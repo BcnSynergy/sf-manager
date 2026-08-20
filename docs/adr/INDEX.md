@@ -10,6 +10,7 @@
 | [ADR-006](ADR-006-walking-skeleton-web-first.md) | Delivery strategy — walking skeleton, web first | Accepted |
 | [ADR-007](ADR-007-i18n-multilanguage-ui-english-codebase.md) | Internationalization — multi-language UI (EN/ES/CA), English-only codebase | Accepted |
 | [ADR-008](ADR-008-element-type-extensibility-typed-catalog.md) | Inspectable element type extensibility — code-level typed catalog | Accepted |
+| [ADR-009](ADR-009-primary-key-strategy-uuidv7.md) | Primary key strategy — UUIDv7, generated in the application layer | Accepted |
 
 See also: [domain model — inspections](../architecture/domain-model-inspections.md)
 (entities implementing ADR-005 and ADR-008).

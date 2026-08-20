@@ -27,10 +27,11 @@ records get created within a session.
 
 ## Conventions
 
-Every entity's `id` is a standard **UUID** primary key — internal, never
-printed or exposed as a scannable identifier. `InspectableElement.code`
-(below) is the one exception: a separate, short, human/QR-facing public
-identifier, distinct from `id` on purpose.
+Every entity's `id` is a **UUIDv7** primary key ([ADR-009](../adr/ADR-009-primary-key-strategy-uuidv7.md))
+— internal, never printed or exposed as a scannable identifier.
+`InspectableElement.code` (below) is the one exception: a separate, short,
+human/QR-facing public identifier, deliberately *not* time-ordered, distinct
+from `id` on purpose.
 
 ## Entities
 
