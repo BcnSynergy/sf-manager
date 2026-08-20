@@ -14,6 +14,9 @@
 | [ADR-010](ADR-010-soft-delete-strategy.md) | Soft delete strategy — split by data kind | Accepted |
 | [ADR-011](ADR-011-expanded-roles-and-auth-architecture.md) | Expanded user roles and authentication/authorization architecture | Accepted |
 | [ADR-012](ADR-012-property-management-company-profile-entity.md) | Property management company profile — domain entity, not system config | Accepted |
+| [ADR-013](ADR-013-orm-prisma-strict-boundary.md) | ORM strategy — Prisma, with a strictly enforced Clean Architecture boundary | Accepted |
+| [ADR-014](ADR-014-api-style-rest-openapi.md) | API style — REST + OpenAPI | Accepted |
+| [ADR-015](ADR-015-frontend-and-tooling-defaults.md) | Frontend and cross-cutting tooling defaults (Vite, Zod, Jest/Vitest, Node LTS) | Accepted |
 
 See also: [domain model — inspections](../architecture/domain-model-inspections.md)
 (entities implementing ADR-011 and ADR-008).

@@ -19,7 +19,9 @@ users, inspectable elements, review types, checklist questions,
 reviews...), each module internally following Clean Architecture
 layering (domain → application → infrastructure → presentation).
 Folder structure is module-first, not a single global `domain/`
-`application/` `infrastructure/` split.
+`application/` `infrastructure/` split. Data access specifics (ORM choice,
+boundary enforcement) are covered separately in
+[ADR-013](ADR-013-orm-prisma-strict-boundary.md).
 
 ## Consequences
 - NestJS's built-in dependency injection removes the need for a manual
