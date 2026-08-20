@@ -30,8 +30,9 @@ domain entity names, database columns, API contracts, code comments.
   frontends.
 - Locale-sensitive formatting (dates, numbers) must be handled consistently
   across all three clients.
-- The final compliance PDF report (sent to the gestora, see original
-  workflow) must also render in the reviewer's chosen locale — it's a
+- The final compliance PDF report (sent to the property management
+  company, see original workflow) must also render in the reviewer's
+  chosen locale — it's a
   legal-effect document, not just UI chrome.
 - User entity needs a persisted language preference (see future FR on user
   management).

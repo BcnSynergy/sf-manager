@@ -14,9 +14,9 @@ structure.
 
 ## Decision
 Backend is built with **NestJS**, organized as a **modular monolith**:
-one module per business domain (comunidades, empresas de mantenimiento,
-usuarios, elementos inspeccionables, tipos de revisión, preguntas,
-revisiones...), each module internally following Clean Architecture
+one module per business domain (communities, maintenance companies,
+users, inspectable elements, review types, checklist questions,
+reviews...), each module internally following Clean Architecture
 layering (domain → application → infrastructure → presentation).
 Folder structure is module-first, not a single global `domain/`
 `application/` `infrastructure/` split.

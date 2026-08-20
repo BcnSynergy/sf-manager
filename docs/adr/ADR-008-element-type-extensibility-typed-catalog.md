@@ -42,7 +42,7 @@ doesn't actually exist in this domain.
   + UI form) — acceptable given the closed, regulation-driven catalog.
 - Strong typing and compile-time safety for element-specific attributes.
 - The checklist question catalog remains the actual configurability surface
-  requested by the user ("gestión de preguntas"), scoped by element type
+  requested by the user (checklist question management), scoped by element type
   and review frequency.
 
 ## Alternatives Considered

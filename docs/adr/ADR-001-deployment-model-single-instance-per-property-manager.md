@@ -4,18 +4,17 @@
 Accepted
 
 ## Context
-The original request framed this as a tool for a single residential community
-(comunidad de vecinos). During architecture discussion it became clear the
-real user base is broader: property management company (administración de
-fincas) employees who administer multiple communities and multiple
-maintenance companies, community representatives (responsables) who only
-handle their own community's inspections, and maintenance company
-technicians who work across whichever communities their company is assigned
-to.
+The original request framed this as a tool for a single residential
+community. During architecture discussion it became clear the real user
+base is broader: property management company employees who administer
+multiple communities and multiple maintenance companies, community
+representatives who only handle their own community's inspections, and
+maintenance company technicians who work across whichever communities their
+company is assigned to.
 
 An earlier assumption ("one VPS per community") was corrected once this
-became clear — it did not support "an administración employee manages all
-communities."
+became clear — it did not support "a property management company employee
+manages all communities."
 
 ## Decision
 Each deployment (one VPS, one database) belongs to exactly **one property
@@ -36,8 +35,8 @@ own separate instance.
   its own ADR plus a migration — not assumed here.
 
 ## Alternatives Considered
-- **One VPS per community** — rejected: doesn't support an administración
-  employee managing many communities from one login.
+- **One VPS per community** — rejected: doesn't support a property
+  management company employee managing many communities from one login.
 - **Full multi-tenant SaaS** (many property management companies sharing one
   instance with tenant isolation) — rejected as premature complexity; the
   deployment model (one VPS per company) makes it unnecessary.

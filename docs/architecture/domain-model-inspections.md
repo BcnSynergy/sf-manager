@@ -36,18 +36,19 @@ from `id` on purpose.
 ## Entities
 
 ### Community
-`comunidad de vecinos`. `id`, `name`, `address`, `locale` (default UI
-language for this community's users), `contactInfo`.
+A residential building managed under this installation. `id`, `name`,
+`address`, `locale` (default UI language for this community's users),
+`contactInfo`.
 
 ### MaintenanceCompany
-`empresa de mantenimiento`. `id`, `name`, `taxId`, `contactInfo`.
+`id`, `name`, `taxId`, `contactInfo`.
 
 > Per [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md),
 > `ANNUAL`/`QUINQUENNIAL`-tier operations may legally be performed by the
-> *fabricante* (manufacturer) as an alternative to an empresa mantenedora.
-> Not modeled as a separate entity — not how this app's actual users work in
-> practice (a fabricante servicing a residential community directly is an
-> edge case, not the norm); revisit if it ever comes up for real.
+> manufacturer as an alternative to a maintenance company. Not modeled as a
+> separate entity — not how this app's actual users work in practice (a
+> manufacturer servicing a residential community directly is an edge case,
+> not the norm); revisit if it ever comes up for real.
 
 ### CommunityMaintenanceAssignment
 Join entity. `communityId`, `maintenanceCompanyId`, `active`. A maintenance
@@ -63,9 +64,10 @@ communities assigned here.
 role-dependent scope:
 - `ADMIN` — no extra field, scope is global (ADR-005).
 - `COMMUNITY_REPRESENTATIVE` — `communityId` (fixed scope). This is a
-  resident designated by the community (titular/usuario, president,
-  vice-president...) on record as responsible in the community's minutes
-  (actas) — not an administración de fincas employee.
+  resident designated by the community (owner/occupant of record,
+  president, vice-president...) on record as responsible in the
+  community's meeting minutes — not a property management company
+  employee.
 - `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (scope resolved
   dynamically via `CommunityMaintenanceAssignment`). An individual acting on
   behalf of the `MaintenanceCompany` they work for.
@@ -107,20 +109,23 @@ denormalized would risk drifting from the actual history for no benefit at
 this scale; revisit only if read performance ever requires a cached
 projection.
 
-**Retimbrado** (quinquennial pressure retest, see
-[compliance doc](../compliance/ripci-extinguisher-maintenance-program.md)) is
-tracked on `InspectableElement` directly, since it's a per-element clock, not
-a community-scheduled `ReviewSession`:
-- `lastRetimbradoAt?`: date of the most recent retimbrado.
-- `retimbradoCount`: how many times it's been done (default 0).
+**Hydrostatic test** (quinquennial pressure retest — RIPCI's own term is
+"retimbrado", but the regulation itself glosses it as the hydraulic/
+hydrostatic pressure test verifying structural integrity; naming the field
+in English per the project's naming convention, see
+[compliance doc](../compliance/ripci-extinguisher-maintenance-program.md))
+is tracked on `InspectableElement` directly, since it's a per-element clock,
+not a community-scheduled `ReviewSession`:
+- `lastHydrostaticTestAt?`: date of the most recent test.
+- `hydrostaticTestCount`: how many times it's been done (default 0).
 
-The 5-year interval and the 3-retimbrado cap are **not** stored fields —
-they're fixed by the Reglamento de Equipos a Presión (RD 809/2021), so they
-live as code-level constants, same reasoning as `ElementType`/
-`ReviewFrequency` (ADR-008): regulation-defined constants, not per-record
-configuration. `retimbradoCount >= 3` is a business-rule signal that the
-extinguisher is due for retirement rather than another retimbrado — computed
-from the constant, not stored as a flag.
+The 5-year interval and the 3-test cap are **not** stored fields — they're
+fixed by the Reglamento de Equipos a Presión (RD 809/2021), so they live as
+code-level constants, same reasoning as `ElementType`/`ReviewFrequency`
+(ADR-008): regulation-defined constants, not per-record configuration.
+`hydrostaticTestCount >= 3` is a business-rule signal that the extinguisher
+is due for retirement rather than another test — computed from the
+constant, not stored as a flag.
 
 Type-specific details, one shape per `ElementType` (illustrative, refined
 when each type is actually implemented):
@@ -133,7 +138,7 @@ when each type is actually implemented):
 original form).
 
 ### ChecklistQuestion
-The one genuinely admin-configurable catalog ("gestión de preguntas").
+The one genuinely admin-configurable catalog.
 `id`, `elementType`, `frequencies` (**set** of `ReviewFrequency` — a
 question can apply to more than one; RIPCI's own tables show checks shared
 between periodicities), `text` (i18n key), `order`, `active` (retire
@@ -143,7 +148,7 @@ For `EXTINGUISHER` + `QUARTERLY`, the actual question set is sourced from
 RIPCI Anexo II Tabla I — see the
 [compliance doc](../compliance/ripci-extinguisher-maintenance-program.md)
 for the cited list. For `EXTINGUISHER` + `ANNUAL`, RIPCI itself defers to
-UNE 23120 (not public) — **the empresa mantenedora provides the actual
+UNE 23120 (not public) — **the maintenance company provides the actual
 question set** their technicians need answered for the review to be valid
 and certifiable by them. Confirms `ChecklistQuestion` management (FR-005)
 must stay genuinely admin-editable content, not seedable from public

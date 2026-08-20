@@ -7,9 +7,8 @@ Accepted
 Three user roles were identified:
 - **Property management company employee** — manages every community and
   every maintenance company registered in the instance.
-- **Community representative (responsable de comunidad)** — the original
-  user from the initial request; only has access to their own community's
-  data.
+- **Community representative** — the original user from the initial
+  request; only has access to their own community's data.
 - **Maintenance company technician** — has access to the communities their
   maintenance company is currently assigned to (a many-to-many
   company↔community assignment).
