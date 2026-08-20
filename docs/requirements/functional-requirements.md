@@ -15,6 +15,7 @@ detail gets added when a requirement is about to be worked on.
 | FR-004 | Manage inspectable elements per community | `SYSTEM_ADMIN`/`MANAGER` with `MANAGE_INSPECTABLE_ELEMENTS`, or a community representative (their own community only) | identified |
 | FR-005 | Manage the checklist question pool (available questions, scoped by element type) | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_CHECKLIST_CONTENT` | identified |
 | FR-005b | Manage review templates: create a new version by selecting questions from the pool, activate it (retiring the previous version) — the actual "revisión trimestral"/"revisión anual" repository, per [domain model](../architecture/domain-model-inspections.md#reviewtemplate) | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_CHECKLIST_CONTENT` | identified |
+| FR-013 | Manage the property management company's own corporate profile used on reports (name, tax ID, address, logo) — per [ADR-012](../adr/ADR-012-property-management-company-profile-entity.md) | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_ORGANIZATION_PROFILE` | identified |
 
 **Not a CRUD**: review types (M/T/S/A) are a fixed code-level enum per
 [ADR-008](../adr/ADR-008-element-type-extensibility-typed-catalog.md), not

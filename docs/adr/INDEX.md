@@ -13,6 +13,7 @@
 | [ADR-009](ADR-009-primary-key-strategy-uuidv7.md) | Primary key strategy — UUIDv7, generated in the application layer | Accepted |
 | [ADR-010](ADR-010-soft-delete-strategy.md) | Soft delete strategy — split by data kind | Accepted |
 | [ADR-011](ADR-011-expanded-roles-and-auth-architecture.md) | Expanded user roles and authentication/authorization architecture | Accepted |
+| [ADR-012](ADR-012-property-management-company-profile-entity.md) | Property management company profile — domain entity, not system config | Accepted |
 
 See also: [domain model — inspections](../architecture/domain-model-inspections.md)
 (entities implementing ADR-011 and ADR-008).

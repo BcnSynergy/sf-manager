@@ -56,6 +56,9 @@ MAINTENANCE_TECHNICIAN | COMMUNITY_REPRESENTATIVE`, replacing ADR-005's
   not split further)
 - `MANAGE_INSPECTABLE_ELEMENTS` (FR-004, admin side)
 - `VIEW_ALL_REVIEWS` (FR-008 across every community)
+- `MANAGE_ORGANIZATION_PROFILE` (FR-013, added by
+  [ADR-012](ADR-012-property-management-company-profile-entity.md) — the
+  property management company's own corporate profile used on reports)
 
 Deliberately **excludes** user management (FR-003) from the assignable
 set — creating/modifying other users' access stays `SYSTEM_ADMIN`-only,

@@ -53,6 +53,19 @@ stricter rule for those.
 
 ## Entities
 
+### PropertyManagementCompany
+Singleton — exactly one per deployment
+([ADR-001](../adr/ADR-001-deployment-model-single-instance-per-property-manager.md)),
+holding the company's own corporate data used on report headers/branding
+([ADR-012](../adr/ADR-012-property-management-company-profile-entity.md)):
+`id`, `name`, `legalName`, `taxId`, `address`, `phone`, `email`,
+`logoAssetId?` (reference into object storage — the actual file, not a
+config value or a DB blob). No `deletedAt` — the row must always exist for
+reports to render; not a deletable record. No direct relationships to
+other entities (implicitly "the company running this instance," not
+foreign-keyed from elsewhere) — omitted from the ER diagram below for that
+reason.
+
 ### Community
 A residential building managed under this installation. `id`, `name`,
 `address`, `locale` (default UI language for this community's users),
