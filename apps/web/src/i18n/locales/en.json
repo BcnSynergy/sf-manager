@@ -1,0 +1,8 @@
+{
+  "health": {
+    "title": "System status",
+    "checking": "Checking...",
+    "ok": "All systems operational",
+    "error": "Something is not working"
+  }
+}
