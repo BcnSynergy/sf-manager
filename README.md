@@ -17,6 +17,15 @@ business features yet, just the toolchain wired end-to-end.
    ```
    DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"
    ```
+   On Windows PowerShell, avoid `Out-File -Encoding utf8` — it adds a BOM
+   that breaks Prisma's env parsing (`DATABASE_URL` silently "not found").
+   Use `-Encoding utf8NoBOM` (PowerShell 7+), or:
+   ```powershell
+   [System.IO.File]::WriteAllText("$PWD\apps\api\.env", 'DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"' + "`n", [System.Text.UTF8Encoding]::new($false))
+   ```
+   If Docker Desktop is set to Windows containers, `docker compose up` will
+   fail pulling `postgres:17-alpine` (Linux-only image). Switch with
+   `docker desktop engine use linux` (or via the Docker Desktop tray icon).
 3. Start Postgres:
    ```
    docker compose up -d
