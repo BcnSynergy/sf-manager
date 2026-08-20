@@ -1,0 +1,20 @@
+{
+  "name": "@sf-manager/validation",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"no build step yet — stub package\"",
+    "lint": "eslint .",
+    "test": "echo \"no tests yet — stub package\""
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.20.0"
+  }
+}
