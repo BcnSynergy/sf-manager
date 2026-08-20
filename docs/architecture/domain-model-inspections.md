@@ -42,6 +42,13 @@ language for this community's users), `contactInfo`.
 ### MaintenanceCompany
 `empresa de mantenimiento`. `id`, `name`, `taxId`, `contactInfo`.
 
+> Per [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md),
+> `ANNUAL`/`QUINQUENNIAL`-tier operations may legally be performed by the
+> *fabricante* (manufacturer) as an alternative to an empresa mantenedora.
+> Not modeled as a separate entity — not how this app's actual users work in
+> practice (a fabricante servicing a residential community directly is an
+> edge case, not the norm); revisit if it ever comes up for real.
+
 ### CommunityMaintenanceAssignment
 Join entity. `communityId`, `maintenanceCompanyId`, `active`. A maintenance
 company's technicians get their access scope (ADR-005) from the set of
@@ -55,9 +62,13 @@ communities assigned here.
 `COMMUNITY_REPRESENTATIVE` | `MAINTENANCE_TECHNICIAN`), `locale`, plus
 role-dependent scope:
 - `ADMIN` — no extra field, scope is global (ADR-005).
-- `COMMUNITY_REPRESENTATIVE` — `communityId` (fixed scope).
+- `COMMUNITY_REPRESENTATIVE` — `communityId` (fixed scope). This is a
+  resident designated by the community (titular/usuario, president,
+  vice-president...) on record as responsible in the community's minutes
+  (actas) — not an administración de fincas employee.
 - `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (scope resolved
-  dynamically via `CommunityMaintenanceAssignment`).
+  dynamically via `CommunityMaintenanceAssignment`). An individual acting on
+  behalf of the `MaintenanceCompany` they work for.
 
 ### ElementType (code-level enum, ADR-008)
 `EXTINGUISHER` today; `BIE`, `EMERGENCY_LIGHTING`, `FIRE_DOOR`, ... added by
@@ -96,6 +107,21 @@ denormalized would risk drifting from the actual history for no benefit at
 this scale; revisit only if read performance ever requires a cached
 projection.
 
+**Retimbrado** (quinquennial pressure retest, see
+[compliance doc](../compliance/ripci-extinguisher-maintenance-program.md)) is
+tracked on `InspectableElement` directly, since it's a per-element clock, not
+a community-scheduled `ReviewSession`:
+- `lastRetimbradoAt?`: date of the most recent retimbrado.
+- `retimbradoCount`: how many times it's been done (default 0).
+
+The 5-year interval and the 3-retimbrado cap are **not** stored fields —
+they're fixed by the Reglamento de Equipos a Presión (RD 809/2021), so they
+live as code-level constants, same reasoning as `ElementType`/
+`ReviewFrequency` (ADR-008): regulation-defined constants, not per-record
+configuration. `retimbradoCount >= 3` is a business-rule signal that the
+extinguisher is due for retirement rather than another retimbrado — computed
+from the constant, not stored as a flag.
+
 Type-specific details, one shape per `ElementType` (illustrative, refined
 when each type is actually implemented):
 - `ExtinguisherDetails`: `weightKg`, `agentType`
@@ -108,9 +134,20 @@ original form).
 
 ### ChecklistQuestion
 The one genuinely admin-configurable catalog ("gestión de preguntas").
-`id`, `elementType`, `frequency` (single value — a question belongs to one
-frequency, matching the original form's "Tipo" column), `text` (i18n key),
-`order`, `active` (retire without deleting history).
+`id`, `elementType`, `frequencies` (**set** of `ReviewFrequency` — a
+question can apply to more than one; RIPCI's own tables show checks shared
+between periodicities), `text` (i18n key), `order`, `active` (retire
+without deleting history).
+
+For `EXTINGUISHER` + `QUARTERLY`, the actual question set is sourced from
+RIPCI Anexo II Tabla I — see the
+[compliance doc](../compliance/ripci-extinguisher-maintenance-program.md)
+for the cited list. For `EXTINGUISHER` + `ANNUAL`, RIPCI itself defers to
+UNE 23120 (not public) — **the empresa mantenedora provides the actual
+question set** their technicians need answered for the review to be valid
+and certifiable by them. Confirms `ChecklistQuestion` management (FR-005)
+must stay genuinely admin-editable content, not seedable from public
+regulation text for this tier.
 
 ### ReviewSession
 One review visit. `id`, `communityId`, `elementType`, `frequency`, `date`,
@@ -118,6 +155,25 @@ One review visit. `id`, `communityId`, `elementType`, `frequency`, `date`,
 Scoped to a single element type + frequency per session — mirrors the
 original one-document-per-review-type structure. Covers every active
 `InspectableElement` of that `elementType` in the community.
+
+**Review scheduling policy** (verified against
+[RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md)):
+- Every calendar quarter needs exactly one `ReviewSession` per
+  `(community, elementType)` — no gaps.
+- Which quarter gets `frequency: ANNUAL` (vs `QUARTERLY`) is **not fixed**
+  to a particular quarter — it shifts year to year based on the maintenance
+  company's actual availability.
+- The only hard constraint: the gap between two consecutive
+  `ANNUAL`-frequency sessions for the same `(community, elementType)` must
+  not exceed 12 months. There is **no minimum** — a community could, in
+  principle, have every quarter done by a technician if no resident takes
+  on the representative role. The 12-month clock resets from the actual
+  date of the last `ANNUAL` session, not from any originally-expected
+  quarter.
+- This is application-layer logic (a scheduling/compliance-calendar domain
+  service reading a community's `ReviewSession` history), not new persisted
+  state — needed for FR-007 (creating a session should know what's
+  expected/due) and FR-009 (overdue/upcoming reminders).
 
 ### ElementReviewEntry
 `id`, `reviewSessionId`, `inspectableElementId`. One row per physical
@@ -151,3 +207,5 @@ erDiagram
   practice.
 - Exact `ExtinguisherDetails` fields — placeholder until the extinguisher
   slice is actually implemented.
+- Retimbrado is tracked but has no workflow yet (who records
+  `lastRetimbradoAt`, from where) — deferred, see compliance doc.

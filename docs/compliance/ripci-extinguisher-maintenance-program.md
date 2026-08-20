@@ -57,14 +57,14 @@ ANNUAL]` for any that also apply to the annual visit — see below).
 > móviles, se comprobará, adicionalmente, el buen estado del sistema de
 > traslado."
 
-**Gap**: RIPCI itself does not enumerate the annual checklist — it defers
-entirely to **UNE 23120**, a paid AENOR standard not publicly accessible.
-The literal question list for the `ANNUAL`-frequency questionnaire cannot be
-sourced from public regulation text. Options going forward: source it from
-the community's actual maintenance company (they will have their own
-UNE 23120-based checklist/report format already), or purchase the standard.
-This blocks writing real `ChecklistQuestion` seed data for `ANNUAL` extintor
-reviews until resolved — tracked as an open item below.
+**Resolved**: RIPCI itself does not enumerate the annual checklist — it
+defers entirely to **UNE 23120**, a paid AENOR standard not publicly
+accessible. Per the user (who runs this process in practice): the empresa
+mantenedora provides the actual question set their technician needs
+answered for the review to be valid and certifiable by them. So the
+`ANNUAL` `ChecklistQuestion` set for `EXTINGUISHER` is sourced from the
+community's actual maintenance company, entered through question management
+(FR-005) — not seeded from public regulation text.
 
 ## Quinquenal (Tabla II, "cinco años") — retimbrado
 
@@ -99,6 +99,8 @@ saved locally as `RD-164-2025-modificaciones-RIPCI-consolidado.pdf` /
 
 ## Open items
 
-- [ ] Source the real `ANNUAL` extintor questionnaire (UNE 23120 access, or
-  the community's maintenance company's own checklist).
-- [ ] Decide, when relevant, whether/how to track retimbrado at all.
+- [x] Source the real `ANNUAL` extintor questionnaire — resolved: sourced
+  from the community's maintenance company, entered via question management.
+- [x] Decide whether/how to track retimbrado — resolved:
+  `InspectableElement.lastRetimbradoAt` + `retimbradoCount`, see domain
+  model doc.
