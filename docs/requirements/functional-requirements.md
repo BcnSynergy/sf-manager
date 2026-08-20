@@ -9,12 +9,12 @@ detail gets added when a requirement is about to be worked on.
 
 | FR | Description | Scope note | Status |
 |----|-------------|-------------|--------|
-| FR-001 | Manage communities | Admin only | identified |
-| FR-002 | Manage maintenance companies | Admin only | identified |
-| FR-003 | Manage users and their role/scope | Admin only | identified |
-| FR-004 | Manage inspectable elements per community | Admin + community representative (their own community) | identified |
-| FR-005 | Manage the checklist question pool (available questions, scoped by element type) | Admin only | identified |
-| FR-005b | Manage review templates: create a new version by selecting questions from the pool, activate it (retiring the previous version) — the actual "revisión trimestral"/"revisión anual" repository, per [domain model](../architecture/domain-model-inspections.md#reviewtemplate) | Admin only | identified |
+| FR-001 | Manage communities | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_COMMUNITIES` | identified |
+| FR-002 | Manage maintenance companies | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_MAINTENANCE_COMPANIES` | identified |
+| FR-003 | Manage users and their role/scope | `SYSTEM_ADMIN` only for property-management-side users; `MAINTENANCE_COMPANY_MANAGER` may CRUD their own company's technicians only (per ADR-011) | identified |
+| FR-004 | Manage inspectable elements per community | `SYSTEM_ADMIN`/`MANAGER` with `MANAGE_INSPECTABLE_ELEMENTS`, or a community representative (their own community only) | identified |
+| FR-005 | Manage the checklist question pool (available questions, scoped by element type) | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_CHECKLIST_CONTENT` | identified |
+| FR-005b | Manage review templates: create a new version by selecting questions from the pool, activate it (retiring the previous version) — the actual "revisión trimestral"/"revisión anual" repository, per [domain model](../architecture/domain-model-inspections.md#reviewtemplate) | `SYSTEM_ADMIN`, or `MANAGER` with `MANAGE_CHECKLIST_CONTENT` | identified |
 
 **Not a CRUD**: review types (M/T/S/A) are a fixed code-level enum per
 [ADR-008](../adr/ADR-008-element-type-extensibility-typed-catalog.md), not
@@ -34,7 +34,7 @@ values.
 | FR | Description | Status |
 |----|-------------|--------|
 | FR-007 | Perform a review session: open a session against a community's currently `active` `ReviewTemplate` for an element type, scan/enter each element's `code`, answer its templated questions, repeat, complete the session | identified |
-| FR-008 | View review history, per element and per community | identified |
+| FR-008 | View review history, per element and per community — visibility scoped per [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md): a technician sees only their own sessions, a `MAINTENANCE_COMPANY_MANAGER` sees all of their company's, a community representative sees their community's, `SYSTEM_ADMIN`/`MANAGER` with `VIEW_ALL_REVIEWS` sees everything | identified |
 | FR-009 | List overdue/upcoming reviews and send reminders to responsible parties | identified |
 | FR-010 | Sign and export the completed review as a document, to send to the property management company | identified |
 
@@ -42,5 +42,5 @@ values.
 
 | FR | Description | Status |
 |----|-------------|--------|
-| FR-011 | Authentication + scoped authorization per [ADR-005](../adr/ADR-005-authorization-model-scoped-rbac.md) | identified |
-| FR-012 | Demo mode — no login required, highest role assigned, must be strictly gated to non-production environments per ADR-005 | identified |
+| FR-011 | Authentication + scoped authorization per [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md) | identified |
+| FR-012 | Demo mode — no login required, `SYSTEM_ADMIN` role assigned, must be strictly gated to non-production environments per ADR-011 | identified |

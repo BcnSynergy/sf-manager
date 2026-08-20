@@ -1,7 +1,11 @@
 # ADR-005: Authorization Model — Role-Based Access Control, Scoped by Resource
 
 ## Status
-Accepted
+Superseded by [ADR-011](ADR-011-expanded-roles-and-auth-architecture.md) —
+the 3-role model below was replaced by a 5-role model with capability
+flags and an explicit authentication/authorization architecture. Kept for
+historical record; the scoped-resource-access *principle* established here
+still holds under ADR-011.
 
 ## Context
 Three user roles were identified:

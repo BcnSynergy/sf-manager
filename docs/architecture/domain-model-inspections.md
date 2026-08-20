@@ -1,7 +1,7 @@
 # Domain Model — Inspections
 
-Implements the decisions from [ADR-005](../adr/ADR-005-authorization-model-scoped-rbac.md)
-(scoped RBAC) and [ADR-008](../adr/ADR-008-element-type-extensibility-typed-catalog.md)
+Implements the decisions from [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md)
+(scoped RBAC, supersedes ADR-005) and [ADR-008](../adr/ADR-008-element-type-extensibility-typed-catalog.md)
 (typed element catalog). All names are English per
 [ADR-007](../adr/ADR-007-i18n-multilanguage-ui-english-codebase.md).
 
@@ -77,18 +77,27 @@ communities assigned here.
 > Not decided — starting without that granularity, revisit if needed.
 
 ### User
-`id`, `name`, `email`, `passwordHash`, `role` (`ADMIN` |
-`COMMUNITY_REPRESENTATIVE` | `MAINTENANCE_TECHNICIAN`), `locale`, plus
-role-dependent scope:
-- `ADMIN` — no extra field, scope is global (ADR-005).
+`id`, `name`, `email`, `passwordHash`, `role` (`SYSTEM_ADMIN` | `MANAGER` |
+`MAINTENANCE_COMPANY_MANAGER` | `MAINTENANCE_TECHNICIAN` |
+`COMMUNITY_REPRESENTATIVE` — [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md)),
+`locale`, plus role-dependent fields:
+- `SYSTEM_ADMIN` — no extra field, scope is global, unrestricted.
+- `MANAGER` — `managerCapabilities` (set of `MANAGE_COMMUNITIES` |
+  `MANAGE_MAINTENANCE_COMPANIES` | `MANAGE_CHECKLIST_CONTENT` |
+  `MANAGE_INSPECTABLE_ELEMENTS` | `VIEW_ALL_REVIEWS`) — user management
+  is deliberately not an assignable capability, `SYSTEM_ADMIN`-only.
+- `MAINTENANCE_COMPANY_MANAGER` — `maintenanceCompanyId` (fixed scope).
+  CRUD over that company's `MAINTENANCE_TECHNICIAN` users, read access to
+  every review performed by any of them.
+- `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (scope for
+  *performing* reviews resolved dynamically via
+  `CommunityMaintenanceAssignment`); review **visibility** is narrower —
+  only sessions where `performedById = self`.
 - `COMMUNITY_REPRESENTATIVE` — `communityId` (fixed scope). This is a
   resident designated by the community (owner/occupant of record,
   president, vice-president...) on record as responsible in the
   community's meeting minutes — not a property management company
   employee.
-- `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (scope resolved
-  dynamically via `CommunityMaintenanceAssignment`). An individual acting on
-  behalf of the `MaintenanceCompany` they work for.
 
 ### ElementType (code-level enum, ADR-008)
 `EXTINGUISHER` today; `BIE`, `EMERGENCY_LIGHTING`, `FIRE_DOOR`, ... added by
