@@ -1,0 +1,13 @@
+// Prisma schema — infrastructure-layer artifact only (ADR-013). No domain
+// models yet: those are added per SDD slice, mapped to hand-written domain
+// entities in each module's repository implementations, never used directly
+// outside infrastructure/persistence/**.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
