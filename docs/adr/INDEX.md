@@ -12,8 +12,6 @@
 
 ## Open decisions (not yet an ADR)
 
-- **Monorepo tooling**: ADR-004 defaults to Turborepo (npm workspaces), reused from
-  RM-Manager, pending explicit confirmation.
 - **Generic inspectable-element domain model**: extinguishers today, other RIPCI
   elements later (BIEs, emergency lighting, fire doors...). Deferred to the design
   phase for the first walking-skeleton slice per ADR-006.

@@ -18,8 +18,18 @@ discussion:
 Three separate UI codebases — **React** (web), **React Native**
 (mobile/tablet), **Electron** (desktop) — sharing business logic, the API
 client, and TypeScript types/contracts through internal packages in a
-monorepo. Monorepo tooling defaults to **Turborepo** (npm workspaces),
-matching the RM-Manager precedent, pending confirmation.
+monorepo. Monorepo tooling is **Turborepo on top of npm workspaces**,
+matching the RM-Manager precedent.
+
+npm workspaces provide the package linking (shared `node_modules`,
+resolving internal packages like `packages/types` or `packages/api-client`
+into `apps/web`, `apps/mobile`, `apps/desktop`, `apps/api`). Turborepo adds
+the piece workspaces don't provide on their own: task orchestration and
+caching across that dependency graph — running `build`/`lint`/`test` in
+dependency order, skipping unaffected packages via incremental caching, and
+scoping commands with `--filter`. With four apps and several shared
+packages present from the very first walking-skeleton slice (not something
+that grows in "later"), that orchestration problem exists from day one.
 
 ## Consequences
 - Full native capability per platform (camera, offline storage, push
@@ -39,3 +49,8 @@ matching the RM-Manager precedent, pending confirmation.
   single-codebase multiplatform for the non-web clients, but introduces
   Dart as a second language, breaking TypeScript continuity across the
   whole stack.
+- **npm workspaces alone, no Turborepo** — simpler to start with, but loses
+  dependency-graph-aware task orchestration and incremental caching from
+  day one, when four apps and shared packages already exist. Rejected: this
+  isn't complexity being added ahead of need, the need is already present
+  at the walking-skeleton stage.
