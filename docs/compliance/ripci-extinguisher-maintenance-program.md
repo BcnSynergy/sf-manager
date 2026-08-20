@@ -6,6 +6,12 @@ incendios", Tabla I (p. 34-36) and Tabla II (p. 37-38). Full text saved locally
 as `RD-513-2017-RIPCI-consolidado.pdf` / `ripci.txt` in this folder. Retrieved
 2026-08-20 from the BOE consolidated text.
 
+> **Convention**: every blockquote in this document is a **verbatim
+> citation** from the official Spanish text, kept untranslated on purpose
+> so it stays checkable word-for-word against the source — each is preceded
+> by a short *italic* locator (article/tabla/página). Everything outside a
+> blockquote is our own English analysis/summary.
+
 ## Who can perform each tier
 
 - **Tabla I (quarterly)**: the manufacturer's specialized staff, a
@@ -27,25 +33,26 @@ one shared block of checks; the following are the extinguisher-relevant
 items (exact per-equipment split isn't always textually separable in the
 source table layout, noted where uncertain):
 
-1. Que los extintores estén en su lugar asignado y no presenten muestras
-   aparentes de daños.
-2. Que son adecuados conforme al riesgo a proteger.
-3. Que no tienen el acceso obstruido, son visibles o están señalizados y
-   tienen sus instrucciones de manejo en la parte delantera.
-4. Que las instrucciones de manejo son legibles.
-5. Que el indicador de presión se encuentra en la zona de operación.
-6. Que las partes metálicas (boquilla, válvula, manguera...) están en buen
-   estado.
-7. Que no faltan ni están rotos los precintos o los tapones indicadores de
-   uso.
-8. Que no han sido descargados total o parcialmente.
-9. Comprobación de la señalización de los extintores.
-10. Comprobación de la buena accesibilidad de los equipos.
-11. Comprobación, por lectura del manómetro, de la presión.
+*RIPCI, Anexo II, Tabla I, p. 34-36:*
+> 1. Que los extintores estén en su lugar asignado y no presenten muestras
+>    aparentes de daños.
+> 2. Que son adecuados conforme al riesgo a proteger.
+> 3. Que no tienen el acceso obstruido, son visibles o están señalizados y
+>    tienen sus instrucciones de manejo en la parte delantera.
+> 4. Que las instrucciones de manejo son legibles.
+> 5. Que el indicador de presión se encuentra en la zona de operación.
+> 6. Que las partes metálicas (boquilla, válvula, manguera...) están en
+>    buen estado.
+> 7. Que no faltan ni están rotos los precintos o los tapones indicadores
+>    de uso.
+> 8. Que no han sido descargados total o parcialmente.
+> 9. Comprobación de la señalización de los extintores.
+> 10. Comprobación de la buena accesibilidad de los equipos.
+> 11. Comprobación, por lectura del manómetro, de la presión.
 
-> Equivalent alternative per the law: this requirement is also considered met
-> if the checks from UNE 23120's "Programa de Mantenimiento Trimestral" are
-> performed instead.
+Equivalent alternative per the law: this requirement is also considered met
+if the checks from UNE 23120's "Programa de Mantenimiento Trimestral" are
+performed instead.
 
 This maps directly to `ChecklistQuestion` records with
 `elementType: EXTINGUISHER`, `frequencies: [QUARTERLY]` (or `[QUARTERLY,
@@ -53,6 +60,7 @@ ANNUAL]` for any that also apply to the annual visit — see below).
 
 ## Annual (Tabla II, "cada año") — fire extinguishers
 
+*RIPCI, Anexo II, Tabla II, p. 37-38:*
 > "Realizar las operaciones de mantenimiento según lo establecido en el
 > 'Programa de Mantenimiento Anual' de la norma UNE 23120. En extintores
 > móviles, se comprobará, adicionalmente, el buen estado del sistema de
@@ -69,6 +77,7 @@ community's actual maintenance company, entered through question management
 
 ## Every five years (Tabla II, "cinco años") — hydrostatic test
 
+*RIPCI, Anexo II, Tabla II, p. 37-38:*
 > "A partir de la fecha de timbrado del extintor (y por tres veces) se
 > procederá al retimbrado del mismo de acuerdo a lo establecido en el anexo
 > III del Reglamento de Equipos a Presión, aprobado por Real Decreto
