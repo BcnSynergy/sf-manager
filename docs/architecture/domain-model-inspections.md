@@ -33,6 +33,16 @@ Every entity's `id` is a **UUIDv7** primary key ([ADR-009](../adr/ADR-009-primar
 human/QR-facing public identifier, deliberately *not* time-ordered, distinct
 from `id` on purpose.
 
+Every **reference/master-data** entity — `Community`, `MaintenanceCompany`,
+`User`, `InspectableElement`, `ChecklistQuestion`,
+`CommunityMaintenanceAssignment` — also has `deletedAt: Date | null`
+([ADR-010](../adr/ADR-010-soft-delete-strategy.md)), omitted from the
+per-entity field lists below to avoid repeating it six times. This is
+separate from any domain-state field an entity already has (e.g.
+`InspectableElement.active`). `ReviewSession`/`ElementReviewEntry`/
+`QuestionAnswer` deliberately do **not** get `deletedAt` — see ADR-010's
+stricter rule for those.
+
 ## Entities
 
 ### Community
@@ -160,6 +170,12 @@ One review visit. `id`, `communityId`, `elementType`, `frequency`, `date`,
 Scoped to a single element type + frequency per session — mirrors the
 original one-document-per-review-type structure. Covers every active
 `InspectableElement` of that `elementType` in the community.
+
+**Immutable once finalized** ([ADR-010](../adr/ADR-010-soft-delete-strategy.md)):
+a `ReviewSession` with `status != draft`, and its `ElementReviewEntry`/
+`QuestionAnswer` children, cannot be deleted — soft or hard — by any role,
+enforced at the domain layer. Only `draft` sessions may be hard-deleted.
+This protects RIPCI's 5-year documentary retention minimum.
 
 **Review scheduling policy** (verified against
 [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md)):
