@@ -14,16 +14,24 @@ session that still carries the same header data the original form had
 (community, review type, date).
 
 ```
-ReviewSession (community, elementType, frequency, date, performedBy)
+ReviewTemplate (elementType, frequency, name, version, status)
+ └── ReviewTemplateQuestion (curated, ordered selection from the ChecklistQuestion pool)
+
+ReviewSession (community, template, date, performedBy)
  └── ElementReviewEntry (one per physical element checked)
-      └── QuestionAnswer (one per checklist question, YES/NO/NA)
+      └── QuestionAnswer (one per templated question, YES/NO/NA)
 ```
 
-Field workflow: open a `ReviewSession` for a community + element type, scan
-an element's `code` to resolve it and create its `ElementReviewEntry`,
-answer that element's `ChecklistQuestion`s, then scan the next element. No
-new entity needed for this — it's just the order `ElementReviewEntry`
-records get created within a session.
+Field workflow: open a `ReviewSession` against a community's currently
+`active` `ReviewTemplate` for an element type, scan an element's `code` to
+resolve it and create its `ElementReviewEntry`, answer that element's
+questions (from the template), then scan the next element. No new entity
+needed for the scan-and-answer loop — it's just the order
+`ElementReviewEntry` records get created within a session.
+
+`ChecklistQuestion` is a **pool of available questions**; `ReviewTemplate`
+is what actually determines what gets asked in a given review — see below
+for why this split exists.
 
 ## Conventions
 
@@ -34,7 +42,7 @@ human/QR-facing public identifier, deliberately *not* time-ordered, distinct
 from `id` on purpose.
 
 Every **reference/master-data** entity — `Community`, `MaintenanceCompany`,
-`User`, `InspectableElement`, `ChecklistQuestion`,
+`User`, `InspectableElement`, `ChecklistQuestion`, `ReviewTemplate`,
 `CommunityMaintenanceAssignment` — also has `deletedAt: Date | null`
 ([ADR-010](../adr/ADR-010-soft-delete-strategy.md)), omitted from the
 per-entity field lists below to avoid repeating it six times. This is
@@ -148,11 +156,13 @@ when each type is actually implemented):
 original form).
 
 ### ChecklistQuestion
-The one genuinely admin-configurable catalog.
-`id`, `elementType`, `frequencies` (**set** of `ReviewFrequency` — a
-question can apply to more than one; RIPCI's own tables show checks shared
-between periodicities), `text` (i18n key), `order`, `active` (retire
-without deleting history).
+The **pool** of available questions an admin can draw from — not, by
+itself, what gets asked in any given review (see `ReviewTemplate`).
+`id`, `elementType`, `frequencies` (**set** of `ReviewFrequency` — an
+informational tag used to suggest candidate questions when building a
+template for a given frequency; RIPCI's own tables show checks shared
+between periodicities, so a question can be tagged for more than one),
+`text` (i18n key), `active` (retire without deleting history).
 
 For `EXTINGUISHER` + `QUARTERLY`, the actual question set is sourced from
 RIPCI Anexo II Tabla I — see the
@@ -160,15 +170,45 @@ RIPCI Anexo II Tabla I — see the
 for the cited list. For `EXTINGUISHER` + `ANNUAL`, RIPCI itself defers to
 UNE 23120 (not public) — **the maintenance company provides the actual
 question set** their technicians need answered for the review to be valid
-and certifiable by them. Confirms `ChecklistQuestion` management (FR-005)
-must stay genuinely admin-editable content, not seedable from public
-regulation text for this tier.
+and certifiable by them.
+
+### ReviewTemplate
+
+**Why this entity exists**: with only `ChecklistQuestion` (queried live by
+`elementType` + `frequency` at review time), there's no explicit record of
+"exactly which questions constituted the quarterly review in March 2026"
+versus now — it has to be reconstructed indirectly from old
+`QuestionAnswer` rows. For a RIPCI-regulated, 5-year-retention domain, that
+indirection is a weaker audit posture than it needs to be. A
+`ReviewTemplate` makes "what was asked, as of when" an explicit, named,
+versioned, immutable-once-used object instead.
+
+A named, versioned, curated bundle of questions — the actual repository of
+report templates ("revisión trimestral", "revisión anual") the admin
+manages. `id`, `elementType`, `frequency`, `name`, `version` (integer,
+starting at 1, incrementing per `(elementType, frequency)` lineage),
+`status` (`draft` | `active` | `retired`), `createdAt`, `deletedAt`
+(ADR-010 — for a template created by mistake and never used; a normal
+version supersession uses `retired`, not `deletedAt`, since retired
+templates stay fully visible for historical sessions that reference them).
+
+Only one `active` template per `(elementType, frequency)` at a time.
+Creating a new version (selecting questions from the `ChecklistQuestion`
+pool) and activating it automatically retires the previous one — retiring
+does not touch any `ReviewSession` that already references it.
+
+### ReviewTemplateQuestion
+Join entity: the curated, ordered selection for one template version.
+`id`, `templateId`, `questionId`, `order`.
 
 ### ReviewSession
-One review visit. `id`, `communityId`, `elementType`, `frequency`, `date`,
+One review visit. `id`, `communityId`, `templateId`, `date`,
 `performedById` (User), `status` (`draft` | `completed` | `signed`).
-Scoped to a single element type + frequency per session — mirrors the
-original one-document-per-review-type structure. Covers every active
+`elementType`/`frequency` are derived from the referenced `ReviewTemplate`,
+not duplicated as separate fields — the template is the single source of
+truth for both "what kind of review this is" and "what questions apply."
+Scoped to a single template per session — mirrors the original
+one-document-per-review-type structure. Covers every active
 `InspectableElement` of that `elementType` in the community.
 
 **Immutable once finalized** ([ADR-010](../adr/ADR-010-soft-delete-strategy.md)):
@@ -181,9 +221,9 @@ This protects RIPCI's 5-year documentary retention minimum.
 [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md)):
 - Every calendar quarter needs exactly one `ReviewSession` per
   `(community, elementType)` — no gaps.
-- Which quarter gets `frequency: ANNUAL` (vs `QUARTERLY`) is **not fixed**
-  to a particular quarter — it shifts year to year based on the maintenance
-  company's actual availability.
+- Which quarter uses an `ANNUAL`-frequency template (vs `QUARTERLY`) is
+  **not fixed** to a particular quarter — it shifts year to year based on
+  the maintenance company's actual availability.
 - The only hard constraint: the gap between two consecutive
   `ANNUAL`-frequency sessions for the same `(community, elementType)` must
   not exceed 12 months. There is **no minimum** — a community could, in
@@ -213,6 +253,9 @@ erDiagram
     Community }o--o{ MaintenanceCompany : "assigned via"
     MaintenanceCompany ||--o{ User : "technicians"
     InspectableElement ||--o{ ElementReviewEntry : "checked in"
+    ReviewTemplate ||--o{ ReviewTemplateQuestion : bundles
+    ChecklistQuestion ||--o{ ReviewTemplateQuestion : "included in"
+    ReviewTemplate ||--o{ ReviewSession : "used by"
     ReviewSession ||--o{ ElementReviewEntry : contains
     ElementReviewEntry ||--o{ QuestionAnswer : contains
     ChecklistQuestion ||--o{ QuestionAnswer : answered_by
@@ -228,5 +271,11 @@ erDiagram
   practice.
 - Exact `ExtinguisherDetails` fields — placeholder until the extinguisher
   slice is actually implemented.
-- Retimbrado is tracked but has no workflow yet (who records
-  `lastRetimbradoAt`, from where) — deferred, see compliance doc.
+- The hydrostatic test is tracked but has no workflow yet (who records
+  `lastHydrostaticTestAt`, from where) — deferred, see compliance doc.
+- If a `ChecklistQuestion`'s *text* changes (not just which questions are
+  bundled), should that force a new template version too, or edit the
+  question in place (which would retroactively change the wording shown
+  for old, already-answered sessions referencing it)? Not decided — the
+  template versioning above solves "which questions changed", not "a
+  question's wording changed."

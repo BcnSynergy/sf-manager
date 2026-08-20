@@ -13,13 +13,15 @@ detail gets added when a requirement is about to be worked on.
 | FR-002 | Manage maintenance companies | Admin only | identified |
 | FR-003 | Manage users and their role/scope | Admin only | identified |
 | FR-004 | Manage inspectable elements per community | Admin + community representative (their own community) | identified |
-| FR-005 | Manage checklist questions, scoped by element type + review frequency | Admin only | identified |
+| FR-005 | Manage the checklist question pool (available questions, scoped by element type) | Admin only | identified |
+| FR-005b | Manage review templates: create a new version by selecting questions from the pool, activate it (retiring the previous version) — the actual "revisión trimestral"/"revisión anual" repository, per [domain model](../architecture/domain-model-inspections.md#reviewtemplate) | Admin only | identified |
 
 **Not a CRUD**: review types (M/T/S/A) are a fixed code-level enum per
 [ADR-008](../adr/ADR-008-element-type-extensibility-typed-catalog.md), not
 a managed catalog — the original "manage review types" request is satisfied
-by the enum being used consistently across FR-005/FR-007, not by an admin
-screen to create new ones.
+by FR-005b (template management) plus the enum being used consistently
+across FR-005/FR-007, not by an admin screen to create new frequency
+values.
 
 ## Element identification
 
@@ -31,7 +33,7 @@ screen to create new ones.
 
 | FR | Description | Status |
 |----|-------------|--------|
-| FR-007 | Perform a review session: open a session (community + element type + frequency), scan/enter each element's `code`, answer its questions, repeat, complete the session | identified |
+| FR-007 | Perform a review session: open a session against a community's currently `active` `ReviewTemplate` for an element type, scan/enter each element's `code`, answer its templated questions, repeat, complete the session | identified |
 | FR-008 | View review history, per element and per community | identified |
 | FR-009 | List overdue/upcoming reviews and send reminders to responsible parties | identified |
 | FR-010 | Sign and export the completed review as a document, to send to the property management company | identified |
