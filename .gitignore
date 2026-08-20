@@ -1,0 +1,15 @@
+# Tooling/harness local state — not part of the project
+.atl/
+
+# Node.js
+node_modules/
+dist/
+build/
+coverage/
+
+# Env
+.env
+.env.local
+
+# OS/editor
+.DS_Store
