@@ -29,7 +29,7 @@ own separate instance.
 - No `tenant_id` / tenant-isolation plumbing anywhere in the domain or
   persistence layer — the "tenant" is the whole install.
 - Simpler authorization model: scoping only needs to happen *below* the
-  property-management-company level (see ADR-005), never across companies.
+  property-management-company level (see ADR-011), never across companies.
 - If the product ever needs to serve multiple property management companies
   from one shared install, that is a new architectural boundary and requires
   its own ADR plus a migration — not assumed here.

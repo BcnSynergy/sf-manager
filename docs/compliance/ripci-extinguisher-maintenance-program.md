@@ -23,7 +23,7 @@ as `RD-513-2017-RIPCI-consolidado.pdf` / `ripci.txt` in this folder. Retrieved
 - **Tabla II (annual and every five years)**: exclusively the
   manufacturer's specialized staff or a maintenance company's staff. Never
   the owner/occupant. Matches
-  [ADR-005](../adr/ADR-005-authorization-model-scoped-rbac.md)'s
+  [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md)'s
   `MAINTENANCE_TECHNICIAN`-only assumption for `ANNUAL`-frequency reviews.
 
 ## Quarterly (Tabla I, "cada tres meses") — fire extinguishers

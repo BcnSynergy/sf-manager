@@ -83,7 +83,7 @@ A residential building managed under this installation. `id`, `name`,
 
 ### CommunityMaintenanceAssignment
 Join entity. `communityId`, `maintenanceCompanyId`, `active`. A maintenance
-company's technicians get their access scope (ADR-005) from the set of
+company's technicians get their access scope (ADR-011) from the set of
 communities assigned here.
 > Open question: should an assignment be scoped to specific element types
 > (e.g. company X only maintains extinguishers, company Y handles BIEs)?
