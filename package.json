@@ -14,12 +14,12 @@
   },
   "devDependencies": {
     "turbo": "^2.5.0",
-    "typescript": "^5.7.0",
-    "eslint": "^9.17.0",
+    "typescript": "^6.0.3",
+    "eslint": "^10.8.1",
     "prettier": "^3.4.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "packageManager": "npm@10.8.2"
 }
