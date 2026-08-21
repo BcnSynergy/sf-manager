@@ -51,12 +51,12 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 
 ## Phase 3: `users` Module
 
-- [ ] 3.1 RED/GREEN `user.entity.ts` (domain).
-- [ ] 3.2 `application/ports/user.repository.port.ts` — `UserRepository` + `USER_REPOSITORY` (`findByEmail`, `save`).
-- [ ] 3.3 RED/GREEN `user.mapper.ts`.
-- [ ] 3.4 `prisma-user.repository.ts` extends `SoftDeletableRepository`; implement `findByEmail`/`save` (upsert, preserves `id` on update).
-- [ ] 3.5 Integration test: `PrismaUserRepository` against real test Postgres — excludes soft-deleted; second `save()` call updates not inserts, `id` unchanged.
-- [ ] 3.6 `users.module.ts`.
+- [x] 3.1 RED/GREEN `user.entity.ts` (domain).
+- [x] 3.2 `application/ports/user.repository.port.ts` — `UserRepository` + `USER_REPOSITORY` (`findByEmail`, `save`).
+- [x] 3.3 RED/GREEN `user.mapper.ts`.
+- [x] 3.4 `prisma-user.repository.ts` extends `SoftDeletableRepository`; implement `findByEmail`/`save` (upsert, preserves `id` on update).
+- [x] 3.5 Integration test: `PrismaUserRepository` against real test Postgres — excludes soft-deleted; second `save()` call updates not inserts, `id` unchanged.
+- [x] 3.6 `users.module.ts`.
 
 ## Phase 4: `auth` Module — Application
 
