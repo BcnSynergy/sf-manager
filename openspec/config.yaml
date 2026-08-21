@@ -1,0 +1,48 @@
+schema: spec-driven
+
+context: |
+  Solo learning + real-use project. NestJS modular monolith backend
+  (Clean Architecture, ADR-002/013), React/Vite frontend (ADR-004/015),
+  Prisma 7.9.1 + PostgreSQL 18, TypeScript throughout, Node 24 LTS.
+  Walking skeleton discipline (ADR-006): build one thin end-to-end
+  slice at a time — only the health-check slice exists so far.
+  Full context: docs/adr/INDEX.md, docs/architecture/domain-model-inspections.md,
+  docs/requirements/functional-requirements.md.
+
+strict_tdd: true
+
+testing:
+  api:
+    test_command: "npm run test --workspace=apps/api"
+    coverage_command: "npm run test:cov --workspace=apps/api"
+    e2e_command: "npm run test:e2e --workspace=apps/api"
+    framework: jest
+  web:
+    test_command: "npm run test --workspace=apps/web"
+    framework: vitest
+
+rules:
+  proposal:
+    - Respect ADR-006 walking skeleton discipline — do not scope beyond the current slice
+    - Include rollback plan for risky changes
+    - Reference relevant ADRs from docs/adr/INDEX.md
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Design Value Objects and use cases per slice, not upfront (ADR-006 addendum)
+  design:
+    - Respect Clean Architecture layering (ADR-002) and Prisma boundary (ADR-013)
+    - Document architecture decisions with rationale; propose new ADRs when a decision is durable
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns (NestJS modules, Clean Architecture layers)
+    tdd: true
+    test_command: "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
+  verify:
+    test_command: "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

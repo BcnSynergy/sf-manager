@@ -1,7 +1,7 @@
-// Prisma schema — infrastructure-layer artifact only (ADR-013). No domain
-// models yet: those are added per SDD slice, mapped to hand-written domain
-// entities in each module's repository implementations, never used directly
-// outside infrastructure/persistence/**.
+// Prisma schema — infrastructure-layer artifact only (ADR-013). Models are
+// added per SDD slice, mapped to hand-written domain entities in each
+// module's repository implementations, never used directly outside
+// infrastructure/persistence/**.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +9,25 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id           String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  email        String    @unique // stored lowercase-normalized
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // ADR-010
+}
+
+// Deny-list, not a session table: only ever holds explicitly logged-out
+// tokens until their natural expiry (design.md Decision 9 — minimum viable
+// revocation, not general session management).
+model RevokedToken {
+  jti       String   @id @db.Uuid // the token's own jti claim
+  expiresAt DateTime // copied from the token's own exp — safe to delete once past
+
+  // The opportunistic cleanup query (`WHERE expiresAt < now()`) runs on every
+  // login/logout, so this must not be a full table scan.
+  @@index([expiresAt])
 }
