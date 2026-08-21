@@ -9,6 +9,10 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    // prisma/seed.ts is created in PR 3 (auth-minimal-skeleton), once the
+    // `PASSWORD_HASHER`/`USER_REPOSITORY` DI tokens it resolves exist —
+    // wiring the command here now so PR 3 only has to add the file.
+    seed: 'ts-node prisma/seed.ts',
   },
   datasource: {
     url: env('DATABASE_URL'),
