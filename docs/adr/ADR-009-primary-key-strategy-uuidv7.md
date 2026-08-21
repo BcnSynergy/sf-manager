@@ -19,11 +19,23 @@ monotonically increasing over time — near auto-increment-like B-tree insert
 locality — while staying globally unique without coordination, like UUIDv4.
 
 Generation happens in the **application layer** (TypeScript, at entity
-construction time), not as a Postgres-version-specific DB default. This
-keeps ID assignment a domain/application-layer concern (an entity has its
-`id` the moment it's constructed, before persistence — useful for domain
-events referencing it), and avoids a hard dependency on PostgreSQL 18+'s
-native `uuidv7()` function.
+construction time), not as a DB default. This is a deliberate DDD/Clean
+Architecture choice, not a portability workaround: an Entity's identity
+(per the Entity pattern — equality by `id`) exists the moment it's
+constructed, before persistence. DB-generated IDs (via `DEFAULT` or a
+trigger) would leave an entity without an `id` until after INSERT, which
+breaks identity-based equality while the entity is still in memory, blocks
+domain events raised at creation time from referencing the entity's own
+`id`, and forces domain-layer unit tests to round-trip through Postgres
+just to obtain an `id`. It also keeps `id` assignment out of the
+infrastructure layer, consistent with ADR-013's Prisma boundary.
+
+(Revisited 2026-08-21 after moving the project's target Postgres version
+from 17 to 18. PostgreSQL 18's native `uuidv7()` function was the original
+secondary motivation for keeping generation Postgres-version-portable, and
+that motivation is now moot — but the primary DDD reasoning above still
+holds, so the decision is unchanged: entity `id`s continue to be generated
+in TypeScript, not via Postgres's native `uuidv7()`.)
 
 This does **not** change `InspectableElement.code` (ADR: see domain model
 doc) — that stays a short, random, non-time-ordered public identifier on
