@@ -4,5 +4,16 @@
     "checking": "Comprobando...",
     "ok": "Todo funciona correctamente",
     "error": "Algo no está funcionando"
+  },
+  "auth": {
+    "loginTitle": "Iniciar sesión",
+    "emailLabel": "Correo electrónico",
+    "passwordLabel": "Contraseña",
+    "submitLabel": "Iniciar sesión",
+    "validationRequired": "El correo electrónico y la contraseña son obligatorios.",
+    "validationInvalidEmail": "Introduce un correo electrónico válido.",
+    "loginFailed": "Correo electrónico o contraseña incorrectos.",
+    "logoAlt": "SF-Manager",
+    "logoutLabel": "Cerrar sesión"
   }
 }

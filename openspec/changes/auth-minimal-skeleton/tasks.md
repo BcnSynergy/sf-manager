@@ -94,12 +94,12 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 
 ## Phase 9: Web
 
-- [ ] 9.1 `src/auth/AuthProvider.tsx` — context calling `GET /auth/me`.
-- [ ] 9.2 RED/GREEN `src/auth/ProtectedRoute.tsx` — redirect to `/login` when unauthenticated.
-- [ ] 9.3 RED/GREEN `src/pages/LoginPage.tsx` — required-field block, generic 401 message, renders logo (fetch mocked).
-- [ ] 9.4 `apps/web/public/logo.svg` — placeholder wordmark.
-- [ ] 9.5 `App.tsx` — `/login` route + `ProtectedRoute` wiring.
-- [ ] 9.6 `i18n/locales/{en,es,ca}.json` — `auth.*` keys.
+- [x] 9.1 `src/auth/AuthProvider.tsx` — context calling `GET /auth/me`.
+- [x] 9.2 RED/GREEN `src/auth/ProtectedRoute.tsx` — redirect to `/login` when unauthenticated.
+- [x] 9.3 RED/GREEN `src/pages/LoginPage.tsx` — required-field block, generic 401 message, renders logo (fetch mocked).
+- [x] 9.4 `apps/web/public/logo.svg` — placeholder wordmark.
+- [x] 9.5 `App.tsx` — `/login` route + `ProtectedRoute` wiring.
+- [x] 9.6 `i18n/locales/{en,es,ca}.json` — `auth.*` keys.
 
 ## Phase 10: Docs
 

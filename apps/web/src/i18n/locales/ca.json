@@ -4,5 +4,16 @@
     "checking": "Comprovant...",
     "ok": "Tot funciona correctament",
     "error": "Alguna cosa no funciona"
+  },
+  "auth": {
+    "loginTitle": "Inicia sessió",
+    "emailLabel": "Correu electrònic",
+    "passwordLabel": "Contrasenya",
+    "submitLabel": "Inicia sessió",
+    "validationRequired": "El correu electrònic i la contrasenya són obligatoris.",
+    "validationInvalidEmail": "Introdueix un correu electrònic vàlid.",
+    "loginFailed": "Correu electrònic o contrasenya incorrectes.",
+    "logoAlt": "SF-Manager",
+    "logoutLabel": "Tanca sessió"
   }
 }

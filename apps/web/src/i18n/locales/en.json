@@ -4,5 +4,16 @@
     "checking": "Checking...",
     "ok": "All systems operational",
     "error": "Something is not working"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "submitLabel": "Sign in",
+    "validationRequired": "Email and password are required.",
+    "validationInvalidEmail": "Enter a valid email address.",
+    "loginFailed": "Invalid email or password.",
+    "logoAlt": "SF-Manager",
+    "logoutLabel": "Log out"
   }
 }
