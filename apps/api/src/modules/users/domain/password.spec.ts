@@ -33,4 +33,11 @@ describe('PlainPassword', () => {
     expect(password.toString()).toBe('[REDACTED]');
     expect(String(password)).toBe('[REDACTED]');
   });
+
+  it('does not expose the plaintext through enumeration (JSON.stringify)', () => {
+    const password = PlainPassword.create('correct-horse1');
+
+    expect(JSON.stringify(password)).toBe('{}');
+    expect(Object.keys(password)).toEqual([]);
+  });
 });

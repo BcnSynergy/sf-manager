@@ -9,7 +9,14 @@ import { WeakPasswordError } from './errors/weak-password.error';
 // non-domain import (packages/validation is pure TS/Zod, no framework, no
 // Prisma) to avoid two sources of truth.
 export class PlainPassword {
-  private constructor(private readonly raw: string) {}
+  // A real JS private field, not `private readonly` (TS-only, compiles to a
+  // plain enumerable property) — otherwise console.log(pw)/JSON.stringify(pw)
+  // print the plaintext directly, defeating the whole point of this VO.
+  #raw: string;
+
+  private constructor(raw: string) {
+    this.#raw = raw;
+  }
 
   static create(raw: string): PlainPassword {
     const result = passwordSchema.safeParse(raw);
@@ -23,7 +30,7 @@ export class PlainPassword {
   // (design.md Data Flow: PlainPassword.create(raw) -> PasswordHasher.hash).
   // toString() below is what protects it from accidental exposure elsewhere.
   get value(): string {
-    return this.raw;
+    return this.#raw;
   }
 
   toString(): string {
