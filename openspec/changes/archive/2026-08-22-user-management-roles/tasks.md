@@ -88,7 +88,7 @@ Chain strategy: stacked-to-main
 - [x] 7.3 RED/GREEN `login.use-case.ts`/`.spec.ts` — passes `role` to `TokenIssuer.sign`.
 - [x] 7.4 RED/GREEN `get-current-user.use-case.ts`/`.spec.ts` — maps `req.user` to `{id,email,role}`.
 - [x] 7.5 `dto/auth-user-response.dto.ts` — add `role`.
-- [ ] 7.6 Apply `openspec/changes/user-management-roles/specs/authentication/spec.md` delta onto `openspec/specs/authentication/spec.md` ("Session Introspection"). **Deferred to `sdd-archive`** per explicit orchestrator instruction for this PR — the delta already lives in the changes-scoped spec file; do not merge it into the archived spec here.
+- [x] 7.6 Apply `openspec/changes/user-management-roles/specs/authentication/spec.md` delta onto `openspec/specs/authentication/spec.md` ("Session Introspection"). **Archived to `sdd-archive`** at 2026-08-22 — the delta was merged into the main spec at archive time.
 - [x] 7.7 `test/auth.e2e-spec.ts` — `GET /auth/me` returns `{id,email,role}`; decoded access token carries `role`.
 
 ## Phase 8: Users E2E
@@ -105,3 +105,5 @@ Chain strategy: stacked-to-main
 - [x] 9.1 `apps/web/src/auth/AuthProvider.tsx` — `AuthUser` gains `role`.
 - [x] 9.2 RED/GREEN web test — `role` flows through `AuthProvider` (Vitest, `fetch` mocked).
 - [x] 9.3 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` — addendum: role staleness accepted (Decision 2), 4 roles declared-not-operational (Decision 5).
+
+**Status**: 58/58 tasks complete. All 9 implementation PRs merged to `main`. Archived 2026-08-22.
