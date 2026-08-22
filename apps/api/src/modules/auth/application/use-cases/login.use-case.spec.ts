@@ -24,7 +24,21 @@ describe('LoginUseCase', () => {
   let useCase: LoginUseCase;
 
   beforeEach(() => {
-    userRepository = { findByEmail: jest.fn(), save: jest.fn() };
+    userRepository = {
+      findByEmail: jest.fn(),
+      save: jest.fn(),
+      // user-management-roles PR 5 extended UserRepository with these
+      // members (design.md Interfaces/Contracts) — LoginUseCase only ever
+      // calls findByEmail/save, but the jest.Mocked<UserRepository> type
+      // requires a mock for every member.
+      findById: jest.fn(),
+      findAll: jest.fn(),
+      create: jest.fn(),
+      updateById: jest.fn(),
+      softDeleteById: jest.fn(),
+      countActiveByRole: jest.fn(),
+      transactional: jest.fn(),
+    };
     passwordHasher = {
       hash: jest.fn(),
       verify: jest.fn(),

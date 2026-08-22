@@ -64,12 +64,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Users Application (Use Cases)
 
-- [ ] 5.1 `user.repository.port.ts` — add `create`, `findById`, `findAll`, `updateById`, `softDeleteById`, `countActiveByRole`, `transactional`; keep `save` for the seed.
-- [ ] 5.2 RED/GREEN `create-user.use-case.ts` — `PlainPassword.create` -> hash -> `IdGenerator.next()` -> `repo.create`; duplicate email -> `EmailAlreadyInUseError`.
-- [ ] 5.3 RED/GREEN `list-users.use-case.ts` — returns `repo.findAll()`, no password hash in output.
-- [ ] 5.4 RED/GREEN `update-user.use-case.ts` — `transactional`: `updateById` + `countActiveByRole` + `assertSystemAdminRemains` when demoting away from `SYSTEM_ADMIN`.
-- [ ] 5.5 RED/GREEN `deactivate-user.use-case.ts` — `transactional`: `softDeleteById` + last-admin check.
-- [ ] 5.6 Unit tests use an in-memory fake repo whose `transactional` runs the callback inline.
+- [x] 5.1 `user.repository.port.ts` — add `create`, `findById`, `findAll`, `updateById`, `softDeleteById`, `countActiveByRole`, `transactional`; keep `save` for the seed.
+- [x] 5.2 RED/GREEN `create-user.use-case.ts` — `PlainPassword.create` -> hash -> `IdGenerator.next()` -> `repo.create`; duplicate email -> `EmailAlreadyInUseError`.
+- [x] 5.3 RED/GREEN `list-users.use-case.ts` — returns `repo.findAll()`, no password hash in output.
+- [x] 5.4 RED/GREEN `update-user.use-case.ts` — `transactional`: `updateById` + `countActiveByRole` + `assertSystemAdminRemains` when demoting away from `SYSTEM_ADMIN`.
+- [x] 5.5 RED/GREEN `deactivate-user.use-case.ts` — `transactional`: `softDeleteById` + last-admin check.
+- [x] 5.6 Unit tests use an in-memory fake repo whose `transactional` runs the callback inline.
 
 ## Phase 6: Users Infrastructure & Presentation
 
