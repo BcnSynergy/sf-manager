@@ -5,6 +5,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PrismaService } from '../../../shared/infrastructure/persistence/prisma.service';
+import { Public } from '../../../shared/presentation/decorators/public.decorator';
 
 // Deliberately not split into full domain/application/infrastructure layers —
 // this is a diagnostic endpoint proving the toolchain wiring works (the
@@ -15,6 +16,10 @@ import { PrismaService } from '../../../shared/infrastructure/persistence/prisma
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Public (design.md Decision 4/spec "Public Endpoint Opt-Out") — must stay
+  // reachable without a session once the global APP_GUARD is wired in
+  // (app.module.ts, PR 4).
+  @Public()
   @Get()
   @ApiOkResponse({ description: 'API and database are both reachable.' })
   @ApiServiceUnavailableResponse({
