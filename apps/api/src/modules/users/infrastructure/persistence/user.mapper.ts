@@ -10,6 +10,10 @@ export class UserMapper {
       id: record.id,
       email: record.email,
       passwordHash: record.passwordHash,
+      // Prisma's `$Enums.Role` is a string-literal union with the same
+      // values as the hand-written domain `Role` (design.md Decision 4) —
+      // structurally assignable with no cast.
+      role: record.role,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       deletedAt: record.deletedAt,
@@ -26,6 +30,7 @@ export class UserMapper {
       id: user.id,
       email: user.email,
       passwordHash: user.passwordHash,
+      role: user.role,
       deletedAt: user.deletedAt,
     };
   }

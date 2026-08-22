@@ -11,6 +11,7 @@ describe('LoginUseCase', () => {
     id: 'user-1',
     email: 'admin@example.com',
     passwordHash: 'real-argon2id-hash',
+    role: 'SYSTEM_ADMIN',
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,

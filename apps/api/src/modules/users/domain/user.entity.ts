@@ -1,3 +1,5 @@
+import { Role } from './role';
+
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
 // Fields mirror the Prisma `User` model (design.md Interfaces/Contracts),
 // mapped by UserMapper (infrastructure/persistence/user.mapper.ts).
@@ -5,6 +7,7 @@ export interface UserProps {
   id: string;
   email: string;
   passwordHash: string;
+  role: Role;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -14,6 +17,7 @@ export class User {
   readonly id: string;
   readonly email: string;
   readonly passwordHash: string;
+  readonly role: Role;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly deletedAt: Date | null;
@@ -22,6 +26,7 @@ export class User {
     this.id = props.id;
     this.email = props.email;
     this.passwordHash = props.passwordHash;
+    this.role = props.role;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;

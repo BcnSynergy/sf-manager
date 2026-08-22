@@ -11,10 +11,22 @@ datasource db {
   provider = "postgresql"
 }
 
+// design.md Decision 4/9: no `@default` — a required column added to a
+// non-empty table needs an explicit backfill, not a schema-level default
+// that would silently decide every future insert's role too.
+enum Role {
+  SYSTEM_ADMIN
+  MANAGER
+  MAINTENANCE_COMPANY_MANAGER
+  MAINTENANCE_TECHNICIAN
+  COMMUNITY_REPRESENTATIVE
+}
+
 model User {
   id           String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
   email        String    @unique // stored lowercase-normalized
   passwordHash String
+  role         Role // design.md Decision 9 — no @default, see migration
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime? // ADR-010

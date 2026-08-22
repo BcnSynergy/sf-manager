@@ -10,6 +10,7 @@ describe('UserMapper', () => {
         id: '01930000-0000-7000-8000-000000000001',
         email: 'admin@example.com',
         passwordHash: 'argon2id$hash',
+        role: 'SYSTEM_ADMIN' as const,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
         deletedAt: null,
@@ -21,6 +22,7 @@ describe('UserMapper', () => {
       expect(user.id).toBe(record.id);
       expect(user.email).toBe(record.email);
       expect(user.passwordHash).toBe(record.passwordHash);
+      expect(user.role).toBe('SYSTEM_ADMIN');
       expect(user.createdAt).toBe(record.createdAt);
       expect(user.updatedAt).toBe(record.updatedAt);
       expect(user.deletedAt).toBeNull();
@@ -32,6 +34,7 @@ describe('UserMapper', () => {
         id: '01930000-0000-7000-8000-000000000002',
         email: 'former-admin@example.com',
         passwordHash: 'argon2id$hash',
+        role: 'MANAGER' as const,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
         deletedAt,
@@ -44,11 +47,12 @@ describe('UserMapper', () => {
   });
 
   describe('toPersistence', () => {
-    it('maps a domain User entity to a Prisma create/update payload, including id', () => {
+    it('maps a domain User entity to a Prisma create/update payload, including id and role', () => {
       const user = new User({
         id: '01930000-0000-7000-8000-000000000001',
         email: 'admin@example.com',
         passwordHash: 'argon2id$hash',
+        role: 'SYSTEM_ADMIN',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
         deletedAt: null,
@@ -60,6 +64,7 @@ describe('UserMapper', () => {
         id: '01930000-0000-7000-8000-000000000001',
         email: 'admin@example.com',
         passwordHash: 'argon2id$hash',
+        role: 'SYSTEM_ADMIN',
         deletedAt: null,
       });
     });
