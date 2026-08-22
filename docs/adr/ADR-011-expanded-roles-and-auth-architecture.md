@@ -107,6 +107,51 @@ FRs, not designed here.
   single long-lived JWT, justified by the data being personal data of
   residents/technicians under GDPR.
 
+## Addendum (2026-08-21): `auth-minimal-skeleton` walking-skeleton deviations
+
+The `auth-minimal-skeleton` change (ADR-006 walking skeleton) implemented
+the first end-to-end login/logout slice against this ADR. It deliberately
+deviates from Decision 4 (Authentication) in three ways, each scoped to
+this slice and reversible without a rewrite. This addendum documents the
+deviations and their rationale; it does not revise the decision above —
+Passport, refresh-token rotation, and rate limiting remain the target
+shape.
+
+1. **`@nestjs/jwt` used directly, without Passport (`passport-jwt` /
+   `@nestjs/passport`).** The login guard is a single `AuthenticatedGuard`
+   class behind a `TokenIssuer` port (`sign`/`verify`), not a Passport
+   strategy. Passport would add four dependencies and a custom cookie
+   extractor to answer one boolean ("is this cookie a valid, non-revoked
+   token?"). Reversible: swapping `AuthenticatedGuard`'s body for
+   `AuthGuard('jwt')` later touches no controller, no `@Public()`
+   decorator, and no use case — the port boundary absorbs the change.
+
+2. **A single non-rotating access token (2h expiry) instead of the
+   access+refresh rotation described in Decision 4.** No refresh token
+   exists yet, so a 15-minute expiry (as originally specified) would mean
+   constant manual re-login with nothing to silently renew the session;
+   2 hours bounds a non-revocable-by-expiry token to roughly one working
+   session instead. The token is still delivered via an httpOnly cookie
+   (`sf_access_token`), matching Decision 4's eventual delivery mechanism
+   for the web client — adding a refresh endpoint later extends this
+   cookie-based flow rather than replacing it. Logout revokes the current
+   token explicitly via a minimal server-side deny-list (`RevokedToken`
+   table keyed on the token's `jti`), so at least explicit logout is not
+   purely wall-clock-bound.
+
+3. **No rate limiting (`@nestjs/throttler`) on the login endpoint yet.**
+   Decision 4 calls for it; this slice ships without it. This is an
+   accepted, time-boxed brute-force exposure window on `POST /auth/login`,
+   revisited alongside the refresh-token slice rather than blocking this
+   walking skeleton on it.
+
+For completeness, not as a deviation: this slice implements a single
+authenticated-yes/no guard with none of this ADR's five-role scoped RBAC
+model (`SYSTEM_ADMIN`/`MANAGER`/etc.) or `PermissionChecker` port yet.
+That is not a deviation from this ADR's authentication decision — it is
+the walking-skeleton scoping principle from ADR-006's addendum, and
+authorization is added per-entity in later slices as they need it.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort

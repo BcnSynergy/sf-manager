@@ -103,5 +103,5 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 
 ## Phase 10: Docs
 
-- [ ] 10.1 `README.md` — new env vars, `prisma:migrate`, `prisma:seed`.
-- [ ] 10.2 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` — addendum (no Passport, 2h non-rotating expiry, no rate limiting).
+- [x] 10.1 `README.md` — new env vars, `prisma:migrate`, `prisma:seed`.
+- [x] 10.2 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` — addendum (no Passport, 2h non-rotating expiry, no rate limiting).

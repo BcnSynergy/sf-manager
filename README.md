@@ -16,6 +16,8 @@ business features yet, just the toolchain wired end-to-end.
 2. Create `apps/api/.env` (git-ignored, not committed) with:
    ```
    DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"
+   JWT_SECRET="<a long random string>"
+   CORS_ORIGIN="http://localhost:5173"
    ```
    On Windows PowerShell, avoid `Out-File -Encoding utf8` — it adds a BOM
    that breaks Prisma's env parsing (`DATABASE_URL` silently "not found").
@@ -26,21 +28,40 @@ business features yet, just the toolchain wired end-to-end.
    If Docker Desktop is set to Windows containers, `docker compose up` will
    fail pulling `postgres:17-alpine` (Linux-only image). Switch with
    `docker desktop engine use linux` (or via the Docker Desktop tray icon).
+
+   Auth-related env vars (`apps/api`):
+   | Var | Required | Default | Notes |
+   |-----|----------|---------|-------|
+   | `JWT_SECRET` | Yes | — | App throws at boot without it. |
+   | `CORS_ORIGIN` | Yes | — | The web origin allowed to send credentialed requests (e.g. `http://localhost:5173` in dev). App throws at boot without it. |
+   | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
+   | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
+   | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
 3. Start Postgres:
    ```
    docker compose up -d
    ```
-4. Generate the Prisma client and push the (currently empty) schema:
+4. Generate the Prisma client, run the migration and seed an admin user:
    ```
    npm run prisma:generate -w apps/api
-   npm run prisma:push -w apps/api
+   npm exec -w apps/api -- prisma migrate dev
+   npm exec -w apps/api -- prisma db seed
    ```
+   The API doesn't yet expose a dedicated `prisma:migrate`/`prisma:seed`
+   npm script (only `prisma:generate`/`prisma:push` exist in
+   `apps/api/package.json`), so the Prisma CLI is invoked directly via
+   `npm exec`. `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` must be set in
+   `apps/api/.env` before running the seed step — that's the admin account
+   you'll log in with.
 5. Run everything:
    ```
    npm run dev
    ```
    - API: http://localhost:3000 (Swagger docs at `/docs`, health check at `/health`)
    - Web: http://localhost:5173
+
+   Everything beyond `/health` now requires being logged in as the seeded
+   admin — open http://localhost:5173, you'll be redirected to `/login`.
 
 ## Other commands
 
