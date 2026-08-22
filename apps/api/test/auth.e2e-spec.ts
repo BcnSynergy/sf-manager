@@ -91,6 +91,7 @@ describe('Auth (e2e)', () => {
         id: 'seeded-admin-id',
         email: ADMIN_EMAIL,
         passwordHash,
+        role: 'SYSTEM_ADMIN',
         createdAt: now,
         updatedAt: now,
         deletedAt: null,

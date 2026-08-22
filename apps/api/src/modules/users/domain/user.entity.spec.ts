@@ -12,6 +12,7 @@ describe('User', () => {
       id: '01930000-0000-7000-8000-000000000001',
       email: 'admin@example.com',
       passwordHash: 'argon2id$hash',
+      role: 'SYSTEM_ADMIN',
       createdAt,
       updatedAt,
       deletedAt: null,
@@ -20,6 +21,7 @@ describe('User', () => {
     expect(user.id).toBe('01930000-0000-7000-8000-000000000001');
     expect(user.email).toBe('admin@example.com');
     expect(user.passwordHash).toBe('argon2id$hash');
+    expect(user.role).toBe('SYSTEM_ADMIN');
     expect(user.createdAt).toBe(createdAt);
     expect(user.updatedAt).toBe(updatedAt);
     expect(user.isDeleted).toBe(false);
@@ -32,6 +34,7 @@ describe('User', () => {
       id: '01930000-0000-7000-8000-000000000002',
       email: 'former-admin@example.com',
       passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       deletedAt,
