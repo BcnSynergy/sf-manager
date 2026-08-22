@@ -40,6 +40,40 @@ class InMemoryUserRepository implements UserRepository {
     this.usersByEmail.set(user.email, user);
     return Promise.resolve();
   }
+
+  // --- Compile bridge only (user-management-roles PR 5). This auth-only
+  // e2e suite never exercises `/users` routes, so it has no need for the
+  // full CRUD surface — but `implements UserRepository` requires these
+  // members after PR 5 extended the port (design.md Interfaces/Contracts).
+  // A dedicated in-memory fake with a real implementation of these members
+  // lands in `test/users.e2e-spec.ts` (tasks.md 8.1).
+  findById(): Promise<User | null> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  findAll(): Promise<User[]> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  create(): Promise<void> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  updateById(): Promise<void> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  softDeleteById(): Promise<void> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  countActiveByRole(): Promise<number> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
+  transactional<T>(): Promise<T> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
 }
 
 class InMemoryTokenDenylist implements TokenDenylist {

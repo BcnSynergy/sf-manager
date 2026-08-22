@@ -38,4 +38,55 @@ export class PrismaUserRepository
       update: updateData,
     });
   }
+
+  // --- Compile bridge only (PR 5 -> PR 6). tasks.md Phase 6 (6.1)
+  // implements these for real against Postgres — unique-violation mapping,
+  // the ADR-010 default filter, and the SERIALIZABLE `$transaction` (P2034
+  // -> 409). PR 5 extended the UserRepository port (design.md Interfaces/
+  // Contracts) with these members; without a stub here the whole-project
+  // typecheck fails because this class `implements UserRepository`. No test
+  // in this repository exercises these stubs: unit tests use
+  // InMemoryUserRepository (PR 5), and the Prisma-backed coverage for these
+  // methods lands with their real implementation in PR 6.
+  findById(): Promise<User | null> {
+    throw new Error(
+      'PrismaUserRepository.findById is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  findAll(): Promise<User[]> {
+    throw new Error(
+      'PrismaUserRepository.findAll is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  create(): Promise<void> {
+    throw new Error(
+      'PrismaUserRepository.create is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  updateById(): Promise<void> {
+    throw new Error(
+      'PrismaUserRepository.updateById is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  softDeleteById(): Promise<void> {
+    throw new Error(
+      'PrismaUserRepository.softDeleteById is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  countActiveByRole(): Promise<number> {
+    throw new Error(
+      'PrismaUserRepository.countActiveByRole is not implemented yet — see tasks.md Phase 6',
+    );
+  }
+
+  transactional<T>(): Promise<T> {
+    throw new Error(
+      'PrismaUserRepository.transactional is not implemented yet — see tasks.md Phase 6',
+    );
+  }
 }
