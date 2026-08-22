@@ -1,7 +1,7 @@
 import { User } from '../../../users/domain/user.entity';
 import type { UserRepository } from '../../../users/application/ports/user.repository.port';
 import { InvalidCredentialsError } from '../../domain/invalid-credentials.error';
-import type { PasswordHasher } from '../ports/password-hasher.port';
+import type { PasswordHasher } from '../../../../shared/application/ports/password-hasher.port';
 import type { TokenDenylist } from '../ports/token-denylist.port';
 import type { TokenIssuer } from '../ports/token-issuer.port';
 import { LoginUseCase } from './login.use-case';

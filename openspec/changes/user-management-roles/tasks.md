@@ -41,12 +41,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Shared Infra Move + Authorization Primitives
 
-- [ ] 2.1 Move `password-hasher.port.ts` -> `shared/application/ports/password-hasher.port.ts` (token unchanged).
-- [ ] 2.2 Move `argon2-password.hasher.ts` + spec -> `shared/infrastructure/hashing/`.
-- [ ] 2.3 `shared/infrastructure/hashing/hashing.module.ts` — `@Global()`, mirrors `IdGeneratorModule`.
-- [ ] 2.4 `auth.module.ts` — drop moved hasher providers, import `HashingModule`; fix import paths in `login.use-case.ts`/`.spec.ts`.
-- [ ] 2.5 `shared/application/authorization/permission.ts` — `Permission` union (`user:create|read|update|delete`).
-- [ ] 2.6 `shared/presentation/decorators/require-permission.decorator.ts` — `@RequirePermission`, `PERMISSION_KEY`.
+- [x] 2.1 Move `password-hasher.port.ts` -> `shared/application/ports/password-hasher.port.ts` (token unchanged).
+- [x] 2.2 Move `argon2-password.hasher.ts` + spec -> `shared/infrastructure/hashing/`.
+- [x] 2.3 `shared/infrastructure/hashing/hashing.module.ts` — `@Global()`, mirrors `IdGeneratorModule`.
+- [x] 2.4 `auth.module.ts` — drop moved hasher providers, import `HashingModule`; fix import paths in `login.use-case.ts`/`.spec.ts`.
+- [x] 2.5 `shared/application/authorization/permission.ts` — `Permission` union (`user:create|read|update|delete`).
+- [x] 2.6 `shared/presentation/decorators/require-permission.decorator.ts` — `@RequirePermission`, `PERMISSION_KEY`.
 
 ## Phase 3: Authorization — Checker & Guard
 
