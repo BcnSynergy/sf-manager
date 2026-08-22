@@ -57,10 +57,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Users Domain
 
-- [ ] 4.1 `packages/validation/src/users/password.schema.ts` — `passwordSchema`: min 10 chars, >=1 letter, >=1 digit; export from `packages/validation/src/index.ts`.
-- [ ] 4.2 RED/GREEN `users/domain/password.ts` — `PlainPassword` VO: private ctor + `static create(raw)` throws `WeakPasswordError`; `toString()` returns `'[REDACTED]'`.
-- [ ] 4.3 RED/GREEN `users/domain/last-admin.policy.ts` — pure `assertSystemAdminRemains(activeAdminCount)`: 0 throws, >=1 passes.
-- [ ] 4.4 `users/domain/errors/{weak-password,email-already-in-use,last-system-admin}.error.ts`.
+- [x] 4.1 `packages/validation/src/users/password.schema.ts` — `passwordSchema`: min 10 chars, >=1 letter, >=1 digit; export from `packages/validation/src/index.ts`.
+- [x] 4.2 RED/GREEN `users/domain/password.ts` — `PlainPassword` VO: private ctor + `static create(raw)` throws `WeakPasswordError`; `toString()` returns `'[REDACTED]'`.
+- [x] 4.3 RED/GREEN `users/domain/last-admin.policy.ts` — pure `assertSystemAdminRemains(activeAdminCount)`: 0 throws, >=1 passes.
+- [x] 4.4 `users/domain/errors/{weak-password,email-already-in-use,last-system-admin}.error.ts`.
 
 ## Phase 5: Users Application (Use Cases)
 
