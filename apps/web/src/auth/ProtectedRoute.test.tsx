@@ -59,7 +59,7 @@ describe('ProtectedRoute', () => {
 
   it('renders the protected content when authenticated', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'admin@sf-manager.example' },
+      user: { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' },
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),

@@ -102,6 +102,6 @@ Chain strategy: stacked-to-main
 
 ## Phase 9: Web & Docs
 
-- [ ] 9.1 `apps/web/src/auth/AuthProvider.tsx` — `AuthUser` gains `role`.
-- [ ] 9.2 RED/GREEN web test — `role` flows through `AuthProvider` (Vitest, `fetch` mocked).
-- [ ] 9.3 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` — addendum: role staleness accepted (Decision 2), 4 roles declared-not-operational (Decision 5).
+- [x] 9.1 `apps/web/src/auth/AuthProvider.tsx` — `AuthUser` gains `role`.
+- [x] 9.2 RED/GREEN web test — `role` flows through `AuthProvider` (Vitest, `fetch` mocked).
+- [x] 9.3 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` — addendum: role staleness accepted (Decision 2), 4 roles declared-not-operational (Decision 5).
