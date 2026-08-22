@@ -4,11 +4,13 @@ import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import { HashingModule } from '../../shared/infrastructure/hashing/hashing.module';
 import { UsersModule } from '../users/users.module';
+import { PERMISSION_CHECKER } from './application/ports/permission-checker.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
 import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { RolePermissionChecker } from './infrastructure/authorization/role-permission.checker';
 import {
   AUTH_CONFIG,
   getAuthConfig,
@@ -17,6 +19,7 @@ import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
 import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
+import { PermissionsGuard } from './presentation/guards/permissions.guard';
 
 // design.md Decision 4: this module registers its own APP_GUARD — a Nest
 // module can provide APP_GUARD without being imported elsewhere. Wiring
@@ -59,7 +62,13 @@ import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },
+    { provide: PERMISSION_CHECKER, useClass: RolePermissionChecker },
     { provide: APP_GUARD, useClass: AuthenticatedGuard },
+    // design.md Decision 1: registration order matters — Nest runs APP_GUARD
+    // providers in the order they appear in this array, so PermissionsGuard
+    // MUST come immediately after AuthenticatedGuard to rely on
+    // AuthenticatedGuard having already attached `request.user`.
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AuthModule {}

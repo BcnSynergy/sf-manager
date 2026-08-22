@@ -50,10 +50,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Authorization — Checker & Guard
 
-- [ ] 3.1 `auth/application/ports/permission-checker.port.ts` — `PermissionChecker` + `PERMISSION_CHECKER` token.
-- [ ] 3.2 RED/GREEN `role-permission.checker.ts` — table-driven test: `SYSTEM_ADMIN` allowed all 4 perms, every other role denied on every perm (Decision 5, exhaustive `Record`).
-- [ ] 3.3 RED/GREEN `permissions.guard.ts` — no `@RequirePermission` metadata passes through; missing `req.user` -> 401 (fail-closed); wrong role -> 403 (mocked `ExecutionContext`).
-- [ ] 3.4 `auth.module.ts` — register `PermissionsGuard` as second `APP_GUARD`, immediately after `AuthenticatedGuard`; provide `PERMISSION_CHECKER`.
+- [x] 3.1 `auth/application/ports/permission-checker.port.ts` — `PermissionChecker` + `PERMISSION_CHECKER` token.
+- [x] 3.2 RED/GREEN `role-permission.checker.ts` — table-driven test: `SYSTEM_ADMIN` allowed all 4 perms, every other role denied on every perm (Decision 5, exhaustive `Record`).
+- [x] 3.3 RED/GREEN `permissions.guard.ts` — no `@RequirePermission` metadata passes through; missing `req.user` -> 401 (fail-closed); wrong role -> 403 (mocked `ExecutionContext`).
+- [x] 3.4 `auth.module.ts` — register `PermissionsGuard` as second `APP_GUARD`, immediately after `AuthenticatedGuard`; provide `PERMISSION_CHECKER`.
 
 ## Phase 4: Users Domain
 
