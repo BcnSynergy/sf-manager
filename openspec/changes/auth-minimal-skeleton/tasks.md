@@ -47,7 +47,7 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 - [x] 2.1 `prisma/schema.prisma` — add `User` and `RevokedToken` models per Interfaces/Contracts.
 - [x] 2.2 Run `prisma migrate dev` — first real migration.
 - [x] 2.3 `prisma.config.ts` — add `migrations.seed` command.
-- [ ] 2.4 `prisma/seed.ts` — DEFERRED to PR 3: `PASSWORD_HASHER`/`USER_REPOSITORY` don't exist until PR 3's `auth`/`users` modules; a stub that bootstraps DI but no-ops the actual seed would silently report success while inserting nothing (ADR-006: no fake/scaffolded code that pretends to work). `prisma.config.ts`'s `migrations.seed` command already points at this file — until PR 3 adds it, `prisma db seed` / the post-`migrate dev` seed hook fails loudly with a clear `Cannot find module` error, which is the intended, honest transitional state.
+- [ ] 2.4 `prisma/seed.ts` — DEFERRED to PR 4: `PASSWORD_HASHER`/`USER_REPOSITORY` DI tokens now exist (PR 3's `auth`/`users` modules), but `NestFactory.createApplicationContext(AppModule)` needs `AppModule` to actually wire `AuthModule`/`UsersModule` — that only happens in PR 4's app-wiring task. A stub that bootstraps DI but no-ops the actual seed would silently report success while inserting nothing (ADR-006: no fake/scaffolded code that pretends to work). `prisma.config.ts`'s `migrations.seed` command already points at this file — until PR 4 adds it, `prisma db seed` / the post-`migrate dev` seed hook fails loudly with a clear `Cannot find module` error, which is the intended, honest transitional state.
 
 ## Phase 3: `users` Module
 
@@ -60,27 +60,27 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 
 ## Phase 4: `auth` Module — Application
 
-- [ ] 4.1 `domain/invalid-credentials.error.ts`.
-- [ ] 4.2 `application/ports/password-hasher.port.ts`, `token-issuer.port.ts`, `token-denylist.port.ts`.
-- [ ] 4.3 RED/GREEN `login.use-case.ts` — cases: valid, wrong password, unknown email (dummy-hash path), soft-deleted (all identical failure).
-- [ ] 4.4 RED/GREEN `logout.use-case.ts` — revokes `jti` via `TokenDenylist.revoke(jti, exp)`.
-- [ ] 4.5 RED/GREEN `get-current-user.use-case.ts` — maps `req.user` to `{id,email}` only.
+- [x] 4.1 `domain/invalid-credentials.error.ts`.
+- [x] 4.2 `application/ports/password-hasher.port.ts`, `token-issuer.port.ts`, `token-denylist.port.ts`.
+- [x] 4.3 RED/GREEN `login.use-case.ts` — cases: valid, wrong password, unknown email (dummy-hash path), soft-deleted (all identical failure).
+- [x] 4.4 RED/GREEN `logout.use-case.ts` — revokes `jti` via `TokenDenylist.revoke(jti, exp)`.
+- [x] 4.5 RED/GREEN `get-current-user.use-case.ts` — maps `req.user` to `{id,email}` only.
 
 ## Phase 5: `auth` Module — Infrastructure
 
-- [ ] 5.1 `argon2-password.hasher.ts` — real hasher + pre-generated dummy-hash constant (same params).
-- [ ] 5.2 `jwt-token.issuer.ts` — signs `{sub,email,jti}`, `jti` via `uuid` `v4()`.
-- [ ] 5.3 RED/GREEN `prisma-token-denylist.adapter.ts` — `revoke()` as upsert keyed on `jti` (mocked Prisma test for idempotency).
-- [ ] 5.4 Integration test: `PrismaTokenDenylistAdapter.revoke()` twice against real test Postgres — no unique-constraint error.
-- [ ] 5.5 `auth.config.ts` — typed factory, throws on missing `JWT_SECRET`/`CORS_ORIGIN`.
+- [x] 5.1 `argon2-password.hasher.ts` — real hasher + pre-generated dummy-hash constant (same params).
+- [x] 5.2 `jwt-token.issuer.ts` — signs `{sub,email,jti}`, `jti` via `uuid` `v4()`.
+- [x] 5.3 RED/GREEN `prisma-token-denylist.adapter.ts` — `revoke()` as upsert keyed on `jti` (mocked Prisma test for idempotency).
+- [x] 5.4 Integration test: `PrismaTokenDenylistAdapter.revoke()` twice against real test Postgres — no unique-constraint error.
+- [x] 5.5 `auth.config.ts` — typed factory, throws on missing `JWT_SECRET`/`CORS_ORIGIN`.
 
 ## Phase 6: `auth` Module — Presentation
 
-- [ ] 6.1 `dto/login-request.dto.ts`, `dto/auth-user-response.dto.ts`.
-- [ ] 6.2 RED/GREEN `authenticated.guard.ts` — `@Public()` bypass, missing/expired/tampered cookie, valid-but-denylisted `jti`.
-- [ ] 6.3 `decorators/current-user.decorator.ts`.
-- [ ] 6.4 `auth.controller.ts` — `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`; `@ApiBody` for Zod schema.
-- [ ] 6.5 `auth.module.ts` — registers `APP_GUARD`.
+- [x] 6.1 `dto/login-request.dto.ts`, `dto/auth-user-response.dto.ts`.
+- [x] 6.2 RED/GREEN `authenticated.guard.ts` — `@Public()` bypass, missing/expired/tampered cookie, valid-but-denylisted `jti`.
+- [x] 6.3 `decorators/current-user.decorator.ts`.
+- [x] 6.4 `auth.controller.ts` — `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`; `@ApiBody` for Zod schema.
+- [x] 6.5 `auth.module.ts` — registers `APP_GUARD`.
 
 ## Phase 7: App Wiring
 
