@@ -92,6 +92,7 @@ describe('AuthenticatedGuard', () => {
     tokenIssuer.verify.mockResolvedValue({
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 9_999_999_999,
     });
@@ -108,6 +109,7 @@ describe('AuthenticatedGuard', () => {
     tokenIssuer.verify.mockResolvedValue({
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 9_999_999_999,
     });
@@ -124,6 +126,7 @@ describe('AuthenticatedGuard', () => {
     const payload: VerifiedAccessToken = {
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 9_999_999_999,
     };

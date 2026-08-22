@@ -75,13 +75,14 @@ describe('LoginUseCase', () => {
     expect(passwordHasher.verifyAgainstDummy).not.toHaveBeenCalled();
     expect(tokenDenylist.deleteExpired).toHaveBeenCalledTimes(1);
     // jti is generated internally by the TokenIssuer adapter (Decision 9) —
-    // this use case only supplies {sub, email}, never a jti.
+    // this use case only supplies {sub, email, role}, never a jti.
     expect(tokenIssuer.sign).toHaveBeenCalledWith({
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
     });
     expect(result).toEqual({
-      user: { id: 'user-1', email: 'admin@example.com' },
+      user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed.jwt.token',
     });
   });
@@ -100,7 +101,7 @@ describe('LoginUseCase', () => {
     );
 
     expect(result).toEqual({
-      user: { id: 'user-1', email: 'admin@example.com' },
+      user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed.jwt.token',
     });
   });

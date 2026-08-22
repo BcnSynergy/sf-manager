@@ -180,6 +180,7 @@ describe('Auth (e2e)', () => {
       expect(response.body).toEqual({
         id: 'seeded-admin-id',
         email: ADMIN_EMAIL,
+        role: 'SYSTEM_ADMIN',
       });
 
       const setCookieHeader = response.headers['set-cookie'];
@@ -195,6 +196,21 @@ describe('Auth (e2e)', () => {
       expect(
         cookies.some((cookie: string) => cookie.includes('HttpOnly')),
       ).toBe(true);
+
+      // tasks.md 7.7: the signed access token itself must carry `role`, not
+      // just the response body — decode-only (no signature verification
+      // needed here; JwtTokenIssuer's own unit tests already cover
+      // sign/verify round-tripping `role`).
+      const accessTokenCookie = cookies.find((cookie: string) =>
+        cookie.startsWith(`${ACCESS_TOKEN_COOKIE_NAME}=`),
+      ) as string;
+      const rawToken = accessTokenCookie
+        .split(';')[0]
+        .slice(`${ACCESS_TOKEN_COOKIE_NAME}=`.length);
+      const decodedPayload = JSON.parse(
+        Buffer.from(rawToken.split('.')[1], 'base64url').toString('utf8'),
+      ) as { sub: string; email: string; role: string };
+      expect(decodedPayload.role).toBe('SYSTEM_ADMIN');
     });
 
     it('rejects wrong credentials with a generic 401', () => {
@@ -210,7 +226,7 @@ describe('Auth (e2e)', () => {
       return request(app.getHttpServer()).get('/auth/me').expect(401);
     });
 
-    it('returns {id, email} for a valid session', async () => {
+    it('returns {id, email, role} for a valid session', async () => {
       const agent = request.agent(app.getHttpServer());
       await agent
         .post('/auth/login')
@@ -222,6 +238,7 @@ describe('Auth (e2e)', () => {
       expect(response.body).toEqual({
         id: 'seeded-admin-id',
         email: ADMIN_EMAIL,
+        role: 'SYSTEM_ADMIN',
       });
     });
   });
