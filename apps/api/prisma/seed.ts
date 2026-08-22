@@ -50,6 +50,10 @@ async function seed() {
       id: idGenerator.generate(),
       email,
       passwordHash,
+      // design.md Decision 9 — the migration backfills every existing row
+      // to MANAGER (fail-closed, zero permissions); only the seeded admin
+      // is explicitly promoted to SYSTEM_ADMIN, and only here.
+      role: 'SYSTEM_ADMIN',
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
