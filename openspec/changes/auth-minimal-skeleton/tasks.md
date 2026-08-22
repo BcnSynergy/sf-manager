@@ -47,7 +47,7 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 - [x] 2.1 `prisma/schema.prisma` — add `User` and `RevokedToken` models per Interfaces/Contracts.
 - [x] 2.2 Run `prisma migrate dev` — first real migration.
 - [x] 2.3 `prisma.config.ts` — add `migrations.seed` command.
-- [ ] 2.4 `prisma/seed.ts` — DEFERRED to PR 4: `PASSWORD_HASHER`/`USER_REPOSITORY` DI tokens now exist (PR 3's `auth`/`users` modules), but `NestFactory.createApplicationContext(AppModule)` needs `AppModule` to actually wire `AuthModule`/`UsersModule` — that only happens in PR 4's app-wiring task. A stub that bootstraps DI but no-ops the actual seed would silently report success while inserting nothing (ADR-006: no fake/scaffolded code that pretends to work). `prisma.config.ts`'s `migrations.seed` command already points at this file — until PR 4 adds it, `prisma db seed` / the post-`migrate dev` seed hook fails loudly with a clear `Cannot find module` error, which is the intended, honest transitional state.
+- [x] 2.4 `prisma/seed.ts` — bootstraps `NestFactory.createApplicationContext(AppModule)`, parses `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` through the full `loginRequestSchema`, resolves `ID_GENERATOR`/`PASSWORD_HASHER`/`USER_REPOSITORY` from the app context, upserts via `UserRepository.save()`, calls `app.close()`. `prisma db seed` verified working end-to-end (idempotent — reran twice, one row).
 
 ## Phase 3: `users` Module
 
@@ -84,13 +84,13 @@ Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in orde
 
 ## Phase 7: App Wiring
 
-- [ ] 7.1 `health.controller.ts` — add `@Public()`.
-- [ ] 7.2 `app.module.ts` — import `UsersModule`, `AuthModule`, `IdGeneratorModule`.
-- [ ] 7.3 `main.ts` — `cookie-parser`, `enableCors({ origin: process.env.CORS_ORIGIN, credentials: true })`.
+- [x] 7.1 `health.controller.ts` — add `@Public()`.
+- [x] 7.2 `app.module.ts` — import `UsersModule`, `AuthModule`, `IdGeneratorModule`.
+- [x] 7.3 `main.ts` — `cookie-parser`, `enableCors({ origin: process.env.CORS_ORIGIN, credentials: true })`.
 
 ## Phase 8: API E2E
 
-- [ ] 8.1 E2E (supertest, in-memory `USER_REPOSITORY`/`TOKEN_DENYLIST`): login→cookie→`/auth/me` 2xx; no cookie 401; `/health` public; logout then reuse 401; cross-origin request asserts CORS headers. Test bootstrap re-applies `cookie-parser`+`enableCors` explicitly.
+- [x] 8.1 E2E (supertest, in-memory `USER_REPOSITORY`/`TOKEN_DENYLIST`): login→cookie→`/auth/me` 2xx; no cookie 401; `/health` public; logout then reuse 401; cross-origin request asserts CORS headers. Test bootstrap re-applies `cookie-parser`+`enableCors` explicitly.
 
 ## Phase 9: Web
 
