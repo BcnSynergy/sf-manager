@@ -15,6 +15,11 @@ export const roleSchema = z.enum([
   'COMMUNITY_REPRESENTATIVE',
 ]);
 
+// Single source of truth for the Role type across every client of this
+// package (ADR-015). apps/web imports this type-only — it never imports
+// zod directly, keeping the runtime dependency confined to this package.
+export type Role = z.infer<typeof roleSchema>;
+
 // design.md Interfaces/Contracts (POST /users). Trim/lowercase before the
 // email-format check, mirroring loginRequestSchema. `password` reuses the
 // same passwordSchema imported by users/domain/password.ts's PlainPassword

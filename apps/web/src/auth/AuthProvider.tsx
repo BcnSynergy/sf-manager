@@ -5,8 +5,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import type { Role } from '@sf-manager/validation';
 
-export type AuthUser = { id: string; email: string };
+// role is signed into the JWT and returned as-is by both POST /auth/login
+// and GET /auth/me (design.md "Data Flow") — the frontend does not decide
+// or cache it independently. It may lag a role change made elsewhere in
+// the system by up to the access token's lifetime; see design.md Decision 2
+// and the ADR-011 addendum ("role staleness accepted").
+export type AuthUser = { id: string; email: string; role: Role };
 
 type AuthContextValue = {
   user: AuthUser | null;

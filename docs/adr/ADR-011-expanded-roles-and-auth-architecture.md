@@ -152,6 +152,52 @@ That is not a deviation from this ADR's authentication decision — it is
 the walking-skeleton scoping principle from ADR-006's addendum, and
 authorization is added per-entity in later slices as they need it.
 
+## Addendum (2026-08-22): `user-management-roles` walking-skeleton deviations
+
+The `user-management-roles` change (ADR-006 walking skeleton) implemented
+the first `SYSTEM_ADMIN`-only slice of user management and authorization
+against this ADR's Decisions 1, 3, and 4. It confirms two deliberate,
+scoped deviations already implied by Decision 4's addendum above, and
+extends them with the design decisions made for this slice.
+
+1. **Role staleness in the access token is accepted, not closed, in this
+   slice.** `role` is signed into the access token at login and returned
+   as-is by `GET /auth/me` — the token is not re-verified against the
+   database on every request. If a `SYSTEM_ADMIN` changes another user's
+   role via `PATCH /users/:id`, that user's already-issued token keeps
+   authorizing on the OLD role until it expires (bounded by the
+   `auth-minimal-skeleton` addendum's 2h access-token lifetime) or the
+   user logs out. This is the same tradeoff the `auth-minimal-skeleton`
+   addendum already accepted for revocation (no `TokenDenylist` /
+   `userId` index for bulk invalidation) — extended here to cover role
+   changes, not only logout. **Rejected**: reusing `TokenDenylist` to
+   force re-authentication on every role change (no `userId` column to
+   bulk-invalidate by user, same gap already documented above); a new
+   per-user invalidation epoch (`User.sessionsValidFrom`). Both are
+   deferred, tracked as the same follow-up: introduce the epoch alongside
+   refresh tokens, at which point role changes can invalidate the
+   affected user's active sessions without a new mechanism.
+
+2. **Four of the five declared roles (`MANAGER`,
+   `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`,
+   `COMMUNITY_REPRESENTATIVE`) are declared in the `Role` enum and the
+   `PermissionChecker`'s rule table, but carry zero operational
+   permissions in this slice.** `ROLE_PERMISSIONS: Record<Role,
+   Permission[]>` maps each of the four to `[]` explicitly — not omitted,
+   not defaulted, not inferred — so the exhaustive `Record` type forces
+   every future permission or role addition to reconsider each one
+   instead of silently forgetting it. Only `SYSTEM_ADMIN` can reach
+   `POST/GET/PATCH/DELETE /users` in this slice; the other four roles
+   authenticate successfully (login and `/auth/me` work for any role) but
+   are authorized for nothing beyond that. Decision 2's `MANAGER`
+   capability-flag model (`managerCapabilities`) and the scoped CRUD
+   described for `MAINTENANCE_COMPANY_MANAGER` are **not implemented
+   yet** — this slice only proves the guard/checker seam end-to-end for
+   one role, per the ADR-006 walking-skeleton scoping principle. Each
+   inert role becomes operational in its own later slice, adding entries
+   to `ROLE_PERMISSIONS` rather than changing the authorization
+   architecture itself.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
