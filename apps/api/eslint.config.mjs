@@ -58,4 +58,15 @@ export default tseslint.config(
       'no-restricted-imports': 'off',
     },
   },
+  // Jest mock objects (`{ method: jest.fn() }`) typed against a port
+  // interface trigger this rule as a false positive whenever a test passes
+  // `expect(mock.method)` — the property access is flagged as an "unbound
+  // method" even though it's a plain jest.fn(), not a real class method
+  // that depends on `this`. Standard practice for typescript-eslint + jest.
+  {
+    files: ['src/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );

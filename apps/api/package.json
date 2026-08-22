@@ -25,10 +25,12 @@
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@sf-manager/validation": "*",
     "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
     "reflect-metadata": "^0.2.2",
@@ -74,8 +76,24 @@
       "/node_modules/",
       "\\.integration\\.spec\\.ts$"
     ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!@sf-manager/)"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "module": "commonjs",
+            "moduleResolution": "node",
+            "resolvePackageJsonExports": false,
+            "ignoreDeprecations": "6.0"
+          }
+        }
+      ]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
