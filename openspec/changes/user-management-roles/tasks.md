@@ -73,13 +73,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 6: Users Infrastructure & Presentation
 
-- [ ] 6.1 `prisma-user.repository.ts` — implement `create` (unique-violation -> `EmailAlreadyInUseError`), `findById`, `findAll` (`withDefaultFilter`, Decision 10), `updateById`, `softDeleteById`, `countActiveByRole`, `transactional` (`$transaction({ isolationLevel: 'Serializable' })`, `P2034` -> 409).
-- [ ] 6.2 Integration test (real test Postgres): `create` rejects duplicate email without upserting.
-- [ ] 6.3 Integration test: `countActiveByRole` excludes soft-deleted; two concurrent transactions each demoting one of the last two admins -> exactly one commits.
-- [ ] 6.4 Integration test: `findAll` excludes soft-deleted users (seed two, soft-delete one, assert only surviving id returned).
-- [ ] 6.5 `packages/validation/src/users/{create-user.schema.ts,update-user.schema.ts}`.
-- [ ] 6.6 `presentation/dto/**` + `presentation/users.controller.ts` — `POST/GET/PATCH/DELETE /users`, `@RequirePermission('user:*')` per route, explicit `@ApiBody` schemas (ADR-015).
-- [ ] 6.7 `users.module.ts` — register controller + 4 use-case providers.
+- [x] 6.1 `prisma-user.repository.ts` — implement `create` (unique-violation -> `EmailAlreadyInUseError`), `findById`, `findAll` (`withDefaultFilter`, Decision 10), `updateById`, `softDeleteById`, `countActiveByRole`, `transactional` (`$transaction({ isolationLevel: 'Serializable' })`, `P2034` -> 409).
+- [x] 6.2 Integration test (real test Postgres): `create` rejects duplicate email without upserting.
+- [x] 6.3 Integration test: `countActiveByRole` excludes soft-deleted; two concurrent transactions each demoting one of the last two admins -> exactly one commits.
+- [x] 6.4 Integration test: `findAll` excludes soft-deleted users (seed two, soft-delete one, assert only surviving id returned).
+- [x] 6.5 `packages/validation/src/users/{create-user.schema.ts,update-user.schema.ts}`.
+- [x] 6.6 `presentation/dto/**` + `presentation/users.controller.ts` — `POST/GET/PATCH/DELETE /users`, `@RequirePermission('user:*')` per route, explicit `@ApiBody` schemas (ADR-015).
+- [x] 6.7 `users.module.ts` — register controller + 4 use-case providers.
 
 ## Phase 7: Auth Wiring — Role in JWT & /auth/me (breaking)
 
