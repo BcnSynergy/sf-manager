@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
+import { HashingModule } from '../../shared/infrastructure/hashing/hashing.module';
 import { UsersModule } from '../users/users.module';
-import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
 import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
@@ -13,7 +13,6 @@ import {
   AUTH_CONFIG,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
-import { Argon2PasswordHasher } from './infrastructure/hashing/argon2-password.hasher';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
@@ -32,6 +31,11 @@ import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
 @Module({
   imports: [
     UsersModule,
+    // design.md Decision 7: HashingModule is @Global(), imported here (not
+    // app.module.ts) so PASSWORD_HASHER becomes available app-wide as soon
+    // as AuthModule is instantiated — mirrors the IdGeneratorModule
+    // precedent (app.module.ts), just registered from this module instead.
+    HashingModule,
     JwtModule.registerAsync({
       useFactory: () => {
         const config = getAuthConfig();
@@ -53,7 +57,6 @@ import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
     LogoutUseCase,
     GetCurrentUserUseCase,
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
-    { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },
     { provide: APP_GUARD, useClass: AuthenticatedGuard },

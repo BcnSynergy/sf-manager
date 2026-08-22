@@ -9,7 +9,7 @@ import {
 import {
   PASSWORD_HASHER,
   type PasswordHasher,
-} from '../src/modules/auth/application/ports/password-hasher.port';
+} from '../src/shared/application/ports/password-hasher.port';
 import {
   USER_REPOSITORY,
   type UserRepository,

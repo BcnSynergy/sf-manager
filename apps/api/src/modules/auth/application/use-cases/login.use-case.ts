@@ -7,7 +7,7 @@ import { InvalidCredentialsError } from '../../domain/invalid-credentials.error'
 import {
   PASSWORD_HASHER,
   type PasswordHasher,
-} from '../ports/password-hasher.port';
+} from '../../../../shared/application/ports/password-hasher.port';
 import {
   TOKEN_DENYLIST,
   type TokenDenylist,
