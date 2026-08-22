@@ -50,6 +50,14 @@ describe('PermissionsGuard', () => {
     expect(permissionChecker.can).not.toHaveBeenCalled();
   });
 
+  it('rejects with 403 when the authenticated user has no role yet (pre-PR-7 token)', () => {
+    reflector.getAllAndOverride.mockReturnValue('user:create');
+    const context = buildContext({ role: undefined as unknown as string });
+
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(permissionChecker.can).not.toHaveBeenCalled();
+  });
+
   it('rejects with 403 when the caller role lacks the required permission', () => {
     reflector.getAllAndOverride.mockReturnValue('user:create');
     permissionChecker.can.mockReturnValue(false);

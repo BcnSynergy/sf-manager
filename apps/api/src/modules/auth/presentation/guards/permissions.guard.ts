@@ -55,7 +55,13 @@ export class PermissionsGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    if (!this.permissionChecker.can(request.user.role, requiredPermission)) {
+    // Fail-closed: an authenticated request whose token predates `role`
+    // being signed into the JWT (pre-PR-7) must not reach the permission
+    // checker with `role: undefined` — that would throw, not reject cleanly.
+    if (
+      !request.user.role ||
+      !this.permissionChecker.can(request.user.role, requiredPermission)
+    ) {
       throw new ForbiddenException();
     }
 
