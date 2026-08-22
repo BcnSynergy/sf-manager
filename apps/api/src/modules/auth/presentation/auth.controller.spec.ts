@@ -46,7 +46,7 @@ describe('AuthController', () => {
 
   it('sets the access-token cookie and returns only the public user fields on successful login', async () => {
     loginUseCase.execute.mockResolvedValue({
-      user: { id: 'user-1', email: 'admin@example.com' },
+      user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed-jwt',
     });
 
@@ -70,7 +70,11 @@ describe('AuthController', () => {
         maxAge: 7_200_000,
       },
     );
-    expect(result).toEqual({ id: 'user-1', email: 'admin@example.com' });
+    expect(result).toEqual({
+      id: 'user-1',
+      email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
+    });
   });
 
   it('maps InvalidCredentialsError to a generic 401 and does not set a cookie', async () => {
@@ -111,15 +115,17 @@ describe('AuthController', () => {
     expect(response.clearCookie).not.toHaveBeenCalled();
   });
 
-  it('me maps the guard-attached user to {id, email} via GetCurrentUserUseCase', () => {
+  it('me maps the guard-attached user to {id, email, role} via GetCurrentUserUseCase', () => {
     getCurrentUserUseCase.execute.mockReturnValue({
       id: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
     });
 
     const result = controller.getMe({
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 123,
     });
@@ -127,9 +133,14 @@ describe('AuthController', () => {
     expect(getCurrentUserUseCase.execute).toHaveBeenCalledWith({
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 123,
     });
-    expect(result).toEqual({ id: 'user-1', email: 'admin@example.com' });
+    expect(result).toEqual({
+      id: 'user-1',
+      email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
+    });
   });
 });

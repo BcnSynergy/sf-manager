@@ -25,6 +25,7 @@ describe('LogoutUseCase', () => {
     const payload: VerifiedAccessToken = {
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 1_700_000_000,
     };
@@ -59,6 +60,7 @@ describe('LogoutUseCase', () => {
     const payload: VerifiedAccessToken = {
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 1_700_000_000,
     };
@@ -80,6 +82,7 @@ describe('LogoutUseCase', () => {
     const payload: VerifiedAccessToken = {
       sub: 'user-1',
       email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
       jti: 'jti-1',
       exp: 1_700_000_000,
     };

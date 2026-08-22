@@ -83,13 +83,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 7: Auth Wiring — Role in JWT & /auth/me (breaking)
 
-- [ ] 7.1 `auth/application/ports/token-issuer.port.ts` — payload gains `role`.
-- [ ] 7.2 RED/GREEN `jwt-token.issuer.ts`/`.spec.ts` — signs `{sub,email,role,jti}`.
-- [ ] 7.3 RED/GREEN `login.use-case.ts`/`.spec.ts` — passes `role` to `TokenIssuer.sign`.
-- [ ] 7.4 RED/GREEN `get-current-user.use-case.ts`/`.spec.ts` — maps `req.user` to `{id,email,role}`.
-- [ ] 7.5 `dto/auth-user-response.dto.ts` — add `role`.
-- [ ] 7.6 Apply `openspec/changes/user-management-roles/specs/authentication/spec.md` delta onto `openspec/specs/authentication/spec.md` ("Session Introspection").
-- [ ] 7.7 `test/auth.e2e-spec.ts` — `GET /auth/me` returns `{id,email,role}`; decoded access token carries `role`.
+- [x] 7.1 `auth/application/ports/token-issuer.port.ts` — payload gains `role`.
+- [x] 7.2 RED/GREEN `jwt-token.issuer.ts`/`.spec.ts` — signs `{sub,email,role,jti}`.
+- [x] 7.3 RED/GREEN `login.use-case.ts`/`.spec.ts` — passes `role` to `TokenIssuer.sign`.
+- [x] 7.4 RED/GREEN `get-current-user.use-case.ts`/`.spec.ts` — maps `req.user` to `{id,email,role}`.
+- [x] 7.5 `dto/auth-user-response.dto.ts` — add `role`.
+- [ ] 7.6 Apply `openspec/changes/user-management-roles/specs/authentication/spec.md` delta onto `openspec/specs/authentication/spec.md` ("Session Introspection"). **Deferred to `sdd-archive`** per explicit orchestrator instruction for this PR — the delta already lives in the changes-scoped spec file; do not merge it into the archived spec here.
+- [x] 7.7 `test/auth.e2e-spec.ts` — `GET /auth/me` returns `{id,email,role}`; decoded access token carries `role`.
 
 ## Phase 8: Users E2E
 

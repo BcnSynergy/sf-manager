@@ -1,3 +1,5 @@
+import type { Role } from '../../../users/domain/role';
+
 // Port (application layer, ADR-002/013). Concrete adapter: JwtTokenIssuer
 // (infrastructure/token/jwt-token.issuer.ts), backed by @nestjs/jwt
 // (design.md Decision 2).
@@ -10,9 +12,15 @@
 // touches the `uuid` library directly — that would repeat the exact
 // "application layer bypassing a port" pattern the IdGenerator port exists
 // to prevent (PR 1, Decision 3).
+//
+// `role` (user-management-roles PR 7, design.md Interfaces/Contracts) is
+// signed at login time so PermissionsGuard (PR 3/6) never needs a DB read to
+// authorize a request. Accepted staleness: a role change is only reflected
+// once the holder's token expires or they log in again (design.md Decision 2).
 export interface AccessTokenPayload {
   sub: string;
   email: string;
+  role: Role;
 }
 
 // What verify() resolves to once the JWT library has decoded and validated
