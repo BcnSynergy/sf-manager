@@ -93,12 +93,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 8: Users E2E
 
-- [ ] 8.1 `test/users.e2e-spec.ts` — build in-memory fake `UserRepository` implementing the full port (incl. `transactional`).
-- [ ] 8.2 Fake `findAll` MUST replicate the `deletedAt: null` exclusion filter by hand (Decision 10 puts this filter only in `PrismaUserRepository`/`SoftDeletableRepository` — a fake that returns all rows would make the "soft-deleted excluded" e2e scenario pass even if the real filter broke). Write a unit test on the fake asserting `findAll` excludes a soft-deleted seed row.
-- [ ] 8.3 E2E: admin CRUD happy paths (create/list/update/deactivate), no password hash in any response.
-- [ ] 8.4 E2E: non-admin authenticated caller -> 403 on every `/users` route; anonymous -> 401 (guard order per authorization spec).
-- [ ] 8.5 E2E: deactivating/demoting the last active `SYSTEM_ADMIN` -> rejected, state unchanged; deactivating one of two admins -> 2xx.
-- [ ] 8.6 E2E: `DELETE /users/:id` then `GET /users` no longer lists that user.
+- [x] 8.1 `test/users.e2e-spec.ts` — in-memory fake `UserRepository` implementing the full port (incl. `transactional`). Reuses the shared `InMemoryUserRepository` from `application/use-cases/testing/` (already fully implements the port) instead of hand-rolling a second fake.
+- [x] 8.2 Fake `findAll` MUST replicate the `deletedAt: null` exclusion filter by hand (Decision 10 puts this filter only in `PrismaUserRepository`/`SoftDeletableRepository` — a fake that returns all rows would make the "soft-deleted excluded" e2e scenario pass even if the real filter broke). Write a unit test on the fake asserting `findAll` excludes a soft-deleted seed row. **Verified**: `in-memory-user.repository.spec.ts` (new) confirms the shared fake already correctly filters — 2/2 tests passing (exclusion + triangulation case).
+- [x] 8.3 E2E: admin CRUD happy paths (create/list/update/deactivate), no password hash in any response.
+- [x] 8.4 E2E: non-admin authenticated caller -> 403 on every `/users` route; anonymous -> 401 (guard order per authorization spec).
+- [x] 8.5 E2E: deactivating/demoting the last active `SYSTEM_ADMIN` -> rejected, state unchanged; deactivating one of two admins -> 2xx.
+- [x] 8.6 E2E: `DELETE /users/:id` then `GET /users` no longer lists that user.
 
 ## Phase 9: Web & Docs
 
