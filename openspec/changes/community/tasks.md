@@ -64,12 +64,12 @@ Chain strategy: stacked-to-main
 - [x] 5.5 `community.module.ts` providers/controller; register in `app.module.ts`.
 
 ## Phase 6: Representative Application (PR 6)
-- [ ] 6.1 `community-representative.repository.port.ts` — `Symbol` token; `transactional()` only here.
-- [ ] 6.2 RED/GREEN `add-representative.use-case.ts` — eligibility gate; 409 `AssignmentAlreadyExistsError` if pair exists.
-- [ ] 6.3 RED/GREEN `deactivate-representative.use-case.ts`.
-- [ ] 6.4 RED/GREEN `reactivate-representative.use-case.ts` — exclusivity swap inside `transactional()`; rejects soft-deleted user (404 via `findById`).
-- [ ] 6.5 Cover multi-community warning (`countActiveByUser > 1`) in 6.2/6.4 specs; no-warning first-activation case.
-- [ ] 6.6 `in-memory-community-representative.repository.ts` fake — snapshot/rollback `transactional()`, invariant parity.
+- [x] 6.1 `community-representative.repository.port.ts` — `Symbol` token; `transactional()` only here.
+- [x] 6.2 RED/GREEN `add-representative.use-case.ts` — eligibility gate; 409 `AssignmentAlreadyExistsError` if pair exists.
+- [x] 6.3 RED/GREEN `deactivate-representative.use-case.ts`.
+- [x] 6.4 RED/GREEN `reactivate-representative.use-case.ts` — exclusivity swap inside `transactional()`; rejects soft-deleted user (404 via `findById`).
+- [x] 6.5 Cover multi-community warning (`countActiveByUser > 1`) in 6.2/6.4 specs; no-warning first-activation case.
+- [x] 6.6 `in-memory-community-representative.repository.ts` fake — snapshot/rollback `transactional()`, invariant parity.
 
 ## Phase 7: Soft-Delete Cascade (PR 7)
 - [ ] 7.1 Extend `soft-delete-community.use-case.ts`: `findActiveByCommunity` → `countActiveByUser` → `setDeactivatedAt` when `==1`, no-op when `>1`.
