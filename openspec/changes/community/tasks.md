@@ -72,8 +72,8 @@ Chain strategy: stacked-to-main
 - [x] 6.6 `in-memory-community-representative.repository.ts` fake — snapshot/rollback `transactional()`, invariant parity.
 
 ## Phase 7: Soft-Delete Cascade (PR 7)
-- [ ] 7.1 Extend `soft-delete-community.use-case.ts`: `findActiveByCommunity` → `countActiveByUser` → `setDeactivatedAt` when `==1`, no-op when `>1`.
-- [ ] 7.2 RED/GREEN unit tests: sole-community rep deactivated / active-elsewhere untouched / already-inactive record untouched / technicians unaffected.
+- [x] 7.1 Extend `soft-delete-community.use-case.ts`: `findActiveByCommunity` → `countActiveByUser` → `setDeactivatedAt` when `==1`, no-op when `>1`.
+- [x] 7.2 RED/GREEN unit tests: sole-community rep deactivated / active-elsewhere untouched / already-inactive record untouched / technicians unaffected.
 
 ## Phase 8: Representative Infra & Presentation (PR 8)
 - [ ] 8.1 `prisma-community-representative.repository.ts` — `transactional()` via `$transaction(SERIALIZABLE)`, `P2034`→`TransactionConflictError`; mapper.
