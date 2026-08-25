@@ -26,8 +26,8 @@ Chain strategy: stacked-to-main
 | 4 | Community application: port + 4 CRUD use cases + fake | PR 4 | Depends on PR 2 |
 | 5 | Community infra+presentation: Prisma adapter, controller CRUD, DTOs, module wiring, validation schemas | PR 5 | Depends on PR 3, PR 4 |
 | 6 | Representative application: port (w/ `transactional`) + 3 use cases + fake w/ snapshot rollback | PR 6 | Depends on PR 2 |
-| 7 | Soft-delete cascade: extend `SoftDeleteCommunityUseCase` using representative port | PR 7 | Depends on PR 5, PR 6; unit-tested via fakes only |
-| 8 | Representative infra+presentation: Prisma adapter (SERIALIZABLE), controller routes, DTOs | PR 8 | Depends on PR 6; parallel to PR 9 |
+| 7 | Soft-delete cascade: extend `SoftDeleteCommunityUseCase` using representative port; Prisma adapter (SERIALIZABLE) + mapper pulled forward from PR 8 to fix a DI-bootstrap defect | PR 7 | Depends on PR 5, PR 6; unit-tested via fakes, adapter via real-Postgres integration test |
+| 8 | Representative presentation only: controller routes, DTOs (adapter moved to PR 7) | PR 8 | Depends on PR 7; parallel to PR 9 |
 | 9 | Technician application+infra+presentation: port + 3 use cases + fake + adapter + controller routes | PR 9 | Depends on PR 2, PR 5; parallel to PR 8 |
 | 10 | List assignments: `GET .../representatives`, `GET .../technicians` | PR 10 | Depends on PR 8, PR 9 |
 | 11 | E2E suite | PR 11 | Depends on all prior units |
@@ -71,13 +71,17 @@ Chain strategy: stacked-to-main
 - [x] 6.5 Cover multi-community warning (`countActiveByUser > 1`) in 6.2/6.4 specs; no-warning first-activation case.
 - [x] 6.6 `in-memory-community-representative.repository.ts` fake — snapshot/rollback `transactional()`, invariant parity.
 
-## Phase 7: Soft-Delete Cascade (PR 7)
-- [ ] 7.1 Extend `soft-delete-community.use-case.ts`: `findActiveByCommunity` → `countActiveByUser` → `setDeactivatedAt` when `==1`, no-op when `>1`.
-- [ ] 7.2 RED/GREEN unit tests: sole-community rep deactivated / active-elsewhere untouched / already-inactive record untouched / technicians unaffected.
+## Phase 7: Soft-Delete Cascade + Representative Persistence (PR 7)
+- [x] 7.1 Extend `soft-delete-community.use-case.ts`: `findActiveByCommunity` → `countActiveByUser` → `setDeactivatedAt` when `==1`, no-op when `>1`.
+- [x] 7.2 RED/GREEN unit tests: sole-community rep deactivated / active-elsewhere untouched / already-inactive record untouched / technicians unaffected.
+- [x] 7.3 Fix (fresh-context review, post-7.1/7.2): `community.module.ts` never bound `COMMUNITY_REPRESENTATIVE_REPOSITORY`, so `SoftDeleteCommunityUseCase`'s new dependency broke `AppModule`'s Nest DI bootstrap entirely. Pulled 8.1 and 8.2 forward from PR 8 into this PR (see notes below) so `main` stays bootable after every merge (stacked-to-main). Added a permanent regression test, `apps/api/src/app.module.spec.ts`, asserting `Test.createTestingModule({ imports: [AppModule] }).compile()` succeeds.
+- [x] 7.4 Fix (2nd fresh-context review, post-7.3): (a) `isUniqueViolationOn` relied on `error.meta.target`, which Prisma 7's `@prisma/adapter-pg` never populates for either unique constraint on `CommunityRepresentative` — verified empirically the violated columns actually surface under `error.meta.driverAdapterError.cause.constraint.fields`. `create()` always fell through to `AssignmentAlreadyExistsError`, and `setDeactivatedAt()` had no working fallback at all. Replaced with an inverted, driver-adapter-aware check: only a P2002 matching the plain `(communityId, userId)` pair maps to `AssignmentAlreadyExistsError`; every other P2002 on this table maps to `TransactionConflictError`. (b) The "two concurrent `transactional()` activations" integration test never produced a genuine conflict across repeated runs (the second transaction's read always observed the first's already-committed write). Redesigned with an explicit read barrier forcing both transactions to complete their read before either writes, and tightened assertions to require exactly one fulfilled and one rejected result (matching `PrismaUserRepository`'s equivalent test). Verified across 7 consecutive runs, no flakiness.
 
-## Phase 8: Representative Infra & Presentation (PR 8)
-- [ ] 8.1 `prisma-community-representative.repository.ts` — `transactional()` via `$transaction(SERIALIZABLE)`, `P2034`→`TransactionConflictError`; mapper.
-- [ ] 8.2 Integration: `SERIALIZABLE` conflict→409; partial index present in `pg_indexes`; concurrent double-activation leaves exactly one active.
+**Note**: 8.1 and 8.2 below were pulled forward into PR 7 (not PR 8) to fix the DI-bootstrap defect in 7.3 — a temporary in-memory stub was rejected as unsafe (a singleton fake wouldn't reflect real DB state). Their original numbering is kept for traceability; they are NOT part of PR 8's scope.
+- [x] 8.1 `prisma-community-representative.repository.ts` — `transactional()` via `$transaction(SERIALIZABLE)`, `P2034`→`TransactionConflictError`; mapper. **(pulled forward into PR 7)**
+- [x] 8.2 Integration: `SERIALIZABLE` conflict→409; partial index present in `pg_indexes`; concurrent double-activation leaves exactly one active. **(pulled forward into PR 7)**
+
+## Phase 8: Representative Presentation Only (PR 8)
 - [ ] 8.3 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../representatives` + DTOs (warning payload) + Swagger.
 
 ## Phase 9: Technician Application, Infra & Presentation (PR 9)
