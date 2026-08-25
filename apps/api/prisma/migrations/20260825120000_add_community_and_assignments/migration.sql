@@ -59,3 +59,22 @@ CREATE UNIQUE INDEX "CommunityTechnician_communityId_userId_key" ON "CommunityTe
 -- operation this index never fires; a `P2002` on its name maps to the same
 -- `TransactionConflictError`/409 as a `P2034` serialization failure.
 CREATE UNIQUE INDEX "CommunityRepresentative_one_active_per_community" ON "CommunityRepresentative"("communityId") WHERE "deactivatedAt" IS NULL;
+
+-- Hand-edited migration (fresh-context review of PR 1, applied before merge):
+-- referential integrity for the assignment tables. `schema.prisma` has no
+-- `@relation` fields here (mirroring the `users` module's zero-Prisma-relation
+-- convention), so — same as the partial unique index above — these FK
+-- constraints are INVISIBLE to Prisma's migration diffing.
+--
+-- WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate this
+-- migration file or diff schema.prisma against the database in a way that
+-- could DROP these constraints — Prisma has no knowledge of them.
+--
+-- `ON DELETE RESTRICT` (the default) is correct: `User` and `Community` rows
+-- are never hard-deleted (ADR-010 soft delete), so the referenced row always
+-- still physically exists — RESTRICT simply matches that invariant rather
+-- than needing to fire.
+ALTER TABLE "CommunityRepresentative" ADD CONSTRAINT "CommunityRepresentative_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CommunityRepresentative" ADD CONSTRAINT "CommunityRepresentative_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CommunityTechnician" ADD CONSTRAINT "CommunityTechnician_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CommunityTechnician" ADD CONSTRAINT "CommunityTechnician_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
