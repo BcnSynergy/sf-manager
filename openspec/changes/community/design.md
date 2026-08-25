@@ -234,3 +234,10 @@ backfilled. Rollback = revert the branch and drop the three tables plus
       in this controller to set a precedent either way, so this was left
       as-is per ADR-006 walking-skeleton discipline. Revisit if a client
       ever needs to distinguish "empty" from "does not exist."
+- [ ] (PR11) Two E2E coverage gaps noted on review, both already proven
+      at the unit level (Phase 7/9) so not behavioral gaps, just E2E
+      completeness gaps: (a) the soft-delete cascade E2E scenario doesn't
+      re-verify that technician assignments are left untouched, and
+      (b) there's no E2E happy-path for reactivating a technician (only
+      the 404-soft-deleted-user and auth-guard cases are covered
+      end-to-end). Add if a future slice touches this behavior again.
