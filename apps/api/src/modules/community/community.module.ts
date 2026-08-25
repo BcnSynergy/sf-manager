@@ -2,15 +2,20 @@ import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 import { COMMUNITY_REPOSITORY } from './application/ports/community.repository.port';
 import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from './application/ports/community-representative.repository.port';
+import { COMMUNITY_TECHNICIAN_REPOSITORY } from './application/ports/community-technician.repository.port';
 import { AddRepresentativeUseCase } from './application/use-cases/add-representative.use-case';
+import { AddTechnicianUseCase } from './application/use-cases/add-technician.use-case';
 import { CreateCommunityUseCase } from './application/use-cases/create-community.use-case';
 import { DeactivateRepresentativeUseCase } from './application/use-cases/deactivate-representative.use-case';
+import { DeactivateTechnicianUseCase } from './application/use-cases/deactivate-technician.use-case';
 import { ListCommunitiesUseCase } from './application/use-cases/list-communities.use-case';
 import { ReactivateRepresentativeUseCase } from './application/use-cases/reactivate-representative.use-case';
+import { ReactivateTechnicianUseCase } from './application/use-cases/reactivate-technician.use-case';
 import { SoftDeleteCommunityUseCase } from './application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from './application/use-cases/update-community.use-case';
 import { PrismaCommunityRepository } from './infrastructure/persistence/prisma-community.repository';
 import { PrismaCommunityRepresentativeRepository } from './infrastructure/persistence/prisma-community-representative.repository';
+import { PrismaCommunityTechnicianRepository } from './infrastructure/persistence/prisma-community-technician.repository';
 import { CommunityController } from './presentation/community.controller';
 
 // design.md File Changes (PR 5): registers the admin-only /communities CRUD
@@ -23,11 +28,16 @@ import { CommunityController } from './presentation/community.controller';
 // it, `Test.createTestingModule({ imports: [AppModule] }).compile()` throws
 // (see app.module.spec.ts).
 //
-// UsersModule import (tasks.md 8.3): AddRepresentativeUseCase and
-// ReactivateRepresentativeUseCase both inject USER_REPOSITORY (eligibility
-// gate + the soft-deleted-user 404, design.md "Where the settled policies
-// live in code") — exported by UsersModule the same way AuthModule already
+// UsersModule import (tasks.md 8.3, 9.6): AddRepresentativeUseCase/
+// AddTechnicianUseCase and ReactivateRepresentativeUseCase/
+// ReactivateTechnicianUseCase all inject USER_REPOSITORY (eligibility gate
+// + the soft-deleted-user 404, design.md "Where the settled policies live
+// in code") — exported by UsersModule the same way AuthModule already
 // consumes it for LoginUseCase.
+//
+// COMMUNITY_TECHNICIAN_REPOSITORY (tasks.md 9.1/9.5): bound to the Prisma
+// adapter, mirroring COMMUNITY_REPRESENTATIVE_REPOSITORY — the technician
+// use cases resolve this token the same way, just without transactional().
 @Module({
   imports: [UsersModule],
   controllers: [CommunityController],
@@ -37,6 +47,10 @@ import { CommunityController } from './presentation/community.controller';
       provide: COMMUNITY_REPRESENTATIVE_REPOSITORY,
       useClass: PrismaCommunityRepresentativeRepository,
     },
+    {
+      provide: COMMUNITY_TECHNICIAN_REPOSITORY,
+      useClass: PrismaCommunityTechnicianRepository,
+    },
     CreateCommunityUseCase,
     ListCommunitiesUseCase,
     UpdateCommunityUseCase,
@@ -44,7 +58,14 @@ import { CommunityController } from './presentation/community.controller';
     AddRepresentativeUseCase,
     DeactivateRepresentativeUseCase,
     ReactivateRepresentativeUseCase,
+    AddTechnicianUseCase,
+    DeactivateTechnicianUseCase,
+    ReactivateTechnicianUseCase,
   ],
-  exports: [COMMUNITY_REPOSITORY, COMMUNITY_REPRESENTATIVE_REPOSITORY],
+  exports: [
+    COMMUNITY_REPOSITORY,
+    COMMUNITY_REPRESENTATIVE_REPOSITORY,
+    COMMUNITY_TECHNICIAN_REPOSITORY,
+  ],
 })
 export class CommunityModule {}

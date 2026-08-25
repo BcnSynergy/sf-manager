@@ -40,3 +40,14 @@ export const addRepresentativeSchema = z.object({
 });
 
 export type AddRepresentativeRequest = z.infer<typeof addRepresentativeSchema>;
+
+// design.md Decision 4 (POST /communities/:id/technicians): same shape as
+// addRepresentativeSchema — only `userId` is accepted in the body
+// (tasks.md 9.6). Declared separately, not aliased, so the two request
+// types can diverge independently if a future slice adds
+// technician-specific fields (ADR-006 — no premature abstraction).
+export const addTechnicianSchema = z.object({
+  userId: z.string().trim().min(1),
+});
+
+export type AddTechnicianRequest = z.infer<typeof addTechnicianSchema>;
