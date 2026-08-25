@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ConflictException,
   Delete,
   Get,
   HttpCode,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -21,19 +23,30 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  addRepresentativeSchema,
   createCommunitySchema,
   updateCommunitySchema,
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
+import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
+import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
 import { CreateCommunityUseCase } from '../application/use-cases/create-community.use-case';
+import { DeactivateRepresentativeUseCase } from '../application/use-cases/deactivate-representative.use-case';
 import { ListCommunitiesUseCase } from '../application/use-cases/list-communities.use-case';
+import { ReactivateRepresentativeUseCase } from '../application/use-cases/reactivate-representative.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
+import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
+import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
+import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
+import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
+import type { AddRepresentativeRequestDto } from './dto/add-representative-request.dto';
 import type { CreateCommunityRequestDto } from './dto/create-community-request.dto';
 import type { UpdateCommunityRequestDto } from './dto/update-community-request.dto';
 import { CommunityResponseDto } from './dto/community-response.dto';
+import { RepresentativeResponseDto } from './dto/representative-response.dto';
 
 const LOCALE_ENUM = ['en', 'es', 'ca'];
 
@@ -53,6 +66,9 @@ export class CommunityController {
     private readonly listCommunitiesUseCase: ListCommunitiesUseCase,
     private readonly updateCommunityUseCase: UpdateCommunityUseCase,
     private readonly softDeleteCommunityUseCase: SoftDeleteCommunityUseCase,
+    private readonly addRepresentativeUseCase: AddRepresentativeUseCase,
+    private readonly deactivateRepresentativeUseCase: DeactivateRepresentativeUseCase,
+    private readonly reactivateRepresentativeUseCase: ReactivateRepresentativeUseCase,
   ) {}
 
   @Post()
@@ -130,11 +146,120 @@ export class CommunityController {
     }
   }
 
+  // design.md Decision 4 (POST /communities/:id/representatives): body is
+  // just `{ userId }` — auto-deactivates the incumbent for this community
+  // (exclusivity swap) and may carry a multi-community warning.
+  @Post(':id/representatives')
+  @RequirePermission('community:assign')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['userId'],
+      properties: { userId: { type: 'string' } },
+    },
+  })
+  @ApiCreatedResponse({ type: RepresentativeResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Community or user not found.' })
+  @ApiConflictResponse({
+    description:
+      'Assignment already exists, user is not eligible, or a concurrent conflicting change occurred.',
+  })
+  async addRepresentative(
+    @Param('id') communityId: string,
+    @Body(new ZodValidationPipe(addRepresentativeSchema))
+    body: AddRepresentativeRequestDto,
+  ): Promise<RepresentativeResponseDto> {
+    try {
+      return await this.addRepresentativeUseCase.execute({
+        communityId,
+        userId: body.userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
+  // design.md Decision 4 (DELETE .../representatives/:userId): mirrors
+  // DELETE /users/:id — deactivate, not delete; the record stays reactivable.
+  @Delete(':id/representatives/:userId')
+  @RequirePermission('community:assign')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Representative deactivated.' })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Assignment not found.' })
+  async deactivateRepresentative(
+    @Param('id') communityId: string,
+    @Param('userId') userId: string,
+  ): Promise<void> {
+    try {
+      await this.deactivateRepresentativeUseCase.execute({
+        communityId,
+        userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
+  // design.md Decision 4 (POST .../representatives/:userId/reactivate):
+  // re-applies exclusivity against an EXISTING pair; 404 if the pair was
+  // never created or the associated user is soft-deleted (spec.md
+  // "Reactivation rejected for a soft-deleted user").
+  @Post(':id/representatives/:userId/reactivate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('community:assign')
+  @ApiOkResponse({ type: RepresentativeResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
+  @ApiConflictResponse({
+    description:
+      'User is not eligible, or a concurrent conflicting change occurred.',
+  })
+  async reactivateRepresentative(
+    @Param('id') communityId: string,
+    @Param('userId') userId: string,
+  ): Promise<RepresentativeResponseDto> {
+    try {
+      return await this.reactivateRepresentativeUseCase.execute({
+        communityId,
+        userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
   // Shared by update() and softDelete() — both mutate an existing community
   // looked up by id.
   private mapMutationError(error: unknown): unknown {
     if (error instanceof CommunityNotFoundError) {
       return new NotFoundException(error.message);
+    }
+    return error;
+  }
+
+  // Shared by addRepresentative()/deactivateRepresentative()/
+  // reactivateRepresentative() (tasks.md 8.3) — mirrors mapMutationError's
+  // shape but covers the wider set of errors an assignment use case can
+  // throw (design.md Data Flow, "Where the settled policies live in code").
+  private mapAssignmentError(error: unknown): unknown {
+    if (
+      error instanceof CommunityNotFoundError ||
+      error instanceof UserNotFoundError ||
+      error instanceof AssignmentNotFoundError
+    ) {
+      return new NotFoundException(error.message);
+    }
+    if (
+      error instanceof AssignmentAlreadyExistsError ||
+      error instanceof IneligibleRoleError ||
+      error instanceof TransactionConflictError
+    ) {
+      return new ConflictException(error.message);
     }
     return error;
   }

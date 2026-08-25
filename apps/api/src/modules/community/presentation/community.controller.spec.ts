@@ -1,10 +1,18 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
+import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
 import { CreateCommunityUseCase } from '../application/use-cases/create-community.use-case';
+import { DeactivateRepresentativeUseCase } from '../application/use-cases/deactivate-representative.use-case';
 import { ListCommunitiesUseCase } from '../application/use-cases/list-communities.use-case';
+import { ReactivateRepresentativeUseCase } from '../application/use-cases/reactivate-representative.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
+import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
+import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
+import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
+import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import { CommunityController } from './community.controller';
 
 describe('CommunityController', () => {
@@ -12,6 +20,9 @@ describe('CommunityController', () => {
   const listCommunitiesUseCase = { execute: jest.fn() };
   const updateCommunityUseCase = { execute: jest.fn() };
   const softDeleteCommunityUseCase = { execute: jest.fn() };
+  const addRepresentativeUseCase = { execute: jest.fn() };
+  const deactivateRepresentativeUseCase = { execute: jest.fn() };
+  const reactivateRepresentativeUseCase = { execute: jest.fn() };
 
   let controller: CommunityController;
 
@@ -29,6 +40,18 @@ describe('CommunityController', () => {
         {
           provide: SoftDeleteCommunityUseCase,
           useValue: softDeleteCommunityUseCase,
+        },
+        {
+          provide: AddRepresentativeUseCase,
+          useValue: addRepresentativeUseCase,
+        },
+        {
+          provide: DeactivateRepresentativeUseCase,
+          useValue: deactivateRepresentativeUseCase,
+        },
+        {
+          provide: ReactivateRepresentativeUseCase,
+          useValue: reactivateRepresentativeUseCase,
         },
       ],
     }).compile();
@@ -146,6 +169,187 @@ describe('CommunityController', () => {
       await expect(controller.softDelete('missing-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('addRepresentative', () => {
+    it('delegates to AddRepresentativeUseCase with communityId + userId', async () => {
+      addRepresentativeUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+
+      const result = await controller.addRepresentative('community-1', {
+        userId: 'user-1',
+      });
+
+      expect(addRepresentativeUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toEqual({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+    });
+
+    it('returns the warning payload when the use case emits one', async () => {
+      addRepresentativeUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+        warning: {
+          code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES',
+          communityCount: 2,
+        },
+      });
+
+      const result = await controller.addRepresentative('community-1', {
+        userId: 'user-1',
+      });
+
+      expect(result.warning).toEqual({
+        code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES',
+        communityCount: 2,
+      });
+    });
+
+    it('maps CommunityNotFoundError to 404', async () => {
+      addRepresentativeUseCase.execute.mockRejectedValue(
+        new CommunityNotFoundError(),
+      );
+
+      await expect(
+        controller.addRepresentative('missing-community', {
+          userId: 'user-1',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps UserNotFoundError to 404', async () => {
+      addRepresentativeUseCase.execute.mockRejectedValue(
+        new UserNotFoundError(),
+      );
+
+      await expect(
+        controller.addRepresentative('community-1', {
+          userId: 'missing-user',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps AssignmentAlreadyExistsError to 409', async () => {
+      addRepresentativeUseCase.execute.mockRejectedValue(
+        new AssignmentAlreadyExistsError(),
+      );
+
+      await expect(
+        controller.addRepresentative('community-1', { userId: 'user-1' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps IneligibleRoleError to 409', async () => {
+      addRepresentativeUseCase.execute.mockRejectedValue(
+        new IneligibleRoleError('REPRESENTATIVE', 'MANAGER'),
+      );
+
+      await expect(
+        controller.addRepresentative('community-1', { userId: 'user-1' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps TransactionConflictError to 409', async () => {
+      addRepresentativeUseCase.execute.mockRejectedValue(
+        new TransactionConflictError(),
+      );
+
+      await expect(
+        controller.addRepresentative('community-1', { userId: 'user-1' }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('deactivateRepresentative', () => {
+    it('delegates to DeactivateRepresentativeUseCase with communityId + userId', async () => {
+      deactivateRepresentativeUseCase.execute.mockResolvedValue(undefined);
+
+      const result = await controller.deactivateRepresentative(
+        'community-1',
+        'user-1',
+      );
+
+      expect(deactivateRepresentativeUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('maps AssignmentNotFoundError to 404', async () => {
+      deactivateRepresentativeUseCase.execute.mockRejectedValue(
+        new AssignmentNotFoundError(),
+      );
+
+      await expect(
+        controller.deactivateRepresentative('community-1', 'missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('reactivateRepresentative', () => {
+    it('delegates to ReactivateRepresentativeUseCase with communityId + userId', async () => {
+      reactivateRepresentativeUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+
+      const result = await controller.reactivateRepresentative(
+        'community-1',
+        'user-1',
+      );
+
+      expect(reactivateRepresentativeUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toEqual({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+    });
+
+    it('maps AssignmentNotFoundError to 404', async () => {
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(
+        new AssignmentNotFoundError(),
+      );
+
+      await expect(
+        controller.reactivateRepresentative('community-1', 'missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps UserNotFoundError to 404 (soft-deleted user)', async () => {
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(
+        new UserNotFoundError(),
+      );
+
+      await expect(
+        controller.reactivateRepresentative('community-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps TransactionConflictError to 409', async () => {
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(
+        new TransactionConflictError(),
+      );
+
+      await expect(
+        controller.reactivateRepresentative('community-1', 'user-1'),
+      ).rejects.toThrow(ConflictException);
     });
   });
 });

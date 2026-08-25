@@ -82,7 +82,7 @@ Chain strategy: stacked-to-main
 - [x] 8.2 Integration: `SERIALIZABLE` conflict→409; partial index present in `pg_indexes`; concurrent double-activation leaves exactly one active. **(pulled forward into PR 7)**
 
 ## Phase 8: Representative Presentation Only (PR 8)
-- [ ] 8.3 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../representatives` + DTOs (warning payload) + Swagger.
+- [x] 8.3 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../representatives` + DTOs (warning payload) + Swagger.
 
 ## Phase 9: Technician Application, Infra & Presentation (PR 9)
 - [ ] 9.1 `community-technician.repository.port.ts` — no `transactional`, no `countActiveByUser`.
