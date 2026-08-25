@@ -38,11 +38,11 @@ Chain strategy: stacked-to-main
 - [x] 1.3 Verify migration applies cleanly in dev.
 
 ## Phase 2: Domain Layer (PR 2)
-- [ ] 2.1 RED/GREEN `community.entity.ts`/`.spec.ts` — hand-written, zero Prisma (ADR-013).
-- [ ] 2.2 RED/GREEN `community-representative.entity.ts`/`.spec.ts`.
-- [ ] 2.3 RED/GREEN `community-technician.entity.ts`/`.spec.ts`.
-- [ ] 2.4 RED/GREEN `assignment-eligibility.policy.ts`/`.spec.ts` — `assertEligibleFor(role, kind)`, table-driven over roles × kind.
-- [ ] 2.5 `domain/errors/{community-not-found,assignment-not-found,assignment-already-exists,ineligible-role,transaction-conflict}.error.ts`.
+- [x] 2.1 RED/GREEN `community.entity.ts`/`.spec.ts` — hand-written, zero Prisma (ADR-013).
+- [x] 2.2 RED/GREEN `community-representative.entity.ts`/`.spec.ts`.
+- [x] 2.3 RED/GREEN `community-technician.entity.ts`/`.spec.ts`.
+- [x] 2.4 RED/GREEN `assignment-eligibility.policy.ts`/`.spec.ts` — `assertEligibleFor(role, kind)`, table-driven over roles × kind.
+- [x] 2.5 `domain/errors/{community-not-found,assignment-not-found,assignment-already-exists,ineligible-role,transaction-conflict}.error.ts`.
 
 ## Phase 3: Authorization (PR 3)
 - [ ] 3.1 `shared/application/authorization/permission.ts` — add `community:create|read|update|delete|assign`.
