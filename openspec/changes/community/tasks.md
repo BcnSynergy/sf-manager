@@ -97,14 +97,16 @@ Chain strategy: stacked-to-main
 - [x] 10.2 Test: response includes both active and deactivated records.
 
 ## Phase 11: E2E Suite (PR 11)
-- [ ] 11.1 `community.e2e-spec.ts` — CRUD happy paths.
-- [ ] 11.2 E2E: soft-delete cascade — sole-community rep deactivated vs. active-elsewhere untouched.
-- [ ] 11.3 E2E: eligibility rejection (wrong role) for representative and technician adds.
-- [ ] 11.4 E2E: exclusivity swap + reactivation + multi-community warning present/absent.
-- [ ] 11.5 E2E: reactivation rejected for a soft-deleted user (rep and technician).
-- [ ] 11.6 E2E: accepted eligibility drift — role change via `/users` leaves assignment untouched.
-- [ ] 11.7 E2E: 401 unauth / 403 non-admin on every `/communities` route; `ROLE_PERMISSIONS` non-admin rows still `[]`.
-- [ ] 11.8 E2E: multiple technicians active in same community + same technician active across communities, no warning.
+- [x] 11.1 `community.e2e-spec.ts` — CRUD happy paths.
+- [x] 11.2 E2E: soft-delete cascade — sole-community rep deactivated vs. active-elsewhere untouched.
+- [x] 11.3 E2E: eligibility rejection (wrong role) for representative and technician adds.
+- [x] 11.4 E2E: exclusivity swap + reactivation + multi-community warning present/absent.
+- [x] 11.5 E2E: reactivation rejected for a soft-deleted user (rep and technician).
+- [x] 11.6 E2E: accepted eligibility drift — role change via `/users` leaves assignment untouched.
+- [x] 11.7 E2E: 401 unauth / 403 non-admin on every `/communities` route; `ROLE_PERMISSIONS` non-admin rows still `[]`.
+- [x] 11.8 E2E: multiple technicians active in same community + same technician active across communities, no warning.
+
+**Note (deviation from prompt, not from design.md)**: this suite is hermetic (in-memory repository fakes overriding `COMMUNITY_REPOSITORY`/`COMMUNITY_REPRESENTATIVE_REPOSITORY`/`COMMUNITY_TECHNICIAN_REPOSITORY`/`USER_REPOSITORY`/`TOKEN_DENYLIST`, `PrismaService` stubbed), matching `design.md`'s own Testing Strategy row ("mirroring `users.e2e-spec.ts`") and the established convention in `test/users.e2e-spec.ts` / `test/auth.e2e-spec.ts`. No real Postgres is used by this suite — real-DB coverage for the concurrency/index guarantees already lives in the Phase 7/8/9 `*.integration.spec.ts` files.
 
 ## Rules Applied
 - Strict TDD: RED/GREEN pairs on all logic-bearing files (entities, policy, use cases, mappers, guards); migrations/DTOs/module wiring are mechanical, no RED/GREEN needed.
