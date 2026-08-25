@@ -6,6 +6,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   NotFoundException,
   Param,
   Patch,
@@ -41,6 +42,14 @@ import { ReactivateRepresentativeUseCase } from '../application/use-cases/reacti
 import { ReactivateTechnicianUseCase } from '../application/use-cases/reactivate-technician.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
+import {
+  COMMUNITY_REPRESENTATIVE_REPOSITORY,
+  type CommunityRepresentativeRepository,
+} from '../application/ports/community-representative.repository.port';
+import {
+  COMMUNITY_TECHNICIAN_REPOSITORY,
+  type CommunityTechnicianRepository,
+} from '../application/ports/community-technician.repository.port';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
 import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
@@ -52,7 +61,9 @@ import type { CreateCommunityRequestDto } from './dto/create-community-request.d
 import type { UpdateCommunityRequestDto } from './dto/update-community-request.dto';
 import { CommunityResponseDto } from './dto/community-response.dto';
 import { RepresentativeResponseDto } from './dto/representative-response.dto';
+import { RepresentativeListItemDto } from './dto/representative-list-item.dto';
 import { TechnicianResponseDto } from './dto/technician-response.dto';
+import { TechnicianListItemDto } from './dto/technician-list-item.dto';
 
 const LOCALE_ENUM = ['en', 'es', 'ca'];
 
@@ -78,6 +89,14 @@ export class CommunityController {
     private readonly addTechnicianUseCase: AddTechnicianUseCase,
     private readonly deactivateTechnicianUseCase: DeactivateTechnicianUseCase,
     private readonly reactivateTechnicianUseCase: ReactivateTechnicianUseCase,
+    // tasks.md 10.1: list-assignments routes read straight from the
+    // repository ports (design.md "controller composes listByCommunity()
+    // directly, NO dedicated use case" — per design's 10-use-case count,
+    // this deliberately stays a thin controller-level composition).
+    @Inject(COMMUNITY_REPRESENTATIVE_REPOSITORY)
+    private readonly communityRepresentativeRepository: CommunityRepresentativeRepository,
+    @Inject(COMMUNITY_TECHNICIAN_REPOSITORY)
+    private readonly communityTechnicianRepository: CommunityTechnicianRepository,
   ) {}
 
   @Post()
@@ -153,6 +172,27 @@ export class CommunityController {
     } catch (error) {
       throw this.mapMutationError(error);
     }
+  }
+
+  // design.md Decision 4 (GET /communities/:id/representatives): active AND
+  // deactivated records, per community-assignments spec.md "List Community
+  // Assignments". tasks.md 10.1 — thin controller-level composition over
+  // listByCommunity(), no dedicated use case (design's 10-use-case count).
+  @Get(':id/representatives')
+  @RequirePermission('community:read')
+  @ApiOkResponse({ type: RepresentativeListItemDto, isArray: true })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:read.' })
+  async listRepresentatives(
+    @Param('id') communityId: string,
+  ): Promise<RepresentativeListItemDto[]> {
+    const records =
+      await this.communityRepresentativeRepository.listByCommunity(communityId);
+    return records.map((record) => ({
+      communityId: record.communityId,
+      userId: record.userId,
+      deactivatedAt: record.deactivatedAt,
+    }));
   }
 
   // design.md Decision 4 (POST /communities/:id/representatives): body is
@@ -240,6 +280,26 @@ export class CommunityController {
     } catch (error) {
       throw this.mapAssignmentError(error);
     }
+  }
+
+  // design.md Decision 4 (GET /communities/:id/technicians): mirrors
+  // listRepresentatives() — active AND deactivated records, no dedicated
+  // use case (tasks.md 10.1).
+  @Get(':id/technicians')
+  @RequirePermission('community:read')
+  @ApiOkResponse({ type: TechnicianListItemDto, isArray: true })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:read.' })
+  async listTechnicians(
+    @Param('id') communityId: string,
+  ): Promise<TechnicianListItemDto[]> {
+    const records =
+      await this.communityTechnicianRepository.listByCommunity(communityId);
+    return records.map((record) => ({
+      communityId: record.communityId,
+      userId: record.userId,
+      deactivatedAt: record.deactivatedAt,
+    }));
   }
 
   // design.md Decision 4 (POST /communities/:id/technicians): mirrors
