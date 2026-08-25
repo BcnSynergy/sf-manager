@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
+import { UsersModule } from '../users/users.module';
 import { COMMUNITY_REPOSITORY } from './application/ports/community.repository.port';
 import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from './application/ports/community-representative.repository.port';
+import { AddRepresentativeUseCase } from './application/use-cases/add-representative.use-case';
 import { CreateCommunityUseCase } from './application/use-cases/create-community.use-case';
+import { DeactivateRepresentativeUseCase } from './application/use-cases/deactivate-representative.use-case';
 import { ListCommunitiesUseCase } from './application/use-cases/list-communities.use-case';
+import { ReactivateRepresentativeUseCase } from './application/use-cases/reactivate-representative.use-case';
 import { SoftDeleteCommunityUseCase } from './application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from './application/use-cases/update-community.use-case';
 import { PrismaCommunityRepository } from './infrastructure/persistence/prisma-community.repository';
@@ -17,10 +21,15 @@ import { CommunityController } from './presentation/community.controller';
 // 7): SoftDeleteCommunityUseCase (Phase 7) depends on it directly, so the
 // binding MUST exist here for Nest's DI graph to resolve at all — without
 // it, `Test.createTestingModule({ imports: [AppModule] }).compile()` throws
-// (see app.module.spec.ts). The representative controller/routes
-// (tasks.md 8.3) remain a separate PR 8; this module does not yet register
-// the add/deactivate/reactivate-representative use cases or their routes.
+// (see app.module.spec.ts).
+//
+// UsersModule import (tasks.md 8.3): AddRepresentativeUseCase and
+// ReactivateRepresentativeUseCase both inject USER_REPOSITORY (eligibility
+// gate + the soft-deleted-user 404, design.md "Where the settled policies
+// live in code") — exported by UsersModule the same way AuthModule already
+// consumes it for LoginUseCase.
 @Module({
+  imports: [UsersModule],
   controllers: [CommunityController],
   providers: [
     { provide: COMMUNITY_REPOSITORY, useClass: PrismaCommunityRepository },
@@ -32,6 +41,9 @@ import { CommunityController } from './presentation/community.controller';
     ListCommunitiesUseCase,
     UpdateCommunityUseCase,
     SoftDeleteCommunityUseCase,
+    AddRepresentativeUseCase,
+    DeactivateRepresentativeUseCase,
+    ReactivateRepresentativeUseCase,
   ],
   exports: [COMMUNITY_REPOSITORY, COMMUNITY_REPRESENTATIVE_REPOSITORY],
 })

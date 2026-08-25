@@ -31,3 +31,12 @@ export const updateCommunitySchema = z.object({
 });
 
 export type UpdateCommunityRequest = z.infer<typeof updateCommunitySchema>;
+
+// design.md Decision 4 (POST /communities/:id/representatives): only
+// `userId` is accepted in the body — `communityId` comes from the route
+// param, `id`/`deactivatedAt` are server-managed (tasks.md 8.3).
+export const addRepresentativeSchema = z.object({
+  userId: z.string().trim().min(1),
+});
+
+export type AddRepresentativeRequest = z.infer<typeof addRepresentativeSchema>;
