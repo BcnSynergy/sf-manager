@@ -85,12 +85,12 @@ Chain strategy: stacked-to-main
 - [x] 8.3 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../representatives` + DTOs (warning payload) + Swagger.
 
 ## Phase 9: Technician Application, Infra & Presentation (PR 9)
-- [ ] 9.1 `community-technician.repository.port.ts` — no `transactional`, no `countActiveByUser`.
-- [ ] 9.2 RED/GREEN `add-technician.use-case.ts` — eligibility gate only, no exclusivity.
-- [ ] 9.3 RED/GREEN `deactivate-technician.use-case.ts` / `reactivate-technician.use-case.ts`.
-- [ ] 9.4 `in-memory-community-technician.repository.ts` fake.
-- [ ] 9.5 `prisma-community-technician.repository.ts` + mapper; integration: no exclusivity enforced.
-- [ ] 9.6 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../technicians` + DTOs (no warning field).
+- [x] 9.1 `community-technician.repository.port.ts` — no `transactional`, no `countActiveByUser`.
+- [x] 9.2 RED/GREEN `add-technician.use-case.ts` — eligibility gate only, no exclusivity.
+- [x] 9.3 RED/GREEN `deactivate-technician.use-case.ts` / `reactivate-technician.use-case.ts`.
+- [x] 9.4 `in-memory-community-technician.repository.ts` fake.
+- [x] 9.5 `prisma-community-technician.repository.ts` + mapper; integration: no exclusivity enforced.
+- [x] 9.6 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../technicians` + DTOs (no warning field).
 
 ## Phase 10: List Assignments (PR 10)
 - [ ] 10.1 `GET .../:id/representatives` and `GET .../:id/technicians` — controller composes `listByCommunity()` directly (active + deactivated), no dedicated use case (per design's 10-use-case count).

@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import {
   addRepresentativeSchema,
+  addTechnicianSchema,
   createCommunitySchema,
   updateCommunitySchema,
 } from '@sf-manager/validation';
@@ -31,10 +32,13 @@ import { RequirePermission } from '../../../shared/presentation/decorators/requi
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
+import { AddTechnicianUseCase } from '../application/use-cases/add-technician.use-case';
 import { CreateCommunityUseCase } from '../application/use-cases/create-community.use-case';
 import { DeactivateRepresentativeUseCase } from '../application/use-cases/deactivate-representative.use-case';
+import { DeactivateTechnicianUseCase } from '../application/use-cases/deactivate-technician.use-case';
 import { ListCommunitiesUseCase } from '../application/use-cases/list-communities.use-case';
 import { ReactivateRepresentativeUseCase } from '../application/use-cases/reactivate-representative.use-case';
+import { ReactivateTechnicianUseCase } from '../application/use-cases/reactivate-technician.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
@@ -43,10 +47,12 @@ import { CommunityNotFoundError } from '../domain/errors/community-not-found.err
 import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import type { AddRepresentativeRequestDto } from './dto/add-representative-request.dto';
+import type { AddTechnicianRequestDto } from './dto/add-technician-request.dto';
 import type { CreateCommunityRequestDto } from './dto/create-community-request.dto';
 import type { UpdateCommunityRequestDto } from './dto/update-community-request.dto';
 import { CommunityResponseDto } from './dto/community-response.dto';
 import { RepresentativeResponseDto } from './dto/representative-response.dto';
+import { TechnicianResponseDto } from './dto/technician-response.dto';
 
 const LOCALE_ENUM = ['en', 'es', 'ca'];
 
@@ -69,6 +75,9 @@ export class CommunityController {
     private readonly addRepresentativeUseCase: AddRepresentativeUseCase,
     private readonly deactivateRepresentativeUseCase: DeactivateRepresentativeUseCase,
     private readonly reactivateRepresentativeUseCase: ReactivateRepresentativeUseCase,
+    private readonly addTechnicianUseCase: AddTechnicianUseCase,
+    private readonly deactivateTechnicianUseCase: DeactivateTechnicianUseCase,
+    private readonly reactivateTechnicianUseCase: ReactivateTechnicianUseCase,
   ) {}
 
   @Post()
@@ -233,6 +242,90 @@ export class CommunityController {
     }
   }
 
+  // design.md Decision 4 (POST /communities/:id/technicians): mirrors
+  // addRepresentative() minus exclusivity — body is just `{ userId }`, no
+  // incumbent to deactivate, no warning ever returned (tasks.md 9.6).
+  @Post(':id/technicians')
+  @RequirePermission('community:assign')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['userId'],
+      properties: { userId: { type: 'string' } },
+    },
+  })
+  @ApiCreatedResponse({ type: TechnicianResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Community or user not found.' })
+  @ApiConflictResponse({
+    description: 'Assignment already exists, or the user is not eligible.',
+  })
+  async addTechnician(
+    @Param('id') communityId: string,
+    @Body(new ZodValidationPipe(addTechnicianSchema))
+    body: AddTechnicianRequestDto,
+  ): Promise<TechnicianResponseDto> {
+    try {
+      return await this.addTechnicianUseCase.execute({
+        communityId,
+        userId: body.userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
+  // design.md Decision 4 (DELETE .../technicians/:userId): mirrors
+  // deactivateRepresentative() — deactivate, not delete; the record stays
+  // reactivable. No exclusivity side effect on any other technician.
+  @Delete(':id/technicians/:userId')
+  @RequirePermission('community:assign')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Technician deactivated.' })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Assignment not found.' })
+  async deactivateTechnician(
+    @Param('id') communityId: string,
+    @Param('userId') userId: string,
+  ): Promise<void> {
+    try {
+      await this.deactivateTechnicianUseCase.execute({
+        communityId,
+        userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
+  // design.md Decision 4 (POST .../technicians/:userId/reactivate): 404 if
+  // the pair was never created or the associated user is soft-deleted
+  // (spec.md "Reactivation rejected for a soft-deleted user"). No
+  // exclusivity swap and no warning, unlike reactivateRepresentative().
+  @Post(':id/technicians/:userId/reactivate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('community:assign')
+  @ApiOkResponse({ type: TechnicianResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
+  @ApiConflictResponse({ description: 'The user is not eligible.' })
+  async reactivateTechnician(
+    @Param('id') communityId: string,
+    @Param('userId') userId: string,
+  ): Promise<TechnicianResponseDto> {
+    try {
+      return await this.reactivateTechnicianUseCase.execute({
+        communityId,
+        userId,
+      });
+    } catch (error) {
+      throw this.mapAssignmentError(error);
+    }
+  }
+
   // Shared by update() and softDelete() — both mutate an existing community
   // looked up by id.
   private mapMutationError(error: unknown): unknown {
@@ -242,10 +335,12 @@ export class CommunityController {
     return error;
   }
 
-  // Shared by addRepresentative()/deactivateRepresentative()/
-  // reactivateRepresentative() (tasks.md 8.3) — mirrors mapMutationError's
-  // shape but covers the wider set of errors an assignment use case can
-  // throw (design.md Data Flow, "Where the settled policies live in code").
+  // Shared by both representative AND technician assignment routes
+  // (tasks.md 8.3, 9.6) — mirrors mapMutationError's shape but covers the
+  // wider set of errors an assignment use case can throw (design.md Data
+  // Flow, "Where the settled policies live in code"). Technician use cases
+  // never throw TransactionConflictError (no transactional() wrap), but
+  // mapping it here anyway costs nothing and keeps this method reusable.
   private mapAssignmentError(error: unknown): unknown {
     if (
       error instanceof CommunityNotFoundError ||

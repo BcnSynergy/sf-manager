@@ -2,10 +2,13 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
+import { AddTechnicianUseCase } from '../application/use-cases/add-technician.use-case';
 import { CreateCommunityUseCase } from '../application/use-cases/create-community.use-case';
 import { DeactivateRepresentativeUseCase } from '../application/use-cases/deactivate-representative.use-case';
+import { DeactivateTechnicianUseCase } from '../application/use-cases/deactivate-technician.use-case';
 import { ListCommunitiesUseCase } from '../application/use-cases/list-communities.use-case';
 import { ReactivateRepresentativeUseCase } from '../application/use-cases/reactivate-representative.use-case';
+import { ReactivateTechnicianUseCase } from '../application/use-cases/reactivate-technician.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
@@ -23,6 +26,9 @@ describe('CommunityController', () => {
   const addRepresentativeUseCase = { execute: jest.fn() };
   const deactivateRepresentativeUseCase = { execute: jest.fn() };
   const reactivateRepresentativeUseCase = { execute: jest.fn() };
+  const addTechnicianUseCase = { execute: jest.fn() };
+  const deactivateTechnicianUseCase = { execute: jest.fn() };
+  const reactivateTechnicianUseCase = { execute: jest.fn() };
 
   let controller: CommunityController;
 
@@ -52,6 +58,18 @@ describe('CommunityController', () => {
         {
           provide: ReactivateRepresentativeUseCase,
           useValue: reactivateRepresentativeUseCase,
+        },
+        {
+          provide: AddTechnicianUseCase,
+          useValue: addTechnicianUseCase,
+        },
+        {
+          provide: DeactivateTechnicianUseCase,
+          useValue: deactivateTechnicianUseCase,
+        },
+        {
+          provide: ReactivateTechnicianUseCase,
+          useValue: reactivateTechnicianUseCase,
         },
       ],
     }).compile();
@@ -349,6 +367,164 @@ describe('CommunityController', () => {
 
       await expect(
         controller.reactivateRepresentative('community-1', 'user-1'),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('addTechnician', () => {
+    it('delegates to AddTechnicianUseCase with communityId + userId', async () => {
+      addTechnicianUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+
+      const result = await controller.addTechnician('community-1', {
+        userId: 'user-1',
+      });
+
+      expect(addTechnicianUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toEqual({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+    });
+
+    it('never returns a warning field (unlike addRepresentative)', async () => {
+      addTechnicianUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+
+      const result = await controller.addTechnician('community-1', {
+        userId: 'user-1',
+      });
+
+      expect(result).not.toHaveProperty('warning');
+    });
+
+    it('maps CommunityNotFoundError to 404', async () => {
+      addTechnicianUseCase.execute.mockRejectedValue(
+        new CommunityNotFoundError(),
+      );
+
+      await expect(
+        controller.addTechnician('missing-community', { userId: 'user-1' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps UserNotFoundError to 404', async () => {
+      addTechnicianUseCase.execute.mockRejectedValue(new UserNotFoundError());
+
+      await expect(
+        controller.addTechnician('community-1', { userId: 'missing-user' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps AssignmentAlreadyExistsError to 409', async () => {
+      addTechnicianUseCase.execute.mockRejectedValue(
+        new AssignmentAlreadyExistsError(),
+      );
+
+      await expect(
+        controller.addTechnician('community-1', { userId: 'user-1' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps IneligibleRoleError to 409', async () => {
+      addTechnicianUseCase.execute.mockRejectedValue(
+        new IneligibleRoleError('TECHNICIAN', 'MANAGER'),
+      );
+
+      await expect(
+        controller.addTechnician('community-1', { userId: 'user-1' }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('deactivateTechnician', () => {
+    it('delegates to DeactivateTechnicianUseCase with communityId + userId', async () => {
+      deactivateTechnicianUseCase.execute.mockResolvedValue(undefined);
+
+      const result = await controller.deactivateTechnician(
+        'community-1',
+        'user-1',
+      );
+
+      expect(deactivateTechnicianUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('maps AssignmentNotFoundError to 404', async () => {
+      deactivateTechnicianUseCase.execute.mockRejectedValue(
+        new AssignmentNotFoundError(),
+      );
+
+      await expect(
+        controller.deactivateTechnician('community-1', 'missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('reactivateTechnician', () => {
+    it('delegates to ReactivateTechnicianUseCase with communityId + userId', async () => {
+      reactivateTechnicianUseCase.execute.mockResolvedValue({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+
+      const result = await controller.reactivateTechnician(
+        'community-1',
+        'user-1',
+      );
+
+      expect(reactivateTechnicianUseCase.execute).toHaveBeenCalledWith({
+        communityId: 'community-1',
+        userId: 'user-1',
+      });
+      expect(result).toEqual({
+        communityId: 'community-1',
+        userId: 'user-1',
+        deactivatedAt: null,
+      });
+    });
+
+    it('maps AssignmentNotFoundError to 404', async () => {
+      reactivateTechnicianUseCase.execute.mockRejectedValue(
+        new AssignmentNotFoundError(),
+      );
+
+      await expect(
+        controller.reactivateTechnician('community-1', 'missing-user'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps UserNotFoundError to 404 (soft-deleted user)', async () => {
+      reactivateTechnicianUseCase.execute.mockRejectedValue(
+        new UserNotFoundError(),
+      );
+
+      await expect(
+        controller.reactivateTechnician('community-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('maps IneligibleRoleError to 409', async () => {
+      reactivateTechnicianUseCase.execute.mockRejectedValue(
+        new IneligibleRoleError('TECHNICIAN', 'MANAGER'),
+      );
+
+      await expect(
+        controller.reactivateTechnician('community-1', 'user-1'),
       ).rejects.toThrow(ConflictException);
     });
   });
