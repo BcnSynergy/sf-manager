@@ -43,3 +43,61 @@ model RevokedToken {
   // login/logout, so this must not be a full table scan.
   @@index([expiresAt])
 }
+
+// community/design.md Decision 5: closed enum, mirroring `Role`'s
+// precedent — no i18n behavior implemented for it in this slice.
+enum Locale {
+  en
+  es
+  ca
+}
+
+// community/proposal.md Settled decisions: entity shape is exactly
+// id, name, address, locale, deletedAt — no `contactInfo` (superseded by
+// the assignment lists), no createdAt/updatedAt (not needed by this slice,
+// ADR-006 walking-skeleton discipline).
+model Community {
+  id        String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  name      String
+  address   String
+  locale    Locale
+  deletedAt DateTime? // ADR-010
+}
+
+// community/design.md Decision 1: two physically separate tables, not one
+// table with a `type` discriminator — the exclusivity invariant applies to
+// representatives only, and a shared table would blur that asymmetry.
+//
+// community/design.md Decision 3: `deactivatedAt`, not `deletedAt` — this
+// is domain state ("stopped serving"), not an administrative delete, so it
+// must not hide behind `SoftDeletableRepository`'s default filter.
+// Reactivation is `deactivatedAt = NULL`; no assignment history is kept.
+//
+// community/design.md Decision 4: `(communityId, userId)` is the
+// caller-facing identity — one row per pair, enforced by `@@unique` below.
+// The surrogate `id` never leaves the persistence adapter.
+model CommunityRepresentative {
+  id            String    @id @db.Uuid
+  communityId   String    @db.Uuid
+  userId        String    @db.Uuid
+  deactivatedAt DateTime? // NULL = active
+
+  // Backstop for the one-active-representative-per-community invariant is a
+  // HAND-WRITTEN partial unique index on (communityId) WHERE deactivatedAt
+  // IS NULL — Prisma's `@@unique` has no `WHERE` clause, so it cannot be
+  // expressed here. See migration.sql (design.md Decision 2 Gotcha).
+  @@unique([communityId, userId])
+}
+
+// community/design.md: technician sibling of CommunityRepresentative,
+// deliberately missing the exclusivity index — many active technicians per
+// community, and the same technician active across many communities, is
+// allowed with no warning.
+model CommunityTechnician {
+  id            String    @id @db.Uuid
+  communityId   String    @db.Uuid
+  userId        String    @db.Uuid
+  deactivatedAt DateTime? // NULL = active
+
+  @@unique([communityId, userId])
+}
