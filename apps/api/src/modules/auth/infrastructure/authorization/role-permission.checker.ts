@@ -9,7 +9,17 @@ import type { PermissionChecker } from '../../application/ports/permission-check
 // operational in this slice; the other 4 map to [] with an explicit comment
 // (not omitted) so the emptiness reads as intentional, not forgotten.
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  SYSTEM_ADMIN: ['user:create', 'user:read', 'user:update', 'user:delete'],
+  SYSTEM_ADMIN: [
+    'user:create',
+    'user:read',
+    'user:update',
+    'user:delete',
+    'community:create',
+    'community:read',
+    'community:update',
+    'community:delete',
+    'community:assign',
+  ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to
   // fill these in when the role becomes operational.

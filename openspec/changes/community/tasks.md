@@ -45,8 +45,8 @@ Chain strategy: stacked-to-main
 - [x] 2.5 `domain/errors/{community-not-found,assignment-not-found,assignment-already-exists,ineligible-role,transaction-conflict}.error.ts`.
 
 ## Phase 3: Authorization (PR 3)
-- [ ] 3.1 `shared/application/authorization/permission.ts` — add `community:create|read|update|delete|assign`.
-- [ ] 3.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 5 community permissions; other 4 roles stay `[]`.
+- [x] 3.1 `shared/application/authorization/permission.ts` — add `community:create|read|update|delete|assign`.
+- [x] 3.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 5 community permissions; other 4 roles stay `[]`.
 
 ## Phase 4: Community Application (PR 4)
 - [ ] 4.1 `community.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.

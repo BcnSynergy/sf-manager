@@ -7,6 +7,13 @@ import { RolePermissionChecker } from './role-permission.checker';
 // the other 4 are declared but MUST be denied on every permission (not
 // merely "not explicitly granted" — the table-driven matrix below proves it
 // for every Role x Permission combination, not just a sample).
+//
+// community:* permissions (PR 3, community/authorization spec "Permission
+// Check on Community and Assignment Endpoints"): SYSTEM_ADMIN is the only
+// role permitted on any /communities or assignment sub-resource route; the
+// other 4 roles stay [] even though COMMUNITY_REPRESENTATIVE and
+// MAINTENANCE_TECHNICIAN are the domain concepts these routes manage —
+// holding an assignment grants no permission.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -15,6 +22,11 @@ describe('RolePermissionChecker', () => {
     'user:read',
     'user:update',
     'user:delete',
+    'community:create',
+    'community:read',
+    'community:update',
+    'community:delete',
+    'community:assign',
   ];
 
   const NON_ADMIN_ROLES: Role[] = [
