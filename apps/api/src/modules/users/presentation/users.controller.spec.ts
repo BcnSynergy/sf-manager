@@ -87,6 +87,27 @@ describe('UsersController', () => {
         }),
       ).rejects.toThrow(ConflictException);
     });
+
+    it('maps EmailAlreadyInUseError to a 409 body with code EMAIL_ALREADY_IN_USE', async () => {
+      const domainError = new EmailAlreadyInUseError();
+      createUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .create({
+          email: 'taken@example.com',
+          password: 'Str0ngPassw0rd',
+          role: 'MANAGER',
+        })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'EMAIL_ALREADY_IN_USE',
+      });
+    });
   });
 
   describe('list', () => {
@@ -143,6 +164,23 @@ describe('UsersController', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('maps LastSystemAdminError to a 409 body with code LAST_SYSTEM_ADMIN', async () => {
+      const domainError = new LastSystemAdminError();
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('last-admin', { role: 'MANAGER' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'LAST_SYSTEM_ADMIN',
+      });
+    });
+
     it('maps TransactionConflictError to 409', async () => {
       updateUserUseCase.execute.mockRejectedValue(
         new TransactionConflictError(),
@@ -151,6 +189,23 @@ describe('UsersController', () => {
       await expect(
         controller.update('user-1', { role: 'MANAGER' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
+      const domainError = new TransactionConflictError();
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('user-1', { role: 'MANAGER' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'TRANSACTION_CONFLICT',
+      });
     });
   });
 
@@ -182,6 +237,23 @@ describe('UsersController', () => {
       );
     });
 
+    it('maps LastSystemAdminError to a 409 body with code LAST_SYSTEM_ADMIN', async () => {
+      const domainError = new LastSystemAdminError();
+      deactivateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .deactivate('last-admin')
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'LAST_SYSTEM_ADMIN',
+      });
+    });
+
     it('maps TransactionConflictError to 409', async () => {
       deactivateUserUseCase.execute.mockRejectedValue(
         new TransactionConflictError(),
@@ -190,6 +262,23 @@ describe('UsersController', () => {
       await expect(controller.deactivate('user-1')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
+      const domainError = new TransactionConflictError();
+      deactivateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .deactivate('user-1')
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'TRANSACTION_CONFLICT',
+      });
     });
   });
 });

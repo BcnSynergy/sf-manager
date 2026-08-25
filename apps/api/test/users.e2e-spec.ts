@@ -182,7 +182,7 @@ describe('Users (e2e)', () => {
     it('rejects a duplicate email with 409 (spec: Duplicate email rejected)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      await agent
+      const response = await agent
         .post('/users')
         .send({
           email: existingEmail,
@@ -190,6 +190,18 @@ describe('Users (e2e)', () => {
           role: 'MANAGER',
         })
         .expect(409);
+
+      // spec: "409 responses carry a machine-readable cause" / "Duplicate-email
+      // 409 is distinguishable from last-admin 409" — code is additive, the
+      // existing fields are unchanged in shape.
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'EMAIL_ALREADY_IN_USE',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
     });
 
     it('rejects a weak password with 400 before any user is created (spec: Weak password rejected)', async () => {
@@ -367,7 +379,18 @@ describe('Users (e2e)', () => {
       try {
         const agent = await loginAgent(app, 'sole-admin@example.com');
 
-        await agent.delete(`/users/${soleAdmin.id}`).expect(409);
+        const response = await agent
+          .delete(`/users/${soleAdmin.id}`)
+          .expect(409);
+
+        expect(response.body).toMatchObject({
+          statusCode: 409,
+          error: 'Conflict',
+          code: 'LAST_SYSTEM_ADMIN',
+        });
+        expect(typeof (response.body as { message: unknown }).message).toBe(
+          'string',
+        );
 
         const list = await agent.get('/users').expect(200);
         expect(
@@ -391,10 +414,19 @@ describe('Users (e2e)', () => {
       try {
         const agent = await loginAgent(app, 'sole-admin-demote@example.com');
 
-        await agent
+        const response = await agent
           .patch(`/users/${soleAdmin.id}`)
           .send({ role: 'MANAGER' })
           .expect(409);
+
+        expect(response.body).toMatchObject({
+          statusCode: 409,
+          error: 'Conflict',
+          code: 'LAST_SYSTEM_ADMIN',
+        });
+        expect(typeof (response.body as { message: unknown }).message).toBe(
+          'string',
+        );
 
         const list = await agent.get('/users').expect(200);
         const found = (list.body as Array<{ id: string; role: string }>).find(
