@@ -49,12 +49,12 @@ Chain strategy: stacked-to-main
 - [x] 3.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 5 community permissions; other 4 roles stay `[]`.
 
 ## Phase 4: Community Application (PR 4)
-- [ ] 4.1 `community.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
-- [ ] 4.2 RED/GREEN `create-community.use-case.ts`.
-- [ ] 4.3 RED/GREEN `list-communities.use-case.ts` — excludes soft-deleted.
-- [ ] 4.4 RED/GREEN `update-community.use-case.ts` — 404 on missing id.
-- [ ] 4.5 RED/GREEN `soft-delete-community.use-case.ts` — sets `deletedAt` only (cascade added Phase 7).
-- [ ] 4.6 `in-memory-community.repository.ts` fake — `deletedAt: null` default filter parity.
+- [x] 4.1 `community.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
+- [x] 4.2 RED/GREEN `create-community.use-case.ts`.
+- [x] 4.3 RED/GREEN `list-communities.use-case.ts` — excludes soft-deleted.
+- [x] 4.4 RED/GREEN `update-community.use-case.ts` — 404 on missing id.
+- [x] 4.5 RED/GREEN `soft-delete-community.use-case.ts` — sets `deletedAt` only (cascade added Phase 7).
+- [x] 4.6 `in-memory-community.repository.ts` fake — `deletedAt: null` default filter parity.
 
 ## Phase 5: Community Infra & Presentation (PR 5)
 - [ ] 5.1 `prisma-community.repository.ts` (extends `SoftDeletableRepository`) + `community.mapper.ts`.
