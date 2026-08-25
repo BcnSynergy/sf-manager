@@ -57,11 +57,11 @@ Chain strategy: stacked-to-main
 - [x] 4.6 `in-memory-community.repository.ts` fake — `deletedAt: null` default filter parity.
 
 ## Phase 5: Community Infra & Presentation (PR 5)
-- [ ] 5.1 `prisma-community.repository.ts` (extends `SoftDeletableRepository`) + `community.mapper.ts`.
-- [ ] 5.2 Integration: `findAll`/`findById` exclude soft-deleted (real Postgres).
-- [ ] 5.3 `packages/validation/src/community/community.schema.ts` (create/update) + `src/index.ts` export.
-- [ ] 5.4 `community.controller.ts` CRUD routes + `dto/**` + Swagger + domain-error→HTTP mapping.
-- [ ] 5.5 `community.module.ts` providers/controller; register in `app.module.ts`.
+- [x] 5.1 `prisma-community.repository.ts` (extends `SoftDeletableRepository`) + `community.mapper.ts`.
+- [x] 5.2 Integration: `findAll`/`findById` exclude soft-deleted (real Postgres).
+- [x] 5.3 `packages/validation/src/community/community.schema.ts` (create/update) + `src/index.ts` export.
+- [x] 5.4 `community.controller.ts` CRUD routes + `dto/**` + Swagger + domain-error→HTTP mapping.
+- [x] 5.5 `community.module.ts` providers/controller; register in `app.module.ts`.
 
 ## Phase 6: Representative Application (PR 6)
 - [ ] 6.1 `community-representative.repository.port.ts` — `Symbol` token; `transactional()` only here.
