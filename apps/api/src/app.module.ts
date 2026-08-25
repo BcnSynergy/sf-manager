@@ -4,6 +4,7 @@ import { IdGeneratorModule } from './shared/infrastructure/id/id-generator.modul
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CommunityModule } from './modules/community/community.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -11,12 +12,15 @@ import { AuthModule } from './modules/auth/auth.module';
 // authentication for the whole app, so getAuthConfig() (JWT_SECRET/
 // CORS_ORIGIN) now runs at boot. IdGeneratorModule is @Global(), imported
 // once here so every module can inject ID_GENERATOR without re-importing it.
+// CommunityModule (community PR 5) registers the admin-only /communities
+// CRUD surface behind the same global AuthenticatedGuard/PermissionsGuard.
 @Module({
   imports: [
     PrismaModule,
     IdGeneratorModule,
     UsersModule,
     AuthModule,
+    CommunityModule,
     HealthModule,
   ],
 })
