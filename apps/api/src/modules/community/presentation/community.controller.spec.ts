@@ -11,6 +11,8 @@ import { ReactivateRepresentativeUseCase } from '../application/use-cases/reacti
 import { ReactivateTechnicianUseCase } from '../application/use-cases/reactivate-technician.use-case';
 import { SoftDeleteCommunityUseCase } from '../application/use-cases/soft-delete-community.use-case';
 import { UpdateCommunityUseCase } from '../application/use-cases/update-community.use-case';
+import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from '../application/ports/community-representative.repository.port';
+import { COMMUNITY_TECHNICIAN_REPOSITORY } from '../application/ports/community-technician.repository.port';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
 import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
@@ -29,6 +31,8 @@ describe('CommunityController', () => {
   const addTechnicianUseCase = { execute: jest.fn() };
   const deactivateTechnicianUseCase = { execute: jest.fn() };
   const reactivateTechnicianUseCase = { execute: jest.fn() };
+  const communityRepresentativeRepository = { listByCommunity: jest.fn() };
+  const communityTechnicianRepository = { listByCommunity: jest.fn() };
 
   let controller: CommunityController;
 
@@ -70,6 +74,14 @@ describe('CommunityController', () => {
         {
           provide: ReactivateTechnicianUseCase,
           useValue: reactivateTechnicianUseCase,
+        },
+        {
+          provide: COMMUNITY_REPRESENTATIVE_REPOSITORY,
+          useValue: communityRepresentativeRepository,
+        },
+        {
+          provide: COMMUNITY_TECHNICIAN_REPOSITORY,
+          useValue: communityTechnicianRepository,
         },
       ],
     }).compile();
@@ -526,6 +538,54 @@ describe('CommunityController', () => {
       await expect(
         controller.reactivateTechnician('community-1', 'user-1'),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('listRepresentatives', () => {
+    it('returns both active and deactivated representative records for the community (tasks.md 10.2)', async () => {
+      const deactivatedAt = new Date('2026-01-01T00:00:00.000Z');
+      communityRepresentativeRepository.listByCommunity.mockResolvedValue([
+        { communityId: 'community-1', userId: 'user-1', deactivatedAt: null },
+        {
+          communityId: 'community-1',
+          userId: 'user-2',
+          deactivatedAt,
+        },
+      ]);
+
+      const result = await controller.listRepresentatives('community-1');
+
+      expect(
+        communityRepresentativeRepository.listByCommunity,
+      ).toHaveBeenCalledWith('community-1');
+      expect(result).toEqual([
+        { communityId: 'community-1', userId: 'user-1', deactivatedAt: null },
+        { communityId: 'community-1', userId: 'user-2', deactivatedAt },
+      ]);
+    });
+  });
+
+  describe('listTechnicians', () => {
+    it('returns both active and deactivated technician records for the community (tasks.md 10.2)', async () => {
+      const deactivatedAt = new Date('2026-01-01T00:00:00.000Z');
+      communityTechnicianRepository.listByCommunity.mockResolvedValue([
+        { communityId: 'community-1', userId: 'user-3', deactivatedAt: null },
+        {
+          communityId: 'community-1',
+          userId: 'user-4',
+          deactivatedAt,
+        },
+      ]);
+
+      const result = await controller.listTechnicians('community-1');
+
+      expect(
+        communityTechnicianRepository.listByCommunity,
+      ).toHaveBeenCalledWith('community-1');
+      expect(result).toEqual([
+        { communityId: 'community-1', userId: 'user-3', deactivatedAt: null },
+        { communityId: 'community-1', userId: 'user-4', deactivatedAt },
+      ]);
     });
   });
 });

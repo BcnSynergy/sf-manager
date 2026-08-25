@@ -93,8 +93,8 @@ Chain strategy: stacked-to-main
 - [x] 9.6 Controller routes: `POST`/`DELETE`/`POST .../reactivate` under `.../technicians` + DTOs (no warning field).
 
 ## Phase 10: List Assignments (PR 10)
-- [ ] 10.1 `GET .../:id/representatives` and `GET .../:id/technicians` — controller composes `listByCommunity()` directly (active + deactivated), no dedicated use case (per design's 10-use-case count).
-- [ ] 10.2 Test: response includes both active and deactivated records.
+- [x] 10.1 `GET .../:id/representatives` and `GET .../:id/technicians` — controller composes `listByCommunity()` directly (active + deactivated), no dedicated use case (per design's 10-use-case count).
+- [x] 10.2 Test: response includes both active and deactivated records.
 
 ## Phase 11: E2E Suite (PR 11)
 - [ ] 11.1 `community.e2e-spec.ts` — CRUD happy paths.
