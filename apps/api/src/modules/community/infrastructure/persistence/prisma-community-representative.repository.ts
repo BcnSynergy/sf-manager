@@ -8,52 +8,94 @@ import { CommunityRepresentativeRepository } from '../../application/ports/commu
 import { CommunityRepresentativeMapper } from './community-representative.mapper';
 
 // Prisma unique-constraint violation code (shared by both unique constraints
-// on this table — distinguished below by index name).
+// on this table — distinguished below by which columns were violated).
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 // Prisma's mapping of a Postgres SERIALIZABLE isolation abort (SQLSTATE
 // 40001) — mapped to TransactionConflictError (design.md Decision 2),
 // mirroring PrismaUserRepository.transactional.
 const SERIALIZATION_FAILURE = 'P2034';
-// design.md Decision 2 Gotcha: the hand-written partial unique index
-// (migration.sql), invisible to schema.prisma. A P2002 on THIS index is the
-// backstop for a concurrent double-activation that slips past SERIALIZABLE
-// (or bypasses transactional() entirely) — mapped to TransactionConflictError,
-// same as a P2034. A P2002 on the OTHER unique constraint
-// (`communityId_userId`, design.md Decision 4) means the caller tried to
-// create() a duplicate (communityId, userId) pair — mapped to
-// AssignmentAlreadyExistsError instead.
-const PARTIAL_INDEX_NAME = 'CommunityRepresentative_one_active_per_community';
+// The plain (communityId, userId) unique constraint (design.md Decision 4).
+// A P2002 whose violated columns match exactly these two means the caller
+// tried to create() a duplicate pair -> AssignmentAlreadyExistsError.
+const PLAIN_PAIR_COLUMNS = ['communityId', 'userId'];
 
 // Either the root PrismaService or the interactive-transaction client Prisma
 // hands to a $transaction callback — mirrors PrismaUserRepository's
 // PrismaClientOrTx (prisma-user.repository.ts:19-23).
 type PrismaClientOrTx = PrismaService | Prisma.TransactionClient;
 
-// Prisma's P2002 `meta.target` shape varies by provider/constraint kind: a
-// named Postgres constraint/index typically comes through as a single
-// string, but Prisma's own types allow string[] too — checked explicitly
-// (no String(unknown) coercion, which ESLint's no-base-to-string rule
-// rightly rejects for a value with no meaningful toString()).
-function isUniqueViolationOn(
-  error: unknown,
-  indexNameFragment: string,
-): boolean {
+// Fresh-context review (2nd pass) Bug 1 finding, verified empirically
+// against real Postgres: under Prisma 7 with the @prisma/adapter-pg driver
+// adapter, `error.meta.target` is NEVER populated for P2002s on this table
+// (neither for the plain @@unique Prisma knows about from schema.prisma,
+// nor for the hand-written partial index it doesn't) — the violated
+// constraint's columns instead come through under
+// `error.meta.driverAdapterError.cause.constraint.fields` (quoted column
+// names, e.g. `"communityId"`), because the driver adapter reports the raw
+// Postgres error rather than Prisma's own precomputed `target`. Narrowed
+// step-by-step (no `any`) to satisfy `no-unsafe-member-access`.
+function extractViolatedConstraintFields(error: unknown): string[] | undefined {
   if (
     !(error instanceof Prisma.PrismaClientKnownRequestError) ||
     error.code !== UNIQUE_CONSTRAINT_VIOLATION
   ) {
+    return undefined;
+  }
+  const meta: unknown = error.meta;
+  if (typeof meta !== 'object' || meta === null) {
+    return undefined;
+  }
+  const driverAdapterError = (meta as Record<string, unknown>)
+    .driverAdapterError;
+  if (typeof driverAdapterError !== 'object' || driverAdapterError === null) {
+    return undefined;
+  }
+  const cause = (driverAdapterError as Record<string, unknown>).cause;
+  if (typeof cause !== 'object' || cause === null) {
+    return undefined;
+  }
+  const constraint = (cause as Record<string, unknown>).constraint;
+  if (typeof constraint !== 'object' || constraint === null) {
+    return undefined;
+  }
+  const fields = (constraint as Record<string, unknown>).fields;
+  if (!Array.isArray(fields)) {
+    return undefined;
+  }
+  return fields
+    .filter((field): field is string => typeof field === 'string')
+    .map((field) => field.replace(/"/g, ''));
+}
+
+function isUniqueConstraintViolation(
+  error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === UNIQUE_CONSTRAINT_VIOLATION
+  );
+}
+
+// This table has exactly 2 unique constraints (design.md Decision 2 /
+// Decision 4), so the check is inverted per the fresh-context review's fix
+// direction: only a P2002 whose violated columns demonstrably match BOTH
+// plain-pair columns is treated as a duplicate-pair violation. Every OTHER
+// P2002 on this table — including the hand-written partial index, and any
+// case where the driver-adapter shape above can't be read at all — is
+// treated as the partial-index/exclusivity-race case. This is the safer
+// default: it maps to a 409 the caller should retry (TransactionConflictError)
+// rather than silently mislabeling a genuine race as a permanent
+// "already exists" (AssignmentAlreadyExistsError), which would incorrectly
+// tell the caller to reactivate instead of retrying.
+function isPlainPairViolation(error: unknown): boolean {
+  const fields = extractViolatedConstraintFields(error);
+  if (!fields) {
     return false;
   }
-  const target = error.meta?.target;
-  if (typeof target === 'string') {
-    return target.includes(indexNameFragment);
-  }
-  if (Array.isArray(target)) {
-    return target.some(
-      (entry) => typeof entry === 'string' && entry.includes(indexNameFragment),
-    );
-  }
-  return false;
+  return (
+    fields.length === PLAIN_PAIR_COLUMNS.length &&
+    PLAIN_PAIR_COLUMNS.every((column) => fields.includes(column))
+  );
 }
 
 // Prisma adapter for the CommunityRepresentativeRepository port (ADR-013).
@@ -127,14 +169,10 @@ export class PrismaCommunityRepresentativeRepository implements CommunityReprese
         data: CommunityRepresentativeMapper.toPersistence(assignment),
       });
     } catch (error) {
-      if (isUniqueViolationOn(error, PARTIAL_INDEX_NAME)) {
-        throw new TransactionConflictError();
-      }
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === UNIQUE_CONSTRAINT_VIOLATION
-      ) {
-        throw new AssignmentAlreadyExistsError();
+      if (isUniqueConstraintViolation(error)) {
+        throw isPlainPairViolation(error)
+          ? new AssignmentAlreadyExistsError()
+          : new TransactionConflictError();
       }
       throw error;
     }
@@ -144,8 +182,13 @@ export class PrismaCommunityRepresentativeRepository implements CommunityReprese
   // (the use cases) always check existence first via
   // findByCommunityAndUser/findActiveByCommunity, mirroring
   // PrismaUserRepository.softDeleteById's lack of a defensive existence
-  // check. Reactivation (at: null) can, in principle, hit the partial
-  // index's P2002 backstop too -> mapped the same way as create()'s.
+  // check. Reactivation (at: null) can hit the partial index's P2002
+  // backstop when another representative is already active for the
+  // community -> mapped the same way as create()'s (a P2002 here can never
+  // legitimately be the plain-pair constraint, since communityId/userId are
+  // the update's WHERE key, not its SET — but the same helper is reused for
+  // consistency and as a defensive fallback rather than assuming and
+  // letting a raw PrismaClientKnownRequestError leak past this layer).
   async setDeactivatedAt(
     communityId: string,
     userId: string,
@@ -157,8 +200,10 @@ export class PrismaCommunityRepresentativeRepository implements CommunityReprese
         data: { deactivatedAt: at },
       });
     } catch (error) {
-      if (isUniqueViolationOn(error, PARTIAL_INDEX_NAME)) {
-        throw new TransactionConflictError();
+      if (isUniqueConstraintViolation(error)) {
+        throw isPlainPairViolation(error)
+          ? new AssignmentAlreadyExistsError()
+          : new TransactionConflictError();
       }
       throw error;
     }

@@ -253,18 +253,59 @@ describe('PrismaCommunityRepresentativeRepository (integration)', () => {
   // design.md Decision 2 / Testing Strategy: two concurrent transactional()
   // activations targeting the SAME community must not both commit an active
   // row — SERIALIZABLE (P2034) or the partial-index backstop (P2002) must
-  // abort one of them, mapped to TransactionConflictError, mirroring
-  // PrismaUserRepository's concurrent last-admin-demotion test. This is a
-  // true concurrency test (two real overlapping Postgres connections), not
-  // a sequential simulation.
+  // abort one of them, mapped to TransactionConflictError.
+  //
+  // Fresh-context review (2nd pass) Bug 2: the previous version of this test
+  // fired both activate() calls via Promise.allSettled and just hoped they'd
+  // race, but empirically (8 runs) they never did — the second transaction's
+  // read consistently observed the first's already-committed write (no
+  // incumbent -> incumbent exists), so both swapped sequentially with no
+  // real conflict, and the assertions only checked rejection TYPE *if* one
+  // happened, which is vacuously true when zero rejections occur.
+  //
+  // The `users` module's equivalent test
+  // (prisma-user.repository.integration.spec.ts, "two concurrent
+  // transactions each demoting one of the last two admins") guarantees a
+  // genuine conflict by having both transactions WRITE to two DISJOINT rows
+  // (admin1, admin2) while both READ the same overlapping predicate
+  // (countActiveByRole) — a classic write-skew shape SERIALIZABLE is
+  // guaranteed to catch, with no artificial synchronization needed, because
+  // disjoint writes never block each other so both naturally overlap.
+  //
+  // This table's exclusivity invariant has no disjoint pair of rows to
+  // write to independently (there is only ONE active "slot" per community,
+  // by design) — any two concurrent writers necessarily target that same
+  // slot. So instead of relying on incidental timing, this test uses an
+  // explicit barrier: both transactions MUST complete their initial read of
+  // the community's incumbent before EITHER is allowed to proceed to write.
+  // This deterministically forces genuine overlap regardless of connection
+  // pool/event-loop scheduling, guaranteeing both observe the SAME
+  // "no incumbent" state and then race to claim the single active slot —
+  // exactly one create() commits, the other hits the partial index's P2002
+  // (mapped to TransactionConflictError by create()'s fix above).
   it('two concurrent transactional() activations for the same community leave exactly one active representative', async () => {
     const communityId = await createCommunity('concurrent-activation');
     const user1Id = await createUser('concurrent-activation-1');
     const user2Id = await createUser('concurrent-activation-2');
 
+    let readsCompleted = 0;
+    let releaseBarrier!: () => void;
+    const bothReadsComplete = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+
     const activate = (userId: string) =>
       repository.transactional(async (repo) => {
         const incumbent = await repo.findActiveByCommunity(communityId);
+
+        readsCompleted += 1;
+        if (readsCompleted === 2) {
+          releaseBarrier();
+        }
+        // Neither transaction may proceed to write until BOTH have
+        // completed their read — guarantees genuine overlap.
+        await bothReadsComplete;
+
         if (incumbent) {
           await repo.setDeactivatedAt(
             communityId,
@@ -287,16 +328,94 @@ describe('PrismaCommunityRepresentativeRepository (integration)', () => {
       activate(user2Id),
     ]);
 
-    const rejected = results.filter((result) => result.status === 'rejected');
-    for (const failure of rejected) {
-      if (failure.status === 'rejected') {
-        expect(failure.reason).toBeInstanceOf(TransactionConflictError);
-      }
-    }
+    const isFulfilled = <T>(
+      result: PromiseSettledResult<T>,
+    ): result is PromiseFulfilledResult<T> => result.status === 'fulfilled';
+    const isRejected = <T>(
+      result: PromiseSettledResult<T>,
+    ): result is PromiseRejectedResult => result.status === 'rejected';
+
+    const fulfilled = results.filter(isFulfilled);
+    const rejected = results.filter(isRejected);
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(TransactionConflictError);
 
     const activeRows = await prisma.communityRepresentative.findMany({
       where: { communityId, deactivatedAt: null },
     });
     expect(activeRows).toHaveLength(1);
+  });
+
+  // Fresh-context review (2nd pass) Bug 1: the hand-written partial index
+  // (`CommunityRepresentative_one_active_per_community`) is INVISIBLE to
+  // schema.prisma, so Prisma's classic `error.meta.target` field is never
+  // populated for it — but Prisma 7's pg driver adapter (@prisma/adapter-pg)
+  // surfaces the violated constraint's columns under
+  // `error.meta.driverAdapterError.cause.constraint.fields` for BOTH known
+  // and unknown-to-schema constraints (verified empirically against real
+  // Postgres). This forces a genuine P2002 on the partial index specifically
+  // (two active rows for the SAME community, DIFFERENT users — not a
+  // duplicate pair) and asserts it maps to TransactionConflictError, not
+  // AssignmentAlreadyExistsError.
+  it('create() rejects a second ACTIVE representative for the same community (different user) with TransactionConflictError, not AssignmentAlreadyExistsError', async () => {
+    const communityId = await createCommunity('partial-index-conflict');
+    const user1Id = await createUser('partial-index-conflict-1');
+    const user2Id = await createUser('partial-index-conflict-2');
+
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId,
+        userId: user1Id,
+        deactivatedAt: null,
+      }),
+    );
+
+    await expect(
+      repository.create(
+        new CommunityRepresentative({
+          id: idGenerator.generate(),
+          communityId,
+          userId: user2Id,
+          deactivatedAt: null,
+        }),
+      ),
+    ).rejects.toThrow(TransactionConflictError);
+  });
+
+  // Fresh-context review (2nd pass) Bug 1: setDeactivatedAt() had NO
+  // fallback branch for the plain-pair case at all, and its ONLY existing
+  // branch (the partial-index check) was itself broken the same way as
+  // create()'s. Reactivating (deactivatedAt: null) a representative while
+  // another is already active for the community must hit the partial index
+  // and map to TransactionConflictError, not leak the raw
+  // PrismaClientKnownRequestError past the infrastructure layer.
+  it('setDeactivatedAt() reactivating a representative rejects with TransactionConflictError when another is already active for the community', async () => {
+    const communityId = await createCommunity('reactivate-conflict');
+    const activeUserId = await createUser('reactivate-conflict-active');
+    const inactiveUserId = await createUser('reactivate-conflict-inactive');
+
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId,
+        userId: activeUserId,
+        deactivatedAt: null,
+      }),
+    );
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId,
+        userId: inactiveUserId,
+        deactivatedAt: new Date(),
+      }),
+    );
+
+    await expect(
+      repository.setDeactivatedAt(communityId, inactiveUserId, null),
+    ).rejects.toThrow(TransactionConflictError);
   });
 });
