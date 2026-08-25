@@ -226,3 +226,11 @@ backfilled. Rollback = revert the branch and drop the three tables plus
 - [ ] Confirm at apply time that `prisma migrate dev` does not emit a
       `DROP INDEX` for the hand-written partial index; the `pg_indexes`
       integration test is the guard either way.
+- [ ] (PR10) `GET :id/representatives` and `GET :id/technicians` do not
+      check that the community exists before listing — a nonexistent
+      `:id` returns `200 []`, indistinguishable from a genuinely empty
+      community. Neither this design nor `community-assignments/spec.md`
+      specifies 404 behavior here, and no other `GET :id` route exists
+      in this controller to set a precedent either way, so this was left
+      as-is per ADR-006 walking-skeleton discipline. Revisit if a client
+      ever needs to distinguish "empty" from "does not exist."
