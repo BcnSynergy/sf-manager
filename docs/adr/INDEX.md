@@ -30,3 +30,15 @@ See also: [domain model — inspections](../architecture/domain-model-inspection
 - **Maintenance-company assignment granularity by element type**, whether a
   `ReviewSession` can ever cover more than one element type, and exact
   `ExtinguisherDetails` fields — see open questions in the domain model doc.
+- **API versioning** (ADR-014 follow-up): not implemented (no
+  `setGlobalPrefix`/`VersioningType`/`/v1` prefix). Deferred deliberately —
+  all three clients (web/mobile/desktop) live in this monorepo, share types
+  generated from the same OpenAPI spec, and deploy together, so there is no
+  external consumer to protect from a breaking change today. Revisit if a
+  third-party/public API consumer appears, or if a client ever needs to be
+  deployed on a different cadence than the server.
+- **End-user manual**: not started. Deferred deliberately — most slices so
+  far are API-only (no web UI yet beyond the health-check slice), and SDD
+  specs document technical contract, not end-user usage. Start a living
+  manual per feature once that feature has a real, stable UI — not per
+  spec/PR while a slice is still API-only.

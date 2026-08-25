@@ -51,3 +51,21 @@ tactical DDD design done before any code exists. Example: an entity field
 already described richly in prose (e.g. `InspectableElement.code`'s
 alphabet/uniqueness rules) becomes a real Value Object with a validating
 factory when — and only when — the slice that needs it is specced.
+
+## Addendum: Course Correction — UI Fell Behind (2026-08-25)
+After `auth-minimal-skeleton` validated the end-to-end architecture via
+web (login flow), the next two slices (`user-management-roles`,
+`community`) were built API-only — the only web change was propagating
+`role` through `AuthProvider`. This drifted from this ADR's own premise
+("thinnest possible end-to-end slice = API + one client", grown slice by
+slice), stacking two domains of backend-only surface with no real UI
+consumer to validate their contracts against.
+
+Correction: before starting a new domain slice, retrofit minimal web UI
+for `users` then `community` (in that order — `users` is simpler and
+establishes the base CRUD/list/form/permission-gated-route pattern;
+`community` reuses it for its larger surface: CRUD plus two assignment
+types with exclusivity/reactivation/warnings). Going forward, each new
+domain slice includes its own minimal UI in the same cycle — no more
+batching backend-only domains before circling back to build their
+clients.
