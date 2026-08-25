@@ -38,6 +38,7 @@ import { WeakPasswordError } from '../domain/errors/weak-password.error';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import type { UserErrorCode } from './user-error-code';
 
 const ROLE_ENUM = [
   'SYSTEM_ADMIN',
@@ -80,7 +81,10 @@ export class UsersController {
   @ApiCreatedResponse({ type: UserResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks user:create.' })
-  @ApiConflictResponse({ description: 'Email already in use.' })
+  @ApiConflictResponse({
+    description:
+      'Email already in use. Body carries code: EMAIL_ALREADY_IN_USE.',
+  })
   async create(
     @Body(new ZodValidationPipe(createUserSchema)) body: CreateUserRequestDto,
   ): Promise<UserResponseDto> {
@@ -91,7 +95,7 @@ export class UsersController {
         throw new BadRequestException(error.message);
       }
       if (error instanceof EmailAlreadyInUseError) {
-        throw new ConflictException(error.message);
+        throw this.buildConflictException(error, 'EMAIL_ALREADY_IN_USE');
       }
       throw error;
     }
@@ -123,7 +127,8 @@ export class UsersController {
   @ApiNotFoundResponse({ description: 'User not found.' })
   @ApiConflictResponse({
     description:
-      'Would leave zero active SYSTEM_ADMIN users, or a concurrent conflicting update occurred.',
+      'Would leave zero active SYSTEM_ADMIN users (code: LAST_SYSTEM_ADMIN), ' +
+      'or a concurrent conflicting update occurred (code: TRANSACTION_CONFLICT).',
   })
   async update(
     @Param('id') id: string,
@@ -145,7 +150,8 @@ export class UsersController {
   @ApiNotFoundResponse({ description: 'User not found.' })
   @ApiConflictResponse({
     description:
-      'Would leave zero active SYSTEM_ADMIN users, or a concurrent conflicting update occurred.',
+      'Would leave zero active SYSTEM_ADMIN users (code: LAST_SYSTEM_ADMIN), ' +
+      'or a concurrent conflicting update occurred (code: TRANSACTION_CONFLICT).',
   })
   async deactivate(@Param('id') id: string): Promise<void> {
     try {
@@ -162,12 +168,30 @@ export class UsersController {
     if (error instanceof UserNotFoundError) {
       return new NotFoundException(error.message);
     }
-    if (
-      error instanceof LastSystemAdminError ||
-      error instanceof TransactionConflictError
-    ) {
-      return new ConflictException(error.message);
+    if (error instanceof LastSystemAdminError) {
+      return this.buildConflictException(error, 'LAST_SYSTEM_ADMIN');
+    }
+    if (error instanceof TransactionConflictError) {
+      return this.buildConflictException(error, 'TRANSACTION_CONFLICT');
     }
     return error;
+  }
+
+  // design.md Decision 3 ("Non-breaking guarantee"): ConflictException with
+  // an object body is emitted verbatim by Nest's HttpException.createBody
+  // (confirmed against @nestjs/common 11 source at apply time) — so this
+  // re-supplies the default {statusCode, error, message} shape and only
+  // *adds* `code`, keeping the change additive/non-breaking per the
+  // user-management spec delta.
+  private buildConflictException(
+    error: Error,
+    code: UserErrorCode,
+  ): ConflictException {
+    return new ConflictException({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      message: error.message,
+      code,
+    });
   }
 }
