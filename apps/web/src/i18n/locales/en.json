@@ -1,7 +1,9 @@
 {
   "common": {
     "notAuthorizedTitle": "Not authorized",
-    "notAuthorizedMessage": "You do not have permission to view this page."
+    "notAuthorizedMessage": "You do not have permission to view this page.",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "health": {
     "title": "System status",
