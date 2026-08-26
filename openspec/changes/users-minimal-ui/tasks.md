@@ -69,8 +69,8 @@ Chain strategy: stacked-to-main
 - [x] 8.4 Add a per-row "Edit" link on `UsersListPage.tsx` navigating to `/users/:id/edit` — closes the entry-point gap flagged in PR6's fresh-context review (no other task in this plan reaches `/users/:id/edit` from the UI).
 
 ## Phase 9: Integration & i18n Parity (PR 9)
-- [ ] 9.1 Add a key-set equality test over `en`/`es`/`ca` locale JSONs (mechanical structural test, run after all `users.*`/`common.*` keys landed in PR 6-8).
-- [ ] 9.2 Run full web + api lint/test suite; confirm success criteria checklist in `proposal.md`.
+- [x] 9.1 Add a key-set equality test over `en`/`es`/`ca` locale JSONs (mechanical structural test, run after all `users.*`/`common.*` keys landed in PR 6-8).
+- [x] 9.2 Run full web + api lint/test suite; confirm success criteria checklist in `proposal.md`. **Gap found**: the `role` enum value (`SYSTEM_ADMIN`, `MANAGER`, etc.) is rendered raw/untranslated in `UsersListPage.tsx` (table cell) and as `<option>` labels in `UserCreatePage.tsx`/`UserEditPage.tsx` — a real, not-newly-introduced miss against the "Zero hardcoded UI strings" success criterion and the "Internationalization Coverage" spec requirement. Previously flagged as a SUGGESTION in PR6/7/8 reviews and deferred, not fixed; not fixed in PR9 either per this PR's verification-only scope. Flagged for the orchestrator/maintainer to decide before archive.
 
 ## Rules Applied
 - Strict TDD: RED/GREEN pairs on all logic-bearing files (409 controller mapping, `apiFetch`/`api/users.ts`, `ProtectedRoute` role-check, `ConfirmDialog` interaction, `error-messages.ts`, and RTL component tests for the 3 pages); DTO/union types, i18n JSON entries, and route wiring are mechanical, no RED/GREEN needed.
