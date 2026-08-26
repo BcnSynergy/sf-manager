@@ -455,13 +455,24 @@ describe('Communities (e2e)', () => {
       await app.close();
     });
 
-    it('rejects adding a wrong-role user as representative with 409, no assignment created', async () => {
+    it('rejects adding a wrong-role user as representative with 409 code INELIGIBLE_ROLE, no assignment created', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      await agent
+      const response = await agent
         .post(`/communities/${communityId}/representatives`)
         .send({ userId: 'eligibility-wrong-role-id' })
         .expect(409);
+
+      // spec: "Ineligible-role 409 is distinguishable from the other two" —
+      // code is additive, statusCode/error/message unchanged in shape.
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'INELIGIBLE_ROLE',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
 
       const representatives = await agent
         .get(`/communities/${communityId}/representatives`)
@@ -473,13 +484,22 @@ describe('Communities (e2e)', () => {
       ).toBe(false);
     });
 
-    it('rejects adding a wrong-role user as technician with 409, no assignment created', async () => {
+    it('rejects adding a wrong-role user as technician with 409 code INELIGIBLE_ROLE, no assignment created', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      await agent
+      const response = await agent
         .post(`/communities/${communityId}/technicians`)
         .send({ userId: 'eligibility-wrong-role-id' })
         .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'INELIGIBLE_ROLE',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
 
       const technicians = await agent
         .get(`/communities/${communityId}/technicians`)
@@ -489,6 +509,96 @@ describe('Communities (e2e)', () => {
           (entry) => entry.userId === 'eligibility-wrong-role-id',
         ),
       ).toBe(false);
+    });
+
+    it('rejects adding a request missing userId with 400, carrying no code (spec: 404 and 400 responses on assignment routes are unaffected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post(`/communities/${communityId}/representatives`)
+        .send({})
+        .expect(400);
+
+      expect(response.body).not.toHaveProperty('code');
+    });
+  });
+
+  describe('Already-assigned 409 on repeat assignment (tasks.md 1.4, spec: Already-assigned 409 is distinguishable from ineligible-role 409)', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'already-assigned-admin@example.com';
+    const communityId = 'already-assigned-community-id';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'already-assigned-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const rep = await buildSeedUser({
+        id: 'already-assigned-rep-id',
+        email: 'already-assigned-rep@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const tech = await buildSeedUser({
+        id: 'already-assigned-tech-id',
+        email: 'already-assigned-tech@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const community = buildCommunity({ id: communityId });
+      ({ app } = await buildApp({
+        users: [admin, rep, tech],
+        communities: [community],
+      }));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('rejects re-adding an active representative assignment with 409 code ASSIGNMENT_ALREADY_EXISTS', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .post(`/communities/${communityId}/representatives`)
+        .send({ userId: 'already-assigned-rep-id' })
+        .expect(201);
+
+      const response = await agent
+        .post(`/communities/${communityId}/representatives`)
+        .send({ userId: 'already-assigned-rep-id' })
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'ASSIGNMENT_ALREADY_EXISTS',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
+    });
+
+    it('rejects re-adding an active technician assignment with 409 code ASSIGNMENT_ALREADY_EXISTS', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .post(`/communities/${communityId}/technicians`)
+        .send({ userId: 'already-assigned-tech-id' })
+        .expect(201);
+
+      const response = await agent
+        .post(`/communities/${communityId}/technicians`)
+        .send({ userId: 'already-assigned-tech-id' })
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'ASSIGNMENT_ALREADY_EXISTS',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
     });
   });
 
@@ -663,11 +773,14 @@ describe('Communities (e2e)', () => {
 
       await agent.delete('/users/softdel-user-rep-id').expect(204);
 
-      await agent
+      const reactivateResponse = await agent
         .post(
           `/communities/${communityId}/representatives/softdel-user-rep-id/reactivate`,
         )
         .expect(404);
+      // spec: "404 and 400 responses on assignment routes are unaffected" —
+      // no `code` field added by this requirement.
+      expect(reactivateResponse.body).not.toHaveProperty('code');
 
       const representatives = await agent
         .get(`/communities/${communityId}/representatives`)
@@ -694,11 +807,12 @@ describe('Communities (e2e)', () => {
 
       await agent.delete('/users/softdel-user-tech-id').expect(204);
 
-      await agent
+      const reactivateResponse = await agent
         .post(
           `/communities/${communityId}/technicians/softdel-user-tech-id/reactivate`,
         )
         .expect(404);
+      expect(reactivateResponse.body).not.toHaveProperty('code');
 
       const technicians = await agent
         .get(`/communities/${communityId}/technicians`)
@@ -710,6 +824,111 @@ describe('Communities (e2e)', () => {
         }>
       ).find((entry) => entry.userId === 'softdel-user-tech-id');
       expect(record?.deactivatedAt).not.toBeNull();
+    });
+  });
+
+  describe('Ineligible-role 409 on reactivate (tasks.md 1.5 checkpoint, design.md Open Question 1)', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'reactivate-ineligible-admin@example.com';
+    const communityId = 'reactivate-ineligible-community-id';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'reactivate-ineligible-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const rep = await buildSeedUser({
+        id: 'reactivate-ineligible-rep-id',
+        email: 'reactivate-ineligible-rep@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const tech = await buildSeedUser({
+        id: 'reactivate-ineligible-tech-id',
+        email: 'reactivate-ineligible-tech@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const community = buildCommunity({ id: communityId });
+      ({ app } = await buildApp({
+        users: [admin, rep, tech],
+        communities: [community],
+      }));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    // design.md Open Question 1 checkpoint: IneligibleRoleError IS reachable
+    // on reactivate — ReactivateRepresentativeUseCase/ReactivateTechnicianUseCase
+    // both call assertEligibleFor(user.role, kind) AFTER re-reading the
+    // user's CURRENT global role, so a role change while the assignment is
+    // deactivated (allowed — "Accepted eligibility drift" only covers an
+    // ACTIVE assignment) surfaces as a 409 on the next reactivate attempt.
+    it('rejects reactivating a representative assignment whose user role drifted away from COMMUNITY_REPRESENTATIVE while deactivated', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .post(`/communities/${communityId}/representatives`)
+        .send({ userId: 'reactivate-ineligible-rep-id' })
+        .expect(201);
+      await agent
+        .delete(
+          `/communities/${communityId}/representatives/reactivate-ineligible-rep-id`,
+        )
+        .expect(204);
+      await agent
+        .patch('/users/reactivate-ineligible-rep-id')
+        .send({ role: 'MANAGER' })
+        .expect(200);
+
+      const response = await agent
+        .post(
+          `/communities/${communityId}/representatives/reactivate-ineligible-rep-id/reactivate`,
+        )
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'INELIGIBLE_ROLE',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
+    });
+
+    it('rejects reactivating a technician assignment whose user role drifted away from MAINTENANCE_TECHNICIAN while deactivated', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .post(`/communities/${communityId}/technicians`)
+        .send({ userId: 'reactivate-ineligible-tech-id' })
+        .expect(201);
+      await agent
+        .delete(
+          `/communities/${communityId}/technicians/reactivate-ineligible-tech-id`,
+        )
+        .expect(204);
+      await agent
+        .patch('/users/reactivate-ineligible-tech-id')
+        .send({ role: 'MANAGER' })
+        .expect(200);
+
+      const response = await agent
+        .post(
+          `/communities/${communityId}/technicians/reactivate-ineligible-tech-id/reactivate`,
+        )
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        error: 'Conflict',
+        code: 'INELIGIBLE_ROLE',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
     });
   });
 
