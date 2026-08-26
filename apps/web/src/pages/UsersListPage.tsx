@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { deactivateUser, listUsers, type User } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
@@ -90,6 +91,9 @@ export function UsersListPage() {
   return (
     <main>
       <h1>{t('users.list.title')}</h1>
+      <Link to="/users/new" data-testid="users-list-create-link">
+        {t('users.list.createLink')}
+      </Link>
       {actionErrorKey && (
         <p data-testid="users-list-action-error">{t(actionErrorKey)}</p>
       )}

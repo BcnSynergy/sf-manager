@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -20,7 +21,11 @@ const admin = { id: 'admin-1', email: 'admin@sf-manager.example', role: 'SYSTEM_
 const otherUser = { id: 'user-2', email: 'user2@sf-manager.example', role: 'MANAGER' as const };
 
 function renderPage() {
-  return render(<UsersListPage />);
+  return render(
+    <MemoryRouter>
+      <UsersListPage />
+    </MemoryRouter>,
+  );
 }
 
 describe('UsersListPage', () => {
@@ -120,6 +125,15 @@ describe('UsersListPage', () => {
 
     expect(mockedDeactivateUser).not.toHaveBeenCalled();
     expect(screen.getByTestId(`users-list-row-${otherUser.id}`)).toBeInTheDocument();
+  });
+
+  it('shows a "New user" link pointing to /users/new', async () => {
+    mockedListUsers.mockResolvedValue([admin]);
+
+    renderPage();
+
+    const link = await screen.findByTestId('users-list-create-link');
+    expect(link).toHaveAttribute('href', '/users/new');
   });
 
   it('shows a cause-specific message (mapped via error-messages, not English server prose) when deactivation fails', async () => {

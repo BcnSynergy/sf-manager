@@ -18,7 +18,16 @@
       "columnRole": "Rol",
       "deactivate": "Desactivar",
       "deactivateConfirmTitle": "Desactivar usuari",
-      "deactivateConfirmMessage": "Aquest usuari ja no podrà iniciar sessió. Aquesta acció no es pot desfer."
+      "deactivateConfirmMessage": "Aquest usuari ja no podrà iniciar sessió. Aquesta acció no es pot desfer.",
+      "createLink": "Usuari nou"
+    },
+    "create": {
+      "title": "Usuari nou",
+      "emailLabel": "Correu electrònic",
+      "passwordLabel": "Contrasenya",
+      "roleLabel": "Rol",
+      "submitLabel": "Crear usuari",
+      "validationError": "Introdueix un correu electrònic vàlid i una contrasenya que compleixi els requisits de seguretat."
     },
     "error": {
       "duplicateEmail": "Aquest correu electrònic ja està en ús per un altre usuari.",

@@ -57,10 +57,10 @@ Chain strategy: stacked-to-main
 - [x] 6.3 Wire `/users` route into `App.tsx` under `<ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>`.
 
 ## Phase 7: User Create Page (PR 7)
-- [ ] 7.1 Add `users.create.*` i18n keys to `en.json`, `es.json`, `ca.json`.
-- [ ] 7.2 RED/GREEN `UserCreatePage.tsx` + `UserCreatePage.test.tsx` — `createUserSchema`/`passwordSchema` `safeParse` blocks submit before any fetch; success navigates to list without manual reload; duplicate-email 409 shows `users.error.duplicateEmail`.
-- [ ] 7.3 Wire `/users/new` route into `App.tsx`.
-- [ ] 7.4 Add a "New user" link/button to `UsersListPage.tsx` navigating to `/users/new` — closes the entry-point gap flagged in PR6's fresh-context review (no other task in this plan reaches `/users/new` from the UI).
+- [x] 7.1 Add `users.create.*` i18n keys to `en.json`, `es.json`, `ca.json`.
+- [x] 7.2 RED/GREEN `UserCreatePage.tsx` + `UserCreatePage.test.tsx` — `createUserSchema`/`passwordSchema` `safeParse` blocks submit before any fetch; success navigates to list without manual reload; duplicate-email 409 shows `users.error.duplicateEmail`.
+- [x] 7.3 Wire `/users/new` route into `App.tsx`.
+- [x] 7.4 Add a "New user" link/button to `UsersListPage.tsx` navigating to `/users/new` — closes the entry-point gap flagged in PR6's fresh-context review (no other task in this plan reaches `/users/new` from the UI).
 
 ## Phase 8: User Edit Page (PR 8)
 - [ ] 8.1 Add `users.edit.*` i18n keys to `en.json`, `es.json`, `ca.json`.
