@@ -66,7 +66,8 @@
       "delete": "Delete",
       "deleteConfirmTitle": "Delete community",
       "deleteConfirmMessage": "This community will be removed. This cannot be undone.",
-      "createLink": "New community"
+      "createLink": "New community",
+      "editLink": "Edit"
     },
     "locale": {
       "en": "English",
@@ -80,6 +81,15 @@
       "localeLabel": "Locale",
       "submitLabel": "Create community",
       "validationError": "Enter a name, an address, and a locale."
+    },
+    "edit": {
+      "title": "Edit community",
+      "nameLabel": "Name",
+      "addressLabel": "Address",
+      "localeLabel": "Locale",
+      "submitLabel": "Save changes",
+      "validationError": "Enter a name, an address, and a locale.",
+      "notFound": "This community could not be found."
     }
   },
   "health": {
