@@ -18,7 +18,16 @@
       "columnRole": "Role",
       "deactivate": "Deactivate",
       "deactivateConfirmTitle": "Deactivate user",
-      "deactivateConfirmMessage": "This user will no longer be able to sign in. This cannot be undone."
+      "deactivateConfirmMessage": "This user will no longer be able to sign in. This cannot be undone.",
+      "createLink": "New user"
+    },
+    "create": {
+      "title": "New user",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "roleLabel": "Role",
+      "submitLabel": "Create user",
+      "validationError": "Enter a valid email and a password that meets the strength requirements."
     },
     "error": {
       "duplicateEmail": "This email is already in use by another user.",

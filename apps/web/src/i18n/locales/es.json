@@ -18,7 +18,16 @@
       "columnRole": "Rol",
       "deactivate": "Desactivar",
       "deactivateConfirmTitle": "Desactivar usuario",
-      "deactivateConfirmMessage": "Este usuario ya no podrá iniciar sesión. Esta acción no se puede deshacer."
+      "deactivateConfirmMessage": "Este usuario ya no podrá iniciar sesión. Esta acción no se puede deshacer.",
+      "createLink": "Nuevo usuario"
+    },
+    "create": {
+      "title": "Nuevo usuario",
+      "emailLabel": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "roleLabel": "Rol",
+      "submitLabel": "Crear usuario",
+      "validationError": "Introduce un correo electrónico válido y una contraseña que cumpla los requisitos de seguridad."
     },
     "error": {
       "duplicateEmail": "Este correo electrónico ya está en uso por otro usuario.",
