@@ -1,7 +1,9 @@
 {
   "common": {
     "notAuthorizedTitle": "No autoritzat",
-    "notAuthorizedMessage": "No tens permís per veure aquesta pàgina."
+    "notAuthorizedMessage": "No tens permís per veure aquesta pàgina.",
+    "confirm": "Confirmar",
+    "cancel": "Cancel·lar"
   },
   "health": {
     "title": "Estat del sistema",

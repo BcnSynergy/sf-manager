@@ -44,8 +44,8 @@ Chain strategy: stacked-to-main
 - [x] 3.2 Create `apps/web/src/auth/NotAuthorized.tsx` — renders `common.notAuthorized*` keys; mechanical (pure render, no branching logic).
 
 ## Phase 4: Web Foundation — Confirm Dialog (PR 4)
-- [ ] 4.1 RED/GREEN `apps/web/src/components/ConfirmDialog.tsx` + test — native `<dialog>`, `showModal`/`close`, confirm/cancel callbacks, i18n'd labels.
-- [ ] 4.2 If jsdom 30 lacks `HTMLDialogElement.showModal`/`close`, add a minimal polyfill to `apps/web/src/test/setup.ts` (mechanical, verify at apply time per design's Open Question).
+- [x] 4.1 RED/GREEN `apps/web/src/components/ConfirmDialog.tsx` + test — native `<dialog>`, `showModal`/`close`, confirm/cancel callbacks, i18n'd labels.
+- [x] 4.2 Verified empirically: jsdom 30's `HTMLDialogElement` is a bare stub with no `showModal`/`close` overrides (`node_modules/jsdom/lib/jsdom/living/nodes/HTMLDialogElement-impl.js`) — RTL test failed with `dialog.showModal is not a function` before the polyfill. Added minimal `showModal`/`close` polyfill to `apps/web/src/test/setup.ts` (toggles the reflected `open` attribute only).
 
 ## Phase 5: Web — Error-Message Mapping (PR 5)
 - [ ] 5.1 RED/GREEN `apps/web/src/users/error-messages.ts` + test — `ApiError{status,code}` -> i18n key: `EMAIL_ALREADY_IN_USE` -> `users.error.duplicateEmail`, `LAST_SYSTEM_ADMIN` -> `users.error.lastSystemAdmin`, `TRANSACTION_CONFLICT` -> `users.error.tryAgain`, 400 -> `users.error.weakPassword`, 404 -> `users.error.notFound`, `status 0`/unknown -> `common.error.network`.
