@@ -55,6 +55,24 @@
       "communityRepresentative": "Representant de la comunitat"
     }
   },
+  "community": {
+    "list": {
+      "title": "Comunitats",
+      "loading": "Carregant comunitats...",
+      "empty": "No hi ha comunitats actives.",
+      "columnName": "Nom",
+      "columnAddress": "Adreça",
+      "columnLocale": "Idioma",
+      "delete": "Elimina",
+      "deleteConfirmTitle": "Elimina la comunitat",
+      "deleteConfirmMessage": "Aquesta comunitat s'eliminarà. Aquesta acció no es pot desfer."
+    },
+    "locale": {
+      "en": "Anglès",
+      "es": "Espanyol",
+      "ca": "Català"
+    }
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",
