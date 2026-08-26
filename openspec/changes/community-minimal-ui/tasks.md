@@ -56,10 +56,10 @@ one PR" (High likelihood).
 - [x] 3.3 **Rule checkpoint**: grep `AssignmentSection.tsx` for `isExclusive`/`mode`/`allowsMultipleActive` or any behavior-changing prop before merge — none may exist (design.md Decision 3 hard rule for `sdd-apply`/`sdd-verify`).
 
 ## Phase 4: Communities List Page (PR 4)
-- [ ] 4.1 mechanical `apps/web/src/community/locale-labels.ts` — `Locale` -> i18n key.
-- [ ] 4.2 mechanical: add `community.list.*`/`community.locale.*` keys to `en.json`/`es.json`/`ca.json`, real translations.
-- [ ] 4.3 RED/GREEN `CommunitiesListPage.tsx` + test — loading/empty/error states; renders `name`/`address`/`locale` via label map; soft-deleted rows never shown; delete -> `ConfirmDialog` -> `softDeleteCommunity` + refetch, no manual reload. Traces spec "List Active Communities", "Soft-Delete Community".
-- [ ] 4.4 mechanical: wire `/communities` route under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`.
+- [x] 4.1 mechanical `apps/web/src/community/locale-labels.ts` — `Locale` -> i18n key.
+- [x] 4.2 mechanical: add `community.list.*`/`community.locale.*` keys to `en.json`/`es.json`/`ca.json`, real translations.
+- [x] 4.3 RED/GREEN `CommunitiesListPage.tsx` + test — loading/empty/error states; renders `name`/`address`/`locale` via label map; soft-deleted rows never shown; delete -> `ConfirmDialog` -> `softDeleteCommunity` + refetch, no manual reload. Traces spec "List Active Communities", "Soft-Delete Community".
+- [x] 4.4 mechanical: wire `/communities` route under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`.
 
 ## Phase 5: Community Create Page (PR 5)
 - [ ] 5.1 mechanical: `community.create.*` i18n keys, 3 locales.

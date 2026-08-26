@@ -55,6 +55,24 @@
       "communityRepresentative": "Representante de la comunidad"
     }
   },
+  "community": {
+    "list": {
+      "title": "Comunidades",
+      "loading": "Cargando comunidades...",
+      "empty": "No hay comunidades activas.",
+      "columnName": "Nombre",
+      "columnAddress": "Dirección",
+      "columnLocale": "Idioma",
+      "delete": "Eliminar",
+      "deleteConfirmTitle": "Eliminar comunidad",
+      "deleteConfirmMessage": "Esta comunidad se eliminará. Esta acción no se puede deshacer."
+    },
+    "locale": {
+      "en": "Inglés",
+      "es": "Español",
+      "ca": "Catalán"
+    }
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",

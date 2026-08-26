@@ -55,6 +55,24 @@
       "communityRepresentative": "Community representative"
     }
   },
+  "community": {
+    "list": {
+      "title": "Communities",
+      "loading": "Loading communities...",
+      "empty": "No active communities found.",
+      "columnName": "Name",
+      "columnAddress": "Address",
+      "columnLocale": "Locale",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete community",
+      "deleteConfirmMessage": "This community will be removed. This cannot be undone."
+    },
+    "locale": {
+      "en": "English",
+      "es": "Spanish",
+      "ca": "Catalan"
+    }
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",
