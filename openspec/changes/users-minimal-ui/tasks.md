@@ -40,8 +40,8 @@ Chain strategy: stacked-to-main
 - [x] 2.2 RED/GREEN `apps/web/src/api/users.ts` + test — `listUsers`/`createUser`/`updateUser`/`deactivateUser`; mirrored `UserErrorCode` literal union.
 
 ## Phase 3: Web Foundation — Role Gating (PR 3)
-- [ ] 3.1 RED/GREEN `ProtectedRoute.tsx` + `ProtectedRoute.test.tsx` — add `allowedRoles?: Role[]`; precedence `isLoading` -> null, no user -> `/login`, role not in `allowedRoles` -> `NotAuthorized`, allowed/no prop -> children (legacy behavior unchanged).
-- [ ] 3.2 Create `apps/web/src/auth/NotAuthorized.tsx` — renders `common.notAuthorized*` keys; mechanical (pure render, no branching logic).
+- [x] 3.1 RED/GREEN `ProtectedRoute.tsx` + `ProtectedRoute.test.tsx` — add `allowedRoles?: Role[]`; precedence `isLoading` -> null, no user -> `/login`, role not in `allowedRoles` -> `NotAuthorized`, allowed/no prop -> children (legacy behavior unchanged).
+- [x] 3.2 Create `apps/web/src/auth/NotAuthorized.tsx` — renders `common.notAuthorized*` keys; mechanical (pure render, no branching logic).
 
 ## Phase 4: Web Foundation — Confirm Dialog (PR 4)
 - [ ] 4.1 RED/GREEN `apps/web/src/components/ConfirmDialog.tsx` + test — native `<dialog>`, `showModal`/`close`, confirm/cancel callbacks, i18n'd labels.

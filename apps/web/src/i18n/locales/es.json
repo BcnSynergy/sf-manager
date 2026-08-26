@@ -1,4 +1,8 @@
 {
+  "common": {
+    "notAuthorizedTitle": "No autorizado",
+    "notAuthorizedMessage": "No tienes permiso para ver esta página."
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",
