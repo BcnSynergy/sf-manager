@@ -95,4 +95,47 @@ describe('apiFetch', () => {
     expect((error as ApiError).status).toBe(0);
     expect((error as ApiError).code).toBeUndefined();
   });
+
+  it('throws ApiError without a code on an error response whose JSON body has no code field', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse({
+          ok: false,
+          status: 400,
+          json: async () => ({
+            statusCode: 400,
+            error: 'Bad Request',
+            message: 'Password does not meet requirements',
+          }),
+        }),
+      ),
+    );
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(400);
+    expect((error as ApiError).code).toBeUndefined();
+  });
+
+  it('throws ApiError with status 0 on a successful (200) response with an unparseable body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse({
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new Error('not JSON');
+          },
+        }),
+      ),
+    );
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(0);
+  });
 });
