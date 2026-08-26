@@ -73,6 +73,17 @@ describe('UserEditPage', () => {
     expect(screen.queryByTestId('user-edit-email')).not.toBeInTheDocument();
   });
 
+  it('shows a network-error state, not not-found, when listUsers() itself rejects', async () => {
+    mockedListUsers.mockRejectedValue(new ApiError(0));
+    renderPage(otherUser.id);
+
+    expect(await screen.findByTestId('user-edit-error-state')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    );
+    expect(screen.queryByTestId('user-edit-not-found')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('user-edit-email')).not.toBeInTheDocument();
+  });
+
   it('saves changes and navigates to the users list without a manual reload', async () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     mockedUpdateUser.mockResolvedValue({ ...otherUser, email: 'updated@sf-manager.example' });

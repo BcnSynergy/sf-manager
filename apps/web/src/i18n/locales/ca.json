@@ -19,7 +19,8 @@
       "deactivate": "Desactivar",
       "deactivateConfirmTitle": "Desactivar usuari",
       "deactivateConfirmMessage": "Aquest usuari ja no podrà iniciar sessió. Aquesta acció no es pot desfer.",
-      "createLink": "Usuari nou"
+      "createLink": "Usuari nou",
+      "editLink": "Edita"
     },
     "create": {
       "title": "Usuari nou",
@@ -35,8 +36,7 @@
       "roleLabel": "Rol",
       "submitLabel": "Desa els canvis",
       "validationError": "Introdueix un correu electrònic vàlid.",
-      "notFound": "No s'ha pogut trobar aquest usuari.",
-      "editLink": "Edita"
+      "notFound": "No s'ha pogut trobar aquest usuari."
     },
     "error": {
       "duplicateEmail": "Aquest correu electrònic ja està en ús per un altre usuari.",

@@ -9,18 +9,21 @@ import { mapApiErrorToMessageKey } from '../users/error-messages';
 
 const ROLE_OPTIONS = roleSchema.options;
 
-type LoadState = 'loading' | 'loaded' | 'not-found';
+type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
 
 // spec.md "Edit User": no `GET /users/:id` exists (design.md Decision 5), so
 // the page fetches listUsers() and selects the row by :id client-side. If
-// the id is absent from the list (deactivated or gone) — or the list fetch
-// itself fails — the page renders the same not-found state as a 404, per
-// Decision 5's "no silent redirect". Only email and role are editable, no
-// password field (spec). The role field is disabled on the admin's own row,
-// mirroring UsersListPage's deactivate-button self-guard (design.md "Data
-// Flow — deactivate"). Server-side rejection is mapped exclusively through
-// mapApiErrorToMessageKey (spec "No Server-Message String Coupling"); this
-// page never reads ApiError.message.
+// the id is genuinely absent from a successfully-fetched list (deactivated
+// or gone), the page renders a not-found state, per Decision 5's "no silent
+// redirect". If listUsers() itself rejects (network/API failure), that's a
+// distinct 'error' state — telling an admin a real user "could not be
+// found" during a transient failure would be misleading — reusing
+// mapApiErrorToMessageKey's network-error key (spec "No Server-Message
+// String Coupling"). Only email and role are editable, no password field
+// (spec). The role field is disabled on the admin's own row, mirroring
+// UsersListPage's deactivate-button self-guard (design.md "Data Flow —
+// deactivate"). Server-side rejection is mapped exclusively through
+// mapApiErrorToMessageKey; this page never reads ApiError.message.
 export function UserEditPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -51,7 +54,7 @@ export function UserEditPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          setLoadState('not-found');
+          setLoadState('error');
         }
       });
 
@@ -102,6 +105,15 @@ export function UserEditPage() {
       <main>
         <h1>{t('users.edit.title')}</h1>
         <p data-testid="user-edit-not-found">{t('users.edit.notFound')}</p>
+      </main>
+    );
+  }
+
+  if (loadState === 'error') {
+    return (
+      <main>
+        <h1>{t('users.edit.title')}</h1>
+        <p data-testid="user-edit-error-state">{t('common.error.network')}</p>
       </main>
     );
   }
