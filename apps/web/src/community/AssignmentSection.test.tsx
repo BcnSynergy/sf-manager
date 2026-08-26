@@ -113,8 +113,11 @@ describe('AssignmentSection', () => {
     });
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
 
+    // community.error.assignmentExists now has a real (non-placeholder)
+    // translation (community-minimal-ui PR8, task 8.1's known-gap fix) —
+    // assert the rendered EN copy, not the raw i18n key.
     expect(await screen.findByTestId('representatives-assign-error')).toHaveTextContent(
-      'community.error.assignmentExists',
+      'This user is already assigned.',
     );
   });
 
