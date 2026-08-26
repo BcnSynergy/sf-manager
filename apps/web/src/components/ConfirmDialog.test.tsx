@@ -29,6 +29,23 @@ describe('ConfirmDialog', () => {
     expect(screen.getByTestId('confirm-dialog')).toHaveAttribute('open');
   });
 
+  it('closes the native dialog when open transitions from true to false', () => {
+    const { rerender } = renderDialog({ open: true });
+    expect(screen.getByTestId('confirm-dialog')).toHaveAttribute('open');
+
+    rerender(
+      <ConfirmDialog
+        open={false}
+        title="Deactivate user"
+        message="This cannot be undone."
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('confirm-dialog')).not.toHaveAttribute('open');
+  });
+
   it('renders the caller-supplied title and message', () => {
     renderDialog();
 
