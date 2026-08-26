@@ -65,12 +65,21 @@
       "columnLocale": "Locale",
       "delete": "Delete",
       "deleteConfirmTitle": "Delete community",
-      "deleteConfirmMessage": "This community will be removed. This cannot be undone."
+      "deleteConfirmMessage": "This community will be removed. This cannot be undone.",
+      "createLink": "New community"
     },
     "locale": {
       "en": "English",
       "es": "Spanish",
       "ca": "Catalan"
+    },
+    "create": {
+      "title": "New community",
+      "nameLabel": "Name",
+      "addressLabel": "Address",
+      "localeLabel": "Locale",
+      "submitLabel": "Create community",
+      "validationError": "Enter a name, an address, and a locale."
     }
   },
   "health": {
