@@ -4,6 +4,8 @@
     "notAuthorizedMessage": "You do not have permission to view this page.",
     "confirm": "Confirm",
     "cancel": "Cancel",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
     "error": {
       "network": "Something went wrong. Please try again."
     }
