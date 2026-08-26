@@ -86,6 +86,15 @@ describe('CommunitiesListPage', () => {
     expect(screen.queryByTestId(`communities-list-row-${communityB.id}`)).not.toBeInTheDocument();
   });
 
+  it('shows a "New community" link pointing to /communities/new', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    const link = await screen.findByTestId('communities-list-create-link');
+    expect(link).toHaveAttribute('href', '/communities/new');
+  });
+
   it('requires confirmation before calling softDeleteCommunity', async () => {
     mockedListCommunities.mockResolvedValue([communityA]);
 

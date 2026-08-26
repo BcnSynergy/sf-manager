@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { CommunitiesListPage } from './pages/CommunitiesListPage';
+import { CommunityCreatePage } from './pages/CommunityCreatePage';
 import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
 import { UserCreatePage } from './pages/UserCreatePage';
@@ -51,6 +52,19 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <CommunitiesListPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md "Route order note": the static /communities/new
+              segment ranks above the dynamic /communities/:id segment
+              (added in Phase 7) — React Router matches static path
+              segments before dynamic ones regardless of declaration
+              order, so this coexists safely once :id is added. */}
+          <Route
+            path="/communities/new"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <CommunityCreatePage />
               </ProtectedRoute>
             }
           />

@@ -65,12 +65,21 @@
       "columnLocale": "Idioma",
       "delete": "Eliminar",
       "deleteConfirmTitle": "Eliminar comunidad",
-      "deleteConfirmMessage": "Esta comunidad se eliminará. Esta acción no se puede deshacer."
+      "deleteConfirmMessage": "Esta comunidad se eliminará. Esta acción no se puede deshacer.",
+      "createLink": "Nueva comunidad"
     },
     "locale": {
       "en": "Inglés",
       "es": "Español",
       "ca": "Catalán"
+    },
+    "create": {
+      "title": "Nueva comunidad",
+      "nameLabel": "Nombre",
+      "addressLabel": "Dirección",
+      "localeLabel": "Idioma",
+      "submitLabel": "Crear comunidad",
+      "validationError": "Introduce un nombre, una dirección y un idioma."
     }
   },
   "health": {

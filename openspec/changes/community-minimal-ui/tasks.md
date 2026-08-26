@@ -62,10 +62,10 @@ one PR" (High likelihood).
 - [x] 4.4 mechanical: wire `/communities` route under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`.
 
 ## Phase 5: Community Create Page (PR 5)
-- [ ] 5.1 mechanical: `community.create.*` i18n keys, 3 locales.
-- [ ] 5.2 RED/GREEN `CommunityCreatePage.tsx` + test — `createCommunitySchema`/`localeSchema` `safeParse` blocks submit before any network call; `<select>` options via `locale-labels`; success navigates to list without manual reload. Traces spec "Create Community".
-- [ ] 5.3 mechanical: wire `/communities/new` (verify it ranks above `/communities/:id`, per design.md route-order note).
-- [ ] 5.4 mechanical: add a "New community" link on `CommunitiesListPage.tsx` — close the entry-point gap in this same PR, not a later follow-up (`users-minimal-ui` PR6/PR7 precedent).
+- [x] 5.1 mechanical: `community.create.*` i18n keys, 3 locales.
+- [x] 5.2 RED/GREEN `CommunityCreatePage.tsx` + test — `createCommunitySchema`/`localeSchema` `safeParse` blocks submit before any network call; `<select>` options via `locale-labels`; success navigates to list without manual reload. Traces spec "Create Community".
+- [x] 5.3 mechanical: wire `/communities/new` (verify it ranks above `/communities/:id`, per design.md route-order note).
+- [x] 5.4 mechanical: add a "New community" link on `CommunitiesListPage.tsx` — close the entry-point gap in this same PR, not a later follow-up (`users-minimal-ui` PR6/PR7 precedent).
 
 ## Phase 6: Community Edit Page (PR 6)
 - [ ] 6.1 RED/GREEN `apps/web/src/community/use-community.ts` + test — `listCommunities()` + client-side select by `:id`; explicit not-found state when `:id` is absent. Per design.md Decision 4.

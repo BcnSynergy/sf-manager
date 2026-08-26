@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { listCommunities, softDeleteCommunity, type Community } from '../api/community';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -88,6 +89,9 @@ export function CommunitiesListPage() {
   return (
     <main>
       <h1>{t('community.list.title')}</h1>
+      <Link to="/communities/new" data-testid="communities-list-create-link">
+        {t('community.list.createLink')}
+      </Link>
       {actionErrorKey && (
         <p data-testid="communities-list-action-error">{t(actionErrorKey)}</p>
       )}

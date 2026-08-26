@@ -65,12 +65,21 @@
       "columnLocale": "Idioma",
       "delete": "Elimina",
       "deleteConfirmTitle": "Elimina la comunitat",
-      "deleteConfirmMessage": "Aquesta comunitat s'eliminarà. Aquesta acció no es pot desfer."
+      "deleteConfirmMessage": "Aquesta comunitat s'eliminarà. Aquesta acció no es pot desfer.",
+      "createLink": "Comunitat nova"
     },
     "locale": {
       "en": "Anglès",
       "es": "Espanyol",
       "ca": "Català"
+    },
+    "create": {
+      "title": "Comunitat nova",
+      "nameLabel": "Nom",
+      "addressLabel": "Adreça",
+      "localeLabel": "Idioma",
+      "submitLabel": "Crea la comunitat",
+      "validationError": "Introdueix un nom, una adreça i un idioma."
     }
   },
   "health": {
