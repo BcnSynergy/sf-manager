@@ -44,6 +44,13 @@
       "tryAgain": "Something changed while saving. Please try again.",
       "weakPassword": "The password does not meet the strength requirements.",
       "notFound": "This user could not be found."
+    },
+    "role": {
+      "systemAdmin": "System administrator",
+      "manager": "Manager",
+      "maintenanceCompanyManager": "Maintenance company manager",
+      "maintenanceTechnician": "Maintenance technician",
+      "communityRepresentative": "Community representative"
     }
   },
   "health": {

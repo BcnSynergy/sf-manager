@@ -44,6 +44,13 @@
       "tryAgain": "Algo ha cambiado mientras se guardaba. Inténtalo de nuevo.",
       "weakPassword": "La contraseña no cumple los requisitos de seguridad.",
       "notFound": "No se ha podido encontrar este usuario."
+    },
+    "role": {
+      "systemAdmin": "Administrador del sistema",
+      "manager": "Gestor",
+      "maintenanceCompanyManager": "Gestor de empresa de mantenimiento",
+      "maintenanceTechnician": "Técnico de mantenimiento",
+      "communityRepresentative": "Representante de la comunidad"
     }
   },
   "health": {

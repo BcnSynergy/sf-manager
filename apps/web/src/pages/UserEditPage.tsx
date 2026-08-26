@@ -6,6 +6,7 @@ import { ApiError } from '../api/client';
 import { listUsers, updateUser } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
+import { mapRoleToLabelKey } from '../users/role-labels';
 
 const ROLE_OPTIONS = roleSchema.options;
 
@@ -142,7 +143,7 @@ export function UserEditPage() {
         >
           {ROLE_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {t(mapRoleToLabelKey(option))}
             </option>
           ))}
         </select>

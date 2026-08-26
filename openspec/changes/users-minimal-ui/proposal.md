@@ -228,8 +228,13 @@ data is reshaped, so there is no state to unwind.
 - [ ] A genuine concurrency conflict (`TransactionConflictError`) on
       `PATCH`/`DELETE` shows a distinct "please try again" message, with no
       automatic retry.
-- [ ] Zero hardcoded UI strings; `users.*` and `common.*` keys exist with real
-      translations in `en`, `es` **and** `ca`.
+- [x] Zero hardcoded UI strings; `users.*` and `common.*` keys exist with real
+      translations in `en`, `es` **and** `ca`. (Closed in PR9's follow-up fix:
+      `users.role.*` keys added to all 3 locales, `role-labels.ts` maps the
+      `Role` enum to its i18n key, consumed by `UsersListPage.tsx`'s table
+      cell and `UserCreatePage.tsx`/`UserEditPage.tsx`'s role `<select>`
+      `<option>` labels — the raw enum value now only backs the `<option
+      value>` and API payload, never the rendered text.)
 - [ ] No client code compares against a server-supplied English message string.
 - [ ] Web suite and lint pass.
 

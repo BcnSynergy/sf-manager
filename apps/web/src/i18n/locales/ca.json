@@ -44,6 +44,13 @@
       "tryAgain": "Alguna cosa ha canviat mentre es desava. Torna-ho a provar.",
       "weakPassword": "La contrasenya no compleix els requisits de seguretat.",
       "notFound": "No s'ha pogut trobar aquest usuari."
+    },
+    "role": {
+      "systemAdmin": "Administrador del sistema",
+      "manager": "Gestor",
+      "maintenanceCompanyManager": "Gestor d'empresa de manteniment",
+      "maintenanceTechnician": "Tècnic de manteniment",
+      "communityRepresentative": "Representant de la comunitat"
     }
   },
   "health": {

@@ -5,6 +5,7 @@ import { createUserSchema, roleSchema, type Role } from '@sf-manager/validation'
 import { ApiError } from '../api/client';
 import { createUser } from '../api/users';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
+import { mapRoleToLabelKey } from '../users/role-labels';
 
 const ROLE_OPTIONS = roleSchema.options;
 const DEFAULT_ROLE: Role = 'SYSTEM_ADMIN';
@@ -79,7 +80,7 @@ export function UserCreatePage() {
         >
           {ROLE_OPTIONS.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {t(mapRoleToLabelKey(option))}
             </option>
           ))}
         </select>
