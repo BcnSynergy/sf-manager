@@ -36,8 +36,8 @@ Chain strategy: stacked-to-main
 - [x] 1.3 Extend `apps/api/test/users.e2e-spec.ts` (lines ~192, 370, 397) — assert `body.code` equals the expected value for each of the 3 409 causes; assert `statusCode`/`error`/`message` unchanged in shape.
 
 ## Phase 2: Web Foundation — API Client (PR 2)
-- [ ] 2.1 RED/GREEN `apps/web/src/api/client.ts` + `client.test.ts` — `apiFetch`: 204 -> `undefined`; 409 -> `ApiError{status,code}`; malformed body -> `ApiError` without `code`; network throw -> `status 0`.
-- [ ] 2.2 RED/GREEN `apps/web/src/api/users.ts` + test — `listUsers`/`createUser`/`updateUser`/`deactivateUser`; mirrored `UserErrorCode` literal union.
+- [x] 2.1 RED/GREEN `apps/web/src/api/client.ts` + `client.test.ts` — `apiFetch`: 204 -> `undefined`; 409 -> `ApiError{status,code}`; malformed body -> `ApiError` without `code`; network throw -> `status 0`.
+- [x] 2.2 RED/GREEN `apps/web/src/api/users.ts` + test — `listUsers`/`createUser`/`updateUser`/`deactivateUser`; mirrored `UserErrorCode` literal union.
 
 ## Phase 3: Web Foundation — Role Gating (PR 3)
 - [ ] 3.1 RED/GREEN `ProtectedRoute.tsx` + `ProtectedRoute.test.tsx` — add `allowedRoles?: Role[]`; precedence `isLoading` -> null, no user -> `/login`, role not in `allowedRoles` -> `NotAuthorized`, allowed/no prop -> children (legacy behavior unchanged).
