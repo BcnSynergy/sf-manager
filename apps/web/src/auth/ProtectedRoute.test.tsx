@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import type { Role } from '@sf-manager/validation';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from './AuthProvider';
 
@@ -66,6 +67,83 @@ describe('ProtectedRoute', () => {
     });
 
     renderProtectedRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+});
+
+describe('ProtectedRoute with allowedRoles', () => {
+  function renderWithAllowedRoles(allowedRoles: Role[]) {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={allowedRoles}>
+                <div data-testid="protected-content">secret</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">login</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('renders nothing while the initial session check is in flight, even with allowedRoles set', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderWithAllowedRoles(['SYSTEM_ADMIN']);
+
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+  });
+
+  it('redirects to /login when unauthenticated, even with allowedRoles set (401 before 403)', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderWithAllowedRoles(['SYSTEM_ADMIN']);
+
+    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+  });
+
+  it('renders NotAuthorized when authenticated but role is not in allowedRoles', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'manager@sf-manager.example', role: 'MANAGER' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderWithAllowedRoles(['SYSTEM_ADMIN']);
+
+    expect(screen.getByTestId('not-authorized')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+  });
+
+  it('renders the protected content when the role is in allowedRoles', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderWithAllowedRoles(['SYSTEM_ADMIN']);
 
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
