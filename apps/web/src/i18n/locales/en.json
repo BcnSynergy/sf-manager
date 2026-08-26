@@ -29,6 +29,15 @@
       "submitLabel": "Create user",
       "validationError": "Enter a valid email and a password that meets the strength requirements."
     },
+    "edit": {
+      "title": "Edit user",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "submitLabel": "Save changes",
+      "validationError": "Enter a valid email.",
+      "notFound": "This user could not be found.",
+      "editLink": "Edit"
+    },
     "error": {
       "duplicateEmail": "This email is already in use by another user.",
       "lastSystemAdmin": "The last system administrator cannot be removed.",

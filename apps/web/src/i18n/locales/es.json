@@ -29,6 +29,15 @@
       "submitLabel": "Crear usuario",
       "validationError": "Introduce un correo electrónico válido y una contraseña que cumpla los requisitos de seguridad."
     },
+    "edit": {
+      "title": "Editar usuario",
+      "emailLabel": "Correo electrónico",
+      "roleLabel": "Rol",
+      "submitLabel": "Guardar cambios",
+      "validationError": "Introduce un correo electrónico válido.",
+      "notFound": "No se ha podido encontrar este usuario.",
+      "editLink": "Editar"
+    },
     "error": {
       "duplicateEmail": "Este correo electrónico ya está en uso por otro usuario.",
       "lastSystemAdmin": "No se puede eliminar al último administrador del sistema.",

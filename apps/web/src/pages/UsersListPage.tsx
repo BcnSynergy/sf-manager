@@ -116,6 +116,9 @@ export function UsersListPage() {
                 <td>{row.email}</td>
                 <td>{row.role}</td>
                 <td>
+                  <Link to={`/users/${row.id}/edit`} data-testid={`users-list-edit-${row.id}`}>
+                    {t('users.edit.editLink')}
+                  </Link>
                   {row.id !== currentUser?.id && (
                     <button
                       type="button"

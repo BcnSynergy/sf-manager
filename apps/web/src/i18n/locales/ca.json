@@ -29,6 +29,15 @@
       "submitLabel": "Crear usuari",
       "validationError": "Introdueix un correu electrònic vàlid i una contrasenya que compleixi els requisits de seguretat."
     },
+    "edit": {
+      "title": "Edita l'usuari",
+      "emailLabel": "Correu electrònic",
+      "roleLabel": "Rol",
+      "submitLabel": "Desa els canvis",
+      "validationError": "Introdueix un correu electrònic vàlid.",
+      "notFound": "No s'ha pogut trobar aquest usuari.",
+      "editLink": "Edita"
+    },
     "error": {
       "duplicateEmail": "Aquest correu electrònic ja està en ús per un altre usuari.",
       "lastSystemAdmin": "No es pot eliminar l'últim administrador del sistema.",
