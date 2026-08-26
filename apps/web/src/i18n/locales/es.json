@@ -67,12 +67,19 @@
       "deleteConfirmTitle": "Eliminar comunidad",
       "deleteConfirmMessage": "Esta comunidad se eliminará. Esta acción no se puede deshacer.",
       "createLink": "Nueva comunidad",
-      "editLink": "Editar"
+      "editLink": "Editar",
+      "viewLink": "Ver"
     },
     "locale": {
       "en": "Inglés",
       "es": "Español",
       "ca": "Catalán"
+    },
+    "assignment": {
+      "status": {
+        "active": "Activo",
+        "deactivated": "Desactivado"
+      }
     },
     "create": {
       "title": "Nueva comunidad",
@@ -90,6 +97,29 @@
       "submitLabel": "Guardar cambios",
       "validationError": "Introduce un nombre, una dirección y un idioma.",
       "notFound": "No se ha podido encontrar esta comunidad."
+    },
+    "detail": {
+      "title": "Detalles de la comunidad",
+      "nameLabel": "Nombre",
+      "addressLabel": "Dirección",
+      "localeLabel": "Idioma",
+      "notFound": "No se ha podido encontrar esta comunidad."
+    },
+    "representatives": {
+      "title": "Representantes",
+      "empty": "No hay representantes asignados.",
+      "assignLabel": "Asignar representante",
+      "confirmTitle": "Desactivar representante",
+      "confirmMessage": "Este representante se desactivará. Esta acción no se puede deshacer.",
+      "ineligible": "El rol actual de este usuario no permite asignaciones de representante."
+    },
+    "technicians": {
+      "title": "Técnicos",
+      "empty": "No hay técnicos asignados.",
+      "assignLabel": "Asignar técnico",
+      "confirmTitle": "Desactivar técnico",
+      "confirmMessage": "Este técnico se desactivará. Esta acción no se puede deshacer.",
+      "ineligible": "El rol actual de este usuario no permite asignaciones de técnico."
     }
   },
   "health": {

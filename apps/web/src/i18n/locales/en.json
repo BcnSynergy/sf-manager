@@ -67,12 +67,19 @@
       "deleteConfirmTitle": "Delete community",
       "deleteConfirmMessage": "This community will be removed. This cannot be undone.",
       "createLink": "New community",
-      "editLink": "Edit"
+      "editLink": "Edit",
+      "viewLink": "View"
     },
     "locale": {
       "en": "English",
       "es": "Spanish",
       "ca": "Catalan"
+    },
+    "assignment": {
+      "status": {
+        "active": "Active",
+        "deactivated": "Deactivated"
+      }
     },
     "create": {
       "title": "New community",
@@ -90,6 +97,29 @@
       "submitLabel": "Save changes",
       "validationError": "Enter a name, an address, and a locale.",
       "notFound": "This community could not be found."
+    },
+    "detail": {
+      "title": "Community details",
+      "nameLabel": "Name",
+      "addressLabel": "Address",
+      "localeLabel": "Locale",
+      "notFound": "This community could not be found."
+    },
+    "representatives": {
+      "title": "Representatives",
+      "empty": "No representatives assigned.",
+      "assignLabel": "Assign representative",
+      "confirmTitle": "Deactivate representative",
+      "confirmMessage": "This representative will be deactivated. This cannot be undone.",
+      "ineligible": "This user's current role does not allow representative assignments."
+    },
+    "technicians": {
+      "title": "Technicians",
+      "empty": "No technicians assigned.",
+      "assignLabel": "Assign technician",
+      "confirmTitle": "Deactivate technician",
+      "confirmMessage": "This technician will be deactivated. This cannot be undone.",
+      "ineligible": "This user's current role does not allow technician assignments."
     }
   },
   "health": {

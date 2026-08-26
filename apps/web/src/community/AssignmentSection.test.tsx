@@ -71,11 +71,11 @@ describe('AssignmentSection', () => {
 
     const activeRow = await screen.findByTestId('representatives-row-user-active');
     expect(activeRow).toHaveTextContent('user-active');
-    expect(activeRow).toHaveTextContent('community.assignment.status.active');
+    expect(activeRow).toHaveTextContent('Active');
 
     const deactivatedRow = screen.getByTestId('representatives-row-user-deactivated');
     expect(deactivatedRow).toHaveTextContent('user-deactivated');
-    expect(deactivatedRow).toHaveTextContent('community.assignment.status.deactivated');
+    expect(deactivatedRow).toHaveTextContent('Deactivated');
   });
 
   it('assigns a pasted userId and refetches the list on success', async () => {
@@ -171,7 +171,7 @@ describe('AssignmentSection', () => {
     await waitFor(() => expect(ops.deactivate).toHaveBeenCalledWith('user-a'));
     await waitFor(() =>
       expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent(
-        'community.assignment.status.deactivated',
+        'Deactivated',
       ),
     );
     expect(ops.list).toHaveBeenCalledTimes(2);
@@ -207,7 +207,7 @@ describe('AssignmentSection', () => {
     await waitFor(() => expect(ops.reactivate).toHaveBeenCalledWith('user-a'));
     await waitFor(() =>
       expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent(
-        'community.assignment.status.active',
+        'Active',
       ),
     );
     expect(ops.list).toHaveBeenCalledTimes(2);
@@ -262,11 +262,11 @@ describe('AssignmentSection', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent(
-        'community.assignment.status.deactivated',
+        'Deactivated',
       ),
     );
     expect(screen.getByTestId('representatives-row-new-active')).toHaveTextContent(
-      'community.assignment.status.active',
+      'Active',
     );
   });
 

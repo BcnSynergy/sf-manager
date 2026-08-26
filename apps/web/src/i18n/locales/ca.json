@@ -67,12 +67,19 @@
       "deleteConfirmTitle": "Elimina la comunitat",
       "deleteConfirmMessage": "Aquesta comunitat s'eliminarà. Aquesta acció no es pot desfer.",
       "createLink": "Comunitat nova",
-      "editLink": "Edita"
+      "editLink": "Edita",
+      "viewLink": "Veure"
     },
     "locale": {
       "en": "Anglès",
       "es": "Espanyol",
       "ca": "Català"
+    },
+    "assignment": {
+      "status": {
+        "active": "Actiu",
+        "deactivated": "Desactivat"
+      }
     },
     "create": {
       "title": "Comunitat nova",
@@ -90,6 +97,29 @@
       "submitLabel": "Desa els canvis",
       "validationError": "Introdueix un nom, una adreça i un idioma.",
       "notFound": "No s'ha pogut trobar aquesta comunitat."
+    },
+    "detail": {
+      "title": "Detalls de la comunitat",
+      "nameLabel": "Nom",
+      "addressLabel": "Adreça",
+      "localeLabel": "Idioma",
+      "notFound": "No s'ha pogut trobar aquesta comunitat."
+    },
+    "representatives": {
+      "title": "Representants",
+      "empty": "No hi ha representants assignats.",
+      "assignLabel": "Assigna un representant",
+      "confirmTitle": "Desactiva el representant",
+      "confirmMessage": "Aquest representant es desactivarà. Aquesta acció no es pot desfer.",
+      "ineligible": "El rol actual d'aquest usuari no permet assignacions de representant."
+    },
+    "technicians": {
+      "title": "Tècnics",
+      "empty": "No hi ha tècnics assignats.",
+      "assignLabel": "Assigna un tècnic",
+      "confirmTitle": "Desactiva el tècnic",
+      "confirmMessage": "Aquest tècnic es desactivarà. Aquesta acció no es pot desfer.",
+      "ineligible": "El rol actual d'aquest usuari no permet assignacions de tècnic."
     }
   },
   "health": {

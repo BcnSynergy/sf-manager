@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { CommunitiesListPage } from './pages/CommunitiesListPage';
 import { CommunityCreatePage } from './pages/CommunityCreatePage';
+import { CommunityDetailPage } from './pages/CommunityDetailPage';
 import { CommunityEditPage } from './pages/CommunityEditPage';
 import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
@@ -70,10 +71,23 @@ function App() {
             }
           />
           {/* design.md "Route order note" (same reasoning as /communities/new
+              above): the static /communities/new segment ranks above this
+              dynamic /communities/:id segment, and this depth-2 route is
+              distinct from the depth-3 /communities/:id/edit below it — no
+              ordering conflict against either. */}
+          <Route
+            path="/communities/:id"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <CommunityDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md "Route order note" (same reasoning as /communities/new
               above): the static /communities/new segment already ranks above
               /communities/:id/edit's dynamic :id segment, and /communities/:id
-              (added in Phase 7) is a distinct depth-2 route from this
-              depth-3 one — no ordering conflict between any of the three. */}
+              (Phase 7, above) is a distinct depth-2 route from this depth-3
+              one — no ordering conflict between any of the three. */}
           <Route
             path="/communities/:id/edit"
             element={

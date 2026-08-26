@@ -95,6 +95,15 @@ describe('CommunitiesListPage', () => {
     expect(link).toHaveAttribute('href', '/communities/new');
   });
 
+  it('shows a "View" link per row pointing to /communities/:id', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    const link = await screen.findByTestId(`communities-list-view-${communityA.id}`);
+    expect(link).toHaveAttribute('href', `/communities/${communityA.id}`);
+  });
+
   it('shows an "Edit" link per row pointing to /communities/:id/edit', async () => {
     mockedListCommunities.mockResolvedValue([communityA]);
 
