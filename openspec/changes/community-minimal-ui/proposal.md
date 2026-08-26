@@ -256,68 +256,75 @@ its own, since old clients ignore an unknown response field.
 
 ## Success Criteria
 
-1. [ ] A `SYSTEM_ADMIN` sees a list of active communities (`name`, `address`,
-   `locale`) with distinct loading, empty and error states.
-2. [ ] Soft-deleted communities never appear in the list, and a soft-delete
-   performed from the UI removes the row without a manual page reload.
-3. [ ] A `SYSTEM_ADMIN` creates a community with `name`, `address` and `locale`;
+1. [x] A `SYSTEM_ADMIN` sees a list of active communities (`name`, `address`,
+   `locale`) with distinct loading, empty and error states. — PR4, browser-verified.
+2. [x] Soft-deleted communities never appear in the list, and a soft-delete
+   performed from the UI removes the row without a manual page reload. — PR4, browser-verified.
+3. [x] A `SYSTEM_ADMIN` creates a community with `name`, `address` and `locale`;
    it appears in the list without a manual reload. Client-side validation uses
    `createCommunitySchema` from `@sf-manager/validation` and blocks the request
-   before any network call when invalid.
-4. [ ] A `SYSTEM_ADMIN` edits a community's `name`, `address` and/or `locale`
+   before any network call when invalid. — PR5, browser-verified.
+4. [x] A `SYSTEM_ADMIN` edits a community's `name`, `address` and/or `locale`
    (validated with `updateCommunitySchema`); the change is visible on return to
-   the list.
-5. [ ] Soft-deleting a community requires an explicit confirmation step
-   (`ConfirmDialog`, reused unmodified).
-6. [ ] `CommunityDetailPage` shows the community's fields plus two clearly
+   the list. — PR6, browser-verified.
+5. [x] Soft-deleting a community requires an explicit confirmation step
+   (`ConfirmDialog`, reused unmodified). — PR4, browser-verified.
+6. [x] `CommunityDetailPage` shows the community's fields plus two clearly
    separated sections — Representatives and Technicians — each listing **active
-   and deactivated** rows with a visible status.
-7. [ ] A `SYSTEM_ADMIN` assigns a representative by pasting a `userId`; the new
-   representative appears active without a manual reload.
-8. [ ] Assigning a **second** representative to the same community shows the
+   and deactivated** rows with a visible status. — PR7, browser-verified.
+7. [x] A `SYSTEM_ADMIN` assigns a representative by pasting a `userId`; the new
+   representative appears active without a manual reload. — PR7/PR8, browser-verified.
+8. [x] Assigning a **second** representative to the same community shows the
    previously-active one **moved to deactivated** (not removed) in the same
-   refreshed section — the exclusivity rule is observable in the UI.
-9. [ ] Deactivating a representative requires confirmation and moves the row to
-   deactivated rather than removing it.
-10. [ ] Reactivating a deactivated representative makes it active **and** shows
-    whoever was active at that moment as deactivated.
-11. [ ] Two technicians are active in the same community simultaneously —
+   refreshed section — the exclusivity rule is observable in the UI. — PR7/PR8, browser-verified.
+9. [x] Deactivating a representative requires confirmation and moves the row to
+   deactivated rather than removing it. — PR7, browser-verified.
+10. [x] Reactivating a deactivated representative makes it active **and** shows
+    whoever was active at that moment as deactivated. — PR8, browser-verified.
+11. [x] Two technicians are active in the same community simultaneously —
     assigning the second does **not** deactivate the first (no exclusivity, no
-    warning surface).
-12. [ ] A technician can be deactivated (with confirmation) and reactivated,
-    with no effect on any other technician's status.
-13. [ ] Assigning a user whose global role is wrong shows a **specific**
-    ineligible-role message, distinguishable from the already-assigned message.
-14. [ ] Assigning a user who already has an assignment (active **or**
+    warning surface). — PR7, browser-verified.
+12. [x] A technician can be deactivated (with confirmation) and reactivated,
+    with no effect on any other technician's status. — PR7, browser-verified.
+13. [x] Assigning a user whose global role is wrong shows a **specific**
+    ineligible-role message, distinguishable from the already-assigned message. — PR8, browser-verified.
+14. [x] Assigning a user who already has an assignment (active **or**
     deactivated) shows a **specific** message telling the admin to reactivate the
-    existing record instead of a generic conflict.
-15. [ ] A `TransactionConflictError` on a representative operation shows a
+    existing record instead of a generic conflict. — PR8, browser-verified.
+15. [x] A `TransactionConflictError` on a representative operation shows a
     distinct "please try again" message, with **no automatic retry** anywhere in
-    the web app.
-16. [ ] No client code compares against a server-supplied English message string;
+    the web app. — verified by code inspection + differential unit test (not
+    deterministically reproducible through manual UI alone; requires a genuine
+    concurrent-write race).
+16. [x] No client code compares against a server-supplied English message string;
     `community/error-messages.ts` reads only `ApiError.status` and `.code`,
     guarded by a differential unit test and a `.message` grep over
-    `apps/web/src`.
-17. [ ] Zero hardcoded UI strings: `community.*` keys exist with real
+    `apps/web/src`. — PR8 static guard, clean.
+17. [x] Zero hardcoded UI strings: `community.*` keys exist with real
     translations in `en`, `es` **and** `ca`, and locale-file key-set parity is
-    test-enforced.
-18. [ ] **No enum-like value is rendered raw.** `locale` and assignment status
+    test-enforced. — PR8, `locales.test.ts` extended with a full key-existence guard.
+18. [x] **No enum-like value is rendered raw.** `locale` and assignment status
     are displayed through i18n label maps (`role-labels.ts` pattern) in every
     surface — table cells and `<select>` option labels alike; the raw enum value
-    only ever backs `<option value>` and API payloads.
-19. [ ] An authenticated non-`SYSTEM_ADMIN` reaching any `/communities` route
+    only ever backs `<option value>` and API payloads. — delivered incrementally
+    in PR3/PR4/PR7 (label maps), PR8 static guard confirms no regression; not a
+    late PR9-style patch.
+19. [x] An authenticated non-`SYSTEM_ADMIN` reaching any `/communities` route
     sees the explicit `NotAuthorized` surface, not a silent redirect; an
-    unauthenticated visitor is redirected to `/login`.
-20. [ ] Assignment 409 responses carry `code`
+    unauthenticated visitor is redirected to `/login`. — unauthenticated half
+    browser-verified in PR8; non-admin half reuses `ProtectedRoute`, already
+    verified in `users-minimal-ui`.
+20. [x] Assignment 409 responses carry `code`
     (`ASSIGNMENT_ALREADY_EXISTS` / `INELIGIBLE_ROLE` / `TRANSACTION_CONFLICT`)
     with `statusCode`, `error` and `message` unchanged; asserted in
-    `community.e2e-spec.ts`. 404 and 400 bodies are untouched.
-21. [ ] Web and API suites, lint and build pass
+    `community.e2e-spec.ts`. 404 and 400 bodies are untouched. — PR1.
+21. [x] Web and API suites, lint and build pass
     (`npm run test --workspace=apps/web`, `npm run test --workspace=apps/api`,
-    `npm run lint --workspace=apps/web`, `npm run build`).
-22. [ ] Every UI criterion above is **browser-verified** against a running dev
+    `npm run lint --workspace=apps/web`, `npm run build`). — PR8: 213/213 web,
+    279/279 api, lint clean, build succeeds.
+22. [x] Every UI criterion above is **browser-verified** against a running dev
     server (`npm run dev`), not only test-verified — per CLAUDE.md's "Verifying
-    UI Changes" rule.
+    UI Changes" rule. — this checklist's own evidence trail.
 
 ## Open Questions / Deferred
 

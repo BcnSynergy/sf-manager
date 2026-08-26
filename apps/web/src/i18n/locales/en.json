@@ -81,6 +81,13 @@
         "deactivated": "Deactivated"
       }
     },
+    "error": {
+      "assignmentExists": "This user is already assigned.",
+      "ineligibleRole": "This user's current role does not allow this assignment.",
+      "tryAgain": "Something changed while saving. Please try again.",
+      "validationFailed": "Enter a valid user ID.",
+      "assignmentTargetNotFound": "This community or user could not be found."
+    },
     "create": {
       "title": "New community",
       "nameLabel": "Name",

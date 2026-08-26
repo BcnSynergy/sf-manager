@@ -81,6 +81,13 @@
         "deactivated": "Desactivat"
       }
     },
+    "error": {
+      "assignmentExists": "Aquest usuari ja està assignat.",
+      "ineligibleRole": "El rol actual d'aquest usuari no permet aquesta assignació.",
+      "tryAgain": "Alguna cosa ha canviat mentre es desava. Torna-ho a provar.",
+      "validationFailed": "Introdueix un identificador d'usuari vàlid.",
+      "assignmentTargetNotFound": "No s'ha pogut trobar aquesta comunitat o usuari."
+    },
     "create": {
       "title": "Comunitat nova",
       "nameLabel": "Nom",
