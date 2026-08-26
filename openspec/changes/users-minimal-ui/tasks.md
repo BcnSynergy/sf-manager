@@ -52,9 +52,9 @@ Chain strategy: stacked-to-main
 - [x] 5.2 Test asserts the mapping never branches on `error.message` text (guards "No Server-Message String Coupling").
 
 ## Phase 6: Users List Page (PR 6)
-- [ ] 6.1 Add base `users.*`/`common.*` i18n keys (list, loading/empty/error, `notAuthorized`, shared error keys) to `en.json`, `es.json`, `ca.json` — real translations, mechanical.
-- [ ] 6.2 RED/GREEN `UsersListPage.tsx` + `UsersListPage.test.tsx` (RTL, mocked `api/users`) — loading/empty/error states; row render; deactivate button wired to `ConfirmDialog` then `deactivateUser`+refetch; deactivate hidden on `row.id === auth.user.id`.
-- [ ] 6.3 Wire `/users` route into `App.tsx` under `<ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>`.
+- [x] 6.1 Add base `users.*`/`common.*` i18n keys (list, loading/empty/error, `notAuthorized`, shared error keys) to `en.json`, `es.json`, `ca.json` — real translations, mechanical.
+- [x] 6.2 RED/GREEN `UsersListPage.tsx` + `UsersListPage.test.tsx` (RTL, mocked `api/users`) — loading/empty/error states; row render; deactivate button wired to `ConfirmDialog` then `deactivateUser`+refetch; deactivate hidden on `row.id === auth.user.id`.
+- [x] 6.3 Wire `/users` route into `App.tsx` under `<ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>`.
 
 ## Phase 7: User Create Page (PR 7)
 - [ ] 7.1 Add `users.create.*` i18n keys to `en.json`, `es.json`, `ca.json`.

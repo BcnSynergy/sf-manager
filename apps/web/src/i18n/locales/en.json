@@ -3,7 +3,30 @@
     "notAuthorizedTitle": "Not authorized",
     "notAuthorizedMessage": "You do not have permission to view this page.",
     "confirm": "Confirm",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "error": {
+      "network": "Something went wrong. Please try again."
+    }
+  },
+  "users": {
+    "list": {
+      "title": "Users",
+      "loading": "Loading users...",
+      "empty": "No active users found.",
+      "columnId": "ID",
+      "columnEmail": "Email",
+      "columnRole": "Role",
+      "deactivate": "Deactivate",
+      "deactivateConfirmTitle": "Deactivate user",
+      "deactivateConfirmMessage": "This user will no longer be able to sign in. This cannot be undone."
+    },
+    "error": {
+      "duplicateEmail": "This email is already in use by another user.",
+      "lastSystemAdmin": "The last system administrator cannot be removed.",
+      "tryAgain": "Something changed while saving. Please try again.",
+      "weakPassword": "The password does not meet the strength requirements.",
+      "notFound": "This user could not be found."
+    }
   },
   "health": {
     "title": "System status",

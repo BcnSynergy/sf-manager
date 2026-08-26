@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
+import { UsersListPage } from './pages/UsersListPage';
 
 function App() {
   return (
@@ -15,6 +16,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <HealthPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <UsersListPage />
               </ProtectedRoute>
             }
           />
