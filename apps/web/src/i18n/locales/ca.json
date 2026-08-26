@@ -3,7 +3,30 @@
     "notAuthorizedTitle": "No autoritzat",
     "notAuthorizedMessage": "No tens permís per veure aquesta pàgina.",
     "confirm": "Confirmar",
-    "cancel": "Cancel·lar"
+    "cancel": "Cancel·lar",
+    "error": {
+      "network": "Alguna cosa ha fallat. Torna-ho a provar."
+    }
+  },
+  "users": {
+    "list": {
+      "title": "Usuaris",
+      "loading": "Carregant usuaris...",
+      "empty": "No hi ha usuaris actius.",
+      "columnId": "ID",
+      "columnEmail": "Correu electrònic",
+      "columnRole": "Rol",
+      "deactivate": "Desactivar",
+      "deactivateConfirmTitle": "Desactivar usuari",
+      "deactivateConfirmMessage": "Aquest usuari ja no podrà iniciar sessió. Aquesta acció no es pot desfer."
+    },
+    "error": {
+      "duplicateEmail": "Aquest correu electrònic ja està en ús per un altre usuari.",
+      "lastSystemAdmin": "No es pot eliminar l'últim administrador del sistema.",
+      "tryAgain": "Alguna cosa ha canviat mentre es desava. Torna-ho a provar.",
+      "weakPassword": "La contrasenya no compleix els requisits de seguretat.",
+      "notFound": "No s'ha pogut trobar aquest usuari."
+    }
   },
   "health": {
     "title": "Estat del sistema",
