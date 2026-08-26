@@ -204,34 +204,70 @@ data is reshaped, so there is no state to unwind.
 
 ## Success Criteria
 
-- [ ] A `SYSTEM_ADMIN` sees a list of active users (`id`, `email`, `role`) with
-      distinct loading, empty and error states.
-- [ ] Deactivated users never appear in the list.
-- [ ] A `SYSTEM_ADMIN` creates a user with `email`, `role` and an initial
+- [x] A `SYSTEM_ADMIN` sees a list of active users (`id`, `email`, `role`) with
+      distinct loading, empty and error states. (PR6, `UsersListPage.tsx` +
+      `UsersListPage.test.tsx`; browser-verified.)
+- [x] Deactivated users never appear in the list. (PR6: `deactivateUser` success
+      refetches via `listUsers()`, which only returns active users; browser-
+      verified — deactivated row disappeared without manual reload.)
+- [x] A `SYSTEM_ADMIN` creates a user with `email`, `role` and an initial
       password; the new user appears in the list without a manual page reload.
-- [ ] Client-side validation rejects a weak password using the same
-      `passwordSchema` the API enforces, before any network call.
-- [ ] A duplicate email on create shows a **specific** "email already in use"
-      message, not a generic conflict message.
-- [ ] A `SYSTEM_ADMIN` edits a user's `email` and `role`; no password field is
-      present on the edit form.
-- [ ] Demoting the last `SYSTEM_ADMIN` shows a **specific** last-admin message,
+      (PR7, `UserCreatePage.tsx`; browser-verified end to end.)
+- [x] Client-side validation rejects a weak password using the same
+      `passwordSchema` the API enforces, before any network call. (PR7:
+      `createUserSchema`/`passwordSchema` imported from `@sf-manager/validation`,
+      same package the API controller validates with — zero drift; `safeParse`
+      blocks `createUser` call on failure, tested and browser-verified.)
+- [x] A duplicate email on create shows a **specific** "email already in use"
+      message, not a generic conflict message. (PR5 `error-messages.ts`
+      `EMAIL_ALREADY_IN_USE` -> `users.error.duplicateEmail`; PR7 wires it into
+      `UserCreatePage.tsx`; browser-verified — real 409 showed the exact
+      translated message.)
+- [x] A `SYSTEM_ADMIN` edits a user's `email` and `role`; no password field is
+      present on the edit form. (PR8, `UserEditPage.tsx`; no password input
+      exists on the page, asserted in `UserEditPage.test.tsx` and
+      browser-verified.)
+- [x] Demoting the last `SYSTEM_ADMIN` shows a **specific** last-admin message,
       distinguishable from the duplicate-email case and from a concurrency
-      conflict.
-- [ ] Deactivation requires an explicit confirmation step and removes the user
-      from the list on success.
-- [ ] The deactivate action is unavailable on the logged-in admin's own row.
-- [ ] The `role` field is disabled when a `SYSTEM_ADMIN` edits their own row.
-- [ ] An authenticated non-`SYSTEM_ADMIN` who reaches `/users` sees an explicit
+      conflict. (PR5 `error-messages.ts`: `LAST_SYSTEM_ADMIN` ->
+      `users.error.lastSystemAdmin`, `TRANSACTION_CONFLICT` ->
+      `users.error.tryAgain`, `EMAIL_ALREADY_IN_USE` ->
+      `users.error.duplicateEmail` — three distinct keys/messages, each
+      unit-tested.)
+- [x] Deactivation requires an explicit confirmation step and removes the user
+      from the list on success. (PR4 `ConfirmDialog` + PR6 wiring; native
+      `<dialog>` confirm before `deactivateUser`; browser-verified.)
+- [x] The deactivate action is unavailable on the logged-in admin's own row.
+      (PR6 `UsersListPage.tsx` self-row guard, `row.id === auth.user.id`;
+      tested and browser-verified — no Deactivate button on own row.)
+- [x] The `role` field is disabled when a `SYSTEM_ADMIN` edits their own row.
+      (PR8 `UserEditPage.tsx`, `isSelf = id === currentUser?.id` ->
+      `disabled={isSelf}`; controlled input, no disabled-field submit bypass —
+      confirmed by PR8's fresh-context review; browser-verified.)
+- [x] An authenticated non-`SYSTEM_ADMIN` who reaches `/users` sees an explicit
       "not authorized" message, not a silent redirect; an unauthenticated
-      visitor is redirected to `/login`.
-- [ ] A genuine concurrency conflict (`TransactionConflictError`) on
+      visitor is redirected to `/login`. (PR3 `ProtectedRoute.allowedRoles` +
+      `NotAuthorized.tsx`; precedence tested: loading -> null, no user ->
+      `/login`, wrong role -> `NotAuthorized`, allowed -> children.)
+- [x] A genuine concurrency conflict (`TransactionConflictError`) on
       `PATCH`/`DELETE` shows a distinct "please try again" message, with no
-      automatic retry.
-- [ ] Zero hardcoded UI strings; `users.*` and `common.*` keys exist with real
-      translations in `en`, `es` **and** `ca`.
-- [ ] No client code compares against a server-supplied English message string.
-- [ ] Web suite and lint pass.
+      automatic retry. (PR5 `TRANSACTION_CONFLICT` -> `users.error.tryAgain`;
+      PR9's verification grepped `apps/web/src` for "retry" — zero hits,
+      confirming no automatic retry anywhere in the web app.)
+- [x] Zero hardcoded UI strings; `users.*` and `common.*` keys exist with real
+      translations in `en`, `es` **and** `ca`. (Closed in PR9's follow-up fix:
+      `users.role.*` keys added to all 3 locales, `role-labels.ts` maps the
+      `Role` enum to its i18n key, consumed by `UsersListPage.tsx`'s table
+      cell and `UserCreatePage.tsx`/`UserEditPage.tsx`'s role `<select>`
+      `<option>` labels — the raw enum value now only backs the `<option
+      value>` and API payload, never the rendered text.)
+- [x] No client code compares against a server-supplied English message string.
+      (PR5 `error-messages.ts` reads only `ApiError.status`/`.code`, never
+      `.message`; guarded by an explicit differential test; PR9's verification
+      grepped `apps/web/src` for `.message` — zero hits outside tests/comments.)
+- [x] Web suite and lint pass. (PR9: `npm run test --workspace=apps/web` ->
+      78/78 pass across 13 files; `npm run lint --workspace=apps/web` -> 0
+      errors/warnings; `npm run build --workspace=apps/web` succeeds.)
 
 ## Open Questions / Deferred
 

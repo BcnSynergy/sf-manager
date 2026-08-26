@@ -72,7 +72,10 @@ describe('UsersListPage', () => {
     const row = await screen.findByTestId(`users-list-row-${otherUser.id}`);
     expect(row).toHaveTextContent(otherUser.id);
     expect(row).toHaveTextContent(otherUser.email);
-    expect(row).toHaveTextContent(otherUser.role);
+    // otherUser.role is 'MANAGER' — asserts the translated label renders,
+    // not the raw enum value (spec "Internationalization Coverage").
+    expect(row).toHaveTextContent('Manager');
+    expect(row).not.toHaveTextContent(otherUser.role);
   });
 
   it("hides the deactivate action on the current admin's own row, shows it on others", async () => {

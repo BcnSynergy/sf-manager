@@ -6,6 +6,7 @@ import { deactivateUser, listUsers, type User } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
+import { mapRoleToLabelKey } from '../users/role-labels';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -114,7 +115,7 @@ export function UsersListPage() {
               <tr key={row.id} data-testid={`users-list-row-${row.id}`}>
                 <td>{row.id}</td>
                 <td>{row.email}</td>
-                <td>{row.role}</td>
+                <td>{t(mapRoleToLabelKey(row.role))}</td>
                 <td>
                   <Link to={`/users/${row.id}/edit`} data-testid={`users-list-edit-${row.id}`}>
                     {t('users.list.editLink')}
