@@ -66,7 +66,8 @@
       "delete": "Elimina",
       "deleteConfirmTitle": "Elimina la comunitat",
       "deleteConfirmMessage": "Aquesta comunitat s'eliminarà. Aquesta acció no es pot desfer.",
-      "createLink": "Comunitat nova"
+      "createLink": "Comunitat nova",
+      "editLink": "Edita"
     },
     "locale": {
       "en": "Anglès",
@@ -80,6 +81,15 @@
       "localeLabel": "Idioma",
       "submitLabel": "Crea la comunitat",
       "validationError": "Introdueix un nom, una adreça i un idioma."
+    },
+    "edit": {
+      "title": "Edita la comunitat",
+      "nameLabel": "Nom",
+      "addressLabel": "Adreça",
+      "localeLabel": "Idioma",
+      "submitLabel": "Desa els canvis",
+      "validationError": "Introdueix un nom, una adreça i un idioma.",
+      "notFound": "No s'ha pogut trobar aquesta comunitat."
     }
   },
   "health": {

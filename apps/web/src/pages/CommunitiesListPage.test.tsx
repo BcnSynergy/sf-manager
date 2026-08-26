@@ -95,6 +95,15 @@ describe('CommunitiesListPage', () => {
     expect(link).toHaveAttribute('href', '/communities/new');
   });
 
+  it('shows an "Edit" link per row pointing to /communities/:id/edit', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    const link = await screen.findByTestId(`communities-list-edit-${communityA.id}`);
+    expect(link).toHaveAttribute('href', `/communities/${communityA.id}/edit`);
+  });
+
   it('requires confirmation before calling softDeleteCommunity', async () => {
     mockedListCommunities.mockResolvedValue([communityA]);
 
