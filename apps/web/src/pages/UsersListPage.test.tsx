@@ -134,5 +134,6 @@ describe('UsersListPage', () => {
     expect(await screen.findByTestId('users-list-action-error')).toHaveTextContent(
       'The last system administrator cannot be removed.',
     );
+    expect(screen.getByTestId(`users-list-row-${otherUser.id}`)).toBeInTheDocument();
   });
 });

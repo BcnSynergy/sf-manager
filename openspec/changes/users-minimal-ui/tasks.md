@@ -60,11 +60,13 @@ Chain strategy: stacked-to-main
 - [ ] 7.1 Add `users.create.*` i18n keys to `en.json`, `es.json`, `ca.json`.
 - [ ] 7.2 RED/GREEN `UserCreatePage.tsx` + `UserCreatePage.test.tsx` — `createUserSchema`/`passwordSchema` `safeParse` blocks submit before any fetch; success navigates to list without manual reload; duplicate-email 409 shows `users.error.duplicateEmail`.
 - [ ] 7.3 Wire `/users/new` route into `App.tsx`.
+- [ ] 7.4 Add a "New user" link/button to `UsersListPage.tsx` navigating to `/users/new` — closes the entry-point gap flagged in PR6's fresh-context review (no other task in this plan reaches `/users/new` from the UI).
 
 ## Phase 8: User Edit Page (PR 8)
 - [ ] 8.1 Add `users.edit.*` i18n keys to `en.json`, `es.json`, `ca.json`.
 - [ ] 8.2 RED/GREEN `UserEditPage.tsx` + `UserEditPage.test.tsx` — `listUsers()` + filter by `:id` (Decision 5); prefill `email`/`role`, no password field; `role` disabled when `:id === auth.user.id`; not-found state when `:id` absent from the list; `LAST_SYSTEM_ADMIN`/`TRANSACTION_CONFLICT` errors mapped distinctly.
 - [ ] 8.3 Wire `/users/:id/edit` route into `App.tsx`.
+- [ ] 8.4 Add a per-row "Edit" link on `UsersListPage.tsx` navigating to `/users/:id/edit` — closes the entry-point gap flagged in PR6's fresh-context review (no other task in this plan reaches `/users/:id/edit` from the UI).
 
 ## Phase 9: Integration & i18n Parity (PR 9)
 - [ ] 9.1 Add a key-set equality test over `en`/`es`/`ca` locale JSONs (mechanical structural test, run after all `users.*`/`common.*` keys landed in PR 6-8).
