@@ -280,6 +280,23 @@ describe('CommunityController', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('maps AssignmentAlreadyExistsError to a 409 body with code ASSIGNMENT_ALREADY_EXISTS', async () => {
+      const domainError = new AssignmentAlreadyExistsError();
+      addRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addRepresentative('community-1', { userId: 'user-1' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'ASSIGNMENT_ALREADY_EXISTS',
+      });
+    });
+
     it('maps IneligibleRoleError to 409', async () => {
       addRepresentativeUseCase.execute.mockRejectedValue(
         new IneligibleRoleError('REPRESENTATIVE', 'MANAGER'),
@@ -290,6 +307,23 @@ describe('CommunityController', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
+      const domainError = new IneligibleRoleError('REPRESENTATIVE', 'MANAGER');
+      addRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addRepresentative('community-1', { userId: 'user-1' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'INELIGIBLE_ROLE',
+      });
+    });
+
     it('maps TransactionConflictError to 409', async () => {
       addRepresentativeUseCase.execute.mockRejectedValue(
         new TransactionConflictError(),
@@ -298,6 +332,39 @@ describe('CommunityController', () => {
       await expect(
         controller.addRepresentative('community-1', { userId: 'user-1' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
+      const domainError = new TransactionConflictError();
+      addRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addRepresentative('community-1', { userId: 'user-1' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'TRANSACTION_CONFLICT',
+      });
+    });
+
+    it('maps CommunityNotFoundError to a 404 body carrying no code (unaffected)', async () => {
+      const domainError = new CommunityNotFoundError();
+      addRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addRepresentative('missing-community', { userId: 'user-1' })
+        .catch((error: NotFoundException) => error);
+
+      expect(response).toBeInstanceOf(NotFoundException);
+      expect((response as NotFoundException).getResponse()).toEqual({
+        statusCode: 404,
+        error: 'Not Found',
+        message: domainError.message,
+      });
     });
   });
 
@@ -372,6 +439,33 @@ describe('CommunityController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('maps IneligibleRoleError to 409 (role drifted since deactivation)', async () => {
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(
+        new IneligibleRoleError('REPRESENTATIVE', 'MANAGER'),
+      );
+
+      await expect(
+        controller.reactivateRepresentative('community-1', 'user-1'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
+      const domainError = new IneligibleRoleError('REPRESENTATIVE', 'MANAGER');
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .reactivateRepresentative('community-1', 'user-1')
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'INELIGIBLE_ROLE',
+      });
+    });
+
     it('maps TransactionConflictError to 409', async () => {
       reactivateRepresentativeUseCase.execute.mockRejectedValue(
         new TransactionConflictError(),
@@ -380,6 +474,23 @@ describe('CommunityController', () => {
       await expect(
         controller.reactivateRepresentative('community-1', 'user-1'),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
+      const domainError = new TransactionConflictError();
+      reactivateRepresentativeUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .reactivateRepresentative('community-1', 'user-1')
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'TRANSACTION_CONFLICT',
+      });
     });
   });
 
@@ -448,6 +559,23 @@ describe('CommunityController', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('maps AssignmentAlreadyExistsError to a 409 body with code ASSIGNMENT_ALREADY_EXISTS', async () => {
+      const domainError = new AssignmentAlreadyExistsError();
+      addTechnicianUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addTechnician('community-1', { userId: 'user-1' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'ASSIGNMENT_ALREADY_EXISTS',
+      });
+    });
+
     it('maps IneligibleRoleError to 409', async () => {
       addTechnicianUseCase.execute.mockRejectedValue(
         new IneligibleRoleError('TECHNICIAN', 'MANAGER'),
@@ -456,6 +584,23 @@ describe('CommunityController', () => {
       await expect(
         controller.addTechnician('community-1', { userId: 'user-1' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
+      const domainError = new IneligibleRoleError('TECHNICIAN', 'MANAGER');
+      addTechnicianUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .addTechnician('community-1', { userId: 'user-1' })
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'INELIGIBLE_ROLE',
+      });
     });
   });
 
@@ -530,7 +675,7 @@ describe('CommunityController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('maps IneligibleRoleError to 409', async () => {
+    it('maps IneligibleRoleError to 409 (role drifted since deactivation)', async () => {
       reactivateTechnicianUseCase.execute.mockRejectedValue(
         new IneligibleRoleError('TECHNICIAN', 'MANAGER'),
       );
@@ -538,6 +683,23 @@ describe('CommunityController', () => {
       await expect(
         controller.reactivateTechnician('community-1', 'user-1'),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
+      const domainError = new IneligibleRoleError('TECHNICIAN', 'MANAGER');
+      reactivateTechnicianUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .reactivateTechnician('community-1', 'user-1')
+        .catch((error: ConflictException) => error);
+
+      expect(response).toBeInstanceOf(ConflictException);
+      expect((response as ConflictException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'INELIGIBLE_ROLE',
+      });
     });
   });
 

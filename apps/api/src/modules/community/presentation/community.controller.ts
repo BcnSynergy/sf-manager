@@ -55,6 +55,7 @@ import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.e
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
 import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
+import type { CommunityErrorCode } from './community-error-code';
 import type { AddRepresentativeRequestDto } from './dto/add-representative-request.dto';
 import type { AddTechnicianRequestDto } from './dto/add-technician-request.dto';
 import type { CreateCommunityRequestDto } from './dto/create-community-request.dto';
@@ -213,7 +214,9 @@ export class CommunityController {
   @ApiNotFoundResponse({ description: 'Community or user not found.' })
   @ApiConflictResponse({
     description:
-      'Assignment already exists, user is not eligible, or a concurrent conflicting change occurred.',
+      'Assignment already exists (code: ASSIGNMENT_ALREADY_EXISTS), user is ' +
+      'not eligible (code: INELIGIBLE_ROLE), or a concurrent conflicting ' +
+      'change occurred (code: TRANSACTION_CONFLICT).',
   })
   async addRepresentative(
     @Param('id') communityId: string,
@@ -266,7 +269,8 @@ export class CommunityController {
   @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
   @ApiConflictResponse({
     description:
-      'User is not eligible, or a concurrent conflicting change occurred.',
+      'User is not eligible (code: INELIGIBLE_ROLE), or a concurrent ' +
+      'conflicting change occurred (code: TRANSACTION_CONFLICT).',
   })
   async reactivateRepresentative(
     @Param('id') communityId: string,
@@ -319,7 +323,9 @@ export class CommunityController {
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
   @ApiNotFoundResponse({ description: 'Community or user not found.' })
   @ApiConflictResponse({
-    description: 'Assignment already exists, or the user is not eligible.',
+    description:
+      'Assignment already exists (code: ASSIGNMENT_ALREADY_EXISTS), or the ' +
+      'user is not eligible (code: INELIGIBLE_ROLE).',
   })
   async addTechnician(
     @Param('id') communityId: string,
@@ -371,7 +377,9 @@ export class CommunityController {
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
   @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
-  @ApiConflictResponse({ description: 'The user is not eligible.' })
+  @ApiConflictResponse({
+    description: 'The user is not eligible (code: INELIGIBLE_ROLE).',
+  })
   async reactivateTechnician(
     @Param('id') communityId: string,
     @Param('userId') userId: string,
@@ -401,6 +409,9 @@ export class CommunityController {
   // Flow, "Where the settled policies live in code"). Technician use cases
   // never throw TransactionConflictError (no transactional() wrap), but
   // mapping it here anyway costs nothing and keeps this method reusable.
+  // design.md Decision 1 (Coded-conflict convention): each 409 cause gets
+  // its own machine-readable `code`, additive to {statusCode, error,
+  // message} — mirrors UsersController.mapMutationError.
   private mapAssignmentError(error: unknown): unknown {
     if (
       error instanceof CommunityNotFoundError ||
@@ -409,13 +420,33 @@ export class CommunityController {
     ) {
       return new NotFoundException(error.message);
     }
-    if (
-      error instanceof AssignmentAlreadyExistsError ||
-      error instanceof IneligibleRoleError ||
-      error instanceof TransactionConflictError
-    ) {
-      return new ConflictException(error.message);
+    if (error instanceof AssignmentAlreadyExistsError) {
+      return this.buildConflictException(error, 'ASSIGNMENT_ALREADY_EXISTS');
+    }
+    if (error instanceof IneligibleRoleError) {
+      return this.buildConflictException(error, 'INELIGIBLE_ROLE');
+    }
+    if (error instanceof TransactionConflictError) {
+      return this.buildConflictException(error, 'TRANSACTION_CONFLICT');
     }
     return error;
+  }
+
+  // design.md Decision 1 ("Non-breaking guarantee", mirroring
+  // UsersController.buildConflictException): ConflictException with an
+  // object body is emitted verbatim by Nest's HttpException.createBody, so
+  // this re-supplies the default {statusCode, error, message} shape and
+  // only *adds* `code`, keeping the change additive/non-breaking per the
+  // community-assignments spec delta.
+  private buildConflictException(
+    error: Error,
+    code: CommunityErrorCode,
+  ): ConflictException {
+    return new ConflictException({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      message: error.message,
+      code,
+    });
   }
 }
