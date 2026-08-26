@@ -48,8 +48,8 @@ Chain strategy: stacked-to-main
 - [x] 4.2 Verified empirically: jsdom 30's `HTMLDialogElement` is a bare stub with no `showModal`/`close` overrides (`node_modules/jsdom/lib/jsdom/living/nodes/HTMLDialogElement-impl.js`) — RTL test failed with `dialog.showModal is not a function` before the polyfill. Added minimal `showModal`/`close` polyfill to `apps/web/src/test/setup.ts` (toggles the reflected `open` attribute only).
 
 ## Phase 5: Web — Error-Message Mapping (PR 5)
-- [ ] 5.1 RED/GREEN `apps/web/src/users/error-messages.ts` + test — `ApiError{status,code}` -> i18n key: `EMAIL_ALREADY_IN_USE` -> `users.error.duplicateEmail`, `LAST_SYSTEM_ADMIN` -> `users.error.lastSystemAdmin`, `TRANSACTION_CONFLICT` -> `users.error.tryAgain`, 400 -> `users.error.weakPassword`, 404 -> `users.error.notFound`, `status 0`/unknown -> `common.error.network`.
-- [ ] 5.2 Test asserts the mapping never branches on `error.message` text (guards "No Server-Message String Coupling").
+- [x] 5.1 RED/GREEN `apps/web/src/users/error-messages.ts` + test — `ApiError{status,code}` -> i18n key: `EMAIL_ALREADY_IN_USE` -> `users.error.duplicateEmail`, `LAST_SYSTEM_ADMIN` -> `users.error.lastSystemAdmin`, `TRANSACTION_CONFLICT` -> `users.error.tryAgain`, 400 -> `users.error.weakPassword`, 404 -> `users.error.notFound`, `status 0`/unknown -> `common.error.network`.
+- [x] 5.2 Test asserts the mapping never branches on `error.message` text (guards "No Server-Message String Coupling").
 
 ## Phase 6: Users List Page (PR 6)
 - [ ] 6.1 Add base `users.*`/`common.*` i18n keys (list, loading/empty/error, `notAuthorized`, shared error keys) to `en.json`, `es.json`, `ca.json` — real translations, mechanical.
