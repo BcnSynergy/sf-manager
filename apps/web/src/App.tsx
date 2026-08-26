@@ -4,6 +4,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
 import { UserCreatePage } from './pages/UserCreatePage';
+import { UserEditPage } from './pages/UserEditPage';
 import { UsersListPage } from './pages/UsersListPage';
 
 function App() {
@@ -33,6 +34,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <UserCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <UserEditPage />
               </ProtectedRoute>
             }
           />

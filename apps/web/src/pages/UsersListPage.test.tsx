@@ -136,6 +136,15 @@ describe('UsersListPage', () => {
     expect(link).toHaveAttribute('href', '/users/new');
   });
 
+  it('shows a per-row "Edit" link pointing to /users/:id/edit', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+
+    renderPage();
+
+    const link = await screen.findByTestId(`users-list-edit-${otherUser.id}`);
+    expect(link).toHaveAttribute('href', `/users/${otherUser.id}/edit`);
+  });
+
   it('shows a cause-specific message (mapped via error-messages, not English server prose) when deactivation fails', async () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     mockedDeactivateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
