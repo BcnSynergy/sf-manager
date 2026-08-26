@@ -4,6 +4,8 @@
     "notAuthorizedMessage": "No tens permís per veure aquesta pàgina.",
     "confirm": "Confirmar",
     "cancel": "Cancel·lar",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar",
     "error": {
       "network": "Alguna cosa ha fallat. Torna-ho a provar."
     }

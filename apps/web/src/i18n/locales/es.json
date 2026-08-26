@@ -4,6 +4,8 @@
     "notAuthorizedMessage": "No tienes permiso para ver esta página.",
     "confirm": "Confirmar",
     "cancel": "Cancelar",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar",
     "error": {
       "network": "Algo ha fallado. Inténtalo de nuevo."
     }
