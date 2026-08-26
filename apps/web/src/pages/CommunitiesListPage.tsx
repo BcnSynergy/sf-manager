@@ -114,6 +114,9 @@ export function CommunitiesListPage() {
                 <td>{row.address}</td>
                 <td>{t(mapLocaleToLabelKey(row.locale))}</td>
                 <td>
+                  <Link to={`/communities/${row.id}`} data-testid={`communities-list-view-${row.id}`}>
+                    {t('community.list.viewLink')}
+                  </Link>
                   <Link to={`/communities/${row.id}/edit`} data-testid={`communities-list-edit-${row.id}`}>
                     {t('community.list.editLink')}
                   </Link>

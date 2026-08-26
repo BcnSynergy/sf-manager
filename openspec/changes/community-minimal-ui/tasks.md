@@ -68,17 +68,18 @@ one PR" (High likelihood).
 - [x] 5.4 mechanical: add a "New community" link on `CommunitiesListPage.tsx` — close the entry-point gap in this same PR, not a later follow-up (`users-minimal-ui` PR6/PR7 precedent).
 
 ## Phase 6: Community Edit Page (PR 6)
-- [ ] 6.1 RED/GREEN `apps/web/src/community/use-community.ts` + test — `listCommunities()` + client-side select by `:id`; explicit not-found state when `:id` is absent. Per design.md Decision 4.
-- [ ] 6.2 mechanical: `community.edit.*` i18n keys, 3 locales.
-- [ ] 6.3 RED/GREEN `CommunityEditPage.tsx` + test — prefilled via `useCommunity`; `updateCommunitySchema` validation; not-found state renders no form. Traces spec "Edit Community".
-- [ ] 6.4 mechanical: wire `/communities/:id/edit` route; add a per-row "Edit" link on `CommunitiesListPage.tsx`.
+- [x] 6.1 RED/GREEN `apps/web/src/community/use-community.ts` + test — `listCommunities()` + client-side select by `:id`; explicit not-found state when `:id` is absent. Per design.md Decision 4.
+- [x] 6.2 mechanical: `community.edit.*` i18n keys, 3 locales.
+- [x] 6.3 RED/GREEN `CommunityEditPage.tsx` + test — prefilled via `useCommunity`; `updateCommunitySchema` validation; not-found state renders no form. Traces spec "Edit Community".
+- [x] 6.4 mechanical: wire `/communities/:id/edit` route; add a per-row "Edit" link on `CommunitiesListPage.tsx`.
 
 ## Phase 7: Community Detail Page — Assignment Lifecycles (PR 7, most complex)
-- [ ] 7.1 mechanical: `community.detail.*`/`community.representatives.*`/`community.technicians.*` i18n keys (titles, empty text, assign labels, confirm copy, ineligible copy per section), 3 locales.
-- [ ] 7.2 RED/GREEN `CommunityDetailPage.tsx` + test — 3 independent, parallel requests on mount (community via `useCommunity`; two assignment lists inside their own `AssignmentSection`); not-found guardrail renders **neither** assignment section when `:id` is absent (design.md Decision 4); composes `AssignmentSection` twice with distinct `ops`/`keys`/`testIdPrefix`. Traces spec "Community Detail View", "Representative Assignment Lifecycle" (incl. exclusivity + multi-community warning **not** surfaced), "Technician Assignment Lifecycle". **Heads-up (PR3 review)**: `ConfirmDialog`'s `<dialog>` is always mounted with a hardcoded `data-testid="confirm-dialog"` (not parameterized) — composing `AssignmentSection` twice means two `confirm-dialog` nodes coexist in the DOM. Tests must scope dialog queries (e.g. `within(container)` per section) rather than an unscoped `screen.getByTestId('confirm-dialog')`, which will throw on "found multiple elements."
-- [ ] 7.3 mechanical: wire `/communities/:id` route.
-- [ ] 7.4 mechanical: add a "View" link per row on `CommunitiesListPage.tsx`.
-- [ ] 7.5 Test: end-to-end through `CommunityDetailPage` (not just the isolated Phase 3 unit test) — a mocked add-representative whose refetch shows the incumbent deactivated renders the swap. Per design.md Data Flow diagram.
+- [x] 7.1 mechanical: `community.detail.*`/`community.representatives.*`/`community.technicians.*` i18n keys (titles, empty text, assign labels, confirm copy, ineligible copy per section), 3 locales.
+- [x] 7.2 RED/GREEN `CommunityDetailPage.tsx` + test — 3 independent, parallel requests on mount (community via `useCommunity`; two assignment lists inside their own `AssignmentSection`); not-found guardrail renders **neither** assignment section when `:id` is absent (design.md Decision 4); composes `AssignmentSection` twice with distinct `ops`/`keys`/`testIdPrefix`. Traces spec "Community Detail View", "Representative Assignment Lifecycle" (incl. exclusivity + multi-community warning **not** surfaced), "Technician Assignment Lifecycle". **Heads-up (PR3 review)**: `ConfirmDialog`'s `<dialog>` is always mounted with a hardcoded `data-testid="confirm-dialog"` (not parameterized) — composing `AssignmentSection` twice means two `confirm-dialog` nodes coexist in the DOM. Tests must scope dialog queries (e.g. `within(container)` per section) rather than an unscoped `screen.getByTestId('confirm-dialog')`, which will throw on "found multiple elements."
+  - **Resolved**: confirmed the collision is real via an explicit test asserting the unscoped query throws; all dialog assertions in `CommunityDetailPage.test.tsx` use `within(sectionContainer)` scoping. `ConfirmDialog.tsx` itself is unchanged.
+- [x] 7.3 mechanical: wire `/communities/:id` route.
+- [x] 7.4 mechanical: add a "View" link per row on `CommunitiesListPage.tsx`.
+- [x] 7.5 Test: end-to-end through `CommunityDetailPage` (not just the isolated Phase 3 unit test) — a mocked add-representative whose refetch shows the incumbent deactivated renders the swap. Per design.md Data Flow diagram.
 
 ## Phase 8: Integration, i18n Parity, Verification (PR 8)
 - [ ] 8.1 mechanical: extend `locales.test.ts` key-set parity to all new `community.*` keys.
