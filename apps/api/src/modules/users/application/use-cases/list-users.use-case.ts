@@ -9,6 +9,10 @@ export interface ListedUser {
   id: string;
   email: string;
   role: Role;
+  // maintenance-company design.md Decision 7: the raw id only — the web
+  // resolves it to a company name client-side via its own
+  // GET /maintenance-companies fetch, never a server-side join.
+  maintenanceCompanyId: string | null;
 }
 
 // design.md Data Flow / Testing Strategy: findAll() already excludes
@@ -27,6 +31,7 @@ export class ListUsersUseCase {
       id: user.id,
       email: user.email,
       role: user.role,
+      maintenanceCompanyId: user.maintenanceCompanyId,
     }));
   }
 }

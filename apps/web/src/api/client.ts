@@ -6,9 +6,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000
 const HTTP_NO_CONTENT = 204;
 
 // status 0 marks a network failure or a response body that could not be
-// parsed at all. `code` is present only when the server sent one — today
-// that is exclusively 409 responses (user-management spec delta,
-// design.md Decision 3); every other status leaves it undefined.
+// parsed at all. `code` is present only when the server sent one —
+// originally exclusively 409 responses (user-management spec delta,
+// design.md Decision 3), now also several coded 400s (maintenance-company
+// design.md Decision 5: MAINTENANCE_COMPANY_REQUIRED/NOT_ALLOWED/NOT_FOUND);
+// every other status still leaves it undefined.
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;

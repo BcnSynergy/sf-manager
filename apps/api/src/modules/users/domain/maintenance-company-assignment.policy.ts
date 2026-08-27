@@ -1,21 +1,21 @@
+import { isMaintenanceRole } from '@sf-manager/validation';
 import { InvalidMaintenanceCompanyAssignmentError } from './errors/invalid-maintenance-company-assignment.error';
 import type { Role } from './role';
 
 // design.md Interfaces/Contracts: the same predicate that drives the shared
 // Zod `.superRefine` (packages/validation/src/users/create-user.schema.ts)
-// and the web form's show/hide of the company selector — kept local here
-// rather than imported, because `users/domain/password.ts` already
-// establishes the reverse direction (a domain file importing FROM
-// @sf-manager/validation, not the other way around); a domain policy has no
-// reason to depend on the validation package.
-const MAINTENANCE_ROLES: readonly Role[] = [
-  'MAINTENANCE_COMPANY_MANAGER',
-  'MAINTENANCE_TECHNICIAN',
-];
-
-function isMaintenanceRole(role: Role): boolean {
-  return MAINTENANCE_ROLES.includes(role);
-}
+// and the web form's show/hide of the company selector — imported from
+// @sf-manager/validation rather than re-declared, mirroring the precedent
+// already set by `users/domain/password.ts` (domain -> validation is an
+// established, allowed direction here). One source of truth for "which
+// roles need a company".
+//
+// Re-exported (spec.md "Grandfathered Maintenance-Role Users", OQ2 — the
+// stricter direction design.md's "Handoff to sdd-spec" anticipated):
+// UpdateUserUseCase needs this predicate directly to evaluate the RESULTING
+// role/company pair on every PATCH, not only when a request supplies
+// `maintenanceCompanyId`.
+export { isMaintenanceRole };
 
 // design.md Decision 3: pure domain function, no ports, no I/O — mirrors
 // last-admin.policy.ts. The AUTHORITY for the conditional requirement

@@ -20,4 +20,11 @@ export class UserResponseDto {
     ],
   })
   role!: Role;
+
+  // maintenance-company design.md Decision 7: the web resolves this id to
+  // a company NAME client-side via its own GET /maintenance-companies list
+  // — this DTO carries only the id, never a joined name (spec.md
+  // "Maintenance Company Rendered By Name" is a Phase 11 web concern).
+  @ApiProperty({ nullable: true, type: String })
+  maintenanceCompanyId!: string | null;
 }

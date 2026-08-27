@@ -12,6 +12,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -31,10 +32,13 @@ import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
 import { UpdateUserUseCase } from '../application/use-cases/update-user.use-case';
 import { EmailAlreadyInUseError } from '../domain/errors/email-already-in-use.error';
+import { InvalidMaintenanceCompanyAssignmentError } from '../domain/errors/invalid-maintenance-company-assignment.error';
 import { LastSystemAdminError } from '../domain/errors/last-system-admin.error';
+import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-company-not-found.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import { UserNotFoundError } from '../domain/errors/user-not-found.error';
 import { WeakPasswordError } from '../domain/errors/weak-password.error';
+import type { UserErrorCode } from './user-error-code';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -74,6 +78,11 @@ export class UsersController {
         email: { type: 'string', format: 'email' },
         password: { type: 'string', minLength: 10 },
         role: { type: 'string', enum: ROLE_ENUM },
+        maintenanceCompanyId: {
+          type: 'string',
+          description:
+            'Required iff role is MAINTENANCE_COMPANY_MANAGER or MAINTENANCE_TECHNICIAN; must be absent otherwise.',
+        },
       },
     },
   })
@@ -83,6 +92,12 @@ export class UsersController {
   @ApiConflictResponse({
     description:
       'Email already in use. Body carries code: EMAIL_ALREADY_IN_USE.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Maintenance-company assignment invalid (code: MAINTENANCE_COMPANY_REQUIRED ' +
+      'or MAINTENANCE_COMPANY_NOT_ALLOWED) or the referenced company is ' +
+      'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND).',
   })
   async create(
     @Body(new ZodValidationPipe(createUserSchema)) body: CreateUserRequestDto,
@@ -100,7 +115,7 @@ export class UsersController {
           'EMAIL_ALREADY_IN_USE',
         );
       }
-      throw error;
+      throw this.mapMaintenanceCompanyError(error) ?? error;
     }
   }
 
@@ -121,6 +136,14 @@ export class UsersController {
       properties: {
         email: { type: 'string', format: 'email' },
         role: { type: 'string', enum: ROLE_ENUM },
+        maintenanceCompanyId: {
+          type: 'string',
+          description:
+            'Present iff this request assigns/reassigns a maintenance ' +
+            'company; the resulting role/company pair is always validated, ' +
+            'even when this field is absent (spec.md "Grandfathered ' +
+            'Maintenance-Role Users").',
+        },
       },
     },
   })
@@ -132,6 +155,12 @@ export class UsersController {
     description:
       'Would leave zero active SYSTEM_ADMIN users (code: LAST_SYSTEM_ADMIN), ' +
       'or a concurrent conflicting update occurred (code: TRANSACTION_CONFLICT).',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Maintenance-company assignment invalid (code: MAINTENANCE_COMPANY_REQUIRED ' +
+      'or MAINTENANCE_COMPANY_NOT_ALLOWED) or the referenced company is ' +
+      'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND).',
   })
   async update(
     @Param('id') id: string,
@@ -168,13 +197,10 @@ export class UsersController {
   // looked up by id and both run the same Last-Admin Lockout /
   // SERIALIZABLE-conflict path (design.md Decision 3, Data Flow).
   //
-  // maintenance-company design.md Decision 1: PR6 adds a 400
-  // `MAINTENANCE_COMPANY_NOT_FOUND` cause here once `users`' domain/
-  // application layers gain `maintenanceCompanyId` (design.md Decision 5).
-  // Not added in this PR — `MaintenanceCompanyNotFoundError` and the
-  // `MAINTENANCE_COMPANY_NOT_FOUND` literal don't exist yet, so there is no
-  // code path that could throw it. This PR only migrates the pre-existing
-  // causes onto the shared `buildCodedError` helper.
+  // maintenance-company design.md Decision 1/5: the three
+  // MAINTENANCE_COMPANY_* 400 causes are only reachable through update()
+  // (UpdateUserUseCase) — deactivate() never touches role/company, so this
+  // branch is simply unreached for that call site, not dead code.
   private mapMutationError(error: unknown): unknown {
     if (error instanceof UserNotFoundError) {
       return new NotFoundException(error.message);
@@ -193,6 +219,31 @@ export class UsersController {
         'TRANSACTION_CONFLICT',
       );
     }
-    return error;
+    return this.mapMaintenanceCompanyError(error) ?? error;
+  }
+
+  // Shared by create() and mapMutationError() — both may receive the two
+  // maintenance-company domain errors (design.md Decision 5). Returns
+  // undefined for any other error so callers fall through to their own
+  // handling/rethrow. `InvalidMaintenanceCompanyAssignmentError.reason`
+  // discriminates the two 400 codes (user-management spec.md "Last-Admin
+  // Lockout", MODIFIED — MAINTENANCE_COMPANY_REQUIRED /
+  // MAINTENANCE_COMPANY_NOT_ALLOWED).
+  private mapMaintenanceCompanyError(error: unknown): unknown {
+    if (error instanceof InvalidMaintenanceCompanyAssignmentError) {
+      const code: UserErrorCode =
+        error.reason === 'REQUIRED'
+          ? 'MAINTENANCE_COMPANY_REQUIRED'
+          : 'MAINTENANCE_COMPANY_NOT_ALLOWED';
+      return buildCodedError(HttpStatus.BAD_REQUEST, error.message, code);
+    }
+    if (error instanceof MaintenanceCompanyNotFoundError) {
+      return buildCodedError(
+        HttpStatus.BAD_REQUEST,
+        error.message,
+        'MAINTENANCE_COMPANY_NOT_FOUND',
+      );
+    }
+    return undefined;
   }
 }

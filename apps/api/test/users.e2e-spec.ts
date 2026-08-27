@@ -16,6 +16,10 @@ import {
 } from '../src/modules/auth/application/ports/token-denylist.port';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
+import {
+  MAINTENANCE_COMPANY_LOOKUP,
+  type MaintenanceCompanyLookup,
+} from '../src/modules/users/application/ports/maintenance-company-lookup.port';
 // design.md Testing Strategy (E2E row) + tasks.md 8.1: reuse the SAME
 // in-memory fake the four use-case unit specs already exercise (PR 5),
 // rather than hand-rolling a second one for this suite. tasks.md 8.2 pins
@@ -47,6 +51,19 @@ class InMemoryTokenDenylist implements TokenDenylist {
   }
 }
 
+// maintenance-company design.md Decision 4: mirrors InMemoryUserRepository's
+// role here — a hermetic double for the one-question MAINTENANCE_COMPANY_LOOKUP
+// port, so tests that PATCH a maintenance-side role (and therefore hit
+// UpdateUserUseCase's resulting-state existsActive() check, tasks.md 8.x)
+// don't need a real Prisma-backed MaintenanceCompany table.
+class InMemoryMaintenanceCompanyLookup implements MaintenanceCompanyLookup {
+  constructor(private readonly liveCompanyIds: ReadonlySet<string>) {}
+
+  existsActive(id: string): Promise<boolean> {
+    return Promise.resolve(this.liveCompanyIds.has(id));
+  }
+}
+
 const DEFAULT_PASSWORD = 'correct-horse-battery-staple';
 
 async function hashPassword(plain: string): Promise<string> {
@@ -64,6 +81,7 @@ interface SeedUserInput {
   role: Role;
   password?: string;
   deletedAt?: Date | null;
+  maintenanceCompanyId?: string | null;
 }
 
 async function buildSeedUser(input: SeedUserInput): Promise<User> {
@@ -76,6 +94,7 @@ async function buildSeedUser(input: SeedUserInput): Promise<User> {
     createdAt: now,
     updatedAt: now,
     deletedAt: input.deletedAt ?? null,
+    maintenanceCompanyId: input.maintenanceCompanyId ?? null,
   });
 }
 
@@ -84,7 +103,10 @@ async function buildSeedUser(input: SeedUserInput): Promise<User> {
 // leak state into unrelated tests (design.md Decision 3's countActiveByRole
 // is a GLOBAL count, exactly the isolation problem PR 6's integration test
 // hit for the same reason — see apply-progress PR 6 notes).
-async function buildApp(seedUsers: User[]): Promise<{
+async function buildApp(
+  seedUsers: User[],
+  liveCompanyIds: string[] = [],
+): Promise<{
   app: INestApplication<App>;
   userRepository: UserRepository;
 }> {
@@ -93,6 +115,9 @@ async function buildApp(seedUsers: User[]): Promise<{
     userRepository.seed(user);
   }
   const tokenDenylist = new InMemoryTokenDenylist();
+  const companyLookup = new InMemoryMaintenanceCompanyLookup(
+    new Set(liveCompanyIds),
+  );
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -101,6 +126,8 @@ async function buildApp(seedUsers: User[]): Promise<{
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)
+    .useValue(companyLookup)
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
@@ -508,6 +535,46 @@ describe('Users (e2e)', () => {
           (user) => user.id === 'softdelete-target-id',
         ),
       ).toBe(false);
+    });
+  });
+
+  // maintenance-company design.md Decision 5 + spec.md "Update User" /
+  // "Grandfathered Maintenance-Role Users" (OQ2): a PATCH that transitions
+  // between two maintenance-side roles without re-supplying
+  // maintenanceCompanyId must succeed, inheriting the existing company —
+  // updateUserSchema's `.superRefine` must not reject this at the HTTP
+  // layer before UpdateUserUseCase's resulting-state check ever runs.
+  describe('Maintenance-role update inherits company (maintenance-company design.md Decision 5)', () => {
+    it('PATCH role between two maintenance roles without maintenanceCompanyId in the body succeeds, company inherited', async () => {
+      const admin = await buildSeedUser({
+        id: 'maint-admin-id',
+        email: 'maint-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'maint-technician-id',
+        email: 'maint-technician@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'company-1',
+      });
+      const { app } = await buildApp([admin, technician], ['company-1']);
+
+      try {
+        const agent = await loginAgent(app, 'maint-admin@example.com');
+
+        const response = await agent
+          .patch(`/users/${technician.id}`)
+          .send({ role: 'MAINTENANCE_COMPANY_MANAGER' })
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          id: technician.id,
+          role: 'MAINTENANCE_COMPANY_MANAGER',
+          maintenanceCompanyId: 'company-1',
+        });
+      } finally {
+        await app.close();
+      }
     });
   });
 
