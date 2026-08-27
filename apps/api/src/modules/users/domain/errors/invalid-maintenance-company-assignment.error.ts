@@ -1,27 +1,41 @@
 import type { Role } from '../role';
 
-// Thrown by assertCompanyMatchesRole() (design.md Decision 5) at the write
-// path — CreateUserUseCase and (payload-scoped) UpdateUserUseCase — when the
-// request's role/maintenanceCompanyId pair violates the conditional
-// requirement: a maintenance role (MAINTENANCE_COMPANY_MANAGER,
-// MAINTENANCE_TECHNICIAN) with no company, or a non-maintenance role with a
-// company supplied (spec.md "Create User" / "Update User"). This is meant as
-// a backstop: Phase 6 (tasks.md, not yet implemented) adds a shared Zod
-// `.superRefine` that rejects both shapes on the HTTP path first, at which
-// point this error becomes unreachable through the pipe and is caught only
-// by writers that bypass it (e.g. `prisma/seed.ts` via `save()`). Until
-// Phase 6 lands, this domain-layer check is the ONLY guard — do not assume
-// the HTTP path is already double-validated. The application layer maps this
-// to a plain 400 with no `code` (design.md
-// Decision 5) — distinct from the shared 400 `MAINTENANCE_COMPANY_NOT_FOUND`
-// cause below, which DOES carry a code.
+// Thrown by assertCompanyMatchesRole() (design.md Decision 5) and by
+// UpdateUserUseCase's unconditional resulting-state check (spec.md
+// "Grandfathered Maintenance-Role Users", OQ2) at the write path —
+// CreateUserUseCase and UpdateUserUseCase — when the role/maintenanceCompanyId
+// pair violates the conditional requirement: a maintenance role
+// (MAINTENANCE_COMPANY_MANAGER, MAINTENANCE_TECHNICIAN) with no company, or a
+// non-maintenance role with a company supplied (spec.md "Create User" /
+// "Update User"). The shared Zod `.superRefine`
+// (packages/validation/src/users/{create,update}-user.schema.ts) rejects
+// both shapes on the HTTP path first when the payload itself is internally
+// inconsistent, so this is the backstop for: writers that bypass the pipe
+// entirely (e.g. `prisma/seed.ts` via `save()`), AND — for UpdateUserUseCase
+// specifically — the cases a partial PATCH's schema cannot see (a
+// company-only reassignment, or a companyless-role RESULTING state that a
+// PATCH never mentions by name).
+//
+// `reason` distinguishes the two violation shapes for the presentation
+// layer's `code` mapping (user-management spec.md "409/400 responses carry
+// a machine-readable cause"): `REQUIRED` -> 400 `MAINTENANCE_COMPANY_REQUIRED`,
+// `NOT_ALLOWED` -> 400 `MAINTENANCE_COMPANY_NOT_ALLOWED`. Both are plain 400s
+// distinct from the shared `MAINTENANCE_COMPANY_NOT_FOUND` cause below.
+export type InvalidMaintenanceCompanyAssignmentReason =
+  'REQUIRED' | 'NOT_ALLOWED';
+
 export class InvalidMaintenanceCompanyAssignmentError extends Error {
+  readonly reason: InvalidMaintenanceCompanyAssignmentReason;
+
   constructor(role: Role, maintenanceCompanyId: string | null) {
+    const reason: InvalidMaintenanceCompanyAssignmentReason =
+      maintenanceCompanyId === null ? 'REQUIRED' : 'NOT_ALLOWED';
     super(
-      maintenanceCompanyId === null
+      reason === 'REQUIRED'
         ? `Role "${role}" requires a maintenanceCompanyId, but none was supplied`
         : `Role "${role}" does not accept a maintenanceCompanyId, but one was supplied`,
     );
     this.name = 'InvalidMaintenanceCompanyAssignmentError';
+    this.reason = reason;
   }
 }

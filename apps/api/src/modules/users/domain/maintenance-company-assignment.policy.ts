@@ -13,7 +13,13 @@ const MAINTENANCE_ROLES: readonly Role[] = [
   'MAINTENANCE_TECHNICIAN',
 ];
 
-function isMaintenanceRole(role: Role): boolean {
+// Exported (spec.md "Grandfathered Maintenance-Role Users", OQ2 — the
+// stricter direction design.md's "Handoff to sdd-spec" anticipated):
+// UpdateUserUseCase needs this predicate directly to evaluate the RESULTING
+// role/company pair on every PATCH, not only when a request supplies
+// `maintenanceCompanyId` — reusing it here instead of re-deriving the role
+// list keeps exactly one source of truth for "which roles need a company".
+export function isMaintenanceRole(role: Role): boolean {
   return MAINTENANCE_ROLES.includes(role);
 }
 
