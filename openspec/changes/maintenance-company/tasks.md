@@ -1,0 +1,129 @@
+# Tasks: Maintenance Company + `User.maintenanceCompanyId`
+
+## Review Workload Forecast
+
+| Field | Value |
+|---|---|
+| Estimated changed lines | ~3400-3600 (shared refactor touching 2 existing controllers, 1 migration, 1 new module across 4 layers, `users` domain+app+infra+presentation deltas, 5 web pages/forms, 3 locale files, full e2e coverage) |
+| 400-line budget risk | High |
+| Chained PRs recommended | Yes |
+| Suggested split | PR1 -> PR13 (see Suggested Work Units) |
+| Delivery strategy | ask-on-risk |
+| Chain strategy | stacked-to-main |
+
+Decision needed before apply: Yes
+Chained PRs recommended: Yes
+Chain strategy: stacked-to-main
+400-line budget risk: High
+
+### Suggested Work Units
+
+| Unit | Goal | Likely PR | Est. lines | Notes |
+|---|---|---|---|---|
+| 1 | Extract `buildCodedError` to `shared/presentation/http/coded-error.ts`; migrate `users` + `community` controllers | PR 1 | ~180 | Mechanical, zero behavior diff, guarded by existing e2e `body.code` assertions (proposal correction). Must land before PR 8's controller |
+| 2 | Prisma migration: `MaintenanceCompany` table, `User.maintenanceCompanyId`, hand-written FK + partial unique index | PR 2 | ~180 | No behavior change; unblocks everything downstream |
+| 3 | `maintenance-company` domain: entity, deletion policy, 3 errors | PR 3 | ~220 | Depends on PR 2 (types only); zero Prisma (ADR-013) |
+| 4 | Authorization: extend `Permission`, grant `SYSTEM_ADMIN` row only | PR 4 | ~50 | Independent of PR 3 |
+| 5 | `users` domain+infra deltas: entity field, `MaintenanceCompanyLookup` port+adapter, `countActiveByMaintenanceCompany`, assignment policy+errors | PR 5 | ~320 | Depends on PR 2; needed by PR 7 (count) and PR 6 (lookup) |
+| 6 | `users` use-case wiring + presentation + shared schema: create/update use cases, error codes, DTOs, `.superRefine` | PR 6 | ~350 | Depends on PR 5 |
+| 7 | `maintenance-company` application: port + 4 CRUD use cases + fake + validation schema | PR 7 | ~280 | Depends on PR 3, PR 5 (count method) |
+| 8 | `maintenance-company` infra+presentation: adapter, controller, DTOs, module wiring, `app.module.ts` | PR 8 | ~340 | Depends on PR 1, PR 4, PR 7 |
+| 9 | Web: api client, error-messages, List+Create pages, i18n, `App.tsx` routes | PR 9 | ~380 | Depends on PR 8 |
+| 10 | Web: Edit page + route | PR 10 | ~160 | Depends on PR 9 |
+| 11 | Web: users forms company selector, list company-name, `UserErrorCode` mirror, i18n | PR 11 | ~320 | Depends on PR 6, PR 9 |
+| 12 | E2E: `maintenance-company.e2e-spec.ts` full lifecycle + auth matrix | PR 12 | ~350 | Depends on PR 8 |
+| 13 | E2E: `users.e2e-spec.ts` additions + browser verification pass | PR 13 | ~350 | Depends on PR 6, PR 11 |
+
+## Phase 1: Shared Error Envelope Extraction (PR 1)
+- [x] 1.1 Create `apps/api/src/shared/presentation/http/coded-error.ts` — `buildCodedError<TCode>(status, message, code)` + `STATUS_TEXT` map (design Decision 1).
+- [x] 1.2 `users.controller.ts`: delete private `buildConflictException`, use shared helper for all existing causes. The new 400 (`MAINTENANCE_COMPANY_NOT_FOUND`) is NOT added here — `MaintenanceCompanyNotFoundError` and the code literal don't exist until PR6 (`users` gains `maintenanceCompanyId`), so there is no code path that could throw it yet; adding it now would be dead/unreachable code. Left as a code comment pointing at PR6.
+- [x] 1.3 `community.controller.ts`: same mechanical migration (proposal correction — isolated, zero behavior diff).
+- [x] 1.4 Verify existing `users.e2e-spec.ts` and `community.e2e-spec.ts` `body.code` assertions pass unchanged (regression guard, no new tests). Also updated the two controllers' pre-existing unit specs (`users.controller.spec.ts`, `community.controller.spec.ts`) to assert `HttpException` instead of `ConflictException`, since `buildCodedError` constructs a plain `HttpException` rather than the status-specific subclass — an internal-implementation-detail test update, not a behavior change (HTTP status/body are unaffected, confirmed by the unchanged e2e assertions).
+
+## Phase 2: Schema & Migration (PR 2)
+- [ ] 2.1 `schema.prisma`: add `MaintenanceCompany` model (`id`,`name`,`taxId`,`contactInfo`,`deletedAt`), `User.maintenanceCompanyId` + `@@index`; comment block flagging the Prisma-invisible index/FK.
+- [ ] 2.2 Hand-written migration SQL: `CreateTable`, nullable column, `User_maintenanceCompanyId_idx`, partial unique index `MaintenanceCompany_taxId_active_key` (`WHERE "deletedAt" IS NULL`), FK `ON DELETE RESTRICT` — mirror `20260825120000_add_community_and_assignments`.
+- [ ] 2.3 Verify migration applies cleanly in dev; confirm `prisma migrate dev` does not regenerate/drop the hand-written index or FK.
+
+## Phase 3: Maintenance Company Domain (PR 3)
+- [ ] 3.1 RED/GREEN `maintenance-company.entity.ts`/`.spec.ts` — plain fields, no Prisma (ADR-013, Decision 3).
+- [ ] 3.2 RED/GREEN `maintenance-company-deletion.policy.ts`/`.spec.ts` — `assertNoActiveUsersAttached(count)`, table-driven 0/1/n.
+- [ ] 3.3 `domain/errors/{tax-id-already-in-use,maintenance-company-has-active-users,maintenance-company-not-found}.error.ts`. No `TransactionConflictError` (Decision 6).
+
+## Phase 4: Authorization (PR 4)
+- [ ] 4.1 `shared/application/authorization/permission.ts` — add `maintenanceCompany:create|read|update|delete`.
+- [ ] 4.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 4; other 4 roles stay `[]`.
+
+## Phase 5: Users Domain + Lookup Infra (PR 5)
+- [ ] 5.1 `users/domain/user.entity.ts`: add `maintenanceCompanyId: string | null`. No constructor validation (Decision 5 landmine).
+- [ ] 5.2 RED/GREEN `users/domain/maintenance-company-assignment.policy.ts` — `assertCompanyMatchesRole(role, companyId)`, table-driven over all 5 roles × present/absent.
+- [ ] 5.3 `users/domain/errors/{invalid-maintenance-company-assignment,maintenance-company-not-found}.error.ts`.
+- [ ] 5.4 `users/application/ports/maintenance-company-lookup.port.ts` — `existsActive(id)` + `MAINTENANCE_COMPANY_LOOKUP` token (Decision 4, no cycle).
+- [ ] 5.5 `users/infrastructure/persistence/prisma-maintenance-company-lookup.repository.ts` — existence probe via `PrismaService` (`@Global()`).
+- [ ] 5.6 `users/application/ports/user.repository.port.ts`: add `countActiveByMaintenanceCompany(id)`; `updateById` signature gains the field.
+- [ ] 5.7 `prisma-user.repository.ts` + `user.mapper.ts`: new column mapping + `countActiveByMaintenanceCompany` (uses `withDefaultFilter`).
+- [ ] 5.8 `users.module.ts`: bind `MAINTENANCE_COMPANY_LOOKUP`. Imports nothing new from `maintenance-company`.
+
+## Phase 6: Users Use Cases + Presentation + Shared Schema (PR 6)
+- [ ] 6.1 RED/GREEN `create-user.use-case.ts` — `assertCompanyMatchesRole` then (if supplied) `existsActive`.
+- [ ] 6.2 RED/GREEN `update-user.use-case.ts` — company check runs only when `maintenanceCompanyId` is present in the request; grandfathered-user rule: any PATCH on a companyless maintenance-role user rejected without a valid company (spec ADDED requirement).
+- [ ] 6.3 `packages/validation/src/users/{create,update}-user.schema.ts`: `MAINTENANCE_ROLES`, `isMaintenanceRole`, `.superRefine` shapes 1 & 2.
+- [ ] 6.4 `users/presentation/user-error-code.ts`: add `MAINTENANCE_COMPANY_REQUIRED` (400), `MAINTENANCE_COMPANY_NOT_ALLOWED` (400), `MAINTENANCE_COMPANY_NOT_FOUND` (400).
+- [ ] 6.5 `users/presentation/dto/**`: `maintenanceCompanyId` on request/response DTOs.
+- [ ] 6.6 `apps/web/src/api/client.ts`: fix stale comment (`code` no longer 409-exclusive).
+
+## Phase 7: Maintenance Company Application (PR 7)
+- [ ] 7.1 `maintenance-company.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`. No `transactional()` (Decision 6), no `findByTaxId` (Decision 2).
+- [ ] 7.2 RED/GREEN `create-maintenance-company.use-case.ts`.
+- [ ] 7.3 RED/GREEN `list-maintenance-companies.use-case.ts` — excludes soft-deleted.
+- [ ] 7.4 RED/GREEN `update-maintenance-company.use-case.ts` — 404 on missing id.
+- [ ] 7.5 RED/GREEN `soft-delete-maintenance-company.use-case.ts` — `findById` -> `countActiveByMaintenanceCompany` -> `assertNoActiveUsersAttached` -> `softDeleteById`; assert `softDeleteById` never called when blocked.
+- [ ] 7.6 `in-memory-maintenance-company.repository.ts` fake — must reproduce *partial* taxId uniqueness (active rows only).
+- [ ] 7.7 `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts` — `taxIdSchema` (trim+uppercase), create/update schemas.
+
+## Phase 8: Maintenance Company Infra + Presentation (PR 8)
+- [ ] 8.1 `prisma-maintenance-company.repository.ts` (extends `SoftDeletableRepository`) + `maintenance-company.mapper.ts`; `P2002` -> `TaxIdAlreadyInUseError` unconditionally (Decision 2 gotcha) on `create` and `updateById`.
+- [ ] 8.2 Integration: partial index present in `pg_indexes`; FK exists; active+active same-taxId rejected, active+soft-deleted pair accepted.
+- [ ] 8.3 `maintenance-company.controller.ts` CRUD routes + `dto/**` + Swagger, using `buildCodedError` from PR 1.
+- [ ] 8.4 `maintenance-company-error-code.ts` — exactly 2 values (`TAX_ID_ALREADY_IN_USE`, `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS`).
+- [ ] 8.5 `maintenance-company.module.ts` — imports `UsersModule` for `USER_REPOSITORY` (Decision 4, no `forwardRef`); register in `app.module.ts`.
+
+## Phase 9: Web — List, Create, i18n (PR 9)
+- [ ] 9.1 `apps/web/src/api/maintenance-company.ts` — typed calls + mirrored `MaintenanceCompanyErrorCode`.
+- [ ] 9.2 `apps/web/src/maintenance-company/error-messages.ts` — status/code-only map, mirrors `community/error-messages.ts`.
+- [ ] 9.3 `MaintenanceCompaniesListPage.tsx` — loading/empty/error states, name/taxId/contactInfo columns.
+- [ ] 9.4 `MaintenanceCompanyCreatePage.tsx` — client validation via shared schema, duplicate-taxId message.
+- [ ] 9.5 `App.tsx` — list + create routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering.
+- [ ] 9.6 `i18n/locales/{en,es,ca}.json` — `maintenanceCompany.*` keys incl. `maintenanceCompany.unknown`; parity test.
+
+## Phase 10: Web — Edit (PR 10)
+- [ ] 10.1 `MaintenanceCompanyEditPage.tsx` — prefilled form, confirmed soft-delete via `ConfirmDialog`, delete-blocked message distinct from duplicate-taxId.
+- [ ] 10.2 `App.tsx` — edit route.
+
+## Phase 11: Web — Users Forms + List (PR 11)
+- [ ] 11.1 `UserCreatePage.tsx` / `UserEditPage.tsx` — role-conditional company `<select>` populated from `GET /maintenance-companies`; appears/required only for the 2 maintenance roles; cleared from payload otherwise.
+- [ ] 11.2 `UsersListPage.tsx` (or detail surface) — render company **name** via id->name map (Decision 7), never raw UUID; unknown id renders `maintenanceCompany.unknown`.
+- [ ] 11.3 `apps/web/src/api/users.ts` — mirror `UserErrorCode` gains `MAINTENANCE_COMPANY_REQUIRED|NOT_ALLOWED|NOT_FOUND`.
+- [ ] 11.4 `apps/web/src/users/error-messages.ts` (or equivalent) — distinct message per new cause.
+- [ ] 11.5 `i18n/locales/{en,es,ca}.json` — users-side additions; parity test extended.
+
+## Phase 12: E2E — Maintenance Company (PR 12)
+- [ ] 12.1 `maintenance-company.e2e-spec.ts`: CRUD happy paths; `body.code` asserted for both codes.
+- [ ] 12.2 E2E: duplicate active taxId rejected; taxId reusable after soft-delete.
+- [ ] 12.3 E2E: delete blocked while active user attached; company `deletedAt` stays null; no user modified.
+- [ ] 12.4 E2E: delete succeeds after reassigning/deleting the blocking user; soft-deleted users never block.
+- [ ] 12.5 E2E: 401 unauthenticated / 403 non-admin (incl. a maintenance-role holder) on every route.
+
+## Phase 13: E2E — Users Deltas + Browser Verification (PR 13)
+- [ ] 13.1 `users.e2e-spec.ts`: shapes 1-3 (missing company, disallowed company, dead/soft-deleted company) with correct codes.
+- [ ] 13.2 E2E: reassignment via `PATCH` reflects immediately; demotion away from a maintenance role leaves `maintenanceCompanyId` untouched (regression).
+- [ ] 13.3 E2E: grandfathered companyless user — unrelated-field PATCH rejected with `MAINTENANCE_COMPANY_REQUIRED`; supplying a company resolves it; `GET` remains unrestricted.
+- [ ] 13.4 E2E: `ROLE_PERMISSIONS` non-admin rows (incl. both maintenance roles) still `[]` after the slice.
+- [ ] 13.5 Browser verification (`npm run dev`, `claude-in-chrome`, `SYSTEM_ADMIN` session): create company -> create technician requiring it -> edit technician to a different company -> attempt delete on an in-use company (see block message) -> reassign/delete the user -> delete succeeds; role dropdown show/hide of company selector; users list renders company name not UUID; non-admin sees `NotAuthorized` on `/maintenance-companies`; unauthenticated redirect to `/login`; es/ca locale spot-check.
+- [ ] 13.6 Full API + web suites, lint, build all pass; `no-restricted-imports` passes; grep confirms no `CommunityMaintenanceAssignment` artifact exists.
+
+## Rules Applied
+- Strict TDD: RED/GREEN on all logic-bearing files (entities, policies, use cases, mappers, guards); migrations/DTOs/module wiring/schema files are mechanical, no RED/GREEN required.
+- PR 1 (coded-error extraction) is isolated and mechanical per the proposal's post-design correction — no business logic in the same PR, reverts independently.
+- Design Decisions 1-7 (envelope builder location, partial index as sole enforcement, plain fields, DI-cycle-free lookup, payload-scoped conditional check, no `transactional()`, client-side name resolution) are settled — do not re-litigate at apply time.
+- Grandfathered-user PATCH rule follows the spec's strict scope: any edit, not just role/company edits, is rejected without a valid company.

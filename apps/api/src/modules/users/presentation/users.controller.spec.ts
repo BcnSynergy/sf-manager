@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
+  HttpException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -85,7 +85,7 @@ describe('UsersController', () => {
           password: 'Str0ngPassw0rd',
           role: 'MANAGER',
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps EmailAlreadyInUseError to a 409 body with code EMAIL_ALREADY_IN_USE', async () => {
@@ -98,10 +98,10 @@ describe('UsersController', () => {
           password: 'Str0ngPassw0rd',
           role: 'MANAGER',
         })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -161,7 +161,7 @@ describe('UsersController', () => {
 
       await expect(
         controller.update('last-admin', { role: 'MANAGER' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps LastSystemAdminError to a 409 body with code LAST_SYSTEM_ADMIN', async () => {
@@ -170,10 +170,10 @@ describe('UsersController', () => {
 
       const response = await controller
         .update('last-admin', { role: 'MANAGER' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -188,7 +188,7 @@ describe('UsersController', () => {
 
       await expect(
         controller.update('user-1', { role: 'MANAGER' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
@@ -197,10 +197,10 @@ describe('UsersController', () => {
 
       const response = await controller
         .update('user-1', { role: 'MANAGER' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -233,7 +233,7 @@ describe('UsersController', () => {
       );
 
       await expect(controller.deactivate('last-admin')).rejects.toThrow(
-        ConflictException,
+        HttpException,
       );
     });
 
@@ -243,10 +243,10 @@ describe('UsersController', () => {
 
       const response = await controller
         .deactivate('last-admin')
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -260,7 +260,7 @@ describe('UsersController', () => {
       );
 
       await expect(controller.deactivate('user-1')).rejects.toThrow(
-        ConflictException,
+        HttpException,
       );
     });
 
@@ -270,10 +270,10 @@ describe('UsersController', () => {
 
       const response = await controller
         .deactivate('user-1')
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
