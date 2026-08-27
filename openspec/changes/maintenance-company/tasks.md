@@ -46,9 +46,9 @@ Chain strategy: stacked-to-main
 - [x] 2.3 Verify migration applies cleanly in dev; confirm `prisma migrate dev` does not regenerate/drop the hand-written index or FK. **Finding**: it does — `prisma migrate dev --create-only` generated 4 `DropForeignKey` statements for `CommunityRepresentative`/`CommunityTechnician`'s hand-written FKs (invisible to Prisma, no `@relation`, ADR-013), which were manually deleted from the migration file before applying. Guarded going forward by `maintenance-company-migration.integration.spec.ts` (pg_indexes + pg_constraint checks, including a regression assertion that the 4 community FKs still exist).
 
 ## Phase 3: Maintenance Company Domain (PR 3)
-- [ ] 3.1 RED/GREEN `maintenance-company.entity.ts`/`.spec.ts` — plain fields, no Prisma (ADR-013, Decision 3).
-- [ ] 3.2 RED/GREEN `maintenance-company-deletion.policy.ts`/`.spec.ts` — `assertNoActiveUsersAttached(count)`, table-driven 0/1/n.
-- [ ] 3.3 `domain/errors/{tax-id-already-in-use,maintenance-company-has-active-users,maintenance-company-not-found}.error.ts`. No `TransactionConflictError` (Decision 6).
+- [x] 3.1 RED/GREEN `maintenance-company.entity.ts`/`.spec.ts` — plain fields, no Prisma (ADR-013, Decision 3).
+- [x] 3.2 RED/GREEN `maintenance-company-deletion.policy.ts`/`.spec.ts` — `assertNoActiveUsersAttached(count)`, table-driven 0/1/n.
+- [x] 3.3 `domain/errors/{tax-id-already-in-use,maintenance-company-has-active-users,maintenance-company-not-found}.error.ts`. No `TransactionConflictError` (Decision 6).
 
 ## Phase 4: Authorization (PR 4)
 - [ ] 4.1 `shared/application/authorization/permission.ts` — add `maintenanceCompany:create|read|update|delete`.
