@@ -9,6 +9,14 @@
 // kept separate from `community:update` so a future slice can grant
 // assignment without granting attribute edits or deletion (design.md File
 // Changes note).
+//
+// maintenanceCompany:* — maintenance-company/authorization spec "Permission
+// Check on Maintenance Company Endpoints" (PR 4): governs every
+// /maintenance-companies route. Four separate permissions rather than one,
+// mirroring community:*'s granularity, so a future slice (e.g. a MANAGER
+// with managerCapabilities) can grant read without granting delete
+// (design.md Routes). All four are granted only on the SYSTEM_ADMIN row of
+// ROLE_PERMISSIONS — see "Maintenance-Role Permissions Stay Inert".
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -18,4 +26,8 @@ export type Permission =
   | 'community:read'
   | 'community:update'
   | 'community:delete'
-  | 'community:assign';
+  | 'community:assign'
+  | 'maintenanceCompany:create'
+  | 'maintenanceCompany:read'
+  | 'maintenanceCompany:update'
+  | 'maintenanceCompany:delete';

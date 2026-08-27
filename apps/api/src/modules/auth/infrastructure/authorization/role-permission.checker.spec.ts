@@ -14,6 +14,15 @@ import { RolePermissionChecker } from './role-permission.checker';
 // other 4 roles stay [] even though COMMUNITY_REPRESENTATIVE and
 // MAINTENANCE_TECHNICIAN are the domain concepts these routes manage —
 // holding an assignment grants no permission.
+//
+// maintenanceCompany:* permissions (PR 4, authorization/spec.md "Permission
+// Check on Maintenance Company Endpoints" + "Maintenance-Role Permissions
+// Stay Inert"): SYSTEM_ADMIN is the only role permitted on any
+// /maintenance-companies route. MAINTENANCE_COMPANY_MANAGER and
+// MAINTENANCE_TECHNICIAN stay [] — holding a `maintenanceCompanyId` MUST NOT
+// grant either role any API permission, including on the very resource the
+// id references. The exhaustive matrix below (every NON_ADMIN_ROLES x
+// ALL_PERMISSIONS pair) is the non-escalation regression test.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -27,6 +36,10 @@ describe('RolePermissionChecker', () => {
     'community:update',
     'community:delete',
     'community:assign',
+    'maintenanceCompany:create',
+    'maintenanceCompany:read',
+    'maintenanceCompany:update',
+    'maintenanceCompany:delete',
   ];
 
   const NON_ADMIN_ROLES: Role[] = [
