@@ -37,6 +37,7 @@ describe('LoginUseCase', () => {
       updateById: jest.fn(),
       softDeleteById: jest.fn(),
       countActiveByRole: jest.fn(),
+      countActiveByMaintenanceCompany: jest.fn(),
       transactional: jest.fn(),
     };
     passwordHasher = {

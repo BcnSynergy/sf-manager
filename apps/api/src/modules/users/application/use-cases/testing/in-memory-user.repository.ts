@@ -68,7 +68,11 @@ export class InMemoryUserRepository implements UserRepository {
 
   updateById(
     id: string,
-    changes: { email?: string; role?: Role },
+    changes: {
+      email?: string;
+      role?: Role;
+      maintenanceCompanyId?: string | null;
+    },
   ): Promise<void> {
     const existing = this.usersById.get(id);
     if (!existing) {
@@ -80,6 +84,14 @@ export class InMemoryUserRepository implements UserRepository {
         ...existing,
         email: changes.email ?? existing.email,
         role: changes.role ?? existing.role,
+        // 'maintenanceCompanyId' in changes (not just !== undefined) so a
+        // caller can explicitly pass null to clear it -- undefined ("not
+        // part of this PATCH") leaves the existing value untouched
+        // (design.md Decision 5, no auto-clear on a bare role change).
+        maintenanceCompanyId:
+          'maintenanceCompanyId' in changes
+            ? changes.maintenanceCompanyId
+            : existing.maintenanceCompanyId,
         updatedAt: new Date(),
       }),
     );
@@ -102,6 +114,25 @@ export class InMemoryUserRepository implements UserRepository {
     let count = 0;
     for (const user of this.usersById.values()) {
       if (user.role === role && !user.isDeleted) {
+        count += 1;
+      }
+    }
+    return Promise.resolve(count);
+  }
+
+  // maintenance-company design.md Decision 4: mirrors countActiveByRole
+  // above -- kept in sync with UserRepository so this fake fully satisfies
+  // the port (used by community's SoftDeleteMaintenanceCompanyUseCase fake
+  // wiring in a later phase; not exercised by any Phase 5 caller yet).
+  countActiveByMaintenanceCompany(
+    maintenanceCompanyId: string,
+  ): Promise<number> {
+    let count = 0;
+    for (const user of this.usersById.values()) {
+      if (
+        user.maintenanceCompanyId === maintenanceCompanyId &&
+        !user.isDeleted
+      ) {
         count += 1;
       }
     }

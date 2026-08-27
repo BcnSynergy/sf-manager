@@ -218,6 +218,41 @@ describe('PrismaUserRepository (integration)', () => {
     expect(updated?.role).toBe('MAINTENANCE_TECHNICIAN');
   });
 
+  // maintenance-company design.md File Changes: updateById's changes type
+  // gains maintenanceCompanyId — a PATCH that supplies it must round-trip.
+  it('findById() and updateById() round-trip a maintenanceCompanyId change', async () => {
+    const email = uniqueEmail('update-by-id-company');
+    const id = idGenerator.generate();
+    const companyId = idGenerator.generate();
+
+    await prisma.maintenanceCompany.create({
+      data: {
+        id: companyId,
+        name: 'Update-By-Id Maintenance Co',
+        taxId: uniqueEmail('update-by-id-taxid'),
+        contactInfo: 'ops@update-by-id.example',
+        deletedAt: null,
+      },
+    });
+
+    await repository.create(
+      new User({
+        id,
+        email,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+
+    await repository.updateById(id, { maintenanceCompanyId: companyId });
+
+    const updated = await repository.findById(id);
+    expect(updated?.maintenanceCompanyId).toBe(companyId);
+  });
+
   it('softDeleteById() sets deletedAt so the user is excluded from findById()', async () => {
     const email = uniqueEmail('soft-delete-by-id');
     const id = idGenerator.generate();
@@ -274,6 +309,56 @@ describe('PrismaUserRepository (integration)', () => {
     const after = await repository.countActiveByRole(
       'COMMUNITY_REPRESENTATIVE',
     );
+
+    expect(after).toBe(before - 1);
+  });
+
+  // maintenance-company design.md Decision 4: mirrors the countActiveByRole
+  // test above. withDefaultFilter (deletedAt: null) is what makes
+  // "soft-deleted users do not block a company's deletion" true for free.
+  it('countActiveByMaintenanceCompany() excludes soft-deleted users', async () => {
+    const companyId = idGenerator.generate();
+    await prisma.maintenanceCompany.create({
+      data: {
+        id: companyId,
+        name: 'Count Maintenance Co',
+        taxId: uniqueEmail('count-company-taxid'),
+        contactInfo: 'ops@count-company.example',
+        deletedAt: null,
+      },
+    });
+
+    const activeId = idGenerator.generate();
+    const alreadyDeletedId = idGenerator.generate();
+
+    await repository.create(
+      new User({
+        id: activeId,
+        email: uniqueEmail('count-company-active'),
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        maintenanceCompanyId: companyId,
+      }),
+    );
+    await repository.create(
+      new User({
+        id: alreadyDeletedId,
+        email: uniqueEmail('count-company-deleted'),
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: new Date(),
+        maintenanceCompanyId: companyId,
+      }),
+    );
+
+    const before = await repository.countActiveByMaintenanceCompany(companyId);
+    await repository.softDeleteById(activeId);
+    const after = await repository.countActiveByMaintenanceCompany(companyId);
 
     expect(after).toBe(before - 1);
   });

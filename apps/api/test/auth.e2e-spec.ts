@@ -71,6 +71,10 @@ class InMemoryUserRepository implements UserRepository {
     throw new Error('Not used by auth.e2e-spec.ts');
   }
 
+  countActiveByMaintenanceCompany(): Promise<number> {
+    throw new Error('Not used by auth.e2e-spec.ts');
+  }
+
   transactional<T>(): Promise<T> {
     throw new Error('Not used by auth.e2e-spec.ts');
   }
