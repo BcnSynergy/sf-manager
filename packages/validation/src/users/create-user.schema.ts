@@ -35,6 +35,32 @@ export function isMaintenanceRole(role: Role): boolean {
   return (MAINTENANCE_ROLES as readonly string[]).includes(role);
 }
 
+// Shared by both createUserSchema and updateUserSchema's `.superRefine`
+// (update-user.schema.ts) — one source of truth for the "maintenanceCompanyId
+// required iff role is maintenance-side, forbidden otherwise" rule, instead
+// of two near-identical superRefine bodies with the same issue shapes.
+export function applyMaintenanceCompanyRefinement(
+  role: Role,
+  maintenanceCompanyId: string | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  const requiresCompany = isMaintenanceRole(role);
+  if (requiresCompany && maintenanceCompanyId === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['maintenanceCompanyId'],
+      message: `Role "${role}" requires a maintenanceCompanyId`,
+    });
+  }
+  if (!requiresCompany && maintenanceCompanyId !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['maintenanceCompanyId'],
+      message: `Role "${role}" does not accept a maintenanceCompanyId`,
+    });
+  }
+}
+
 // design.md Interfaces/Contracts (POST /users). Trim/lowercase before the
 // email-format check, mirroring loginRequestSchema. `password` reuses the
 // same passwordSchema imported by users/domain/password.ts's PlainPassword
@@ -54,21 +80,7 @@ export const createUserSchema = z
     maintenanceCompanyId: z.string().trim().min(1).optional(),
   })
   .superRefine((data, ctx) => {
-    const requiresCompany = isMaintenanceRole(data.role);
-    if (requiresCompany && data.maintenanceCompanyId === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maintenanceCompanyId'],
-        message: `Role "${data.role}" requires a maintenanceCompanyId`,
-      });
-    }
-    if (!requiresCompany && data.maintenanceCompanyId !== undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maintenanceCompanyId'],
-        message: `Role "${data.role}" does not accept a maintenanceCompanyId`,
-      });
-    }
+    applyMaintenanceCompanyRefinement(data.role, data.maintenanceCompanyId, ctx);
   });
 
 export type CreateUserRequest = z.infer<typeof createUserSchema>;

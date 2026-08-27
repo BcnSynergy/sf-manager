@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isMaintenanceRole, roleSchema } from './create-user.schema';
+import { applyMaintenanceCompanyRefinement, roleSchema } from './create-user.schema';
 
 // design.md Interfaces/Contracts (PATCH /users/:id) — "accepts email, role,
 // and (maintenance-company design.md Decision 5) maintenanceCompanyId".
@@ -27,21 +27,7 @@ export const updateUserSchema = z
     if (data.role === undefined) {
       return;
     }
-    const requiresCompany = isMaintenanceRole(data.role);
-    if (requiresCompany && data.maintenanceCompanyId === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maintenanceCompanyId'],
-        message: `Role "${data.role}" requires a maintenanceCompanyId`,
-      });
-    }
-    if (!requiresCompany && data.maintenanceCompanyId !== undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maintenanceCompanyId'],
-        message: `Role "${data.role}" does not accept a maintenanceCompanyId`,
-      });
-    }
+    applyMaintenanceCompanyRefinement(data.role, data.maintenanceCompanyId, ctx);
   });
 
 export type UpdateUserRequest = z.infer<typeof updateUserSchema>;
