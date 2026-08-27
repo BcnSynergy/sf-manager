@@ -20,14 +20,55 @@ export const roleSchema = z.enum([
 // zod directly, keeping the runtime dependency confined to this package.
 export type Role = z.infer<typeof roleSchema>;
 
+// maintenance-company design.md Decision 5 / Interfaces: the same predicate
+// drives this schema's `.superRefine`, the domain policy
+// (users/domain/maintenance-company-assignment.policy.ts), and the web
+// form's show/hide of the company selector (Phase 11). Exported so every
+// consumer shares one source of truth for "which roles need a company"
+// instead of re-deriving the role list (ADR-015).
+export const MAINTENANCE_ROLES = [
+  'MAINTENANCE_COMPANY_MANAGER',
+  'MAINTENANCE_TECHNICIAN',
+] as const satisfies readonly Role[];
+
+export function isMaintenanceRole(role: Role): boolean {
+  return (MAINTENANCE_ROLES as readonly string[]).includes(role);
+}
+
 // design.md Interfaces/Contracts (POST /users). Trim/lowercase before the
 // email-format check, mirroring loginRequestSchema. `password` reuses the
 // same passwordSchema imported by users/domain/password.ts's PlainPassword
 // VO (design.md Decision 6) — one source of truth, both layers validate it.
-export const createUserSchema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email()),
-  password: passwordSchema,
-  role: roleSchema,
-});
+//
+// maintenance-company design.md Decision 5, shapes 1 & 2 — user-management
+// spec.md "Create User": `maintenanceCompanyId` is required iff the role is
+// maintenance-side, and forbidden otherwise. This is the primary gate for
+// the HTTP path (ZodValidationPipe) and the web form; the domain policy
+// (assertCompanyMatchesRole) is the backstop for writers that bypass this
+// pipe (e.g. `prisma/seed.ts`).
+export const createUserSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().pipe(z.email()),
+    password: passwordSchema,
+    role: roleSchema,
+    maintenanceCompanyId: z.string().trim().min(1).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const requiresCompany = isMaintenanceRole(data.role);
+    if (requiresCompany && data.maintenanceCompanyId === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['maintenanceCompanyId'],
+        message: `Role "${data.role}" requires a maintenanceCompanyId`,
+      });
+    }
+    if (!requiresCompany && data.maintenanceCompanyId !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['maintenanceCompanyId'],
+        message: `Role "${data.role}" does not accept a maintenanceCompanyId`,
+      });
+    }
+  });
 
 export type CreateUserRequest = z.infer<typeof createUserSchema>;
