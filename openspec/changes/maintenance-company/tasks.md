@@ -55,14 +55,14 @@ Chain strategy: stacked-to-main
 - [x] 4.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 4; other 4 roles stay `[]`. Reused the existing exhaustive `ALL_PERMISSIONS x NON_ADMIN_ROLES` table-driven spec — the 4 new permissions were added to `ALL_PERMISSIONS`, which extends both the SYSTEM_ADMIN-allow assertions and the non-admin-deny matrix for free (65 cases total, up from 45).
 
 ## Phase 5: Users Domain + Lookup Infra (PR 5)
-- [ ] 5.1 `users/domain/user.entity.ts`: add `maintenanceCompanyId: string | null`. No constructor validation (Decision 5 landmine).
-- [ ] 5.2 RED/GREEN `users/domain/maintenance-company-assignment.policy.ts` — `assertCompanyMatchesRole(role, companyId)`, table-driven over all 5 roles × present/absent.
-- [ ] 5.3 `users/domain/errors/{invalid-maintenance-company-assignment,maintenance-company-not-found}.error.ts`.
-- [ ] 5.4 `users/application/ports/maintenance-company-lookup.port.ts` — `existsActive(id)` + `MAINTENANCE_COMPANY_LOOKUP` token (Decision 4, no cycle).
-- [ ] 5.5 `users/infrastructure/persistence/prisma-maintenance-company-lookup.repository.ts` — existence probe via `PrismaService` (`@Global()`).
-- [ ] 5.6 `users/application/ports/user.repository.port.ts`: add `countActiveByMaintenanceCompany(id)`; `updateById` signature gains the field.
-- [ ] 5.7 `prisma-user.repository.ts` + `user.mapper.ts`: new column mapping + `countActiveByMaintenanceCompany` (uses `withDefaultFilter`).
-- [ ] 5.8 `users.module.ts`: bind `MAINTENANCE_COMPANY_LOOKUP`. Imports nothing new from `maintenance-company`.
+- [x] 5.1 `users/domain/user.entity.ts`: add `maintenanceCompanyId: string | null`. No constructor validation (Decision 5 landmine). Made OPTIONAL in `UserProps` (defaults to `null`) so every existing `new User(...)` caller across the codebase keeps compiling — see Deviations.
+- [x] 5.2 RED/GREEN `users/domain/maintenance-company-assignment.policy.ts` — `assertCompanyMatchesRole(role, companyId)`, table-driven over all 5 roles × present/absent (10 cases).
+- [x] 5.3 `users/domain/errors/{invalid-maintenance-company-assignment,maintenance-company-not-found}.error.ts`.
+- [x] 5.4 `users/application/ports/maintenance-company-lookup.port.ts` — `existsActive(id)` + `MAINTENANCE_COMPANY_LOOKUP` token (Decision 4, no cycle).
+- [x] 5.5 `users/infrastructure/persistence/prisma-maintenance-company-lookup.repository.ts` — existence probe via `PrismaService` (`@Global()`). RED/GREEN via integration spec against real Postgres.
+- [x] 5.6 `users/application/ports/user.repository.port.ts`: add `countActiveByMaintenanceCompany(id)`; `updateById` signature gains the field.
+- [x] 5.7 `prisma-user.repository.ts` + `user.mapper.ts`: new column mapping + `countActiveByMaintenanceCompany` (uses `withDefaultFilter`). Mechanical fallout: `InMemoryUserRepository` and two `jest.Mocked<UserRepository>`/manual-fake compile bridges (`login.use-case.spec.ts`, `test/auth.e2e-spec.ts`) updated to keep implementing the extended port.
+- [x] 5.8 `users.module.ts`: bind `MAINTENANCE_COMPANY_LOOKUP`. Imports nothing new from `maintenance-company`. DI graph verified by `app.module.spec.ts`.
 
 ## Phase 6: Users Use Cases + Presentation + Shared Schema (PR 6)
 - [ ] 6.1 RED/GREEN `create-user.use-case.ts` — `assertCompanyMatchesRole` then (if supplied) `existsActive`.
