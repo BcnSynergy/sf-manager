@@ -14,20 +14,22 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 // That is what makes the shape byte-identical across every status code this
 // helper is asked to build, including the previously-unverified 400 case
 // (see coded-error.spec.ts, and design.md's Open Questions last item).
-const STATUS_TEXT: Partial<Record<number, string>> = {
+type CodedErrorStatus = HttpStatus.BAD_REQUEST | HttpStatus.CONFLICT;
+
+const STATUS_TEXT: Record<CodedErrorStatus, string> = {
   [HttpStatus.BAD_REQUEST]: 'Bad Request',
   [HttpStatus.CONFLICT]: 'Conflict',
 };
 
 export function buildCodedError<TCode extends string>(
-  status: HttpStatus,
+  status: CodedErrorStatus,
   message: string,
   code: TCode,
 ): HttpException {
   return new HttpException(
     {
       statusCode: status,
-      error: STATUS_TEXT[status] ?? HttpStatus[status],
+      error: STATUS_TEXT[status],
       message,
       code,
     },
