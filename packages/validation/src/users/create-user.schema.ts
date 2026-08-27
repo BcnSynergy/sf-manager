@@ -35,30 +35,45 @@ export function isMaintenanceRole(role: Role): boolean {
   return (MAINTENANCE_ROLES as readonly string[]).includes(role);
 }
 
-// Shared by both createUserSchema and updateUserSchema's `.superRefine`
-// (update-user.schema.ts) — one source of truth for the "maintenanceCompanyId
-// required iff role is maintenance-side, forbidden otherwise" rule, instead
-// of two near-identical superRefine bodies with the same issue shapes.
-export function applyMaintenanceCompanyRefinement(
+// Shared by createUserSchema and updateUserSchema's `.superRefine`
+// (update-user.schema.ts) — the NOT_ALLOWED direction of the
+// "maintenanceCompanyId required iff role is maintenance-side, forbidden
+// otherwise" rule is the ONLY direction fully decidable from a payload
+// alone, on both POST (full replacement) and PATCH (partial — see
+// update-user.schema.ts's header comment for why REQUIRED can't be judged
+// there). One source of truth for this half of the rule instead of
+// duplicating the issue shape/message across both schema files.
+export function applyMaintenanceCompanyNotAllowedRefinement(
   role: Role,
   maintenanceCompanyId: string | undefined,
   ctx: z.RefinementCtx,
 ): void {
-  const requiresCompany = isMaintenanceRole(role);
-  if (requiresCompany && maintenanceCompanyId === undefined) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['maintenanceCompanyId'],
-      message: `Role "${role}" requires a maintenanceCompanyId`,
-    });
-  }
-  if (!requiresCompany && maintenanceCompanyId !== undefined) {
+  if (!isMaintenanceRole(role) && maintenanceCompanyId !== undefined) {
     ctx.addIssue({
       code: 'custom',
       path: ['maintenanceCompanyId'],
       message: `Role "${role}" does not accept a maintenanceCompanyId`,
     });
   }
+}
+
+// createUserSchema-only: on creation there is no existing state to inherit
+// from, so BOTH directions of the rule are fully decidable from the payload
+// alone — unlike updateUserSchema, which only ever calls the NOT_ALLOWED
+// half above (see update-user.schema.ts's header comment).
+export function applyMaintenanceCompanyRefinement(
+  role: Role,
+  maintenanceCompanyId: string | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  if (isMaintenanceRole(role) && maintenanceCompanyId === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['maintenanceCompanyId'],
+      message: `Role "${role}" requires a maintenanceCompanyId`,
+    });
+  }
+  applyMaintenanceCompanyNotAllowedRefinement(role, maintenanceCompanyId, ctx);
 }
 
 // design.md Interfaces/Contracts (POST /users). Trim/lowercase before the
