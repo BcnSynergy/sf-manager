@@ -34,6 +34,10 @@ describe('PrismaUserRepository (integration)', () => {
   // Unique per test run so repeated runs never collide on the unique
   // `email` constraint, and so tests don't depend on cross-run cleanup.
   const uniqueEmail = (label: string) => `${label}-${randomUUID()}@example.com`;
+  // Mirrors prisma-maintenance-company-lookup.repository.integration.spec.ts
+  // -- a distinct helper so a MaintenanceCompany.taxId fixture never looks
+  // like an email column value.
+  const uniqueTaxId = (label: string) => `${label}-${randomUUID()}`;
 
   it('excludes a soft-deleted user from findByEmail (ADR-010 default filter)', async () => {
     const email = uniqueEmail('soft-deleted');
@@ -229,7 +233,7 @@ describe('PrismaUserRepository (integration)', () => {
       data: {
         id: companyId,
         name: 'Update-By-Id Maintenance Co',
-        taxId: uniqueEmail('update-by-id-taxid'),
+        taxId: uniqueTaxId('update-by-id-taxid'),
         contactInfo: 'ops@update-by-id.example',
         deletedAt: null,
       },
@@ -322,7 +326,7 @@ describe('PrismaUserRepository (integration)', () => {
       data: {
         id: companyId,
         name: 'Count Maintenance Co',
-        taxId: uniqueEmail('count-company-taxid'),
+        taxId: uniqueTaxId('count-company-taxid'),
         contactInfo: 'ops@count-company.example',
         deletedAt: null,
       },

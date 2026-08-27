@@ -84,12 +84,15 @@ export class InMemoryUserRepository implements UserRepository {
         ...existing,
         email: changes.email ?? existing.email,
         role: changes.role ?? existing.role,
-        // 'maintenanceCompanyId' in changes (not just !== undefined) so a
-        // caller can explicitly pass null to clear it -- undefined ("not
-        // part of this PATCH") leaves the existing value untouched
-        // (design.md Decision 5, no auto-clear on a bare role change).
+        // Mirrors PrismaUserRepository.updateById passing `changes` straight
+        // through as Prisma `data`: Prisma strips undefined-valued keys from
+        // the update entirely (column untouched), while an explicit `null`
+        // clears it. Checking `!== undefined` (not `'in' changes`) matches
+        // that -- a present-but-undefined key must NOT be treated as "clear"
+        // here, only an explicit null does (design.md Decision 5, no
+        // auto-clear on a bare role change).
         maintenanceCompanyId:
-          'maintenanceCompanyId' in changes
+          changes.maintenanceCompanyId !== undefined
             ? changes.maintenanceCompanyId
             : existing.maintenanceCompanyId,
         updatedAt: new Date(),
