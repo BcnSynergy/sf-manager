@@ -23,13 +23,25 @@ enum Role {
 }
 
 model User {
-  id           String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
-  email        String    @unique // stored lowercase-normalized
-  passwordHash String
-  role         Role // design.md Decision 9 — no @default, see migration
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime? // ADR-010
+  id                   String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  email                String    @unique // stored lowercase-normalized
+  passwordHash         String
+  role                 Role // design.md Decision 9 — no @default, see migration
+  // maintenance-company/design.md Decision 4/5: nullable — required only for
+  // the 2 maintenance roles (app-layer policy + Zod, not a DB CHECK). The FK
+  // to MaintenanceCompany(id) is hand-written in migration.sql, INVISIBLE to
+  // Prisma (no `@relation` here, ADR-013 — see MaintenanceCompany's comment
+  // block below for the full warning).
+  maintenanceCompanyId String?   @db.Uuid
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime? // ADR-010
+
+  // Prisma-VISIBLE regular index (not the partial unique one — that lives
+  // only on MaintenanceCompany.taxId). Postgres does not auto-index FK
+  // columns, and countActiveByMaintenanceCompany filters on exactly this
+  // column on every delete attempt (maintenance-company/design.md Decision 4).
+  @@index([maintenanceCompanyId])
 }
 
 // Deny-list, not a session table: only ever holds explicitly logged-out
@@ -100,4 +112,31 @@ model CommunityTechnician {
   deactivatedAt DateTime? // NULL = active
 
   @@unique([communityId, userId])
+}
+
+// maintenance-company/design.md Decision 3: all plain fields, no Value
+// Objects — see design.md for the per-field re-derivation (name/contactInfo
+// have no behaviour beyond validation; taxId's uniqueness is a set property,
+// not intrinsic to the value).
+//
+// maintenance-company/design.md Decision 2: the taxId-unique-among-active-
+// companies invariant is enforced ONLY by a HAND-WRITTEN partial unique
+// index — `CREATE UNIQUE INDEX ... ON "MaintenanceCompany"("taxId") WHERE
+// "deletedAt" IS NULL` — which Prisma's schema DSL cannot express (`@@unique`
+// has no `WHERE` clause) and is therefore INVISIBLE to Prisma's migration
+// diffing. Same for the FK from User.maintenanceCompanyId to this table's
+// id (no `@relation` field here, ADR-013 — mirroring CommunityRepresentative
+// above).
+//
+// WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate the
+// migration file or diff schema.prisma against the database in a way that
+// could DROP that index or FK — Prisma has no knowledge of either. Guarded
+// by an integration test asserting their continued presence (see
+// migration.sql and the pg_indexes/pg_constraint integration spec).
+model MaintenanceCompany {
+  id          String    @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  name        String
+  taxId       String // stored upper-cased-normalized (design.md Decision 3)
+  contactInfo String
+  deletedAt   DateTime? // ADR-010
 }
