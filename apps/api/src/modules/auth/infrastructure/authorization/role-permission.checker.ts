@@ -19,10 +19,20 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'community:update',
     'community:delete',
     'community:assign',
+    'maintenanceCompany:create',
+    'maintenanceCompany:read',
+    'maintenanceCompany:update',
+    'maintenanceCompany:delete',
   ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to
   // fill these in when the role becomes operational.
+  //
+  // authorization/spec.md "Maintenance-Role Permissions Stay Inert": holding
+  // a maintenanceCompanyId MUST NOT grant MAINTENANCE_COMPANY_MANAGER or
+  // MAINTENANCE_TECHNICIAN any API permission, including on the
+  // /maintenance-companies resource their own id references. Both stay []
+  // here, unchanged by this slice.
   MANAGER: [],
   MAINTENANCE_COMPANY_MANAGER: [],
   MAINTENANCE_TECHNICIAN: [],

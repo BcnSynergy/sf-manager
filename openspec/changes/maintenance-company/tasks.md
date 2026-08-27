@@ -51,8 +51,8 @@ Chain strategy: stacked-to-main
 - [x] 3.3 `domain/errors/{tax-id-already-in-use,maintenance-company-has-active-users,maintenance-company-not-found}.error.ts`. No `TransactionConflictError` (Decision 6).
 
 ## Phase 4: Authorization (PR 4)
-- [ ] 4.1 `shared/application/authorization/permission.ts` — add `maintenanceCompany:create|read|update|delete`.
-- [ ] 4.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 4; other 4 roles stay `[]`.
+- [x] 4.1 `shared/application/authorization/permission.ts` — add `maintenanceCompany:create|read|update|delete`.
+- [x] 4.2 RED/GREEN `role-permission.checker.ts` spec — `SYSTEM_ADMIN` gets all 4; other 4 roles stay `[]`. Reused the existing exhaustive `ALL_PERMISSIONS x NON_ADMIN_ROLES` table-driven spec — the 4 new permissions were added to `ALL_PERMISSIONS`, which extends both the SYSTEM_ADMIN-allow assertions and the non-admin-deny matrix for free (65 cases total, up from 45).
 
 ## Phase 5: Users Domain + Lookup Infra (PR 5)
 - [ ] 5.1 `users/domain/user.entity.ts`: add `maintenanceCompanyId: string | null`. No constructor validation (Decision 5 landmine).
