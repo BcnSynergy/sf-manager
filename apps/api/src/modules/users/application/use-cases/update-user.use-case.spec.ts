@@ -277,9 +277,7 @@ describe('UpdateUserUseCase', () => {
       }),
     ).rejects.toThrow(MaintenanceCompanyNotFoundError);
 
-    expect(companyLookup.existsActive).toHaveBeenCalledWith(
-      'company-deleted',
-    );
+    expect(companyLookup.existsActive).toHaveBeenCalledWith('company-deleted');
     expect((await userRepository.findById('tech-1'))?.role).toBe('MANAGER');
   });
 });
