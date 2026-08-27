@@ -68,7 +68,11 @@ export class InMemoryUserRepository implements UserRepository {
 
   updateById(
     id: string,
-    changes: { email?: string; role?: Role },
+    changes: {
+      email?: string;
+      role?: Role;
+      maintenanceCompanyId?: string | null;
+    },
   ): Promise<void> {
     const existing = this.usersById.get(id);
     if (!existing) {
@@ -80,6 +84,17 @@ export class InMemoryUserRepository implements UserRepository {
         ...existing,
         email: changes.email ?? existing.email,
         role: changes.role ?? existing.role,
+        // Mirrors PrismaUserRepository.updateById passing `changes` straight
+        // through as Prisma `data`: Prisma strips undefined-valued keys from
+        // the update entirely (column untouched), while an explicit `null`
+        // clears it. Checking `!== undefined` (not `'in' changes`) matches
+        // that -- a present-but-undefined key must NOT be treated as "clear"
+        // here, only an explicit null does (design.md Decision 5, no
+        // auto-clear on a bare role change).
+        maintenanceCompanyId:
+          changes.maintenanceCompanyId !== undefined
+            ? changes.maintenanceCompanyId
+            : existing.maintenanceCompanyId,
         updatedAt: new Date(),
       }),
     );
@@ -102,6 +117,25 @@ export class InMemoryUserRepository implements UserRepository {
     let count = 0;
     for (const user of this.usersById.values()) {
       if (user.role === role && !user.isDeleted) {
+        count += 1;
+      }
+    }
+    return Promise.resolve(count);
+  }
+
+  // maintenance-company design.md Decision 4: mirrors countActiveByRole
+  // above -- kept in sync with UserRepository so this fake fully satisfies
+  // the port (used by community's SoftDeleteMaintenanceCompanyUseCase fake
+  // wiring in a later phase; not exercised by any Phase 5 caller yet).
+  countActiveByMaintenanceCompany(
+    maintenanceCompanyId: string,
+  ): Promise<number> {
+    let count = 0;
+    for (const user of this.usersById.values()) {
+      if (
+        user.maintenanceCompanyId === maintenanceCompanyId &&
+        !user.isDeleted
+      ) {
         count += 1;
       }
     }

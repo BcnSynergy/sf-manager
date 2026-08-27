@@ -17,6 +17,7 @@ export class UserMapper {
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       deletedAt: record.deletedAt,
+      maintenanceCompanyId: record.maintenanceCompanyId,
     });
   }
 
@@ -32,6 +33,7 @@ export class UserMapper {
       passwordHash: user.passwordHash,
       role: user.role,
       deletedAt: user.deletedAt,
+      maintenanceCompanyId: user.maintenanceCompanyId,
     };
   }
 }

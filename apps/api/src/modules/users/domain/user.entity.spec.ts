@@ -43,4 +43,61 @@ describe('User', () => {
     expect(user.deletedAt).toBe(deletedAt);
     expect(user.isDeleted).toBe(true);
   });
+
+  // design.md Decision 5: the constructor performs NO validation of
+  // maintenanceCompanyId against role — UserMapper.toDomain reconstitutes
+  // every row read from the database, including grandfathered
+  // maintenance-role users with a null company (spec.md "Grandfathered
+  // Maintenance-Role Users"); throwing here would turn GET /users into a
+  // 500 for those rows. This is a plain field, not a validated one.
+  it('carries a maintenanceCompanyId when supplied, with no role-based validation', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000003',
+      email: 'technician@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MAINTENANCE_TECHNICIAN',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      maintenanceCompanyId: '01930000-0000-7000-8000-00000000abcd',
+    });
+
+    expect(user.maintenanceCompanyId).toBe(
+      '01930000-0000-7000-8000-00000000abcd',
+    );
+  });
+
+  // Every existing caller across the codebase (use cases, seed.ts, fixtures)
+  // constructs User without maintenanceCompanyId — it defaults to null
+  // rather than becoming a required constructor argument everywhere, which
+  // would inflate this PR into Phase 6's use-case wiring.
+  it('defaults maintenanceCompanyId to null when omitted (e.g. a non-maintenance-role user)', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000004',
+      email: 'admin2@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'SYSTEM_ADMIN',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+    });
+
+    expect(user.maintenanceCompanyId).toBeNull();
+  });
+
+  it('does NOT throw for a maintenance role with a null maintenanceCompanyId (grandfathered row, spec.md)', () => {
+    expect(
+      () =>
+        new User({
+          id: '01930000-0000-7000-8000-000000000005',
+          email: 'grandfathered@example.com',
+          passwordHash: 'argon2id$hash',
+          role: 'MAINTENANCE_COMPANY_MANAGER',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+          deletedAt: null,
+          maintenanceCompanyId: null,
+        }),
+    ).not.toThrow();
+  });
 });

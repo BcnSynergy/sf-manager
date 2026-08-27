@@ -41,13 +41,33 @@ export interface UserRepository {
 
   updateById(
     id: string,
-    changes: { email?: string; role?: Role },
+    changes: {
+      email?: string;
+      role?: Role;
+      // maintenance-company design.md Decision 5: present only when
+      // UpdateUserUseCase's request body itself carries the field —
+      // `undefined` here means "not part of this PATCH", never "clear the
+      // value". A bare role change away from a maintenance role therefore
+      // leaves an existing maintenanceCompanyId untouched by construction
+      // (no auto-clear), which is the settled product decision.
+      maintenanceCompanyId?: string | null;
+    },
   ): Promise<void>;
 
   // Sets deletedAt (ADR-010) — no row deletion.
   softDeleteById(id: string): Promise<void>;
 
   countActiveByRole(role: Role): Promise<number>;
+
+  // maintenance-company design.md Decision 4: mirrors countActiveByRole
+  // one-for-one. Called by SoftDeleteMaintenanceCompanyUseCase (Phase 7)
+  // before assertNoActiveUsersAttached — defined here, on the port `users`
+  // already owns, so `maintenance-company` can inject USER_REPOSITORY
+  // (mirroring CommunityModule's precedent) without `users` importing
+  // anything back.
+  countActiveByMaintenanceCompany(
+    maintenanceCompanyId: string,
+  ): Promise<number>;
 
   // MUST run at an isolation level that prevents write skew (adapter:
   // Prisma `$transaction({ isolationLevel: 'Serializable' })`, design.md

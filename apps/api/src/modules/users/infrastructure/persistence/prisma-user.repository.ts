@@ -106,7 +106,11 @@ export class PrismaUserRepository
 
   async updateById(
     id: string,
-    changes: { email?: string; role?: Role },
+    changes: {
+      email?: string;
+      role?: Role;
+      maintenanceCompanyId?: string | null;
+    },
   ): Promise<void> {
     await this.prisma.user.update({
       where: { id },
@@ -125,6 +129,18 @@ export class PrismaUserRepository
   async countActiveByRole(role: Role): Promise<number> {
     return this.prisma.user.count({
       where: this.withDefaultFilter({ role }),
+    });
+  }
+
+  // maintenance-company design.md Decision 4: mirrors countActiveByRole.
+  // withDefaultFilter supplies deletedAt: null, so soft-deleted users are
+  // excluded by construction — the "soft-deleted users don't block a
+  // company's deletion" rule needs no extra predicate here.
+  async countActiveByMaintenanceCompany(
+    maintenanceCompanyId: string,
+  ): Promise<number> {
+    return this.prisma.user.count({
+      where: this.withDefaultFilter({ maintenanceCompanyId }),
     });
   }
 
