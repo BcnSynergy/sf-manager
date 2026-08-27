@@ -41,9 +41,9 @@ Chain strategy: stacked-to-main
 - [x] 1.4 Verify existing `users.e2e-spec.ts` and `community.e2e-spec.ts` `body.code` assertions pass unchanged (regression guard, no new tests). Also updated the two controllers' pre-existing unit specs (`users.controller.spec.ts`, `community.controller.spec.ts`) to assert `HttpException` instead of `ConflictException`, since `buildCodedError` constructs a plain `HttpException` rather than the status-specific subclass — an internal-implementation-detail test update, not a behavior change (HTTP status/body are unaffected, confirmed by the unchanged e2e assertions).
 
 ## Phase 2: Schema & Migration (PR 2)
-- [ ] 2.1 `schema.prisma`: add `MaintenanceCompany` model (`id`,`name`,`taxId`,`contactInfo`,`deletedAt`), `User.maintenanceCompanyId` + `@@index`; comment block flagging the Prisma-invisible index/FK.
-- [ ] 2.2 Hand-written migration SQL: `CreateTable`, nullable column, `User_maintenanceCompanyId_idx`, partial unique index `MaintenanceCompany_taxId_active_key` (`WHERE "deletedAt" IS NULL`), FK `ON DELETE RESTRICT` — mirror `20260825120000_add_community_and_assignments`.
-- [ ] 2.3 Verify migration applies cleanly in dev; confirm `prisma migrate dev` does not regenerate/drop the hand-written index or FK.
+- [x] 2.1 `schema.prisma`: add `MaintenanceCompany` model (`id`,`name`,`taxId`,`contactInfo`,`deletedAt`), `User.maintenanceCompanyId` + `@@index`; comment block flagging the Prisma-invisible index/FK.
+- [x] 2.2 Hand-written migration SQL: `CreateTable`, nullable column, `User_maintenanceCompanyId_idx`, partial unique index `MaintenanceCompany_taxId_active_key` (`WHERE "deletedAt" IS NULL`), FK `ON DELETE RESTRICT` — mirror `20260825120000_add_community_and_assignments`.
+- [x] 2.3 Verify migration applies cleanly in dev; confirm `prisma migrate dev` does not regenerate/drop the hand-written index or FK. **Finding**: it does — `prisma migrate dev --create-only` generated 4 `DropForeignKey` statements for `CommunityRepresentative`/`CommunityTechnician`'s hand-written FKs (invisible to Prisma, no `@relation`, ADR-013), which were manually deleted from the migration file before applying. Guarded going forward by `maintenance-company-migration.integration.spec.ts` (pg_indexes + pg_constraint checks, including a regression assertion that the 4 community FKs still exist).
 
 ## Phase 3: Maintenance Company Domain (PR 3)
 - [ ] 3.1 RED/GREEN `maintenance-company.entity.ts`/`.spec.ts` — plain fields, no Prisma (ADR-013, Decision 3).
