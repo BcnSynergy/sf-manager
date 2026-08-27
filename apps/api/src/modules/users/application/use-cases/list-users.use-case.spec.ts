@@ -41,8 +41,18 @@ describe('ListUsersUseCase', () => {
     const result = await useCase.execute();
 
     expect(result).toEqual([
-      { id: 'u1', email: 'a@example.com', role: 'MANAGER' },
-      { id: 'u2', email: 'b@example.com', role: 'SYSTEM_ADMIN' },
+      {
+        id: 'u1',
+        email: 'a@example.com',
+        role: 'MANAGER',
+        maintenanceCompanyId: null,
+      },
+      {
+        id: 'u2',
+        email: 'b@example.com',
+        role: 'SYSTEM_ADMIN',
+        maintenanceCompanyId: null,
+      },
     ]);
     result.forEach((user) => expect(user).not.toHaveProperty('passwordHash'));
   });
@@ -74,7 +84,12 @@ describe('ListUsersUseCase', () => {
     const result = await useCase.execute();
 
     expect(result).toEqual([
-      { id: 'u1', email: 'active@example.com', role: 'MANAGER' },
+      {
+        id: 'u1',
+        email: 'active@example.com',
+        role: 'MANAGER',
+        maintenanceCompanyId: null,
+      },
     ]);
   });
 

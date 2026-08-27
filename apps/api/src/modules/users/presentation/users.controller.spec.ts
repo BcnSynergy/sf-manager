@@ -9,7 +9,9 @@ import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
 import { UpdateUserUseCase } from '../application/use-cases/update-user.use-case';
 import { EmailAlreadyInUseError } from '../domain/errors/email-already-in-use.error';
+import { InvalidMaintenanceCompanyAssignmentError } from '../domain/errors/invalid-maintenance-company-assignment.error';
 import { LastSystemAdminError } from '../domain/errors/last-system-admin.error';
+import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-company-not-found.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import { UserNotFoundError } from '../domain/errors/user-not-found.error';
 import { WeakPasswordError } from '../domain/errors/weak-password.error';
@@ -106,6 +108,77 @@ describe('UsersController', () => {
         error: 'Conflict',
         message: domainError.message,
         code: 'EMAIL_ALREADY_IN_USE',
+      });
+    });
+
+    it('maps a REQUIRED InvalidMaintenanceCompanyAssignmentError to a 400 body with code MAINTENANCE_COMPANY_REQUIRED', async () => {
+      const domainError = new InvalidMaintenanceCompanyAssignmentError(
+        'MAINTENANCE_TECHNICIAN',
+        null,
+      );
+      createUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .create({
+          email: 'tech@example.com',
+          password: 'Str0ngPassw0rd',
+          role: 'MAINTENANCE_TECHNICIAN',
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+    });
+
+    it('maps a NOT_ALLOWED InvalidMaintenanceCompanyAssignmentError to a 400 body with code MAINTENANCE_COMPANY_NOT_ALLOWED', async () => {
+      const domainError = new InvalidMaintenanceCompanyAssignmentError(
+        'MANAGER',
+        'company-1',
+      );
+      createUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .create({
+          email: 'manager@example.com',
+          password: 'Str0ngPassw0rd',
+          role: 'MANAGER',
+          maintenanceCompanyId: 'company-1',
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
+    });
+
+    it('maps MaintenanceCompanyNotFoundError to a 400 body with code MAINTENANCE_COMPANY_NOT_FOUND', async () => {
+      const domainError = new MaintenanceCompanyNotFoundError();
+      createUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .create({
+          email: 'tech@example.com',
+          password: 'Str0ngPassw0rd',
+          role: 'MAINTENANCE_TECHNICIAN',
+          maintenanceCompanyId: 'ghost',
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_NOT_FOUND',
       });
     });
   });
@@ -205,6 +278,66 @@ describe('UsersController', () => {
         error: 'Conflict',
         message: domainError.message,
         code: 'TRANSACTION_CONFLICT',
+      });
+    });
+
+    it('maps a REQUIRED InvalidMaintenanceCompanyAssignmentError to a 400 body with code MAINTENANCE_COMPANY_REQUIRED', async () => {
+      const domainError = new InvalidMaintenanceCompanyAssignmentError(
+        'MAINTENANCE_TECHNICIAN',
+        null,
+      );
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('grandfathered-1', { email: 'renamed@example.com' })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+    });
+
+    it('maps a NOT_ALLOWED InvalidMaintenanceCompanyAssignmentError to a 400 body with code MAINTENANCE_COMPANY_NOT_ALLOWED', async () => {
+      const domainError = new InvalidMaintenanceCompanyAssignmentError(
+        'COMMUNITY_REPRESENTATIVE',
+        'company-1',
+      );
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('user-1', {
+          role: 'COMMUNITY_REPRESENTATIVE',
+          maintenanceCompanyId: 'company-1',
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
+    });
+
+    it('maps MaintenanceCompanyNotFoundError to a 400 body with code MAINTENANCE_COMPANY_NOT_FOUND', async () => {
+      const domainError = new MaintenanceCompanyNotFoundError();
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('tech-1', { maintenanceCompanyId: 'ghost' })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MAINTENANCE_COMPANY_NOT_FOUND',
       });
     });
   });
