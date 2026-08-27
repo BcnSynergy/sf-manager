@@ -1,6 +1,9 @@
 // Thrown by MaintenanceCompanyLookup.existsActive() call sites (design.md
-// Decision 4/5) — CreateUserUseCase and (payload-scoped) UpdateUserUseCase —
-// when a supplied `maintenanceCompanyId` does not resolve to an existing,
+// Decision 4/5) — CreateUserUseCase and UpdateUserUseCase (resulting-state-
+// scoped: checked whenever the RESULTING role/maintenanceCompanyId pair
+// requires a live company, not only when the request payload itself
+// supplies maintenanceCompanyId) — when a supplied `maintenanceCompanyId`
+// does not resolve to an existing,
 // non-soft-deleted MaintenanceCompany (spec.md "Nonexistent or soft-deleted
 // company rejected"). Missing and soft-deleted are indistinguishable
 // (ADR-010). The application layer maps this to 400
