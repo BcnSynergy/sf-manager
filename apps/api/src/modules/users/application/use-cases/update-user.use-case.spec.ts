@@ -252,4 +252,34 @@ describe('UpdateUserUseCase', () => {
       ).toBe('company-1');
     });
   });
+
+  // Data-integrity gap (fresh-context review, PR 6): a user carries a
+  // stored maintenanceCompanyId from before its company was soft-deleted.
+  // A later PATCH that changes ONLY role, back into a maintenance role,
+  // never supplies maintenanceCompanyId in its own payload — but the
+  // RESULTING state still requires a live company. The liveness check must
+  // run against the inherited id, not be skipped just because this
+  // request's payload omits the field.
+  it('rejects re-promoting into a maintenance role when the inherited maintenanceCompanyId no longer resolves to a live company', async () => {
+    userRepository.seed(
+      makeUser({
+        id: 'tech-1',
+        role: 'MANAGER',
+        maintenanceCompanyId: 'company-deleted',
+      }),
+    );
+    companyLookup.existsActive.mockResolvedValue(false);
+
+    await expect(
+      useCase.execute({
+        id: 'tech-1',
+        role: 'MAINTENANCE_TECHNICIAN',
+      }),
+    ).rejects.toThrow(MaintenanceCompanyNotFoundError);
+
+    expect(companyLookup.existsActive).toHaveBeenCalledWith(
+      'company-deleted',
+    );
+    expect((await userRepository.findById('tech-1'))?.role).toBe('MANAGER');
+  });
 });

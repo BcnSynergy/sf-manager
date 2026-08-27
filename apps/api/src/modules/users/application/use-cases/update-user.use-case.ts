@@ -74,18 +74,25 @@ export class UpdateUserUseCase {
     }
 
     if (changes.maintenanceCompanyId !== undefined) {
-      // NOT_ALLOWED + liveness stay payload-scoped (design.md Decision 5):
-      // only evaluated when THIS request itself supplies a
-      // maintenanceCompanyId. A bare demotion away from a maintenance role
-      // must leave a stale company id untouched, never rejected — checked
-      // above, this block never runs for that case since the field is
-      // absent from `changes`. `resultingCompanyId` is non-null here (it
-      // equals `changes.maintenanceCompanyId`), so this can only ever
-      // surface the NOT_ALLOWED shape, never REQUIRED.
+      // NOT_ALLOWED stays payload-scoped (design.md Decision 5): only
+      // evaluated when THIS request itself supplies a maintenanceCompanyId
+      // for a non-maintenance resulting role. `resultingCompanyId` is
+      // non-null here (it equals `changes.maintenanceCompanyId`), so this
+      // can only ever surface the NOT_ALLOWED shape, never REQUIRED.
       assertCompanyMatchesRole(resultingRole, changes.maintenanceCompanyId);
-      const isLive = await this.companyLookup.existsActive(
-        changes.maintenanceCompanyId,
-      );
+    }
+
+    // Liveness is scoped to the RESULTING state, not to whether this
+    // request's payload happens to supply maintenanceCompanyId. A bare
+    // demotion away from a maintenance role is excluded here because the
+    // outer condition requires isMaintenanceRole(resultingRole) — a stale
+    // company id on a demoted user is left untouched, never rejected. But
+    // a PATCH that re-promotes a user back into a maintenance role while
+    // inheriting an existing maintenanceCompanyId (this request doesn't
+    // supply one) must still be checked: that inherited id can point at a
+    // company that was soft-deleted after it was originally assigned.
+    if (isMaintenanceRole(resultingRole) && resultingCompanyId !== null) {
+      const isLive = await this.companyLookup.existsActive(resultingCompanyId);
       if (!isLive) {
         throw new MaintenanceCompanyNotFoundError();
       }
