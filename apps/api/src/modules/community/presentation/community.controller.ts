@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ConflictException,
   Delete,
   Get,
   HttpCode,
@@ -30,6 +29,7 @@ import {
   updateCommunitySchema,
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
+import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
@@ -55,7 +55,6 @@ import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.e
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
 import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
-import type { CommunityErrorCode } from './community-error-code';
 import type { AddRepresentativeRequestDto } from './dto/add-representative-request.dto';
 import type { AddTechnicianRequestDto } from './dto/add-technician-request.dto';
 import type { CreateCommunityRequestDto } from './dto/create-community-request.dto';
@@ -409,9 +408,10 @@ export class CommunityController {
   // Flow, "Where the settled policies live in code"). Technician use cases
   // never throw TransactionConflictError (no transactional() wrap), but
   // mapping it here anyway costs nothing and keeps this method reusable.
-  // design.md Decision 1 (Coded-conflict convention): each 409 cause gets
-  // its own machine-readable `code`, additive to {statusCode, error,
-  // message} — mirrors UsersController.mapMutationError.
+  // design.md Decision 1 (coded-error convention): each 409 cause gets its
+  // own machine-readable `code`, additive to {statusCode, error, message},
+  // built via the shared `buildCodedError` helper — mirrors
+  // UsersController.mapMutationError.
   private mapAssignmentError(error: unknown): unknown {
     if (
       error instanceof CommunityNotFoundError ||
@@ -421,32 +421,26 @@ export class CommunityController {
       return new NotFoundException(error.message);
     }
     if (error instanceof AssignmentAlreadyExistsError) {
-      return this.buildConflictException(error, 'ASSIGNMENT_ALREADY_EXISTS');
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'ASSIGNMENT_ALREADY_EXISTS',
+      );
     }
     if (error instanceof IneligibleRoleError) {
-      return this.buildConflictException(error, 'INELIGIBLE_ROLE');
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'INELIGIBLE_ROLE',
+      );
     }
     if (error instanceof TransactionConflictError) {
-      return this.buildConflictException(error, 'TRANSACTION_CONFLICT');
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'TRANSACTION_CONFLICT',
+      );
     }
     return error;
-  }
-
-  // design.md Decision 1 ("Non-breaking guarantee", mirroring
-  // UsersController.buildConflictException): ConflictException with an
-  // object body is emitted verbatim by Nest's HttpException.createBody, so
-  // this re-supplies the default {statusCode, error, message} shape and
-  // only *adds* `code`, keeping the change additive/non-breaking per the
-  // community-assignments spec delta.
-  private buildConflictException(
-    error: Error,
-    code: CommunityErrorCode,
-  ): ConflictException {
-    return new ConflictException({
-      statusCode: HttpStatus.CONFLICT,
-      error: 'Conflict',
-      message: error.message,
-      code,
-    });
   }
 }

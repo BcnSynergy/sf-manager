@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
@@ -277,7 +277,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.addRepresentative('community-1', { userId: 'user-1' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps AssignmentAlreadyExistsError to a 409 body with code ASSIGNMENT_ALREADY_EXISTS', async () => {
@@ -286,10 +286,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .addRepresentative('community-1', { userId: 'user-1' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -304,7 +304,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.addRepresentative('community-1', { userId: 'user-1' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
@@ -313,10 +313,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .addRepresentative('community-1', { userId: 'user-1' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -331,7 +331,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.addRepresentative('community-1', { userId: 'user-1' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
@@ -340,10 +340,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .addRepresentative('community-1', { userId: 'user-1' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -446,7 +446,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.reactivateRepresentative('community-1', 'user-1'),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
@@ -455,10 +455,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .reactivateRepresentative('community-1', 'user-1')
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -473,7 +473,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.reactivateRepresentative('community-1', 'user-1'),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps TransactionConflictError to a 409 body with code TRANSACTION_CONFLICT', async () => {
@@ -482,10 +482,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .reactivateRepresentative('community-1', 'user-1')
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -556,7 +556,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.addTechnician('community-1', { userId: 'user-1' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps AssignmentAlreadyExistsError to a 409 body with code ASSIGNMENT_ALREADY_EXISTS', async () => {
@@ -565,10 +565,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .addTechnician('community-1', { userId: 'user-1' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -583,7 +583,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.addTechnician('community-1', { userId: 'user-1' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
@@ -592,10 +592,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .addTechnician('community-1', { userId: 'user-1' })
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,
@@ -682,7 +682,7 @@ describe('CommunityController', () => {
 
       await expect(
         controller.reactivateTechnician('community-1', 'user-1'),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(HttpException);
     });
 
     it('maps IneligibleRoleError to a 409 body with code INELIGIBLE_ROLE', async () => {
@@ -691,10 +691,10 @@ describe('CommunityController', () => {
 
       const response = await controller
         .reactivateTechnician('community-1', 'user-1')
-        .catch((error: ConflictException) => error);
+        .catch((error: HttpException) => error);
 
-      expect(response).toBeInstanceOf(ConflictException);
-      expect((response as ConflictException).getResponse()).toEqual({
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
         statusCode: 409,
         error: 'Conflict',
         message: domainError.message,

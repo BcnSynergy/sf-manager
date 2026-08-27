@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
@@ -25,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { createUserSchema, updateUserSchema } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
+import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CreateUserUseCase } from '../application/use-cases/create-user.use-case';
 import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.use-case';
@@ -38,7 +38,6 @@ import { WeakPasswordError } from '../domain/errors/weak-password.error';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import type { UserErrorCode } from './user-error-code';
 
 const ROLE_ENUM = [
   'SYSTEM_ADMIN',
@@ -95,7 +94,11 @@ export class UsersController {
         throw new BadRequestException(error.message);
       }
       if (error instanceof EmailAlreadyInUseError) {
-        throw this.buildConflictException(error, 'EMAIL_ALREADY_IN_USE');
+        throw buildCodedError(
+          HttpStatus.CONFLICT,
+          error.message,
+          'EMAIL_ALREADY_IN_USE',
+        );
       }
       throw error;
     }
@@ -164,34 +167,32 @@ export class UsersController {
   // Shared by update() and deactivate() — both mutate an existing user
   // looked up by id and both run the same Last-Admin Lockout /
   // SERIALIZABLE-conflict path (design.md Decision 3, Data Flow).
+  //
+  // maintenance-company design.md Decision 1: PR6 adds a 400
+  // `MAINTENANCE_COMPANY_NOT_FOUND` cause here once `users`' domain/
+  // application layers gain `maintenanceCompanyId` (design.md Decision 5).
+  // Not added in this PR — `MaintenanceCompanyNotFoundError` and the
+  // `MAINTENANCE_COMPANY_NOT_FOUND` literal don't exist yet, so there is no
+  // code path that could throw it. This PR only migrates the pre-existing
+  // causes onto the shared `buildCodedError` helper.
   private mapMutationError(error: unknown): unknown {
     if (error instanceof UserNotFoundError) {
       return new NotFoundException(error.message);
     }
     if (error instanceof LastSystemAdminError) {
-      return this.buildConflictException(error, 'LAST_SYSTEM_ADMIN');
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'LAST_SYSTEM_ADMIN',
+      );
     }
     if (error instanceof TransactionConflictError) {
-      return this.buildConflictException(error, 'TRANSACTION_CONFLICT');
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'TRANSACTION_CONFLICT',
+      );
     }
     return error;
-  }
-
-  // design.md Decision 3 ("Non-breaking guarantee"): ConflictException with
-  // an object body is emitted verbatim by Nest's HttpException.createBody
-  // (confirmed against @nestjs/common 11 source at apply time) — so this
-  // re-supplies the default {statusCode, error, message} shape and only
-  // *adds* `code`, keeping the change additive/non-breaking per the
-  // user-management spec delta.
-  private buildConflictException(
-    error: Error,
-    code: UserErrorCode,
-  ): ConflictException {
-    return new ConflictException({
-      statusCode: HttpStatus.CONFLICT,
-      error: 'Conflict',
-      message: error.message,
-      code,
-    });
   }
 }
