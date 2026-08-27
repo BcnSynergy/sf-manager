@@ -65,12 +65,12 @@ Chain strategy: stacked-to-main
 - [x] 5.8 `users.module.ts`: bind `MAINTENANCE_COMPANY_LOOKUP`. Imports nothing new from `maintenance-company`. DI graph verified by `app.module.spec.ts`.
 
 ## Phase 6: Users Use Cases + Presentation + Shared Schema (PR 6)
-- [ ] 6.1 RED/GREEN `create-user.use-case.ts` — `assertCompanyMatchesRole` then (if supplied) `existsActive`.
-- [ ] 6.2 RED/GREEN `update-user.use-case.ts` — company check runs only when `maintenanceCompanyId` is present in the request; grandfathered-user rule: any PATCH on a companyless maintenance-role user rejected without a valid company (spec ADDED requirement).
-- [ ] 6.3 `packages/validation/src/users/{create,update}-user.schema.ts`: `MAINTENANCE_ROLES`, `isMaintenanceRole`, `.superRefine` shapes 1 & 2.
-- [ ] 6.4 `users/presentation/user-error-code.ts`: add `MAINTENANCE_COMPANY_REQUIRED` (400), `MAINTENANCE_COMPANY_NOT_ALLOWED` (400), `MAINTENANCE_COMPANY_NOT_FOUND` (400).
-- [ ] 6.5 `users/presentation/dto/**`: `maintenanceCompanyId` on request/response DTOs.
-- [ ] 6.6 `apps/web/src/api/client.ts`: fix stale comment (`code` no longer 409-exclusive).
+- [x] 6.1 RED/GREEN `create-user.use-case.ts` — `assertCompanyMatchesRole` then (if supplied) `existsActive`.
+- [x] 6.2 RED/GREEN `update-user.use-case.ts` — the REQUIRED shape is evaluated against the RESULTING role/company pair on every PATCH regardless of which fields it touches (spec.md OQ2, "Grandfathered Maintenance-Role Users" ADDED requirement — stricter than design.md's original payload-scoped call, per its own "Handoff to sdd-spec" note); NOT_ALLOWED + the liveness check stay payload-scoped (only when `maintenanceCompanyId` is itself present in the request), so a bare demotion away from a maintenance role still leaves a stale company id untouched (design.md Decision 5).
+- [x] 6.3 `packages/validation/src/users/{create,update}-user.schema.ts`: `MAINTENANCE_ROLES`, `isMaintenanceRole`, `.superRefine` shapes 1 & 2. Mechanical per Rules Applied — no dedicated RED/GREEN (package has no test harness: `"test": "echo \"no tests yet\""`); correctness is covered by the use-case specs exercising the schema indirectly via the API layer's contract.
+- [x] 6.4 `users/presentation/user-error-code.ts`: add `MAINTENANCE_COMPANY_REQUIRED` (400), `MAINTENANCE_COMPANY_NOT_ALLOWED` (400), `MAINTENANCE_COMPANY_NOT_FOUND` (400). **Finding**: design.md Decision 5 originally specified shapes 1/2 as a *plain* 400 with no code ("a code would be dead weight"); the user-management spec.md's ADDED/MODIFIED requirements ("Create User", "Update User", "Last-Admin Lockout") explicitly mandate these two codes, so the spec supersedes that design call — `InvalidMaintenanceCompanyAssignmentError` gained a `reason: 'REQUIRED' | 'NOT_ALLOWED'` discriminant to drive the mapping instead of splitting into two error classes.
+- [x] 6.5 `users/presentation/dto/**`: `maintenanceCompanyId` on `UserResponseDto` (request DTOs are Zod-inferred, already covered by 6.3). `ListUsersUseCase`/`ListedUser` also gained the field — required for `UserResponseDto` (shared by create/update/list) to type-check, and needed by Phase 11's list-page company-name resolution (design.md Decision 7).
+- [x] 6.6 `apps/web/src/api/client.ts`: fix stale comment (`code` no longer 409-exclusive).
 
 ## Phase 7: Maintenance Company Application (PR 7)
 - [ ] 7.1 `maintenance-company.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`. No `transactional()` (Decision 6), no `findByTaxId` (Decision 2).
