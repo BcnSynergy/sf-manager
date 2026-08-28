@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../shared/infrastructure/persistence/pri
 import { SoftDeletableRepository } from '../../../../shared/infrastructure/persistence/soft-deletable.repository';
 import { MaintenanceCompanyRepository } from '../../application/ports/maintenance-company.repository.port';
 import { MaintenanceCompany } from '../../domain/maintenance-company.entity';
+import { MaintenanceCompanyNotFoundError } from '../../domain/errors/maintenance-company-not-found.error';
 import { TaxIdAlreadyInUseError } from '../../domain/errors/tax-id-already-in-use.error';
 import { MaintenanceCompanyMapper } from './maintenance-company.mapper';
 
@@ -15,6 +16,15 @@ import { MaintenanceCompanyMapper } from './maintenance-company.mapper';
 // branch on error.meta.target: Prisma cannot reliably report it for a
 // hand-written index it has no schema knowledge of.
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+
+// PR8 review: updateById()'s `where` includes the deletedAt: null default
+// filter (below), so a concurrent delete landing between
+// UpdateMaintenanceCompanyUseCase's findById check and this write makes
+// Prisma's update() match zero rows and throw P2025 instead of silently
+// writing onto an already-deleted row — mapped to MaintenanceCompanyNotFoundError,
+// the same 404 the use case's own findById check would have thrown had it
+// run a moment later.
+const RECORD_NOT_FOUND = 'P2025';
 
 // Prisma adapter for the MaintenanceCompanyRepository port (ADR-013).
 // Extends SoftDeletableRepository so the ADR-010 `deletedAt: null` default
@@ -65,17 +75,22 @@ export class PrismaMaintenanceCompanyRepository
     }
   }
 
+  // PR8 review: where includes the deletedAt: null default filter so a
+  // concurrent delete landing after UpdateMaintenanceCompanyUseCase's own
+  // findById check (but before this write) can't silently write onto the
+  // now-deleted row — Prisma matches zero rows and throws P2025, mapped
+  // below to MaintenanceCompanyNotFoundError.
   async updateById(
     id: string,
     changes: { name?: string; taxId?: string; contactInfo?: string },
   ): Promise<void> {
     try {
       await this.prisma.maintenanceCompany.update({
-        where: { id },
+        where: this.withDefaultFilter({ id }),
         data: changes,
       });
     } catch (error) {
-      throw this.mapTaxIdViolation(error);
+      throw this.mapMutationError(error);
     }
   }
 
@@ -101,6 +116,18 @@ export class PrismaMaintenanceCompanyRepository
     `;
 
     return affectedRows === 1;
+  }
+
+  // Shared by updateById() — checks the not-found case first, then falls
+  // through to the same taxId-collision mapping create() uses.
+  private mapMutationError(error: unknown): unknown {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === RECORD_NOT_FOUND
+    ) {
+      return new MaintenanceCompanyNotFoundError();
+    }
+    return this.mapTaxIdViolation(error);
   }
 
   private mapTaxIdViolation(error: unknown): unknown {

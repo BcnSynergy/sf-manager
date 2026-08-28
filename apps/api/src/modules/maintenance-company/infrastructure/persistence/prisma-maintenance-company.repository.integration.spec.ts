@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../shared/infrastructure/persistence/pri
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { User } from '../../../users/domain/user.entity';
 import { PrismaUserRepository } from '../../../users/infrastructure/persistence/prisma-user.repository';
+import { MaintenanceCompanyNotFoundError } from '../../domain/errors/maintenance-company-not-found.error';
 import { TaxIdAlreadyInUseError } from '../../domain/errors/tax-id-already-in-use.error';
 import { MaintenanceCompany } from '../../domain/maintenance-company.entity';
 import { PrismaMaintenanceCompanyRepository } from './prisma-maintenance-company.repository';
@@ -103,6 +104,19 @@ describe('PrismaMaintenanceCompanyRepository (integration)', () => {
     await expect(
       repository.updateById(mover.id, { taxId: heldTaxId }),
     ).rejects.toThrow(TaxIdAlreadyInUseError);
+  });
+
+  // PR8 review: updateById() must not silently write onto a row that a
+  // concurrent delete already soft-deleted — this is the same class of
+  // TOCTOU gap softDeleteById() closes above, applied to update instead.
+  it('updateById() throws MaintenanceCompanyNotFoundError for an already soft-deleted company', async () => {
+    const company = makeCompany(uniqueTaxId('update-already-deleted'));
+    await repository.create(company);
+    await repository.softDeleteById(company.id);
+
+    await expect(
+      repository.updateById(company.id, { name: 'New Name' }),
+    ).rejects.toThrow(MaintenanceCompanyNotFoundError);
   });
 
   it('findById() and findAll() exclude a soft-deleted company (ADR-010)', async () => {
