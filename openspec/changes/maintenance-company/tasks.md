@@ -82,11 +82,11 @@ Chain strategy: stacked-to-main
 - [x] 7.7 `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts` — `taxIdSchema` (trim+uppercase), create/update schemas.
 
 ## Phase 8: Maintenance Company Infra + Presentation (PR 8)
-- [ ] 8.1 `prisma-maintenance-company.repository.ts` (extends `SoftDeletableRepository`) + `maintenance-company.mapper.ts`; `P2002` -> `TaxIdAlreadyInUseError` unconditionally (Decision 2 gotcha) on `create` and `updateById`.
-- [ ] 8.2 Integration: partial index present in `pg_indexes`; FK exists; active+active same-taxId rejected, active+soft-deleted pair accepted.
-- [ ] 8.3 `maintenance-company.controller.ts` CRUD routes + `dto/**` + Swagger, using `buildCodedError` from PR 1.
-- [ ] 8.4 `maintenance-company-error-code.ts` — exactly 2 values (`TAX_ID_ALREADY_IN_USE`, `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS`).
-- [ ] 8.5 `maintenance-company.module.ts` — imports `UsersModule` for `USER_REPOSITORY` (Decision 4, no `forwardRef`); register in `app.module.ts`.
+- [x] 8.1 `prisma-maintenance-company.repository.ts` (extends `SoftDeletableRepository`) + `maintenance-company.mapper.ts`; `P2002` -> `TaxIdAlreadyInUseError` unconditionally (Decision 2 gotcha) on `create` and `updateById`. **Also closes the PR7-documented cross-repo delete race** (design.md Decision 4 addendum): `softDeleteById` now runs a single atomic `UPDATE ... WHERE ... AND NOT EXISTS (SELECT 1 FROM "User" ...)` statement and returns `Promise<boolean>` instead of `Promise<void>`; `SoftDeleteMaintenanceCompanyUseCase` re-checks on a `false` return to report the precise cause (`MaintenanceCompanyHasActiveUsersError` or `MaintenanceCompanyNotFoundError`) instead of silently succeeding.
+- [x] 8.2 Integration: partial index present in `pg_indexes`; FK exists; active+active same-taxId rejected, active+soft-deleted pair accepted. Also covers `softDeleteById` against real Postgres with an active `User.maintenanceCompanyId` row attached — `deletedAt` stays `null`, proving the `NOT EXISTS` guard actually runs against the database, not just the in-memory fake.
+- [x] 8.3 `maintenance-company.controller.ts` CRUD routes + `dto/**` + Swagger, using `buildCodedError` from PR 1.
+- [x] 8.4 `maintenance-company-error-code.ts` — exactly 2 values (`TAX_ID_ALREADY_IN_USE`, `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS`).
+- [x] 8.5 `maintenance-company.module.ts` — imports `UsersModule` for `USER_REPOSITORY` (Decision 4, no `forwardRef`); register in `app.module.ts`.
 
 ## Phase 9: Web — List, Create, i18n (PR 9)
 - [ ] 9.1 `apps/web/src/api/maintenance-company.ts` — typed calls + mirrored `MaintenanceCompanyErrorCode`.
