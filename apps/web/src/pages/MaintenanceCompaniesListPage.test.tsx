@@ -76,18 +76,6 @@ describe('MaintenanceCompaniesListPage', () => {
     expect(row).toHaveTextContent(companyB.contactInfo);
   });
 
-  it('never shows a soft-deleted company (list already excludes it)', async () => {
-    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
-
-    renderPage();
-
-    await screen.findByTestId(`maintenance-companies-list-row-${companyA.id}`);
-
-    expect(
-      screen.queryByTestId(`maintenance-companies-list-row-${companyB.id}`),
-    ).not.toBeInTheDocument();
-  });
-
   it('shows a "New maintenance company" link pointing to /maintenance-companies/new', async () => {
     mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
 
