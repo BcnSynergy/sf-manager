@@ -138,17 +138,40 @@ describe('SoftDeleteMaintenanceCompanyUseCase', () => {
   });
 
   it('throws MaintenanceCompanyNotFoundError when the atomic write refuses because the company vanished concurrently', async () => {
+    const company = makeCompany();
+    maintenanceCompanyRepository.seed(company);
+    jest
+      .spyOn(maintenanceCompanyRepository, 'softDeleteById')
+      .mockResolvedValueOnce(false);
+    jest
+      .spyOn(maintenanceCompanyRepository, 'findById')
+      .mockResolvedValueOnce(company) // initial existence check
+      .mockResolvedValueOnce(null); // re-check after the refused write: gone
+
+    await expect(useCase.execute('company-1')).rejects.toThrow(
+      MaintenanceCompanyNotFoundError,
+    );
+  });
+
+  // PR8 review: the re-check after a refused atomic write must never infer
+  // "vanished" from a possibly-stale active-user count — findById (not
+  // countActiveByMaintenanceCompany) is the sole existence oracle
+  // (ADR-010), so a company that provably still exists is never
+  // misreported as 404 even if the count happens to read 0 at that exact
+  // instant (e.g. the blocking user was detached again right after the
+  // atomic write failed).
+  it('throws MaintenanceCompanyHasActiveUsersError, not NotFoundError, when the write is refused and the company still exists even though the re-check count reads 0', async () => {
     maintenanceCompanyRepository.seed(makeCompany());
     jest
       .spyOn(maintenanceCompanyRepository, 'softDeleteById')
       .mockResolvedValueOnce(false);
     jest
       .spyOn(userRepository, 'countActiveByMaintenanceCompany')
-      .mockResolvedValueOnce(0) // fast-path read-time check: no active users
-      .mockResolvedValueOnce(0); // re-check after the refused write: still none
+      .mockResolvedValueOnce(0) // fast-path read-time check
+      .mockResolvedValueOnce(0); // re-check: transiently 0, but company was never deleted
 
     await expect(useCase.execute('company-1')).rejects.toThrow(
-      MaintenanceCompanyNotFoundError,
+      MaintenanceCompanyHasActiveUsersError,
     );
   });
 });

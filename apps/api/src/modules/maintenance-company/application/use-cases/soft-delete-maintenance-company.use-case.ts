@@ -55,17 +55,29 @@ export class SoftDeleteMaintenanceCompanyUseCase {
       // was concurrently attached between the check and the write. This is
       // exactly the PR7-documented race, now closed: the write is
       // authoritative and simply refuses in this case instead of silently
-      // succeeding. Re-check to give an accurate error.
+      // succeeding.
+      //
+      // PR8 review: findById — not a second countActiveByMaintenanceCompany
+      // read — is the sole existence oracle here (ADR-010's "soft-deleted
+      // resolves to null" is what findById already encodes everywhere
+      // else). A stale/racy count read must never be used to infer
+      // "vanished": if the company still exists, the ONLY reason the
+      // atomic write could have refused is an active user, so that's the
+      // only error thrown in that case, regardless of what the count reads
+      // a moment later (the count is fetched only to make the message
+      // accurate, never to decide which error to throw).
+      const stillExists = await this.maintenanceCompanyRepository.findById(id);
+      if (!stillExists) {
+        // Company vanished between the read-time check and the write (e.g.
+        // concurrently soft-deleted by another request) — same 404
+        // semantics as the initial findById check above.
+        throw new MaintenanceCompanyNotFoundError();
+      }
       const currentActiveUserCount =
         await this.userRepository.countActiveByMaintenanceCompany(id);
-      if (currentActiveUserCount > 0) {
-        throw new MaintenanceCompanyHasActiveUsersError(currentActiveUserCount);
-      }
-      // Company vanished between the read-time check and the write (e.g.
-      // concurrently soft-deleted by another request) — same 404 semantics
-      // as the initial findById check (ADR-010: soft-deleted resolves to
-      // "no such company").
-      throw new MaintenanceCompanyNotFoundError();
+      throw new MaintenanceCompanyHasActiveUsersError(
+        Math.max(currentActiveUserCount, 1),
+      );
     }
   }
 }
