@@ -188,15 +188,13 @@ describe('MaintenanceCompanyController', () => {
 
   describe('softDelete', () => {
     it('delegates to SoftDeleteMaintenanceCompanyUseCase with the id', async () => {
-      softDeleteMaintenanceCompanyUseCase.execute.mockResolvedValue(
-        undefined,
-      );
+      softDeleteMaintenanceCompanyUseCase.execute.mockResolvedValue(undefined);
 
       const result = await controller.softDelete('company-1');
 
-      expect(
-        softDeleteMaintenanceCompanyUseCase.execute,
-      ).toHaveBeenCalledWith('company-1');
+      expect(softDeleteMaintenanceCompanyUseCase.execute).toHaveBeenCalledWith(
+        'company-1',
+      );
       expect(result).toBeUndefined();
     });
 

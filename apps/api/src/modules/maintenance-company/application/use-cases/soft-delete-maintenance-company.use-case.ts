@@ -47,9 +47,8 @@ export class SoftDeleteMaintenanceCompanyUseCase {
       await this.userRepository.countActiveByMaintenanceCompany(id);
     assertNoActiveUsersAttached(activeUserCount);
 
-    const wasDeleted = await this.maintenanceCompanyRepository.softDeleteById(
-      id,
-    );
+    const wasDeleted =
+      await this.maintenanceCompanyRepository.softDeleteById(id);
     if (!wasDeleted) {
       // Extremely rare: the atomic UPDATE found the invariant violated at
       // write time even though the read-time check above passed — a user
@@ -60,9 +59,7 @@ export class SoftDeleteMaintenanceCompanyUseCase {
       const currentActiveUserCount =
         await this.userRepository.countActiveByMaintenanceCompany(id);
       if (currentActiveUserCount > 0) {
-        throw new MaintenanceCompanyHasActiveUsersError(
-          currentActiveUserCount,
-        );
+        throw new MaintenanceCompanyHasActiveUsersError(currentActiveUserCount);
       }
       // Company vanished between the read-time check and the write (e.g.
       // concurrently soft-deleted by another request) — same 404 semantics

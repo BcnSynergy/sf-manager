@@ -72,7 +72,9 @@ export class MaintenanceCompanyController {
   })
   @ApiCreatedResponse({ type: MaintenanceCompanyResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
-  @ApiForbiddenResponse({ description: 'Caller lacks maintenanceCompany:create.' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks maintenanceCompany:create.',
+  })
   @ApiConflictResponse({
     description:
       'taxId already in use by another active company. Body carries code: TAX_ID_ALREADY_IN_USE.',
@@ -92,7 +94,9 @@ export class MaintenanceCompanyController {
   @RequirePermission('maintenanceCompany:read')
   @ApiOkResponse({ type: MaintenanceCompanyResponseDto, isArray: true })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
-  @ApiForbiddenResponse({ description: 'Caller lacks maintenanceCompany:read.' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks maintenanceCompany:read.',
+  })
   async list(): Promise<MaintenanceCompanyResponseDto[]> {
     return this.listMaintenanceCompaniesUseCase.execute();
   }
@@ -111,7 +115,9 @@ export class MaintenanceCompanyController {
   })
   @ApiOkResponse({ type: MaintenanceCompanyResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
-  @ApiForbiddenResponse({ description: 'Caller lacks maintenanceCompany:update.' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks maintenanceCompany:update.',
+  })
   @ApiNotFoundResponse({ description: 'Maintenance company not found.' })
   @ApiConflictResponse({
     description:
@@ -137,7 +143,9 @@ export class MaintenanceCompanyController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Maintenance company soft-deleted.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
-  @ApiForbiddenResponse({ description: 'Caller lacks maintenanceCompany:delete.' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks maintenanceCompany:delete.',
+  })
   @ApiNotFoundResponse({ description: 'Maintenance company not found.' })
   @ApiConflictResponse({
     description:

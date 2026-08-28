@@ -8,5 +8,4 @@
 // module has no transactional() seam, so there is no P2034 path (design.md
 // Decision 6, "Findings reported to the proposal").
 export type MaintenanceCompanyErrorCode =
-  | 'TAX_ID_ALREADY_IN_USE'
-  | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS';
+  'TAX_ID_ALREADY_IN_USE' | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS';
