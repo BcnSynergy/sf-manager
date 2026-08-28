@@ -136,6 +136,37 @@ describe('locale key-set parity (en/es/ca)', () => {
     'community.error.assignmentTargetNotFound',
   ];
 
+  // Existence guard for maintenance-company (Phase 9), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `maintenanceCompany.*` key path referenced by source in PR9, so a
+  // future PR that adds a new call site without adding its translation
+  // fails here rather than silently rendering the raw key.
+  const REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS = [
+    // list (Phase 9)
+    'maintenanceCompany.list.title',
+    'maintenanceCompany.list.loading',
+    'maintenanceCompany.list.empty',
+    'maintenanceCompany.list.columnName',
+    'maintenanceCompany.list.columnTaxId',
+    'maintenanceCompany.list.columnContactInfo',
+    'maintenanceCompany.list.createLink',
+    // create (Phase 9)
+    'maintenanceCompany.create.title',
+    'maintenanceCompany.create.nameLabel',
+    'maintenanceCompany.create.taxIdLabel',
+    'maintenanceCompany.create.contactInfoLabel',
+    'maintenanceCompany.create.submitLabel',
+    'maintenanceCompany.create.validationError',
+    // error-messages.ts mapping targets (Phase 9)
+    'maintenanceCompany.error.duplicateTaxId',
+    'maintenanceCompany.error.hasActiveUsers',
+    'maintenanceCompany.error.validationFailed',
+    'maintenanceCompany.error.notFound',
+    // id -> name resolution fallback (design.md Decision 7, used from
+    // Phase 11 onward, defined now so the key exists before it is consumed)
+    'maintenanceCompany.unknown',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -146,6 +177,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   }
 
   it.each(REQUIRED_COMMUNITY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

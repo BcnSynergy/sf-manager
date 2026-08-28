@@ -129,6 +129,32 @@
       "ineligible": "This user's current role does not allow technician assignments."
     }
   },
+  "maintenanceCompany": {
+    "list": {
+      "title": "Maintenance companies",
+      "loading": "Loading maintenance companies...",
+      "empty": "No active maintenance companies found.",
+      "columnName": "Name",
+      "columnTaxId": "Tax ID",
+      "columnContactInfo": "Contact info",
+      "createLink": "New maintenance company"
+    },
+    "create": {
+      "title": "New maintenance company",
+      "nameLabel": "Name",
+      "taxIdLabel": "Tax ID",
+      "contactInfoLabel": "Contact info",
+      "submitLabel": "Create maintenance company",
+      "validationError": "Enter a name, a tax ID, and contact info."
+    },
+    "error": {
+      "duplicateTaxId": "This tax ID is already in use by another active maintenance company.",
+      "hasActiveUsers": "This maintenance company still has active users. Reassign or remove them first.",
+      "validationFailed": "Enter valid maintenance company details.",
+      "notFound": "This maintenance company could not be found."
+    },
+    "unknown": "Unknown maintenance company"
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",
