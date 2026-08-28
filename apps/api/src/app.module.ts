@@ -5,6 +5,7 @@ import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommunityModule } from './modules/community/community.module';
+import { MaintenanceCompanyModule } from './modules/maintenance-company/maintenance-company.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -14,6 +15,8 @@ import { CommunityModule } from './modules/community/community.module';
 // once here so every module can inject ID_GENERATOR without re-importing it.
 // CommunityModule (community PR 5) registers the admin-only /communities
 // CRUD surface behind the same global AuthenticatedGuard/PermissionsGuard.
+// MaintenanceCompanyModule (maintenance-company PR 8) registers the
+// admin-only /maintenance-companies CRUD surface the same way.
 @Module({
   imports: [
     PrismaModule,
@@ -21,6 +24,7 @@ import { CommunityModule } from './modules/community/community.module';
     UsersModule,
     AuthModule,
     CommunityModule,
+    MaintenanceCompanyModule,
     HealthModule,
   ],
 })

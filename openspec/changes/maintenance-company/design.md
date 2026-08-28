@@ -322,6 +322,42 @@ a second cross-module liveness lookup appears, revisit with a
 `shared/application/ports/entity-liveness.port.ts` generalization — not
 before.
 
+**Addendum (Phase 8): the delete-block race, closed with an atomic UPDATE, not
+a cross-repository transaction.** PR7 shipped `SoftDeleteMaintenanceCompany
+UseCase`'s check-then-act (`countActiveByMaintenanceCompany` then
+`softDeleteById`) with no transaction spanning `MaintenanceCompanyRepository`
+and `UserRepository` — a documented TOCTOU: a concurrent
+create/update-user call can attach a maintenance user to the company between
+the count and the write. Phase 8 resolves this, not by introducing the
+cross-module `UnitOfWork` seam Decision 6 already rejected for a different
+invariant, but by making `softDeleteById` itself atomic:
+
+```sql
+UPDATE "MaintenanceCompany"
+SET "deletedAt" = now()
+WHERE "id" = ${id}::uuid
+  AND "deletedAt" IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM "User"
+    WHERE "maintenanceCompanyId" = ${id}::uuid AND "deletedAt" IS NULL
+  )
+```
+
+A single `UPDATE ... WHERE ... AND NOT EXISTS (...)` is one Postgres
+statement — the invariant check and the write happen inside the same atomic
+operation, so there is no window for a concurrent insert to slip in between
+them. `softDeleteById` now returns `Promise<boolean>` (`true` iff it actually
+flipped `deletedAt`) instead of `Promise<void>`; the port doc comment records
+this as the *authoritative* guarantee. `SoftDeleteMaintenanceCompanyUseCase`
+keeps its original `countActiveByMaintenanceCompany` read — now demoted to a
+fast path / accurate error message only — and re-checks on a `false` return to
+report `MaintenanceCompanyHasActiveUsersError` (a user was concurrently
+attached) or `MaintenanceCompanyNotFoundError` (the company vanished
+concurrently) instead of silently succeeding. This differs from Decision 2's
+partial unique index only in mechanism (`NOT EXISTS` subquery vs. an index),
+not in spirit: both push a cross-row invariant into a single atomic database
+statement rather than reaching for application-level locking.
+
 ### Decision 5: the conditional requirement — shared Zod for shape, domain policy for authority, and **only what the request supplies** is judged
 
 Three violation shapes, three answers:
@@ -663,7 +699,12 @@ export interface MaintenanceCompanyRepository {
     id: string,
     changes: { name?: string; taxId?: string; contactInfo?: string },
   ): Promise<void>;
-  softDeleteById(id: string): Promise<void>;
+
+  // Phase 8 addendum (Decision 4): atomic UPDATE + NOT EXISTS guard against
+  // User — returns true iff this call actually flipped deletedAt. This is
+  // the authoritative enforcement of "no active user attached"; the use
+  // case's own read-time count is only a fast path / error-message aid.
+  softDeleteById(id: string): Promise<boolean>;
 
   // No transactional(): this module has no multi-statement invariant that a
   // single-repository transaction could protect (Decision 6).
