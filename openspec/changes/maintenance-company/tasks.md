@@ -73,13 +73,13 @@ Chain strategy: stacked-to-main
 - [x] 6.6 `apps/web/src/api/client.ts`: fix stale comment (`code` no longer 409-exclusive).
 
 ## Phase 7: Maintenance Company Application (PR 7)
-- [ ] 7.1 `maintenance-company.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`. No `transactional()` (Decision 6), no `findByTaxId` (Decision 2).
-- [ ] 7.2 RED/GREEN `create-maintenance-company.use-case.ts`.
-- [ ] 7.3 RED/GREEN `list-maintenance-companies.use-case.ts` — excludes soft-deleted.
-- [ ] 7.4 RED/GREEN `update-maintenance-company.use-case.ts` — 404 on missing id.
-- [ ] 7.5 RED/GREEN `soft-delete-maintenance-company.use-case.ts` — `findById` -> `countActiveByMaintenanceCompany` -> `assertNoActiveUsersAttached` -> `softDeleteById`; assert `softDeleteById` never called when blocked.
-- [ ] 7.6 `in-memory-maintenance-company.repository.ts` fake — must reproduce *partial* taxId uniqueness (active rows only).
-- [ ] 7.7 `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts` — `taxIdSchema` (trim+uppercase), create/update schemas.
+- [x] 7.1 `maintenance-company.repository.port.ts` — `Symbol` token; `create`/`findById`/`findAll`/`updateById`/`softDeleteById`. No `transactional()` (Decision 6), no `findByTaxId` (Decision 2).
+- [x] 7.2 RED/GREEN `create-maintenance-company.use-case.ts`.
+- [x] 7.3 RED/GREEN `list-maintenance-companies.use-case.ts` — excludes soft-deleted.
+- [x] 7.4 RED/GREEN `update-maintenance-company.use-case.ts` — 404 on missing id.
+- [x] 7.5 RED/GREEN `soft-delete-maintenance-company.use-case.ts` — `findById` -> `countActiveByMaintenanceCompany` -> `assertNoActiveUsersAttached` -> `softDeleteById`; assert `softDeleteById` never called when blocked.
+- [x] 7.6 `in-memory-maintenance-company.repository.ts` fake — must reproduce *partial* taxId uniqueness (active rows only).
+- [x] 7.7 `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts` — `taxIdSchema` (trim+uppercase), create/update schemas.
 
 ## Phase 8: Maintenance Company Infra + Presentation (PR 8)
 - [ ] 8.1 `prisma-maintenance-company.repository.ts` (extends `SoftDeletableRepository`) + `maintenance-company.mapper.ts`; `P2002` -> `TaxIdAlreadyInUseError` unconditionally (Decision 2 gotcha) on `create` and `updateById`.
