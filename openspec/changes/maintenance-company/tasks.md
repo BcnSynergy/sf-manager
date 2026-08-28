@@ -89,12 +89,12 @@ Chain strategy: stacked-to-main
 - [x] 8.5 `maintenance-company.module.ts` — imports `UsersModule` for `USER_REPOSITORY` (Decision 4, no `forwardRef`); register in `app.module.ts`.
 
 ## Phase 9: Web — List, Create, i18n (PR 9)
-- [ ] 9.1 `apps/web/src/api/maintenance-company.ts` — typed calls + mirrored `MaintenanceCompanyErrorCode`.
-- [ ] 9.2 `apps/web/src/maintenance-company/error-messages.ts` — status/code-only map, mirrors `community/error-messages.ts`.
-- [ ] 9.3 `MaintenanceCompaniesListPage.tsx` — loading/empty/error states, name/taxId/contactInfo columns.
-- [ ] 9.4 `MaintenanceCompanyCreatePage.tsx` — client validation via shared schema, duplicate-taxId message.
-- [ ] 9.5 `App.tsx` — list + create routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering.
-- [ ] 9.6 `i18n/locales/{en,es,ca}.json` — `maintenanceCompany.*` keys incl. `maintenanceCompany.unknown`; parity test.
+- [x] 9.1 `apps/web/src/api/maintenance-company.ts` — typed calls + mirrored `MaintenanceCompanyErrorCode`.
+- [x] 9.2 `apps/web/src/maintenance-company/error-messages.ts` — status/code-only map, mirrors `community/error-messages.ts`.
+- [x] 9.3 `MaintenanceCompaniesListPage.tsx` — loading/empty/error states, name/taxId/contactInfo columns. Scoped to list+create only per this phase's task list — no edit/delete affordance yet; Phase 10 will need to add the row-level edit entry point when `MaintenanceCompanyEditPage.tsx` lands (a small addition to tasks.md's Phase 10 file list, not present in the original breakdown — flagged as a finding).
+- [x] 9.4 `MaintenanceCompanyCreatePage.tsx` — client validation via shared schema, duplicate-taxId message.
+- [x] 9.5 `App.tsx` — list + create routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering.
+- [x] 9.6 `i18n/locales/{en,es,ca}.json` — `maintenanceCompany.*` keys incl. `maintenanceCompany.unknown`; parity test (extended `locales.test.ts` with a `REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS` existence guard mirroring the community precedent).
 
 ## Phase 10: Web — Edit (PR 10)
 - [ ] 10.1 `MaintenanceCompanyEditPage.tsx` — prefilled form, confirmed soft-delete via `ConfirmDialog`, delete-blocked message distinct from duplicate-taxId.
