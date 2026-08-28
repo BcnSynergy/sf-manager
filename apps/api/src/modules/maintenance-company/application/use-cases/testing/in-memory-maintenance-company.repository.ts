@@ -40,13 +40,8 @@ export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyR
   }
 
   create(company: MaintenanceCompany): Promise<void> {
-    // Partial-uniqueness parity with the real partial unique index (design.md
-    // Decision 2): only ACTIVE rows collide. A soft-deleted row with the same
-    // taxId does NOT block this insert.
-    for (const existing of this.companiesById.values()) {
-      if (existing.taxId === company.taxId && !existing.isDeleted) {
-        return Promise.reject(new TaxIdAlreadyInUseError());
-      }
+    if (this.hasActiveTaxIdCollision(company.taxId)) {
+      return Promise.reject(new TaxIdAlreadyInUseError());
     }
     this.companiesById.set(company.id, company);
     return Promise.resolve();
@@ -61,14 +56,11 @@ export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyR
       return Promise.resolve();
     }
     const nextTaxId = changes.taxId ?? existing.taxId;
-    if (changes.taxId !== undefined) {
-      // Same partial-uniqueness rule as create(): only active rows collide,
-      // and the target row itself is excluded from its own check.
-      for (const other of this.companiesById.values()) {
-        if (other.id !== id && other.taxId === nextTaxId && !other.isDeleted) {
-          return Promise.reject(new TaxIdAlreadyInUseError());
-        }
-      }
+    if (
+      changes.taxId !== undefined &&
+      this.hasActiveTaxIdCollision(nextTaxId, id)
+    ) {
+      return Promise.reject(new TaxIdAlreadyInUseError());
     }
     this.companiesById.set(
       id,
@@ -80,6 +72,23 @@ export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyR
       }),
     );
     return Promise.resolve();
+  }
+
+  // Partial-uniqueness parity with the real partial unique index (design.md
+  // Decision 2): only ACTIVE rows collide on taxId. A soft-deleted row with
+  // the same taxId does NOT block create()/updateById(). `excludeId` lets
+  // updateById() exclude the row being updated from its own check.
+  private hasActiveTaxIdCollision(taxId: string, excludeId?: string): boolean {
+    for (const existing of this.companiesById.values()) {
+      if (
+        existing.id !== excludeId &&
+        existing.taxId === taxId &&
+        !existing.isDeleted
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   softDeleteById(id: string): Promise<void> {
