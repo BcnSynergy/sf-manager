@@ -115,4 +115,40 @@ describe('SoftDeleteMaintenanceCompanyUseCase', () => {
 
     expect(await maintenanceCompanyRepository.findById('company-1')).toBeNull();
   });
+
+  // design.md Decision 4 addendum (Phase 8, closing the PR7-documented
+  // cross-repo race): when the read-time check above passes but the atomic
+  // write finds the invariant violated (a user was concurrently attached
+  // between the check and the write), softDeleteById returns `false` and
+  // the use case re-checks to report the precise cause instead of silently
+  // succeeding or throwing a misleading error.
+  it('throws MaintenanceCompanyHasActiveUsersError when the atomic write refuses because a user was concurrently attached', async () => {
+    maintenanceCompanyRepository.seed(makeCompany());
+    jest
+      .spyOn(maintenanceCompanyRepository, 'softDeleteById')
+      .mockResolvedValueOnce(false);
+    jest
+      .spyOn(userRepository, 'countActiveByMaintenanceCompany')
+      .mockResolvedValueOnce(0) // fast-path read-time check: no active users yet
+      .mockResolvedValueOnce(1); // re-check after the refused write: one now attached
+
+    await expect(useCase.execute('company-1')).rejects.toThrow(
+      MaintenanceCompanyHasActiveUsersError,
+    );
+  });
+
+  it('throws MaintenanceCompanyNotFoundError when the atomic write refuses because the company vanished concurrently', async () => {
+    maintenanceCompanyRepository.seed(makeCompany());
+    jest
+      .spyOn(maintenanceCompanyRepository, 'softDeleteById')
+      .mockResolvedValueOnce(false);
+    jest
+      .spyOn(userRepository, 'countActiveByMaintenanceCompany')
+      .mockResolvedValueOnce(0) // fast-path read-time check: no active users
+      .mockResolvedValueOnce(0); // re-check after the refused write: still none
+
+    await expect(useCase.execute('company-1')).rejects.toThrow(
+      MaintenanceCompanyNotFoundError,
+    );
+  });
 });

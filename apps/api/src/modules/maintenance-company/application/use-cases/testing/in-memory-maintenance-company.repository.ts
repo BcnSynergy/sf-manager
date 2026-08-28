@@ -88,15 +88,23 @@ export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyR
     return false;
   }
 
-  softDeleteById(id: string): Promise<void> {
+  // design.md Decision 4 addendum (Phase 8): the port now returns `boolean`
+  // -- `true` iff this call actually flipped `deletedAt`. This fake has no
+  // concept of cross-repo user data, so it can only reproduce the
+  // missing/already-deleted half of the guard (existence + not-already-
+  // deleted); it deliberately does NOT attempt the NOT EXISTS-against-User
+  // guard -- that atomic guarantee lives solely in
+  // PrismaMaintenanceCompanyRepository and is exercised by the Phase 8
+  // integration test against real Postgres, never by this in-memory double.
+  softDeleteById(id: string): Promise<boolean> {
     const existing = this.companiesById.get(id);
-    if (!existing) {
-      return Promise.resolve();
+    if (!existing || existing.isDeleted) {
+      return Promise.resolve(false);
     }
     this.companiesById.set(
       id,
       new MaintenanceCompany({ ...existing, deletedAt: new Date() }),
     );
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 }

@@ -35,21 +35,20 @@ export interface MaintenanceCompanyRepository {
     changes: { name?: string; taxId?: string; contactInfo?: string },
   ): Promise<void>;
 
-  // Sets deletedAt (ADR-010) — no row deletion. Callers (design.md Data
-  // Flow — DELETE) are responsible for the has-active-users check via
-  // UserRepository.countActiveByMaintenanceCompany BEFORE calling this.
-  //
-  // KNOWN GAP (PR7 review, deferred to Phase 8/PR8 when the DELETE HTTP
-  // endpoint actually ships): this check-then-act is a cross-repository
-  // TOCTOU race — a concurrent create-user/update-user call can attach a
-  // maintenance user to this company between the count and this call, since
-  // neither repository wraps the pair in a transaction (Decision 6 above
-  // only reasons about single-repository invariants, not this cross-module
-  // case). Unlike users' Last-Admin Lockout (design.md Decision 3), there is
-  // no `transactional()`/SERIALIZABLE wrapping here yet. Must be resolved
-  // (or explicitly re-accepted) before/when Phase 8 wires
-  // SoftDeleteMaintenanceCompanyUseCase to an HTTP route.
-  softDeleteById(id: string): Promise<void>;
+  // Sets deletedAt (ADR-010) — no row deletion. Resolves the PR7-documented
+  // cross-repository TOCTOU race (design.md Decision 4 addendum, Phase 8):
+  // the real Prisma adapter enforces "no active user attached" ATOMICALLY as
+  // part of this single write (a `NOT EXISTS` guard in the same UPDATE
+  // statement), so it is the authoritative guarantee, not
+  // SoftDeleteMaintenanceCompanyUseCase's earlier
+  // countActiveByMaintenanceCompany/assertNoActiveUsersAttached read — that
+  // read stays only for the fast path and an accurate error message. Returns
+  // `true` iff this call actually flipped `deletedAt` (the row existed, was
+  // not already deleted, AND had no active users attached at write time);
+  // `false` otherwise (row missing/already deleted, OR a user was
+  // concurrently attached between the use case's read-time check and this
+  // write — the caller must re-check and report the precise cause).
+  softDeleteById(id: string): Promise<boolean>;
 }
 
 export const MAINTENANCE_COMPANY_REPOSITORY = Symbol(
