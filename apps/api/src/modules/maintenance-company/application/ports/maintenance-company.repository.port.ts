@@ -38,6 +38,17 @@ export interface MaintenanceCompanyRepository {
   // Sets deletedAt (ADR-010) — no row deletion. Callers (design.md Data
   // Flow — DELETE) are responsible for the has-active-users check via
   // UserRepository.countActiveByMaintenanceCompany BEFORE calling this.
+  //
+  // KNOWN GAP (PR7 review, deferred to Phase 8/PR8 when the DELETE HTTP
+  // endpoint actually ships): this check-then-act is a cross-repository
+  // TOCTOU race — a concurrent create-user/update-user call can attach a
+  // maintenance user to this company between the count and this call, since
+  // neither repository wraps the pair in a transaction (Decision 6 above
+  // only reasons about single-repository invariants, not this cross-module
+  // case). Unlike users' Last-Admin Lockout (design.md Decision 3), there is
+  // no `transactional()`/SERIALIZABLE wrapping here yet. Must be resolved
+  // (or explicitly re-accepted) before/when Phase 8 wires
+  // SoftDeleteMaintenanceCompanyUseCase to an HTTP route.
   softDeleteById(id: string): Promise<void>;
 }
 
