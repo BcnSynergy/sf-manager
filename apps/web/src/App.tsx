@@ -7,6 +7,8 @@ import { CommunityDetailPage } from './pages/CommunityDetailPage';
 import { CommunityEditPage } from './pages/CommunityEditPage';
 import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
+import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
+import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
 import { UserCreatePage } from './pages/UserCreatePage';
 import { UserEditPage } from './pages/UserEditPage';
 import { UsersListPage } from './pages/UsersListPage';
@@ -93,6 +95,28 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <CommunityEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/maintenance-companies"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <MaintenanceCompaniesListPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md "Routes" + the /communities precedent above: the
+              static /maintenance-companies/new segment ranks above the
+              dynamic /maintenance-companies/:id/edit segment Phase 10 adds
+              — React Router matches static path segments before dynamic
+              ones regardless of declaration order, so this coexists safely
+              once :id/edit is added. */}
+          <Route
+            path="/maintenance-companies/new"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <MaintenanceCompanyCreatePage />
               </ProtectedRoute>
             }
           />
