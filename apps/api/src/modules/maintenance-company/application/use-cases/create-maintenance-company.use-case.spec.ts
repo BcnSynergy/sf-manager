@@ -36,9 +36,8 @@ describe('CreateMaintenanceCompanyUseCase', () => {
       contactInfo: 'ops@acme.example',
     });
 
-    const stored = await maintenanceCompanyRepository.findById(
-      'new-company-id',
-    );
+    const stored =
+      await maintenanceCompanyRepository.findById('new-company-id');
     expect(stored?.deletedAt).toBeNull();
   });
 

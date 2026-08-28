@@ -26,9 +26,7 @@ describe('ListMaintenanceCompaniesUseCase', () => {
 
   beforeEach(() => {
     maintenanceCompanyRepository = new InMemoryMaintenanceCompanyRepository();
-    useCase = new ListMaintenanceCompaniesUseCase(
-      maintenanceCompanyRepository,
-    );
+    useCase = new ListMaintenanceCompaniesUseCase(maintenanceCompanyRepository);
   });
 
   it('returns all active companies', async () => {

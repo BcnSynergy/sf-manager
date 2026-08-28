@@ -59,9 +59,7 @@ describe('SoftDeleteMaintenanceCompanyUseCase', () => {
 
     await useCase.execute('company-1');
 
-    expect(
-      await maintenanceCompanyRepository.findById('company-1'),
-    ).toBeNull();
+    expect(await maintenanceCompanyRepository.findById('company-1')).toBeNull();
   });
 
   it('throws MaintenanceCompanyNotFoundError for a non-existent company id', async () => {
@@ -115,8 +113,6 @@ describe('SoftDeleteMaintenanceCompanyUseCase', () => {
 
     await useCase.execute('company-1');
 
-    expect(
-      await maintenanceCompanyRepository.findById('company-1'),
-    ).toBeNull();
+    expect(await maintenanceCompanyRepository.findById('company-1')).toBeNull();
   });
 });

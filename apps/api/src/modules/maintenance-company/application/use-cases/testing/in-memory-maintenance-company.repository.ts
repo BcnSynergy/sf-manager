@@ -14,9 +14,7 @@ import { MaintenanceCompanyRepository } from '../../ports/maintenance-company.re
 // (design.md Decision 2 — "a soft-deleted company frees its taxId for
 // reuse"). Getting this wrong would let the fake accept a case the real
 // database rejects, or vice versa.
-export class InMemoryMaintenanceCompanyRepository
-  implements MaintenanceCompanyRepository
-{
+export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyRepository {
   private readonly companiesById = new Map<string, MaintenanceCompany>();
 
   seed(company: MaintenanceCompany): void {
@@ -37,9 +35,7 @@ export class InMemoryMaintenanceCompanyRepository
     // Soft-deleted companies excluded from findAll (ADR-010), same filter
     // parity as InMemoryCommunityRepository.findAll.
     return Promise.resolve(
-      [...this.companiesById.values()].filter(
-        (company) => !company.isDeleted,
-      ),
+      [...this.companiesById.values()].filter((company) => !company.isDeleted),
     );
   }
 
@@ -69,11 +65,7 @@ export class InMemoryMaintenanceCompanyRepository
       // Same partial-uniqueness rule as create(): only active rows collide,
       // and the target row itself is excluded from its own check.
       for (const other of this.companiesById.values()) {
-        if (
-          other.id !== id &&
-          other.taxId === nextTaxId &&
-          !other.isDeleted
-        ) {
+        if (other.id !== id && other.taxId === nextTaxId && !other.isDeleted) {
           return Promise.reject(new TaxIdAlreadyInUseError());
         }
       }
