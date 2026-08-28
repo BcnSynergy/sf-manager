@@ -56,10 +56,7 @@ export class InMemoryMaintenanceCompanyRepository implements MaintenanceCompanyR
       return Promise.resolve();
     }
     const nextTaxId = changes.taxId ?? existing.taxId;
-    if (
-      changes.taxId !== undefined &&
-      this.hasActiveTaxIdCollision(nextTaxId, id)
-    ) {
+    if (this.hasActiveTaxIdCollision(nextTaxId, id)) {
       return Promise.reject(new TaxIdAlreadyInUseError());
     }
     this.companiesById.set(
