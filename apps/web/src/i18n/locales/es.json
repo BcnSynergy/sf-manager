@@ -129,6 +129,32 @@
       "ineligible": "El rol actual de este usuario no permite asignaciones de técnico."
     }
   },
+  "maintenanceCompany": {
+    "list": {
+      "title": "Empresas de mantenimiento",
+      "loading": "Cargando empresas de mantenimiento...",
+      "empty": "No hay empresas de mantenimiento activas.",
+      "columnName": "Nombre",
+      "columnTaxId": "NIF/CIF",
+      "columnContactInfo": "Información de contacto",
+      "createLink": "Nueva empresa de mantenimiento"
+    },
+    "create": {
+      "title": "Nueva empresa de mantenimiento",
+      "nameLabel": "Nombre",
+      "taxIdLabel": "NIF/CIF",
+      "contactInfoLabel": "Información de contacto",
+      "submitLabel": "Crear empresa de mantenimiento",
+      "validationError": "Introduce un nombre, un NIF/CIF y una información de contacto."
+    },
+    "error": {
+      "duplicateTaxId": "Este NIF/CIF ya está en uso por otra empresa de mantenimiento activa.",
+      "hasActiveUsers": "Esta empresa de mantenimiento todavía tiene usuarios activos. Reasígnalos o elimínalos primero.",
+      "validationFailed": "Introduce datos válidos de la empresa de mantenimiento.",
+      "notFound": "No se ha podido encontrar esta empresa de mantenimiento."
+    },
+    "unknown": "Empresa de mantenimiento desconocida"
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",
