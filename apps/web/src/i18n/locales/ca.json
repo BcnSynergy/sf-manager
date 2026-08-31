@@ -137,7 +137,8 @@
       "columnName": "Nom",
       "columnTaxId": "NIF/CIF",
       "columnContactInfo": "Informació de contacte",
-      "createLink": "Empresa de manteniment nova"
+      "createLink": "Empresa de manteniment nova",
+      "editLink": "Edita"
     },
     "create": {
       "title": "Empresa de manteniment nova",
@@ -146,6 +147,18 @@
       "contactInfoLabel": "Informació de contacte",
       "submitLabel": "Crea l'empresa de manteniment",
       "validationError": "Introdueix un nom, un NIF/CIF i una informació de contacte."
+    },
+    "edit": {
+      "title": "Edita l'empresa de manteniment",
+      "nameLabel": "Nom",
+      "taxIdLabel": "NIF/CIF",
+      "contactInfoLabel": "Informació de contacte",
+      "submitLabel": "Desa els canvis",
+      "validationError": "Introdueix un nom, un NIF/CIF i una informació de contacte.",
+      "notFound": "No s'ha pogut trobar aquesta empresa de manteniment.",
+      "deleteLabel": "Elimina",
+      "deleteConfirmTitle": "Elimina l'empresa de manteniment",
+      "deleteConfirmMessage": "Aquesta empresa de manteniment s'eliminarà. Aquesta acció no es pot desfer."
     },
     "error": {
       "duplicateTaxId": "Aquest NIF/CIF ja està en ús per una altra empresa de manteniment activa.",

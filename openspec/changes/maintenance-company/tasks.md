@@ -97,8 +97,8 @@ Chain strategy: stacked-to-main
 - [x] 9.6 `i18n/locales/{en,es,ca}.json` — `maintenanceCompany.*` keys incl. `maintenanceCompany.unknown`; parity test (extended `locales.test.ts` with a `REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS` existence guard mirroring the community precedent).
 
 ## Phase 10: Web — Edit (PR 10)
-- [ ] 10.1 `MaintenanceCompanyEditPage.tsx` — prefilled form, confirmed soft-delete via `ConfirmDialog`, delete-blocked message distinct from duplicate-taxId.
-- [ ] 10.2 `App.tsx` — edit route.
+- [x] 10.1 `MaintenanceCompanyEditPage.tsx` — prefilled form, confirmed soft-delete via `ConfirmDialog`, delete-blocked message distinct from duplicate-taxId. Inline list-and-select (no shared hook — single caller, mirrors `UserEditPage.tsx`'s precedent, not `CommunityEditPage.tsx`'s shared-hook one, since there is no maintenance-company detail page). Save and delete are two independent error surfaces (`maintenance-company-edit-error` vs. `maintenance-company-edit-delete-error`) so a duplicate-taxId save failure can never be confused with a delete-blocked failure — both already had distinct i18n keys from PR9 (`error.duplicateTaxId` / `error.hasActiveUsers`), reused as-is via `mapApiErrorToMessageKey`. **Finding (resolved, not scope creep)**: `MaintenanceCompaniesListPage.tsx` gained a per-row "Edit" link — without it the edit page was unreachable from the UI (flagged as an open question in Phase 9's apply-progress); this is glue for 10.1/10.2 to be reachable, not new scope, and unlike `community` (whose delete lives on the list page), this list page still owns no destructive action.
+- [x] 10.2 `App.tsx` — edit route (`/maintenance-companies/:id/edit`), static-before-dynamic ordering preserved (the pre-existing comment anticipating this route from PR9 is now resolved).
 
 ## Phase 11: Web — Users Forms + List (PR 11)
 - [ ] 11.1 `UserCreatePage.tsx` / `UserEditPage.tsx` — role-conditional company `<select>` populated from `GET /maintenance-companies`; appears/required only for the 2 maintenance roles; cleared from payload otherwise.

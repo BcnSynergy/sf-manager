@@ -137,7 +137,8 @@
       "columnName": "Name",
       "columnTaxId": "Tax ID",
       "columnContactInfo": "Contact info",
-      "createLink": "New maintenance company"
+      "createLink": "New maintenance company",
+      "editLink": "Edit"
     },
     "create": {
       "title": "New maintenance company",
@@ -146,6 +147,18 @@
       "contactInfoLabel": "Contact info",
       "submitLabel": "Create maintenance company",
       "validationError": "Enter a name, a tax ID, and contact info."
+    },
+    "edit": {
+      "title": "Edit maintenance company",
+      "nameLabel": "Name",
+      "taxIdLabel": "Tax ID",
+      "contactInfoLabel": "Contact info",
+      "submitLabel": "Save changes",
+      "validationError": "Enter a name, a tax ID, and contact info.",
+      "notFound": "This maintenance company could not be found.",
+      "deleteLabel": "Delete",
+      "deleteConfirmTitle": "Delete maintenance company",
+      "deleteConfirmMessage": "This maintenance company will be removed. This cannot be undone."
     },
     "error": {
       "duplicateTaxId": "This tax ID is already in use by another active maintenance company.",

@@ -9,6 +9,7 @@ import { HealthPage } from './pages/HealthPage';
 import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
+import { MaintenanceCompanyEditPage } from './pages/MaintenanceCompanyEditPage';
 import { UserCreatePage } from './pages/UserCreatePage';
 import { UserEditPage } from './pages/UserEditPage';
 import { UsersListPage } from './pages/UsersListPage';
@@ -117,6 +118,19 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <MaintenanceCompanyCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md "Routes" + the /communities precedent above: this
+              depth-3 dynamic route never conflicts with the static
+              /maintenance-companies/new segment above regardless of
+              declaration order (React Router matches static segments
+              first). */}
+          <Route
+            path="/maintenance-companies/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <MaintenanceCompanyEditPage />
               </ProtectedRoute>
             }
           />

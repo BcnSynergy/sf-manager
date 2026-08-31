@@ -13,11 +13,17 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // spec.md "List Active Maintenance Companies": distinct loading, empty, and
 // error states (never a blank screen); the list request already excludes
 // soft-deleted companies (mirrors CommunitiesListPage.tsx's precedent), so
-// this page performs no client-side filtering of its own. Edit/delete are
-// out of scope for this phase (tasks.md Phase 9 lists only list+create; the
-// confirmed soft-delete lives on MaintenanceCompanyEditPage.tsx, Phase 10).
-// Error messages come exclusively from mapApiErrorToMessageKey (spec "No
-// Server-Message String Coupling") — this page never reads `ApiError.message`.
+// this page performs no client-side filtering of its own. Delete is out of
+// scope for THIS page (tasks.md Phase 10, 10.1: the confirmed soft-delete —
+// and its ConfirmDialog — lives on MaintenanceCompanyEditPage.tsx, unlike
+// CommunitiesListPage.tsx which owns delete itself). The per-row "Edit" link
+// below is Phase 10's only addition to this page: without it the edit page
+// would be unreachable from the UI (flagged in Phase 9's apply-progress as
+// an open question, resolved here — not listed as a separate tasks.md
+// bullet because it is the minimal glue tasks 10.1/10.2 require, not new
+// scope). Error messages come exclusively from mapApiErrorToMessageKey
+// (spec "No Server-Message String Coupling") — this page never reads
+// `ApiError.message`.
 export function MaintenanceCompaniesListPage() {
   const { t } = useTranslation();
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
@@ -84,6 +90,7 @@ export function MaintenanceCompaniesListPage() {
               <th>{t('maintenanceCompany.list.columnName')}</th>
               <th>{t('maintenanceCompany.list.columnTaxId')}</th>
               <th>{t('maintenanceCompany.list.columnContactInfo')}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -92,6 +99,14 @@ export function MaintenanceCompaniesListPage() {
                 <td>{row.name}</td>
                 <td>{row.taxId}</td>
                 <td>{row.contactInfo}</td>
+                <td>
+                  <Link
+                    to={`/maintenance-companies/${row.id}/edit`}
+                    data-testid={`maintenance-companies-list-edit-${row.id}`}
+                  >
+                    {t('maintenanceCompany.list.editLink')}
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>

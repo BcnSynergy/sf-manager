@@ -150,6 +150,7 @@ describe('locale key-set parity (en/es/ca)', () => {
     'maintenanceCompany.list.columnTaxId',
     'maintenanceCompany.list.columnContactInfo',
     'maintenanceCompany.list.createLink',
+    'maintenanceCompany.list.editLink',
     // create (Phase 9)
     'maintenanceCompany.create.title',
     'maintenanceCompany.create.nameLabel',
@@ -157,6 +158,17 @@ describe('locale key-set parity (en/es/ca)', () => {
     'maintenanceCompany.create.contactInfoLabel',
     'maintenanceCompany.create.submitLabel',
     'maintenanceCompany.create.validationError',
+    // edit (Phase 10)
+    'maintenanceCompany.edit.title',
+    'maintenanceCompany.edit.nameLabel',
+    'maintenanceCompany.edit.taxIdLabel',
+    'maintenanceCompany.edit.contactInfoLabel',
+    'maintenanceCompany.edit.submitLabel',
+    'maintenanceCompany.edit.validationError',
+    'maintenanceCompany.edit.notFound',
+    'maintenanceCompany.edit.deleteLabel',
+    'maintenanceCompany.edit.deleteConfirmTitle',
+    'maintenanceCompany.edit.deleteConfirmMessage',
     // error-messages.ts mapping targets (Phase 9)
     'maintenanceCompany.error.duplicateTaxId',
     'maintenanceCompany.error.hasActiveUsers',
