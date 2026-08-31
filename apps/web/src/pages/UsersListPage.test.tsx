@@ -3,11 +3,13 @@ import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
+import * as maintenanceCompanyApi from '../api/maintenance-company';
 import * as usersApi from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { UsersListPage } from './UsersListPage';
 
 vi.mock('../api/users');
+vi.mock('../api/maintenance-company');
 vi.mock('../auth/AuthProvider', async () => {
   const actual = await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
   return { ...actual, useAuth: vi.fn() };
@@ -16,9 +18,38 @@ vi.mock('../auth/AuthProvider', async () => {
 const mockedUseAuth = vi.mocked(useAuth);
 const mockedListUsers = vi.mocked(usersApi.listUsers);
 const mockedDeactivateUser = vi.mocked(usersApi.deactivateUser);
+const mockedListMaintenanceCompanies = vi.mocked(maintenanceCompanyApi.listMaintenanceCompanies);
 
-const admin = { id: 'admin-1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' as const };
-const otherUser = { id: 'user-2', email: 'user2@sf-manager.example', role: 'MANAGER' as const };
+const admin = {
+  id: 'admin-1',
+  email: 'admin@sf-manager.example',
+  role: 'SYSTEM_ADMIN' as const,
+  maintenanceCompanyId: null,
+};
+const otherUser = {
+  id: 'user-2',
+  email: 'user2@sf-manager.example',
+  role: 'MANAGER' as const,
+  maintenanceCompanyId: null,
+};
+const technician = {
+  id: 'user-3',
+  email: 'tech@sf-manager.example',
+  role: 'MAINTENANCE_TECHNICIAN' as const,
+  maintenanceCompanyId: 'company-1',
+};
+const orphanedTechnician = {
+  id: 'user-4',
+  email: 'orphan@sf-manager.example',
+  role: 'MAINTENANCE_TECHNICIAN' as const,
+  maintenanceCompanyId: 'company-does-not-exist',
+};
+const grandfatheredTechnician = {
+  id: 'user-5',
+  email: 'grandfathered@sf-manager.example',
+  role: 'MAINTENANCE_TECHNICIAN' as const,
+  maintenanceCompanyId: null,
+};
 
 function renderPage() {
   return render(
@@ -37,6 +68,7 @@ describe('UsersListPage', () => {
       login: vi.fn(),
       logout: vi.fn(),
     });
+    mockedListMaintenanceCompanies.mockResolvedValue([]);
   });
 
   it('shows a loading state while the list request is in flight', () => {
@@ -76,6 +108,53 @@ describe('UsersListPage', () => {
     // not the raw enum value (spec "Internationalization Coverage").
     expect(row).toHaveTextContent('Manager');
     expect(row).not.toHaveTextContent(otherUser.role);
+  });
+
+  it("renders a maintenance-role user's company name, resolved from the id->name map, never the raw id", async () => {
+    mockedListUsers.mockResolvedValue([admin, technician]);
+    mockedListMaintenanceCompanies.mockResolvedValue([
+      { id: 'company-1', name: 'Acme Maintenance', taxId: 'A1', contactInfo: 'x' },
+    ]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`users-list-row-${technician.id}`);
+    expect(row).toHaveTextContent('Acme Maintenance');
+    expect(row).not.toHaveTextContent(technician.maintenanceCompanyId);
+  });
+
+  it('renders maintenanceCompany.unknown for a maintenance-role user whose companyId does not resolve', async () => {
+    mockedListUsers.mockResolvedValue([admin, orphanedTechnician]);
+    mockedListMaintenanceCompanies.mockResolvedValue([
+      { id: 'company-1', name: 'Acme Maintenance', taxId: 'A1', contactInfo: 'x' },
+    ]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`users-list-row-${orphanedTechnician.id}`);
+    expect(row).toHaveTextContent('Unknown maintenance company');
+    expect(row).not.toHaveTextContent(orphanedTechnician.maintenanceCompanyId);
+  });
+
+  it('renders maintenanceCompany.unknown for a maintenance-role user with no company at all (grandfathered pre-migration row)', async () => {
+    mockedListUsers.mockResolvedValue([admin, grandfatheredTechnician]);
+    mockedListMaintenanceCompanies.mockResolvedValue([
+      { id: 'company-1', name: 'Acme Maintenance', taxId: 'A1', contactInfo: 'x' },
+    ]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`users-list-row-${grandfatheredTechnician.id}`);
+    expect(row).toHaveTextContent('Unknown maintenance company');
+  });
+
+  it('renders no company text for a non-maintenance-role user', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`users-list-row-${otherUser.id}`);
+    expect(row).not.toHaveTextContent('Unknown maintenance company');
   });
 
   it("hides the deactivate action on the current admin's own row, shows it on others", async () => {

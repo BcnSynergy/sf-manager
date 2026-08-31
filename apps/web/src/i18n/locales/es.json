@@ -18,6 +18,7 @@
       "columnId": "ID",
       "columnEmail": "Correo electrónico",
       "columnRole": "Rol",
+      "columnCompany": "Empresa de mantenimiento",
       "deactivate": "Desactivar",
       "deactivateConfirmTitle": "Desactivar usuario",
       "deactivateConfirmMessage": "Este usuario ya no podrá iniciar sesión. Esta acción no se puede deshacer.",
@@ -29,6 +30,8 @@
       "emailLabel": "Correo electrónico",
       "passwordLabel": "Contraseña",
       "roleLabel": "Rol",
+      "companyLabel": "Empresa de mantenimiento",
+      "companyPlaceholder": "Selecciona una empresa de mantenimiento",
       "submitLabel": "Crear usuario",
       "validationError": "Introduce un correo electrónico válido y una contraseña que cumpla los requisitos de seguridad."
     },
@@ -36,6 +39,8 @@
       "title": "Editar usuario",
       "emailLabel": "Correo electrónico",
       "roleLabel": "Rol",
+      "companyLabel": "Empresa de mantenimiento",
+      "companyPlaceholder": "Selecciona una empresa de mantenimiento",
       "submitLabel": "Guardar cambios",
       "validationError": "Introduce un correo electrónico válido.",
       "notFound": "No se ha podido encontrar este usuario."
@@ -45,7 +50,10 @@
       "lastSystemAdmin": "No se puede eliminar al último administrador del sistema.",
       "tryAgain": "Algo ha cambiado mientras se guardaba. Inténtalo de nuevo.",
       "weakPassword": "La contraseña no cumple los requisitos de seguridad.",
-      "notFound": "No se ha podido encontrar este usuario."
+      "notFound": "No se ha podido encontrar este usuario.",
+      "maintenanceCompanyRequired": "Este rol requiere seleccionar una empresa de mantenimiento.",
+      "maintenanceCompanyNotAllowed": "Este rol no acepta una empresa de mantenimiento.",
+      "maintenanceCompanyNotFound": "La empresa de mantenimiento seleccionada ya no existe."
     },
     "role": {
       "systemAdmin": "Administrador del sistema",

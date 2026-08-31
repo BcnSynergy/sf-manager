@@ -10,6 +10,9 @@ const CODE_MESSAGE_KEYS: Record<UserErrorCode, string> = {
   EMAIL_ALREADY_IN_USE: 'users.error.duplicateEmail',
   LAST_SYSTEM_ADMIN: 'users.error.lastSystemAdmin',
   TRANSACTION_CONFLICT: 'users.error.tryAgain',
+  MAINTENANCE_COMPANY_REQUIRED: 'users.error.maintenanceCompanyRequired',
+  MAINTENANCE_COMPANY_NOT_ALLOWED: 'users.error.maintenanceCompanyNotAllowed',
+  MAINTENANCE_COMPANY_NOT_FOUND: 'users.error.maintenanceCompanyNotFound',
 };
 
 const HTTP_BAD_REQUEST = 400;

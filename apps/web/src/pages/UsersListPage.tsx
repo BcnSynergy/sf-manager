@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import { isMaintenanceRole } from '@sf-manager/validation';
+import { listMaintenanceCompanies } from '../api/maintenance-company';
 import { ApiError } from '../api/client';
 import { deactivateUser, listUsers, type User } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
@@ -16,6 +18,16 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // admin's own row (design.md "Data Flow — deactivate"). Error messages come
 // exclusively from mapApiErrorToMessageKey (spec "No Server-Message String
 // Coupling") — this page never reads `ApiError.message`.
+//
+// maintenance-company design.md Decision 7: the company NAME is resolved
+// client-side from an id->name map built from GET /maintenance-companies,
+// fetched ONCE on mount, in parallel with (never sequential to) the users
+// list — this page never renders the raw maintenanceCompanyId UUID
+// (user-admin-ui spec "Maintenance Company Rendered By Name"). An id that
+// doesn't resolve in the map (soft-deleted company, design.md Decision 6's
+// accepted anomaly) or a maintenance-role user without a company at all
+// (grandfathered pre-migration row) both render the localized
+// `maintenanceCompany.unknown` label instead of a blank cell or a crash.
 export function UsersListPage() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
@@ -24,6 +36,7 @@ export function UsersListPage() {
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeactivateId, setPendingDeactivateId] = useState<string | null>(null);
   const [actionErrorKey, setActionErrorKey] = useState<string | null>(null);
+  const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
 
   // Deliberately does not set loadState back to 'loading' here: this runs
   // from the mount effect (initial loadState is already 'loading' via
@@ -50,6 +63,40 @@ export function UsersListPage() {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  // Runs once on mount, in parallel with loadUsers() above (neither awaits
+  // the other) — design.md Decision 7's "never sequentially" call. A failed
+  // fetch here just leaves the map empty, so every maintenance-role row
+  // falls back to `maintenanceCompany.unknown` rather than the page failing
+  // to render the users list it already has.
+  useEffect(() => {
+    let cancelled = false;
+
+    listMaintenanceCompanies()
+      .then((companies) => {
+        if (cancelled) {
+          return;
+        }
+        setCompanyNamesById(Object.fromEntries(companies.map((company) => [company.id, company.name])));
+      })
+      .catch(() => {
+        // Intentionally swallowed — see comment above.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function resolveCompanyName(row: User): string {
+    if (!isMaintenanceRole(row.role)) {
+      return '';
+    }
+    if (row.maintenanceCompanyId === null) {
+      return t('maintenanceCompany.unknown');
+    }
+    return companyNamesById[row.maintenanceCompanyId] ?? t('maintenanceCompany.unknown');
+  }
 
   function requestDeactivate(id: string) {
     setActionErrorKey(null);
@@ -107,6 +154,7 @@ export function UsersListPage() {
               <th>{t('users.list.columnId')}</th>
               <th>{t('users.list.columnEmail')}</th>
               <th>{t('users.list.columnRole')}</th>
+              <th>{t('users.list.columnCompany')}</th>
               <th></th>
             </tr>
           </thead>
@@ -116,6 +164,7 @@ export function UsersListPage() {
                 <td>{row.id}</td>
                 <td>{row.email}</td>
                 <td>{t(mapRoleToLabelKey(row.role))}</td>
+                <td>{resolveCompanyName(row)}</td>
                 <td>
                   <Link to={`/users/${row.id}/edit`} data-testid={`users-list-edit-${row.id}`}>
                     {t('users.list.editLink')}

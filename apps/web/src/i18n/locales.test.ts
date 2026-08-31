@@ -179,6 +179,23 @@ describe('locale key-set parity (en/es/ca)', () => {
     'maintenanceCompany.unknown',
   ];
 
+  // Existence guard for the users-side maintenance-company additions
+  // (Phase 11), same rationale as REQUIRED_COMMUNITY_KEY_PATHS /
+  // REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS above.
+  const REQUIRED_USER_MAINTENANCE_COMPANY_KEY_PATHS = [
+    // list column (Phase 11)
+    'users.list.columnCompany',
+    // create/edit company selector (Phase 11)
+    'users.create.companyLabel',
+    'users.create.companyPlaceholder',
+    'users.edit.companyLabel',
+    'users.edit.companyPlaceholder',
+    // error-messages.ts mapping targets (Phase 11)
+    'users.error.maintenanceCompanyRequired',
+    'users.error.maintenanceCompanyNotAllowed',
+    'users.error.maintenanceCompanyNotFound',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -203,6 +220,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_USER_MAINTENANCE_COMPANY_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

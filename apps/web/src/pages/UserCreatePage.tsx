@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { createUserSchema, roleSchema, type Role } from '@sf-manager/validation';
+import { createUserSchema, isMaintenanceRole, roleSchema, type Role } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
+import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { createUser } from '../api/users';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
@@ -18,20 +19,68 @@ const DEFAULT_ROLE: Role = 'SYSTEM_ADMIN';
 // Server-side rejection is mapped exclusively through
 // mapApiErrorToMessageKey (spec "No Server-Message String Coupling"); this
 // page never reads ApiError.message.
+//
+// maintenance-company user-admin-ui spec "Role-Conditional Company
+// Selector" / design.md Decision 7: the company `<select>` is populated
+// from GET /maintenance-companies, fetched once on mount (there is no
+// existing id to resolve on a create form, unlike UserEditPage/
+// UsersListPage — just the dropdown's options), and appears/is required
+// only while `isMaintenanceRole(role)` — the single source of truth shared
+// with @sf-manager/validation's `.superRefine` and the domain policy.
+// Switching away from a maintenance role clears the selection so a stale
+// `maintenanceCompanyId` can never linger in the submitted payload, which
+// is itself built conditionally on the CURRENT role, never on stale state.
 export function UserCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(DEFAULT_ROLE);
+  const [companyId, setCompanyId] = useState('');
+  const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    listMaintenanceCompanies()
+      .then((result) => {
+        if (!cancelled) {
+          setCompanies(result);
+        }
+      })
+      .catch(() => {
+        // A failed company-list fetch just leaves the selector empty; the
+        // required-field client validation still blocks submission for a
+        // maintenance role with no company picked.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleRoleChange(event: ChangeEvent<HTMLSelectElement>) {
+    const nextRole = event.target.value as Role;
+    setRole(nextRole);
+    if (!isMaintenanceRole(nextRole)) {
+      setCompanyId('');
+    }
+  }
+
+  const showCompanySelector = isMaintenanceRole(role);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    const result = createUserSchema.safeParse({ email, password, role });
+    const result = createUserSchema.safeParse({
+      email,
+      password,
+      role,
+      maintenanceCompanyId: showCompanySelector ? companyId : undefined,
+    });
     if (!result.success) {
       setError(t('users.create.validationError'));
       return;
@@ -75,7 +124,7 @@ export function UserCreatePage() {
         <select
           id="user-create-role-input"
           value={role}
-          onChange={(event) => setRole(event.target.value as Role)}
+          onChange={handleRoleChange}
           data-testid="user-create-role"
         >
           {ROLE_OPTIONS.map((option) => (
@@ -84,6 +133,27 @@ export function UserCreatePage() {
             </option>
           ))}
         </select>
+        {showCompanySelector && (
+          <>
+            <label htmlFor="user-create-company-input">{t('users.create.companyLabel')}</label>
+            <select
+              id="user-create-company-input"
+              value={companyId}
+              onChange={(event) => setCompanyId(event.target.value)}
+              required
+              data-testid="user-create-company"
+            >
+              <option value="" disabled>
+                {t('users.create.companyPlaceholder')}
+              </option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
         {error && <p data-testid="user-create-error">{error}</p>}
         <button type="submit" data-testid="user-create-submit" disabled={submitting}>
           {t('users.create.submitLabel')}

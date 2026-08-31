@@ -21,6 +21,24 @@ describe('mapApiErrorToMessageKey', () => {
     );
   });
 
+  it('maps a 400 MAINTENANCE_COMPANY_REQUIRED to users.error.maintenanceCompanyRequired', () => {
+    expect(mapApiErrorToMessageKey(new ApiError(400, 'MAINTENANCE_COMPANY_REQUIRED'))).toBe(
+      'users.error.maintenanceCompanyRequired',
+    );
+  });
+
+  it('maps a 400 MAINTENANCE_COMPANY_NOT_ALLOWED to users.error.maintenanceCompanyNotAllowed', () => {
+    expect(mapApiErrorToMessageKey(new ApiError(400, 'MAINTENANCE_COMPANY_NOT_ALLOWED'))).toBe(
+      'users.error.maintenanceCompanyNotAllowed',
+    );
+  });
+
+  it('maps a 400 MAINTENANCE_COMPANY_NOT_FOUND to users.error.maintenanceCompanyNotFound', () => {
+    expect(mapApiErrorToMessageKey(new ApiError(400, 'MAINTENANCE_COMPANY_NOT_FOUND'))).toBe(
+      'users.error.maintenanceCompanyNotFound',
+    );
+  });
+
   it('maps a 400 with no code to users.error.weakPassword', () => {
     expect(mapApiErrorToMessageKey(new ApiError(400))).toBe('users.error.weakPassword');
   });
