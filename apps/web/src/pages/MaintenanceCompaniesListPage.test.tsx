@@ -84,4 +84,13 @@ describe('MaintenanceCompaniesListPage', () => {
     const link = await screen.findByTestId('maintenance-companies-list-create-link');
     expect(link).toHaveAttribute('href', '/maintenance-companies/new');
   });
+
+  it('shows an "Edit" link per row pointing to /maintenance-companies/:id/edit', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+
+    renderPage();
+
+    const link = await screen.findByTestId(`maintenance-companies-list-edit-${companyA.id}`);
+    expect(link).toHaveAttribute('href', `/maintenance-companies/${companyA.id}/edit`);
+  });
 });
