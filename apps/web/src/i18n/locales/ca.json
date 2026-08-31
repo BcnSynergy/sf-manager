@@ -18,6 +18,7 @@
       "columnId": "ID",
       "columnEmail": "Correu electrònic",
       "columnRole": "Rol",
+      "columnCompany": "Empresa de manteniment",
       "deactivate": "Desactivar",
       "deactivateConfirmTitle": "Desactivar usuari",
       "deactivateConfirmMessage": "Aquest usuari ja no podrà iniciar sessió. Aquesta acció no es pot desfer.",
@@ -29,6 +30,8 @@
       "emailLabel": "Correu electrònic",
       "passwordLabel": "Contrasenya",
       "roleLabel": "Rol",
+      "companyLabel": "Empresa de manteniment",
+      "companyPlaceholder": "Selecciona una empresa de manteniment",
       "submitLabel": "Crear usuari",
       "validationError": "Introdueix un correu electrònic vàlid i una contrasenya que compleixi els requisits de seguretat."
     },
@@ -36,6 +39,8 @@
       "title": "Edita l'usuari",
       "emailLabel": "Correu electrònic",
       "roleLabel": "Rol",
+      "companyLabel": "Empresa de manteniment",
+      "companyPlaceholder": "Selecciona una empresa de manteniment",
       "submitLabel": "Desa els canvis",
       "validationError": "Introdueix un correu electrònic vàlid.",
       "notFound": "No s'ha pogut trobar aquest usuari."
@@ -45,7 +50,10 @@
       "lastSystemAdmin": "No es pot eliminar l'últim administrador del sistema.",
       "tryAgain": "Alguna cosa ha canviat mentre es desava. Torna-ho a provar.",
       "weakPassword": "La contrasenya no compleix els requisits de seguretat.",
-      "notFound": "No s'ha pogut trobar aquest usuari."
+      "notFound": "No s'ha pogut trobar aquest usuari.",
+      "maintenanceCompanyRequired": "Aquest rol requereix seleccionar una empresa de manteniment.",
+      "maintenanceCompanyNotAllowed": "Aquest rol no accepta una empresa de manteniment.",
+      "maintenanceCompanyNotFound": "L'empresa de manteniment seleccionada ja no existeix."
     },
     "role": {
       "systemAdmin": "Administrador del sistema",

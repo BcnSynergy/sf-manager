@@ -19,7 +19,12 @@ function mockResponse(init: {
   } as unknown as Response;
 }
 
-const user = { id: '1', email: 'a@sf-manager.example', role: 'SYSTEM_ADMIN' as const };
+const user = {
+  id: '1',
+  email: 'a@sf-manager.example',
+  role: 'SYSTEM_ADMIN' as const,
+  maintenanceCompanyId: null,
+};
 
 describe('api/users', () => {
   beforeEach(() => {
