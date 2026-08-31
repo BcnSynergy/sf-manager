@@ -6,7 +6,10 @@ import { ZodType } from 'zod';
 // rejected. Swagger documents the body separately via @ApiBody since
 // Zod-inferred types carry no decorator metadata (design.md Interfaces).
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private readonly schema: ZodType) {}
+  // protected (not private) so module-local subclasses — e.g.
+  // MaintenanceCompanyZodValidationPipe — can re-run safeParse and inspect
+  // the raw issues before falling back to this class's generic rejection.
+  constructor(protected readonly schema: ZodType) {}
 
   transform(value: unknown) {
     const result = this.schema.safeParse(value);

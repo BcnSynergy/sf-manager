@@ -578,6 +578,478 @@ describe('Users (e2e)', () => {
     });
   });
 
+  // maintenance-company design.md Decision 5, spec.md "Create User" /
+  // "Update User" — tasks.md 13.1 (shapes 1-3, correct codes).
+  //
+  // Reachability note (verified against the shared Zod schema and
+  // UsersController's error mapping, not assumed): shapes 1 (REQUIRED) and
+  // 2 (NOT_ALLOWED) are decided by `createUserSchema`/`updateUserSchema`'s
+  // `.superRefine` at the ZodValidationPipe layer whenever the payload
+  // alone makes the violation decidable — POST always (role is mandatory),
+  // PATCH only when `role` is itself present in the body. These 3
+  // combinations were originally found to reject with a plain 400 (Zod
+  // issues as `message`, no `code`) BEFORE the controller/use case ever
+  // ran — `MaintenanceCompanyZodValidationPipe` closes that gap by reading
+  // the schema's own `params.maintenanceCompanyCode` tag and attaching the
+  // matching `code` before the pipe throws, so these 3 combinations now
+  // carry the same `code` the domain-policy path already produced for the
+  // schema-undecidable shapes. The domain-policy `code` mapping
+  // (`UsersController.mapMaintenanceCompanyError`) remains the sole
+  // authority for the payload shapes the schema cannot decide alone: (a)
+  // PATCH's REQUIRED direction, deliberately unchecked by the schema
+  // (update-user.schema.ts's header comment) — resulting-state-dependent,
+  // decided only by `UpdateUserUseCase`; (b) a PATCH that supplies
+  // `maintenanceCompanyId` without `role` in the same body, judged against
+  // the user's EXISTING role. Shape 3 (NOT_FOUND) is never schema-decidable
+  // (liveness is not a shape/format rule) and is always reachable on both
+  // POST and PATCH.
+  describe('Maintenance-company assignment shapes 1-3 (design.md Decision 5, spec.md Create/Update User) — tasks.md 13.1', () => {
+    let app: INestApplication<App>;
+    let userRepository: UserRepository;
+    const adminEmail = 'shapes-admin@example.com';
+    const LIVE_COMPANY = 'shapes-live-company';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'shapes-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const manager = await buildSeedUser({
+        id: 'shapes-manager-id',
+        email: 'shapes-manager@example.com',
+        role: 'MANAGER',
+      });
+      const technician = await buildSeedUser({
+        id: 'shapes-technician-id',
+        email: 'shapes-technician@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: LIVE_COMPANY,
+      });
+      ({ app, userRepository } = await buildApp(
+        [admin, manager, technician],
+        [LIVE_COMPANY],
+      ));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('POST with a maintenance role and no maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_REQUIRED and creates no user (spec: Missing company for a maintenance role rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post('/users')
+        .send({
+          email: 'shape1-create@example.com',
+          password: 'aValidPassw0rd',
+          role: 'MAINTENANCE_TECHNICIAN',
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+      const created = await userRepository.findByEmail(
+        'shape1-create@example.com',
+      );
+      expect(created).toBeNull();
+    });
+
+    it('POST with a non-maintenance role and a maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED and creates no user (spec: Company id rejected for a non-maintenance role)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post('/users')
+        .send({
+          email: 'shape2-create@example.com',
+          password: 'aValidPassw0rd',
+          role: 'MANAGER',
+          maintenanceCompanyId: LIVE_COMPANY,
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
+      const created = await userRepository.findByEmail(
+        'shape2-create@example.com',
+      );
+      expect(created).toBeNull();
+    });
+
+    it('POST with a maintenance role and an unknown/soft-deleted maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_NOT_FOUND (spec: Nonexistent or soft-deleted company rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post('/users')
+        .send({
+          email: 'shape3-create@example.com',
+          password: 'aValidPassw0rd',
+          role: 'MAINTENANCE_TECHNICIAN',
+          maintenanceCompanyId: 'dead-company-id',
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_FOUND',
+      });
+      const created = await userRepository.findByEmail(
+        'shape3-create@example.com',
+      );
+      expect(created).toBeNull();
+    });
+
+    it('PATCH changing role to a maintenance role without maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_REQUIRED, no field changed (spec: Missing company when changing role to a maintenance role rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const before = await userRepository.findById('shapes-manager-id');
+      const response = await agent
+        .patch('/users/shapes-manager-id')
+        .send({ role: 'MAINTENANCE_COMPANY_MANAGER' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+      const after = await userRepository.findById('shapes-manager-id');
+      expect(after).toEqual(before);
+    });
+
+    it('PATCH with role present (non-maintenance) and maintenanceCompanyId present in the same body is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED, no field changed (spec: Company id rejected when changing role to a non-maintenance role)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const before = await userRepository.findById('shapes-manager-id');
+      const response = await agent
+        .patch('/users/shapes-manager-id')
+        .send({ role: 'MANAGER', maintenanceCompanyId: LIVE_COMPANY })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
+      const after = await userRepository.findById('shapes-manager-id');
+      expect(after).toEqual(before);
+    });
+
+    it('PATCH supplying only a maintenanceCompanyId for an existing non-maintenance user is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED, no field changed (spec: Update User conditional requirement)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const before = await userRepository.findById('shapes-manager-id');
+      const response = await agent
+        .patch('/users/shapes-manager-id')
+        .send({ maintenanceCompanyId: LIVE_COMPANY })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
+      const after = await userRepository.findById('shapes-manager-id');
+      expect(after).toEqual(before);
+    });
+
+    it('PATCH supplying an unknown/soft-deleted maintenanceCompanyId for an existing maintenance-role user is rejected with code MAINTENANCE_COMPANY_NOT_FOUND, no field changed (spec: shape 3 via update)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const before = await userRepository.findById('shapes-technician-id');
+      const response = await agent
+        .patch('/users/shapes-technician-id')
+        .send({ maintenanceCompanyId: 'dead-company-id-2' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_FOUND',
+      });
+      const after = await userRepository.findById('shapes-technician-id');
+      expect(after).toEqual(before);
+    });
+  });
+
+  // maintenance-company design.md Decision 5 / Decision 7, spec.md "Update
+  // User" — tasks.md 13.2: reassignment reflects immediately via GET;
+  // demotion away from a maintenance role leaves maintenanceCompanyId
+  // untouched (regression locking in the "no auto-clear, no rejection"
+  // rule — the deliberately accepted anomaly this is NOT closing, design.md
+  // Decision 6).
+  describe('Reassignment and demotion (design.md Decision 5, spec.md Update User) — tasks.md 13.2', () => {
+    it('PATCH reassigning a maintenance-role user to a different live company reflects immediately on GET', async () => {
+      const admin = await buildSeedUser({
+        id: 'reassign-admin-id',
+        email: 'reassign-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'reassign-technician-id',
+        email: 'reassign-technician@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'reassign-company-a',
+      });
+      const { app } = await buildApp(
+        [admin, technician],
+        ['reassign-company-a', 'reassign-company-b'],
+      );
+
+      try {
+        const agent = await loginAgent(app, 'reassign-admin@example.com');
+
+        const patchResponse = await agent
+          .patch(`/users/${technician.id}`)
+          .send({ maintenanceCompanyId: 'reassign-company-b' })
+          .expect(200);
+        expect(patchResponse.body).toMatchObject({
+          id: technician.id,
+          maintenanceCompanyId: 'reassign-company-b',
+        });
+
+        const list = await agent.get('/users').expect(200);
+        const found = (
+          list.body as Array<{ id: string; maintenanceCompanyId: string }>
+        ).find((user) => user.id === technician.id);
+        expect(found?.maintenanceCompanyId).toBe('reassign-company-b');
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('PATCH demoting a maintenance-role user away from a maintenance role leaves maintenanceCompanyId untouched (spec: Role change away from a maintenance role leaves maintenanceCompanyId untouched)', async () => {
+      const admin = await buildSeedUser({
+        id: 'demote-admin-id',
+        email: 'demote-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'demote-technician-id',
+        email: 'demote-technician@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'demote-company-a',
+      });
+      const { app } = await buildApp([admin, technician], ['demote-company-a']);
+
+      try {
+        const agent = await loginAgent(app, 'demote-admin@example.com');
+
+        const patchResponse = await agent
+          .patch(`/users/${technician.id}`)
+          .send({ role: 'MANAGER' })
+          .expect(200);
+        expect(patchResponse.body).toMatchObject({
+          id: technician.id,
+          role: 'MANAGER',
+          maintenanceCompanyId: 'demote-company-a',
+        });
+
+        const list = await agent.get('/users').expect(200);
+        const found = (
+          list.body as Array<{
+            id: string;
+            role: string;
+            maintenanceCompanyId: string;
+          }>
+        ).find((user) => user.id === technician.id);
+        expect(found?.role).toBe('MANAGER');
+        expect(found?.maintenanceCompanyId).toBe('demote-company-a');
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
+  // maintenance-company spec.md "Grandfathered Maintenance-Role Users
+  // Without a Company" (OQ2) — tasks.md 13.3. Seeded directly via
+  // userRepository.seed() (bypassing the create-user pipe/use case
+  // entirely), the same way a pre-existing DB row from before this
+  // migration would look: a maintenance-role user with
+  // maintenanceCompanyId: null. User's constructor performs no validation
+  // (design.md Decision 5's explicit landmine callout), so this seed is a
+  // faithful hermetic stand-in for that historical row.
+  describe('Grandfathered companyless maintenance-role user (spec.md OQ2) — tasks.md 13.3', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'grandfathered-admin@example.com';
+    const grandfatheredId = 'grandfathered-technician-id';
+    const LIVE_COMPANY = 'grandfathered-live-company';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'grandfathered-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const grandfathered = await buildSeedUser({
+        id: grandfatheredId,
+        email: 'grandfathered@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: null,
+      });
+      ({ app } = await buildApp([admin, grandfathered], [LIVE_COMPANY]));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('GET /users/:id (via list) returns the grandfathered user unchanged, unrestricted (spec: Grandfathered user remains readable and listable indefinitely)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const list = await agent.get('/users').expect(200);
+      const found = (
+        list.body as Array<{
+          id: string;
+          role: string;
+          maintenanceCompanyId: string | null;
+        }>
+      ).find((user) => user.id === grandfatheredId);
+
+      expect(found).toMatchObject({
+        id: grandfatheredId,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: null,
+      });
+    });
+
+    it('PATCH touching only an unrelated field is rejected with code MAINTENANCE_COMPANY_REQUIRED, user unchanged (spec: PATCH on a grandfathered user is rejected even for an unrelated field)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch(`/users/${grandfatheredId}`)
+        .send({ email: 'grandfathered-renamed@example.com' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+
+      const list = await agent.get('/users').expect(200);
+      const found = (list.body as Array<{ id: string; email: string }>).find(
+        (user) => user.id === grandfatheredId,
+      );
+      expect(found?.email).toBe('grandfathered@example.com');
+    });
+
+    it('PATCH supplying a live maintenanceCompanyId resolves the invariant (spec: Supplying a company on that PATCH resolves the invariant)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch(`/users/${grandfatheredId}`)
+        .send({ maintenanceCompanyId: LIVE_COMPANY })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        id: grandfatheredId,
+        maintenanceCompanyId: LIVE_COMPANY,
+      });
+
+      const list = await agent.get('/users').expect(200);
+      const found = (
+        list.body as Array<{ id: string; maintenanceCompanyId: string }>
+      ).find((user) => user.id === grandfatheredId);
+      expect(found?.maintenanceCompanyId).toBe(LIVE_COMPANY);
+    });
+  });
+
+  // authorization spec.md "Maintenance-Role Permissions Stay Inert" —
+  // tasks.md 13.4. Unit-level exhaustive coverage of ROLE_PERMISSIONS
+  // (SYSTEM_ADMIN gets everything, the other 4 roles including both
+  // maintenance roles stay []) already exists in
+  // role-permission.checker.spec.ts (tasks.md 4.2). The targeted addition
+  // this suite is missing: confirming, at the HTTP/e2e level and from the
+  // /users routes specifically, that a MAINTENANCE_TECHNICIAN or
+  // MAINTENANCE_COMPANY_MANAGER caller — not just a generic non-admin
+  // (MANAGER) as the existing "Anonymous and non-admin access control"
+  // group already covers — gets 403 on every /users route, even though
+  // their own maintenanceCompanyId is set (authorization spec: "A
+  // maintenance-role user cannot access any endpoint via their company
+  // association").
+  describe('Maintenance-role holder gets 403 on /users (authorization spec) — tasks.md 13.4', () => {
+    let app: INestApplication<App>;
+    const technicianEmail = 'permissions-technician@example.com';
+    let targetUserId: string;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'permissions-admin-id',
+        email: 'permissions-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'permissions-technician-id',
+        email: technicianEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'permissions-company',
+      });
+      const target = await buildSeedUser({
+        id: 'permissions-target-id',
+        email: 'permissions-target@example.com',
+        role: 'MANAGER',
+      });
+      targetUserId = target.id;
+      ({ app } = await buildApp(
+        [admin, technician, target],
+        ['permissions-company'],
+      ));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it.each([
+      ['POST', '/users'],
+      ['GET', '/users'],
+      ['PATCH', `/users/permissions-target-id`],
+      ['DELETE', `/users/permissions-target-id`],
+    ] as const)(
+      'MAINTENANCE_TECHNICIAN caller (own maintenanceCompanyId set) -> 403 on %s %s',
+      async (method, path) => {
+        const agent = await loginAgent(app, technicianEmail);
+        const req =
+          method === 'POST'
+            ? agent.post(path).send({
+                email: 'blocked-by-technician@example.com',
+                password: 'aValidPassw0rd',
+                role: 'MANAGER',
+              })
+            : method === 'GET'
+              ? agent.get(path)
+              : method === 'PATCH'
+                ? agent.patch(path).send({ email: 'blocked@example.com' })
+                : agent.delete(path);
+
+        const response = await req;
+        expect(response.status).toBe(403);
+      },
+    );
+
+    it('the targeted user is unaffected after every rejected attempt', async () => {
+      const verifyAgent = await loginAgent(
+        app,
+        'permissions-admin@example.com',
+      );
+      const list = await verifyAgent.get('/users').expect(200);
+      expect(
+        (list.body as Array<{ id: string; role: string }>).find(
+          (user) => user.id === targetUserId,
+        )?.role,
+      ).toBe('MANAGER');
+    });
+  });
+
   describe('GET /auth/me returns role (tasks.md 8, design.md Testing Strategy)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'me-admin@example.com';
