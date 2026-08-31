@@ -190,7 +190,11 @@ export function MaintenanceCompanyEditPage() {
           data-testid="maintenance-company-edit-contact-info"
         />
         {error && <p data-testid="maintenance-company-edit-error">{error}</p>}
-        <button type="submit" data-testid="maintenance-company-edit-submit" disabled={submitting}>
+        <button
+          type="submit"
+          data-testid="maintenance-company-edit-submit"
+          disabled={submitting || deleting}
+        >
           {t('maintenanceCompany.edit.submitLabel')}
         </button>
       </form>
@@ -200,7 +204,7 @@ export function MaintenanceCompanyEditPage() {
       <button
         type="button"
         data-testid="maintenance-company-edit-delete"
-        disabled={deleting}
+        disabled={submitting || deleting}
         onClick={requestDelete}
       >
         {t('maintenanceCompany.edit.deleteLabel')}
