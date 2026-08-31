@@ -53,6 +53,12 @@ export function applyMaintenanceCompanyNotAllowedRefinement(
       code: 'custom',
       path: ['maintenanceCompanyId'],
       message: `Role "${role}" does not accept a maintenanceCompanyId`,
+      // apps/api's MaintenanceCompanyZodValidationPipe reads this tag to
+      // attach the machine-readable `code` before Nest's parameter-binding
+      // pipe stage rejects the request — the controller's own try/catch
+      // (and mapMaintenanceCompanyError) never runs for schema-level
+      // rejections (openspec/changes/maintenance-company/tasks.md 13.1).
+      params: { maintenanceCompanyCode: 'MAINTENANCE_COMPANY_NOT_ALLOWED' },
     });
   }
 }
@@ -71,6 +77,9 @@ export function applyMaintenanceCompanyRefinement(
       code: 'custom',
       path: ['maintenanceCompanyId'],
       message: `Role "${role}" requires a maintenanceCompanyId`,
+      // See applyMaintenanceCompanyNotAllowedRefinement's addIssue above for
+      // why this tag exists.
+      params: { maintenanceCompanyCode: 'MAINTENANCE_COMPANY_REQUIRED' },
     });
   }
   applyMaintenanceCompanyNotAllowedRefinement(role, maintenanceCompanyId, ctx);

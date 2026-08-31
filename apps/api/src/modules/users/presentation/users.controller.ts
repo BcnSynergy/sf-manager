@@ -26,7 +26,6 @@ import {
 import { createUserSchema, updateUserSchema } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
-import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CreateUserUseCase } from '../application/use-cases/create-user.use-case';
 import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.use-case';
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
@@ -42,6 +41,7 @@ import type { UserErrorCode } from './user-error-code';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { MaintenanceCompanyZodValidationPipe } from './pipes/maintenance-company-zod-validation.pipe';
 
 const ROLE_ENUM = [
   'SYSTEM_ADMIN',
@@ -100,7 +100,8 @@ export class UsersController {
       'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND).',
   })
   async create(
-    @Body(new ZodValidationPipe(createUserSchema)) body: CreateUserRequestDto,
+    @Body(new MaintenanceCompanyZodValidationPipe(createUserSchema))
+    body: CreateUserRequestDto,
   ): Promise<UserResponseDto> {
     try {
       return await this.createUserUseCase.execute(body);
@@ -164,7 +165,8 @@ export class UsersController {
   })
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateUserSchema)) body: UpdateUserRequestDto,
+    @Body(new MaintenanceCompanyZodValidationPipe(updateUserSchema))
+    body: UpdateUserRequestDto,
   ): Promise<UserResponseDto> {
     try {
       return await this.updateUserUseCase.execute({ id, ...body });

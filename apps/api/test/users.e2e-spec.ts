@@ -586,14 +586,16 @@ describe('Users (e2e)', () => {
   // 2 (NOT_ALLOWED) are decided by `createUserSchema`/`updateUserSchema`'s
   // `.superRefine` at the ZodValidationPipe layer whenever the payload
   // alone makes the violation decidable — POST always (role is mandatory),
-  // PATCH only when `role` is itself present in the body. In those cases
-  // the pipe rejects with a plain 400 (Zod issues as `message`, no `code`)
-  // BEFORE the controller/use case ever runs, exactly as design.md Decision
-  // 5 originally documented ("unreachable through the HTTP path, the pipe
-  // rejects first") and as `maintenance-company-assignment.policy.ts`'s own
-  // comment states. The domain-policy `code` mapping
-  // (`UsersController.mapMaintenanceCompanyError`) is reachable via real
-  // HTTP ONLY for the payload shapes the schema cannot decide alone: (a)
+  // PATCH only when `role` is itself present in the body. These 3
+  // combinations were originally found to reject with a plain 400 (Zod
+  // issues as `message`, no `code`) BEFORE the controller/use case ever
+  // ran — `MaintenanceCompanyZodValidationPipe` closes that gap by reading
+  // the schema's own `params.maintenanceCompanyCode` tag and attaching the
+  // matching `code` before the pipe throws, so these 3 combinations now
+  // carry the same `code` the domain-policy path already produced for the
+  // schema-undecidable shapes. The domain-policy `code` mapping
+  // (`UsersController.mapMaintenanceCompanyError`) remains the sole
+  // authority for the payload shapes the schema cannot decide alone: (a)
   // PATCH's REQUIRED direction, deliberately unchecked by the schema
   // (update-user.schema.ts's header comment) — resulting-state-dependent,
   // decided only by `UpdateUserUseCase`; (b) a PATCH that supplies
@@ -634,35 +636,47 @@ describe('Users (e2e)', () => {
       await app.close();
     });
 
-    it('POST with a maintenance role and no maintenanceCompanyId is rejected with 4xx and creates no user (spec: Missing company for a maintenance role rejected)', async () => {
+    it('POST with a maintenance role and no maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_REQUIRED and creates no user (spec: Missing company for a maintenance role rejected)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const response = await agent.post('/users').send({
-        email: 'shape1-create@example.com',
-        password: 'aValidPassw0rd',
-        role: 'MAINTENANCE_TECHNICIAN',
-      });
+      const response = await agent
+        .post('/users')
+        .send({
+          email: 'shape1-create@example.com',
+          password: 'aValidPassw0rd',
+          role: 'MAINTENANCE_TECHNICIAN',
+        })
+        .expect(400);
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
-      expect(response.status).toBeLessThan(500);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
       const created = await userRepository.findByEmail(
         'shape1-create@example.com',
       );
       expect(created).toBeNull();
     });
 
-    it('POST with a non-maintenance role and a maintenanceCompanyId is rejected with 4xx and creates no user (spec: Company id rejected for a non-maintenance role)', async () => {
+    it('POST with a non-maintenance role and a maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED and creates no user (spec: Company id rejected for a non-maintenance role)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const response = await agent.post('/users').send({
-        email: 'shape2-create@example.com',
-        password: 'aValidPassw0rd',
-        role: 'MANAGER',
-        maintenanceCompanyId: LIVE_COMPANY,
-      });
+      const response = await agent
+        .post('/users')
+        .send({
+          email: 'shape2-create@example.com',
+          password: 'aValidPassw0rd',
+          role: 'MANAGER',
+          maintenanceCompanyId: LIVE_COMPANY,
+        })
+        .expect(400);
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
-      expect(response.status).toBeLessThan(500);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
+      });
       const created = await userRepository.findByEmail(
         'shape2-create@example.com',
       );
@@ -706,6 +720,24 @@ describe('Users (e2e)', () => {
         statusCode: 400,
         error: 'Bad Request',
         code: 'MAINTENANCE_COMPANY_REQUIRED',
+      });
+      const after = await userRepository.findById('shapes-manager-id');
+      expect(after).toEqual(before);
+    });
+
+    it('PATCH with role present (non-maintenance) and maintenanceCompanyId present in the same body is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED, no field changed (spec: Company id rejected when changing role to a non-maintenance role)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const before = await userRepository.findById('shapes-manager-id');
+      const response = await agent
+        .patch('/users/shapes-manager-id')
+        .send({ role: 'MANAGER', maintenanceCompanyId: LIVE_COMPANY })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
       });
       const after = await userRepository.findById('shapes-manager-id');
       expect(after).toEqual(before);
