@@ -108,11 +108,11 @@ Chain strategy: stacked-to-main
 - [x] 11.5 `i18n/locales/{en,es,ca}.json` — `users.list.columnCompany`, `users.create/edit.companyLabel`/`companyPlaceholder`, `users.error.maintenanceCompany{Required,NotAllowed,NotFound}`. Parity test (`locales.test.ts`) extended with a `REQUIRED_USER_MAINTENANCE_COMPANY_KEY_PATHS` existence guard, mirroring the `REQUIRED_MAINTENANCE_COMPANY_KEY_PATHS` precedent from PR9.
 
 ## Phase 12: E2E — Maintenance Company (PR 12)
-- [ ] 12.1 `maintenance-company.e2e-spec.ts`: CRUD happy paths; `body.code` asserted for both codes.
-- [ ] 12.2 E2E: duplicate active taxId rejected; taxId reusable after soft-delete.
-- [ ] 12.3 E2E: delete blocked while active user attached; company `deletedAt` stays null; no user modified.
-- [ ] 12.4 E2E: delete succeeds after reassigning/deleting the blocking user; soft-deleted users never block.
-- [ ] 12.5 E2E: 401 unauthenticated / 403 non-admin (incl. a maintenance-role holder) on every route.
+- [x] 12.1 `maintenance-company.e2e-spec.ts`: CRUD happy paths; `body.code` asserted for both codes. Follows `community.e2e-spec.ts`'s HERMETIC pattern (design.md Testing Strategy: in-memory fakes overriding `USER_REPOSITORY`/`MAINTENANCE_COMPANY_REPOSITORY`/`MAINTENANCE_COMPANY_LOOKUP`/`TOKEN_DENYLIST`/`PrismaService`, no real Postgres) — not a real-DB e2e suite; the real-DB atomic soft-delete guard is already covered by Phase 8's Prisma integration spec.
+- [x] 12.2 E2E: duplicate active taxId rejected (create + update); taxId reusable after soft-delete.
+- [x] 12.3 E2E: delete blocked while active user attached; company `deletedAt` stays null (asserted via direct repository read); no user modified (`toEqual` on the full pre/post user record).
+- [x] 12.4 E2E: delete succeeds after reassigning the blocking user to a different company; delete succeeds after soft-deleting the blocking user; a user soft-deleted before any delete attempt never blocks in the first place. `MAINTENANCE_COMPANY_LOOKUP` stubbed as always-live (an intentional simplification — its precise REQUIRED/NOT_ALLOWED/NOT_FOUND contract is Phase 13's `users.e2e-spec.ts` concern, not this suite's).
+- [x] 12.5 E2E: 401 unauthenticated / 403 non-admin (incl. a maintenance-role holder with a `maintenanceCompanyId` matching the very resource under test) on every route (POST/GET/PATCH/DELETE); SYSTEM_ADMIN permitted.
 
 ## Phase 13: E2E — Users Deltas + Browser Verification (PR 13)
 - [ ] 13.1 `users.e2e-spec.ts`: shapes 1-3 (missing company, disallowed company, dead/soft-deleted company) with correct codes.
