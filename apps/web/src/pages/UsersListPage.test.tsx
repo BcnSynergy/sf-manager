@@ -44,6 +44,12 @@ const orphanedTechnician = {
   role: 'MAINTENANCE_TECHNICIAN' as const,
   maintenanceCompanyId: 'company-does-not-exist',
 };
+const grandfatheredTechnician = {
+  id: 'user-5',
+  email: 'grandfathered@sf-manager.example',
+  role: 'MAINTENANCE_TECHNICIAN' as const,
+  maintenanceCompanyId: null,
+};
 
 function renderPage() {
   return render(
@@ -128,6 +134,18 @@ describe('UsersListPage', () => {
     const row = await screen.findByTestId(`users-list-row-${orphanedTechnician.id}`);
     expect(row).toHaveTextContent('Unknown maintenance company');
     expect(row).not.toHaveTextContent(orphanedTechnician.maintenanceCompanyId);
+  });
+
+  it('renders maintenanceCompany.unknown for a maintenance-role user with no company at all (grandfathered pre-migration row)', async () => {
+    mockedListUsers.mockResolvedValue([admin, grandfatheredTechnician]);
+    mockedListMaintenanceCompanies.mockResolvedValue([
+      { id: 'company-1', name: 'Acme Maintenance', taxId: 'A1', contactInfo: 'x' },
+    ]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`users-list-row-${grandfatheredTechnician.id}`);
+    expect(row).toHaveTextContent('Unknown maintenance company');
   });
 
   it('renders no company text for a non-maintenance-role user', async () => {
