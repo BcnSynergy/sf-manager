@@ -38,10 +38,10 @@ Chain strategy: stacked-to-main
 - [x] 1.3 Apply the migration in dev; confirm `prisma migrate dev --create-only` does not emit `DropForeignKey` for any of the 5 existing `@relation`-less FKs (delete any it emits, per design's Open Questions warning); regenerate the Prisma client.
 
 ## Phase 2: Inspectable Element Domain (PR 2) — Strict TDD
-- [ ] 2.1 RED/GREEN `domain/element-type.ts` — `ELEMENT_TYPES` const array + `ElementType` union, `satisfies readonly ValidatedElementType[]` (design Decision 1).
-- [ ] 2.2 RED/GREEN `domain/inspectable-element.entity.ts` — plain fields, zero Prisma (ADR-013), no constructor validation (design Decision 2; spec: "Entity shape" in Purpose).
-- [ ] 2.3 RED/GREEN `domain/installed-at.ts` — `parseInstalledAt`/`formatInstalledAt` round-trip, incl. a DST-boundary date and a UTC-offset-sensitive one (design Decision 3).
-- [ ] 2.4 `domain/errors/inspectable-element-not-found.error.ts` — mirrors `MaintenanceCompanyNotFoundError` (mechanical).
+- [x] 2.1 RED/GREEN `domain/element-type.ts` — `ELEMENT_TYPES` const array + `ElementType` union, `satisfies readonly ValidatedElementType[]` (design Decision 1). **Deviation**: the `satisfies readonly ValidatedElementType[]` gate against `@sf-manager/validation` could not be wired — that package does not export an `ElementType` type until Phase 5 (task 5.7). The union is declared standalone with a comment documenting the deferred gate; Phase 5 closes this edge.
+- [x] 2.2 RED/GREEN `domain/inspectable-element.entity.ts` — plain fields, zero Prisma (ADR-013), no constructor validation (design Decision 2; spec: "Entity shape" in Purpose).
+- [x] 2.3 RED/GREEN `domain/installed-at.ts` — `parseInstalledAt`/`formatInstalledAt` round-trip, incl. a DST-boundary date and a UTC-offset-sensitive one (design Decision 3).
+- [x] 2.4 `domain/errors/inspectable-element-not-found.error.ts` — mirrors `MaintenanceCompanyNotFoundError` (mechanical).
 
 ## Phase 3: Community Atomic Delete-Guard Cluster (PR 3) — Strict TDD, independently reviewable unit
 - [ ] 3.1 RED/GREEN `community/domain/community-deletion.policy.ts` — `assertNoActiveElementsAttached(count)`, table-driven 0/1/n (design Decision 6; spec: community-management "Soft-Delete Community").
