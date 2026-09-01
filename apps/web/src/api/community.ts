@@ -9,7 +9,8 @@ import { apiFetch } from './client';
 export type CommunityErrorCode =
   | 'ASSIGNMENT_ALREADY_EXISTS'
   | 'INELIGIBLE_ROLE'
-  | 'TRANSACTION_CONFLICT';
+  | 'TRANSACTION_CONFLICT'
+  | 'COMMUNITY_HAS_ACTIVE_ELEMENTS';
 
 // Mirrors apps/api's CommunityResponseDto.
 export type Community = {

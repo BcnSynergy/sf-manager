@@ -17,6 +17,7 @@ const CODE_MESSAGE_KEYS: Record<CommunityErrorCode, string> = {
   ASSIGNMENT_ALREADY_EXISTS: 'community.error.assignmentExists',
   INELIGIBLE_ROLE: 'community.error.ineligibleRole',
   TRANSACTION_CONFLICT: 'community.error.tryAgain',
+  COMMUNITY_HAS_ACTIVE_ELEMENTS: 'community.error.hasActiveElements',
 };
 
 const HTTP_BAD_REQUEST = 400;

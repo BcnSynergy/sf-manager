@@ -61,13 +61,32 @@ export class PrismaCommunityRepository
     });
   }
 
-  // Sets deletedAt (ADR-010) — no row deletion. The representative
-  // deactivation cascade lives in SoftDeleteCommunityUseCase (Phase 7),
-  // never in this adapter.
-  async softDeleteById(id: string): Promise<void> {
-    await this.prisma.community.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+  // inspectable-elements/design.md Decision 6: a single atomic UPDATE with a
+  // NOT EXISTS guard against InspectableElement closes the check-then-act
+  // race a plain count-then-write would have — the "no active element
+  // attached" invariant and the write happen inside one Postgres statement,
+  // so there is no window for a concurrent element creation to slip an
+  // element in between a check and this write. Mirrors
+  // PrismaMaintenanceCompanyRepository.softDeleteById's identical shape
+  // (there against `User`, here against `InspectableElement`). Returns true
+  // iff the row existed, was not already deleted, AND had no active element
+  // attached at write time (i.e. the UPDATE actually matched and flipped
+  // deletedAt). The representative deactivation cascade lives in
+  // SoftDeleteCommunityUseCase, never in this adapter, and now only runs
+  // when this returns true.
+  async softDeleteById(id: string): Promise<boolean> {
+    const affectedRows = await this.prisma.$executeRaw`
+      UPDATE "Community"
+      SET "deletedAt" = now()
+      WHERE "id" = ${id}::uuid
+        AND "deletedAt" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM "InspectableElement"
+          WHERE "communityId" = ${id}::uuid
+            AND "deletedAt" IS NULL
+        )
+    `;
+
+    return affectedRows === 1;
   }
 }

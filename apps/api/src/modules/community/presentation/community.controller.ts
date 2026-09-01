@@ -52,6 +52,7 @@ import {
 } from '../application/ports/community-technician.repository.port';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
 import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
+import { CommunityHasActiveElementsError } from '../domain/errors/community-has-active-elements.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
 import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
@@ -166,6 +167,10 @@ export class CommunityController {
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:delete.' })
   @ApiNotFoundResponse({ description: 'Community not found.' })
+  @ApiConflictResponse({
+    description:
+      'Community has active inspectable elements attached. Body carries code: COMMUNITY_HAS_ACTIVE_ELEMENTS.',
+  })
   async softDelete(@Param('id') id: string): Promise<void> {
     try {
       await this.softDeleteCommunityUseCase.execute(id);
@@ -398,6 +403,13 @@ export class CommunityController {
   private mapMutationError(error: unknown): unknown {
     if (error instanceof CommunityNotFoundError) {
       return new NotFoundException(error.message);
+    }
+    if (error instanceof CommunityHasActiveElementsError) {
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'COMMUNITY_HAS_ACTIVE_ELEMENTS',
+      );
     }
     return error;
   }

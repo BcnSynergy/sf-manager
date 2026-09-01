@@ -21,13 +21,22 @@ describe('mapApiErrorToMessageKey (community)', () => {
     );
   });
 
-  it('the three assignment 409 codes map to three distinct keys', () => {
+  // inspectable-elements/design.md Decision 6/Finding 4: the community
+  // delete-guard's 409 cause.
+  it('maps COMMUNITY_HAS_ACTIVE_ELEMENTS to community.error.hasActiveElements', () => {
+    expect(
+      mapApiErrorToMessageKey(new ApiError(409, 'COMMUNITY_HAS_ACTIVE_ELEMENTS')),
+    ).toBe('community.error.hasActiveElements');
+  });
+
+  it('the four 409 codes map to four distinct keys', () => {
     const keys = new Set([
       mapApiErrorToMessageKey(new ApiError(409, 'ASSIGNMENT_ALREADY_EXISTS')),
       mapApiErrorToMessageKey(new ApiError(409, 'INELIGIBLE_ROLE')),
       mapApiErrorToMessageKey(new ApiError(409, 'TRANSACTION_CONFLICT')),
+      mapApiErrorToMessageKey(new ApiError(409, 'COMMUNITY_HAS_ACTIVE_ELEMENTS')),
     ]);
-    expect(keys.size).toBe(3);
+    expect(keys.size).toBe(4);
   });
 
   it('maps a 400 with no code to community.error.validationFailed', () => {

@@ -56,15 +56,24 @@ export class InMemoryCommunityRepository implements CommunityRepository {
     return Promise.resolve();
   }
 
-  softDeleteById(id: string): Promise<void> {
+  // inspectable-elements/design.md Decision 6: reproduces the boolean
+  // contract PrismaCommunityRepository's atomic UPDATE...NOT EXISTS
+  // enforces — this fake has no InspectableElement table to guard against,
+  // so it only reproduces the "already gone" half (missing or already
+  // soft-deleted) of the contract; the active-element half is exercised via
+  // `jest.spyOn(...).mockResolvedValueOnce(false)` in
+  // soft-delete-community.use-case.spec.ts (mirrors
+  // InMemoryMaintenanceCompanyRepository's identical fake-boundary
+  // rationale).
+  softDeleteById(id: string): Promise<boolean> {
     const existing = this.communitiesById.get(id);
-    if (!existing) {
-      return Promise.resolve();
+    if (!existing || existing.isDeleted) {
+      return Promise.resolve(false);
     }
     this.communitiesById.set(
       id,
       new Community({ ...existing, deletedAt: new Date() }),
     );
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 }

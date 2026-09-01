@@ -94,7 +94,8 @@
       "ineligibleRole": "El rol actual de este usuario no permite esta asignación.",
       "tryAgain": "Algo ha cambiado mientras se guardaba. Inténtalo de nuevo.",
       "validationFailed": "Introduce un identificador de usuario válido.",
-      "assignmentTargetNotFound": "No se ha podido encontrar esta comunidad o usuario."
+      "assignmentTargetNotFound": "No se ha podido encontrar esta comunidad o usuario.",
+      "hasActiveElements": "Esta comunidad todavía tiene elementos inspeccionables activos. Elimínalos primero."
     },
     "create": {
       "title": "Nueva comunidad",
