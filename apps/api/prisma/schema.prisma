@@ -140,3 +140,47 @@ model MaintenanceCompany {
   contactInfo String
   deletedAt   DateTime? // ADR-010
 }
+
+// inspectable-elements/design.md Decision 1: the TypeScript union in
+// `domain/element-type.ts` is authoritative; this enum is its persistence
+// projection only, mirroring `Role`/`Locale`'s precedent. A parity
+// integration spec (Phase 6) asserts this enum, the domain union and the
+// Zod schema all agree.
+enum ElementType {
+  EXTINGUISHER
+}
+
+// inspectable-elements/design.md: entity shape is exactly id, communityId,
+// elementType, name, description?, location, serialNumber?, installedAt,
+// deletedAt — no `code`/`imageUrl`/typed details/hydrostatic tracking
+// (ADR-006 walking-skeleton discipline, proposal Settled decisions).
+//
+// inspectable-elements/design.md Decision 2: name/location/description/
+// serialNumber are all plain fields — none carries behaviour beyond
+// validation (no Value Objects).
+//
+// inspectable-elements/design.md Decision 3: `installedAt` is a Postgres
+// `DATE`, not `TIMESTAMP(3)` — the first calendar date a human types in
+// this schema, transported as ISO `YYYY-MM-DD`. A `TIMESTAMP(3)` would
+// round-trip a day off in a non-UTC browser.
+//
+// The FK to Community(id) is hand-written in migration.sql, INVISIBLE to
+// Prisma (no `@relation` here, ADR-013 — mirroring every other
+// cross-module FK in this schema: User.maintenanceCompanyId,
+// CommunityRepresentative/CommunityTechnician.communityId).
+model InspectableElement {
+  id           String      @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  communityId  String      @db.Uuid
+  elementType  ElementType
+  name         String
+  description  String?
+  location     String
+  serialNumber String?
+  installedAt  DateTime    @db.Date // design.md Decision 3 — DATE, not TIMESTAMP(3)
+  deletedAt    DateTime? // ADR-010
+
+  // Prisma-VISIBLE regular index. Postgres does not auto-index FK columns,
+  // and every list query plus the community delete guard's NOT EXISTS
+  // (design.md Decision 6) filters on exactly this column.
+  @@index([communityId])
+}
