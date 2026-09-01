@@ -33,9 +33,9 @@ Chain strategy: stacked-to-main
 | 11 | Remaining scope-guard greps + full browser verification + final suite/lint/build | PR 11 | ~40 | Depends on PR 8, PR 9, PR 10 |
 
 ## Phase 1: Prisma Migration (PR 1) — mechanical, no TDD
-- [ ] 1.1 `apps/api/prisma/schema.prisma`: add `enum ElementType { EXTINGUISHER }` + `InspectableElement` model (`id`, `communityId`, `elementType`, `name`, `description?`, `location`, `serialNumber?`, `installedAt @db.Date`, `deletedAt?`) with `@@index([communityId])`; comment block flagging the Prisma-invisible FK (design File Changes; spec: inspectable-element-management "Create Inspectable Element Under a Community").
-- [ ] 1.2 Hand-written `migrations/<ts>_add_inspectable_element/migration.sql`: `CREATE TYPE`, `CREATE TABLE`, Prisma-visible `communityId` index, hand-written FK `ON DELETE RESTRICT ON UPDATE CASCADE` — mirror `20260825120000_add_community_and_assignments` (design "Interfaces" SQL block, Decision 3 for `DATE` not `TIMESTAMP(3)`).
-- [ ] 1.3 Apply the migration in dev; confirm `prisma migrate dev --create-only` does not emit `DropForeignKey` for any of the 5 existing `@relation`-less FKs (delete any it emits, per design's Open Questions warning); regenerate the Prisma client.
+- [x] 1.1 `apps/api/prisma/schema.prisma`: add `enum ElementType { EXTINGUISHER }` + `InspectableElement` model (`id`, `communityId`, `elementType`, `name`, `description?`, `location`, `serialNumber?`, `installedAt @db.Date`, `deletedAt?`) with `@@index([communityId])`; comment block flagging the Prisma-invisible FK (design File Changes; spec: inspectable-element-management "Create Inspectable Element Under a Community").
+- [x] 1.2 Hand-written `migrations/<ts>_add_inspectable_element/migration.sql`: `CREATE TYPE`, `CREATE TABLE`, Prisma-visible `communityId` index, hand-written FK `ON DELETE RESTRICT ON UPDATE CASCADE` — mirror `20260825120000_add_community_and_assignments` (design "Interfaces" SQL block, Decision 3 for `DATE` not `TIMESTAMP(3)`).
+- [x] 1.3 Apply the migration in dev; confirm `prisma migrate dev --create-only` does not emit `DropForeignKey` for any of the 5 existing `@relation`-less FKs (delete any it emits, per design's Open Questions warning); regenerate the Prisma client.
 
 ## Phase 2: Inspectable Element Domain (PR 2) — Strict TDD
 - [ ] 2.1 RED/GREEN `domain/element-type.ts` — `ELEMENT_TYPES` const array + `ElementType` union, `satisfies readonly ValidatedElementType[]` (design Decision 1).
