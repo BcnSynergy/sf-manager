@@ -126,7 +126,7 @@ describe('PrismaCommunityRepository (integration)', () => {
     expect(updated?.locale).toBe('es');
   });
 
-  it('softDeleteById() sets deletedAt so the community is excluded from findById()', async () => {
+  it('softDeleteById() sets deletedAt so the community is excluded from findById(), and returns true', async () => {
     const id = idGenerator.generate();
 
     await repository.create(
@@ -139,8 +139,71 @@ describe('PrismaCommunityRepository (integration)', () => {
       }),
     );
 
-    await repository.softDeleteById(id);
+    await expect(repository.softDeleteById(id)).resolves.toBe(true);
+    expect(await repository.findById(id)).toBeNull();
+  });
 
+  // inspectable-elements/design.md Decision 6: the atomic `UPDATE ... AND
+  // NOT EXISTS (active element)` guard, mirroring
+  // prisma-maintenance-company.repository.integration.spec.ts's equivalent
+  // "has active user" guard. This test inserts the InspectableElement row
+  // directly via Prisma (no inspectable-element module dependency, per
+  // tasks.md 3.6) so Phase 3 stays self-contained after Phase 1's migration.
+  it('softDeleteById() returns false and leaves deletedAt null when an active InspectableElement is attached', async () => {
+    const id = idGenerator.generate();
+
+    await repository.create(
+      new Community({
+        id,
+        name: uniqueName('blocked-by-active-element'),
+        address: 'Carrer del Mar 8, Palamós',
+        locale: 'en',
+        deletedAt: null,
+      }),
+    );
+    await prisma.inspectableElement.create({
+      data: {
+        id: idGenerator.generate(),
+        communityId: id,
+        elementType: 'EXTINGUISHER',
+        name: 'Extinguisher',
+        location: 'Ground floor',
+        installedAt: new Date('2026-01-01T00:00:00.000Z'),
+        deletedAt: null,
+      },
+    });
+
+    await expect(repository.softDeleteById(id)).resolves.toBe(false);
+    expect(await repository.findById(id)).not.toBeNull();
+  });
+
+  // Soft-deleted elements must NOT block the guard (community-management
+  // spec.md "Soft-deleted elements do not block deletion").
+  it('softDeleteById() succeeds when only soft-deleted InspectableElements are attached', async () => {
+    const id = idGenerator.generate();
+
+    await repository.create(
+      new Community({
+        id,
+        name: uniqueName('only-soft-deleted-elements'),
+        address: 'Carrer del Sol 2, Blanes',
+        locale: 'es',
+        deletedAt: null,
+      }),
+    );
+    await prisma.inspectableElement.create({
+      data: {
+        id: idGenerator.generate(),
+        communityId: id,
+        elementType: 'EXTINGUISHER',
+        name: 'Retired extinguisher',
+        location: 'Basement',
+        installedAt: new Date('2026-01-01T00:00:00.000Z'),
+        deletedAt: new Date(),
+      },
+    });
+
+    await expect(repository.softDeleteById(id)).resolves.toBe(true);
     expect(await repository.findById(id)).toBeNull();
   });
 });

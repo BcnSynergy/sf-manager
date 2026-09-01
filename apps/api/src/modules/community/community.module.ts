@@ -3,6 +3,7 @@ import { UsersModule } from '../users/users.module';
 import { COMMUNITY_REPOSITORY } from './application/ports/community.repository.port';
 import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from './application/ports/community-representative.repository.port';
 import { COMMUNITY_TECHNICIAN_REPOSITORY } from './application/ports/community-technician.repository.port';
+import { INSPECTABLE_ELEMENT_COUNTER } from './application/ports/inspectable-element-counter.port';
 import { AddRepresentativeUseCase } from './application/use-cases/add-representative.use-case';
 import { AddTechnicianUseCase } from './application/use-cases/add-technician.use-case';
 import { CreateCommunityUseCase } from './application/use-cases/create-community.use-case';
@@ -16,6 +17,7 @@ import { UpdateCommunityUseCase } from './application/use-cases/update-community
 import { PrismaCommunityRepository } from './infrastructure/persistence/prisma-community.repository';
 import { PrismaCommunityRepresentativeRepository } from './infrastructure/persistence/prisma-community-representative.repository';
 import { PrismaCommunityTechnicianRepository } from './infrastructure/persistence/prisma-community-technician.repository';
+import { PrismaInspectableElementCounter } from './infrastructure/persistence/prisma-inspectable-element-counter.repository';
 import { CommunityController } from './presentation/community.controller';
 
 // design.md File Changes (PR 5): registers the admin-only /communities CRUD
@@ -38,6 +40,12 @@ import { CommunityController } from './presentation/community.controller';
 // COMMUNITY_TECHNICIAN_REPOSITORY (tasks.md 9.1/9.5): bound to the Prisma
 // adapter, mirroring COMMUNITY_REPRESENTATIVE_REPOSITORY — the technician
 // use cases resolve this token the same way, just without transactional().
+//
+// INSPECTABLE_ELEMENT_COUNTER (inspectable-elements/design.md Decision 4,
+// tasks.md 3.11): bound to PrismaInspectableElementCounter, a read-only
+// count probe owned entirely by `community` — talks to PrismaService
+// (`@Global()` PrismaModule) directly, so no InspectableElementModule
+// import is added here, keeping the DI graph acyclic.
 @Module({
   imports: [UsersModule],
   controllers: [CommunityController],
@@ -50,6 +58,10 @@ import { CommunityController } from './presentation/community.controller';
     {
       provide: COMMUNITY_TECHNICIAN_REPOSITORY,
       useClass: PrismaCommunityTechnicianRepository,
+    },
+    {
+      provide: INSPECTABLE_ELEMENT_COUNTER,
+      useClass: PrismaInspectableElementCounter,
     },
     CreateCommunityUseCase,
     ListCommunitiesUseCase,

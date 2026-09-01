@@ -15,6 +15,7 @@ import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from '../application/ports/commun
 import { COMMUNITY_TECHNICIAN_REPOSITORY } from '../application/ports/community-technician.repository.port';
 import { AssignmentAlreadyExistsError } from '../domain/errors/assignment-already-exists.error';
 import { AssignmentNotFoundError } from '../domain/errors/assignment-not-found.error';
+import { CommunityHasActiveElementsError } from '../domain/errors/community-has-active-elements.error';
 import { CommunityNotFoundError } from '../domain/errors/community-not-found.error';
 import { IneligibleRoleError } from '../domain/errors/ineligible-role.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
@@ -199,6 +200,35 @@ describe('CommunityController', () => {
       await expect(controller.softDelete('missing-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    // inspectable-elements/design.md Decision 6/7: mirrors
+    // MaintenanceCompanyController's HasActiveUsersError -> 409 mapping.
+    it('maps CommunityHasActiveElementsError to 409', async () => {
+      softDeleteCommunityUseCase.execute.mockRejectedValue(
+        new CommunityHasActiveElementsError(2),
+      );
+
+      await expect(controller.softDelete('community-1')).rejects.toThrow(
+        HttpException,
+      );
+    });
+
+    it('maps CommunityHasActiveElementsError to a 409 body with code COMMUNITY_HAS_ACTIVE_ELEMENTS', async () => {
+      const domainError = new CommunityHasActiveElementsError(2);
+      softDeleteCommunityUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .softDelete('community-1')
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 409,
+        error: 'Conflict',
+        message: domainError.message,
+        code: 'COMMUNITY_HAS_ACTIVE_ELEMENTS',
+      });
     });
   });
 

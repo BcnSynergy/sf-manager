@@ -31,9 +31,16 @@ export interface CommunityRepository {
   // Sets deletedAt (ADR-010) — no row deletion. The representative
   // deactivation cascade (community-management spec.md, "Soft-deleting a
   // community deactivates its sole-active representative") is NOT part of
-  // this port method; it is orchestrated by SoftDeleteCommunityUseCase in
-  // Phase 7 (PR 7) once CommunityRepresentativeRepository exists (PR 6).
-  softDeleteById(id: string): Promise<void>;
+  // this port method; it is orchestrated by SoftDeleteCommunityUseCase.
+  //
+  // inspectable-elements/design.md Decision 6: mirrors
+  // MaintenanceCompanyRepository.softDeleteById — returns true iff this call
+  // actually flipped deletedAt (row existed, was not already deleted, AND
+  // had no active InspectableElement attached at WRITE time). The atomic
+  // UPDATE is the authoritative enforcement; the use case's count read
+  // (countActiveByCommunity/assertNoActiveElementsAttached) is only a fast
+  // path and an accurate error message.
+  softDeleteById(id: string): Promise<boolean>;
 }
 
 export const COMMUNITY_REPOSITORY = Symbol('COMMUNITY_REPOSITORY');
