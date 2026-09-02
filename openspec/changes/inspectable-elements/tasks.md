@@ -80,13 +80,13 @@ Chain strategy: stacked-to-main
 - [x] 6.7 `inspectable-element.module.ts` — imports `CommunityModule` for `COMMUNITY_REPOSITORY` (design Decision 4); register in `app.module.ts`.
 
 ## Phase 7: Web — List + Create (PR 7) — mechanical + component tests
-- [ ] 7.1 `apps/web/src/api/inspectable-element.ts` — typed calls + mirrored `InspectableElementErrorCode`.
-- [ ] 7.2 `apps/web/src/inspectable-element/error-messages.ts` — status/code-only map, mirrors `community/error-messages.ts` (spec: "No Server-Message String Coupling").
-- [ ] 7.3 `apps/web/src/inspectable-element/element-type-labels.ts` — `Record<ElementType, string>` label map; a missing entry is a compile error (spec: "Element Type Label Mapping").
-- [ ] 7.4 `apps/web/src/pages/CommunityElementsListPage.tsx` — clones `MaintenanceCompaniesListPage.tsx`; loading/empty/error states; element type rendered via label map, never raw `EXTINGUISHER` (spec: "List Active Elements For a Community").
-- [ ] 7.5 `apps/web/src/pages/InspectableElementCreatePage.tsx` — clones `MaintenanceCompanyCreatePage.tsx`; client validation via the shared schema before any network call (spec: "Create Inspectable Element").
-- [ ] 7.6 `apps/web/src/App.tsx` — list + create nested routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering comment (design Decision 8).
-- [ ] 7.7 `i18n/locales/{en,es,ca}.json` — real `inspectableElement.*` keys (list/create/labels); extend `locales.test.ts` parity guard (spec: "Internationalization Coverage").
+- [x] 7.1 `apps/web/src/api/inspectable-element.ts` — typed calls + mirrored `InspectableElementErrorCode`.
+- [x] 7.2 `apps/web/src/inspectable-element/error-messages.ts` — status/code-only map, mirrors `community/error-messages.ts` (spec: "No Server-Message String Coupling").
+- [x] 7.3 `apps/web/src/inspectable-element/element-type-labels.ts` — `Record<ElementType, string>` label map; a missing entry is a compile error (spec: "Element Type Label Mapping").
+- [x] 7.4 `apps/web/src/pages/CommunityElementsListPage.tsx` — clones `MaintenanceCompaniesListPage.tsx`; loading/empty/error states; element type rendered via label map, never raw `EXTINGUISHER` (spec: "List Active Elements For a Community").
+- [x] 7.5 `apps/web/src/pages/InspectableElementCreatePage.tsx` — clones `MaintenanceCompanyCreatePage.tsx`; client validation via the shared schema before any network call (spec: "Create Inspectable Element").
+- [x] 7.6 `apps/web/src/App.tsx` — list + create nested routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering comment (design Decision 8).
+- [x] 7.7 `i18n/locales/{en,es,ca}.json` — real `inspectableElement.*` keys (list/create/labels); extend `locales.test.ts` parity guard (spec: "Internationalization Coverage").
 
 ## Phase 8: Web — Edit (PR 8)
 - [ ] 8.1 `apps/web/src/pages/InspectableElementEditPage.tsx` — inlined list-and-select (`listInspectableElements` then `.find`), prefilled form, confirmed soft-delete via `ConfirmDialog`, 4 load states (`loading|loaded|not-found|error`) (design Decision 9; spec: "Edit Inspectable Element", "Soft-Delete Inspectable Element").

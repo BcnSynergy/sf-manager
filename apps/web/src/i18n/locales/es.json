@@ -177,6 +177,38 @@
     },
     "unknown": "Empresa de mantenimiento desconocida"
   },
+  "inspectableElement": {
+    "list": {
+      "title": "Elementos inspeccionables",
+      "loading": "Cargando elementos inspeccionables...",
+      "empty": "No hay elementos inspeccionables activos.",
+      "columnType": "Tipo",
+      "columnName": "Nombre",
+      "columnDescription": "Descripción",
+      "columnLocation": "Ubicación",
+      "columnSerialNumber": "Número de serie",
+      "columnInstalledAt": "Fecha de instalación",
+      "createLink": "Nuevo elemento inspeccionable"
+    },
+    "create": {
+      "title": "Nuevo elemento inspeccionable",
+      "typeLabel": "Tipo",
+      "nameLabel": "Nombre",
+      "descriptionLabel": "Descripción (opcional)",
+      "locationLabel": "Ubicación",
+      "serialNumberLabel": "Número de serie (opcional)",
+      "installedAtLabel": "Fecha de instalación",
+      "submitLabel": "Crear elemento inspeccionable",
+      "validationError": "Introduce un tipo, un nombre, una ubicación y una fecha de instalación válidos."
+    },
+    "error": {
+      "validationFailed": "Introduce datos válidos del elemento inspeccionable.",
+      "notFound": "No se ha podido encontrar esta comunidad o este elemento inspeccionable."
+    },
+    "type": {
+      "extinguisher": "Extintor"
+    }
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",

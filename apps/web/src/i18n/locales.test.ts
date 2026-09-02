@@ -196,6 +196,40 @@ describe('locale key-set parity (en/es/ca)', () => {
     'users.error.maintenanceCompanyNotFound',
   ];
 
+  // Existence guard for inspectable-element (Phase 7), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `inspectableElement.*` key path referenced by source in PR7, so a
+  // future PR that adds a new call site without adding its translation
+  // fails here rather than silently rendering the raw key.
+  const REQUIRED_INSPECTABLE_ELEMENT_KEY_PATHS = [
+    // list (Phase 7)
+    'inspectableElement.list.title',
+    'inspectableElement.list.loading',
+    'inspectableElement.list.empty',
+    'inspectableElement.list.columnType',
+    'inspectableElement.list.columnName',
+    'inspectableElement.list.columnDescription',
+    'inspectableElement.list.columnLocation',
+    'inspectableElement.list.columnSerialNumber',
+    'inspectableElement.list.columnInstalledAt',
+    'inspectableElement.list.createLink',
+    // create (Phase 7)
+    'inspectableElement.create.title',
+    'inspectableElement.create.typeLabel',
+    'inspectableElement.create.nameLabel',
+    'inspectableElement.create.descriptionLabel',
+    'inspectableElement.create.locationLabel',
+    'inspectableElement.create.serialNumberLabel',
+    'inspectableElement.create.installedAtLabel',
+    'inspectableElement.create.submitLabel',
+    'inspectableElement.create.validationError',
+    // error-messages.ts mapping targets (Phase 7)
+    'inspectableElement.error.validationFailed',
+    'inspectableElement.error.notFound',
+    // element-type-labels.ts mapping targets (Phase 7)
+    'inspectableElement.type.extinguisher',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -234,6 +268,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_USER_MAINTENANCE_COMPANY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_INSPECTABLE_ELEMENT_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

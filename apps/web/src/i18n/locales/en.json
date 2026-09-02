@@ -177,6 +177,38 @@
     },
     "unknown": "Unknown maintenance company"
   },
+  "inspectableElement": {
+    "list": {
+      "title": "Inspectable elements",
+      "loading": "Loading inspectable elements...",
+      "empty": "No active inspectable elements found.",
+      "columnType": "Type",
+      "columnName": "Name",
+      "columnDescription": "Description",
+      "columnLocation": "Location",
+      "columnSerialNumber": "Serial number",
+      "columnInstalledAt": "Installed on",
+      "createLink": "New inspectable element"
+    },
+    "create": {
+      "title": "New inspectable element",
+      "typeLabel": "Type",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description (optional)",
+      "locationLabel": "Location",
+      "serialNumberLabel": "Serial number (optional)",
+      "installedAtLabel": "Installed on",
+      "submitLabel": "Create inspectable element",
+      "validationError": "Enter a valid type, name, location, and installation date."
+    },
+    "error": {
+      "validationFailed": "Enter valid inspectable element details.",
+      "notFound": "This community or inspectable element could not be found."
+    },
+    "type": {
+      "extinguisher": "Fire extinguisher"
+    }
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",

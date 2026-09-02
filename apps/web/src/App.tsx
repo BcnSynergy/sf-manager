@@ -5,7 +5,9 @@ import { CommunitiesListPage } from './pages/CommunitiesListPage';
 import { CommunityCreatePage } from './pages/CommunityCreatePage';
 import { CommunityDetailPage } from './pages/CommunityDetailPage';
 import { CommunityEditPage } from './pages/CommunityEditPage';
+import { CommunityElementsListPage } from './pages/CommunityElementsListPage';
 import { HealthPage } from './pages/HealthPage';
+import { InspectableElementCreatePage } from './pages/InspectableElementCreatePage';
 import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
@@ -96,6 +98,36 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <CommunityEditPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 8: nested under the community, same
+              `inspectable-elements` segment on the API and the web (Open
+              Question 3 — no fork). This depth-3 route (:communityId is
+              dynamic, `inspectable-elements` is a literal) never conflicts
+              with `/communities/:id`/`/communities/:id/edit` above — those
+              match on `:id` alone at depth 2/3 with no third literal
+              segment, so Express/React Router never confuses the two
+              families regardless of declaration order. */}
+          <Route
+            path="/communities/:communityId/inspectable-elements"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <CommunityElementsListPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 8 (React Router ordering note): the static
+              `new` segment ranks above a dynamic segment regardless of
+              declaration order, and the future `:elementId/edit` route
+              (Phase 8) is depth 5 while this is depth 4 — no URL can match
+              both, so no ordering conflict exists or will exist once it
+              lands. */}
+          <Route
+            path="/communities/:communityId/inspectable-elements/new"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <InspectableElementCreatePage />
               </ProtectedRoute>
             }
           />
