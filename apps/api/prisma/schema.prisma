@@ -184,3 +184,33 @@ model InspectableElement {
   // (design.md Decision 6) filters on exactly this column.
   @@index([communityId])
 }
+
+// checklist-management/design.md Decision 1: the TypeScript union in
+// `checklist-question/domain/review-frequency.ts` is authoritative; this
+// enum is its persistence projection only, mirroring `ElementType`'s
+// precedent. A parity integration spec (PR4) asserts this enum, the domain
+// union and the Zod schema all agree.
+enum ReviewFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+// checklist-management/design.md: global admin content pool, not
+// community-scoped — flat `/checklist-questions` routes, no community FK.
+// Entity shape is exactly id, elementType, frequencies, text, deletedAt —
+// no help text, no RIPCI clause reference, no required/optional flag, no
+// pool-level `order`, no separate `active` retire flag (deferred;
+// `deletedAt` is the sole off state, ADR-010).
+//
+// checklist-management/design.md Decision 1: `frequencies` is a Postgres
+// enum ARRAY, not a join table — a tag set with no attributes of its own,
+// always read whole.
+model ChecklistQuestion {
+  id          String            @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  elementType ElementType
+  frequencies ReviewFrequency[]
+  text        String // admin free text, rendered verbatim, never t()
+  deletedAt   DateTime? // ADR-010
+}
