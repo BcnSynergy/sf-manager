@@ -201,6 +201,21 @@
       "submitLabel": "Crear elemento inspeccionable",
       "validationError": "Introduce un tipo, un nombre, una ubicación y una fecha de instalación válidos."
     },
+    "edit": {
+      "title": "Editar elemento inspeccionable",
+      "typeLabel": "Tipo",
+      "nameLabel": "Nombre",
+      "descriptionLabel": "Descripción (opcional)",
+      "locationLabel": "Ubicación",
+      "serialNumberLabel": "Número de serie (opcional)",
+      "installedAtLabel": "Fecha de instalación",
+      "submitLabel": "Guardar cambios",
+      "validationError": "Introduce datos válidos del elemento inspeccionable.",
+      "notFound": "No se ha podido encontrar este elemento inspeccionable.",
+      "deleteLabel": "Eliminar elemento inspeccionable",
+      "deleteConfirmTitle": "Eliminar elemento inspeccionable",
+      "deleteConfirmMessage": "Este elemento inspeccionable se eliminará. Esta acción no se puede deshacer."
+    },
     "error": {
       "validationFailed": "Introduce datos válidos del elemento inspeccionable.",
       "notFound": "No se ha podido encontrar esta comunidad o este elemento inspeccionable."

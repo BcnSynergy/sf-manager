@@ -228,6 +228,20 @@ describe('locale key-set parity (en/es/ca)', () => {
     'inspectableElement.error.notFound',
     // element-type-labels.ts mapping targets (Phase 7)
     'inspectableElement.type.extinguisher',
+    // edit (Phase 8)
+    'inspectableElement.edit.title',
+    'inspectableElement.edit.typeLabel',
+    'inspectableElement.edit.nameLabel',
+    'inspectableElement.edit.descriptionLabel',
+    'inspectableElement.edit.locationLabel',
+    'inspectableElement.edit.serialNumberLabel',
+    'inspectableElement.edit.installedAtLabel',
+    'inspectableElement.edit.submitLabel',
+    'inspectableElement.edit.validationError',
+    'inspectableElement.edit.notFound',
+    'inspectableElement.edit.deleteLabel',
+    'inspectableElement.edit.deleteConfirmTitle',
+    'inspectableElement.edit.deleteConfirmMessage',
   ];
 
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
