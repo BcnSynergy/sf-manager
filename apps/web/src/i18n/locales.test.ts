@@ -115,6 +115,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     'community.detail.addressLabel',
     'community.detail.localeLabel',
     'community.detail.notFound',
+    // detail nav-link to inspectable elements (Phase 9)
+    'community.detail.elementsLink',
     // representatives / technicians AssignmentSection keys (Phase 7)
     'community.representatives.title',
     'community.representatives.empty',

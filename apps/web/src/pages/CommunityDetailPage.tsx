@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import {
   addRepresentative,
   addTechnician,
@@ -99,6 +99,19 @@ export function CommunityDetailPage() {
           <dt>{t('community.detail.localeLabel')}</dt>
           <dd data-testid="community-detail-locale">{t(mapLocaleToLabelKey(community.locale))}</dd>
         </dl>
+      )}
+
+      {/* design.md Decision 9 — this Link is CommunityDetailPage's only
+          sanctioned change for the inspectable-elements slice; the elements
+          list is a distinct, community-scoped route, never a standalone one
+          (spec.md "Navigation to Inspectable Elements"). */}
+      {loadState === 'loaded' && community && id !== undefined && (
+        <Link
+          to={`/communities/${id}/inspectable-elements`}
+          data-testid="community-detail-elements-link"
+        >
+          {t('community.detail.elementsLink')}
+        </Link>
       )}
 
       {id !== undefined && loadState !== 'not-found' && (

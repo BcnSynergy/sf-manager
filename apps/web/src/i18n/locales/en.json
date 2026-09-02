@@ -119,7 +119,8 @@
       "nameLabel": "Name",
       "addressLabel": "Address",
       "localeLabel": "Locale",
-      "notFound": "This community could not be found."
+      "notFound": "This community could not be found.",
+      "elementsLink": "View inspectable elements"
     },
     "representatives": {
       "title": "Representatives",

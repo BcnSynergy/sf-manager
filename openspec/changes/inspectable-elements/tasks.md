@@ -93,7 +93,7 @@ Chain strategy: stacked-to-main
 - [x] 8.2 `apps/web/src/App.tsx` — edit route (`/communities/:communityId/inspectable-elements/:elementId/edit`), static-before-dynamic ordering preserved.
 
 ## Phase 9: Community Nav-Link (PR 9)
-- [ ] 9.1 `apps/web/src/pages/CommunityDetailPage.tsx` — one `<Link>` to the community's inspectable elements, its only sanctioned change (spec: community-admin-ui "Navigation to Inspectable Elements").
+- [x] 9.1 `apps/web/src/pages/CommunityDetailPage.tsx` — one `<Link>` to the community's inspectable elements, its only sanctioned change (spec: community-admin-ui "Navigation to Inspectable Elements").
 
 ## Phase 10: E2E — Inspectable Element CRUD, Community Delete-Guard, RBAC (PR 10)
 - [ ] 10.1 `apps/api/test/inspectable-element.e2e-spec.ts` — full lifecycle (create/list/update/delete); element under A never listed under B; create under unknown/soft-deleted community → 404 `COMMUNITY_NOT_FOUND`, no row written; PATCH/DELETE cross-community → 404 `INSPECTABLE_ELEMENT_NOT_FOUND`; two identical name+location accepted; duplicate/absent `serialNumber` accepted; soft-deleted element absent from list.
