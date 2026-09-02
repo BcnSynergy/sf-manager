@@ -18,3 +18,4 @@ export * from './users/create-user.schema';
 export * from './users/update-user.schema';
 export * from './community/community.schema';
 export * from './maintenance-company/maintenance-company.schema';
+export * from './inspectable-element/inspectable-element.schema';
