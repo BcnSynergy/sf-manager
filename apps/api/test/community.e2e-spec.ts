@@ -17,7 +17,13 @@ import {
 import { COMMUNITY_REPOSITORY } from '../src/modules/community/application/ports/community.repository.port';
 import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from '../src/modules/community/application/ports/community-representative.repository.port';
 import { COMMUNITY_TECHNICIAN_REPOSITORY } from '../src/modules/community/application/ports/community-technician.repository.port';
+import {
+  INSPECTABLE_ELEMENT_COUNTER,
+  type InspectableElementCounter,
+} from '../src/modules/community/application/ports/inspectable-element-counter.port';
 import { InMemoryCommunityRepository } from '../src/modules/community/application/use-cases/testing/in-memory-community.repository';
+import { INSPECTABLE_ELEMENT_REPOSITORY } from '../src/modules/inspectable-element/application/ports/inspectable-element.repository.port';
+import { InMemoryInspectableElementRepository } from '../src/modules/inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
 import { InMemoryCommunityRepresentativeRepository } from '../src/modules/community/application/use-cases/testing/in-memory-community-representative.repository';
 import { InMemoryCommunityTechnicianRepository } from '../src/modules/community/application/use-cases/testing/in-memory-community-technician.repository';
 import {
@@ -53,6 +59,32 @@ class InMemoryTokenDenylist implements TokenDenylist {
 
   deleteExpired(): Promise<void> {
     return Promise.resolve();
+  }
+}
+
+// inspectable-elements/design.md Decision 4 + tasks.md 10.3: reads from the
+// SAME in-memory element repository the delete-guard tests create elements
+// through (via the real POST /communities/:communityId/inspectable-elements
+// route), so DELETE /communities/:id exercises the real
+// SoftDeleteCommunityUseCase -> InspectableElementCounter -> policy chain
+// end to end. Without this override, INSPECTABLE_ELEMENT_COUNTER resolves to
+// the default PrismaInspectableElementCounter, which crashes against the
+// PrismaService stub below (no real DB in this hermetic suite) — this was a
+// latent gap in buildApp: EVERY existing DELETE /communities/:id e2e call
+// broke this way as soon as SoftDeleteCommunityUseCase started depending on
+// INSPECTABLE_ELEMENT_COUNTER (Phase 3 / PR #59), silently failing the
+// "Soft-delete cascade to representative" tests below with a 500 instead of
+// 204. Confirmed via `npx jest community.e2e-spec.ts` on main before this
+// fix; the fix is test-infrastructure only, no apps/api/src change.
+class InMemoryInspectableElementCounter implements InspectableElementCounter {
+  constructor(
+    private readonly elementRepository: InMemoryInspectableElementRepository,
+  ) {}
+
+  async countActiveByCommunity(communityId: string): Promise<number> {
+    const elements =
+      await this.elementRepository.findAllByCommunity(communityId);
+    return elements.length;
   }
 }
 
@@ -148,6 +180,7 @@ async function buildApp(seed: {
   communityRepository: InMemoryCommunityRepository;
   representativeRepository: InMemoryCommunityRepresentativeRepository;
   technicianRepository: InMemoryCommunityTechnicianRepository;
+  elementRepository: InMemoryInspectableElementRepository;
 }> {
   const userRepository = new InMemoryUserRepository();
   for (const user of seed.users ?? []) {
@@ -170,6 +203,11 @@ async function buildApp(seed: {
     technicianRepository.seed(technician);
   }
 
+  const elementRepository = new InMemoryInspectableElementRepository();
+  const elementCounter = new InMemoryInspectableElementCounter(
+    elementRepository,
+  );
+
   const tokenDenylist = new InMemoryTokenDenylist();
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -185,6 +223,10 @@ async function buildApp(seed: {
     .useValue(representativeRepository)
     .overrideProvider(COMMUNITY_TECHNICIAN_REPOSITORY)
     .useValue(technicianRepository)
+    .overrideProvider(INSPECTABLE_ELEMENT_REPOSITORY)
+    .useValue(elementRepository)
+    .overrideProvider(INSPECTABLE_ELEMENT_COUNTER)
+    .useValue(elementCounter)
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
@@ -202,6 +244,7 @@ async function buildApp(seed: {
     communityRepository,
     representativeRepository,
     technicianRepository,
+    elementRepository,
   };
 }
 
@@ -1196,6 +1239,176 @@ describe('Communities (e2e)', () => {
         }>
       ).find((entry) => entry.userId === 'multi-tech-a-id');
       expect(activeC2?.deactivatedAt).toBeNull();
+    });
+  });
+
+  describe('Delete blocked by active inspectable elements (tasks.md 10.3, community-management spec: Soft-Delete Community)', () => {
+    let app: INestApplication<App>;
+    let communityRepository: InMemoryCommunityRepository;
+    const adminEmail = 'ie-block-admin@example.com';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'ie-block-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      ({ app, communityRepository } = await buildApp({ users: [admin] }));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('refuses to delete a community with an active element attached, deletedAt stays null, no element is modified (spec: Delete refused while an active element is attached)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const community = await agent
+        .post('/communities')
+        .send({
+          name: 'Blocked Community',
+          address: '1 Blocked Ave',
+          locale: 'en',
+        })
+        .expect(201);
+      const communityId = (community.body as { id: string }).id;
+
+      const createdElement = await agent
+        .post(`/communities/${communityId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Extintor bloque',
+          location: 'Portal 1',
+          installedAt: '2026-01-10',
+        })
+        .expect(201);
+      const elementId = (createdElement.body as { id: string }).id;
+
+      const response = await agent
+        .delete(`/communities/${communityId}`)
+        .expect(409);
+
+      // tasks.md 10.3: body.code asserted for COMMUNITY_HAS_ACTIVE_ELEMENTS.
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        code: 'COMMUNITY_HAS_ACTIVE_ELEMENTS',
+      });
+      expect(typeof (response.body as { message: unknown }).message).toBe(
+        'string',
+      );
+
+      // Community's deletedAt MUST remain null.
+      const communityAfterAttempt =
+        await communityRepository.findById(communityId);
+      expect(communityAfterAttempt).not.toBeNull();
+      expect(communityAfterAttempt?.deletedAt).toBeNull();
+
+      // A refused delete attempt MUST NOT modify any element record.
+      const elementsAfterAttempt = await agent
+        .get(`/communities/${communityId}/inspectable-elements`)
+        .expect(200);
+      const elementAfterAttempt = (
+        elementsAfterAttempt.body as Array<{
+          id: string;
+          name: string;
+          location: string;
+        }>
+      ).find((element) => element.id === elementId);
+      expect(elementAfterAttempt).toMatchObject({
+        id: elementId,
+        name: 'Extintor bloque',
+        location: 'Portal 1',
+      });
+    });
+
+    it('succeeds once every active element has been soft-deleted (spec: Delete succeeds after soft-deleting every active element)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const community = await agent
+        .post('/communities')
+        .send({
+          name: 'Clearable Community',
+          address: '2 Clearable Ave',
+          locale: 'en',
+        })
+        .expect(201);
+      const communityId = (community.body as { id: string }).id;
+
+      const elementA = await agent
+        .post(`/communities/${communityId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Extintor A',
+          location: 'Zone A',
+          installedAt: '2026-01-10',
+        })
+        .expect(201);
+      const elementB = await agent
+        .post(`/communities/${communityId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Extintor B',
+          location: 'Zone B',
+          installedAt: '2026-01-10',
+        })
+        .expect(201);
+
+      await agent.delete(`/communities/${communityId}`).expect(409);
+
+      await agent
+        .delete(
+          `/communities/${communityId}/inspectable-elements/${(elementA.body as { id: string }).id}`,
+        )
+        .expect(204);
+      await agent
+        .delete(
+          `/communities/${communityId}/inspectable-elements/${(elementB.body as { id: string }).id}`,
+        )
+        .expect(204);
+
+      await agent.delete(`/communities/${communityId}`).expect(204);
+
+      const communityAfterDelete =
+        await communityRepository.findById(communityId);
+      expect(communityAfterDelete).toBeNull();
+    });
+
+    it('succeeds when the community only has soft-deleted elements attached (spec: Soft-deleted elements do not block deletion)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const community = await agent
+        .post('/communities')
+        .send({
+          name: 'Pre-cleared Community',
+          address: '3 Pre-cleared Ave',
+          locale: 'en',
+        })
+        .expect(201);
+      const communityId = (community.body as { id: string }).id;
+
+      const element = await agent
+        .post(`/communities/${communityId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Extintor pre-cleared',
+          location: 'Zone C',
+          installedAt: '2026-01-10',
+        })
+        .expect(201);
+
+      // The element is soft-deleted BEFORE any delete attempt on the
+      // community — it must never have counted against the block.
+      await agent
+        .delete(
+          `/communities/${communityId}/inspectable-elements/${(element.body as { id: string }).id}`,
+        )
+        .expect(204);
+
+      await agent.delete(`/communities/${communityId}`).expect(204);
+
+      const communityAfterDelete =
+        await communityRepository.findById(communityId);
+      expect(communityAfterDelete).toBeNull();
     });
   });
 });
