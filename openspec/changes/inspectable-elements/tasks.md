@@ -71,13 +71,13 @@ Chain strategy: stacked-to-main
 - [x] 5.7 `packages/validation/src/inspectable-element/inspectable-element.schema.ts` + `src/index.ts` — `elementTypeSchema`, `createInspectableElementSchema`, `updateInspectableElementSchema` (`z.iso.date()`, trim, `.nullable()` on update for `description`/`serialNumber`). Mechanical, no dedicated RED/GREEN — package has no test harness (precedent: `maintenance-company` Phase 6.3). **Also closed the Phase 2 deferred gate**: `domain/element-type.ts` now imports `ElementType as ValidatedElementType` from `@sf-manager/validation` and wires `as const satisfies readonly ValidatedElementType[]` (design Decision 1).
 
 ## Phase 6: Inspectable Element Infrastructure + Presentation (PR 6) — mechanical + integration specs
-- [ ] 6.1 `infrastructure/persistence/prisma-inspectable-element.repository.ts` (extends `SoftDeletableRepository`) + `inspectable-element.mapper.ts` — direct-assignment `elementType` mapping, no cast, no switch (design Decision 1).
-- [ ] 6.2 Integration: `infrastructure/persistence/element-type-parity.integration.spec.ts` — asserts `[...ELEMENT_TYPES]`, `Object.values($Enums.ElementType)`, and `[...elementTypeSchema.options]` all agree when sorted.
-- [ ] 6.3 Integration: migration guard spec — hand-written FK present in `pg_constraint` (`ON DELETE RESTRICT`), `communityId` index in `pg_indexes`, the 5 pre-existing FKs still survive, `installedAt` column type is `date`.
-- [ ] 6.4 `presentation/inspectable-element.controller.ts` + `dto/**` + Swagger — 4 routes nested under `communities/:communityId/inspectable-elements`, ordering-rationale comment (design Decision 8); uses `buildCodedError`.
-- [ ] 6.5 `presentation/inspectable-element-error-code.ts` — exactly 2 values (`COMMUNITY_NOT_FOUND`, `INSPECTABLE_ELEMENT_NOT_FOUND`).
-- [ ] 6.6 `shared/presentation/http/coded-error.ts` — widen `CodedErrorStatus` with `NOT_FOUND: 'Not Found'` (design Decision 7, reported finding, additive-only, already covered by `coded-error.spec.ts`).
-- [ ] 6.7 `inspectable-element.module.ts` — imports `CommunityModule` for `COMMUNITY_REPOSITORY` (design Decision 4); register in `app.module.ts`.
+- [x] 6.1 `infrastructure/persistence/prisma-inspectable-element.repository.ts` (extends `SoftDeletableRepository`) + `inspectable-element.mapper.ts` — direct-assignment `elementType` mapping, no cast, no switch (design Decision 1).
+- [x] 6.2 Integration: `infrastructure/persistence/element-type-parity.integration.spec.ts` — asserts `[...ELEMENT_TYPES]`, `Object.values($Enums.ElementType)`, and `[...elementTypeSchema.options]` all agree when sorted.
+- [x] 6.3 Integration: migration guard spec — hand-written FK present in `pg_constraint` (`ON DELETE RESTRICT`), `communityId` index in `pg_indexes`, the 5 pre-existing FKs still survive, `installedAt` column type is `date`.
+- [x] 6.4 `presentation/inspectable-element.controller.ts` + `dto/**` + Swagger — 4 routes nested under `communities/:communityId/inspectable-elements`, ordering-rationale comment (design Decision 8); uses `buildCodedError`.
+- [x] 6.5 `presentation/inspectable-element-error-code.ts` — exactly 2 values (`COMMUNITY_NOT_FOUND`, `INSPECTABLE_ELEMENT_NOT_FOUND`).
+- [x] 6.6 `shared/presentation/http/coded-error.ts` — widen `CodedErrorStatus` with `NOT_FOUND: 'Not Found'` (design Decision 7, reported finding, additive-only, already covered by `coded-error.spec.ts`).
+- [x] 6.7 `inspectable-element.module.ts` — imports `CommunityModule` for `COMMUNITY_REPOSITORY` (design Decision 4); register in `app.module.ts`.
 
 ## Phase 7: Web — List + Create (PR 7) — mechanical + component tests
 - [ ] 7.1 `apps/web/src/api/inspectable-element.ts` — typed calls + mirrored `InspectableElementErrorCode`.
