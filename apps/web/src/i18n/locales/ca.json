@@ -177,6 +177,38 @@
     },
     "unknown": "Empresa de manteniment desconeguda"
   },
+  "inspectableElement": {
+    "list": {
+      "title": "Elements inspeccionables",
+      "loading": "Carregant elements inspeccionables...",
+      "empty": "No hi ha elements inspeccionables actius.",
+      "columnType": "Tipus",
+      "columnName": "Nom",
+      "columnDescription": "Descripció",
+      "columnLocation": "Ubicació",
+      "columnSerialNumber": "Número de sèrie",
+      "columnInstalledAt": "Data d'instal·lació",
+      "createLink": "Element inspeccionable nou"
+    },
+    "create": {
+      "title": "Element inspeccionable nou",
+      "typeLabel": "Tipus",
+      "nameLabel": "Nom",
+      "descriptionLabel": "Descripció (opcional)",
+      "locationLabel": "Ubicació",
+      "serialNumberLabel": "Número de sèrie (opcional)",
+      "installedAtLabel": "Data d'instal·lació",
+      "submitLabel": "Crea l'element inspeccionable",
+      "validationError": "Introdueix un tipus, un nom, una ubicació i una data d'instal·lació vàlids."
+    },
+    "error": {
+      "validationFailed": "Introdueix dades vàlides de l'element inspeccionable.",
+      "notFound": "No s'ha pogut trobar aquesta comunitat o aquest element inspeccionable."
+    },
+    "type": {
+      "extinguisher": "Extintor"
+    }
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",
