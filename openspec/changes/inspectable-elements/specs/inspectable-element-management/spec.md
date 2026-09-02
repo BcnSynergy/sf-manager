@@ -80,9 +80,11 @@ list.
 ### Requirement: Update Inspectable Element
 
 The system MUST allow an authenticated `SYSTEM_ADMIN` to update an
-existing element's `elementType`, `name`, `description`, `location`,
-`serialNumber`, and/or `installedAt` by `communityId` and element id
-together. The system MUST verify the parent community exists and is
+existing element's `name`, `description`, `location`, `serialNumber`,
+and/or `installedAt` by `communityId` and element id together.
+`elementType` and `communityId` are NOT updatable — an element never
+moves between communities and never changes type in this slice. The
+system MUST verify the parent community exists and is
 not soft-deleted (otherwise 404 `code: COMMUNITY_NOT_FOUND`), and
 that the element exists, is not soft-deleted, and belongs to that
 exact `communityId` (otherwise 404 `code:
