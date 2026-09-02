@@ -6,6 +6,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommunityModule } from './modules/community/community.module';
 import { MaintenanceCompanyModule } from './modules/maintenance-company/maintenance-company.module';
+import { InspectableElementModule } from './modules/inspectable-element/inspectable-element.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -17,6 +18,9 @@ import { MaintenanceCompanyModule } from './modules/maintenance-company/maintena
 // CRUD surface behind the same global AuthenticatedGuard/PermissionsGuard.
 // MaintenanceCompanyModule (maintenance-company PR 8) registers the
 // admin-only /maintenance-companies CRUD surface the same way.
+// InspectableElementModule (inspectable-elements PR 6) registers the
+// admin-only /communities/:communityId/inspectable-elements CRUD surface,
+// importing CommunityModule for COMMUNITY_REPOSITORY (design.md Decision 4).
 @Module({
   imports: [
     PrismaModule,
@@ -25,6 +29,7 @@ import { MaintenanceCompanyModule } from './modules/maintenance-company/maintena
     AuthModule,
     CommunityModule,
     MaintenanceCompanyModule,
+    InspectableElementModule,
     HealthModule,
   ],
 })
