@@ -89,8 +89,8 @@ Chain strategy: stacked-to-main
 - [x] 7.7 `i18n/locales/{en,es,ca}.json` — real `inspectableElement.*` keys (list/create/labels); extend `locales.test.ts` parity guard (spec: "Internationalization Coverage").
 
 ## Phase 8: Web — Edit (PR 8)
-- [ ] 8.1 `apps/web/src/pages/InspectableElementEditPage.tsx` — inlined list-and-select (`listInspectableElements` then `.find`), prefilled form, confirmed soft-delete via `ConfirmDialog`, 4 load states (`loading|loaded|not-found|error`) (design Decision 9; spec: "Edit Inspectable Element", "Soft-Delete Inspectable Element").
-- [ ] 8.2 `apps/web/src/App.tsx` — edit route (`/communities/:communityId/inspectable-elements/:elementId/edit`), static-before-dynamic ordering preserved.
+- [x] 8.1 `apps/web/src/pages/InspectableElementEditPage.tsx` — inlined list-and-select (`listInspectableElements` then `.find`), prefilled form, confirmed soft-delete via `ConfirmDialog`, 4 load states (`loading|loaded|not-found|error`) (design Decision 9; spec: "Edit Inspectable Element", "Soft-Delete Inspectable Element").
+- [x] 8.2 `apps/web/src/App.tsx` — edit route (`/communities/:communityId/inspectable-elements/:elementId/edit`), static-before-dynamic ordering preserved.
 
 ## Phase 9: Community Nav-Link (PR 9)
 - [ ] 9.1 `apps/web/src/pages/CommunityDetailPage.tsx` — one `<Link>` to the community's inspectable elements, its only sanctioned change (spec: community-admin-ui "Navigation to Inspectable Elements").

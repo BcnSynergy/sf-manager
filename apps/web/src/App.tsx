@@ -8,6 +8,7 @@ import { CommunityEditPage } from './pages/CommunityEditPage';
 import { CommunityElementsListPage } from './pages/CommunityElementsListPage';
 import { HealthPage } from './pages/HealthPage';
 import { InspectableElementCreatePage } from './pages/InspectableElementCreatePage';
+import { InspectableElementEditPage } from './pages/InspectableElementEditPage';
 import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
@@ -119,15 +120,29 @@ function App() {
           />
           {/* design.md Decision 8 (React Router ordering note): the static
               `new` segment ranks above a dynamic segment regardless of
-              declaration order, and the future `:elementId/edit` route
-              (Phase 8) is depth 5 while this is depth 4 — no URL can match
-              both, so no ordering conflict exists or will exist once it
-              lands. */}
+              declaration order, and the `:elementId/edit` route below is
+              depth 5 while this is depth 4 — no URL can match both, so no
+              ordering conflict exists. */}
           <Route
             path="/communities/:communityId/inspectable-elements/new"
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <InspectableElementCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 8 (React Router ordering note, same
+              reasoning as the static `new` segment above): this depth-5
+              dynamic route never conflicts with the depth-4 static `new`
+              route above regardless of declaration order (React Router
+              matches static segments first), and it never conflicts with
+              `/communities/:id`/`/communities/:id/edit` for the same reason
+              the list/create routes above do not. */}
+          <Route
+            path="/communities/:communityId/inspectable-elements/:elementId/edit"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <InspectableElementEditPage />
               </ProtectedRoute>
             }
           />

@@ -201,6 +201,21 @@
       "submitLabel": "Create inspectable element",
       "validationError": "Enter a valid type, name, location, and installation date."
     },
+    "edit": {
+      "title": "Edit inspectable element",
+      "typeLabel": "Type",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description (optional)",
+      "locationLabel": "Location",
+      "serialNumberLabel": "Serial number (optional)",
+      "installedAtLabel": "Installed on",
+      "submitLabel": "Save changes",
+      "validationError": "Enter valid inspectable element details.",
+      "notFound": "This inspectable element could not be found.",
+      "deleteLabel": "Delete inspectable element",
+      "deleteConfirmTitle": "Delete inspectable element",
+      "deleteConfirmMessage": "This inspectable element will be removed. This cannot be undone."
+    },
     "error": {
       "validationFailed": "Enter valid inspectable element details.",
       "notFound": "This community or inspectable element could not be found."

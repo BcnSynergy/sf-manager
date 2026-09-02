@@ -201,6 +201,21 @@
       "submitLabel": "Crea l'element inspeccionable",
       "validationError": "Introdueix un tipus, un nom, una ubicació i una data d'instal·lació vàlids."
     },
+    "edit": {
+      "title": "Edita l'element inspeccionable",
+      "typeLabel": "Tipus",
+      "nameLabel": "Nom",
+      "descriptionLabel": "Descripció (opcional)",
+      "locationLabel": "Ubicació",
+      "serialNumberLabel": "Número de sèrie (opcional)",
+      "installedAtLabel": "Data d'instal·lació",
+      "submitLabel": "Desa els canvis",
+      "validationError": "Introdueix dades vàlides de l'element inspeccionable.",
+      "notFound": "No s'ha pogut trobar aquest element inspeccionable.",
+      "deleteLabel": "Elimina l'element inspeccionable",
+      "deleteConfirmTitle": "Elimina l'element inspeccionable",
+      "deleteConfirmMessage": "Aquest element inspeccionable s'eliminarà. Aquesta acció no es pot desfer."
+    },
     "error": {
       "validationFailed": "Introdueix dades vàlides de l'element inspeccionable.",
       "notFound": "No s'ha pogut trobar aquesta comunitat o aquest element inspeccionable."
