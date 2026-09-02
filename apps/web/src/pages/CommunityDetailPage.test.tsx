@@ -65,6 +65,24 @@ describe('CommunityDetailPage', () => {
     expect(screen.getByTestId('community-detail-locale')).not.toHaveTextContent('en');
   });
 
+  it('links to the community-scoped inspectable elements list once loaded', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage(communityA.id);
+
+    const link = await screen.findByTestId('community-detail-elements-link');
+    expect(link).toHaveAttribute('href', `/communities/${communityA.id}/inspectable-elements`);
+  });
+
+  it('does not render the elements link when the community is not found', async () => {
+    mockedListCommunities.mockResolvedValue([]);
+
+    renderPage(communityA.id);
+
+    await screen.findByTestId('community-detail-not-found');
+    expect(screen.queryByTestId('community-detail-elements-link')).not.toBeInTheDocument();
+  });
+
   it('fetches representatives and technicians independently, not waiting on the community fetch', async () => {
     // The community fetch never resolves; the two assignment lists still do —
     // proving they are independent parallel requests, not sequenced/Promise.all'd

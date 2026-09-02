@@ -119,7 +119,8 @@
       "nameLabel": "Nom",
       "addressLabel": "Adreça",
       "localeLabel": "Idioma",
-      "notFound": "No s'ha pogut trobar aquesta comunitat."
+      "notFound": "No s'ha pogut trobar aquesta comunitat.",
+      "elementsLink": "Veure elements inspeccionables"
     },
     "representatives": {
       "title": "Representants",
