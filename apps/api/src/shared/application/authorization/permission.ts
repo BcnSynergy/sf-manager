@@ -17,6 +17,14 @@
 // with managerCapabilities) can grant read without granting delete
 // (design.md Routes). All four are granted only on the SYSTEM_ADMIN row of
 // ROLE_PERMISSIONS — see "Maintenance-Role Permissions Stay Inert".
+//
+// inspectableElement:* — inspectable-elements/authorization spec "Permission
+// Check on Inspectable Element Endpoints" (PR 4): governs every
+// /communities/:communityId/inspectable-elements route. Four separate
+// permissions rather than one, mirroring community:*/maintenanceCompany:*'s
+// granularity (design.md Decision 8), so a future MANAGER slice can grant
+// read without granting delete. All four are granted only on the
+// SYSTEM_ADMIN row of ROLE_PERMISSIONS.
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -30,4 +38,8 @@ export type Permission =
   | 'maintenanceCompany:create'
   | 'maintenanceCompany:read'
   | 'maintenanceCompany:update'
-  | 'maintenanceCompany:delete';
+  | 'maintenanceCompany:delete'
+  | 'inspectableElement:create'
+  | 'inspectableElement:read'
+  | 'inspectableElement:update'
+  | 'inspectableElement:delete';

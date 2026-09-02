@@ -23,6 +23,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'maintenanceCompany:read',
     'maintenanceCompany:update',
     'maintenanceCompany:delete',
+    'inspectableElement:create',
+    'inspectableElement:read',
+    'inspectableElement:update',
+    'inspectableElement:delete',
   ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to

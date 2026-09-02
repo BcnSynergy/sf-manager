@@ -58,8 +58,8 @@ Chain strategy: stacked-to-main
 - [x] 3.12 Web mirror (design Finding 4): `apps/web/src/api/community.ts` — `CommunityErrorCode` gains `COMMUNITY_HAS_ACTIVE_ELEMENTS`; `apps/web/src/community/error-messages.ts` — new key forced by `Record<CommunityErrorCode, string>`; `i18n/locales/{en,es,ca}.json` — real `community.error.hasActiveElements` translations. `CommunitiesListPage.tsx` itself needs zero changes.
 
 ## Phase 4: Authorization (PR 4) — mechanical + spec extension
-- [ ] 4.1 `shared/application/authorization/permission.ts` — add `inspectableElement:create|read|update|delete` (spec: authorization "Permission Check on Inspectable Element Endpoints").
-- [ ] 4.2 RED/GREEN `role-permission.checker.ts` spec — extend the existing exhaustive `ALL_PERMISSIONS x NON_ADMIN_ROLES` table with the 4 new permissions; `SYSTEM_ADMIN` gets all 4, the other 4 roles stay `[]`.
+- [x] 4.1 `shared/application/authorization/permission.ts` — add `inspectableElement:create|read|update|delete` (spec: authorization "Permission Check on Inspectable Element Endpoints").
+- [x] 4.2 RED/GREEN `role-permission.checker.ts` spec — extend the existing exhaustive `ALL_PERMISSIONS x NON_ADMIN_ROLES` table with the 4 new permissions; `SYSTEM_ADMIN` gets all 4, the other 4 roles stay `[]`.
 
 ## Phase 5: Inspectable Element Application (PR 5) — Strict TDD
 - [ ] 5.1 `application/ports/inspectable-element.repository.port.ts` — `Symbol` token; `create`/`findByIdInCommunity`/`findAllByCommunity`/`updateById`/`softDeleteById`. **No** `countActiveByCommunity` (design Decision 4), **no** `transactional()` (mechanical interface).

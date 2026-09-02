@@ -23,6 +23,12 @@ import { RolePermissionChecker } from './role-permission.checker';
 // grant either role any API permission, including on the very resource the
 // id references. The exhaustive matrix below (every NON_ADMIN_ROLES x
 // ALL_PERMISSIONS pair) is the non-escalation regression test.
+//
+// inspectableElement:* permissions (PR 4, inspectable-elements/authorization
+// spec.md "Permission Check on Inspectable Element Endpoints"): SYSTEM_ADMIN
+// is the only role permitted on any
+// /communities/:communityId/inspectable-elements route; the other 4 roles
+// stay [].
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -40,6 +46,10 @@ describe('RolePermissionChecker', () => {
     'maintenanceCompany:read',
     'maintenanceCompany:update',
     'maintenanceCompany:delete',
+    'inspectableElement:create',
+    'inspectableElement:read',
+    'inspectableElement:update',
+    'inspectableElement:delete',
   ];
 
   const NON_ADMIN_ROLES: Role[] = [
