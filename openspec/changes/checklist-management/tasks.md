@@ -85,15 +85,15 @@ Chain strategy: stacked-to-main
 - [x] 7.5 Wire the cleaner into `soft-delete-checklist-question.use-case.ts`, gated on `wasDeleted === true` (spec: "Deletion removes the question from drafts").
 
 ## Phase 8: Review Template Application + Validation (PR 8) — Strict TDD
-- [ ] 8.1 `application/ports/review-template.repository.port.ts` — `create`/`findById`/`findAll`/`findDraftWithLiveQuestions`/`findFrozenWithSnapshot`/`replaceDraftQuestions`/`activate`/`softDeleteDraftById` (design Decision 5, Interfaces).
-- [ ] 8.2 RED/GREEN `create-draft-review-template.use-case.ts` — one-draft-per-lineage guard, 409 `DRAFT_EXISTS` (spec: "Create Draft Template").
-- [ ] 8.3 RED/GREEN `set-review-template-questions.use-case.ts` — full-replace semantics, unknown/soft-deleted id → 404, frozen → 409, cross-frequency allowed (spec: "Replace a Draft's Ordered Question Selection").
-- [ ] 8.4 RED/GREEN `activate-review-template.use-case.ts` — pure guards before the repo call: not-`draft` → 409 `NOT_EDITABLE`, empty selection → 409 `EMPTY` fast path (spec: "Activation Freezes...Atomically", data flow steps 1-4).
-- [ ] 8.5 RED/GREEN `list-review-templates.use-case.ts` / `read-review-template.use-case.ts` — dispatch on `status` between the two read paths, assert the pool port is never called on the frozen path (spec: "List and Read Templates", "Drafts Track the Live Pool").
-- [ ] 8.6 RED/GREEN `soft-delete-draft-review-template.use-case.ts` — only `draft` deletable, frozen → 409 (spec: "Only Drafts May Be Soft-Deleted").
-- [ ] 8.7 `application/use-cases/testing/in-memory-review-template.repository.ts` — fake reproducing both read paths and the version/gap rule.
-- [ ] 8.8 `packages/validation/src/review-template/**` + `src/index.ts` — create/set-questions schemas, `reviewTemplateStatusSchema`.
-- [ ] 8.9 `permission.ts` — add `reviewTemplate:create|read|update|delete|activate`; `role-permission.checker.ts` — `SYSTEM_ADMIN` row only (spec: authorization "Permission Check on Review Template Endpoints", "No Standalone Retire Permission").
+- [x] 8.1 `application/ports/review-template.repository.port.ts` — `create`/`findById`/`findAll`/`findDraftWithLiveQuestions`/`findFrozenWithSnapshot`/`replaceDraftQuestions`/`activate`/`softDeleteDraftById` (design Decision 5, Interfaces).
+- [x] 8.2 RED/GREEN `create-draft-review-template.use-case.ts` — one-draft-per-lineage guard, 409 `DRAFT_EXISTS` (spec: "Create Draft Template").
+- [x] 8.3 RED/GREEN `set-review-template-questions.use-case.ts` — full-replace semantics, unknown/soft-deleted id → 404, frozen → 409, cross-frequency allowed (spec: "Replace a Draft's Ordered Question Selection").
+- [x] 8.4 RED/GREEN `activate-review-template.use-case.ts` — pure guards before the repo call: not-`draft` → 409 `NOT_EDITABLE`, empty selection → 409 `EMPTY` fast path (spec: "Activation Freezes...Atomically", data flow steps 1-4).
+- [x] 8.5 RED/GREEN `list-review-templates.use-case.ts` / `read-review-template.use-case.ts` — dispatch on `status` between the two read paths, assert the pool port is never called on the frozen path (spec: "List and Read Templates", "Drafts Track the Live Pool").
+- [x] 8.6 RED/GREEN `soft-delete-draft-review-template.use-case.ts` — only `draft` deletable, frozen → 409 (spec: "Only Drafts May Be Soft-Deleted").
+- [x] 8.7 `application/use-cases/testing/in-memory-review-template.repository.ts` — fake reproducing both read paths and the version/gap rule.
+- [x] 8.8 `packages/validation/src/review-template/**` + `src/index.ts` — create/set-questions schemas, `reviewTemplateStatusSchema`. Also wired the deferred `as const satisfies readonly ValidatedReviewTemplateStatus[]` gate on `review-template-status.ts` (deferred at PR 7) now that the type exists.
+- [ ] 8.9 `permission.ts` — add `reviewTemplate:create|read|update|delete|activate`; `role-permission.checker.ts` — `SYSTEM_ADMIN` row only (spec: authorization "Permission Check on Review Template Endpoints", "No Standalone Retire Permission"). **Not in this PR's assigned scope (8.1-8.8 only per orchestrator instruction) — deferred to the next apply batch.**
 
 ## Phase 9: Review Template Infra + Presentation (PR 9) — Strict TDD (activate) + integration specs
 - [ ] 9.1 RED/GREEN `infrastructure/persistence/prisma-review-template.repository.ts::activate()` — Serializable `$transaction`: assign version, `INSERT…SELECT` snapshot (design Decision 4 SQL), retire predecessor **before** flipping to active (statement order load-bearing), map `P2034`/`P2002` → `TransactionConflictError` (design Decision 3, Data Flow).
