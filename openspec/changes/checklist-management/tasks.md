@@ -57,6 +57,7 @@ Chain strategy: stacked-to-main
 - [ ] 4.3 `presentation/checklist-question.controller.ts` + DTOs + Swagger; `checklist-question-error-code.ts` (`CHECKLIST_QUESTION_NOT_FOUND`); `checklist-question.module.ts` exporting the repository token.
 - [ ] 4.4 `shared/application/authorization/permission.ts` — add `checklistQuestion:create|read|update|delete`; `role-permission.checker.ts` — `SYSTEM_ADMIN` row only, other 4 stay `[]` (spec: authorization "Permission Check on Checklist Question Endpoints").
 - [ ] 4.5 Register `ChecklistQuestionModule` in `app.module.ts`.
+- [ ] 4.6 Reconcile validation-error path: PR 3 added `CreateChecklistQuestionUseCase.assertValidInput` (`InvalidChecklistQuestionInputError`) as a use-case-level duplicate of the Zod `.min(1)`/required-field checks, since `packages/validation` has no Jest runner to RED/GREEN those scenarios directly (deviates from the `inspectable-element` precedent, which leaves this solely to the Zod/DTO pipe, tested at e2e only — flagged in fresh-context review of PR 3). Decide here: map `InvalidChecklistQuestionInputError` to 400 alongside the Zod pipe's 400, or drop the guard now that e2e (Phase 5's `checklist-question.e2e-spec.ts`, task 5.8) can cover it like the precedent does. Also decide whether `update-checklist-question.use-case.ts` needs the same treatment for symmetry — currently it has none, and "update to an empty frequencies set" has zero test coverage anywhere yet.
 
 ## Phase 5: Web — Question Pool (PR 5)
 - [ ] 5.1 `apps/web/src/api/checklist-question.ts` — typed calls + error-code union.
