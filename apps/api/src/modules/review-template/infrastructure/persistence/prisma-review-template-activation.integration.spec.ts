@@ -135,6 +135,9 @@ describe('PrismaReviewTemplateRepository.activate() (integration, concurrency)',
     // asserted, only that the winning call's own returned outcome matches
     // what actually landed in the database.
     expect(activeRows[0].version).toBe(fulfilled[0].value.version);
+    // design.md Data Flow step 5d: draftQuestionIds is reset to empty on
+    // activation — the frozen row never carries a stale draft selection.
+    expect(activeRows[0].draftQuestionIds).toEqual([]);
 
     // Exactly one snapshot's worth of question rows exists — the losing
     // transaction's INSERT...SELECT was rolled back entirely, not left as

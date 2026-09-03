@@ -371,4 +371,37 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
     expect(insertSql).toContain('ROW_NUMBER() OVER (ORDER BY sel.ord)');
     expect(insertCall.slice(1)).toEqual([TEMPLATE_ID, ['q1', 'q2'], ROW_IDS]);
   });
+
+  // design.md Data Flow step 5d: the flip-to-active UPDATE also resets
+  // draftQuestionIds to '{}' — a frozen row never carries a stale draft
+  // selection (Decision 2/6).
+  it('resets draftQuestionIds to an empty array in the flip-to-active UPDATE', async () => {
+    const tx = makeTxMock({
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            elementType: 'EXTINGUISHER',
+            frequency: 'QUARTERLY',
+            draftQuestionIds: ['q1'],
+          },
+        ])
+        .mockResolvedValueOnce([{ nextVersion: 1 }]) as QueryRawMock,
+      $executeRaw: jest
+        .fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(1) as ExecuteRawMock,
+    });
+    const prisma = makePrismaMock(tx);
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repository.activate(TEMPLATE_ID, ROW_IDS);
+
+    const flipCall = tx.$executeRaw.mock.calls[2];
+    const flipSql = flipCall[0].join('');
+    expect(flipSql).toContain('"draftQuestionIds" = ARRAY[]::uuid[]');
+  });
 });

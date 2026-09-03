@@ -271,9 +271,15 @@ export class PrismaReviewTemplateRepository
     // flipped this exact row between step 1's lineage read and here. Zero
     // rows means that race was lost — mapped to the same retryable
     // conflict as step 1's race loss.
+    // design.md Data Flow step 5d: `draftQuestionIds` is reset to '{}' at
+    // activation, not left carrying the now-frozen selection — this is what
+    // makes Decision 6's cleanup cascade's `"status" = 'draft'` filter
+    // belt-and-braces rather than load-bearing (a frozen row's
+    // draftQuestionIds is always empty by construction, so array_remove on
+    // it is a structural no-op regardless of the filter).
     const flippedRows = await tx.$executeRaw`
       UPDATE "ReviewTemplate"
-      SET "status" = 'active', "version" = ${nextVersion}
+      SET "status" = 'active', "version" = ${nextVersion}, "draftQuestionIds" = ARRAY[]::uuid[]
       WHERE "id" = ${id}::uuid AND "status" = 'draft'
     `;
     if (flippedRows === 0) {
