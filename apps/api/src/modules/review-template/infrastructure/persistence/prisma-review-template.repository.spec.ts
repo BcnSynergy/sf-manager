@@ -27,8 +27,14 @@ interface TxMock {
 
 function makeTxMock(overrides?: Partial<TxMock>): TxMock {
   return {
-    $queryRaw: jest.fn(),
-    $executeRaw: jest.fn(),
+    $queryRaw: jest.fn<
+      Promise<unknown[]>,
+      [TemplateStringsArray, ...unknown[]]
+    >(),
+    $executeRaw: jest.fn<
+      Promise<number>,
+      [TemplateStringsArray, ...unknown[]]
+    >(),
     ...overrides,
   };
 }
@@ -38,8 +44,11 @@ function makePrismaMock(tx: TxMock) {
     $transaction: jest.fn(
       (
         work: (tx: TxMock) => Promise<unknown>,
-        _options?: unknown,
-      ): Promise<unknown> => work(tx),
+        options: { isolationLevel: string },
+      ): Promise<unknown> => {
+        void options;
+        return work(tx);
+      },
     ),
   };
 }
@@ -74,9 +83,7 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
     await repository.activate(TEMPLATE_ID, ROW_IDS);
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    const options = prisma.$transaction.mock.calls[0][1] as {
-      isolationLevel: string;
-    };
+    const options = prisma.$transaction.mock.calls[0][1];
     expect(options.isolationLevel).toBe(
       Prisma.TransactionIsolationLevel.Serializable,
     );

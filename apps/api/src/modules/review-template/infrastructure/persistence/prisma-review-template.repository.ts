@@ -265,11 +265,19 @@ export class PrismaReviewTemplateRepository
       WHERE "elementType" = ${lineage.elementType} AND "frequency" = ${lineage.frequency} AND "status" = 'active'
     `;
 
-    // 5. flip-to-active: the `"status" = 'draft'` guard is load-bearing,
-    // not belt-and-braces — without it this UPDATE would match by `id`
-    // alone and always succeed even if a concurrent transaction already
-    // flipped this exact row between step 1's lineage read and here. Zero
-    // rows means that race was lost — mapped to the same retryable
+    // 5. flip-to-active: the `"status" = 'draft'` guard is defense-in-depth
+    // (matches design.md Decision 3's literal SQL), not the thing that
+    // actually prevents a double-activation under real Serializable
+    // isolation — Postgres's own write-conflict detection on the shared
+    // row already aborts the losing transaction before this statement
+    // could observe a stale status, and step 1's lineage read already
+    // gates entry on `status = 'draft'` for the whole transaction. The
+    // predicate is kept because it costs nothing and matches the spec'd
+    // SQL, not because the concurrency test depends on it — verified by
+    // removing it locally and re-running the concurrency integration spec
+    // (prisma-review-template-activation.integration.spec.ts), which
+    // stayed green. Zero rows here still means the row's id didn't match
+    // (e.g. deleted mid-transaction), mapped to the same retryable
     // conflict as step 1's race loss.
     // design.md Data Flow step 5d: `draftQuestionIds` is reset to '{}' at
     // activation, not left carrying the now-frozen selection — this is what
