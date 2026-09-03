@@ -43,13 +43,13 @@ Chain strategy: stacked-to-main
 - [x] 2.3 `domain/errors/checklist-question-not-found.error.ts` — mechanical.
 
 ## Phase 3: Checklist Question Application + Validation (PR 3) — Strict TDD
-- [ ] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
-- [ ] 3.2 RED/GREEN `create-checklist-question.use-case.ts` (spec: "Create Checklist Question", empty-`frequencies`/missing-field scenarios).
-- [ ] 3.3 RED/GREEN `list-checklist-questions.use-case.ts` — excludes soft-deleted, empty pool valid (spec: "List Checklist Questions", "The Pool Ships Empty").
-- [ ] 3.4 RED/GREEN `update-checklist-question.use-case.ts` — `elementType` never mutated, 404 on missing/deleted (spec: "Update Checklist Question").
-- [ ] 3.5 RED/GREEN `soft-delete-checklist-question.use-case.ts` — never blocked by references, 404 on missing/already-deleted; cleanup hook point left as a no-op call site for Phase 7 (spec: "Soft-Delete Checklist Question Is Never Blocked").
-- [ ] 3.6 `application/use-cases/testing/in-memory-checklist-question.repository.ts` — fake.
-- [ ] 3.7 `packages/validation/src/checklist-question/**` + `src/index.ts` — `reviewFrequencySchema`, create/update schemas, `.min(1)` on `frequencies`.
+- [x] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
+- [x] 3.2 RED/GREEN `create-checklist-question.use-case.ts` (spec: "Create Checklist Question", empty-`frequencies`/missing-field scenarios).
+- [x] 3.3 RED/GREEN `list-checklist-questions.use-case.ts` — excludes soft-deleted, empty pool valid (spec: "List Checklist Questions", "The Pool Ships Empty").
+- [x] 3.4 RED/GREEN `update-checklist-question.use-case.ts` — `elementType` never mutated, 404 on missing/deleted (spec: "Update Checklist Question").
+- [x] 3.5 RED/GREEN `soft-delete-checklist-question.use-case.ts` — never blocked by references, 404 on missing/already-deleted; cleanup hook point left as a no-op call site for Phase 7 (spec: "Soft-Delete Checklist Question Is Never Blocked").
+- [x] 3.6 `application/use-cases/testing/in-memory-checklist-question.repository.ts` — fake.
+- [x] 3.7 `packages/validation/src/checklist-question/**` + `src/index.ts` — `reviewFrequencySchema`, create/update schemas, `.min(1)` on `frequencies`.
 
 ## Phase 4: Checklist Question Infra + Presentation + Permissions (PR 4) — mechanical + integration specs
 - [ ] 4.1 `infrastructure/persistence/prisma-checklist-question.repository.ts` (extends `SoftDeletableRepository`) + mapper.
@@ -57,6 +57,7 @@ Chain strategy: stacked-to-main
 - [ ] 4.3 `presentation/checklist-question.controller.ts` + DTOs + Swagger; `checklist-question-error-code.ts` (`CHECKLIST_QUESTION_NOT_FOUND`); `checklist-question.module.ts` exporting the repository token.
 - [ ] 4.4 `shared/application/authorization/permission.ts` — add `checklistQuestion:create|read|update|delete`; `role-permission.checker.ts` — `SYSTEM_ADMIN` row only, other 4 stay `[]` (spec: authorization "Permission Check on Checklist Question Endpoints").
 - [ ] 4.5 Register `ChecklistQuestionModule` in `app.module.ts`.
+- [ ] 4.6 Reconcile validation-error path: PR 3 added `CreateChecklistQuestionUseCase.assertValidInput` (`InvalidChecklistQuestionInputError`) as a use-case-level duplicate of the Zod `.min(1)`/required-field checks, since `packages/validation` has no Jest runner to RED/GREEN those scenarios directly (deviates from the `inspectable-element` precedent, which leaves this solely to the Zod/DTO pipe, tested at e2e only — flagged in fresh-context review of PR 3). Decide here: map `InvalidChecklistQuestionInputError` to 400 alongside the Zod pipe's 400, or drop the guard now that e2e (Phase 5's `checklist-question.e2e-spec.ts`, task 5.8) can cover it like the precedent does. Also decide whether `update-checklist-question.use-case.ts` needs the same treatment for symmetry — currently it has none, and "update to an empty frequencies set" has zero test coverage anywhere yet.
 
 ## Phase 5: Web — Question Pool (PR 5)
 - [ ] 5.1 `apps/web/src/api/checklist-question.ts` — typed calls + error-code union.
