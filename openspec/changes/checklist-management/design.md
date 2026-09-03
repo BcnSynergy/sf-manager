@@ -207,6 +207,8 @@ mirroring `last-admin.policy.ts`' pure-function shape.
 |---|---|---|---|
 | `POST` | `/checklist-questions` | `checklistQuestion:create` | 201 · 400 |
 | `GET` | `/checklist-questions` | `checklistQuestion:read` | 200 (`?elementType=` optional) |
+
+> **PR 4 note**: the `?elementType=` filter listed above was deliberately **not** implemented — no spec.md scenario requires it, and ADR-006 (walking-skeleton discipline) says not to build scope the current slice doesn't need. `GET /checklist-questions` always returns the full pool; add the filter later if a scenario actually calls for it.
 | `PATCH` | `/checklist-questions/:id` | `checklistQuestion:update` | 200 · 404 `CHECKLIST_QUESTION_NOT_FOUND` |
 | `DELETE` | `/checklist-questions/:id` | `checklistQuestion:delete` | 204 · 404 — **never 409**, no delete guard |
 | `POST` | `/review-templates` | `reviewTemplate:create` | 201 · 409 `REVIEW_TEMPLATE_DRAFT_EXISTS` |
