@@ -38,9 +38,9 @@ Chain strategy: stacked-to-main
 - [x] 1.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` emitted for existing FKs/indexes; regenerate client.
 
 ## Phase 2: Checklist Question Domain (PR 2) — Strict TDD
-- [ ] 2.1 RED/GREEN `domain/review-frequency.ts` — `REVIEW_FREQUENCIES` const, `as const satisfies readonly ValidatedReviewFrequency[]` (design Decision 1).
-- [ ] 2.2 RED/GREEN `domain/checklist-question.entity.ts` — plain fields, zero Prisma, no constructor validation (design Decision 7).
-- [ ] 2.3 `domain/errors/checklist-question-not-found.error.ts` — mechanical.
+- [x] 2.1 RED/GREEN `domain/review-frequency.ts` — `REVIEW_FREQUENCIES` const, `as const satisfies readonly ValidatedReviewFrequency[]` (design Decision 1).
+- [x] 2.2 RED/GREEN `domain/checklist-question.entity.ts` — plain fields, zero Prisma, no constructor validation (design Decision 7).
+- [x] 2.3 `domain/errors/checklist-question-not-found.error.ts` — mechanical.
 
 ## Phase 3: Checklist Question Application + Validation (PR 3) — Strict TDD
 - [ ] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
