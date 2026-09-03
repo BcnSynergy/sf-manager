@@ -114,11 +114,11 @@ Chain strategy: stacked-to-main
 - [x] 10.8 `App.tsx` — 3 routes, static-before-dynamic ordering; `i18n/locales/{en,es,ca}.json` — real `reviewTemplate.*` keys + label maps; extend `locales.test.ts`.
 
 ## Phase 11: E2E, Docs Correction, Browser Verification, Final Checks (PR 11)
-- [ ] 11.1 `apps/api/test/review-template.e2e-spec.ts` — full lifecycle; second draft 409; activate empty 409 + no version consumed; discarded draft leaves no version gap; `PUT`/`activate` on frozen 409 `NOT_EDITABLE`; post-activation question edit → frozen response byte-identical; soft-delete a referenced question → frozen still renders, draft drops it; cross-frequency pick accepted; RBAC matrix on all 6 routes (spec: review-template-management, all requirements).
-- [ ] 11.2 Grep-confirm no `ReviewSession`/`ElementReviewEntry`/`QuestionAnswer` table, model, route or page exists (spec: "No Review Session Surface").
-- [ ] 11.3 `docs/architecture/domain-model-inspections.md` — fix `text` (i18n key → free text) wording; close the wording-change open question with snapshot-on-freeze; document `draftQuestionIds`/`questionText`; record the `active`-flag deferral.
+- [x] 11.1 `apps/api/test/review-template.e2e-spec.ts` — full lifecycle; second draft 409; activate empty 409 + no version consumed; discarded draft leaves no version gap; `PUT`/`activate` on frozen 409 `NOT_EDITABLE`; post-activation question edit → frozen response byte-identical; soft-delete a referenced question → frozen still renders, draft drops it; cross-frequency pick accepted; RBAC matrix on all 6 routes (spec: review-template-management, all requirements).
+- [x] 11.2 Grep-confirm no `ReviewSession`/`ElementReviewEntry`/`QuestionAnswer` table, model, route or page exists (spec: "No Review Session Surface").
+- [x] 11.3 `docs/architecture/domain-model-inspections.md` — fix `text` (i18n key → free text) wording; close the wording-change open question with snapshot-on-freeze; document `draftQuestionIds`/`questionText`; record the `active`-flag deferral.
 - [ ] 11.4 Browser verification (`npm run dev`, `claude-in-chrome`, `SYSTEM_ADMIN` session): empty pool → first question → first draft → builder → activate → retire predecessor; edit-after-freeze divergence; non-admin `NotAuthorized` surface (CLAUDE.md "Verifying UI Changes").
-- [ ] 11.5 Full API + web suites, lint, build pass; `no-restricted-imports` passes.
+- [x] 11.5 Full API + web suites, lint, build pass; `no-restricted-imports` passes.
 
 ## Rules Applied
 - Strict TDD: RED/GREEN on entities, status guards, use cases, the activation transaction, mappers where non-trivial. Migrations/DTOs/module wiring/schema files/error-code enums are mechanical.

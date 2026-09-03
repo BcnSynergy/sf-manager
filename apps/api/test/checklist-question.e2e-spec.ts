@@ -12,6 +12,7 @@ import {
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
 import { CHECKLIST_QUESTION_REPOSITORY } from '../src/modules/checklist-question/application/ports/checklist-question.repository.port';
+import { DRAFT_SELECTION_CLEANER } from '../src/modules/checklist-question/application/ports/draft-selection-cleaner.port';
 import { InMemoryChecklistQuestionRepository } from '../src/modules/checklist-question/application/use-cases/testing/in-memory-checklist-question.repository';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
@@ -22,6 +23,21 @@ import type { Role } from '../src/modules/users/domain/role';
 // connection, PrismaService is stubbed just so nothing tries to open one via
 // the @Global() PrismaModule.
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
+
+// checklist-management PR 11 fix: SoftDeleteChecklistQuestionUseCase has
+// required DRAFT_SELECTION_CLEANER since PR 7 (design.md Decision 6), but
+// this spec (written in PR 5, before PR 7 existed) never overrode it or
+// stubbed PrismaService.$executeRaw — every soft-delete in this file was
+// hitting the REAL PrismaDraftSelectionCleaner, which calls
+// `this.prisma.$executeRaw`, undefined on the stub below, throwing and
+// turning every 204 into an unhandled 500. This module doesn't exercise
+// review-template cross-module behavior at all (that's
+// test/review-template.e2e-spec.ts's job), so a no-op fake is correct here.
+class NoopDraftSelectionCleaner {
+  removeQuestionFromDrafts(): Promise<void> {
+    return Promise.resolve();
+  }
+}
 
 class InMemoryTokenDenylist implements TokenDenylist {
   private readonly revokedJtis = new Set<string>();
@@ -93,6 +109,8 @@ async function buildApp(seed: { users?: User[] }): Promise<{
     .useValue(tokenDenylist)
     .overrideProvider(CHECKLIST_QUESTION_REPOSITORY)
     .useValue(questionRepository)
+    .overrideProvider(DRAFT_SELECTION_CLEANER)
+    .useValue(new NoopDraftSelectionCleaner())
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),

@@ -184,7 +184,14 @@ itself, what gets asked in any given review (see `ReviewTemplate`).
 informational tag used to suggest candidate questions when building a
 template for a given frequency; RIPCI's own tables show checks shared
 between periodicities, so a question can be tagged for more than one),
-`text` (i18n key), `active` (retire without deleting history).
+`text` (**correction, `checklist-management` PR 11**: free, runtime
+admin-editable text — NOT an i18n key. Originally documented here as an
+i18n key during this doc's exploration phase, before `checklist-management`
+settled the question. As shipped, `text` is a plain `string` column
+(`ChecklistQuestion.text`), rendered verbatim and never parsed, translated,
+or passed through `t()` — see design.md Decision 7 of that change),
+`deletedAt` (ADR-010 soft delete — retire without deleting history; this
+replaces the `active` flag speculated here before the change shipped).
 
 For `EXTINGUISHER` + `QUARTERLY`, the actual question set is sourced from
 RIPCI Anexo II Tabla I — see the
@@ -208,8 +215,18 @@ versioned, immutable-once-used object instead.
 A named, versioned, curated bundle of questions — the actual repository of
 report templates ("revisión trimestral", "revisión anual") the admin
 manages. `id`, `elementType`, `frequency`, `name`, `version` (integer,
-starting at 1, incrementing per `(elementType, frequency)` lineage),
-`status` (`draft` | `active` | `retired`), `createdAt`, `deletedAt`
+starting at 1, incrementing per `(elementType, frequency)` lineage —
+**correction, `checklist-management` PR 11**: `version` is nullable and
+stays `NULL` for the lifetime of a `draft`; it is assigned exactly once,
+at activation, so a draft that is discarded without ever activating never
+consumes a version number and the sequence has no gaps — see "Snapshot on
+freeze" below), `status` (`draft` | `active` | `retired` —
+**correction**: shipped as a `ReviewTemplateStatus` Postgres
+enum/domain-union pair, the same treatment as `ReviewFrequency`; an
+`active`-boolean-flag design was considered and explicitly rejected in
+favor of this three-value status, because "not active" is ambiguous
+between "still being drafted" and "superseded" and the audit trail needs
+to distinguish them), `createdAt`, `deletedAt`
 (ADR-010 — for a template created by mistake and never used; a normal
 version supersession uses `retired`, not `deletedAt`, since retired
 templates stay fully visible for historical sessions that reference them).
@@ -219,9 +236,42 @@ Creating a new version (selecting questions from the `ChecklistQuestion`
 pool) and activating it automatically retires the previous one — retiring
 does not touch any `ReviewSession` that already references it.
 
+**Snapshot on freeze (correction, `checklist-management` PR 11 — closes
+the wording-change open question below)**: a draft's live, editable
+selection and a frozen version's permanent record are **two different
+fields on two different tables**, not one join entity that gradually
+"becomes" the audit record:
+
+- `ReviewTemplate.draftQuestionIds` (`UUID[]`) — the **draft-only**,
+  ordered list of pool question ids currently selected. Live: resolved
+  against the current `ChecklistQuestion.text` on every read, so editing a
+  pool question's wording is reflected immediately in every draft that
+  selected it. Reset to `{}` the moment the template activates — it is
+  never the audit record.
+- `ReviewTemplateQuestion.questionText` (`TEXT NOT NULL`) — the frozen
+  wording, copied from the pool **once, inside the activation
+  transaction**, and never re-read, re-synced, or repaired afterward. Rows
+  in this table exist **only** for `active`/`retired` versions; a `draft`
+  has none. Because the column is `NOT NULL` and only ever written at
+  activation, "an activated version with a missing snapshot" is
+  structurally unrepresentable rather than merely test-guarded.
+
+Consequently: editing a `ChecklistQuestion.text` after a template froze it
+changes what every draft shows (via `draftQuestionIds`) but leaves every
+already-frozen version's rendered wording byte-for-byte unchanged (via
+`ReviewTemplateQuestion.questionText`) — including if the question is
+later soft-deleted, since the frozen read path never touches the pool
+table at all.
+
 ### ReviewTemplateQuestion
-Join entity: the curated, ordered selection for one template version.
-`id`, `templateId`, `questionId`, `order`.
+Join entity: the curated, ordered selection for one **frozen** template
+version only (**correction, `checklist-management` PR 11**: this table is
+NOT the draft's live selection — that moved to
+`ReviewTemplate.draftQuestionIds`, see "Snapshot on freeze" above. Rows
+here are written once, at activation, and never for a `draft`). `id`,
+`templateId`, `questionId` (provenance link back to the pool only — never
+the source of displayed wording), `order`, `questionText` (the frozen
+wording snapshot, `NOT NULL`).
 
 ### ReviewSession
 One review visit. `id`, `communityId`, `templateId`, `date`,
@@ -295,9 +345,15 @@ erDiagram
   slice is actually implemented.
 - The hydrostatic test is tracked but has no workflow yet (who records
   `lastHydrostaticTestAt`, from where) — deferred, see compliance doc.
-- If a `ChecklistQuestion`'s *text* changes (not just which questions are
-  bundled), should that force a new template version too, or edit the
+- ~~If a `ChecklistQuestion`'s *text* changes (not just which questions
+  are bundled), should that force a new template version too, or edit the
   question in place (which would retroactively change the wording shown
-  for old, already-answered sessions referencing it)? Not decided — the
-  template versioning above solves "which questions changed", not "a
-  question's wording changed."
+  for old, already-answered sessions referencing it)?~~ **Closed,
+  `checklist-management` PR 11**: editing a question's `text` never forces
+  a new template version and never retroactively changes an already-frozen
+  version's wording. `ReviewTemplateQuestion.questionText` snapshots the
+  wording once, at activation, into its own `NOT NULL` column — see
+  "Snapshot on freeze" under `ReviewTemplate` above. A pool edit is
+  reflected only in `draft` templates (via the live `draftQuestionIds`
+  read path) and in the pool listing itself; every `active`/`retired`
+  version keeps rendering exactly what it froze, forever.
