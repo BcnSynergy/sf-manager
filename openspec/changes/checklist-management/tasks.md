@@ -104,14 +104,14 @@ Chain strategy: stacked-to-main
   - **Note**: `POST .../activate`'s response (`ActivateReviewTemplateResponseDto`) is `{id, status, version}` only, not the full `ReviewTemplateResponseDto` (with `questions`) that design.md's Data Flow diagram labels the response as. spec.md's own activation scenario only asserts `status`/`version` in the response, and composing a second read to include `questions` would be unrequested scope per ADR-006 — the client can call `GET .../:id` right after if it needs the frozen snapshot. Fair, spec-compliant reading per fresh-context review of PR 9; documented here since it diverges from design.md's literal diagram.
 
 ## Phase 10: Web — Review Templates (PR 10)
-- [ ] 10.1 `apps/web/src/api/review-template.ts` — typed calls + error-code union.
-- [ ] 10.2 `apps/web/src/review-template/error-messages.ts`, `template-status-labels.ts` (`review-frequency-labels.ts` reused).
-- [ ] 10.3 `apps/web/src/pages/ReviewTemplatesListPage.tsx` — grouped by `elementType`+`frequency`, version/status badge, empty/loading/error states (spec: review-template-admin-ui "List Templates With Version and Status").
-- [ ] 10.4 `apps/web/src/pages/ReviewTemplateCreatePage.tsx` — 409 `DRAFT_EXISTS` shown as specific message (spec: "Create Draft Template").
-- [ ] 10.5 `apps/web/src/pages/ReviewTemplateDetailPage.tsx` — one page, inline picker for drafts (pre-filtered by frequency, toggle to reveal others), read-only render of frozen snapshot, no edit controls on frozen (design Decision 9; spec: "Draft Builder Selects and Orders Questions", "Frozen Versions Are Read-Only").
-- [ ] 10.6 Activate `ConfirmDialog` — names the version being retired, omits the claim on first activation, `EMPTY`/`NOT_EDITABLE` shown as specific messages (spec: "Activate With a Confirmation That Names the Retirement").
-- [ ] 10.7 Draft-only delete control, no delete on frozen (spec: "Delete Control Applies to Drafts Only").
-- [ ] 10.8 `App.tsx` — 3 routes, static-before-dynamic ordering; `i18n/locales/{en,es,ca}.json` — real `reviewTemplate.*` keys + label maps; extend `locales.test.ts`.
+- [x] 10.1 `apps/web/src/api/review-template.ts` — typed calls + error-code union.
+- [x] 10.2 `apps/web/src/review-template/error-messages.ts`, `template-status-labels.ts` (`review-frequency-labels.ts` reused).
+- [x] 10.3 `apps/web/src/pages/ReviewTemplatesListPage.tsx` — grouped by `elementType`+`frequency`, version/status badge, empty/loading/error states (spec: review-template-admin-ui "List Templates With Version and Status").
+- [x] 10.4 `apps/web/src/pages/ReviewTemplateCreatePage.tsx` — 409 `DRAFT_EXISTS` shown as specific message (spec: "Create Draft Template").
+- [x] 10.5 `apps/web/src/pages/ReviewTemplateDetailPage.tsx` — one page, inline picker for drafts (pre-filtered by frequency, toggle to reveal others), read-only render of frozen snapshot, no edit controls on frozen (design Decision 9; spec: "Draft Builder Selects and Orders Questions", "Frozen Versions Are Read-Only").
+- [x] 10.6 Activate `ConfirmDialog` — names the version being retired, omits the claim on first activation, `EMPTY`/`NOT_EDITABLE` shown as specific messages (spec: "Activate With a Confirmation That Names the Retirement").
+- [x] 10.7 Draft-only delete control, no delete on frozen (spec: "Delete Control Applies to Drafts Only").
+- [x] 10.8 `App.tsx` — 3 routes, static-before-dynamic ordering; `i18n/locales/{en,es,ca}.json` — real `reviewTemplate.*` keys + label maps; extend `locales.test.ts`.
 
 ## Phase 11: E2E, Docs Correction, Browser Verification, Final Checks (PR 11)
 - [ ] 11.1 `apps/api/test/review-template.e2e-spec.ts` — full lifecycle; second draft 409; activate empty 409 + no version consumed; discarded draft leaves no version gap; `PUT`/`activate` on frozen 409 `NOT_EDITABLE`; post-activation question edit → frozen response byte-identical; soft-delete a referenced question → frozen still renders, draft drops it; cross-frequency pick accepted; RBAC matrix on all 6 routes (spec: review-template-management, all requirements).

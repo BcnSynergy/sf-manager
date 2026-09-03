@@ -270,6 +270,68 @@
       "annual": "Annual"
     }
   },
+  "reviewTemplate": {
+    "list": {
+      "title": "Review templates",
+      "loading": "Loading review templates...",
+      "empty": "No review templates found.",
+      "columnName": "Name",
+      "columnVersion": "Version",
+      "columnStatus": "Status",
+      "columnActions": "Actions",
+      "createLink": "New review template",
+      "viewLink": "View",
+      "noVersion": "Unversioned"
+    },
+    "create": {
+      "title": "New review template",
+      "typeLabel": "Element type",
+      "frequencyLabel": "Review frequency",
+      "nameLabel": "Name",
+      "submitLabel": "Create draft",
+      "validationError": "Enter a valid element type, review frequency, and name."
+    },
+    "detail": {
+      "title": "Review template",
+      "notFound": "This review template could not be found.",
+      "nameLabel": "Name",
+      "typeLabel": "Element type",
+      "frequencyLabel": "Review frequency",
+      "versionLabel": "Version",
+      "statusLabel": "Status",
+      "questionsTitle": "Questions",
+      "questionsEmpty": "No questions selected yet.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeQuestion": "Remove",
+      "pickerTitle": "Add questions from the pool",
+      "showAllFrequencies": "Show questions from all review frequencies",
+      "poolEmpty": "The checklist question pool is empty. Add questions to the pool first.",
+      "addQuestion": "Add",
+      "saveLabel": "Save selection",
+      "activateLabel": "Activate",
+      "activateConfirmTitle": "Activate template",
+      "activateConfirmMessageWithRetirement": "Activating this draft permanently freezes it and cannot be undone. Version {{version}} of this template will be retired.",
+      "activateConfirmMessageFirst": "Activating this draft permanently freezes it and cannot be undone. This will be the first active version of this template.",
+      "deleteLabel": "Delete draft",
+      "deleteConfirmTitle": "Delete draft template",
+      "deleteConfirmMessage": "This draft template will be removed. This cannot be undone."
+    },
+    "error": {
+      "notFound": "This review template could not be found.",
+      "notEditable": "This version is already frozen and cannot be changed.",
+      "empty": "Add at least one question before activating.",
+      "draftExists": "A draft already exists for this element type and review frequency.",
+      "activationConflict": "Another activation won the race for this template. Please refresh and try again.",
+      "questionNotFound": "One of the selected questions could not be found.",
+      "validationFailed": "Enter valid review template details."
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "retired": "Retired"
+    }
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",

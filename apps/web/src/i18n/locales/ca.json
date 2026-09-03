@@ -270,6 +270,68 @@
       "annual": "Anual"
     }
   },
+  "reviewTemplate": {
+    "list": {
+      "title": "Plantilles de revisió",
+      "loading": "Carregant plantilles de revisió...",
+      "empty": "No s'han trobat plantilles de revisió.",
+      "columnName": "Nom",
+      "columnVersion": "Versió",
+      "columnStatus": "Estat",
+      "columnActions": "Accions",
+      "createLink": "Plantilla de revisió nova",
+      "viewLink": "Veure",
+      "noVersion": "Sense versió"
+    },
+    "create": {
+      "title": "Plantilla de revisió nova",
+      "typeLabel": "Tipus d'element",
+      "frequencyLabel": "Freqüència de revisió",
+      "nameLabel": "Nom",
+      "submitLabel": "Crea l'esborrany",
+      "validationError": "Introdueix un tipus d'element, una freqüència de revisió i un nom vàlids."
+    },
+    "detail": {
+      "title": "Plantilla de revisió",
+      "notFound": "No s'ha pogut trobar aquesta plantilla de revisió.",
+      "nameLabel": "Nom",
+      "typeLabel": "Tipus d'element",
+      "frequencyLabel": "Freqüència de revisió",
+      "versionLabel": "Versió",
+      "statusLabel": "Estat",
+      "questionsTitle": "Preguntes",
+      "questionsEmpty": "Encara no s'ha seleccionat cap pregunta.",
+      "moveUp": "Puja",
+      "moveDown": "Baixa",
+      "removeQuestion": "Treu",
+      "pickerTitle": "Afegeix preguntes del banc",
+      "showAllFrequencies": "Mostra preguntes de totes les freqüències de revisió",
+      "poolEmpty": "El banc de preguntes de revisió és buit. Afegeix preguntes al banc primer.",
+      "addQuestion": "Afegeix",
+      "saveLabel": "Desa la selecció",
+      "activateLabel": "Activa",
+      "activateConfirmTitle": "Activa la plantilla",
+      "activateConfirmMessageWithRetirement": "Activar aquest esborrany el congela permanentment i no es pot desfer. La versió {{version}} d'aquesta plantilla quedarà retirada.",
+      "activateConfirmMessageFirst": "Activar aquest esborrany el congela permanentment i no es pot desfer. Serà la primera versió activa d'aquesta plantilla.",
+      "deleteLabel": "Elimina l'esborrany",
+      "deleteConfirmTitle": "Elimina la plantilla esborrany",
+      "deleteConfirmMessage": "Aquesta plantilla esborrany s'eliminarà. Aquesta acció no es pot desfer."
+    },
+    "error": {
+      "notFound": "No s'ha pogut trobar aquesta plantilla de revisió.",
+      "notEditable": "Aquesta versió ja està congelada i no es pot modificar.",
+      "empty": "Afegeix com a mínim una pregunta abans d'activar.",
+      "draftExists": "Ja existeix un esborrany per a aquest tipus d'element i freqüència de revisió.",
+      "activationConflict": "Una altra activació ha guanyat la cursa per a aquesta plantilla. Actualitza la pàgina i torna-ho a provar.",
+      "questionNotFound": "No s'ha pogut trobar una de les preguntes seleccionades.",
+      "validationFailed": "Introdueix dades vàlides de la plantilla de revisió."
+    },
+    "status": {
+      "draft": "Esborrany",
+      "active": "Activa",
+      "retired": "Retirada"
+    }
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",

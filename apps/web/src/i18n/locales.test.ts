@@ -292,6 +292,69 @@ describe('locale key-set parity (en/es/ca)', () => {
     'checklistQuestion.frequency.annual',
   ];
 
+  // Existence guard for review-template (Phase 10), same rationale as
+  // REQUIRED_CHECKLIST_QUESTION_KEY_PATHS above — a fixed, hand-maintained
+  // list of every `reviewTemplate.*` key path referenced by source in
+  // PR10, so a future PR that adds a new call site without adding its
+  // translation fails here rather than silently rendering the raw key.
+  const REQUIRED_REVIEW_TEMPLATE_KEY_PATHS = [
+    // list (Phase 10)
+    'reviewTemplate.list.title',
+    'reviewTemplate.list.loading',
+    'reviewTemplate.list.empty',
+    'reviewTemplate.list.columnName',
+    'reviewTemplate.list.columnVersion',
+    'reviewTemplate.list.columnStatus',
+    'reviewTemplate.list.columnActions',
+    'reviewTemplate.list.createLink',
+    'reviewTemplate.list.viewLink',
+    'reviewTemplate.list.noVersion',
+    // create (Phase 10)
+    'reviewTemplate.create.title',
+    'reviewTemplate.create.typeLabel',
+    'reviewTemplate.create.frequencyLabel',
+    'reviewTemplate.create.nameLabel',
+    'reviewTemplate.create.submitLabel',
+    'reviewTemplate.create.validationError',
+    // detail / builder (Phase 10)
+    'reviewTemplate.detail.title',
+    'reviewTemplate.detail.notFound',
+    'reviewTemplate.detail.nameLabel',
+    'reviewTemplate.detail.typeLabel',
+    'reviewTemplate.detail.frequencyLabel',
+    'reviewTemplate.detail.versionLabel',
+    'reviewTemplate.detail.statusLabel',
+    'reviewTemplate.detail.questionsTitle',
+    'reviewTemplate.detail.questionsEmpty',
+    'reviewTemplate.detail.moveUp',
+    'reviewTemplate.detail.moveDown',
+    'reviewTemplate.detail.removeQuestion',
+    'reviewTemplate.detail.pickerTitle',
+    'reviewTemplate.detail.showAllFrequencies',
+    'reviewTemplate.detail.poolEmpty',
+    'reviewTemplate.detail.addQuestion',
+    'reviewTemplate.detail.saveLabel',
+    'reviewTemplate.detail.activateLabel',
+    'reviewTemplate.detail.activateConfirmTitle',
+    'reviewTemplate.detail.activateConfirmMessageWithRetirement',
+    'reviewTemplate.detail.activateConfirmMessageFirst',
+    'reviewTemplate.detail.deleteLabel',
+    'reviewTemplate.detail.deleteConfirmTitle',
+    'reviewTemplate.detail.deleteConfirmMessage',
+    // error-messages.ts mapping targets (Phase 10)
+    'reviewTemplate.error.notFound',
+    'reviewTemplate.error.notEditable',
+    'reviewTemplate.error.empty',
+    'reviewTemplate.error.draftExists',
+    'reviewTemplate.error.activationConflict',
+    'reviewTemplate.error.questionNotFound',
+    'reviewTemplate.error.validationFailed',
+    // template-status-labels.ts mapping targets (Phase 10)
+    'reviewTemplate.status.draft',
+    'reviewTemplate.status.active',
+    'reviewTemplate.status.retired',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -358,6 +421,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_CHECKLIST_QUESTION_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_REVIEW_TEMPLATE_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

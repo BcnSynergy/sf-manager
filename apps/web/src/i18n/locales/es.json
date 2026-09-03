@@ -270,6 +270,68 @@
       "annual": "Anual"
     }
   },
+  "reviewTemplate": {
+    "list": {
+      "title": "Plantillas de revisión",
+      "loading": "Cargando plantillas de revisión...",
+      "empty": "No se han encontrado plantillas de revisión.",
+      "columnName": "Nombre",
+      "columnVersion": "Versión",
+      "columnStatus": "Estado",
+      "columnActions": "Acciones",
+      "createLink": "Nueva plantilla de revisión",
+      "viewLink": "Ver",
+      "noVersion": "Sin versión"
+    },
+    "create": {
+      "title": "Nueva plantilla de revisión",
+      "typeLabel": "Tipo de elemento",
+      "frequencyLabel": "Frecuencia de revisión",
+      "nameLabel": "Nombre",
+      "submitLabel": "Crear borrador",
+      "validationError": "Introduce un tipo de elemento, una frecuencia de revisión y un nombre válidos."
+    },
+    "detail": {
+      "title": "Plantilla de revisión",
+      "notFound": "No se ha podido encontrar esta plantilla de revisión.",
+      "nameLabel": "Nombre",
+      "typeLabel": "Tipo de elemento",
+      "frequencyLabel": "Frecuencia de revisión",
+      "versionLabel": "Versión",
+      "statusLabel": "Estado",
+      "questionsTitle": "Preguntas",
+      "questionsEmpty": "Todavía no se ha seleccionado ninguna pregunta.",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "removeQuestion": "Quitar",
+      "pickerTitle": "Añadir preguntas del banco",
+      "showAllFrequencies": "Mostrar preguntas de todas las frecuencias de revisión",
+      "poolEmpty": "El banco de preguntas de revisión está vacío. Añade preguntas al banco primero.",
+      "addQuestion": "Añadir",
+      "saveLabel": "Guardar selección",
+      "activateLabel": "Activar",
+      "activateConfirmTitle": "Activar plantilla",
+      "activateConfirmMessageWithRetirement": "Activar este borrador lo congela permanentemente y no se puede deshacer. La versión {{version}} de esta plantilla quedará retirada.",
+      "activateConfirmMessageFirst": "Activar este borrador lo congela permanentemente y no se puede deshacer. Será la primera versión activa de esta plantilla.",
+      "deleteLabel": "Eliminar borrador",
+      "deleteConfirmTitle": "Eliminar plantilla borrador",
+      "deleteConfirmMessage": "Esta plantilla borrador se eliminará. Esta acción no se puede deshacer."
+    },
+    "error": {
+      "notFound": "No se ha podido encontrar esta plantilla de revisión.",
+      "notEditable": "Esta versión ya está congelada y no se puede modificar.",
+      "empty": "Añade al menos una pregunta antes de activar.",
+      "draftExists": "Ya existe un borrador para este tipo de elemento y frecuencia de revisión.",
+      "activationConflict": "Otra activación ha ganado la carrera para esta plantilla. Actualiza la página e inténtalo de nuevo.",
+      "questionNotFound": "No se ha podido encontrar una de las preguntas seleccionadas.",
+      "validationFailed": "Introduce datos válidos de la plantilla de revisión."
+    },
+    "status": {
+      "draft": "Borrador",
+      "active": "Activa",
+      "retired": "Retirada"
+    }
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",
