@@ -4,30 +4,33 @@ import {
   CHECKLIST_QUESTION_REPOSITORY,
   type ChecklistQuestionRepository,
 } from '../ports/checklist-question.repository.port';
+import {
+  DRAFT_SELECTION_CLEANER,
+  type DraftSelectionCleaner,
+} from '../ports/draft-selection-cleaner.port';
 
 // spec.md "Soft-Delete Checklist Question Is Never Blocked" + design.md
 // Decision 6: deletion is NEVER guarded by template references — the
 // deliberate inverse of SoftDeleteCommunityUseCase /
 // SoftDeleteMaintenanceCompanyUseCase's active-reference guards, because a
 // frozen ReviewTemplateQuestion snapshot is an audit record, not a live
-// dependency. This use case injects only ChecklistQuestionRepository — no
-// counter/reference port at all — which is what makes "never blocked"
-// structural rather than a runtime check someone could accidentally add
-// a guard in front of later.
+// dependency. DraftSelectionCleaner is NOT a reference-checking port: it
+// cannot throw/block the delete, it only cleans DRAFT selections up after
+// the deletion already succeeded — "never blocked" stays structurally true.
 //
 // `findById` first (404 for unknown OR already-deleted id, ADR-010) then
-// `softDeleteById`, which returns `wasDeleted`. Phase 7 wires a
+// `softDeleteById`, which returns `wasDeleted`. Phase 7 (this PR) wires the
 // DraftSelectionCleaner call here, gated on `wasDeleted === true` — the
 // exact same gating discipline as SoftDeleteCommunityUseCase's
-// representative cascade (design.md Decision 6). Deliberately NOT wired
-// in this PR: the extension point is the `wasDeleted` check below, with
-// nothing else in the method body that would make adding it later
-// structurally awkward.
+// representative cascade (design.md Decision 6): a refused delete must
+// never cascade.
 @Injectable()
 export class SoftDeleteChecklistQuestionUseCase {
   constructor(
     @Inject(CHECKLIST_QUESTION_REPOSITORY)
     private readonly questionRepository: ChecklistQuestionRepository,
+    @Inject(DRAFT_SELECTION_CLEANER)
+    private readonly draftSelectionCleaner: DraftSelectionCleaner,
   ) {}
 
   async execute(id: string): Promise<void> {
@@ -44,9 +47,9 @@ export class SoftDeleteChecklistQuestionUseCase {
       throw new ChecklistQuestionNotFoundError();
     }
 
-    // Phase 7 extension point (design.md Decision 6): once
-    // DraftSelectionCleaner exists, call
-    // `draftSelectionCleaner.removeQuestionFromDrafts(id)` here, gated on
-    // `wasDeleted === true` above. Not implemented in this PR.
+    // spec.md "Deletion removes the question from drafts": gated on the
+    // deletion having ACTUALLY happened — mirrors
+    // SoftDeleteCommunityUseCase's representative-deactivation cascade.
+    await this.draftSelectionCleaner.removeQuestionFromDrafts(id);
   }
 }

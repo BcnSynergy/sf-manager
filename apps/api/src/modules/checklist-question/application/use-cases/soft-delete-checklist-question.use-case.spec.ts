@@ -3,6 +3,7 @@ import {
   ChecklistQuestionProps,
 } from '../../domain/checklist-question.entity';
 import { ChecklistQuestionNotFoundError } from '../../domain/errors/checklist-question-not-found.error';
+import { DraftSelectionCleaner } from '../ports/draft-selection-cleaner.port';
 import { SoftDeleteChecklistQuestionUseCase } from './soft-delete-checklist-question.use-case';
 import { InMemoryChecklistQuestionRepository } from './testing/in-memory-checklist-question.repository';
 
@@ -22,21 +23,31 @@ const makeQuestion = (
 // NEVER guarded by template references — the deliberate inverse of the
 // community/maintenance-company delete guards, because a frozen template
 // is an audit snapshot, not a live dependency (design.md Decision 6). This
-// use case takes no reference-count port at all, unlike
-// SoftDeleteCommunityUseCase — that is the structural proof of "never
-// blocked", not a runtime check that could be bypassed.
+// use case takes no reference-COUNTING port capable of throwing/blocking —
+// unlike SoftDeleteCommunityUseCase's InspectableElementCounter — which is
+// the structural proof of "never blocked", not a runtime check that could
+// be bypassed.
 //
-// `softDeleteById` returns `wasDeleted` (mirrors SoftDeleteCommunityUseCase)
-// so a future DraftSelectionCleaner call (Phase 7, design.md Decision 6)
-// can be gated on `wasDeleted === true` without a signature change — NOT
-// wired in this PR.
+// Phase 7 wires DraftSelectionCleaner (design.md Decision 6): a
+// fire-and-forget CLEANUP call, gated on `wasDeleted === true`, mirroring
+// SoftDeleteCommunityUseCase's representative-deactivation cascade gating
+// exactly. It can never reject the delete — its only job is to strip the
+// id out of every draft's ordered selection after the deletion already
+// succeeded.
 describe('SoftDeleteChecklistQuestionUseCase', () => {
   let questionRepository: InMemoryChecklistQuestionRepository;
+  let draftSelectionCleaner: jest.Mocked<DraftSelectionCleaner>;
   let useCase: SoftDeleteChecklistQuestionUseCase;
 
   beforeEach(() => {
     questionRepository = new InMemoryChecklistQuestionRepository();
-    useCase = new SoftDeleteChecklistQuestionUseCase(questionRepository);
+    draftSelectionCleaner = {
+      removeQuestionFromDrafts: jest.fn().mockResolvedValue(undefined),
+    };
+    useCase = new SoftDeleteChecklistQuestionUseCase(
+      questionRepository,
+      draftSelectionCleaner,
+    );
   });
 
   // spec.md "Admin soft-deletes an unreferenced question"
@@ -57,6 +68,9 @@ describe('SoftDeleteChecklistQuestionUseCase', () => {
     );
 
     expect(softDeleteSpy).not.toHaveBeenCalled();
+    expect(
+      draftSelectionCleaner.removeQuestionFromDrafts,
+    ).not.toHaveBeenCalled();
   });
 
   it('rejects with ChecklistQuestionNotFoundError for an already soft-deleted question', async () => {
@@ -68,15 +82,54 @@ describe('SoftDeleteChecklistQuestionUseCase', () => {
     );
 
     expect(softDeleteSpy).not.toHaveBeenCalled();
+    expect(
+      draftSelectionCleaner.removeQuestionFromDrafts,
+    ).not.toHaveBeenCalled();
   });
 
   // spec.md "Deletion succeeds even when frozen templates reference the
-  // question" — this use case has no dependency capable of blocking it;
-  // asserting the constructor takes only the repository proves that
-  // structurally.
-  it('takes no counter or reference-checking dependency, so deletion cannot be blocked', async () => {
+  // question" — this use case takes no dependency CAPABLE of blocking
+  // deletion; DraftSelectionCleaner only runs after softDeleteById already
+  // returned true and can never make execute() reject.
+  it('resolves even though a DraftSelectionCleaner is injected — deletion cannot be blocked', async () => {
     questionRepository.seed(makeQuestion());
 
     await expect(useCase.execute('question-1')).resolves.toBeUndefined();
+  });
+
+  // spec.md "Deletion removes the question from drafts" + design.md
+  // Decision 6: the cleanup call is gated on `wasDeleted === true`, mirrors
+  // SoftDeleteCommunityUseCase's representative cascade gating.
+  it('calls DraftSelectionCleaner.removeQuestionFromDrafts when the question was actually deleted', async () => {
+    questionRepository.seed(makeQuestion());
+
+    await useCase.execute('question-1');
+
+    expect(
+      draftSelectionCleaner.removeQuestionFromDrafts,
+    ).toHaveBeenCalledTimes(1);
+    expect(draftSelectionCleaner.removeQuestionFromDrafts).toHaveBeenCalledWith(
+      'question-1',
+    );
+  });
+
+  // Not-found paths (already asserted above) never reach softDeleteById, so
+  // wasDeleted is never true and the cleaner must never run — asserted
+  // explicitly here for the concurrently-deleted race too: a
+  // softDeleteById that returns false (already deleted between the
+  // existence check and the write) must not trigger cleanup either.
+  it('does not call DraftSelectionCleaner when softDeleteById reports wasDeleted === false', async () => {
+    questionRepository.seed(makeQuestion());
+    jest
+      .spyOn(questionRepository, 'softDeleteById')
+      .mockResolvedValueOnce(false);
+
+    await expect(useCase.execute('question-1')).rejects.toThrow(
+      ChecklistQuestionNotFoundError,
+    );
+
+    expect(
+      draftSelectionCleaner.removeQuestionFromDrafts,
+    ).not.toHaveBeenCalled();
   });
 });
