@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CommunityModule } from './modules/community/community.module';
 import { MaintenanceCompanyModule } from './modules/maintenance-company/maintenance-company.module';
 import { InspectableElementModule } from './modules/inspectable-element/inspectable-element.module';
+import { ChecklistQuestionModule } from './modules/checklist-question/checklist-question.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -21,6 +22,9 @@ import { InspectableElementModule } from './modules/inspectable-element/inspecta
 // InspectableElementModule (inspectable-elements PR 6) registers the
 // admin-only /communities/:communityId/inspectable-elements CRUD surface,
 // importing CommunityModule for COMMUNITY_REPOSITORY (design.md Decision 4).
+// ChecklistQuestionModule (checklist-management PR 4) registers the
+// admin-only /checklist-questions CRUD surface — a global pool, no parent
+// module import (design.md File Changes).
 @Module({
   imports: [
     PrismaModule,
@@ -30,6 +34,7 @@ import { InspectableElementModule } from './modules/inspectable-element/inspecta
     CommunityModule,
     MaintenanceCompanyModule,
     InspectableElementModule,
+    ChecklistQuestionModule,
     HealthModule,
   ],
 })

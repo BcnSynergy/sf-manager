@@ -29,6 +29,12 @@ import { RolePermissionChecker } from './role-permission.checker';
 // is the only role permitted on any
 // /communities/:communityId/inspectable-elements route; the other 4 roles
 // stay [].
+//
+// checklistQuestion:* permissions (checklist-management PR 4,
+// authorization/spec.md "Permission Check on Checklist Question Endpoints"
+// + "Non-Admin Roles Remain Inert After the Checklist Permissions Are
+// Added"): SYSTEM_ADMIN is the only role permitted on any
+// /checklist-questions route; the other 4 roles stay [].
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -50,6 +56,10 @@ describe('RolePermissionChecker', () => {
     'inspectableElement:read',
     'inspectableElement:update',
     'inspectableElement:delete',
+    'checklistQuestion:create',
+    'checklistQuestion:read',
+    'checklistQuestion:update',
+    'checklistQuestion:delete',
   ];
 
   const NON_ADMIN_ROLES: Role[] = [

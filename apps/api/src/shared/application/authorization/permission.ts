@@ -25,6 +25,12 @@
 // granularity (design.md Decision 8), so a future MANAGER slice can grant
 // read without granting delete. All four are granted only on the
 // SYSTEM_ADMIN row of ROLE_PERMISSIONS.
+//
+// checklistQuestion:* — checklist-management/authorization spec "Permission
+// Check on Checklist Question Endpoints" (PR 4): governs every
+// /checklist-questions route. Four separate permissions, mirroring
+// inspectableElement:*'s granularity (design.md Decision 8). All four are
+// granted only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -42,4 +48,8 @@ export type Permission =
   | 'inspectableElement:create'
   | 'inspectableElement:read'
   | 'inspectableElement:update'
-  | 'inspectableElement:delete';
+  | 'inspectableElement:delete'
+  | 'checklistQuestion:create'
+  | 'checklistQuestion:read'
+  | 'checklistQuestion:update'
+  | 'checklistQuestion:delete';

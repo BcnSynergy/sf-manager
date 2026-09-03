@@ -27,6 +27,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'inspectableElement:read',
     'inspectableElement:update',
     'inspectableElement:delete',
+    'checklistQuestion:create',
+    'checklistQuestion:read',
+    'checklistQuestion:update',
+    'checklistQuestion:delete',
   ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to
