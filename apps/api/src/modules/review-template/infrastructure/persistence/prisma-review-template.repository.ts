@@ -15,12 +15,48 @@ import { ReviewTemplateMapper } from './review-template.mapper';
 
 // Prisma's mapping of a Postgres SERIALIZABLE isolation abort (SQLSTATE
 // 40001) — mirrors PrismaUserRepository.transactional /
-// PrismaCommunityRepresentativeRepository.
+// PrismaCommunityRepresentativeRepository. This is what Prisma's own typed
+// query API (e.g. `.update()`) maps a serialization failure to.
 const SERIALIZATION_FAILURE = 'P2034';
 // Backstop: a concurrent double-activation that slips past SERIALIZABLE is
 // still caught by the `ReviewTemplate_one_active_per_lineage` partial unique
-// index (design.md Decision 3) — same 409 as a P2034.
+// index (design.md Decision 3) — same 409 as a P2034. This is what Prisma's
+// typed query API maps a unique-constraint violation to.
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+// Verified empirically against real Postgres
+// (prisma-review-template-activation.integration.spec.ts, tasks.md 9.3):
+// EVERY statement inside activate()'s transaction is raw SQL
+// ($queryRaw/$executeRaw), and under Prisma 7 + the @prisma/adapter-pg
+// driver adapter, a raw statement's underlying error does NOT get mapped to
+// P2034/P2002 the way the typed query API's does — it surfaces wrapped as
+// `P2010` ("Raw query failed"), with the actual Postgres SQLSTATE embedded
+// in the error's `message` (e.g. "Code: `40001`. Message: `could not
+// serialize access due to concurrent update`"). THIS is the path that
+// actually fires in production for this adapter; P2034/P2002 are kept above
+// as a defensive fallback in case Prisma's raw-query error mapping ever
+// changes to match the typed API's.
+const RAW_QUERY_FAILED = 'P2010';
+const SERIALIZATION_FAILURE_SQLSTATE = '40001';
+const UNIQUE_VIOLATION_SQLSTATE = '23505';
+
+function isActivationConflict(
+  error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+  if (
+    error.code === SERIALIZATION_FAILURE ||
+    error.code === UNIQUE_CONSTRAINT_VIOLATION
+  ) {
+    return true;
+  }
+  return (
+    error.code === RAW_QUERY_FAILED &&
+    (error.message.includes(SERIALIZATION_FAILURE_SQLSTATE) ||
+      error.message.includes(UNIQUE_VIOLATION_SQLSTATE))
+  );
+}
 
 type TxClient = Prisma.TransactionClient;
 
@@ -162,11 +198,7 @@ export class PrismaReviewTemplateRepository
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === SERIALIZATION_FAILURE ||
-          error.code === UNIQUE_CONSTRAINT_VIOLATION)
-      ) {
+      if (isActivationConflict(error)) {
         throw new TransactionConflictError();
       }
       throw error;
@@ -233,13 +265,16 @@ export class PrismaReviewTemplateRepository
       WHERE "elementType" = ${lineage.elementType} AND "frequency" = ${lineage.frequency} AND "status" = 'active'
     `;
 
-    // 5. flip-to-active: zero rows means a concurrent activation of this
-    // exact draft already won between step 1's lineage read and here —
-    // mapped to the same retryable conflict as step 1's race loss.
+    // 5. flip-to-active: the `"status" = 'draft'` guard is load-bearing,
+    // not belt-and-braces — without it this UPDATE would match by `id`
+    // alone and always succeed even if a concurrent transaction already
+    // flipped this exact row between step 1's lineage read and here. Zero
+    // rows means that race was lost — mapped to the same retryable
+    // conflict as step 1's race loss.
     const flippedRows = await tx.$executeRaw`
       UPDATE "ReviewTemplate"
       SET "status" = 'active', "version" = ${nextVersion}
-      WHERE "id" = ${id}::uuid
+      WHERE "id" = ${id}::uuid AND "status" = 'draft'
     `;
     if (flippedRows === 0) {
       throw new TransactionConflictError();

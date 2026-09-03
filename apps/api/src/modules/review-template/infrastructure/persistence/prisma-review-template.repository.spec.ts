@@ -106,11 +106,11 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
           callOrder.push('snapshot-insert');
           return Promise.resolve(1);
         }
-        if (sql.includes("SET \"status\" = 'retired'")) {
+        if (sql.includes('SET "status" = \'retired\'')) {
           callOrder.push('retire-predecessor');
           return Promise.resolve(1);
         }
-        if (sql.includes("SET \"status\" = 'active'")) {
+        if (sql.includes('SET "status" = \'active\'')) {
           callOrder.push('flip-to-active');
           return Promise.resolve(1);
         }
@@ -188,9 +188,9 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
-      repository.activate(TEMPLATE_ID, ROW_IDS),
-    ).rejects.toThrow(ReviewTemplateEmptyError);
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      ReviewTemplateEmptyError,
+    );
 
     // Only the snapshot INSERT ran — retire/flip never fire once the
     // rollback path is taken.
@@ -206,9 +206,9 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
-      repository.activate(TEMPLATE_ID, ROW_IDS),
-    ).rejects.toThrow(TransactionConflictError);
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
   });
 
   it('throws TransactionConflictError when the final flip-to-active UPDATE matches zero rows (a concurrent activation already won)', async () => {
@@ -234,9 +234,9 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
-      repository.activate(TEMPLATE_ID, ROW_IDS),
-    ).rejects.toThrow(TransactionConflictError);
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
   });
 
   it('maps a P2034 serialization failure from $transaction to TransactionConflictError', async () => {
@@ -252,9 +252,9 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
-      repository.activate(TEMPLATE_ID, ROW_IDS),
-    ).rejects.toThrow(TransactionConflictError);
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
   });
 
   it('maps a P2002 unique-constraint violation from $transaction to TransactionConflictError', async () => {
@@ -270,9 +270,73 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
-      repository.activate(TEMPLATE_ID, ROW_IDS),
-    ).rejects.toThrow(TransactionConflictError);
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
+  });
+
+  // Regression (tasks.md 9.3, discovered via the real-Postgres concurrency
+  // integration spec): under Prisma 7 + the @prisma/adapter-pg driver
+  // adapter, a raw SQL statement's ($queryRaw/$executeRaw — every statement
+  // in activate() is raw) SERIALIZABLE abort does NOT surface as a direct
+  // P2034 the way Prisma's typed query API's does. It surfaces wrapped as
+  // P2010 ("Raw query failed"), with the Postgres SQLSTATE (40001) embedded
+  // in the error's own message instead of a separate structured field.
+  it('maps a raw-query-wrapped P2010 whose message embeds SQLSTATE 40001 (serialization_failure) to TransactionConflictError', async () => {
+    const prisma = {
+      $transaction: jest
+        .fn()
+        .mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError(
+            'Raw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`',
+            { code: 'P2010', clientVersion: 'test' },
+          ),
+        ),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
+  });
+
+  it('maps a raw-query-wrapped P2010 whose message embeds SQLSTATE 23505 (unique_violation) to TransactionConflictError', async () => {
+    const prisma = {
+      $transaction: jest
+        .fn()
+        .mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError(
+            'Raw query failed. Code: `23505`. Message: `duplicate key value violates unique constraint`',
+            { code: 'P2010', clientVersion: 'test' },
+          ),
+        ),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
+  });
+
+  it('does NOT swallow a P2010 whose message does not embed a known conflict SQLSTATE — rethrows the raw error', async () => {
+    const original = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Code: `23503`. Message: `foreign key violation`',
+      { code: 'P2010', clientVersion: 'test' },
+    );
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(original),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toBe(
+      original,
+    );
   });
 
   it('binds templateId and rowIds into the snapshot INSERT...SELECT statement', async () => {
@@ -305,10 +369,6 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
     expect(insertSql).toContain('INSERT INTO "ReviewTemplateQuestion"');
     expect(insertSql).toContain('JOIN "ChecklistQuestion" q');
     expect(insertSql).toContain('ROW_NUMBER() OVER (ORDER BY sel.ord)');
-    expect(insertCall.slice(1)).toEqual([
-      TEMPLATE_ID,
-      ['q1', 'q2'],
-      ROW_IDS,
-    ]);
+    expect(insertCall.slice(1)).toEqual([TEMPLATE_ID, ['q1', 'q2'], ROW_IDS]);
   });
 });
