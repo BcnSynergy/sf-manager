@@ -71,9 +71,9 @@ Chain strategy: stacked-to-main
 - [x] 5.8 `apps/api/test/checklist-question.e2e-spec.ts` — full lifecycle, empty-pool, dup text allowed, RBAC matrix (401/403 on all 4 routes, 4 non-admin roles), soft-delete never blocked.
 
 ## Phase 6: Review Template Migration (PR 6) — mechanical, no TDD
-- [ ] 6.1 `schema.prisma`: `enum ReviewTemplateStatus { draft active retired }`, `ReviewTemplate` (`draftQuestionIds String[] @db.Uuid`, `version Int?`), `ReviewTemplateQuestion` (`questionText String` NOT NULL) + `@@index([templateId])` (design Decisions 1-3, Interfaces).
-- [ ] 6.2 Hand-written `migrations/<ts>_add_review_template/migration.sql`: enum + 2 tables, 3 hand-written unique indexes (one-active-per-lineage, one-draft-per-lineage, lineage-version-key), FK `ReviewTemplateQuestion.templateId → ReviewTemplate(id)` (design Decision 3 SQL block).
-- [ ] 6.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` for the 6 pre-existing hand-written FKs/indexes; regenerate client.
+- [x] 6.1 `schema.prisma`: `enum ReviewTemplateStatus { draft active retired }`, `ReviewTemplate` (`draftQuestionIds String[] @db.Uuid`, `version Int?`), `ReviewTemplateQuestion` (`questionText String` NOT NULL) + `@@index([templateId])` (design Decisions 1-3, Interfaces).
+- [x] 6.2 Hand-written `migrations/<ts>_add_review_template/migration.sql`: enum + 2 tables, 3 hand-written unique indexes (one-active-per-lineage, one-draft-per-lineage, lineage-version-key), FK `ReviewTemplateQuestion.templateId → ReviewTemplate(id)` (design Decision 3 SQL block).
+- [x] 6.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` for the 6 pre-existing hand-written FKs/indexes; regenerate client.
 
 ## Phase 7: Review Template Domain + Cleaner (PR 7) — Strict TDD
 - [ ] 7.1 RED/GREEN `review-template/domain/review-template-status.ts` — `as const satisfies` gate (design Decision 1).

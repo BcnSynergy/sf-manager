@@ -214,3 +214,72 @@ model ChecklistQuestion {
   text        String // admin free text, rendered verbatim, never t()
   deletedAt   DateTime? // ADR-010
 }
+
+// checklist-management/design.md Decision 1: the TypeScript union in
+// `review-template/domain/review-template-status.ts` is authoritative; this
+// enum is its persistence projection only, mirroring `ReviewFrequency`'s
+// precedent. A parity integration spec (PR9) asserts this enum, the domain
+// union and the Zod schema all agree.
+enum ReviewTemplateStatus {
+  draft
+  active
+  retired
+}
+
+// checklist-management/design.md Decision 2/3: `version` is NULL until
+// activation (COALESCE(MAX(version),0)+1, assigned inside the activation
+// transaction) — a discarded draft consumes no version number, which is why
+// the lineage-version unique index below tolerates many NULLs. `deletedAt`
+// applies to drafts only; frozen (active/retired) versions are undeletable.
+//
+// checklist-management/design.md Decision 2: `draftQuestionIds` is the
+// DRAFT-ONLY, ordered, live selection — an array of ChecklistQuestion ids,
+// NEVER the audit record. Reset to '{}' inside the activation transaction.
+// No FK on the array elements (Postgres cannot FK an array element);
+// acceptable because pool rows are never hard-deleted (ADR-010).
+//
+// checklist-management/design.md Decision 3: the one-active-per-lineage and
+// one-draft-per-lineage invariants are enforced by TWO HAND-WRITTEN PARTIAL
+// UNIQUE INDEXES (`@@unique` has no `WHERE` clause, so Prisma cannot express
+// them) plus a third hand-written unique index on (elementType, frequency,
+// version) for the lineage-version rule. All three are INVISIBLE to Prisma's
+// migration diffing — see migration.sql and the pg_indexes integration spec.
+//
+// WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate this
+// migration file or diff schema.prisma against the database in a way that
+// could DROP any of the three indexes above, or the six pre-existing
+// hand-written FKs/indexes from earlier migrations — Prisma has no knowledge
+// of any of them.
+model ReviewTemplate {
+  id               String               @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  elementType      ElementType
+  frequency        ReviewFrequency
+  name             String
+  version          Int? // NULL until activation (Decision 3)
+  status           ReviewTemplateStatus
+  draftQuestionIds String[]             @db.Uuid
+  createdAt        DateTime             @default(now())
+  deletedAt        DateTime? // drafts only; frozen versions are undeletable
+}
+
+// checklist-management/design.md Decision 2: rows exist ONLY for
+// activated/retired versions. `questionText` is NOT NULL, so "frozen version
+// with no snapshot" is structurally unrepresentable — not test-guarded.
+// `questionId` is PROVENANCE ONLY — never the source of displayed wording;
+// the frozen read path (design.md Decision 5) does not join ChecklistQuestion
+// at all.
+//
+// The FK from `templateId` to ReviewTemplate(id) is hand-written in
+// migration.sql, INVISIBLE to Prisma (no `@relation` here, ADR-013 —
+// mirroring every other cross-module FK in this schema).
+model ReviewTemplateQuestion {
+  id           String @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  templateId   String @db.Uuid
+  questionId   String @db.Uuid
+  order        Int
+  questionText String
+
+  // Postgres does not auto-index FK-referencing columns; the frozen read
+  // path (design.md Decision 5) filters on exactly this column.
+  @@index([templateId])
+}
