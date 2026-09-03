@@ -43,13 +43,13 @@ Chain strategy: stacked-to-main
 - [x] 2.3 `domain/errors/checklist-question-not-found.error.ts` — mechanical.
 
 ## Phase 3: Checklist Question Application + Validation (PR 3) — Strict TDD
-- [ ] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
-- [ ] 3.2 RED/GREEN `create-checklist-question.use-case.ts` (spec: "Create Checklist Question", empty-`frequencies`/missing-field scenarios).
-- [ ] 3.3 RED/GREEN `list-checklist-questions.use-case.ts` — excludes soft-deleted, empty pool valid (spec: "List Checklist Questions", "The Pool Ships Empty").
-- [ ] 3.4 RED/GREEN `update-checklist-question.use-case.ts` — `elementType` never mutated, 404 on missing/deleted (spec: "Update Checklist Question").
-- [ ] 3.5 RED/GREEN `soft-delete-checklist-question.use-case.ts` — never blocked by references, 404 on missing/already-deleted; cleanup hook point left as a no-op call site for Phase 7 (spec: "Soft-Delete Checklist Question Is Never Blocked").
-- [ ] 3.6 `application/use-cases/testing/in-memory-checklist-question.repository.ts` — fake.
-- [ ] 3.7 `packages/validation/src/checklist-question/**` + `src/index.ts` — `reviewFrequencySchema`, create/update schemas, `.min(1)` on `frequencies`.
+- [x] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
+- [x] 3.2 RED/GREEN `create-checklist-question.use-case.ts` (spec: "Create Checklist Question", empty-`frequencies`/missing-field scenarios).
+- [x] 3.3 RED/GREEN `list-checklist-questions.use-case.ts` — excludes soft-deleted, empty pool valid (spec: "List Checklist Questions", "The Pool Ships Empty").
+- [x] 3.4 RED/GREEN `update-checklist-question.use-case.ts` — `elementType` never mutated, 404 on missing/deleted (spec: "Update Checklist Question").
+- [x] 3.5 RED/GREEN `soft-delete-checklist-question.use-case.ts` — never blocked by references, 404 on missing/already-deleted; cleanup hook point left as a no-op call site for Phase 7 (spec: "Soft-Delete Checklist Question Is Never Blocked").
+- [x] 3.6 `application/use-cases/testing/in-memory-checklist-question.repository.ts` — fake.
+- [x] 3.7 `packages/validation/src/checklist-question/**` + `src/index.ts` — `reviewFrequencySchema`, create/update schemas, `.min(1)` on `frequencies`.
 
 ## Phase 4: Checklist Question Infra + Presentation + Permissions (PR 4) — mechanical + integration specs
 - [ ] 4.1 `infrastructure/persistence/prisma-checklist-question.repository.ts` (extends `SoftDeletableRepository`) + mapper.
