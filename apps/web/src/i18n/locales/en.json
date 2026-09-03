@@ -225,6 +225,51 @@
       "extinguisher": "Fire extinguisher"
     }
   },
+  "checklistQuestion": {
+    "list": {
+      "title": "Checklist questions",
+      "loading": "Loading checklist questions...",
+      "empty": "No active checklist questions found.",
+      "columnText": "Question",
+      "columnFrequencies": "Review frequency",
+      "columnActions": "Actions",
+      "createLink": "New checklist question",
+      "editLink": "Edit",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete checklist question",
+      "deleteConfirmMessage": "This checklist question will be removed. This cannot be undone."
+    },
+    "create": {
+      "title": "New checklist question",
+      "typeLabel": "Element type",
+      "frequenciesLabel": "Review frequency",
+      "textLabel": "Question text",
+      "submitLabel": "Create checklist question",
+      "validationError": "Enter a valid element type, at least one review frequency, and question text."
+    },
+    "edit": {
+      "title": "Edit checklist question",
+      "typeLabel": "Element type",
+      "frequenciesLabel": "Review frequency",
+      "textLabel": "Question text",
+      "submitLabel": "Save changes",
+      "validationError": "Enter at least one review frequency and valid question text.",
+      "notFound": "This checklist question could not be found.",
+      "deleteLabel": "Delete checklist question",
+      "deleteConfirmTitle": "Delete checklist question",
+      "deleteConfirmMessage": "This checklist question will be removed. This cannot be undone."
+    },
+    "error": {
+      "validationFailed": "Enter valid checklist question details.",
+      "notFound": "This checklist question could not be found."
+    },
+    "frequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semiannual": "Semiannual",
+      "annual": "Annual"
+    }
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",

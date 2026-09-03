@@ -225,6 +225,51 @@
       "extinguisher": "Extintor"
     }
   },
+  "checklistQuestion": {
+    "list": {
+      "title": "Preguntes de revisió",
+      "loading": "Carregant preguntes de revisió...",
+      "empty": "No hi ha preguntes de revisió actives.",
+      "columnText": "Pregunta",
+      "columnFrequencies": "Freqüència de revisió",
+      "columnActions": "Accions",
+      "createLink": "Pregunta de revisió nova",
+      "editLink": "Edita",
+      "delete": "Elimina",
+      "deleteConfirmTitle": "Elimina la pregunta de revisió",
+      "deleteConfirmMessage": "Aquesta pregunta de revisió s'eliminarà. Aquesta acció no es pot desfer."
+    },
+    "create": {
+      "title": "Pregunta de revisió nova",
+      "typeLabel": "Tipus d'element",
+      "frequenciesLabel": "Freqüència de revisió",
+      "textLabel": "Text de la pregunta",
+      "submitLabel": "Crea la pregunta de revisió",
+      "validationError": "Introdueix un tipus d'element vàlid, com a mínim una freqüència de revisió i el text de la pregunta."
+    },
+    "edit": {
+      "title": "Edita la pregunta de revisió",
+      "typeLabel": "Tipus d'element",
+      "frequenciesLabel": "Freqüència de revisió",
+      "textLabel": "Text de la pregunta",
+      "submitLabel": "Desa els canvis",
+      "validationError": "Introdueix com a mínim una freqüència de revisió i un text de pregunta vàlid.",
+      "notFound": "No s'ha pogut trobar aquesta pregunta de revisió.",
+      "deleteLabel": "Elimina la pregunta de revisió",
+      "deleteConfirmTitle": "Elimina la pregunta de revisió",
+      "deleteConfirmMessage": "Aquesta pregunta de revisió s'eliminarà. Aquesta acció no es pot desfer."
+    },
+    "error": {
+      "validationFailed": "Introdueix dades vàlides de la pregunta de revisió.",
+      "notFound": "No s'ha pogut trobar aquesta pregunta de revisió."
+    },
+    "frequency": {
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "semiannual": "Semestral",
+      "annual": "Anual"
+    }
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",

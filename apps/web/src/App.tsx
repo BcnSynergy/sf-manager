@@ -1,6 +1,9 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { ChecklistQuestionCreatePage } from './pages/ChecklistQuestionCreatePage';
+import { ChecklistQuestionEditPage } from './pages/ChecklistQuestionEditPage';
+import { ChecklistQuestionsListPage } from './pages/ChecklistQuestionsListPage';
 import { CommunitiesListPage } from './pages/CommunitiesListPage';
 import { CommunityCreatePage } from './pages/CommunityCreatePage';
 import { CommunityDetailPage } from './pages/CommunityDetailPage';
@@ -178,6 +181,39 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <MaintenanceCompanyEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checklist-questions"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ChecklistQuestionsListPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 9 (React Router ordering note, same
+              reasoning as /communities/new above): the static `new`
+              segment ranks above the dynamic `:questionId/edit` segment
+              below regardless of declaration order — React Router matches
+              static path segments before dynamic ones. */}
+          <Route
+            path="/checklist-questions/new"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ChecklistQuestionCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 9 (React Router ordering note, same
+              reasoning as the static `new` segment above): this dynamic
+              route never conflicts with the static `new` route above
+              regardless of declaration order. */}
+          <Route
+            path="/checklist-questions/:questionId/edit"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ChecklistQuestionEditPage />
               </ProtectedRoute>
             }
           />

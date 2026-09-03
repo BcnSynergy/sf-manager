@@ -225,6 +225,51 @@
       "extinguisher": "Extintor"
     }
   },
+  "checklistQuestion": {
+    "list": {
+      "title": "Preguntas de revisión",
+      "loading": "Cargando preguntas de revisión...",
+      "empty": "No hay preguntas de revisión activas.",
+      "columnText": "Pregunta",
+      "columnFrequencies": "Frecuencia de revisión",
+      "columnActions": "Acciones",
+      "createLink": "Nueva pregunta de revisión",
+      "editLink": "Editar",
+      "delete": "Eliminar",
+      "deleteConfirmTitle": "Eliminar pregunta de revisión",
+      "deleteConfirmMessage": "Esta pregunta de revisión se eliminará. Esta acción no se puede deshacer."
+    },
+    "create": {
+      "title": "Nueva pregunta de revisión",
+      "typeLabel": "Tipo de elemento",
+      "frequenciesLabel": "Frecuencia de revisión",
+      "textLabel": "Texto de la pregunta",
+      "submitLabel": "Crear pregunta de revisión",
+      "validationError": "Introduce un tipo de elemento válido, al menos una frecuencia de revisión y el texto de la pregunta."
+    },
+    "edit": {
+      "title": "Editar pregunta de revisión",
+      "typeLabel": "Tipo de elemento",
+      "frequenciesLabel": "Frecuencia de revisión",
+      "textLabel": "Texto de la pregunta",
+      "submitLabel": "Guardar cambios",
+      "validationError": "Introduce al menos una frecuencia de revisión y un texto de pregunta válido.",
+      "notFound": "No se ha podido encontrar esta pregunta de revisión.",
+      "deleteLabel": "Eliminar pregunta de revisión",
+      "deleteConfirmTitle": "Eliminar pregunta de revisión",
+      "deleteConfirmMessage": "Esta pregunta de revisión se eliminará. Esta acción no se puede deshacer."
+    },
+    "error": {
+      "validationFailed": "Introduce datos válidos de la pregunta de revisión.",
+      "notFound": "No se ha podido encontrar esta pregunta de revisión."
+    },
+    "frequency": {
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "semiannual": "Semestral",
+      "annual": "Anual"
+    }
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",
