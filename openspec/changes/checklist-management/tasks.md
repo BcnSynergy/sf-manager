@@ -76,11 +76,13 @@ Chain strategy: stacked-to-main
 - [x] 6.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` for the 6 pre-existing hand-written FKs/indexes; regenerate client.
 
 ## Phase 7: Review Template Domain + Cleaner (PR 7) — Strict TDD
-- [ ] 7.1 RED/GREEN `review-template/domain/review-template-status.ts` — `as const satisfies` gate (design Decision 1).
-- [ ] 7.2 RED/GREEN `review-template/domain/review-template.entity.ts` + status guards (`assertActivatable`, `assertEditable`) — `draft→active` ok, `active`/`retired` reject every mutation and re-activation (design Decision 7; spec: "Frozen Templates Are Immutable").
-- [ ] 7.3 `review-template/domain/errors/**` — 6 errors (`NOT_FOUND`, `NOT_EDITABLE`, `EMPTY`, `DRAFT_EXISTS`, `ACTIVATION_CONFLICT`).
-- [ ] 7.4 `checklist-question/application/ports/draft-selection-cleaner.port.ts` + RED/GREEN `infrastructure/persistence/prisma-draft-selection-cleaner.ts` — `array_remove` raw SQL, resolves `PrismaService` via `@Global()` module, no cross-module import (design Decision 6).
-- [ ] 7.5 Wire the cleaner into `soft-delete-checklist-question.use-case.ts`, gated on `wasDeleted === true` (spec: "Deletion removes the question from drafts").
+- [x] 7.1 RED/GREEN `review-template/domain/review-template-status.ts` — `as const satisfies` gate (design Decision 1).
+  - **Decision (PR 7)**: the `satisfies` gate is **deferred**, not wired — `packages/validation` has no `review-template` sub-package yet (Phase 8, tasks.md 8.8, is what creates `reviewTemplateStatusSchema`). This exactly mirrors `review-frequency.ts`'s own history: Phase 2 shipped it domain-only (plain `as const`), and only Phase 3, once `@sf-manager/validation` exported the type, wired the gate. `review-template-status.ts` carries a comment flagging Phase 8 as the follow-up that must add the gate.
+- [x] 7.2 RED/GREEN `review-template/domain/review-template.entity.ts` + status guards (`assertActivatable`, `assertEditable`) — `draft→active` ok, `active`/`retired` reject every mutation and re-activation (design Decision 7; spec: "Frozen Templates Are Immutable").
+- [x] 7.3 `review-template/domain/errors/**` — 5 errors (`ReviewTemplateNotFoundError`, `ReviewTemplateNotEditableError`, `ReviewTemplateEmptyError`, `ReviewTemplateDraftExistsError`, `TransactionConflictError`/`ACTIVATION_CONFLICT`).
+  - **Note**: the task description said "6 errors" but design.md's Findings #2 and proposal.md's error-code list (lines 96-98) name exactly 5 codes owned by `review-template` itself (`REVIEW_TEMPLATE_NOT_FOUND`, `_NOT_EDITABLE`, `_EMPTY`, `_DRAFT_EXISTS`, `_ACTIVATION_CONFLICT`). `CHECKLIST_QUESTION_NOT_FOUND` appears alongside them in the proposal's list but is owned and already created by `checklist-question` (Phase 2) — reused, not re-declared here. Phase 9's `review-template-error-code.ts` (tasks.md 9.5, "6 codes") is presentation-layer and may re-export/union that 6th, imported code; that is out of scope for this domain-errors task.
+- [x] 7.4 `checklist-question/application/ports/draft-selection-cleaner.port.ts` + RED/GREEN `infrastructure/persistence/prisma-draft-selection-cleaner.ts` — `array_remove` raw SQL, resolves `PrismaService` via `@Global()` module, no cross-module import (design Decision 6).
+- [x] 7.5 Wire the cleaner into `soft-delete-checklist-question.use-case.ts`, gated on `wasDeleted === true` (spec: "Deletion removes the question from drafts").
 
 ## Phase 8: Review Template Application + Validation (PR 8) — Strict TDD
 - [ ] 8.1 `application/ports/review-template.repository.port.ts` — `create`/`findById`/`findAll`/`findDraftWithLiveQuestions`/`findFrozenWithSnapshot`/`replaceDraftQuestions`/`activate`/`softDeleteDraftById` (design Decision 5, Interfaces).
