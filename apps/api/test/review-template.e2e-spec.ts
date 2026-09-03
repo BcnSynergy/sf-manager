@@ -538,6 +538,80 @@ describe('Review Templates (e2e)', () => {
     });
   });
 
+  describe('Versions increment per lineage, independently (spec: review-template-management)', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'rt-independent-lineage-admin@example.com';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rt-independent-lineage-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      ({ app } = await buildApp({ users: [admin] }));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it("activating two versions on lineage A does not advance lineage B's version counter, and vice versa", async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const questionMonthly = await createQuestion(app, agent, {
+        frequencies: ['MONTHLY'],
+      });
+      const questionSemiannual = await createQuestion(app, agent, {
+        frequencies: ['SEMIANNUAL'],
+      });
+
+      async function createAndActivate(
+        frequency: string,
+        questionId: string,
+        name: string,
+      ): Promise<number> {
+        const draft = (
+          await agent
+            .post('/review-templates')
+            .send({ elementType: 'EXTINGUISHER', frequency, name })
+            .expect(201)
+        ).body as TemplateListItemBody;
+        await agent
+          .put(`/review-templates/${draft.id}/questions`)
+          .send({ questionIds: [questionId] })
+          .expect(200);
+        const activated = await agent
+          .post(`/review-templates/${draft.id}/activate`)
+          .expect(201);
+        return (activated.body as { version: number }).version;
+      }
+
+      // Lineage A (MONTHLY): two activations, v1 then v2.
+      expect(
+        await createAndActivate('MONTHLY', questionMonthly.id, 'lineage A v1'),
+      ).toBe(1);
+      expect(
+        await createAndActivate('MONTHLY', questionMonthly.id, 'lineage A v2'),
+      ).toBe(2);
+
+      // Lineage B (SEMIANNUAL): its first-ever activation must still be v1,
+      // unaffected by lineage A already being at v2 — the version sequence
+      // is scoped per (elementType, frequency), not global.
+      expect(
+        await createAndActivate(
+          'SEMIANNUAL',
+          questionSemiannual.id,
+          'lineage B v1',
+        ),
+      ).toBe(1);
+
+      // Lineage A continuing to v3 must likewise be unaffected by lineage
+      // B's own activation in between.
+      expect(
+        await createAndActivate('MONTHLY', questionMonthly.id, 'lineage A v3'),
+      ).toBe(3);
+    });
+  });
+
   describe('Frozen templates are immutable (spec: Frozen Templates Are Immutable)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'rt-frozen-admin@example.com';
