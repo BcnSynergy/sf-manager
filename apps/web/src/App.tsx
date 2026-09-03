@@ -16,6 +16,9 @@ import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from './pages/MaintenanceCompanyEditPage';
+import { ReviewTemplateCreatePage } from './pages/ReviewTemplateCreatePage';
+import { ReviewTemplateDetailPage } from './pages/ReviewTemplateDetailPage';
+import { ReviewTemplatesListPage } from './pages/ReviewTemplatesListPage';
 import { UserCreatePage } from './pages/UserCreatePage';
 import { UserEditPage } from './pages/UserEditPage';
 import { UsersListPage } from './pages/UsersListPage';
@@ -214,6 +217,39 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <ChecklistQuestionEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review-templates"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ReviewTemplatesListPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 9 (React Router ordering note, same
+              reasoning as /checklist-questions/new above): the static `new`
+              segment ranks above the dynamic `:templateId` segment below
+              regardless of declaration order — React Router matches static
+              path segments before dynamic ones. */}
+          <Route
+            path="/review-templates/new"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ReviewTemplateCreatePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 9 (React Router ordering note, same
+              reasoning as the static `new` segment above): this dynamic
+              route never conflicts with the static `new` route above
+              regardless of declaration order. */}
+          <Route
+            path="/review-templates/:templateId"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <ReviewTemplateDetailPage />
               </ProtectedRoute>
             }
           />
