@@ -35,6 +35,13 @@ import { RolePermissionChecker } from './role-permission.checker';
 // + "Non-Admin Roles Remain Inert After the Checklist Permissions Are
 // Added"): SYSTEM_ADMIN is the only role permitted on any
 // /checklist-questions route; the other 4 roles stay [].
+//
+// reviewTemplate:* permissions (checklist-management PR 9, tasks.md 8.9,
+// authorization/spec.md "Permission Check on Review Template Endpoints" +
+// "No Standalone Retire Permission"): SYSTEM_ADMIN is the only role
+// permitted on any /review-templates route, including activate; the other
+// 4 roles stay []. No `reviewTemplate:retire` permission is declared here
+// or anywhere — retirement is only ever a side effect of activation.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -60,6 +67,11 @@ describe('RolePermissionChecker', () => {
     'checklistQuestion:read',
     'checklistQuestion:update',
     'checklistQuestion:delete',
+    'reviewTemplate:create',
+    'reviewTemplate:read',
+    'reviewTemplate:update',
+    'reviewTemplate:delete',
+    'reviewTemplate:activate',
   ];
 
   const NON_ADMIN_ROLES: Role[] = [
@@ -82,5 +94,17 @@ describe('RolePermissionChecker', () => {
     ),
   )('denies %s on %s', (role, permission) => {
     expect(checker.can(role, permission)).toBe(false);
+  });
+
+  // authorization/spec.md "No Standalone Retire Permission": no
+  // `reviewTemplate:retire` permission MUST exist anywhere in the
+  // `Permission` union.
+  it('does not grant SYSTEM_ADMIN a reviewTemplate:retire permission (no such permission exists)', () => {
+    expect(
+      checker.can(
+        'SYSTEM_ADMIN',
+        'reviewTemplate:retire' as unknown as Permission,
+      ),
+    ).toBe(false);
   });
 });

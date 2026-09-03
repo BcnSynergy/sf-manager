@@ -31,6 +31,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'checklistQuestion:read',
     'checklistQuestion:update',
     'checklistQuestion:delete',
+    'reviewTemplate:create',
+    'reviewTemplate:read',
+    'reviewTemplate:update',
+    'reviewTemplate:delete',
+    'reviewTemplate:activate',
   ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to
