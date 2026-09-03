@@ -100,7 +100,7 @@ Chain strategy: stacked-to-main
 - [x] 9.2 `findDraftWithLiveQuestions` / `findFrozenWithSnapshot` — frozen query does not reference `"ChecklistQuestion"` (design Decision 5).
 - [x] 9.3 Integration: two-connection concurrent `activate()` race — exactly one succeeds, one `TransactionConflictError`, exactly one `active` row remains (spec: "Concurrent activations leave exactly one active version").
 - [x] 9.4 Integration: `review-template-status-parity.integration.spec.ts`; migration guard — 3 unique indexes + FK in `pg_indexes`/`pg_constraint`, `questionText` `NOT NULL`.
-- [ ] 9.5 `presentation/review-template.controller.ts` + DTOs — 6 routes incl. `PUT .../questions`, `POST .../activate` (design Decision 8); `review-template-error-code.ts` (6 codes); `review-template.module.ts` imports `ChecklistQuestionModule`; register in `app.module.ts`.
+- [x] 9.5 `presentation/review-template.controller.ts` + DTOs — 6 routes incl. `PUT .../questions`, `POST .../activate` (design Decision 8); `review-template-error-code.ts` (6 codes); `review-template.module.ts` imports `ChecklistQuestionModule`; register in `app.module.ts`.
 
 ## Phase 10: Web — Review Templates (PR 10)
 - [ ] 10.1 `apps/web/src/api/review-template.ts` — typed calls + error-code union.

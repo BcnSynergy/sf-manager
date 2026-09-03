@@ -8,6 +8,7 @@ import { CommunityModule } from './modules/community/community.module';
 import { MaintenanceCompanyModule } from './modules/maintenance-company/maintenance-company.module';
 import { InspectableElementModule } from './modules/inspectable-element/inspectable-element.module';
 import { ChecklistQuestionModule } from './modules/checklist-question/checklist-question.module';
+import { ReviewTemplateModule } from './modules/review-template/review-template.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -25,6 +26,11 @@ import { ChecklistQuestionModule } from './modules/checklist-question/checklist-
 // ChecklistQuestionModule (checklist-management PR 4) registers the
 // admin-only /checklist-questions CRUD surface — a global pool, no parent
 // module import (design.md File Changes).
+// ReviewTemplateModule (checklist-management PR 9) registers the
+// admin-only /review-templates CRUD + activation surface, importing
+// ChecklistQuestionModule for CHECKLIST_QUESTION_REPOSITORY (design.md
+// Decision 6 — the dependency direction is review-template -> checklist-question
+// only, never the reverse).
 @Module({
   imports: [
     PrismaModule,
@@ -35,6 +41,7 @@ import { ChecklistQuestionModule } from './modules/checklist-question/checklist-
     MaintenanceCompanyModule,
     InspectableElementModule,
     ChecklistQuestionModule,
+    ReviewTemplateModule,
     HealthModule,
   ],
 })
