@@ -31,6 +31,18 @@
 // /checklist-questions route. Four separate permissions, mirroring
 // inspectableElement:*'s granularity (design.md Decision 8). All four are
 // granted only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
+//
+// reviewTemplate:* — checklist-management/authorization spec "Permission
+// Check on Review Template Endpoints" (PR 9, tasks.md 8.9): governs every
+// /review-templates route, including the question-selection and activation
+// actions. Five permissions — `reviewTemplate:activate` is kept separate
+// from `reviewTemplate:update`, mirroring `community:assign`, because
+// activation is an irreversible state transition with a side effect on a
+// sibling version, not an ordinary edit (design.md Decision 8). There is
+// deliberately NO `reviewTemplate:retire` permission — retirement is never
+// a standalone action, only an automatic side effect of activating a
+// successor (authorization spec "No Standalone Retire Permission"). All
+// five are granted only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -52,4 +64,9 @@ export type Permission =
   | 'checklistQuestion:create'
   | 'checklistQuestion:read'
   | 'checklistQuestion:update'
-  | 'checklistQuestion:delete';
+  | 'checklistQuestion:delete'
+  | 'reviewTemplate:create'
+  | 'reviewTemplate:read'
+  | 'reviewTemplate:update'
+  | 'reviewTemplate:delete'
+  | 'reviewTemplate:activate';
