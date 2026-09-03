@@ -101,6 +101,7 @@ Chain strategy: stacked-to-main
 - [x] 9.3 Integration: two-connection concurrent `activate()` race — exactly one succeeds, one `TransactionConflictError`, exactly one `active` row remains (spec: "Concurrent activations leave exactly one active version").
 - [x] 9.4 Integration: `review-template-status-parity.integration.spec.ts`; migration guard — 3 unique indexes + FK in `pg_indexes`/`pg_constraint`, `questionText` `NOT NULL`.
 - [x] 9.5 `presentation/review-template.controller.ts` + DTOs — 6 routes incl. `PUT .../questions`, `POST .../activate` (design Decision 8); `review-template-error-code.ts` (6 codes); `review-template.module.ts` imports `ChecklistQuestionModule`; register in `app.module.ts`.
+  - **Note**: `POST .../activate`'s response (`ActivateReviewTemplateResponseDto`) is `{id, status, version}` only, not the full `ReviewTemplateResponseDto` (with `questions`) that design.md's Data Flow diagram labels the response as. spec.md's own activation scenario only asserts `status`/`version` in the response, and composing a second read to include `questions` would be unrequested scope per ADR-006 — the client can call `GET .../:id` right after if it needs the frozen snapshot. Fair, spec-compliant reading per fresh-context review of PR 9; documented here since it diverges from design.md's literal diagram.
 
 ## Phase 10: Web — Review Templates (PR 10)
 - [ ] 10.1 `apps/web/src/api/review-template.ts` — typed calls + error-code union.
