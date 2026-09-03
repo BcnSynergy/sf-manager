@@ -61,14 +61,14 @@ Chain strategy: stacked-to-main
   - **Decision (PR 4)**: kept the guard; mapped `InvalidChecklistQuestionInputError` to a plain `BadRequestException` (no `code` field) in `ChecklistQuestionController.mapMutationError`, matching the Zod pipe's own uncoded 400 shape rather than wrapping it in `buildCodedError` — there is no second REACHABLE 400 cause on this route (the guard is unreachable through HTTP; ZodValidationPipe rejects the same shapes first), so a `code` would imply a client-distinguishable case that doesn't exist. `update-checklist-question.use-case.ts` gets NO symmetric guard: `updateChecklistQuestionSchema.frequencies` is already `z.array(...).min(1).optional()`, so "update to an empty frequencies set" is already a 400 at the Zod boundary — confirmed by reading the schema, not assumed.
 
 ## Phase 5: Web — Question Pool (PR 5)
-- [ ] 5.1 `apps/web/src/api/checklist-question.ts` — typed calls + error-code union.
-- [ ] 5.2 `apps/web/src/checklist-question/error-messages.ts`, `review-frequency-labels.ts`, `element-type-labels.ts` (reused).
-- [ ] 5.3 `apps/web/src/pages/ChecklistQuestionsListPage.tsx` — grouped by `elementType`, frequency tags, verbatim `text`, empty/loading/error states (spec: checklist-question-admin-ui "List the Question Pool", "Question Text Is Rendered Verbatim").
-- [ ] 5.4 `apps/web/src/pages/ChecklistQuestionCreatePage.tsx` / `ChecklistQuestionEditPage.tsx` — client validation via shared schema, prefilled edit (spec: "Create Checklist Question", "Edit Checklist Question").
-- [ ] 5.5 Confirmed soft-delete via `ConfirmDialog`, no blocking-dependency copy (spec: "Confirmed Soft-Delete").
-- [ ] 5.6 `App.tsx` — 3 routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering.
-- [ ] 5.7 `i18n/locales/{en,es,ca}.json` — real `checklistQuestion.*` keys + label maps; extend `locales.test.ts`.
-- [ ] 5.8 `apps/api/test/checklist-question.e2e-spec.ts` — full lifecycle, empty-pool, dup text allowed, RBAC matrix (401/403 on all 4 routes, 4 non-admin roles), soft-delete never blocked.
+- [x] 5.1 `apps/web/src/api/checklist-question.ts` — typed calls + error-code union.
+- [x] 5.2 `apps/web/src/checklist-question/error-messages.ts`, `review-frequency-labels.ts`, `element-type-labels.ts` (reused).
+- [x] 5.3 `apps/web/src/pages/ChecklistQuestionsListPage.tsx` — grouped by `elementType`, frequency tags, verbatim `text`, empty/loading/error states (spec: checklist-question-admin-ui "List the Question Pool", "Question Text Is Rendered Verbatim").
+- [x] 5.4 `apps/web/src/pages/ChecklistQuestionCreatePage.tsx` / `ChecklistQuestionEditPage.tsx` — client validation via shared schema, prefilled edit (spec: "Create Checklist Question", "Edit Checklist Question").
+- [x] 5.5 Confirmed soft-delete via `ConfirmDialog`, no blocking-dependency copy (spec: "Confirmed Soft-Delete").
+- [x] 5.6 `App.tsx` — 3 routes under `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, static-before-dynamic ordering.
+- [x] 5.7 `i18n/locales/{en,es,ca}.json` — real `checklistQuestion.*` keys + label maps; extend `locales.test.ts`.
+- [x] 5.8 `apps/api/test/checklist-question.e2e-spec.ts` — full lifecycle, empty-pool, dup text allowed, RBAC matrix (401/403 on all 4 routes, 4 non-admin roles), soft-delete never blocked.
 
 ## Phase 6: Review Template Migration (PR 6) — mechanical, no TDD
 - [ ] 6.1 `schema.prisma`: `enum ReviewTemplateStatus { draft active retired }`, `ReviewTemplate` (`draftQuestionIds String[] @db.Uuid`, `version Int?`), `ReviewTemplateQuestion` (`questionText String` NOT NULL) + `@@index([templateId])` (design Decisions 1-3, Interfaces).

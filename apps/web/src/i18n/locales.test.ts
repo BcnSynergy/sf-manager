@@ -246,6 +246,52 @@ describe('locale key-set parity (en/es/ca)', () => {
     'inspectableElement.edit.deleteConfirmMessage',
   ];
 
+  // Existence guard for checklist-question (Phase 5), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `checklistQuestion.*` key path referenced by source in PR5, so a
+  // future PR that adds a new call site without adding its translation
+  // fails here rather than silently rendering the raw key.
+  const REQUIRED_CHECKLIST_QUESTION_KEY_PATHS = [
+    // list (Phase 5)
+    'checklistQuestion.list.title',
+    'checklistQuestion.list.loading',
+    'checklistQuestion.list.empty',
+    'checklistQuestion.list.columnText',
+    'checklistQuestion.list.columnFrequencies',
+    'checklistQuestion.list.columnActions',
+    'checklistQuestion.list.createLink',
+    'checklistQuestion.list.editLink',
+    'checklistQuestion.list.delete',
+    'checklistQuestion.list.deleteConfirmTitle',
+    'checklistQuestion.list.deleteConfirmMessage',
+    // create (Phase 5)
+    'checklistQuestion.create.title',
+    'checklistQuestion.create.typeLabel',
+    'checklistQuestion.create.frequenciesLabel',
+    'checklistQuestion.create.textLabel',
+    'checklistQuestion.create.submitLabel',
+    'checklistQuestion.create.validationError',
+    // edit (Phase 5)
+    'checklistQuestion.edit.title',
+    'checklistQuestion.edit.typeLabel',
+    'checklistQuestion.edit.frequenciesLabel',
+    'checklistQuestion.edit.textLabel',
+    'checklistQuestion.edit.submitLabel',
+    'checklistQuestion.edit.validationError',
+    'checklistQuestion.edit.notFound',
+    'checklistQuestion.edit.deleteLabel',
+    'checklistQuestion.edit.deleteConfirmTitle',
+    'checklistQuestion.edit.deleteConfirmMessage',
+    // error-messages.ts mapping targets (Phase 5)
+    'checklistQuestion.error.validationFailed',
+    'checklistQuestion.error.notFound',
+    // review-frequency-labels.ts mapping targets (Phase 5)
+    'checklistQuestion.frequency.monthly',
+    'checklistQuestion.frequency.quarterly',
+    'checklistQuestion.frequency.semiannual',
+    'checklistQuestion.frequency.annual',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -298,6 +344,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_INSPECTABLE_ELEMENT_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_CHECKLIST_QUESTION_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {
