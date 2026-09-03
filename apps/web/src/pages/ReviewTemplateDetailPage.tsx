@@ -406,10 +406,15 @@ export function ReviewTemplateDetailPage() {
 
       {/* Mounted conditionally, one at a time, rather than always-mounted
           with `open={boolean}` — ConfirmDialog's data-testid is a fixed
-          "confirm-dialog" string shared by every caller (it has always had
-          exactly one live instance per page until this page, the first
-          with two distinct confirmation flows), so mounting both
-          permanently would put two elements on the same testid at once. */}
+          "confirm-dialog" string shared by every caller, so two permanently
+          mounted instances would collide on it. This isn't the first page
+          with two confirmation flows: CommunityDetailPage has the same
+          shape (two AssignmentSections, each with its own ConfirmDialog)
+          and resolves the collision by scoping queries with `within()`
+          against each section's own container. That approach doesn't
+          transfer here — Activate and Delete share one section with no
+          equivalent container boundary — so this page scopes the
+          collision by only ever having one dialog mounted instead. */}
       {pendingActivate && (
         <ConfirmDialog
           open={pendingActivate}
