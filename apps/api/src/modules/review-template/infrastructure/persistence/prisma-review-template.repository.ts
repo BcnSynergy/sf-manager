@@ -38,6 +38,16 @@ const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 const RAW_QUERY_FAILED = 'P2010';
 const SERIALIZATION_FAILURE_SQLSTATE = '40001';
 const UNIQUE_VIOLATION_SQLSTATE = '23505';
+// sdd-verify C-1 (PR 12/12): activate()'s statement shape (INSERT, then a
+// lineage-wide UPDATE ... WHERE status='active', then a single-row UPDATE
+// ... WHERE id=...) deadlocks readily under concurrent activation attempts.
+// SQLSTATE class 40 ("Transaction Rollback") covers both 40001
+// (serialization_failure) and 40P01 (deadlock_detected) — both are equally
+// normal, retryable concurrency outcomes and MUST map to the same 409
+// REVIEW_TEMPLATE_ACTIVATION_CONFLICT. Reproduced deterministically against
+// real Postgres: 78/80 losing requests in a 40-iteration x 3-concurrent
+// activate() race escaped unmapped before this fix.
+const DEADLOCK_DETECTED_SQLSTATE = '40P01';
 
 function isActivationConflict(
   error: unknown,
@@ -54,7 +64,8 @@ function isActivationConflict(
   return (
     error.code === RAW_QUERY_FAILED &&
     (error.message.includes(SERIALIZATION_FAILURE_SQLSTATE) ||
-      error.message.includes(UNIQUE_VIOLATION_SQLSTATE))
+      error.message.includes(UNIQUE_VIOLATION_SQLSTATE) ||
+      error.message.includes(DEADLOCK_DETECTED_SQLSTATE))
   );
 }
 

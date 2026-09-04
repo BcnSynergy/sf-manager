@@ -18,6 +18,7 @@ import { DRAFT_SELECTION_CLEANER } from '../src/modules/checklist-question/appli
 import { InMemoryChecklistQuestionRepository } from '../src/modules/checklist-question/application/use-cases/testing/in-memory-checklist-question.repository';
 import { REVIEW_TEMPLATE_REPOSITORY } from '../src/modules/review-template/application/ports/review-template.repository.port';
 import { InMemoryReviewTemplateRepository } from '../src/modules/review-template/application/use-cases/testing/in-memory-review-template.repository';
+import { TransactionConflictError } from '../src/modules/review-template/domain/errors/transaction-conflict.error';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
 // design.md Testing Strategy (E2E row) + tasks.md 11.1: reuse the SAME
@@ -1169,6 +1170,106 @@ describe('Review Templates (e2e)', () => {
         }
       }
       expect(offenders).toEqual([]);
+    });
+  });
+
+  // sdd-verify C-1 (PR 12/12 remediation) + W-2 gap it identified: the
+  // ACTIVATION_CONFLICT mapping was previously exercised only against a
+  // hand-thrown TransactionConflictError in a REPOSITORY unit test
+  // (prisma-review-template.repository.spec.ts) — nothing proved the
+  // CONTROLLER's real HTTP pipeline (guard -> use case -> mapError ->
+  // NestJS exception rendering) actually turns that error into a 409 with
+  // the spec'd body. This spins up a real app instance whose
+  // REVIEW_TEMPLATE_REPOSITORY.activate() always throws
+  // TransactionConflictError, so the request travels the full HTTP stack —
+  // the same stack a real Postgres 40P01/40001/23505 escape would hit —
+  // and asserts what the client actually receives.
+  describe('Activation conflict HTTP mapping (sdd-verify C-1 remediation)', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'rt-activation-conflict-admin@example.com';
+    let templateId: string;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rt-activation-conflict-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+
+      const userRepository = new InMemoryUserRepository();
+      userRepository.seed(admin);
+      const questionRepository = new InMemoryChecklistQuestionRepository();
+      const conflictingTemplateRepository: InMemoryReviewTemplateRepository =
+        new InMemoryReviewTemplateRepository(questionRepository);
+      // Simulates what a real Postgres 40P01/40001/23505 escape looks like
+      // by the time it reaches this port: activate() rejects with
+      // TransactionConflictError. The SQLSTATE -> TransactionConflictError
+      // mapping itself is covered at the repository layer
+      // (prisma-review-template.repository.spec.ts,
+      // prisma-review-template-activation.integration.spec.ts); this test's
+      // job is the layer that had NO coverage — the HTTP response the
+      // caller actually sees.
+      conflictingTemplateRepository.activate = () =>
+        Promise.reject(new TransactionConflictError());
+
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      })
+        .overrideProvider(USER_REPOSITORY)
+        .useValue(userRepository)
+        .overrideProvider(TOKEN_DENYLIST)
+        .useValue(new InMemoryTokenDenylist())
+        .overrideProvider(CHECKLIST_QUESTION_REPOSITORY)
+        .useValue(questionRepository)
+        .overrideProvider(REVIEW_TEMPLATE_REPOSITORY)
+        .useValue(conflictingTemplateRepository)
+        .overrideProvider(DRAFT_SELECTION_CLEANER)
+        .useValue(
+          new InMemoryDraftSelectionCleaner(conflictingTemplateRepository),
+        )
+        .overrideProvider(PrismaService)
+        .useValue({
+          $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+        })
+        .compile();
+
+      app = moduleFixture.createNestApplication();
+      app.use(cookieParser());
+      app.enableCors({ origin: 'http://localhost:5173', credentials: true });
+      await app.init();
+
+      const agent = await loginAgent(app, adminEmail);
+      const created = await agent
+        .post('/review-templates')
+        .send({
+          elementType: 'EXTINGUISHER',
+          frequency: 'QUARTERLY',
+          name: 'Conflict target',
+        })
+        .expect(201);
+      templateId = (created.body as TemplateListItemBody).id;
+      const question = await createQuestion(app, agent);
+      await agent
+        .put(`/review-templates/${templateId}/questions`)
+        .send({ questionIds: [question.id] })
+        .expect(200);
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('returns 409 REVIEW_TEMPLATE_ACTIVATION_CONFLICT when repository.activate() rejects with TransactionConflictError (real HTTP pipeline, not a unit-tested private method)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post(`/review-templates/${templateId}/activate`)
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        statusCode: 409,
+        code: 'REVIEW_TEMPLATE_ACTIVATION_CONFLICT',
+      });
     });
   });
 });
