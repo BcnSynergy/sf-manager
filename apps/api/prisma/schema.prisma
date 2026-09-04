@@ -179,6 +179,19 @@ model InspectableElement {
   installedAt  DateTime    @db.Date // design.md Decision 3 — DATE, not TIMESTAMP(3)
   deletedAt    DateTime? // ADR-010
 
+  // label-printing/design.md Decision 1-2 + Decision 4: application-generated
+  // public identifier, `VARCHAR(10)` not `CHAR(10)` (blank-padded comparison
+  // would make 'ABC       ' equal 'ABC'). Backfilled by a hand-written
+  // migration (index created before backfill, NOT NULL applied last) — this
+  // `@unique` is Prisma-visible and its index name
+  // (`InspectableElement_code_key`) is reproduced verbatim in that migration.
+  // The DB default below is a PR1-only transitional bridge (see
+  // migration.sql for the full rationale) — Prisma Client treats `code` as
+  // optional on create() only because @default is declared, but Phase 3
+  // (PR3) will always supply an explicit, application-generated code,
+  // which overrides this default on every real INSERT.
+  code         String      @unique @db.VarChar(10) @default(dbgenerated("temp_bridge_random_inspectable_element_code()"))
+
   // Prisma-VISIBLE regular index. Postgres does not auto-index FK columns,
   // and every list query plus the community delete guard's NOT EXISTS
   // (design.md Decision 6) filters on exactly this column.

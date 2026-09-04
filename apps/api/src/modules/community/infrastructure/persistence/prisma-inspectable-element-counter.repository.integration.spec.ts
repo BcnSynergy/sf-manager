@@ -41,6 +41,10 @@ describe('PrismaInspectableElementCounter (integration)', () => {
     });
   });
 
+  // label-printing: `code` is NOT NULL + UNIQUE (migration
+  // 20260904090000_add_inspectable_element_code) with a transitional DB
+  // default until Phase 3 wires application-level generation — this
+  // fixture relies on that default rather than supplying a literal.
   const createElement = (overrides: { deletedAt?: Date | null } = {}) =>
     prisma.inspectableElement.create({
       data: {

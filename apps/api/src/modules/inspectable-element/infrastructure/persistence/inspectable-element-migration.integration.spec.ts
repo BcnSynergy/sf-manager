@@ -94,4 +94,65 @@ describe('InspectableElement schema (migration integration guard)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].data_type).toBe('date');
   });
+
+  // label-printing/design.md Decision 4 + spec "Pre-Existing Elements Are
+  // Backfilled With Codes": the unique index on `code` must be present, and
+  // must be the exact name `InspectableElement_code_key` Prisma's own diff
+  // engine would generate for `code String @unique` — otherwise the schema
+  // drifts from what schema.prisma declares.
+  it('the InspectableElement_code_key unique index is present', async () => {
+    const rows = await prisma.$queryRaw<
+      Array<{ indexname: string; indexdef: string }>
+    >`
+      SELECT indexname, indexdef FROM pg_indexes
+      WHERE tablename = 'InspectableElement'
+        AND indexname = 'InspectableElement_code_key'
+    `;
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].indexdef).toContain('UNIQUE');
+    expect(rows[0].indexdef).toContain('(code)');
+  });
+
+  // label-printing/design.md Decision 4 — `VARCHAR(10)`, not `CHAR(10)`:
+  // blank-padded comparison semantics would make 'ABC       ' compare equal
+  // to 'ABC'. Also asserts NOT NULL survives the migration's last statement.
+  it('the code column is character varying(10) and NOT NULL', async () => {
+    const rows = await prisma.$queryRaw<
+      Array<{
+        data_type: string;
+        character_maximum_length: number | null;
+        is_nullable: string;
+      }>
+    >`
+      SELECT data_type, character_maximum_length, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'InspectableElement' AND column_name = 'code'
+    `;
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].data_type).toBe('character varying');
+    expect(rows[0].character_maximum_length).toBe(10);
+    expect(rows[0].is_nullable).toBe('NO');
+  });
+
+  // label-printing spec "Pre-Existing Elements Are Backfilled With Codes":
+  // every row that existed before this migration (this DB holds
+  // representative rows, not an empty table) must end up with a
+  // well-formed, distinct code — proving the backfill actually ran, not
+  // just that the column exists.
+  it('every existing row has a well-formed code and all codes are distinct', async () => {
+    const rows = await prisma.$queryRaw<Array<{ code: string }>>`
+      SELECT "code" FROM "InspectableElement"
+    `;
+
+    expect(rows.length).toBeGreaterThan(0);
+
+    const codes = rows.map((r) => r.code);
+    for (const code of codes) {
+      expect(code).toMatch(/^[2-9A-HJKMNP-Z]{10}$/);
+    }
+
+    expect(new Set(codes).size).toBe(codes.length);
+  });
 });
