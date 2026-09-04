@@ -173,6 +173,7 @@ interface ElementResponseBody {
   serialNumber: string | null;
   installedAt: string;
   code: string;
+  warning?: { code: string };
 }
 
 // label-printing/design.md Decision 2: 10 uppercase-alphanumeric chars,
@@ -278,6 +279,48 @@ describe('Inspectable Elements (e2e)', () => {
       expect(firstCode).toMatch(ELEMENT_CODE_PATTERN);
       expect(secondCode).toMatch(ELEMENT_CODE_PATTERN);
       expect(firstCode).not.toBe(secondCode);
+    });
+
+    // label-printing/design.md Addendum Decision 10-12 + tasks.md 4.5: a
+    // create body whose raw payload carries a `code` key is not rejected —
+    // 2xx, the stored code is application-generated (never the submitted
+    // value), and the response carries a warning.
+    it('creates an element and warns when the request body carries a code key (spec: A supplied code is ignored and warned about)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Supplied Code Extinguisher',
+          location: 'Hallway',
+          installedAt: '2026-03-15',
+          code: 'HACKEDCODE',
+        })
+        .expect(201);
+
+      const body = response.body as ElementResponseBody;
+      expect(body.code).not.toBe('HACKEDCODE');
+      expect(body.code).toMatch(ELEMENT_CODE_PATTERN);
+      expect(body.warning).toEqual({ code: 'SUPPLIED_CODE_IGNORED' });
+    });
+
+    // label-printing spec: "A supplied code is never a validation failure" +
+    // "response MUST NOT include a warning field" on the clean path.
+    it('creates an element with no warning field when the request body carries no code key (spec: Admin creates an element under an existing community)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Clean Create Extinguisher',
+          location: 'Hallway',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+
+      expect(response.body).not.toHaveProperty('warning');
     });
 
     it('rejects a request missing a required field (spec: Missing required field rejected)', async () => {

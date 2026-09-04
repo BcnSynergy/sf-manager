@@ -35,6 +35,15 @@ export interface CreateInspectableElementInput {
   location: string;
   serialNumber?: string;
   installedAt: string;
+  // design.md Addendum Decision 10: set by the controller from raw-body key
+  // presence (Object.hasOwn), never from the (already-stripped) typed DTO.
+  codeSupplied?: boolean;
+}
+
+// design.md Addendum Decision 11: the only warning this use case emits —
+// informational only, never a validation failure.
+export interface SuppliedCodeWarning {
+  code: 'SUPPLIED_CODE_IGNORED';
 }
 
 export interface CreateInspectableElementResult {
@@ -47,6 +56,7 @@ export interface CreateInspectableElementResult {
   serialNumber: string | null;
   installedAt: string;
   code: string;
+  warning?: SuppliedCodeWarning;
 }
 
 // design.md Data Flow — POST /communities/:communityId/inspectable-elements
@@ -91,6 +101,12 @@ export class CreateInspectableElementUseCase {
       serialNumber: element.serialNumber,
       installedAt: formatInstalledAt(element.installedAt),
       code: element.code,
+      // design.md Addendum Decision 11: mirrors AddRepresentativeResult's
+      // conditional-spread — the key is ABSENT, never null/false, when no
+      // code was supplied.
+      ...(input.codeSupplied
+        ? { warning: { code: 'SUPPLIED_CODE_IGNORED' as const } }
+        : {}),
     };
   }
 

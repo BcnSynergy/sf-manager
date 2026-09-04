@@ -59,13 +59,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 4 (PR 4): Supplied-Code Warning Mechanism
 
-- [ ] 4.1 RED: unit test on use case — `codeSupplied: true` -> `result.warning.code === 'SUPPLIED_CODE_IGNORED'`; false/omitted -> `expect('warning' in result).toBe(false)`.
-- [ ] 4.2 GREEN: modify `create-inspectable-element.use-case.ts` — `SuppliedCodeWarning` interface, `codeSupplied?: boolean` input, conditional-spread `warning?` on result.
-- [ ] 4.3 Create `create-inspectable-element-response.dto.ts`: `SuppliedCodeWarningDto`, `CreateInspectableElementResponseDto extends InspectableElementResponseDto`.
-- [ ] 4.4 Modify `inspectable-element.controller.ts`: add unpiped `@Body() rawBody: Record<string, unknown>` param, `Object.hasOwn(rawBody ?? {}, 'code')` -> `codeSupplied`, create return type + `@ApiCreatedResponse` type to `CreateInspectableElementResponseDto`. Confirm `createInspectableElementSchema` stays non-`.strict()`.
-- [ ] 4.5 RED: e2e — warned create (valid body + `code: 'HACKEDCODE'`) -> 201, `warning.code === 'SUPPLIED_CODE_IGNORED'`, stored `code !== 'HACKEDCODE'` and matches alphabet regex.
-- [ ] 4.6 RED: e2e — clean create (no `code`) -> 201, `expect(body).not.toHaveProperty('warning')`.
-- [ ] 4.7 GREEN: confirm both e2e scenarios pass; warned create never 4xx and row exists afterward.
+- [x] 4.1 RED: unit test on use case — `codeSupplied: true` -> `result.warning.code === 'SUPPLIED_CODE_IGNORED'`; false/omitted -> `expect('warning' in result).toBe(false)`.
+- [x] 4.2 GREEN: modify `create-inspectable-element.use-case.ts` — `SuppliedCodeWarning` interface, `codeSupplied?: boolean` input, conditional-spread `warning?` on result.
+- [x] 4.3 Create `create-inspectable-element-response.dto.ts`: `SuppliedCodeWarningDto`, `CreateInspectableElementResponseDto extends InspectableElementResponseDto`.
+- [x] 4.4 Modify `inspectable-element.controller.ts`: add unpiped `@Body() rawBody: Record<string, unknown>` param, `Object.hasOwn(rawBody ?? {}, 'code')` -> `codeSupplied`, create return type + `@ApiCreatedResponse` type to `CreateInspectableElementResponseDto`. Confirm `createInspectableElementSchema` stays non-`.strict()`.
+- [x] 4.5 RED: e2e — warned create (valid body + `code: 'HACKEDCODE'`) -> 201, `warning.code === 'SUPPLIED_CODE_IGNORED'`, stored `code !== 'HACKEDCODE'` and matches alphabet regex.
+- [x] 4.6 RED: e2e — clean create (no `code`) -> 201, `expect(body).not.toHaveProperty('warning')`.
+- [x] 4.7 GREEN: confirm both e2e scenarios pass; warned create never 4xx and row exists afterward.
 
 ## Phase 5 (PR 5): Web QR Rendering Component
 
