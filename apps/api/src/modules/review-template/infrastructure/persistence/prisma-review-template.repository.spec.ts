@@ -329,6 +329,36 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
     );
   });
 
+  // Regression (sdd-verify C-1, PR 12/12): under real concurrent
+  // activations, activate()'s statement shape (INSERT, then a lineage-wide
+  // UPDATE ... WHERE status='active', then a single-row UPDATE ... WHERE
+  // id=...) deadlocks readily — Postgres aborts the loser with SQLSTATE
+  // 40P01 (deadlock_detected), the same class-40 "Transaction Rollback"
+  // family as 40001, but a DISTINCT code that isActivationConflict() did not
+  // recognise. Reproduced deterministically against real Postgres (40
+  // iterations x 3 concurrent activate() calls on the same draft: 78/80
+  // losing requests escaped as an unmapped P2010 instead of
+  // TransactionConflictError).
+  it('maps a raw-query-wrapped P2010 whose message embeds SQLSTATE 40P01 (deadlock_detected) to TransactionConflictError', async () => {
+    const prisma = {
+      $transaction: jest
+        .fn()
+        .mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError(
+            'Raw query failed. Code: `40P01`. Message: `deadlock detected`',
+            { code: 'P2010', clientVersion: 'test' },
+          ),
+        ),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toThrow(
+      TransactionConflictError,
+    );
+  });
+
   it('does NOT swallow a P2010 whose message does not embed a known conflict SQLSTATE — rethrows the raw error', async () => {
     const original = new Prisma.PrismaClientKnownRequestError(
       'Raw query failed. Code: `23503`. Message: `foreign key violation`',
