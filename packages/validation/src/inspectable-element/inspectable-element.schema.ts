@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+// design.md Decision 2: the single declaration of the element-code
+// alphabet, length, and format. `domain/element-code.ts` (apps/api)
+// re-exports the alphabet/length and derives `isElementCode()` from this
+// same schema — no second declaration exists anywhere else. Alphabet is
+// `0-9A-Z` minus the visually-ambiguous `0`, `O`, `1`, `I`, `L` (31 chars).
+export const ELEMENT_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+export const ELEMENT_CODE_LENGTH = 10;
+
+export const elementCodeSchema = z.string().regex(/^[2-9A-HJKMNP-Z]{10}$/);
+
 // design.md Decision 1: the Zod projection of the ElementType three-way
 // seam. Authoritative order is domain (apps/api) -> this schema; the domain
 // union (`ELEMENT_TYPES`, apps/api/src/modules/inspectable-element/domain/
@@ -26,9 +36,7 @@ export const createInspectableElementSchema = z.object({
   installedAt: z.iso.date(),
 });
 
-export type CreateInspectableElementRequest = z.infer<
-  typeof createInspectableElementSchema
->;
+export type CreateInspectableElementRequest = z.infer<typeof createInspectableElementSchema>;
 
 // design.md Interfaces (PATCH .../inspectable-elements/:elementId) +
 // inspectable-element-management spec.md "Update Inspectable Element":
@@ -48,6 +56,4 @@ export const updateInspectableElementSchema = z.object({
   installedAt: z.iso.date().optional(),
 });
 
-export type UpdateInspectableElementRequest = z.infer<
-  typeof updateInspectableElementSchema
->;
+export type UpdateInspectableElementRequest = z.infer<typeof updateInspectableElementSchema>;

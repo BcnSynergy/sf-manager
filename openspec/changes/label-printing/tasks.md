@@ -37,12 +37,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 2 (PR 2): Code Generation Port + Adapter
 
-- [ ] 2.1 `packages/validation/src/inspectable-element/inspectable-element.schema.ts`: add `ELEMENT_CODE_ALPHABET`, `ELEMENT_CODE_LENGTH`, `elementCodeSchema` (regex `^[2-9A-HJKMNP-Z]{10}$`).
-- [ ] 2.2 Create `.../domain/element-code.ts`: re-export alphabet/length, `isElementCode()` predicate.
-- [ ] 2.3 Create `.../application/ports/element-code-generator.port.ts`: `ElementCodeGenerator` + `ELEMENT_CODE_GENERATOR` symbol, mirrors `id-generator.port.ts`.
-- [ ] 2.4 RED: `random-element-code.generator.spec.ts` — 10,000-sample: length 10, alphabet-only chars, no `0O1IL`, all distinct.
-- [ ] 2.5 GREEN: create `.../infrastructure/code/random-element-code.generator.ts` using `node:crypto randomInt(0,31)` per char.
-- [ ] 2.6 Create `.../domain/errors/element-code-already-exists.error.ts` and `.../domain/errors/element-code-generation-failed.error.ts`.
+- [x] 2.1 `packages/validation/src/inspectable-element/inspectable-element.schema.ts`: add `ELEMENT_CODE_ALPHABET`, `ELEMENT_CODE_LENGTH`, `elementCodeSchema` (regex `^[2-9A-HJKMNP-Z]{10}$`).
+- [x] 2.2 Create `.../domain/element-code.ts`: re-export alphabet/length, `isElementCode()` predicate.
+- [x] 2.3 Create `.../application/ports/element-code-generator.port.ts`: `ElementCodeGenerator` + `ELEMENT_CODE_GENERATOR` symbol, mirrors `id-generator.port.ts`.
+- [x] 2.4 RED: `random-element-code.generator.spec.ts` — 10,000-sample: length 10, alphabet-only chars, no `0O1IL`, all distinct.
+- [x] 2.5 GREEN: create `.../infrastructure/code/random-element-code.generator.ts` using `node:crypto randomInt(0,31)` per char.
+- [x] 2.6 Create `.../domain/errors/element-code-already-exists.error.ts` and `.../domain/errors/element-code-generation-failed.error.ts`.
 
 ## Phase 3 (PR 3): Wire Generation Into Create/List/Update
 
