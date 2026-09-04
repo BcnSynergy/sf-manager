@@ -1,11 +1,24 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import { ELEMENT_CODE_ALPHABET } from '../../../inspectable-element/domain/element-code';
 import { Community } from '../../domain/community.entity';
 import { PrismaCommunityRepository } from './prisma-community.repository';
 
 const idGenerator = new UuidV7IdGenerator();
+
+// label-printing/design.md Decision 2: every `code` in the table must match
+// the alphabet regex (inspectable-element-migration.integration.spec.ts's
+// table-wide guard), so fixtures inserting InspectableElement rows directly
+// via `prisma.inspectableElement.create` cannot use an arbitrary literal.
+const uniqueElementCode = (): string => {
+  let code = '';
+  for (let i = 0; i < 10; i++) {
+    code += ELEMENT_CODE_ALPHABET[randomInt(0, ELEMENT_CODE_ALPHABET.length)];
+  }
+  return code;
+};
 
 // Integration test against a real (test) Postgres instance (design.md
 // Testing Strategy), mirroring prisma-user.repository.integration.spec.ts.
@@ -170,6 +183,11 @@ describe('PrismaCommunityRepository (integration)', () => {
         location: 'Ground floor',
         installedAt: new Date('2026-01-01T00:00:00.000Z'),
         deletedAt: null,
+        // label-printing/design.md Decision 4a: PR3 dropped the PR1
+        // transitional DB default (migration
+        // 20260904150000_drop_inspectable_element_code_bridge) — an explicit
+        // literal is required on every raw-Prisma fixture now.
+        code: uniqueElementCode(),
       },
     });
 
@@ -200,6 +218,7 @@ describe('PrismaCommunityRepository (integration)', () => {
         location: 'Basement',
         installedAt: new Date('2026-01-01T00:00:00.000Z'),
         deletedAt: new Date(),
+        code: uniqueElementCode(),
       },
     });
 

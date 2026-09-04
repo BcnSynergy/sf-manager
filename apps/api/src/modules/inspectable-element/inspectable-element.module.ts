@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { CommunityModule } from '../community/community.module';
+import { ELEMENT_CODE_GENERATOR } from './application/ports/element-code-generator.port';
 import { INSPECTABLE_ELEMENT_REPOSITORY } from './application/ports/inspectable-element.repository.port';
 import { CreateInspectableElementUseCase } from './application/use-cases/create-inspectable-element.use-case';
 import { ListInspectableElementsByCommunityUseCase } from './application/use-cases/list-inspectable-elements-by-community.use-case';
 import { SoftDeleteInspectableElementUseCase } from './application/use-cases/soft-delete-inspectable-element.use-case';
 import { UpdateInspectableElementUseCase } from './application/use-cases/update-inspectable-element.use-case';
+import { RandomElementCodeGenerator } from './infrastructure/code/random-element-code.generator';
 import { PrismaInspectableElementRepository } from './infrastructure/persistence/prisma-inspectable-element.repository';
 import { InspectableElementController } from './presentation/inspectable-element.controller';
 
@@ -26,6 +28,10 @@ import { InspectableElementController } from './presentation/inspectable-element
     {
       provide: INSPECTABLE_ELEMENT_REPOSITORY,
       useClass: PrismaInspectableElementRepository,
+    },
+    {
+      provide: ELEMENT_CODE_GENERATOR,
+      useClass: RandomElementCodeGenerator,
     },
     CreateInspectableElementUseCase,
     ListInspectableElementsByCommunityUseCase,

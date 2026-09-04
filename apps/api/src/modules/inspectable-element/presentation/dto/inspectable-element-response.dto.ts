@@ -30,4 +30,10 @@ export class InspectableElementResponseDto {
 
   @ApiProperty({ description: "ISO 'YYYY-MM-DD' calendar date." })
   installedAt!: string;
+
+  // label-printing/design.md Decision 1 + Decision 8: application-generated,
+  // immutable public identifier — server-generated on create, never accepted
+  // as an input, never mutated by PATCH.
+  @ApiProperty({ description: '10-character application-generated code.' })
+  code!: string;
 }

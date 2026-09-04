@@ -1,4 +1,7 @@
-import { Community, CommunityProps } from '../../../community/domain/community.entity';
+import {
+  Community,
+  CommunityProps,
+} from '../../../community/domain/community.entity';
 import { InMemoryCommunityRepository } from '../../../community/application/use-cases/testing/in-memory-community.repository';
 import { CommunityNotFoundError } from '../../../community/domain/errors/community-not-found.error';
 import {
@@ -32,6 +35,7 @@ const makeElement = (
     installedAt: new Date('2026-03-15T00:00:00.000Z'),
     serialNumber: null,
     deletedAt: null,
+    code: 'ABCDEFGHJK',
     ...overrides,
   });
 
@@ -52,11 +56,14 @@ describe('SoftDeleteInspectableElementUseCase', () => {
     );
   });
 
-  it("soft-deletes an active element by setting deletedAt", async () => {
+  it('soft-deletes an active element by setting deletedAt', async () => {
     communityRepository.seed(makeCommunity());
     elementRepository.seed(makeElement());
 
-    await useCase.execute({ communityId: 'community-1', elementId: 'element-1' });
+    await useCase.execute({
+      communityId: 'community-1',
+      elementId: 'element-1',
+    });
 
     expect(
       await elementRepository.findByIdInCommunity('community-1', 'element-1'),

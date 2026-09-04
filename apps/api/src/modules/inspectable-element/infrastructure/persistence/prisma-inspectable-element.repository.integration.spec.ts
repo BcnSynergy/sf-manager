@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
+import { ELEMENT_CODE_ALPHABET } from '../../domain/element-code';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { Community } from '../../../community/domain/community.entity';
@@ -32,6 +33,14 @@ describe('PrismaInspectableElementRepository (integration)', () => {
 
   const uniqueLabel = (label: string) => `${label}-${randomUUID()}`;
 
+  const uniqueCode = (): string => {
+    let code = '';
+    for (let i = 0; i < 10; i++) {
+      code += ELEMENT_CODE_ALPHABET[randomInt(0, ELEMENT_CODE_ALPHABET.length)];
+    }
+    return code;
+  };
+
   const makeCommunity = (): Community =>
     new Community({
       id: idGenerator.generate(),
@@ -52,6 +61,7 @@ describe('PrismaInspectableElementRepository (integration)', () => {
       installedAt: new Date('2026-01-15'),
       serialNumber: null,
       deletedAt: null,
+      code: uniqueCode(),
     });
 
   // PR6 review: updateById()/softDeleteById()'s `where` includes the

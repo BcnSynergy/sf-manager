@@ -1,4 +1,7 @@
-import { Community, CommunityProps } from '../../../community/domain/community.entity';
+import {
+  Community,
+  CommunityProps,
+} from '../../../community/domain/community.entity';
 import { InMemoryCommunityRepository } from '../../../community/application/use-cases/testing/in-memory-community.repository';
 import { CommunityNotFoundError } from '../../../community/domain/errors/community-not-found.error';
 import {
@@ -31,6 +34,7 @@ const makeElement = (
     installedAt: new Date('2026-03-15T00:00:00.000Z'),
     serialNumber: null,
     deletedAt: null,
+    code: 'ABCDEFGHJK',
     ...overrides,
   });
 
@@ -68,6 +72,7 @@ describe('ListInspectableElementsByCommunityUseCase', () => {
         location: 'Planta baja',
         serialNumber: null,
         installedAt: '2026-03-15',
+        code: 'ABCDEFGHJK',
       },
     ]);
   });
@@ -75,7 +80,9 @@ describe('ListInspectableElementsByCommunityUseCase', () => {
   it('does not include elements created under a different community', async () => {
     communityRepository.seed(makeCommunity());
     communityRepository.seed(makeCommunity({ id: 'community-2' }));
-    elementRepository.seed(makeElement({ id: 'element-2', communityId: 'community-2' }));
+    elementRepository.seed(
+      makeElement({ id: 'element-2', communityId: 'community-2' }),
+    );
 
     const result = await useCase.execute('community-1');
 

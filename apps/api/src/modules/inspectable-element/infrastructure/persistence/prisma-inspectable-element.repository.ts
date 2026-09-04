@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../shared/infrastructure/persistence/pri
 import { SoftDeletableRepository } from '../../../../shared/infrastructure/persistence/soft-deletable.repository';
 import { InspectableElementRepository } from '../../application/ports/inspectable-element.repository.port';
 import { InspectableElement } from '../../domain/inspectable-element.entity';
+import { ElementCodeAlreadyExistsError } from '../../domain/errors/element-code-already-exists.error';
 import { InspectableElementNotFoundError } from '../../domain/errors/inspectable-element-not-found.error';
 import { InspectableElementMapper } from './inspectable-element.mapper';
 
@@ -15,6 +16,12 @@ import { InspectableElementMapper } from './inspectable-element.mapper';
 // row — mapped below to InspectableElementNotFoundError, the same 404 the use
 // case's own check would have thrown had it run a moment later.
 const RECORD_NOT_FOUND = 'P2025';
+
+// design.md Decision 3: unique-constraint violation on
+// `InspectableElement_code_key`, mapped to ElementCodeAlreadyExistsError so
+// the create use case's bounded retry loop can regenerate and retry — never
+// surfaces as a raw Prisma error.
+const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 
 // Prisma adapter for the InspectableElementRepository port (ADR-013).
 // Extends SoftDeletableRepository so the ADR-010 `deletedAt: null` default
@@ -31,12 +38,25 @@ export class PrismaInspectableElementRepository
     super();
   }
 
-  // Plain insert — nothing about this entity is unique (design.md "No
-  // Uniqueness Constraints on Name, Location, or Serial Number").
+  // design.md Decision 3: `code` is the one unique field on this entity
+  // (name/location/serialNumber remain unconstrained) — a P2002 on
+  // InspectableElement_code_key maps to ElementCodeAlreadyExistsError,
+  // consumed only by the create use case's retry loop.
   async create(element: InspectableElement): Promise<void> {
-    await this.prisma.inspectableElement.create({
-      data: InspectableElementMapper.toPersistence(element),
-    });
+    try {
+      await this.prisma.inspectableElement.create({
+        data: InspectableElementMapper.toPersistence(element),
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === UNIQUE_CONSTRAINT_VIOLATION &&
+        this.isCodeUniqueViolation(error)
+      ) {
+        throw new ElementCodeAlreadyExistsError();
+      }
+      throw error;
+    }
   }
 
   // design.md Decision 5: the scope is a property of the port, not a
@@ -100,6 +120,23 @@ export class PrismaInspectableElementRepository
     } catch (error) {
       throw this.mapMutationError(error);
     }
+  }
+
+  // Postgres P2002's `meta.target` shape depends on how the unique
+  // constraint was created: field names for a Prisma-declared `@unique`, or
+  // the raw constraint/index name for one only visible via introspection —
+  // `code` is checked either way so this stays robust to either shape.
+  private isCodeUniqueViolation(
+    error: Prisma.PrismaClientKnownRequestError,
+  ): boolean {
+    const target = error.meta?.target;
+    if (Array.isArray(target)) {
+      return target.includes('code');
+    }
+    if (typeof target === 'string') {
+      return target.includes('code');
+    }
+    return false;
   }
 
   private mapMutationError(error: unknown): unknown {

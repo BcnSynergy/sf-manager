@@ -1,4 +1,5 @@
 import { InspectableElement } from '../../../domain/inspectable-element.entity';
+import { ElementCodeAlreadyExistsError } from '../../../domain/errors/element-code-already-exists.error';
 import { InspectableElementRepository } from '../../ports/inspectable-element.repository.port';
 
 // Test double for InspectableElementRepository (design.md Testing Strategy:
@@ -11,17 +12,24 @@ import { InspectableElementRepository } from '../../ports/inspectable-element.re
 // unknown elementId, AND a soft-deleted element — all three collapse to the
 // same indistinguishable 404, exactly like the real
 // `WHERE id = ... AND communityId = ... AND deletedAt IS NULL` query.
-export class InMemoryInspectableElementRepository
-  implements InspectableElementRepository
-{
+export class InMemoryInspectableElementRepository implements InspectableElementRepository {
   private readonly elementsById = new Map<string, InspectableElement>();
+  // Mirrors the real InspectableElement_code_key unique index — create()
+  // throws ElementCodeAlreadyExistsError on a duplicate exactly like the
+  // Prisma adapter maps a real P2002 (design.md Decision 3).
+  private readonly codesInUse = new Set<string>();
 
   seed(element: InspectableElement): void {
     this.elementsById.set(element.id, element);
+    this.codesInUse.add(element.code);
   }
 
   create(element: InspectableElement): Promise<void> {
+    if (this.codesInUse.has(element.code)) {
+      return Promise.reject(new ElementCodeAlreadyExistsError());
+    }
     this.elementsById.set(element.id, element);
+    this.codesInUse.add(element.code);
     return Promise.resolve();
   }
 
@@ -30,11 +38,7 @@ export class InMemoryInspectableElementRepository
     elementId: string,
   ): Promise<InspectableElement | null> {
     const element = this.elementsById.get(elementId);
-    if (
-      !element ||
-      element.communityId !== communityId ||
-      element.isDeleted
-    ) {
+    if (!element || element.communityId !== communityId || element.isDeleted) {
       return Promise.resolve(null);
     }
     return Promise.resolve(element);

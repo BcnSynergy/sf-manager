@@ -20,6 +20,7 @@ export interface ListedInspectableElement {
   location: string;
   serialNumber: string | null;
   installedAt: string;
+  code: string;
 }
 
 // design.md "Where the settled policies live in code" + inspectable-
@@ -55,6 +56,7 @@ export class ListInspectableElementsByCommunityUseCase {
       location: element.location,
       serialNumber: element.serialNumber,
       installedAt: formatInstalledAt(element.installedAt),
+      code: element.code,
     }));
   }
 }

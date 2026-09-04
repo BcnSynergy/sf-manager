@@ -172,7 +172,12 @@ interface ElementResponseBody {
   location: string;
   serialNumber: string | null;
   installedAt: string;
+  code: string;
 }
+
+// label-printing/design.md Decision 2: 10 uppercase-alphanumeric chars,
+// excluding 0/O/1/I/L.
+const ELEMENT_CODE_PATTERN = /^[2-9A-HJKMNP-Z]{10}$/;
 
 describe('Inspectable Elements (e2e)', () => {
   beforeAll(() => {
@@ -237,6 +242,42 @@ describe('Inspectable Elements (e2e)', () => {
         serialNumber: null,
       });
       expect(response.body).toHaveProperty('id');
+      expect((response.body as ElementResponseBody).code).toMatch(
+        ELEMENT_CODE_PATTERN,
+      );
+    });
+
+    // label-printing spec: two creates never collide on `code` (tasks.md
+    // 3.8) — the real RandomElementCodeGenerator is wired via
+    // InspectableElementModule (no fake here), so this exercises the
+    // production adapter end to end.
+    it('assigns distinct, well-formed codes across two creates (label-printing spec)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const first = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Code Extinguisher One',
+          location: 'Hallway',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const second = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Code Extinguisher Two',
+          location: 'Hallway',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+
+      const firstCode = (first.body as ElementResponseBody).code;
+      const secondCode = (second.body as ElementResponseBody).code;
+      expect(firstCode).toMatch(ELEMENT_CODE_PATTERN);
+      expect(secondCode).toMatch(ELEMENT_CODE_PATTERN);
+      expect(firstCode).not.toBe(secondCode);
     });
 
     it('rejects a request missing a required field (spec: Missing required field rejected)', async () => {
@@ -328,6 +369,14 @@ describe('Inspectable Elements (e2e)', () => {
           (element) => element.id === elementId,
         ),
       ).toBe(false);
+
+      const listedElement = (listA.body as ElementResponseBody[]).find(
+        (element) => element.id === elementId,
+      );
+      expect(listedElement?.code).toMatch(ELEMENT_CODE_PATTERN);
+      expect(listedElement?.code).toBe(
+        (created.body as ElementResponseBody).code,
+      );
     });
 
     it('rejects listing for a non-existent or soft-deleted community (spec: Non-existent or soft-deleted community rejected)', async () => {
@@ -363,6 +412,7 @@ describe('Inspectable Elements (e2e)', () => {
         })
         .expect(201);
       const elementId = (created.body as ElementResponseBody).id;
+      const originalCode = (created.body as ElementResponseBody).code;
 
       const response = await agent
         .patch(`/communities/${communityAId}/inspectable-elements/${elementId}`)
@@ -384,6 +434,37 @@ describe('Inspectable Elements (e2e)', () => {
         serialNumber: 'SN-UPDATED',
         installedAt: '2026-04-01',
       });
+      // label-printing/design.md Decision 8: code is immutable.
+      expect((response.body as ElementResponseBody).code).toBe(originalCode);
+    });
+
+    // label-printing spec: PATCH carrying a `code` key is silently discarded
+    // by the write contract (design.md Decision 8) — never a declared
+    // create/update input, so the stored value never changes.
+    it('leaves the stored code untouched when a PATCH body carries a code key (label-printing spec)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Code Immutability Extinguisher',
+          location: 'Storage',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+      const originalCode = (created.body as ElementResponseBody).code;
+
+      const response = await agent
+        .patch(`/communities/${communityAId}/inspectable-elements/${elementId}`)
+        .send({ name: 'Attempted Rename', code: 'HACKEDCODE' })
+        .expect(200);
+
+      expect((response.body as ElementResponseBody).code).toBe(originalCode);
+      expect((response.body as ElementResponseBody).code).not.toBe(
+        'HACKEDCODE',
+      );
     });
 
     it('returns 404 INSPECTABLE_ELEMENT_NOT_FOUND updating a non-existent element id (spec: Update targets a non-existent element id)', async () => {
