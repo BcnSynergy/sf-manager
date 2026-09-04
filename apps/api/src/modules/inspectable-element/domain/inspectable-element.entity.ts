@@ -18,6 +18,11 @@ export interface InspectableElementProps {
   installedAt: Date;
   serialNumber: string | null;
   deletedAt: Date | null;
+  // label-printing/design.md Decision 1: application-generated public
+  // identifier, plain field (no Value Object) — behaviour beyond format
+  // validation is owned by the Zod schema on write, mirroring every other
+  // field in this entity.
+  code: string;
 }
 
 export class InspectableElement {
@@ -30,6 +35,7 @@ export class InspectableElement {
   readonly installedAt: Date;
   readonly serialNumber: string | null;
   readonly deletedAt: Date | null;
+  readonly code: string;
 
   constructor(props: InspectableElementProps) {
     this.id = props.id;
@@ -41,6 +47,7 @@ export class InspectableElement {
     this.installedAt = props.installedAt;
     this.serialNumber = props.serialNumber;
     this.deletedAt = props.deletedAt;
+    this.code = props.code;
   }
 
   // ADR-010: mirrors MaintenanceCompany.isDeleted / Community.isDeleted /

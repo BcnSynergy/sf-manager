@@ -185,12 +185,13 @@ model InspectableElement {
   // migration (index created before backfill, NOT NULL applied last) — this
   // `@unique` is Prisma-visible and its index name
   // (`InspectableElement_code_key`) is reproduced verbatim in that migration.
-  // The DB default below is a PR1-only transitional bridge (see
-  // migration.sql for the full rationale) — Prisma Client treats `code` as
-  // optional on create() only because @default is declared, but Phase 3
-  // (PR3) will always supply an explicit, application-generated code,
-  // which overrides this default on every real INSERT.
-  code         String      @unique @db.VarChar(10) @default(dbgenerated("temp_bridge_random_inspectable_element_code()"))
+  // No @default: the PR1-only transitional DB-generated default (design.md
+  // Decision 4a) was dropped by PR3's cleanup migration
+  // (20260904150000_drop_inspectable_element_code_bridge) once the real
+  // application-level generator (RandomElementCodeGenerator, bounded
+  // 3-attempt retry in CreateInspectableElementUseCase) was wired — every
+  // real INSERT now always supplies an explicit code.
+  code         String      @unique @db.VarChar(10)
 
   // Prisma-VISIBLE regular index. Postgres does not auto-index FK columns,
   // and every list query plus the community delete guard's NOT EXISTS

@@ -24,6 +24,7 @@ export class InspectableElementMapper {
       installedAt: record.installedAt,
       serialNumber: record.serialNumber,
       deletedAt: record.deletedAt,
+      code: record.code,
     });
   }
 
@@ -40,6 +41,7 @@ export class InspectableElementMapper {
       installedAt: element.installedAt,
       serialNumber: element.serialNumber,
       deletedAt: element.deletedAt,
+      code: element.code,
     };
   }
 }

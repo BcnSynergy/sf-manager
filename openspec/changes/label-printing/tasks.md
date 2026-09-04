@@ -46,16 +46,16 @@ Chain strategy: stacked-to-main
 
 ## Phase 3 (PR 3): Wire Generation Into Create/List/Update
 
-- [ ] 3.1 RED: unit test on `create-inspectable-element.use-case.spec.ts` — fake generator duplicate-then-fresh; in-memory repo throws `ElementCodeAlreadyExistsError`; asserts 2 `create()` calls, second code stored.
-- [ ] 3.2 RED: same file — always-duplicate fake asserts `ElementCodeGenerationFailedError` after exactly 3 attempts.
-- [ ] 3.3 GREEN: modify `create-inspectable-element.use-case.ts` — inject `ElementCodeGenerator`, bounded 3-attempt retry loop, `code` on result.
-- [ ] 3.4 Modify `.../use-cases/testing/in-memory-inspectable-element.repository.ts`: track codes, throw `ElementCodeAlreadyExistsError` on duplicate `create()`.
-- [ ] 3.5 Modify `prisma-inspectable-element.repository.ts`: map `P2002` on `InspectableElement_code_key` to `ElementCodeAlreadyExistsError`.
-- [ ] 3.6 Modify `inspectable-element.mapper.ts`: `code` both directions; modify `list`/`update` use-case result types to include `code`.
-- [ ] 3.7 Modify `inspectable-element-response.dto.ts` (+`@ApiProperty`), `inspectable-element.entity.ts` (`readonly code`), `inspectable-element.controller.ts` (map `ElementCodeGenerationFailedError` -> plain 500), `inspectable-element.module.ts` (bind `ELEMENT_CODE_GENERATOR`).
-- [ ] 3.8 RED: e2e `inspectable-element.e2e-spec.ts` — `code` present/well-formed on create/list/update responses, two creates differ, PATCH `{code}` leaves stored value untouched.
-- [ ] 3.9 GREEN: confirm e2e passes end to end.
-- [ ] 3.10 Migration: `DROP FUNCTION temp_bridge_random_inspectable_element_code()` and `ALTER TABLE "InspectableElement" ALTER COLUMN "code" DROP DEFAULT` — per design.md Decision 4a, this is a mandatory cleanup step of the PR1 transitional bridge, not implied by the generator landing. Confirm via `information_schema` that no default remains on `code` afterward.
+- [x] 3.1 RED: unit test on `create-inspectable-element.use-case.spec.ts` — fake generator duplicate-then-fresh; in-memory repo throws `ElementCodeAlreadyExistsError`; asserts 2 `create()` calls, second code stored.
+- [x] 3.2 RED: same file — always-duplicate fake asserts `ElementCodeGenerationFailedError` after exactly 3 attempts.
+- [x] 3.3 GREEN: modify `create-inspectable-element.use-case.ts` — inject `ElementCodeGenerator`, bounded 3-attempt retry loop, `code` on result.
+- [x] 3.4 Modify `.../use-cases/testing/in-memory-inspectable-element.repository.ts`: track codes, throw `ElementCodeAlreadyExistsError` on duplicate `create()`.
+- [x] 3.5 Modify `prisma-inspectable-element.repository.ts`: map `P2002` on `InspectableElement_code_key` to `ElementCodeAlreadyExistsError`. Fresh-context review CRITICAL fix: the original `isCodeUniqueViolation()` checked `error.meta.target`, which Prisma 7 + `@prisma/adapter-pg` never populates for P2002s — ported the proven `meta.driverAdapterError.cause.constraint.fields` extraction from `PrismaCommunityRepresentativeRepository`, and added the design.md Testing Strategy-mandated integration test (real duplicate insert -> `ElementCodeAlreadyExistsError`, not a raw `P2002`) that was missing from this task.
+- [x] 3.6 Modify `inspectable-element.mapper.ts`: `code` both directions; modify `list`/`update` use-case result types to include `code`.
+- [x] 3.7 Modify `inspectable-element-response.dto.ts` (+`@ApiProperty`), `inspectable-element.entity.ts` (`readonly code`), `inspectable-element.controller.ts` (map `ElementCodeGenerationFailedError` -> plain 500), `inspectable-element.module.ts` (bind `ELEMENT_CODE_GENERATOR`).
+- [x] 3.8 RED: e2e `inspectable-element.e2e-spec.ts` — `code` present/well-formed on create/list/update responses, two creates differ, PATCH `{code}` leaves stored value untouched.
+- [x] 3.9 GREEN: confirm e2e passes end to end.
+- [x] 3.10 Migration: `DROP FUNCTION temp_bridge_random_inspectable_element_code()` and `ALTER TABLE "InspectableElement" ALTER COLUMN "code" DROP DEFAULT` — per design.md Decision 4a, this is a mandatory cleanup step of the PR1 transitional bridge, not implied by the generator landing. Confirm via `information_schema` that no default remains on `code` afterward.
 
 ## Phase 4 (PR 4): Supplied-Code Warning Mechanism
 

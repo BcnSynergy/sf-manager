@@ -21,6 +21,7 @@ describe('InspectableElement', () => {
       installedAt,
       serialNumber: 'SN-12345',
       deletedAt: null,
+      code: 'ABCDEFGHJK',
     });
 
     expect(element.id).toBe('01930000-0000-7000-8000-000000000301');
@@ -32,6 +33,7 @@ describe('InspectableElement', () => {
     expect(element.installedAt).toBe(installedAt);
     expect(element.serialNumber).toBe('SN-12345');
     expect(element.isDeleted).toBe(false);
+    expect(element.code).toBe('ABCDEFGHJK');
   });
 
   it('holds null description and serialNumber verbatim when the optional fields are absent', () => {
@@ -45,6 +47,7 @@ describe('InspectableElement', () => {
       installedAt: new Date('2026-01-10T00:00:00.000Z'),
       serialNumber: null,
       deletedAt: null,
+      code: 'BCDEFGHJKM',
     });
 
     expect(element.description).toBeNull();
@@ -64,6 +67,7 @@ describe('InspectableElement', () => {
       installedAt: new Date('2025-11-20T00:00:00.000Z'),
       serialNumber: null,
       deletedAt,
+      code: 'CDEFGHJKMN',
     });
 
     expect(element.deletedAt).toBe(deletedAt);

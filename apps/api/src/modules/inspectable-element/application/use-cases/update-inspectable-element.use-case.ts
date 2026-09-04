@@ -6,10 +6,7 @@ import {
 import { CommunityNotFoundError } from '../../../community/domain/errors/community-not-found.error';
 import { InspectableElementNotFoundError } from '../../domain/errors/inspectable-element-not-found.error';
 import { ElementType } from '../../domain/element-type';
-import {
-  formatInstalledAt,
-  parseInstalledAt,
-} from '../../domain/installed-at';
+import { formatInstalledAt, parseInstalledAt } from '../../domain/installed-at';
 import {
   INSPECTABLE_ELEMENT_REPOSITORY,
   type InspectableElementRepository,
@@ -34,6 +31,7 @@ export interface UpdateInspectableElementResult {
   location: string;
   serialNumber: string | null;
   installedAt: string;
+  code: string;
 }
 
 // design.md Decision 5 + inspectable-element-management spec.md "Update
@@ -98,6 +96,9 @@ export class UpdateInspectableElementUseCase {
           : changes.serialNumber,
       installedAt:
         changes.installedAt ?? formatInstalledAt(existing.installedAt),
+      // design.md Decision 8: `code` is immutable — never part of `changes`,
+      // always the existing stored value.
+      code: existing.code,
     };
   }
 }

@@ -1,11 +1,13 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
+import { ELEMENT_CODE_ALPHABET } from '../../domain/element-code';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { Community } from '../../../community/domain/community.entity';
 import { PrismaCommunityRepository } from '../../../community/infrastructure/persistence/prisma-community.repository';
 import { InspectableElement } from '../../domain/inspectable-element.entity';
 import { InspectableElementNotFoundError } from '../../domain/errors/inspectable-element-not-found.error';
+import { ElementCodeAlreadyExistsError } from '../../domain/errors/element-code-already-exists.error';
 import { PrismaInspectableElementRepository } from './prisma-inspectable-element.repository';
 
 const idGenerator = new UuidV7IdGenerator();
@@ -32,6 +34,14 @@ describe('PrismaInspectableElementRepository (integration)', () => {
 
   const uniqueLabel = (label: string) => `${label}-${randomUUID()}`;
 
+  const uniqueCode = (): string => {
+    let code = '';
+    for (let i = 0; i < 10; i++) {
+      code += ELEMENT_CODE_ALPHABET[randomInt(0, ELEMENT_CODE_ALPHABET.length)];
+    }
+    return code;
+  };
+
   const makeCommunity = (): Community =>
     new Community({
       id: idGenerator.generate(),
@@ -41,7 +51,10 @@ describe('PrismaInspectableElementRepository (integration)', () => {
       deletedAt: null,
     });
 
-  const makeElement = (communityId: string): InspectableElement =>
+  const makeElement = (
+    communityId: string,
+    code?: string,
+  ): InspectableElement =>
     new InspectableElement({
       id: idGenerator.generate(),
       communityId,
@@ -52,6 +65,7 @@ describe('PrismaInspectableElementRepository (integration)', () => {
       installedAt: new Date('2026-01-15'),
       serialNumber: null,
       deletedAt: null,
+      code: code ?? uniqueCode(),
     });
 
   // PR6 review: updateById()/softDeleteById()'s `where` includes the
@@ -89,5 +103,25 @@ describe('PrismaInspectableElementRepository (integration)', () => {
     await expect(
       repository.updateById(idGenerator.generate(), { name: 'New Name' }),
     ).rejects.toThrow(InspectableElementNotFoundError);
+  });
+
+  // Fresh-context review CRITICAL finding (PR3): under Prisma 7 with the
+  // @prisma/adapter-pg driver adapter, a real P2002's `error.meta` has no
+  // `target` field at all — the old `isCodeUniqueViolation()` implementation
+  // that checked `error.meta.target` always returned false against a real
+  // duplicate insert, so this domain mapping never actually fired outside
+  // unit tests using a fake error shape. This test exercises the REAL
+  // `InspectableElement_code_key` unique constraint against real Postgres
+  // (design.md Testing Strategy: "Integration (api) | Prisma adapter | Real
+  // duplicate insert -> ElementCodeAlreadyExistsError, not a raw P2002").
+  it('create() throws ElementCodeAlreadyExistsError for a real duplicate code collision', async () => {
+    const community = makeCommunity();
+    await communityRepository.create(community);
+    const sharedCode = uniqueCode();
+    await repository.create(makeElement(community.id, sharedCode));
+
+    await expect(
+      repository.create(makeElement(community.id, sharedCode)),
+    ).rejects.toThrow(ElementCodeAlreadyExistsError);
   });
 });

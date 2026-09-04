@@ -1,4 +1,7 @@
-import { Community, CommunityProps } from '../../../community/domain/community.entity';
+import {
+  Community,
+  CommunityProps,
+} from '../../../community/domain/community.entity';
 import { InMemoryCommunityRepository } from '../../../community/application/use-cases/testing/in-memory-community.repository';
 import { CommunityNotFoundError } from '../../../community/domain/errors/community-not-found.error';
 import {
@@ -32,6 +35,7 @@ const makeElement = (
     installedAt: new Date('2026-03-15T00:00:00.000Z'),
     serialNumber: null,
     deletedAt: null,
+    code: 'ABCDEFGHJK',
     ...overrides,
   });
 
@@ -67,6 +71,7 @@ describe('UpdateInspectableElementUseCase', () => {
 
     expect(result.name).toBe('Extintor nuevo');
     expect(result.location).toBe('Primer piso');
+    expect(result.code).toBe('ABCDEFGHJK');
 
     const stored = await elementRepository.findByIdInCommunity(
       'community-1',

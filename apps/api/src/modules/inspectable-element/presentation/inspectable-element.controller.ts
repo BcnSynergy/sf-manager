@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Param,
   Patch,
   Post,
@@ -27,6 +28,7 @@ import { RequirePermission } from '../../../shared/presentation/decorators/requi
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CommunityNotFoundError } from '../../community/domain/errors/community-not-found.error';
+import { ElementCodeGenerationFailedError } from '../domain/errors/element-code-generation-failed.error';
 import { CreateInspectableElementUseCase } from '../application/use-cases/create-inspectable-element.use-case';
 import { ListInspectableElementsByCommunityUseCase } from '../application/use-cases/list-inspectable-elements-by-community.use-case';
 import { SoftDeleteInspectableElementUseCase } from '../application/use-cases/soft-delete-inspectable-element.use-case';
@@ -215,6 +217,14 @@ export class InspectableElementController {
         error.message,
         'INSPECTABLE_ELEMENT_NOT_FOUND',
       );
+    }
+    // design.md Decision 3: exhausting the bounded code-generation retry
+    // signals a systemic bug (constant generator, corrupt index), not a
+    // retryable client-facing condition — a plain 500 with no error code,
+    // not a coded error (the coded-error convention's earning test is >1
+    // reachable cause on one status; this has exactly one).
+    if (error instanceof ElementCodeGenerationFailedError) {
+      return new InternalServerErrorException();
     }
     return error;
   }

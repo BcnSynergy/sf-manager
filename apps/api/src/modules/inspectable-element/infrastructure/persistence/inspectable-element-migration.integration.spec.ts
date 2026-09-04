@@ -155,4 +155,30 @@ describe('InspectableElement schema (migration integration guard)', () => {
 
     expect(new Set(codes).size).toBe(codes.length);
   });
+
+  // label-printing/design.md Decision 4a + tasks.md 3.10: the PR1
+  // transitional bridge (temp_bridge_random_inspectable_element_code() as a
+  // column DEFAULT) is mandatory cleanup once the real generator (Phase 3)
+  // is wired — the code column must carry no DEFAULT at all afterward, and
+  // the bridge function itself must no longer exist.
+  it('the code column has no DEFAULT after the PR1 transitional bridge is dropped', async () => {
+    const rows = await prisma.$queryRaw<
+      Array<{ column_default: string | null }>
+    >`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_name = 'InspectableElement' AND column_name = 'code'
+    `;
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].column_default).toBeNull();
+  });
+
+  it('the temp_bridge_random_inspectable_element_code() function no longer exists', async () => {
+    const rows = await prisma.$queryRaw<Array<{ proname: string }>>`
+      SELECT proname FROM pg_proc
+      WHERE proname = 'temp_bridge_random_inspectable_element_code'
+    `;
+
+    expect(rows).toHaveLength(0);
+  });
 });
