@@ -26,9 +26,9 @@ enforcement mechanism depending on what can actually express it:
 
 The proposal flags "`ElementType` may have to move to a shared location" as a
 reportable finding. **It does not have to move.** `apps/api/src/shared/` has
-`application/`, `infrastructure/` and `presentation/` — **no `domain/`** — and
-`inspectable-elements` Decision 4 explicitly rejected hoisting into `shared/`
-as a boundary inversion. The rule that falls out:
+`application/`, `infrastructure/` and `presentation/` — **no `domain/`** —
+and `inspectable-elements` Decision 4 explicitly rejected hoisting into
+`shared/` as a boundary inversion. The rule that falls out:
 
 > Every module imports a closed catalog's **type** from `@sf-manager/validation`
 > (already a universal dependency, ADR-015). Exactly **one** module owns that
