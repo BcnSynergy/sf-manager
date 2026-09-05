@@ -215,6 +215,10 @@ describe('locale key-set parity (en/es/ca)', () => {
     'inspectableElement.list.columnSerialNumber',
     'inspectableElement.list.columnInstalledAt',
     'inspectableElement.list.createLink',
+    // code column + per-row print link (Phase 6)
+    'inspectableElement.list.columnCode',
+    'inspectableElement.list.columnActions',
+    'inspectableElement.list.printLink',
     // create (Phase 7)
     'inspectableElement.create.title',
     'inspectableElement.create.typeLabel',
@@ -244,6 +248,14 @@ describe('locale key-set parity (en/es/ca)', () => {
     'inspectableElement.edit.deleteLabel',
     'inspectableElement.edit.deleteConfirmTitle',
     'inspectableElement.edit.deleteConfirmMessage',
+    // label page (Phase 6)
+    'inspectableElement.label.title',
+    'inspectableElement.label.loading',
+    'inspectableElement.label.notFound',
+    'inspectableElement.label.nameLabel',
+    'inspectableElement.label.locationLabel',
+    'inspectableElement.label.communityLabel',
+    'inspectableElement.label.printLabel',
   ];
 
   // Existence guard for checklist-question (Phase 5), same rationale as

@@ -189,7 +189,10 @@
       "columnLocation": "Ubicación",
       "columnSerialNumber": "Número de serie",
       "columnInstalledAt": "Fecha de instalación",
-      "createLink": "Nuevo elemento inspeccionable"
+      "columnCode": "Código",
+      "columnActions": "Acciones",
+      "createLink": "Nuevo elemento inspeccionable",
+      "printLink": "Imprimir"
     },
     "create": {
       "title": "Nuevo elemento inspeccionable",
@@ -223,6 +226,15 @@
     },
     "type": {
       "extinguisher": "Extintor"
+    },
+    "label": {
+      "title": "Etiqueta del elemento",
+      "loading": "Cargando etiqueta del elemento...",
+      "notFound": "No se ha podido encontrar este elemento inspeccionable.",
+      "nameLabel": "Nombre",
+      "locationLabel": "Ubicación",
+      "communityLabel": "Comunidad",
+      "printLabel": "Imprimir"
     }
   },
   "checklistQuestion": {

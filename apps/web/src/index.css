@@ -109,3 +109,49 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* design.md Decision 6/7: real quiet-zone whitespace around the printed QR.
+   ElementQrCode.tsx renders its module matrix with zero built-in margin
+   (PR5 fresh-context review finding — its own decode test manually adds a
+   quiet zone before handing pixels to jsQR), so the wrapper supplies that
+   padding here instead, both on screen and in print. */
+.element-label-qr-wrapper {
+  display: inline-block;
+  padding: 6mm;
+  background: #fff;
+}
+
+/* design.md Decision 7: print rules for the single-element label
+   (InspectableElementLabelPage.tsx), scoped to `.label-print` so nothing
+   else in the app is affected. `[data-print-hide]` is an allowlist of
+   chrome to hide (page heading, Print button) rather than a blanket reset,
+   per Decision 6's rejection of "hide everything except…". Colors are
+   forced to black-on-white because `:root` above sets `color-scheme: light
+   dark` with a dark-mode palette — without this override, an admin on a
+   dark-mode OS would print a light-grey QR on a dark background and it
+   would not scan. */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  .label-print [data-print-hide] {
+    display: none;
+  }
+
+  .label-print {
+    background: #fff;
+    color: #000;
+    border: none;
+    text-align: left;
+  }
+
+  .label-print .element-label-qr-wrapper {
+    background: #fff;
+  }
+
+  .label-print svg {
+    fill: #000;
+    shape-rendering: crispEdges;
+  }
+}

@@ -189,7 +189,10 @@
       "columnLocation": "Location",
       "columnSerialNumber": "Serial number",
       "columnInstalledAt": "Installed on",
-      "createLink": "New inspectable element"
+      "columnCode": "Code",
+      "columnActions": "Actions",
+      "createLink": "New inspectable element",
+      "printLink": "Print"
     },
     "create": {
       "title": "New inspectable element",
@@ -223,6 +226,15 @@
     },
     "type": {
       "extinguisher": "Fire extinguisher"
+    },
+    "label": {
+      "title": "Element label",
+      "loading": "Loading element label...",
+      "notFound": "This inspectable element could not be found.",
+      "nameLabel": "Name",
+      "locationLabel": "Location",
+      "communityLabel": "Community",
+      "printLabel": "Print"
     }
   },
   "checklistQuestion": {
