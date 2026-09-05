@@ -214,6 +214,59 @@ describe('CreateInspectableElementUseCase', () => {
 
   // inspectable-element-management spec.md "No Uniqueness Constraints on
   // Name, Location, or Serial Number".
+  // design.md Addendum Decision 11 + tasks.md 4.1: `codeSupplied: true`
+  // (the raw request body carried a `code` key) yields a `warning` on the
+  // result mirroring AddRepresentativeResult's conditional-spread pattern;
+  // the supplied value is never echoed, only the coded warning.
+  it('returns a SUPPLIED_CODE_IGNORED warning when codeSupplied is true', async () => {
+    communityRepository.seed(makeCommunity());
+    idGenerator.generate.mockReturnValue('element-1');
+    elementCodeGenerator.generate.mockReturnValue('AAAAAAAAAA');
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementType: 'EXTINGUISHER',
+      name: 'Extintor pasillo',
+      location: 'Planta baja',
+      installedAt: '2026-03-15',
+      codeSupplied: true,
+    });
+
+    expect(result.warning).toEqual({ code: 'SUPPLIED_CODE_IGNORED' });
+    expect(result.code).toBe('AAAAAAAAAA');
+  });
+
+  // design.md Addendum: the key MUST be absent — never null, never false —
+  // when no code was supplied, mirroring AddRepresentativeResult exactly.
+  it('omits the warning key entirely when codeSupplied is false or absent', async () => {
+    communityRepository.seed(makeCommunity());
+    idGenerator.generate
+      .mockReturnValueOnce('element-1')
+      .mockReturnValueOnce('element-2');
+    elementCodeGenerator.generate
+      .mockReturnValueOnce('AAAAAAAAAA')
+      .mockReturnValueOnce('BBBBBBBBBB');
+
+    const withFalse = await useCase.execute({
+      communityId: 'community-1',
+      elementType: 'EXTINGUISHER',
+      name: 'Extintor pasillo',
+      location: 'Planta baja',
+      installedAt: '2026-03-15',
+      codeSupplied: false,
+    });
+    expect('warning' in withFalse).toBe(false);
+
+    const omitted = await useCase.execute({
+      communityId: 'community-1',
+      elementType: 'EXTINGUISHER',
+      name: 'Extintor pasillo',
+      location: 'Planta baja',
+      installedAt: '2026-03-15',
+    });
+    expect('warning' in omitted).toBe(false);
+  });
+
   it('allows two elements under the same community with identical name and location', async () => {
     communityRepository.seed(makeCommunity());
     idGenerator.generate

@@ -35,6 +35,7 @@ import { SoftDeleteInspectableElementUseCase } from '../application/use-cases/so
 import { UpdateInspectableElementUseCase } from '../application/use-cases/update-inspectable-element.use-case';
 import { InspectableElementNotFoundError } from '../domain/errors/inspectable-element-not-found.error';
 import type { CreateInspectableElementRequestDto } from './dto/create-inspectable-element-request.dto';
+import { CreateInspectableElementResponseDto } from './dto/create-inspectable-element-response.dto';
 import type { UpdateInspectableElementRequestDto } from './dto/update-inspectable-element-request.dto';
 import { InspectableElementResponseDto } from './dto/inspectable-element-response.dto';
 
@@ -83,7 +84,7 @@ export class InspectableElementController {
       },
     },
   })
-  @ApiCreatedResponse({ type: InspectableElementResponseDto })
+  @ApiCreatedResponse({ type: CreateInspectableElementResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({
     description: 'Caller lacks inspectableElement:create.',
@@ -94,13 +95,18 @@ export class InspectableElementController {
   })
   async create(
     @Param('communityId') communityId: string,
+    // design.md Addendum Decision 10: raw body, deliberately unpiped —
+    // ZodValidationPipe strips `code` out of the typed argument below, so
+    // this is the only place the key survives to detect its presence.
+    @Body() rawBody: Record<string, unknown>,
     @Body(new ZodValidationPipe(createInspectableElementSchema))
     body: CreateInspectableElementRequestDto,
-  ): Promise<InspectableElementResponseDto> {
+  ): Promise<CreateInspectableElementResponseDto> {
     try {
       return await this.createInspectableElementUseCase.execute({
         communityId,
         ...body,
+        codeSupplied: Object.hasOwn(rawBody ?? {}, 'code'),
       });
     } catch (error) {
       throw this.mapMutationError(error);
