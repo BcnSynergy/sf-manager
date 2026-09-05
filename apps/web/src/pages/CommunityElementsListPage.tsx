@@ -109,6 +109,8 @@ export function CommunityElementsListPage() {
               <th>{t('inspectableElement.list.columnLocation')}</th>
               <th>{t('inspectableElement.list.columnSerialNumber')}</th>
               <th>{t('inspectableElement.list.columnInstalledAt')}</th>
+              <th>{t('inspectableElement.list.columnCode')}</th>
+              <th>{t('inspectableElement.list.columnActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,6 +122,18 @@ export function CommunityElementsListPage() {
                 <td>{row.location}</td>
                 <td>{row.serialNumber ?? ''}</td>
                 <td>{row.installedAt}</td>
+                <td>{row.code}</td>
+                <td>
+                  {/* design.md Decision 6: print is per-element only — no
+                      list-level "print all" control exists anywhere on this
+                      page. */}
+                  <Link
+                    to={`/communities/${communityId}/inspectable-elements/${row.id}/label`}
+                    data-testid={`community-elements-list-print-${row.id}`}
+                  >
+                    {t('inspectableElement.list.printLink')}
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>

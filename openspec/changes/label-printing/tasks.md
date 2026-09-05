@@ -76,14 +76,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 6 (PR 6): Label Page, Route, List Wiring
 
-- [ ] 6.1 RED: `InspectableElementLabelPage.test.tsx` — loading/error/not-found states; code + name/location/community rendered; Print button calls spied `window.print`; locale parity across `en`/`es`/`ca`.
-- [ ] 6.2 GREEN: create `InspectableElementLabelPage.tsx` — route `/communities/:communityId/inspectable-elements/:elementId/label`, `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, data via `listInspectableElements` + `listCommunities` under one `LoadState`, renders `ElementQrCode` + plain-text code + name/location/community, Print button.
-- [ ] 6.3 Modify `apps/web/src/App.tsx`: register the `:elementId/label` route.
-- [ ] 6.4 Modify `apps/web/src/index.css`: append `@media print` block scoped to `.label-print` (`@page{margin:10mm}`, hide `[data-print-hide]`, force `#000`/`#fff`, `crispEdges`).
-- [ ] 6.5 RED: `CommunityElementsListPage.test.tsx` — asserts `code` column present, per-row Print link, no list-level print-all control.
-- [ ] 6.6 GREEN: modify `CommunityElementsListPage.tsx` — add `code` column, per-row Print action linking to the label route.
-- [ ] 6.7 Modify `apps/web/src/i18n/locales/{en,es,ca}.json`: real (non-placeholder) translations for all new label/print keys.
-- [ ] 6.8 Browser-verify (CLAUDE.md rule): start dev server, print preview shows no app chrome, QR black-on-white in both light/dark OS scheme, phone scan decodes to the bare code string.
+- [x] 6.1 RED: `InspectableElementLabelPage.test.tsx` — loading/error/not-found states; code + name/location/community rendered; Print button calls spied `window.print`; locale parity across `en`/`es`/`ca`.
+- [x] 6.2 GREEN: create `InspectableElementLabelPage.tsx` — route `/communities/:communityId/inspectable-elements/:elementId/label`, `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`, data via `listInspectableElements` + `listCommunities` under one `LoadState`, renders `ElementQrCode` + plain-text code + name/location/community, Print button.
+- [x] 6.3 Modify `apps/web/src/App.tsx`: register the `:elementId/label` route.
+- [x] 6.4 Modify `apps/web/src/index.css`: append `@media print` block scoped to `.label-print` (`@page{margin:10mm}`, hide `[data-print-hide]`, force `#000`/`#fff`, `crispEdges`).
+- [x] 6.5 RED: `CommunityElementsListPage.test.tsx` — asserts `code` column present, per-row Print link, no list-level print-all control.
+- [x] 6.6 GREEN: modify `CommunityElementsListPage.tsx` — add `code` column, per-row Print action linking to the label route.
+- [x] 6.7 Modify `apps/web/src/i18n/locales/{en,es,ca}.json`: real (non-placeholder) translations for all new label/print keys.
+- [x] 6.8 Browser-verify (CLAUDE.md rule): start dev server, print preview shows no app chrome, QR black-on-white in both light/dark OS scheme, phone scan decodes to the bare code string.
 
 ## Phase 7 (PR 7): Docs Correction + Final Scope Guards
 

@@ -115,4 +115,29 @@ describe('CommunityElementsListPage', () => {
       `/communities/${COMMUNITY_ID}/inspectable-elements/new`,
     );
   });
+
+  it('renders the code column and a per-row Print link to the label route', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+    renderPage();
+
+    const row = await screen.findByTestId(`community-elements-list-row-${elementA.id}`);
+    expect(row).toHaveTextContent(elementA.code);
+
+    const printLink = screen.getByTestId(`community-elements-list-print-${elementA.id}`);
+    expect(printLink).toHaveAttribute(
+      'href',
+      `/communities/${COMMUNITY_ID}/inspectable-elements/${elementA.id}/label`,
+    );
+  });
+
+  it('does not render a list-level print-all control', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+    renderPage();
+
+    await screen.findByTestId(`community-elements-list-row-${elementA.id}`);
+    expect(screen.queryByTestId('community-elements-list-print-all')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
+  });
 });

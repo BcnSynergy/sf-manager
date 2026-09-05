@@ -12,6 +12,7 @@ import { CommunityElementsListPage } from './pages/CommunityElementsListPage';
 import { HealthPage } from './pages/HealthPage';
 import { InspectableElementCreatePage } from './pages/InspectableElementCreatePage';
 import { InspectableElementEditPage } from './pages/InspectableElementEditPage';
+import { InspectableElementLabelPage } from './pages/InspectableElementLabelPage';
 import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
@@ -149,6 +150,19 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <InspectableElementEditPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* design.md Decision 8 (React Router ordering note, same
+              reasoning as `/edit` above): `label` and `edit` are both
+              literal depth-5 segments under the same dynamic `:elementId`
+              parent — distinct final path segments, so declaration order
+              between the two never matters. */}
+          <Route
+            path="/communities/:communityId/inspectable-elements/:elementId/label"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <InspectableElementLabelPage />
               </ProtectedRoute>
             }
           />

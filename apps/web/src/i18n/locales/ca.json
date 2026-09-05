@@ -189,7 +189,10 @@
       "columnLocation": "Ubicació",
       "columnSerialNumber": "Número de sèrie",
       "columnInstalledAt": "Data d'instal·lació",
-      "createLink": "Element inspeccionable nou"
+      "columnCode": "Codi",
+      "columnActions": "Accions",
+      "createLink": "Element inspeccionable nou",
+      "printLink": "Imprimeix"
     },
     "create": {
       "title": "Element inspeccionable nou",
@@ -223,6 +226,15 @@
     },
     "type": {
       "extinguisher": "Extintor"
+    },
+    "label": {
+      "title": "Etiqueta de l'element",
+      "loading": "Carregant etiqueta de l'element...",
+      "notFound": "No s'ha pogut trobar aquest element inspeccionable.",
+      "nameLabel": "Nom",
+      "locationLabel": "Ubicació",
+      "communityLabel": "Comunitat",
+      "printLabel": "Imprimeix"
     }
   },
   "checklistQuestion": {
