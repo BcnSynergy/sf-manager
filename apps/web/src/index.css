@@ -146,6 +146,10 @@ code {
     text-align: left;
   }
 
+  #root:has(.label-print) {
+    border: none;
+  }
+
   .label-print .element-label-qr-wrapper {
     background: #fff;
   }
