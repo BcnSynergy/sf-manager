@@ -69,10 +69,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 5 (PR 5): Web QR Rendering Component
 
-- [ ] 5.1 `apps/web/package.json`: add runtime dep `qrcode`; devDeps `@types/qrcode`, `jsqr`.
-- [ ] 5.2 RED: `ElementQrCode.test.tsx` — read `<rect>`s from DOM, rebuild boolean matrix, rasterize to `ImageData`, `jsQR` decodes exactly the code (not a URL).
-- [ ] 5.3 GREEN: create `apps/web/src/inspectable-element/ElementQrCode.tsx` — `QRCode.create(code, { errorCorrectionLevel: 'H' })`, render matrix as inline `<svg>` with one `<rect>` per dark module.
-- [ ] 5.4 Modify `apps/web/src/api/inspectable-element.ts`: add `code` to `InspectableElement` type.
+- [x] 5.1 `apps/web/package.json`: add runtime dep `qrcode`; devDeps `@types/qrcode`, `jsqr`.
+- [x] 5.2 RED: `ElementQrCode.test.tsx` — read `<rect>`s from DOM, rebuild boolean matrix, rasterize to `ImageData`, `jsQR` decodes exactly the code (not a URL).
+- [x] 5.3 GREEN: create `apps/web/src/inspectable-element/ElementQrCode.tsx` — `QRCode.create(code, { errorCorrectionLevel: 'H' })`, render matrix as inline `<svg>` with one `<rect>` per dark module.
+- [x] 5.4 Modify `apps/web/src/api/inspectable-element.ts`: add `code` to `InspectableElement` type.
 
 ## Phase 6 (PR 6): Label Page, Route, List Wiring
 
