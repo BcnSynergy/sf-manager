@@ -23,6 +23,7 @@ const elementA = {
   location: 'Ground-floor corridor',
   serialNumber: 'SN-001',
   installedAt: '2026-03-15',
+  code: '23456789AB',
 };
 
 const elementB = {
@@ -34,6 +35,7 @@ const elementB = {
   location: 'Basement parking',
   serialNumber: null,
   installedAt: '2026-01-01',
+  code: 'CDEFGHJKMN',
 };
 
 function renderPage() {

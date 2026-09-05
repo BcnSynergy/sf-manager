@@ -88,6 +88,7 @@ describe('InspectableElementCreatePage', () => {
       location: VALID_LOCATION,
       serialNumber: null,
       installedAt: VALID_INSTALLED_AT,
+      code: '23456789AB',
     });
     renderPage();
 

@@ -24,6 +24,10 @@ export type InspectableElement = {
   location: string;
   serialNumber: string | null;
   installedAt: string;
+  // Server-generated, immutable, 10-char alphanumeric (design.md Decisions
+  // 1-3, 8). Never present in create/update payloads — see those types
+  // below.
+  code: string;
 };
 
 export type CreateInspectableElementPayload = {
