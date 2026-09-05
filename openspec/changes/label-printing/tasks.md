@@ -83,7 +83,7 @@ Chain strategy: stacked-to-main
 - [x] 6.5 RED: `CommunityElementsListPage.test.tsx` — asserts `code` column present, per-row Print link, no list-level print-all control.
 - [x] 6.6 GREEN: modify `CommunityElementsListPage.tsx` — add `code` column, per-row Print action linking to the label route.
 - [x] 6.7 Modify `apps/web/src/i18n/locales/{en,es,ca}.json`: real (non-placeholder) translations for all new label/print keys.
-- [ ] 6.8 Browser-verify (CLAUDE.md rule): start dev server, print preview shows no app chrome, QR black-on-white in both light/dark OS scheme, phone scan decodes to the bare code string.
+- [x] 6.8 Browser-verify (CLAUDE.md rule): start dev server, print preview shows no app chrome, QR black-on-white in both light/dark OS scheme, phone scan decodes to the bare code string.
 
 ## Phase 7 (PR 7): Docs Correction + Final Scope Guards
 
