@@ -134,11 +134,17 @@ identification is driven by an **app-generated `code`** instead:
   someone reads and types by hand off a printed label. Unique across the
   whole installation (app-generated, so global uniqueness is trivial and
   avoids ambiguity if an element is ever reassigned between communities).
-  Rendered as a QR code encoding a URL (`.../elements/{code}`), with the
-  `code` also printed as plain text under the QR for the manual fallback.
-  Scanning on mobile deep-links straight to that element's review screen;
-  on web (no native camera) the same code works as a manually
-  entered/pasted lookup value.
+  Rendered as a QR code encoding the bare `code` string itself (not a
+  URL), with the `code` also printed as plain text under the QR for the
+  manual fallback. Scanning app-side looks the code up directly; on web
+  (no native camera) the same code works as a manually entered/pasted
+  lookup value. `code` is immutable once generated: it is never accepted
+  on create (server-generated, like `id`) or on update (stripped by the
+  write contract before reaching the use case), so there is no
+  regeneration/reassignment endpoint. Printing today is single-element
+  only, one label per print action; a batch/multi-element print sheet is
+  explicitly deferred (see `label-printing` change, FR-006) until a real
+  need for it shows up.
 - `serialNumber?`: kept as **informational only** for now — not used for
   lookup, not enforced unique. May become a real identifier later if
   needed.

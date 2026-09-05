@@ -87,9 +87,9 @@ Chain strategy: stacked-to-main
 
 ## Phase 7 (PR 7): Docs Correction + Final Scope Guards
 
-- [ ] 7.1 Modify `docs/architecture/domain-model-inspections.md` SInspectableElement: replace URL-payload description with bare-`code` payload; record `code` immutability and batch-sheet deferral.
-- [ ] 7.2 Scope-guard: grep confirms no batch/multi-element print route or page-break layout exists.
-- [ ] 7.3 Scope-guard: grep `package.json` files confirm no `pdfkit`/`puppeteer`/headless-browser dependency added.
-- [ ] 7.4 Scope-guard: confirm `ROLE_PERMISSIONS`/`Permission` union unchanged (no new permission, no role newly granted).
-- [ ] 7.5 Scope-guard: grep confirms no `code` regeneration/reassignment endpoint or use case exists.
-- [ ] 7.6 Final checklist review across all phases; mark this task file complete.
+- [x] 7.1 Modify `docs/architecture/domain-model-inspections.md` SInspectableElement: replace URL-payload description with bare-`code` payload; record `code` immutability and batch-sheet deferral.
+- [x] 7.2 Scope-guard: grep confirms no batch/multi-element print route or page-break layout exists.
+- [x] 7.3 Scope-guard: grep `package.json` files confirm no `pdfkit`/`puppeteer`/headless-browser dependency added.
+- [x] 7.4 Scope-guard: confirm `ROLE_PERMISSIONS`/`Permission` union unchanged (no new permission, no role newly granted).
+- [x] 7.5 Scope-guard: grep confirms no `code` regeneration/reassignment endpoint or use case exists.
+- [x] 7.6 Final checklist review across all phases; mark this task file complete.
