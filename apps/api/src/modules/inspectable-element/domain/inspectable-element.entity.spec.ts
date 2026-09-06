@@ -22,6 +22,7 @@ describe('InspectableElement', () => {
       serialNumber: 'SN-12345',
       deletedAt: null,
       code: 'ABCDEFGHJK',
+      deactivatedAt: null,
     });
 
     expect(element.id).toBe('01930000-0000-7000-8000-000000000301');
@@ -34,6 +35,7 @@ describe('InspectableElement', () => {
     expect(element.serialNumber).toBe('SN-12345');
     expect(element.isDeleted).toBe(false);
     expect(element.code).toBe('ABCDEFGHJK');
+    expect(element.isDeactivated).toBe(false);
   });
 
   it('holds null description and serialNumber verbatim when the optional fields are absent', () => {
@@ -48,6 +50,7 @@ describe('InspectableElement', () => {
       serialNumber: null,
       deletedAt: null,
       code: 'BCDEFGHJKM',
+      deactivatedAt: null,
     });
 
     expect(element.description).toBeNull();
@@ -68,9 +71,35 @@ describe('InspectableElement', () => {
       serialNumber: null,
       deletedAt,
       code: 'CDEFGHJKMN',
+      deactivatedAt: null,
     });
 
     expect(element.deletedAt).toBe(deletedAt);
     expect(element.isDeleted).toBe(true);
+  });
+
+  // review-session/design.md Decision 3 + inspectable-element-management
+  // spec.md "Decommissioned and deleted are distinct states": deactivatedAt
+  // is orthogonal to deletedAt — NULL = active, a timestamp = decommissioned.
+  it('marks an inspectable element with a deactivatedAt timestamp as deactivated, independent of deletedAt', () => {
+    const deactivatedAt = new Date('2026-05-01T00:00:00.000Z');
+
+    const element = new InspectableElement({
+      id: '01930000-0000-7000-8000-000000000304',
+      communityId: '01930000-0000-7000-8000-000000000101',
+      elementType: 'EXTINGUISHER',
+      name: 'Decommissioned Extinguisher',
+      description: null,
+      location: 'Rooftop',
+      installedAt: new Date('2025-12-01T00:00:00.000Z'),
+      serialNumber: null,
+      deletedAt: null,
+      code: 'DEFGHJKMNP',
+      deactivatedAt,
+    });
+
+    expect(element.deactivatedAt).toBe(deactivatedAt);
+    expect(element.isDeactivated).toBe(true);
+    expect(element.isDeleted).toBe(false);
   });
 });

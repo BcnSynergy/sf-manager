@@ -62,6 +62,7 @@ export class InMemoryInspectableElementRepository implements InspectableElementR
       location?: string;
       serialNumber?: string | null;
       installedAt?: Date;
+      deactivatedAt?: Date | null;
     },
   ): Promise<void> {
     const existing = this.elementsById.get(elementId);
@@ -83,6 +84,10 @@ export class InMemoryInspectableElementRepository implements InspectableElementR
             ? existing.serialNumber
             : changes.serialNumber,
         installedAt: changes.installedAt ?? existing.installedAt,
+        deactivatedAt:
+          changes.deactivatedAt === undefined
+            ? existing.deactivatedAt
+            : changes.deactivatedAt,
       }),
     );
     return Promise.resolve();

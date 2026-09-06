@@ -147,6 +147,11 @@ export class InspectableElementController {
         location: { type: 'string' },
         serialNumber: { type: 'string', nullable: true },
         installedAt: { type: 'string', example: '2026-03-15' },
+        deactivated: {
+          type: 'boolean',
+          description:
+            'true decommissions, false reactivates, absent leaves the state unchanged.',
+        },
       },
     },
   })

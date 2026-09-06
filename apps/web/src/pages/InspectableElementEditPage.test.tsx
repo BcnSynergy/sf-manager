@@ -26,6 +26,7 @@ const elementA = {
   serialNumber: 'SN-001',
   installedAt: '2026-03-15',
   code: '23456789AB',
+  deactivatedAt: null,
 };
 const elementB = {
   id: 'element-2',
@@ -37,6 +38,7 @@ const elementB = {
   serialNumber: null,
   installedAt: '2026-01-01',
   code: 'CDEFGHJKMN',
+  deactivatedAt: '2026-05-01T00:00:00.000Z',
 };
 
 function renderPage(elementId: string) {
@@ -228,5 +230,118 @@ describe('InspectableElementEditPage', () => {
 
     expect(await screen.findByTestId('inspectable-element-edit-delete-error')).toBeInTheDocument();
     expect(screen.queryByTestId('community-elements-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // inspectable-element-admin-ui spec.md "Decommission and Reactivate
+  // Control": single-element, reason-free, requires confirmation before
+  // decommissioning, reflects the new state once the action succeeds.
+  describe('decommission / reactivate control', () => {
+    it('shows a Decommission action for an active element', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage(elementA.id);
+
+      expect(await screen.findByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('inspectable-element-edit-reactivate'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('inspectable-element-edit-deactivated-label'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows a decommissioned state label for a decommissioned element', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage(elementB.id);
+
+      expect(
+        await screen.findByTestId('inspectable-element-edit-deactivated-label'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows a Reactivate action for a decommissioned element', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage(elementB.id);
+
+      expect(
+        await screen.findByTestId('inspectable-element-edit-reactivate'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('inspectable-element-edit-decommission'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('requires confirmation before decommissioning and sends no request when dismissed', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+
+      renderPage(elementA.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-decommission'));
+      expect(mockedUpdateInspectableElement).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+      expect(mockedUpdateInspectableElement).not.toHaveBeenCalled();
+      expect(screen.getByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
+    });
+
+    it('decommissions an active element after confirmation and shows Reactivate afterward', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      mockedUpdateInspectableElement.mockResolvedValue({
+        ...elementA,
+        deactivatedAt: '2026-06-01T00:00:00.000Z',
+      });
+
+      renderPage(elementA.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-decommission'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      await waitFor(() =>
+        expect(mockedUpdateInspectableElement).toHaveBeenCalledWith(COMMUNITY_ID, elementA.id, {
+          deactivated: true,
+        }),
+      );
+      expect(
+        await screen.findByTestId('inspectable-element-edit-reactivate'),
+      ).toBeInTheDocument();
+    });
+
+    it('reactivates a decommissioned element without a confirmation dialog', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementB]);
+      mockedUpdateInspectableElement.mockResolvedValue({
+        ...elementB,
+        deactivatedAt: null,
+      });
+
+      renderPage(elementB.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-reactivate'));
+
+      await waitFor(() =>
+        expect(mockedUpdateInspectableElement).toHaveBeenCalledWith(COMMUNITY_ID, elementB.id, {
+          deactivated: false,
+        }),
+      );
+      expect(
+        await screen.findByTestId('inspectable-element-edit-decommission'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows a distinct error and leaves the displayed state unchanged on a failed decommission', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      mockedUpdateInspectableElement.mockRejectedValue(new ApiError(0));
+
+      renderPage(elementA.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-decommission'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      expect(
+        await screen.findByTestId('inspectable-element-edit-decommission-error'),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
+    });
   });
 });

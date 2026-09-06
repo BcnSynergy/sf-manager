@@ -193,6 +193,12 @@ model InspectableElement {
   // real INSERT now always supplies an explicit code.
   code         String      @unique @db.VarChar(10)
 
+  // review-session/design.md Decision 3: `deactivatedAt`, not `deletedAt` —
+  // domain state (decommissioned), orthogonal to the administrative delete
+  // above. NULL = active. No default, no backfill needed: ADD COLUMN leaves
+  // every existing row NULL (active) by construction.
+  deactivatedAt DateTime?
+
   // Prisma-VISIBLE regular index. Postgres does not auto-index FK columns,
   // and every list query plus the community delete guard's NOT EXISTS
   // (design.md Decision 6) filters on exactly this column.

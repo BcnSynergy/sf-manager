@@ -28,6 +28,10 @@ export type InspectableElement = {
   // 1-3, 8). Never present in create/update payloads — see those types
   // below.
   code: string;
+  // review-session/design.md Decision 3: NULL = active, a timestamp =
+  // decommissioned. Orthogonal to soft-delete — a decommissioned element
+  // still appears in this list.
+  deactivatedAt: string | null;
 };
 
 export type CreateInspectableElementPayload = {
@@ -48,6 +52,9 @@ export type UpdateInspectableElementPayload = {
   location?: string;
   serialNumber?: string | null;
   installedAt?: string;
+  // review-session/design.md Decision 3: true decommissions, false
+  // reactivates, absent leaves the state unchanged.
+  deactivated?: boolean;
 };
 
 export function listInspectableElements(

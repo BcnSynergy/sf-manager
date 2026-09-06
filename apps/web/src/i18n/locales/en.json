@@ -190,9 +190,12 @@
       "columnSerialNumber": "Serial number",
       "columnInstalledAt": "Installed on",
       "columnCode": "Code",
+      "columnState": "State",
       "columnActions": "Actions",
       "createLink": "New inspectable element",
-      "printLink": "Print"
+      "printLink": "Print",
+      "stateActive": "Active",
+      "stateDecommissioned": "Decommissioned"
     },
     "create": {
       "title": "New inspectable element",
@@ -218,7 +221,12 @@
       "notFound": "This inspectable element could not be found.",
       "deleteLabel": "Delete inspectable element",
       "deleteConfirmTitle": "Delete inspectable element",
-      "deleteConfirmMessage": "This inspectable element will be removed. This cannot be undone."
+      "deleteConfirmMessage": "This inspectable element will be removed. This cannot be undone.",
+      "deactivatedLabel": "Decommissioned",
+      "decommissionLabel": "Decommission element",
+      "reactivateLabel": "Reactivate element",
+      "decommissionConfirmTitle": "Decommission element",
+      "decommissionConfirmMessage": "This element will no longer be expected in new review sessions. This can be reversed by reactivating it."
     },
     "error": {
       "validationFailed": "Enter valid inspectable element details.",

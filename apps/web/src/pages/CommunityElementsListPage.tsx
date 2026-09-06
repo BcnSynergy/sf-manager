@@ -110,11 +110,14 @@ export function CommunityElementsListPage() {
               <th>{t('inspectableElement.list.columnSerialNumber')}</th>
               <th>{t('inspectableElement.list.columnInstalledAt')}</th>
               <th>{t('inspectableElement.list.columnCode')}</th>
+              <th>{t('inspectableElement.list.columnState')}</th>
               <th>{t('inspectableElement.list.columnActions')}</th>
             </tr>
           </thead>
           <tbody>
-            {elements.map((row) => (
+            {elements.map((row) => {
+              const decommissioned = row.deactivatedAt !== null;
+              return (
               <tr key={row.id} data-testid={`community-elements-list-row-${row.id}`}>
                 <td>{t(mapElementTypeToLabelKey(row.elementType))}</td>
                 <td>{row.name}</td>
@@ -123,6 +126,23 @@ export function CommunityElementsListPage() {
                 <td>{row.serialNumber ?? ''}</td>
                 <td>{row.installedAt}</td>
                 <td>{row.code}</td>
+                <td>
+                  {/* inspectable-element-admin-ui spec.md "Element State
+                      Shown in the List": rendered through a localized label,
+                      never a raw field value; `data-element-state`
+                      distinguishes the two states visually beyond the
+                      label's own text. */}
+                  <span
+                    data-testid={`community-elements-list-state-${row.id}`}
+                    data-element-state={decommissioned ? 'decommissioned' : 'active'}
+                  >
+                    {t(
+                      decommissioned
+                        ? 'inspectableElement.list.stateDecommissioned'
+                        : 'inspectableElement.list.stateActive',
+                    )}
+                  </span>
+                </td>
                 <td>
                   {/* design.md Decision 6: print is per-element only — no
                       list-level "print all" control exists anywhere on this
@@ -135,7 +155,8 @@ export function CommunityElementsListPage() {
                   </Link>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       )}

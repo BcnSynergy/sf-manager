@@ -23,6 +23,12 @@ export interface InspectableElementProps {
   // validation is owned by the Zod schema on write, mirroring every other
   // field in this entity.
   code: string;
+  // review-session/design.md Decision 3: `deactivatedAt`, not `deletedAt` —
+  // this is domain state (decommissioned), not an administrative delete.
+  // Orthogonal to `deletedAt`: NULL = active, a timestamp = decommissioned.
+  // Mirrors the shipped CommunityTechnician/CommunityRepresentative
+  // precedent verbatim.
+  deactivatedAt: Date | null;
 }
 
 export class InspectableElement {
@@ -36,6 +42,7 @@ export class InspectableElement {
   readonly serialNumber: string | null;
   readonly deletedAt: Date | null;
   readonly code: string;
+  readonly deactivatedAt: Date | null;
 
   constructor(props: InspectableElementProps) {
     this.id = props.id;
@@ -48,6 +55,7 @@ export class InspectableElement {
     this.serialNumber = props.serialNumber;
     this.deletedAt = props.deletedAt;
     this.code = props.code;
+    this.deactivatedAt = props.deactivatedAt;
   }
 
   // ADR-010: mirrors MaintenanceCompany.isDeleted / Community.isDeleted /
@@ -57,5 +65,13 @@ export class InspectableElement {
   // callers that already have one.
   get isDeleted(): boolean {
     return this.deletedAt !== null;
+  }
+
+  // review-session/design.md Decision 3: NULL deactivatedAt = active,
+  // orthogonal to isDeleted — a decommissioned element is not deleted, and
+  // a deleted element is not merely decommissioned (inspectable-element-
+  // management spec.md "Decommissioned and deleted are distinct states").
+  get isDeactivated(): boolean {
+    return this.deactivatedAt !== null;
   }
 }

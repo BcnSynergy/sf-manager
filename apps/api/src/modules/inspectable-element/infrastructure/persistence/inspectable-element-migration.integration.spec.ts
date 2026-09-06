@@ -181,4 +181,27 @@ describe('InspectableElement schema (migration integration guard)', () => {
 
     expect(rows).toHaveLength(0);
   });
+
+  // review-session/design.md Decision 3 + inspectable-element-management
+  // spec.md "Pre-Existing Elements Are Active After the Migration": a plain
+  // nullable ADD COLUMN needs no backfill — every row that existed before
+  // this migration ends up NULL, i.e. active, by construction.
+  it('the deactivatedAt column is nullable', async () => {
+    const rows = await prisma.$queryRaw<Array<{ is_nullable: string }>>`
+      SELECT is_nullable FROM information_schema.columns
+      WHERE table_name = 'InspectableElement' AND column_name = 'deactivatedAt'
+    `;
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].is_nullable).toBe('YES');
+  });
+
+  it('no row is left with a non-NULL deactivatedAt after the migration (no row is left indeterminate)', async () => {
+    const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) AS count FROM "InspectableElement"
+      WHERE "deactivatedAt" IS NOT NULL
+    `;
+
+    expect(Number(rows[0].count)).toBe(0);
+  });
 });

@@ -36,4 +36,11 @@ export class InspectableElementResponseDto {
   // as an input, never mutated by PATCH.
   @ApiProperty({ description: '10-character application-generated code.' })
   code!: string;
+
+  // review-session/design.md Decision 3 + inspectable-element-management
+  // spec.md "Element State Exposed on Element Responses": every response
+  // returning an InspectableElement carries its active/decommissioned
+  // state. NULL = active, a timestamp = decommissioned.
+  @ApiProperty({ nullable: true, type: String, format: 'date-time' })
+  deactivatedAt!: Date | null;
 }

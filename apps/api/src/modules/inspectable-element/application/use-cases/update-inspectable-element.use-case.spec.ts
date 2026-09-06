@@ -36,6 +36,7 @@ const makeElement = (
     serialNumber: null,
     deletedAt: null,
     code: 'ABCDEFGHJK',
+    deactivatedAt: null,
     ...overrides,
   });
 
@@ -177,5 +178,106 @@ describe('UpdateInspectableElementUseCase', () => {
 
     expect(result.description).toBeNull();
     expect(result.serialNumber).toBeNull();
+  });
+
+  // review-session/design.md Decision 3 + inspectable-element-management
+  // spec.md "Decommission and Reactivate an Element": reuses
+  // inspectableElement:update, no new permission.
+  it('decommissions an active element when deactivated is true', async () => {
+    communityRepository.seed(makeCommunity());
+    elementRepository.seed(makeElement());
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementId: 'element-1',
+      deactivated: true,
+    });
+
+    expect(result.deactivatedAt).not.toBeNull();
+    const stored = await elementRepository.findByIdInCommunity(
+      'community-1',
+      'element-1',
+    );
+    expect(stored?.isDeactivated).toBe(true);
+  });
+
+  it('reactivates a decommissioned element when deactivated is false', async () => {
+    communityRepository.seed(makeCommunity());
+    elementRepository.seed(
+      makeElement({ deactivatedAt: new Date('2026-05-01T00:00:00.000Z') }),
+    );
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementId: 'element-1',
+      deactivated: false,
+    });
+
+    expect(result.deactivatedAt).toBeNull();
+    const stored = await elementRepository.findByIdInCommunity(
+      'community-1',
+      'element-1',
+    );
+    expect(stored?.isDeactivated).toBe(false);
+  });
+
+  it('leaves deactivatedAt unchanged when deactivated is not part of the input', async () => {
+    communityRepository.seed(makeCommunity());
+    const deactivatedAt = new Date('2026-05-01T00:00:00.000Z');
+    elementRepository.seed(makeElement({ deactivatedAt }));
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementId: 'element-1',
+      name: 'Extintor nuevo',
+    });
+
+    expect(result.deactivatedAt).toEqual(deactivatedAt);
+  });
+
+  // spec.md "Repeating the same transition is not an error path with side
+  // effects" — decommissioning an already-decommissioned element succeeds
+  // and every other field is unchanged.
+  it('decommissioning an already-decommissioned element succeeds with every other field unchanged and preserves the original deactivatedAt', async () => {
+    communityRepository.seed(makeCommunity());
+    const originalDeactivatedAt = new Date('2026-05-01T00:00:00.000Z');
+    elementRepository.seed(
+      makeElement({ deactivatedAt: originalDeactivatedAt }),
+    );
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementId: 'element-1',
+      deactivated: true,
+    });
+
+    // Fix (review-session PR1 post-review): a redundant decommission call
+    // MUST NOT overwrite the original decommission timestamp with a fresh
+    // `new Date()` — `not.toBeNull()` alone would not catch that
+    // regression, since a new Date() is also not null.
+    expect(result.deactivatedAt).toEqual(originalDeactivatedAt);
+    expect(result.name).toBe('Extintor pasillo');
+    expect(result.location).toBe('Planta baja');
+  });
+
+  // spec.md "Decommission targets a missing, soft-deleted or wrong-community
+  // element" — reactivating a soft-deleted element 404s via the existing
+  // path, exactly like any other update.
+  it('rejects reactivating a soft-deleted element with InspectableElementNotFoundError', async () => {
+    communityRepository.seed(makeCommunity());
+    elementRepository.seed(
+      makeElement({
+        deletedAt: new Date(),
+        deactivatedAt: new Date('2026-05-01T00:00:00.000Z'),
+      }),
+    );
+
+    await expect(
+      useCase.execute({
+        communityId: 'community-1',
+        elementId: 'element-1',
+        deactivated: false,
+      }),
+    ).rejects.toThrow(InspectableElementNotFoundError);
   });
 });

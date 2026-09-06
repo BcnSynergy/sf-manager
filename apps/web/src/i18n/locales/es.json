@@ -190,9 +190,12 @@
       "columnSerialNumber": "Número de serie",
       "columnInstalledAt": "Fecha de instalación",
       "columnCode": "Código",
+      "columnState": "Estado",
       "columnActions": "Acciones",
       "createLink": "Nuevo elemento inspeccionable",
-      "printLink": "Imprimir"
+      "printLink": "Imprimir",
+      "stateActive": "Activo",
+      "stateDecommissioned": "Dado de baja"
     },
     "create": {
       "title": "Nuevo elemento inspeccionable",
@@ -218,7 +221,12 @@
       "notFound": "No se ha podido encontrar este elemento inspeccionable.",
       "deleteLabel": "Eliminar elemento inspeccionable",
       "deleteConfirmTitle": "Eliminar elemento inspeccionable",
-      "deleteConfirmMessage": "Este elemento inspeccionable se eliminará. Esta acción no se puede deshacer."
+      "deleteConfirmMessage": "Este elemento inspeccionable se eliminará. Esta acción no se puede deshacer.",
+      "deactivatedLabel": "Dado de baja",
+      "decommissionLabel": "Dar de baja el elemento",
+      "reactivateLabel": "Reactivar el elemento",
+      "decommissionConfirmTitle": "Dar de baja el elemento",
+      "decommissionConfirmMessage": "Este elemento dejará de esperarse en las nuevas sesiones de revisión. Esta acción se puede revertir reactivándolo."
     },
     "error": {
       "validationFailed": "Introduce datos válidos del elemento inspeccionable.",

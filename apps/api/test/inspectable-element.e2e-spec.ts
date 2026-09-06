@@ -173,6 +173,7 @@ interface ElementResponseBody {
   serialNumber: string | null;
   installedAt: string;
   code: string;
+  deactivatedAt: string | null;
   warning?: { code: string };
 }
 
@@ -673,6 +674,87 @@ describe('Inspectable Elements (e2e)', () => {
         code: 'INSPECTABLE_ELEMENT_NOT_FOUND',
       });
     });
+
+    // review-session/design.md Decision 3 + inspectable-element-management
+    // spec.md "Element Active State" / "Decommission and Reactivate an
+    // Element": full round trip, reusing inspectableElement:update.
+    it('decommissions and reactivates an element, and the list is unaffected by lifecycle filtering (spec: Admin decommissions and reactivates an element, Element Lifecycle Filtering Unchanged)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Decommission Round Trip Extinguisher',
+          location: 'Roof',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+      expect((created.body as ElementResponseBody).deactivatedAt).toBeNull();
+
+      const decommissioned = await agent
+        .patch(`/communities/${communityAId}/inspectable-elements/${elementId}`)
+        .send({ deactivated: true })
+        .expect(200);
+      expect(
+        (decommissioned.body as ElementResponseBody).deactivatedAt,
+      ).not.toBeNull();
+
+      // Still listed (spec: "Element State Exposed on Element Responses" —
+      // decommissioned elements stay in the list, only soft-deleted ones are
+      // excluded).
+      const listAfterDecommission = await agent
+        .get(`/communities/${communityAId}/inspectable-elements`)
+        .expect(200);
+      const listedDecommissioned = (
+        listAfterDecommission.body as ElementResponseBody[]
+      ).find((element) => element.id === elementId);
+      expect(listedDecommissioned).toBeDefined();
+      expect(listedDecommissioned?.deactivatedAt).not.toBeNull();
+
+      const reactivated = await agent
+        .patch(`/communities/${communityAId}/inspectable-elements/${elementId}`)
+        .send({ deactivated: false })
+        .expect(200);
+      expect(
+        (reactivated.body as ElementResponseBody).deactivatedAt,
+      ).toBeNull();
+    });
+
+    // spec: "Decommission targets a missing, soft-deleted or wrong-community
+    // element" — reactivating a soft-deleted element 404s via the existing
+    // update path, exactly like any other field update.
+    it('returns 404 INSPECTABLE_ELEMENT_NOT_FOUND decommissioning a soft-deleted element', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Soft Deleted Before Decommission',
+          location: 'Basement',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+
+      await agent
+        .delete(
+          `/communities/${communityAId}/inspectable-elements/${elementId}`,
+        )
+        .expect(204);
+
+      const response = await agent
+        .patch(`/communities/${communityAId}/inspectable-elements/${elementId}`)
+        .send({ deactivated: true })
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        statusCode: 404,
+        code: 'INSPECTABLE_ELEMENT_NOT_FOUND',
+      });
+    });
   });
 
   describe('No uniqueness on name, location, or serialNumber (tasks.md 10.1, spec: No Uniqueness Constraints on Name, Location, or Serial Number)', () => {
@@ -880,6 +962,22 @@ describe('Inspectable Elements (e2e)', () => {
       it.each(routes)(`${role} %s %s -> 403`, async (method, path) => {
         const agent = await loginAgent(app, email);
         const response = await sendRoute(agent, method, path);
+        expect(response.status).toBe(403);
+      });
+    }
+
+    // review-session/design.md Decision 3: the decommission/reactivate
+    // control reuses `inspectableElement:update` — no new permission — so
+    // the same non-admin 403 matrix applies to the `{ deactivated: true }`
+    // payload shape, not just the generic PATCH body exercised above.
+    for (const [role, email] of nonAdminEmails) {
+      it(`${role} PATCH /communities/:communityId/inspectable-elements/:id { deactivated: true } -> 403`, async () => {
+        const agent = await loginAgent(app, email);
+        const response = await agent
+          .patch(
+            `/communities/${communityId}/inspectable-elements/${elementId}`,
+          )
+          .send({ deactivated: true });
         expect(response.status).toBe(403);
       });
     }

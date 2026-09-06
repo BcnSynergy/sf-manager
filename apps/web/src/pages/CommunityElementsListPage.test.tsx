@@ -24,6 +24,7 @@ const elementA = {
   serialNumber: 'SN-001',
   installedAt: '2026-03-15',
   code: '23456789AB',
+  deactivatedAt: null,
 };
 
 const elementB = {
@@ -36,6 +37,7 @@ const elementB = {
   serialNumber: null,
   installedAt: '2026-01-01',
   code: 'CDEFGHJKMN',
+  deactivatedAt: '2026-05-01T00:00:00.000Z',
 };
 
 function renderPage() {
@@ -139,5 +141,27 @@ describe('CommunityElementsListPage', () => {
     await screen.findByTestId(`community-elements-list-row-${elementA.id}`);
     expect(screen.queryByTestId('community-elements-list-print-all')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
+  });
+
+  // inspectable-element-admin-ui spec.md "Element State Shown in the List":
+  // active and decommissioned elements both appear, distinguishable through
+  // a localized label — never a raw boolean, timestamp or enum value.
+  it('shows a localized state for each element, visually distinguishing decommissioned from active', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+    renderPage();
+
+    const rowA = await screen.findByTestId(`community-elements-list-row-${elementA.id}`);
+    const stateA = screen.getByTestId(`community-elements-list-state-${elementA.id}`);
+    expect(stateA).toHaveTextContent('Active');
+    expect(rowA).not.toHaveTextContent(elementA.deactivatedAt as never);
+
+    const rowB = await screen.findByTestId(`community-elements-list-row-${elementB.id}`);
+    const stateB = screen.getByTestId(`community-elements-list-state-${elementB.id}`);
+    expect(stateB).toHaveTextContent('Decommissioned');
+    expect(rowB).not.toHaveTextContent('2026-05-01T00:00:00.000Z');
+
+    expect(stateA.dataset.elementState).toBe('active');
+    expect(stateB.dataset.elementState).toBe('decommissioned');
   });
 });

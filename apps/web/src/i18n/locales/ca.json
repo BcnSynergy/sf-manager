@@ -190,9 +190,12 @@
       "columnSerialNumber": "Número de sèrie",
       "columnInstalledAt": "Data d'instal·lació",
       "columnCode": "Codi",
+      "columnState": "Estat",
       "columnActions": "Accions",
       "createLink": "Element inspeccionable nou",
-      "printLink": "Imprimeix"
+      "printLink": "Imprimeix",
+      "stateActive": "Actiu",
+      "stateDecommissioned": "Donat de baixa"
     },
     "create": {
       "title": "Element inspeccionable nou",
@@ -218,7 +221,12 @@
       "notFound": "No s'ha pogut trobar aquest element inspeccionable.",
       "deleteLabel": "Elimina l'element inspeccionable",
       "deleteConfirmTitle": "Elimina l'element inspeccionable",
-      "deleteConfirmMessage": "Aquest element inspeccionable s'eliminarà. Aquesta acció no es pot desfer."
+      "deleteConfirmMessage": "Aquest element inspeccionable s'eliminarà. Aquesta acció no es pot desfer.",
+      "deactivatedLabel": "Donat de baixa",
+      "decommissionLabel": "Dona de baixa l'element",
+      "reactivateLabel": "Reactiva l'element",
+      "decommissionConfirmTitle": "Dona de baixa l'element",
+      "decommissionConfirmMessage": "Aquest element deixarà d'esperar-se a les noves sessions de revisió. Aquesta acció es pot revertir reactivant-lo."
     },
     "error": {
       "validationFailed": "Introdueix dades vàlides de l'element inspeccionable.",

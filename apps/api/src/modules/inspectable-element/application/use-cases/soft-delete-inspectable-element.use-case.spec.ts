@@ -36,6 +36,7 @@ const makeElement = (
     serialNumber: null,
     deletedAt: null,
     code: 'ABCDEFGHJK',
+    deactivatedAt: null,
     ...overrides,
   });
 

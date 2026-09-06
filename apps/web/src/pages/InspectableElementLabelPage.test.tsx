@@ -32,6 +32,7 @@ const element = {
   serialNumber: 'SN-001',
   installedAt: '2026-03-15',
   code: '23456789AB',
+  deactivatedAt: null,
 };
 
 function renderPage(elementId: string) {
