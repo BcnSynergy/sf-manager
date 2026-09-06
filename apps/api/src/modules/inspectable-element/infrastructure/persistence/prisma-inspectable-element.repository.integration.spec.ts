@@ -66,6 +66,7 @@ describe('PrismaInspectableElementRepository (integration)', () => {
       serialNumber: null,
       deletedAt: null,
       code: code ?? uniqueCode(),
+      deactivatedAt: null,
     });
 
   // PR6 review: updateById()/softDeleteById()'s `where` includes the

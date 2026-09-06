@@ -96,6 +96,7 @@ export class PrismaInspectableElementRepository
       location?: string;
       serialNumber?: string | null;
       installedAt?: Date;
+      deactivatedAt?: Date | null;
     },
   ): Promise<void> {
     try {

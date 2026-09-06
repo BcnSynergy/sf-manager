@@ -37,7 +37,9 @@ export interface InspectableElementRepository {
   // communityId and elementType are NOT updatable — an element does not
   // move between communities and does not change type in this slice.
   // `null` explicitly clears an optional field; `undefined` leaves it
-  // alone.
+  // alone. `deactivatedAt` (review-session/design.md Decision 3): `undefined`
+  // leaves the state unchanged, `null` reactivates, a `Date` decommissions —
+  // no new permission, reuses `inspectableElement:update`.
   updateById(
     elementId: string,
     changes: {
@@ -46,6 +48,7 @@ export interface InspectableElementRepository {
       location?: string;
       serialNumber?: string | null;
       installedAt?: Date;
+      deactivatedAt?: Date | null;
     },
   ): Promise<void>;
 

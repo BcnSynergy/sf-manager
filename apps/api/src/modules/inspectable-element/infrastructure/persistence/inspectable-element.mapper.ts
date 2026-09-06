@@ -25,6 +25,7 @@ export class InspectableElementMapper {
       serialNumber: record.serialNumber,
       deletedAt: record.deletedAt,
       code: record.code,
+      deactivatedAt: record.deactivatedAt,
     });
   }
 
@@ -42,6 +43,7 @@ export class InspectableElementMapper {
       serialNumber: element.serialNumber,
       deletedAt: element.deletedAt,
       code: element.code,
+      deactivatedAt: element.deactivatedAt,
     };
   }
 }
