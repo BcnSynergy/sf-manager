@@ -226,8 +226,7 @@
       "decommissionLabel": "Dona de baixa l'element",
       "reactivateLabel": "Reactiva l'element",
       "decommissionConfirmTitle": "Dona de baixa l'element",
-      "decommissionConfirmMessage": "Aquest element deixarà d'esperar-se a les noves sessions de revisió. Aquesta acció es pot revertir reactivant-lo.",
-      "decommissionError": "No s'ha pogut actualitzar l'estat de l'element. Torna-ho a provar."
+      "decommissionConfirmMessage": "Aquest element deixarà d'esperar-se a les noves sessions de revisió. Aquesta acció es pot revertir reactivant-lo."
     },
     "error": {
       "validationFailed": "Introdueix dades vàlides de l'element inspeccionable.",

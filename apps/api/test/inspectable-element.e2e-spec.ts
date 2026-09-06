@@ -966,6 +966,22 @@ describe('Inspectable Elements (e2e)', () => {
       });
     }
 
+    // review-session/design.md Decision 3: the decommission/reactivate
+    // control reuses `inspectableElement:update` — no new permission — so
+    // the same non-admin 403 matrix applies to the `{ deactivated: true }`
+    // payload shape, not just the generic PATCH body exercised above.
+    for (const [role, email] of nonAdminEmails) {
+      it(`${role} PATCH /communities/:communityId/inspectable-elements/:id { deactivated: true } -> 403`, async () => {
+        const agent = await loginAgent(app, email);
+        const response = await agent
+          .patch(
+            `/communities/${communityId}/inspectable-elements/${elementId}`,
+          )
+          .send({ deactivated: true });
+        expect(response.status).toBe(403);
+      });
+    }
+
     it('SYSTEM_ADMIN is permitted through the guard (authorization spec: SYSTEM_ADMIN is permitted)', async () => {
       const agent = await loginAgent(app, adminEmail);
       await agent

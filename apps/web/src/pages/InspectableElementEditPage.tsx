@@ -251,6 +251,16 @@ export function InspectableElementEditPage() {
             {elementType !== null ? t(mapElementTypeToLabelKey(elementType)) : ''}
           </span>
         </p>
+        {/* inspectable-element-admin-ui spec.md "state is visually
+            distinguishable": the edit page's own decommission/reactivate
+            button already implies state, but a decommissioned element also
+            gets an explicit state label here, mirroring the list page's
+            state column. */}
+        {deactivated && (
+          <p data-testid="inspectable-element-edit-deactivated-label">
+            {t('inspectableElement.edit.deactivatedLabel')}
+          </p>
+        )}
         <label htmlFor="inspectable-element-edit-name-input">
           {t('inspectableElement.edit.nameLabel')}
         </label>

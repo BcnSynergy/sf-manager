@@ -245,6 +245,19 @@ describe('InspectableElementEditPage', () => {
       expect(
         screen.queryByTestId('inspectable-element-edit-reactivate'),
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('inspectable-element-edit-deactivated-label'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows a decommissioned state label for a decommissioned element', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage(elementB.id);
+
+      expect(
+        await screen.findByTestId('inspectable-element-edit-deactivated-label'),
+      ).toBeInTheDocument();
     });
 
     it('shows a Reactivate action for a decommissioned element', async () => {

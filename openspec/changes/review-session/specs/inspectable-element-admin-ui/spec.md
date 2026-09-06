@@ -46,14 +46,14 @@ NOT ask for a reason and MUST NOT offer a bulk or "decommission all"
 variant.
 
 #### Scenario: Admin decommissions an element from the list
-- GIVEN a `SYSTEM_ADMIN` is viewing community C's elements list containing active element E
+- GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is active
 - WHEN they trigger decommission for E and confirm
-- THEN E MUST be shown as decommissioned in the list
+- THEN E MUST be shown as decommissioned when community C's elements list is next viewed
 
 #### Scenario: Admin reactivates a decommissioned element
-- GIVEN the list contains decommissioned element E
-- WHEN the `SYSTEM_ADMIN` triggers reactivate for E
-- THEN E MUST be shown as active in the list
+- GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is decommissioned
+- WHEN they trigger reactivate for E
+- THEN E MUST be shown as active when community C's elements list is next viewed
 
 #### Scenario: Decommission is confirmed before it happens
 - GIVEN the `SYSTEM_ADMIN` triggers decommission for element E

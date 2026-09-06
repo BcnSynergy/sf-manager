@@ -226,8 +226,7 @@
       "decommissionLabel": "Dar de baja el elemento",
       "reactivateLabel": "Reactivar el elemento",
       "decommissionConfirmTitle": "Dar de baja el elemento",
-      "decommissionConfirmMessage": "Este elemento dejará de esperarse en las nuevas sesiones de revisión. Esta acción se puede revertir reactivándolo.",
-      "decommissionError": "No se ha podido actualizar el estado del elemento. Inténtalo de nuevo."
+      "decommissionConfirmMessage": "Este elemento dejará de esperarse en las nuevas sesiones de revisión. Esta acción se puede revertir reactivándolo."
     },
     "error": {
       "validationFailed": "Introduce datos válidos del elemento inspeccionable.",

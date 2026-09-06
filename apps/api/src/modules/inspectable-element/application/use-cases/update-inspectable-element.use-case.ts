@@ -80,8 +80,18 @@ export class UpdateInspectableElementUseCase {
       throw new InspectableElementNotFoundError();
     }
 
+    // review-session/design.md Decision 3 + fix (review-session PR1
+    // post-review): a redundant `{ deactivated: true }` on an element that
+    // is already decommissioned must be a no-op, not silently overwrite the
+    // original decommission timestamp with a fresh `new Date()`.
     const deactivatedAt =
-      deactivated === undefined ? undefined : deactivated ? new Date() : null;
+      deactivated === undefined
+        ? undefined
+        : deactivated
+          ? existing.deactivatedAt === null
+            ? new Date()
+            : undefined
+          : null;
 
     await this.elementRepository.updateById(elementId, {
       name: changes.name,

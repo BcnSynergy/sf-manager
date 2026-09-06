@@ -226,8 +226,7 @@
       "decommissionLabel": "Decommission element",
       "reactivateLabel": "Reactivate element",
       "decommissionConfirmTitle": "Decommission element",
-      "decommissionConfirmMessage": "This element will no longer be expected in new review sessions. This can be reversed by reactivating it.",
-      "decommissionError": "Could not update the element's state. Try again."
+      "decommissionConfirmMessage": "This element will no longer be expected in new review sessions. This can be reversed by reactivating it."
     },
     "error": {
       "validationFailed": "Enter valid inspectable element details.",

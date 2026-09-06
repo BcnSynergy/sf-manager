@@ -238,10 +238,11 @@ describe('UpdateInspectableElementUseCase', () => {
   // spec.md "Repeating the same transition is not an error path with side
   // effects" — decommissioning an already-decommissioned element succeeds
   // and every other field is unchanged.
-  it('decommissioning an already-decommissioned element succeeds with every other field unchanged', async () => {
+  it('decommissioning an already-decommissioned element succeeds with every other field unchanged and preserves the original deactivatedAt', async () => {
     communityRepository.seed(makeCommunity());
+    const originalDeactivatedAt = new Date('2026-05-01T00:00:00.000Z');
     elementRepository.seed(
-      makeElement({ deactivatedAt: new Date('2026-05-01T00:00:00.000Z') }),
+      makeElement({ deactivatedAt: originalDeactivatedAt }),
     );
 
     const result = await useCase.execute({
@@ -250,7 +251,11 @@ describe('UpdateInspectableElementUseCase', () => {
       deactivated: true,
     });
 
-    expect(result.deactivatedAt).not.toBeNull();
+    // Fix (review-session PR1 post-review): a redundant decommission call
+    // MUST NOT overwrite the original decommission timestamp with a fresh
+    // `new Date()` — `not.toBeNull()` alone would not catch that
+    // regression, since a new Date() is also not null.
+    expect(result.deactivatedAt).toEqual(originalDeactivatedAt);
     expect(result.name).toBe('Extintor pasillo');
     expect(result.location).toBe('Planta baja');
   });
