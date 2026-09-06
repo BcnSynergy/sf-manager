@@ -35,6 +35,7 @@ const makeElement = (
     serialNumber: null,
     deletedAt: null,
     code: 'ABCDEFGHJK',
+    deactivatedAt: null,
     ...overrides,
   });
 
@@ -73,7 +74,24 @@ describe('ListInspectableElementsByCommunityUseCase', () => {
         serialNumber: null,
         installedAt: '2026-03-15',
         code: 'ABCDEFGHJK',
+        deactivatedAt: null,
       },
+    ]);
+  });
+
+  // inspectable-element-management spec.md "Listing a community's elements
+  // returns each element's state" / "Soft-deleted elements remain excluded":
+  // decommissioned elements are NOT soft-deleted, so they stay listed,
+  // carrying their state.
+  it('includes a decommissioned element in the list, carrying its deactivatedAt state', async () => {
+    communityRepository.seed(makeCommunity());
+    const deactivatedAt = new Date('2026-05-01T00:00:00.000Z');
+    elementRepository.seed(makeElement({ deactivatedAt }));
+
+    const result = await useCase.execute('community-1');
+
+    expect(result).toEqual([
+      expect.objectContaining({ id: 'element-1', deactivatedAt }),
     ]);
   });
 

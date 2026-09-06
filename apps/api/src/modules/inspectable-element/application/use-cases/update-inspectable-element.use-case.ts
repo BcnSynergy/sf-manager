@@ -20,6 +20,11 @@ export interface UpdateInspectableElementInput {
   location?: string;
   serialNumber?: string | null;
   installedAt?: string;
+  // review-session/design.md Decision 3: `{ deactivated: true }` decommissions
+  // (deactivatedAt = now()), `{ deactivated: false }` reactivates
+  // (deactivatedAt = null), absent leaves the state unchanged. No new
+  // permission — reuses `inspectableElement:update`.
+  deactivated?: boolean;
 }
 
 export interface UpdateInspectableElementResult {
@@ -32,6 +37,7 @@ export interface UpdateInspectableElementResult {
   serialNumber: string | null;
   installedAt: string;
   code: string;
+  deactivatedAt: Date | null;
 }
 
 // design.md Decision 5 + inspectable-element-management spec.md "Update
@@ -54,13 +60,18 @@ export class UpdateInspectableElementUseCase {
   async execute(
     input: UpdateInspectableElementInput,
   ): Promise<UpdateInspectableElementResult> {
-    const { communityId, elementId, ...changes } = input;
+    const { communityId, elementId, deactivated, ...changes } = input;
 
     const community = await this.communityRepository.findById(communityId);
     if (!community) {
       throw new CommunityNotFoundError();
     }
 
+    // review-session/design.md Decision 3: findByIdInCommunity's community
+    // scoping already 404s a soft-deleted (or wrong-community, or unknown)
+    // element via the existing indistinguishable-404 path — so reactivating
+    // a soft-deleted element is rejected here, before any deactivatedAt
+    // logic runs, with no extra guard needed.
     const existing = await this.elementRepository.findByIdInCommunity(
       communityId,
       elementId,
@@ -68,6 +79,9 @@ export class UpdateInspectableElementUseCase {
     if (!existing) {
       throw new InspectableElementNotFoundError();
     }
+
+    const deactivatedAt =
+      deactivated === undefined ? undefined : deactivated ? new Date() : null;
 
     await this.elementRepository.updateById(elementId, {
       name: changes.name,
@@ -78,6 +92,7 @@ export class UpdateInspectableElementUseCase {
         changes.installedAt === undefined
           ? undefined
           : parseInstalledAt(changes.installedAt),
+      deactivatedAt,
     });
 
     return {
@@ -99,6 +114,8 @@ export class UpdateInspectableElementUseCase {
       // design.md Decision 8: `code` is immutable — never part of `changes`,
       // always the existing stored value.
       code: existing.code,
+      deactivatedAt:
+        deactivatedAt === undefined ? existing.deactivatedAt : deactivatedAt,
     };
   }
 }

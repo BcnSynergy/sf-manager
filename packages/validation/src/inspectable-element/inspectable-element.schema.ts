@@ -48,12 +48,17 @@ export type CreateInspectableElementRequest = z.infer<typeof createInspectableEl
 // mistyped serial number or an obsolete description; without it the field
 // is write-once forever. Explicit `null` clears the field, an absent key
 // leaves it alone.
+// review-session/design.md Decision 3: `deactivated: true` decommissions,
+// `deactivated: false` reactivates, absent leaves the state unchanged — the
+// admin control is a checkbox on this same edit form, reusing
+// `inspectableElement:update` (no new permission).
 export const updateInspectableElementSchema = z.object({
   name: z.string().trim().min(1).optional(),
   description: z.string().trim().min(1).nullable().optional(),
   location: z.string().trim().min(1).optional(),
   serialNumber: z.string().trim().min(1).nullable().optional(),
   installedAt: z.iso.date().optional(),
+  deactivated: z.boolean().optional(),
 });
 
 export type UpdateInspectableElementRequest = z.infer<typeof updateInspectableElementSchema>;

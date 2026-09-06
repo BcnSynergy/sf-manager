@@ -36,6 +36,7 @@ const makeElementWithCode = (id: string, communityId: string, code: string) =>
     serialNumber: null,
     deletedAt: null,
     code,
+    deactivatedAt: null,
   });
 
 // design.md Data Flow — POST /communities/:communityId/inspectable-elements
@@ -88,6 +89,7 @@ describe('CreateInspectableElementUseCase', () => {
       serialNumber: null,
       installedAt: '2026-03-15',
       code: 'AAAAAAAAAA',
+      deactivatedAt: null,
     });
 
     const stored = await elementRepository.findByIdInCommunity(
@@ -96,6 +98,28 @@ describe('CreateInspectableElementUseCase', () => {
     );
     expect(stored?.deletedAt).toBeNull();
     expect(stored?.code).toBe('AAAAAAAAAA');
+  });
+
+  // inspectable-element-management spec.md "A newly created element is
+  // active" (review-session/design.md Decision 3).
+  it('creates an element in the active state', async () => {
+    communityRepository.seed(makeCommunity());
+    idGenerator.generate.mockReturnValue('element-1');
+
+    const result = await useCase.execute({
+      communityId: 'community-1',
+      elementType: 'EXTINGUISHER',
+      name: 'Extintor pasillo',
+      location: 'Planta baja',
+      installedAt: '2026-03-15',
+    });
+
+    expect(result.deactivatedAt).toBeNull();
+    const stored = await elementRepository.findByIdInCommunity(
+      'community-1',
+      'element-1',
+    );
+    expect(stored?.isDeactivated).toBe(false);
   });
 
   it('stores an optional description and serialNumber when provided', async () => {

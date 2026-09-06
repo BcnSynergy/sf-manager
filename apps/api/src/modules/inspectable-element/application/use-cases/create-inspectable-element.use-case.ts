@@ -56,6 +56,7 @@ export interface CreateInspectableElementResult {
   serialNumber: string | null;
   installedAt: string;
   code: string;
+  deactivatedAt: Date | null;
   warning?: SuppliedCodeWarning;
 }
 
@@ -101,6 +102,7 @@ export class CreateInspectableElementUseCase {
       serialNumber: element.serialNumber,
       installedAt: formatInstalledAt(element.installedAt),
       code: element.code,
+      deactivatedAt: element.deactivatedAt,
       // design.md Addendum Decision 11: mirrors AddRepresentativeResult's
       // conditional-spread — the key is ABSENT, never null/false, when no
       // code was supplied.
@@ -129,6 +131,9 @@ export class CreateInspectableElementUseCase {
         serialNumber: input.serialNumber ?? null,
         deletedAt: null,
         code: this.elementCodeGenerator.generate(),
+        // inspectable-element-management spec.md "A newly created element
+        // is active" — an element is always created active.
+        deactivatedAt: null,
       });
 
       try {
