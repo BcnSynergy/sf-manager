@@ -89,6 +89,7 @@ describe('InspectableElementCreatePage', () => {
       serialNumber: null,
       installedAt: VALID_INSTALLED_AT,
       code: '23456789AB',
+      deactivatedAt: null,
     });
     renderPage();
 

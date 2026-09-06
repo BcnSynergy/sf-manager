@@ -46,9 +46,23 @@ export function InspectableElementEditPage() {
   const [installedAt, setInstalledAt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // review-session/design.md Decision 3 + inspectable-element-admin-ui
+  // spec.md "Decommission and Reactivate Control": a single-element,
+  // reason-free control, separate from the general field-edit form —
+  // reusing inspectableElement:update via its own dedicated PATCH call
+  // (mirrors the soft-delete control's own button + error state, never
+  // mixed into the main form submit).
+  const [deactivated, setDeactivated] = useState(false);
+  const [decommissionError, setDecommissionError] = useState<string | null>(null);
+  const [decommissionSubmitting, setDecommissionSubmitting] = useState(false);
+  // ConfirmDialog always renders its <dialog> DOM node regardless of `open`
+  // (see ConfirmDialog.tsx), so this page can only ever mount ONE instance
+  // — a second instance would duplicate `data-testid="confirm-dialog"`.
+  // `pendingAction` discriminates which destructive action the single
+  // shared dialog is currently confirming.
+  const [pendingAction, setPendingAction] = useState<'delete' | 'decommission' | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +96,7 @@ export function InspectableElementEditPage() {
         setLocation(found.location);
         setSerialNumber(found.serialNumber ?? '');
         setInstalledAt(found.installedAt);
+        setDeactivated(found.deactivatedAt !== null);
         setLoadState('loaded');
       })
       .catch(() => {
@@ -129,11 +144,11 @@ export function InspectableElementEditPage() {
 
   function requestDelete() {
     setDeleteError(null);
-    setPendingDelete(true);
+    setPendingAction('delete');
   }
 
   async function confirmDelete() {
-    setPendingDelete(false);
+    setPendingAction(null);
     if (communityId === undefined || elementId === undefined) {
       return;
     }
@@ -148,6 +163,51 @@ export function InspectableElementEditPage() {
       );
       setDeleting(false);
     }
+  }
+
+  // inspectable-element-admin-ui spec.md "Decommission is confirmed before
+  // it happens": decommission requires confirmation; reactivate does not
+  // (no scenario requires it, mirrors the asymmetry in the spec's own
+  // scenario list).
+  function requestDecommission() {
+    setDecommissionError(null);
+    setPendingAction('decommission');
+  }
+
+  async function applyDeactivatedChange(nextDeactivated: boolean) {
+    if (communityId === undefined || elementId === undefined) {
+      return;
+    }
+
+    setDecommissionSubmitting(true);
+    setDecommissionError(null);
+    try {
+      const updated = await updateInspectableElement(communityId, elementId, {
+        deactivated: nextDeactivated,
+      });
+      setDeactivated(updated.deactivatedAt !== null);
+    } catch (caughtError) {
+      // spec.md "A failed action is reported and does not change the shown
+      // state" — `deactivated` is left untouched on failure.
+      setDecommissionError(
+        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+      );
+    } finally {
+      setDecommissionSubmitting(false);
+    }
+  }
+
+  async function confirmDecommission() {
+    setPendingAction(null);
+    await applyDeactivatedChange(true);
+  }
+
+  async function reactivate() {
+    await applyDeactivatedChange(false);
+  }
+
+  function cancelPendingAction() {
+    setPendingAction(null);
   }
 
   if (loadState === 'loading') {
@@ -261,12 +321,47 @@ export function InspectableElementEditPage() {
       >
         {t('inspectableElement.edit.deleteLabel')}
       </button>
+      {decommissionError && (
+        <p data-testid="inspectable-element-edit-decommission-error">{decommissionError}</p>
+      )}
+      {/* inspectable-element-admin-ui spec.md "The control is single-element
+          and reason-free": exactly one action, no bulk variant, no reason
+          field — either Decommission or Reactivate is shown, never both. */}
+      {deactivated ? (
+        <button
+          type="button"
+          data-testid="inspectable-element-edit-reactivate"
+          disabled={submitting || deleting || decommissionSubmitting}
+          onClick={() => void reactivate()}
+        >
+          {t('inspectableElement.edit.reactivateLabel')}
+        </button>
+      ) : (
+        <button
+          type="button"
+          data-testid="inspectable-element-edit-decommission"
+          disabled={submitting || deleting || decommissionSubmitting}
+          onClick={requestDecommission}
+        >
+          {t('inspectableElement.edit.decommissionLabel')}
+        </button>
+      )}
       <ConfirmDialog
-        open={pendingDelete}
-        title={t('inspectableElement.edit.deleteConfirmTitle')}
-        message={t('inspectableElement.edit.deleteConfirmMessage')}
-        onConfirm={() => void confirmDelete()}
-        onCancel={() => setPendingDelete(false)}
+        open={pendingAction !== null}
+        title={
+          pendingAction === 'decommission'
+            ? t('inspectableElement.edit.decommissionConfirmTitle')
+            : t('inspectableElement.edit.deleteConfirmTitle')
+        }
+        message={
+          pendingAction === 'decommission'
+            ? t('inspectableElement.edit.decommissionConfirmMessage')
+            : t('inspectableElement.edit.deleteConfirmMessage')
+        }
+        onConfirm={() =>
+          void (pendingAction === 'decommission' ? confirmDecommission() : confirmDelete())
+        }
+        onCancel={cancelPendingAction}
       />
     </main>
   );
