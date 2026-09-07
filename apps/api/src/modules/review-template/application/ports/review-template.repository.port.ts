@@ -81,6 +81,16 @@ export interface ReviewTemplateRepository {
   // Sets deletedAt on a draft only (spec.md "Only Drafts May Be Soft-
   // Deleted"). Returns whether the row was actually transitioned.
   softDeleteDraftById(id: string): Promise<boolean>;
+
+  // review-session/design.md Decision 7 (Phase 4, task 4.1): every
+  // `status = 'active'` template for the given element type. Returns a
+  // LIST, not one row — the one-active-per-lineage index is keyed on
+  // `(elementType, frequency)`, so one element type MAY have one active
+  // `QUARTERLY` template and one active `ANNUAL` template at once.
+  // `GET /review-scope` surfaces them by `(elementType, frequency)`;
+  // `OpenReviewSessionUseCase` re-validates the caller's chosen `templateId`
+  // is a member of this set before storing it.
+  findActiveByElementType(elementType: ElementType): Promise<ReviewTemplate[]>;
 }
 
 export const REVIEW_TEMPLATE_REPOSITORY = Symbol('REVIEW_TEMPLATE_REPOSITORY');
