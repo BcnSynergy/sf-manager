@@ -1,3 +1,4 @@
+import type { ElementType } from '@sf-manager/validation';
 import { ChecklistQuestionRepository } from '../../../../checklist-question/application/ports/checklist-question.repository.port';
 import { ReviewTemplateEmptyError } from '../../../domain/errors/review-template-empty.error';
 import { ReviewTemplate } from '../../../domain/review-template.entity';
@@ -180,6 +181,17 @@ export class InMemoryReviewTemplateRepository implements ReviewTemplateRepositor
     void rowIds; // app-generated row ids are opaque to this fake
 
     return { id: activated.id, status: activated.status, version };
+  }
+
+  // review-session/design.md Decision 7 (Phase 4, task 4.1): every
+  // `status = 'active'` row for the requested element type.
+  findActiveByElementType(elementType: ElementType): Promise<ReviewTemplate[]> {
+    return Promise.resolve(
+      [...this.templatesById.values()].filter(
+        (template) =>
+          template.status === 'active' && template.elementType === elementType,
+      ),
+    );
   }
 
   softDeleteDraftById(id: string): Promise<boolean> {

@@ -499,7 +499,7 @@ impossible by construction — the set is frozen.
       -> SessionAccess.loadForActor -> session.recordEntry(...)
            -> status != draft ------------------> 409 REVIEW_SESSION_NOT_EDITABLE
            -> ElementReviewEntry.reviewed | .unreviewed   (answers XOR observations)
-      -> repository.upsertEntry(entry, answers)   [durable immediately]
+      -> repository.upsertEntry(sessionId, entry)   [durable immediately]
 
     COMPLETE
     POST /review-sessions/:id/complete
@@ -605,7 +605,10 @@ export interface ReviewSessionRepository {
   create(session: ReviewSession): Promise<void>;                       // P2002 => OpenDraftAlreadyExistsError
   findByIdForPerformer(id: string, performedById: string): Promise<ReviewSessionAggregate | null>;
   findDraftsByPerformer(performedById: string): Promise<ReviewSession[]>;
-  upsertEntry(sessionId: string, entry: ElementReviewEntry, answers: QuestionAnswer[]): Promise<void>;
+  // PR4 follow-up (review finding #C): no separate `answers` param —
+  // entry.answers is the single source of truth. P2003 on the
+  // reviewSessionId FK => ReviewSessionNotFoundError.
+  upsertEntry(sessionId: string, entry: ElementReviewEntry): Promise<void>;
   complete(id: string, at: Date): Promise<boolean>;   // WHERE status='draft'; false => 409
   // Discard mechanism (resolved 2026-09-06, was unspecified): a HARD DELETE of
   // the ReviewSession row, WHERE status='draft' (false => 409, mirroring

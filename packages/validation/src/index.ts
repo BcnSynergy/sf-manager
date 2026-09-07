@@ -21,3 +21,4 @@ export * from './maintenance-company/maintenance-company.schema';
 export * from './inspectable-element/inspectable-element.schema';
 export * from './checklist-question/checklist-question.schema';
 export * from './review-template/review-template.schema';
+export * from './review-session/review-session.schema';

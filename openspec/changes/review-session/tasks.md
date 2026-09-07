@@ -74,27 +74,27 @@ Chain strategy: stacked-to-main
 - [x] 3.8 `domain/errors/*.ts` — `ReviewSessionNotFoundError`, `ReviewSessionNotEditableError`, `MissingObservationsError`, `UnreviewedElementsWithoutReasonError`, `OpenDraftAlreadyExistsError`.
 - [x] 3.9 Unit: completion coverage logic (pure) — active element with no entry rejects; decommissioned mid-walk not required; entry with only `observations` accepted (spec: "Complete a Session With Explained Gaps Only").
 
-## Phase 4: Open/Resume + Template Resolution (PR 4)
-- [ ] 4.1 RED/GREEN `review-template/application/ports/review-template.repository.port.ts` — `findActiveByElementType(elementType): Promise<ReviewTemplate[]>` (design Decision 7).
-- [ ] 4.2 `application/ports/review-session.repository.port.ts` — `create`, `findByIdForPerformer`, `findDraftsByPerformer`, `upsertEntry`, `complete`, `discardDraft` — deliberately no `findById`/`updateById` (design Decisions 4, 8).
-- [ ] 4.3 RED/GREEN `application/services/session-access.service.ts` — `loadForActor(sessionId, actor)`: `findByIdForPerformer` -> null => `ReviewSessionNotFoundError`; then `communityScopeChecker.isAssignedTo` -> false => same error (design Decision 4, Layer 3).
-- [ ] 4.4 RED/GREEN `open-review-session.use-case.ts` — scope check -> 403 `COMMUNITY_NOT_IN_SCOPE`; template not active -> 404 `ACTIVE_TEMPLATE_NOT_FOUND`; `P2002` -> `OpenDraftAlreadyExistsError` (spec: "Open a Review Session Against a Community and a Specific Template", "At Most One Open Draft Per Community, Template and User").
-- [ ] 4.5 RED/GREEN `get-review-scope.use-case.ts` — `findActiveByUser` both ports + `communityRepository.findById` per assignment + `findActiveByElementType`.
-- [ ] 4.6 RED/GREEN `list-own-review-sessions.use-case.ts` — draft sessions only for the caller (design Open Question, scoped to drafts).
-- [ ] 4.7 RED/GREEN `read-review-session.use-case.ts` — via `SessionAccess`, returns entries + coverage counts, not question set (design Decision 11).
-- [ ] 4.8 RED/GREEN `discard-review-session.use-case.ts` — hard delete via `discardDraft`, `WHERE status='draft'`, false => 409; cascade removes entries/answers (spec: "Discard a Draft Session").
-- [ ] 4.9 `application/use-cases/testing/in-memory-review-session.repository.ts` — fake mirroring the shipped module shape.
-- [ ] 4.10 Prisma adapter: `prisma-review-session.repository.ts` + `review-session.mapper.ts`; `P2002` on the partial unique index -> `OpenDraftAlreadyExistsError`.
-- [ ] 4.11 `presentation/review-session.controller.ts` (partial) + DTOs — `GET /review-scope`, `POST /review-sessions`, `GET /review-sessions`, `GET /review-sessions/:sessionId`, `DELETE /review-sessions/:sessionId`; `@RequirePermission`; `review-session.module.ts` imports Community/ReviewTemplate modules; register in `app.module.ts`.
-- [ ] 4.12 Integration: open-draft race — two concurrent opens for the same (community, template, performer) => exactly one 201, one 409 (spec: "At Most One Open Draft Per Community, Template and User").
-- [ ] 4.13 Integration: enum parity — `ReviewSessionStatus`/`AnswerValue` TS unions == Prisma enums == Zod schemas (shipped 3-way parity precedent).
+## Phase 4: Open/Resume + Template Resolution (PR 4) — COMPLETE, awaiting fresh-context review + push
+- [x] 4.1 RED/GREEN `review-template/application/ports/review-template.repository.port.ts` — `findActiveByElementType(elementType): Promise<ReviewTemplate[]>` (design Decision 7).
+- [x] 4.2 `application/ports/review-session.repository.port.ts` — `create`, `findByIdForPerformer`, `findDraftsByPerformer`, `upsertEntry`, `complete`, `discardDraft` — deliberately no `findById`/`updateById` (design Decisions 4, 8).
+- [x] 4.3 RED/GREEN `application/services/session-access.service.ts` — `loadForActor(sessionId, actor)`: `findByIdForPerformer` -> null => `ReviewSessionNotFoundError`; then `communityScopeChecker.isAssignedTo` -> false => same error (design Decision 4, Layer 3).
+- [x] 4.4 RED/GREEN `open-review-session.use-case.ts` — `communityRepository.findById` check BEFORE `isAssignedTo` (design Decision 4, corrected 2026-09-07) -> 403 `COMMUNITY_NOT_IN_SCOPE`; template not active -> 404 `ACTIVE_TEMPLATE_NOT_FOUND`; `P2002` -> `OpenDraftAlreadyExistsError` (spec: "Open a Review Session Against a Community and a Specific Template", "At Most One Open Draft Per Community, Template and User").
+- [x] 4.5 RED/GREEN `get-review-scope.use-case.ts` — `findActiveByUser` both ports + `communityRepository.findById` per assignment + `findActiveByElementType`.
+- [x] 4.6 RED/GREEN `list-own-review-sessions.use-case.ts` — draft sessions only for the caller (design Open Question, scoped to drafts).
+- [x] 4.7 RED/GREEN `read-review-session.use-case.ts` — via `SessionAccess`, returns entries + coverage counts, not question set (design Decision 11).
+- [x] 4.8 RED/GREEN `discard-review-session.use-case.ts` — hard delete via `discardDraft`, `WHERE status='draft'`, false => 409; cascade removes entries/answers (spec: "Discard a Draft Session").
+- [x] 4.9 `application/use-cases/testing/in-memory-review-session.repository.ts` — fake mirroring the shipped module shape.
+- [x] 4.10 Prisma adapter: `prisma-review-session.repository.ts` + `review-session.mapper.ts`; `P2002` on the partial unique index -> `OpenDraftAlreadyExistsError`.
+- [x] 4.11 `presentation/review-session.controller.ts` (partial) + DTOs — `GET /review-scope`, `POST /review-sessions`, `GET /review-sessions`, `GET /review-sessions/:sessionId`, `DELETE /review-sessions/:sessionId`; `@RequirePermission`; `review-session.module.ts` imports Community/ReviewTemplate modules; register in `app.module.ts`.
+- [x] 4.12 Integration: open-draft race — two concurrent opens for the same (community, template, performer) => exactly one success, one 409 (spec: "At Most One Open Draft Per Community, Template and User").
+- [x] 4.13 Integration: enum parity — `ReviewSessionStatus`/`AnswerValue` TS unions == Prisma enums == Zod schemas (shipped 3-way parity precedent). Minimal Zod scaffolding added to `@sf-manager/validation` (also includes `openReviewSessionSchema`, needed by 4.11's controller); full write-side schemas remain Phase 5's task 5.3.
 
 ## Phase 5: By-Code Resolution + Record Answers + Mark Unreviewed (PR 5)
 - [ ] 5.1 RED/GREEN `inspectable-element/application/ports/inspectable-element.repository.port.ts` — `findReviewableByCode(communityId, elementType, code)`; single `WHERE` collapses unknown/foreign/wrong-type/decommissioned/soft-deleted to one `null` (design Decision 6; spec: "Resolving an Element by Code Is Always Scope-Constrained", "Rejected Codes Are Indistinguishable").
 - [ ] 5.2 RED/GREEN `resolve-element-by-code.use-case.ts` — via `SessionAccess` -> `findReviewableByCode(session.communityId, session.elementType, code)` -> null => one `InspectableElementNotFoundError`; `findFrozenWithSnapshot(session.templateId)` for wording only (spec: "Sessions Render the Template's Frozen Snapshot").
 - [ ] 5.3 `packages/validation/src/review-session/**` — entry-write `z.discriminatedUnion` (`{answers:[...]}` | `{observations:string}`), answer-value schema, open-request schema.
 - [ ] 5.4 RED/GREEN `record-entry.use-case.ts` (`upsert-entry`) — via `SessionAccess` -> `session.recordEntry`/`markUnreviewed`; status != draft => 409 `REVIEW_SESSION_NOT_EDITABLE`; answer set != frozen question set => 400 `ANSWERS_DO_NOT_MATCH_TEMPLATE`; re-recording replaces, not duplicates (`@@unique([reviewSessionId, inspectableElementId])`) (spec: "Record an Element's Answers").
-- [ ] 5.5 `repository.upsertEntry(sessionId, entry, answers)` — Prisma adapter, durable immediately (design Data Flow "WALK").
+- [ ] 5.5 `repository.upsertEntry(sessionId, entry)` — Prisma adapter, durable immediately (design Data Flow "WALK"); `entry.answers` is the sole source (PR4 removed the redundant `answers` parameter).
 - [ ] 5.6 `presentation/review-session.controller.ts` (extend) + DTOs — `GET /review-sessions/:sessionId/elements/:code`, `PUT /review-sessions/:sessionId/entries/:elementId`; error-code mapping for `ELEMENT_NOT_FOUND`, `REVIEW_SESSION_NOT_EDITABLE`, `ANSWERS_DO_NOT_MATCH_TEMPLATE`.
 - [ ] 5.7 Unit: `ElementReviewEntry` `answers XOR observations` — both-populated state unconstructible (reconfirm at use-case boundary via the Zod discriminated union).
 
