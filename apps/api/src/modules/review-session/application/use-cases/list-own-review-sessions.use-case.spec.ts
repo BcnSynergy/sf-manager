@@ -30,7 +30,11 @@ describe('ListOwnReviewSessionsUseCase', () => {
   it("returns the caller's draft sessions only", async () => {
     repository.seed(session({ id: 'draft-1' }));
     repository.seed(
-      session({ id: 'completed-1', status: 'completed', completedAt: new Date() }),
+      session({
+        id: 'completed-1',
+        status: 'completed',
+        completedAt: new Date(),
+      }),
     );
     repository.seed(session({ id: 'other-user', performedById: 'user-2' }));
 

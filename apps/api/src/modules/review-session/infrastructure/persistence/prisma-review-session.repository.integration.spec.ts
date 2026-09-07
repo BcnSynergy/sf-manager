@@ -90,7 +90,11 @@ describe('PrismaReviewSessionRepository.create() (integration, open-draft race)'
     // first; safe because a draft never has ReviewTemplateQuestion snapshot
     // rows (those only exist once activated).
     await prisma1.reviewTemplate.deleteMany({
-      where: { elementType: 'EXTINGUISHER', frequency: 'QUARTERLY', status: 'draft' },
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        status: 'draft',
+      },
     });
 
     const id = idGenerator.generate();
@@ -116,11 +120,19 @@ describe('PrismaReviewSessionRepository.create() (integration, open-draft race)'
     // test run's active row would otherwise collide with the partial
     // unique index `ReviewTemplate_one_active_per_lineage`.
     await prisma1.reviewTemplate.updateMany({
-      where: { elementType: 'EXTINGUISHER', frequency: 'QUARTERLY', status: 'active' },
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        status: 'active',
+      },
       data: { status: 'retired' },
     });
     const priorVersions = await prisma1.reviewTemplate.findMany({
-      where: { elementType: 'EXTINGUISHER', frequency: 'QUARTERLY', version: { not: null } },
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        version: { not: null },
+      },
       select: { version: true },
     });
     const nextVersion =

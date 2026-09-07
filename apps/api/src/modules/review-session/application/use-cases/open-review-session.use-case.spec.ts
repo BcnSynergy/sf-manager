@@ -11,7 +11,9 @@ import { InMemoryReviewSessionRepository } from './testing/in-memory-review-sess
 import { FakeCommunityScopeChecker } from './testing/fake-community-scope.checker';
 import { OpenReviewSessionUseCase } from './open-review-session.use-case';
 
-function activeTemplate(overrides: Partial<ReviewTemplate> = {}): ReviewTemplate {
+function activeTemplate(
+  overrides: Partial<ReviewTemplate> = {},
+): ReviewTemplate {
   return new ReviewTemplate({
     id: 'template-1',
     elementType: 'EXTINGUISHER',

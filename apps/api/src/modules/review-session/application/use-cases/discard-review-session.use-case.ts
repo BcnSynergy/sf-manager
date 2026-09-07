@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ReviewSessionNotEditableError } from '../../domain/errors/review-session-not-editable.error';
-import { Actor, SessionAccessService } from '../services/session-access.service';
+import {
+  Actor,
+  SessionAccessService,
+} from '../services/session-access.service';
 import {
   REVIEW_SESSION_REPOSITORY,
   type ReviewSessionRepository,

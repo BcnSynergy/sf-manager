@@ -50,9 +50,7 @@ describe('DiscardReviewSessionUseCase', () => {
   });
 
   it('rejects discarding a completed session with ReviewSessionNotEditableError', async () => {
-    repository.seed(
-      session({ status: 'completed', completedAt: new Date() }),
-    );
+    repository.seed(session({ status: 'completed', completedAt: new Date() }));
     scopeChecker.assign('user-1', 'community-1');
 
     await expect(

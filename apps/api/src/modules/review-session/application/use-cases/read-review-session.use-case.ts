@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { AnswerValue } from '../../domain/answer-value';
 import type { ReviewSessionStatus } from '../../domain/review-session-status';
-import { Actor, SessionAccessService } from '../services/session-access.service';
+import {
+  Actor,
+  SessionAccessService,
+} from '../services/session-access.service';
 
 export interface ReadReviewSessionEntry {
   inspectableElementId: string;

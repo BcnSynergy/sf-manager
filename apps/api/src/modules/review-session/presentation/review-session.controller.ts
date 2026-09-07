@@ -129,9 +129,7 @@ export class ReviewSessionController {
   async listOwn(
     @CurrentUser() user: VerifiedAccessToken,
   ): Promise<ReviewSessionResponseDto[]> {
-    const sessions = await this.listOwnReviewSessionsUseCase.execute(
-      user.sub,
-    );
+    const sessions = await this.listOwnReviewSessionsUseCase.execute(user.sub);
     return sessions.map((session) => ({
       id: session.id,
       communityId: session.communityId,
@@ -150,7 +148,7 @@ export class ReviewSessionController {
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
   @ApiNotFoundResponse({
     description:
-      'Unknown session, another performer\'s session, or a since-' +
+      "Unknown session, another performer's session, or a since-" +
       'deactivated assignment — all indistinguishable. Body carries ' +
       'code: REVIEW_SESSION_NOT_FOUND.',
   })

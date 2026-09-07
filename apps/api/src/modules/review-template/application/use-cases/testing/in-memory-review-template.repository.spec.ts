@@ -32,12 +32,8 @@ describe('InMemoryReviewTemplateRepository — findActiveByElementType', () => {
   });
 
   it('returns only active templates for the requested element type', async () => {
-    repository.seed(
-      template({ id: 'active-1', status: 'active', version: 1 }),
-    );
-    repository.seed(
-      template({ id: 'draft-1', status: 'draft' }),
-    );
+    repository.seed(template({ id: 'active-1', status: 'active', version: 1 }));
+    repository.seed(template({ id: 'draft-1', status: 'draft' }));
     repository.seed(
       template({ id: 'retired-1', status: 'retired', version: 1 }),
     );

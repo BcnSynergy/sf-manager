@@ -61,8 +61,9 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
   upsertEntry(
     sessionId: string,
     entry: ElementReviewEntry,
-    _answers: QuestionAnswer[],
+    answers: QuestionAnswer[],
   ): Promise<void> {
+    void answers; // Phase 5's real caller; this fake stores entries only.
     const session = this.sessionsById.get(sessionId);
     if (!session) {
       return Promise.resolve();
