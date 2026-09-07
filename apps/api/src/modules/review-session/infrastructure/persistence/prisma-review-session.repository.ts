@@ -126,26 +126,25 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     return records.map((record) => ReviewSessionMapper.toDomain(record, []));
   }
 
-  // Full-replace semantics per element (Phase 5's real caller). Deletes and
-  // recreates the answer set inside one transaction so a partial write is
-  // never observable. `entry.answers` is the single source of truth
-  // (review finding #C) — there is no separate `answers` argument.
-  async upsertEntry(
-    sessionId: string,
-    entry: ElementReviewEntry,
-  ): Promise<void> {
+  // Full-replace semantics per element (Phase 5's real caller,
+  // record-entry.use-case.ts). Deletes and recreates the answer set inside
+  // one transaction so a partial write is never observable. `entry.answers`
+  // is the single source of truth (review finding #C), and so is
+  // `entry.reviewSessionId` (Phase 5 follow-up) — there is no separate
+  // `sessionId` argument either.
+  async upsertEntry(entry: ElementReviewEntry): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
         const stored = await tx.elementReviewEntry.upsert({
           where: {
             reviewSessionId_inspectableElementId: {
-              reviewSessionId: sessionId,
+              reviewSessionId: entry.reviewSessionId,
               inspectableElementId: entry.inspectableElementId,
             },
           },
           create: {
             id: entry.id,
-            reviewSessionId: sessionId,
+            reviewSessionId: entry.reviewSessionId,
             inspectableElementId: entry.inspectableElementId,
             observations: entry.observations,
             recordedAt: entry.recordedAt,

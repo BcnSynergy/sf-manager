@@ -32,19 +32,22 @@ export interface ReviewSessionRepository {
   findDraftsByPerformer(performedById: string): Promise<ReviewSession[]>;
 
   // Full-replace semantics per element — Phase 5's record-answer /
-  // mark-unreviewed use cases are the real callers; wired here for
-  // interface completeness per design.md Interfaces/Contracts.
+  // mark-unreviewed use cases (record-entry.use-case.ts) are the real
+  // callers.
   //
-  // Fresh-context review finding #C (PR4 follow-up): there is deliberately
-  // NO separate `answers` parameter. `entry.answers` is already the
-  // single source of truth — ElementReviewEntry.reviewed()/.unreviewed()
-  // (the domain invariant's only construction paths, design.md Decision 1)
-  // always populate it — so a second parameter carrying the same data was
-  // redundant and let the two doubles diverge on which one to trust.
+  // Fresh-context review finding #C (PR4 follow-up), resolved further in
+  // Phase 5 (PR4's "carried into PR5" note): there is deliberately NO
+  // separate `sessionId` parameter either. `entry.reviewSessionId` is
+  // already part of the entry the caller constructed via
+  // `ElementReviewEntry.reviewed()`/`.unreviewed()` (design.md Decision 1)
+  // — a second parameter carrying the same value was a near-identical
+  // redundancy with no caller to notice the two diverging, until
+  // `record-entry.use-case.ts` became the first real one. `entry` alone is
+  // now the sole source of truth for which session the entry belongs to.
   // Rejects with ReviewSessionNotFoundError for an unknown sessionId
   // (mirrors SessionAccess's own 404 mapping) rather than surfacing a raw
   // FK-violation error.
-  upsertEntry(sessionId: string, entry: ElementReviewEntry): Promise<void>;
+  upsertEntry(entry: ElementReviewEntry): Promise<void>;
 
   // `WHERE status='draft'`; false => the caller maps this to 409
   // REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8).

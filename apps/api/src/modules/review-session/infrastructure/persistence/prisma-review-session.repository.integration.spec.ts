@@ -218,6 +218,10 @@ describe('PrismaReviewSessionRepository.create() (integration, open-draft race)'
 // instead of surfacing a raw FK-violation error — matching
 // InMemoryReviewSessionRepository's behaviour (in-memory-review-session
 // .repository.spec.ts) so Phase 5's tests against the fake reflect this.
+//
+// Phase 5 follow-up: `upsertEntry` also dropped its separate `sessionId`
+// parameter — `entry.reviewSessionId` is now the sole source of truth,
+// closing the identical redundancy PR4 carried forward as a known item.
 describe('PrismaReviewSessionRepository.upsertEntry() (integration, review finding #C)', () => {
   let prisma: PrismaService;
   let repository: PrismaReviewSessionRepository;
@@ -403,7 +407,7 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
       recordedAt: new Date(),
     });
 
-    await repository.upsertEntry(sessionId, entry);
+    await repository.upsertEntry(entry);
 
     const stored = await repository.findByIdForPerformer(
       sessionId,
@@ -425,7 +429,7 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
       observations: 'Not accessible this cycle',
       recordedAt: new Date(),
     });
-    await repository.upsertEntry(sessionId, replacement);
+    await repository.upsertEntry(replacement);
 
     const replaced = await repository.findByIdForPerformer(
       sessionId,
@@ -463,8 +467,8 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
       recordedAt: new Date(),
     });
 
-    await expect(
-      repository.upsertEntry(unknownSessionId, entry),
-    ).rejects.toBeInstanceOf(ReviewSessionNotFoundError);
+    await expect(repository.upsertEntry(entry)).rejects.toBeInstanceOf(
+      ReviewSessionNotFoundError,
+    );
   });
 });
