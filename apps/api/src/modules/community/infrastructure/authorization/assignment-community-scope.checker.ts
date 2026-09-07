@@ -7,10 +7,13 @@ import { COMMUNITY_TECHNICIAN_REPOSITORY } from '../../application/ports/communi
 import type { CommunityTechnicianRepository } from '../../application/ports/community-technician.repository.port';
 
 // Adapter for CommunityScopeChecker (design.md Decision 4, Layer 2).
-// Fail-closed and EXHAUSTIVE on Role via a switch, not a default branch —
-// adding a 6th role fails the build here the same way ROLE_PERMISSIONS
-// forces every role to be considered (authorization spec "The scope check
-// cannot be silently omitted"). Only the two performing roles have an
+// Fail-closed and EXHAUSTIVE on Role via a switch. The default branch
+// exists only to fail closed at runtime against an out-of-union value (see
+// below) — `role satisfies never` inside it still fails the build if a 6th
+// role is added without a matching case above, the same way
+// ROLE_PERMISSIONS forces every role to be considered (authorization spec
+// "The scope check cannot be silently omitted"). Only the two performing
+// roles have an
 // assignment kind at all; SYSTEM_ADMIN, MANAGER and
 // MAINTENANCE_COMPANY_MANAGER hold no community assignment concept and
 // always refuse here, regardless of what either repository contains for
