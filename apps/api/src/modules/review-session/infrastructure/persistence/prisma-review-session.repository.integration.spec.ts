@@ -380,7 +380,7 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     };
   };
 
-  it("persists entry.answers with full-replace semantics — there is no separate answers argument", async () => {
+  it('persists entry.answers with full-replace semantics — there is no separate answers argument', async () => {
     const { sessionId, inspectableElementId } = await createDraftSession();
 
     const entry = ElementReviewEntry.reviewed({
@@ -402,8 +402,11 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
 
     const stored = await repository.findByIdForPerformer(
       sessionId,
-      (await prisma.reviewSession.findUniqueOrThrow({ where: { id: sessionId } }))
-        .performedById,
+      (
+        await prisma.reviewSession.findUniqueOrThrow({
+          where: { id: sessionId },
+        })
+      ).performedById,
     );
     expect(stored?.entries[0].answers).toHaveLength(1);
     expect(stored?.entries[0].answers[0].answer).toBe('YES');
@@ -421,13 +424,14 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
 
     const replaced = await repository.findByIdForPerformer(
       sessionId,
-      (await prisma.reviewSession.findUniqueOrThrow({ where: { id: sessionId } }))
-        .performedById,
+      (
+        await prisma.reviewSession.findUniqueOrThrow({
+          where: { id: sessionId },
+        })
+      ).performedById,
     );
     expect(replaced?.entries[0].answers).toHaveLength(0);
-    expect(replaced?.entries[0].observations).toBe(
-      'Not accessible this cycle',
-    );
+    expect(replaced?.entries[0].observations).toBe('Not accessible this cycle');
   });
 
   it('rejects with ReviewSessionNotFoundError for an unknown sessionId instead of a raw FK-violation error', async () => {
@@ -440,16 +444,22 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
       'upsert-entry-missing-session',
     );
 
+    // A well-formed UUID that simply has no ReviewSession row — the
+    // column is @db.Uuid, so a non-UUID string like 'does-not-exist'
+    // fails at the Postgres type-parsing layer (22P02), not the FK
+    // constraint; that would be a different (and uninteresting) failure
+    // mode than the one this test targets.
+    const unknownSessionId = idGenerator.generate();
     const entry = ElementReviewEntry.unreviewed({
       id: idGenerator.generate(),
-      reviewSessionId: 'does-not-exist',
+      reviewSessionId: unknownSessionId,
       inspectableElementId,
       observations: 'Not accessible this cycle',
       recordedAt: new Date(),
     });
 
     await expect(
-      repository.upsertEntry('does-not-exist', entry),
+      repository.upsertEntry(unknownSessionId, entry),
     ).rejects.toBeInstanceOf(ReviewSessionNotFoundError);
   });
 });

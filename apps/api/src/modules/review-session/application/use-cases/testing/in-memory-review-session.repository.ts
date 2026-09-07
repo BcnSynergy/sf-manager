@@ -1,7 +1,7 @@
 import { ElementReviewEntry } from '../../../domain/element-review-entry.entity';
-import { QuestionAnswer } from '../../../domain/question-answer.entity';
 import { ReviewSession } from '../../../domain/review-session.entity';
 import { OpenDraftAlreadyExistsError } from '../../../domain/errors/open-draft-already-exists.error';
+import { ReviewSessionNotFoundError } from '../../../domain/errors/review-session-not-found.error';
 import { ReviewSessionRepository } from '../../ports/review-session.repository.port';
 
 // Test double for ReviewSessionRepository (design.md Testing Strategy:
@@ -58,15 +58,15 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     );
   }
 
-  upsertEntry(
-    sessionId: string,
-    entry: ElementReviewEntry,
-    answers: QuestionAnswer[],
-  ): Promise<void> {
-    void answers; // Phase 5's real caller; this fake stores entries only.
+  // `entry.answers` is the single source of truth (review finding #C) —
+  // `session.recordEntry(entry)` stores the entry as-is. Rejects with
+  // ReviewSessionNotFoundError for an unknown sessionId instead of
+  // silently no-op-ing, matching PrismaReviewSessionRepository's mapped
+  // FK-violation behaviour.
+  upsertEntry(sessionId: string, entry: ElementReviewEntry): Promise<void> {
     const session = this.sessionsById.get(sessionId);
     if (!session) {
-      return Promise.resolve();
+      return Promise.reject(new ReviewSessionNotFoundError());
     }
     session.recordEntry(entry);
     return Promise.resolve();

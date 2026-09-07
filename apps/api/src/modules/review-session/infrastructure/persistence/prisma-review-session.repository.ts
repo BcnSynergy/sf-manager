@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
-import { QuestionAnswer } from '../../domain/question-answer.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { OpenDraftAlreadyExistsError } from '../../domain/errors/open-draft-already-exists.error';
+import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import { ReviewSessionRepository } from '../../application/ports/review-session.repository.port';
 import { ReviewSessionMapper } from './review-session.mapper';
 
@@ -15,6 +15,7 @@ import { ReviewSessionMapper } from './review-session.mapper';
 // Contracts — invisible to Prisma's schema, but still enforced by Postgres
 // on every INSERT) surfaces the same way any other unique violation does.
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+const FOREIGN_KEY_VIOLATION = 'P2003';
 
 function isUniqueConstraintViolation(
   error: unknown,
@@ -23,6 +24,55 @@ function isUniqueConstraintViolation(
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === UNIQUE_CONSTRAINT_VIOLATION
   );
+}
+
+// review finding #C (PR4 follow-up): `upsertEntry`'s `elementReviewEntry`
+// row FKs to BOTH `reviewSessionId` and `inspectableElementId` — only the
+// former means "no such session" (ReviewSessionNotFoundError, mirroring
+// SessionAccess's own 404 mapping); an invalid `inspectableElementId`
+// FK is a genuinely different, unmapped caller error and must not be
+// swallowed as if the session were missing.
+//
+// PrismaService's driver-adapter setup (@prisma/adapter-pg) surfaces the
+// violated constraint name at `error.meta.driverAdapterError.cause
+// .constraint.index`, NOT at the plain `error.meta.field_name` the
+// non-adapter Prisma client documents — confirmed by inspecting the
+// actual error shape this project's PrismaService produces, not assumed
+// from Prisma's generic docs.
+function violatesReviewSessionForeignKey(
+  error: Prisma.PrismaClientKnownRequestError,
+): boolean {
+  const constraintName = extractConstraintName(error.meta);
+  return constraintName.includes('reviewSessionId');
+}
+
+function extractConstraintName(meta: unknown): string {
+  if (!meta || typeof meta !== 'object') {
+    return '';
+  }
+  const record = meta as Record<string, unknown>;
+
+  // Non-adapter Prisma client shape.
+  if (typeof record.field_name === 'string') {
+    return record.field_name;
+  }
+
+  // @prisma/adapter-pg shape (this project's PrismaService).
+  const driverError = record.driverAdapterError;
+  if (driverError && typeof driverError === 'object') {
+    const cause = (driverError as Record<string, unknown>).cause;
+    if (cause && typeof cause === 'object') {
+      const constraint = (cause as Record<string, unknown>).constraint;
+      if (constraint && typeof constraint === 'object') {
+        const index = (constraint as Record<string, unknown>).index;
+        if (typeof index === 'string') {
+          return index;
+        }
+      }
+    }
+  }
+
+  return '';
 }
 
 // Prisma adapter for the ReviewSessionRepository port (ADR-013). design.md
@@ -78,48 +128,59 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
 
   // Full-replace semantics per element (Phase 5's real caller). Deletes and
   // recreates the answer set inside one transaction so a partial write is
-  // never observable.
+  // never observable. `entry.answers` is the single source of truth
+  // (review finding #C) — there is no separate `answers` argument.
   async upsertEntry(
     sessionId: string,
     entry: ElementReviewEntry,
-    answers: QuestionAnswer[],
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const stored = await tx.elementReviewEntry.upsert({
-        where: {
-          reviewSessionId_inspectableElementId: {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const stored = await tx.elementReviewEntry.upsert({
+          where: {
+            reviewSessionId_inspectableElementId: {
+              reviewSessionId: sessionId,
+              inspectableElementId: entry.inspectableElementId,
+            },
+          },
+          create: {
+            id: entry.id,
             reviewSessionId: sessionId,
             inspectableElementId: entry.inspectableElementId,
+            observations: entry.observations,
+            recordedAt: entry.recordedAt,
           },
-        },
-        create: {
-          id: entry.id,
-          reviewSessionId: sessionId,
-          inspectableElementId: entry.inspectableElementId,
-          observations: entry.observations,
-          recordedAt: entry.recordedAt,
-        },
-        update: {
-          observations: entry.observations,
-          recordedAt: entry.recordedAt,
-        },
-      });
-
-      await tx.questionAnswer.deleteMany({
-        where: { elementReviewEntryId: stored.id },
-      });
-
-      if (answers.length > 0) {
-        await tx.questionAnswer.createMany({
-          data: answers.map((answer) => ({
-            id: answer.id,
-            elementReviewEntryId: stored.id,
-            questionId: answer.questionId,
-            answer: answer.answer,
-          })),
+          update: {
+            observations: entry.observations,
+            recordedAt: entry.recordedAt,
+          },
         });
+
+        await tx.questionAnswer.deleteMany({
+          where: { elementReviewEntryId: stored.id },
+        });
+
+        if (entry.answers.length > 0) {
+          await tx.questionAnswer.createMany({
+            data: entry.answers.map((answer) => ({
+              id: answer.id,
+              elementReviewEntryId: stored.id,
+              questionId: answer.questionId,
+              answer: answer.answer,
+            })),
+          });
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === FOREIGN_KEY_VIOLATION &&
+        violatesReviewSessionForeignKey(error)
+      ) {
+        throw new ReviewSessionNotFoundError();
       }
-    });
+      throw error;
+    }
   }
 
   // `WHERE status='draft'`; 0 rows => false, mapped to 409 upstream

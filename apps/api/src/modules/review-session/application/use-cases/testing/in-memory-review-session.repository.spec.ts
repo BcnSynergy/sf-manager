@@ -15,7 +15,9 @@ import { InMemoryReviewSessionRepository } from './in-memory-review-session.repo
 // port signature drops the second parameter entirely, and both doubles now
 // throw the SAME ReviewSessionNotFoundError for an unknown sessionId.
 describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () => {
-  function buildSession(overrides: Partial<{ status: 'draft' | 'completed' }> = {}) {
+  function buildSession(
+    overrides: Partial<{ status: 'draft' | 'completed' }> = {},
+  ) {
     return new ReviewSession({
       id: 'session-1',
       communityId: 'community-1',
@@ -27,7 +29,7 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
     });
   }
 
-  it("persists entry.answers as the authoritative answer set — there is no separate answers parameter", async () => {
+  it('persists entry.answers as the authoritative answer set — there is no separate answers parameter', async () => {
     const repository = new InMemoryReviewSessionRepository();
     const session = buildSession();
     repository.seed(session);

@@ -1,5 +1,4 @@
 import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
-import { QuestionAnswer } from '../../domain/question-answer.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 
 // Port (application layer, ADR-002/013): design.md Decision 4/8 — scope is
@@ -35,11 +34,17 @@ export interface ReviewSessionRepository {
   // Full-replace semantics per element — Phase 5's record-answer /
   // mark-unreviewed use cases are the real callers; wired here for
   // interface completeness per design.md Interfaces/Contracts.
-  upsertEntry(
-    sessionId: string,
-    entry: ElementReviewEntry,
-    answers: QuestionAnswer[],
-  ): Promise<void>;
+  //
+  // Fresh-context review finding #C (PR4 follow-up): there is deliberately
+  // NO separate `answers` parameter. `entry.answers` is already the
+  // single source of truth — ElementReviewEntry.reviewed()/.unreviewed()
+  // (the domain invariant's only construction paths, design.md Decision 1)
+  // always populate it — so a second parameter carrying the same data was
+  // redundant and let the two doubles diverge on which one to trust.
+  // Rejects with ReviewSessionNotFoundError for an unknown sessionId
+  // (mirrors SessionAccess's own 404 mapping) rather than surfacing a raw
+  // FK-violation error.
+  upsertEntry(sessionId: string, entry: ElementReviewEntry): Promise<void>;
 
   // `WHERE status='draft'`; false => the caller maps this to 409
   // REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8).
