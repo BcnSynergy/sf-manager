@@ -216,11 +216,26 @@ intent over (`communityId` on open) — it does not weaken the indistinguishable
 rejection rule for identifiers that ARE the secret being resolved (`sessionId`,
 element `code`). `CommunityScopeChecker.isAssignedTo` is a single boolean with
 no existence branch: a nonexistent `communityId` and an existing-but-unassigned
-one both simply return `false`, so both already produce the identical
-`403 COMMUNITY_NOT_IN_SCOPE` — there is no separate 404 path for "community
-does not exist" on this route. `authorization/spec.md`'s indistinguishable-
-rejection requirement is worded to apply to session/element identifiers
-specifically; it does not extend to a community named on creation.
+one both simply return `false` — **with one exception, corrected 2026-09-07**:
+a soft-deleted community. Neither `CommunityTechnician.findByCommunityAndUser`
+nor `CommunityRepresentative.findByCommunityAndUser` filters on the
+community's `deletedAt`, so an actor who still holds an active assignment row
+on a community that has since been soft-deleted gets `isAssignedTo(...) ===
+true` even though the community no longer exists from every other route's
+point of view. `isAssignedTo` itself is deliberately **not** changed to
+consult community deletion state — it stays a single-responsibility "is this
+actor currently assigned" check, reusable by any future caller without
+forcing every caller to care about community lifecycle. Instead,
+`open-review-session.use-case.ts` (Phase 4) adds an explicit
+`communityRepository.findById(communityId)` check **before** consulting
+`isAssignedTo`: `null` (nonexistent or soft-deleted — `findById` already
+excludes `deletedAt`-set rows per ADR-010) ⇒ the same `403
+COMMUNITY_NOT_IN_SCOPE` as an unassigned actor, so the indistinguishability
+this section describes still holds end-to-end even though it now takes two
+checks instead of one. `authorization/spec.md`'s indistinguishable-rejection
+requirement is worded to apply to session/element identifiers specifically;
+it does not extend to a community named on creation — the extra existence
+check above is what keeps that rejection uniform, not a new disclosure.
 
 **ADR-011 addendum: needed, and NOT written by this design.** This slice
 supplies the first concrete implementation of ADR-011 Decision 3's "separate,
@@ -663,23 +678,19 @@ roles return to `[]`.
       can navigate to them. That is a within-scope disclosure (the actor is
       assigned to the community), but it is the one place the API volunteers
       element codes the user did not ask for — worth a second look in review.
-- [ ] **Decision 4 premise re-check before Phase 4** — PR2 fresh-context review
-      found that `AssignmentCommunityScopeChecker.isAssignedTo` returns `true`
-      for an assignment active in a **soft-deleted** community: neither
-      `CommunityTechnician.findByCommunityAndUser` nor
-      `CommunityRepresentative.findByCommunityAndUser` filters on the
-      community's `deletedAt`, so a technician (or a representative active in
-      ≥2 communities, since only one active row per community is exclusive,
-      not per representative) can still hold an active assignment row on a
-      community that has since been soft-deleted. Decision 4 currently states
-      this boolean is the *only* existence check needed for `POST
-      /review-sessions` (no separate 404 path for "community does not
-      exist"/deleted) — that premise breaks once the open/resume review-session
-      use case (Phase 4) is wired on top of it, because it would let such an
-      actor open a session against a deleted community. Must be resolved
-      before Phase 4 implementation starts: either (a) correct Decision 4's
-      wording to require a companion `communityRepository.findById` /
-      not-deleted check in the use case, or (b) have `isAssignedTo` itself
-      consult community deletion state. Not fixed in PR2 — out of scope for
-      the Phase 2 scope-checker slice; deliberately deferred here, not a
-      Phase 2 defect.
+- [x] **Decision 4 premise re-check before Phase 4** — RESOLVED 2026-09-07.
+      PR2 fresh-context review found that `AssignmentCommunityScopeChecker.
+      isAssignedTo` returns `true` for an assignment active in a
+      **soft-deleted** community (neither `CommunityTechnician.
+      findByCommunityAndUser` nor `CommunityRepresentative.
+      findByCommunityAndUser` filters on the community's `deletedAt`), which
+      would have let such an actor open a session against a deleted
+      community once Phase 4 wired the open-session use case on top of it.
+      Resolved as option (a): `isAssignedTo` is unchanged (stays a single
+      "is this actor assigned" boolean, no community-lifecycle awareness);
+      `open-review-session.use-case.ts` adds an explicit
+      `communityRepository.findById` check before `isAssignedTo`, both
+      collapsing to the same `403 COMMUNITY_NOT_IN_SCOPE`. See Decision 4's
+      main text above for the corrected rationale. Binding on Phase 4's
+      `sdd-apply` — task 4.4 (`open-review-session.use-case.ts`) must
+      include this check, not just the scope check.
