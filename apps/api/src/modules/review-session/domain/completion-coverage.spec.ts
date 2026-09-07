@@ -24,12 +24,21 @@ describe('computeUncoveredElements', () => {
   });
 
   // spec.md "Decommissioned and soft-deleted elements do not block
-  // completion": an element that has since dropped out of the active set
-  // (the caller passes only currently-active elements) is not required —
-  // proven here by simply never appearing in `activeElements`.
+  // completion": an element decommissioned mid-walk (still has a stale
+  // entry from before it dropped out, but the caller no longer includes it
+  // in `activeElements`) must not appear in the result — it is neither
+  // required (correctly absent from the required set) nor does its stale
+  // entry get incorrectly resurrected. A still-active element (e1) is
+  // included alongside the stale one (e2) so the assertion is sensitive to
+  // both: `return activeElements` (ignoring entries) would wrongly report
+  // e1 as uncovered, and `return []`/`return entries`-derived logic would
+  // not exercise the "element no longer active" branch at all.
   it('does not require an element that is no longer in the active set (decommissioned mid-walk)', () => {
-    const activeElements: Array<{ id: string; code: string }> = [];
-    const entries: Array<{ inspectableElementId: string }> = [];
+    const activeElements = [{ id: 'element-1', code: 'CODE0000A1' }];
+    const entries = [
+      { inspectableElementId: 'element-1' },
+      { inspectableElementId: 'element-2' },
+    ];
 
     const result = computeUncoveredElements(activeElements, entries);
 
