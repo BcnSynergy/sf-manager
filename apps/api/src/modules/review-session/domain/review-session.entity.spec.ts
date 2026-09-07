@@ -49,11 +49,38 @@ describe('ReviewSession', () => {
     expect(session.id).toBe('01930000-0000-7000-8000-000000000701');
     expect(session.communityId).toBe('01930000-0000-7000-8000-000000000101');
     expect(session.templateId).toBe('01930000-0000-7000-8000-000000000501');
-    expect(session.performedById).toBe(
-      '01930000-0000-7000-8000-000000000001',
-    );
+    expect(session.performedById).toBe('01930000-0000-7000-8000-000000000001');
     expect(session.status).toBe('draft');
     expect(session.completedAt).toBeNull();
+    expect(session.entries).toEqual([]);
+  });
+
+  // design.md Interfaces/Contracts: `@@unique([reviewSessionId,
+  // inspectableElementId])` — at most one entry per element. recordEntry
+  // applies the same upsert semantics locally: re-recording an element
+  // replaces its entry rather than duplicating it (spec.md's "re-recording
+  // an element corrects rather than duplicates" assumption).
+  it('recordEntry replaces an existing entry for the same element rather than duplicating it', () => {
+    const session = makeSession();
+    const firstAttempt = makeReviewedEntry();
+
+    session.recordEntry(firstAttempt);
+    session.recordEntry(makeUnreviewedEntry());
+    const secondAttempt = ElementReviewEntry.unreviewed({
+      id: 'entry-1-corrected',
+      reviewSessionId: '01930000-0000-7000-8000-000000000701',
+      inspectableElementId: firstAttempt.inspectableElementId,
+      observations: 'corrected: found the key',
+      recordedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    session.markUnreviewed(secondAttempt);
+
+    expect(session.entries).toHaveLength(2);
+    const correctedEntry = session.entries.find(
+      (entry) =>
+        entry.inspectableElementId === firstAttempt.inspectableElementId,
+    );
+    expect(correctedEntry?.observations).toBe('corrected: found the key');
   });
 
   // spec.md "Completed Sessions Are Immutable": "This MUST be enforced by
@@ -80,15 +107,12 @@ describe('ReviewSession', () => {
       ['markUnreviewed', (s) => s.markUnreviewed(makeUnreviewedEntry())],
       ['complete', (s) => s.complete()],
       ['discard', (s) => s.discard()],
-    ])(
-      '%s throws ReviewSessionNotEditableError',
-      (_name, action) => {
-        const session = makeSession({
-          status: 'completed' satisfies ReviewSessionStatus,
-        });
+    ])('%s throws ReviewSessionNotEditableError', (_name, action) => {
+      const session = makeSession({
+        status: 'completed' satisfies ReviewSessionStatus,
+      });
 
-        expect(() => action(session)).toThrow(ReviewSessionNotEditableError);
-      },
-    );
+      expect(() => action(session)).toThrow(ReviewSessionNotEditableError);
+    });
   });
 });

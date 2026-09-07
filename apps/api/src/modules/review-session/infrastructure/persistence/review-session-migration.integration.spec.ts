@@ -43,7 +43,7 @@ describe('ReviewSession/ElementReviewEntry/QuestionAnswer schema (migration inte
       '"communityId", "templateId", "performedById"',
     );
     expect(rows[0].indexdef).toContain(
-      "status = 'draft'::\"ReviewSessionStatus\"",
+      'status = \'draft\'::"ReviewSessionStatus"',
     );
   });
 

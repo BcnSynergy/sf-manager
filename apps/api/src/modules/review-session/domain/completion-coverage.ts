@@ -16,7 +16,5 @@ export function computeUncoveredElements<
     entries.map((entry) => entry.inspectableElementId),
   );
 
-  return activeElements.filter(
-    (element) => !coveredElementIds.has(element.id),
-  );
+  return activeElements.filter((element) => !coveredElementIds.has(element.id));
 }

@@ -6,7 +6,9 @@
 // this to 409 { code: OPEN_DRAFT_ALREADY_EXISTS }.
 export class OpenDraftAlreadyExistsError extends Error {
   constructor() {
-    super('An open draft session already exists for this community, template and user');
+    super(
+      'An open draft session already exists for this community, template and user',
+    );
     this.name = 'OpenDraftAlreadyExistsError';
   }
 }

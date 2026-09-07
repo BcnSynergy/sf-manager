@@ -17,6 +17,12 @@ export interface ReviewSessionProps {
   status: ReviewSessionStatus;
   startedAt: Date;
   completedAt: Date | null;
+  // Optional: the repository (Phase 4/5) is the source of truth for
+  // persisted entries; this in-memory list lets the aggregate itself apply
+  // the `@@unique([reviewSessionId, inspectableElementId])` upsert
+  // semantics (design.md Interfaces/Contracts) when recordEntry/
+  // markUnreviewed are called directly against a hydrated aggregate.
+  entries?: ElementReviewEntry[];
 }
 
 export class ReviewSession {
@@ -27,6 +33,7 @@ export class ReviewSession {
   readonly status: ReviewSessionStatus;
   readonly startedAt: Date;
   readonly completedAt: Date | null;
+  private readonly entriesByElementId: Map<string, ElementReviewEntry>;
 
   constructor(props: ReviewSessionProps) {
     this.id = props.id;
@@ -36,6 +43,16 @@ export class ReviewSession {
     this.status = props.status;
     this.startedAt = props.startedAt;
     this.completedAt = props.completedAt;
+    this.entriesByElementId = new Map(
+      (props.entries ?? []).map((entry) => [entry.inspectableElementId, entry]),
+    );
+  }
+
+  // Read-only view of the recorded entries, keyed by
+  // `@@unique([reviewSessionId, inspectableElementId])`'s own uniqueness —
+  // at most one entry per element (design.md Interfaces/Contracts).
+  get entries(): ElementReviewEntry[] {
+    return [...this.entriesByElementId.values()];
   }
 
   // design.md Decision 8: immutability is the aggregate root's job, not the
@@ -48,19 +65,24 @@ export class ReviewSession {
     }
   }
 
-  // spec.md "Answering a completed session is rejected". Actual entry
-  // persistence is owned by the repository (Phase 4/5) — this guard is what
-  // makes the illegal transition unreachable regardless of the caller.
-  recordEntry(_entry: ElementReviewEntry): void {
+  // spec.md "Answering a completed session is rejected". Durable persistence
+  // is owned by the repository (`upsertEntry`, Phase 4/5) — this method is
+  // what makes the illegal transition unreachable regardless of the caller,
+  // and applies the same upsert-by-element-id semantics locally so a
+  // hydrated aggregate stays consistent with `@@unique([reviewSessionId,
+  // inspectableElementId])`.
+  recordEntry(entry: ElementReviewEntry): void {
     this.assertEditable();
+    this.entriesByElementId.set(entry.inspectableElementId, entry);
   }
 
   // spec.md "An unreviewed element is not counted as reviewed" /
   // "Answering a completed session is rejected" — same immutability guard
-  // as recordEntry, kept as a distinct method per design.md Decision 8's
-  // named transition list.
-  markUnreviewed(_entry: ElementReviewEntry): void {
+  // and upsert semantics as recordEntry, kept as a distinct method per
+  // design.md Decision 8's named transition list.
+  markUnreviewed(entry: ElementReviewEntry): void {
     this.assertEditable();
+    this.entriesByElementId.set(entry.inspectableElementId, entry);
   }
 
   // spec.md "Reopening a completed session is rejected" — complete() is
