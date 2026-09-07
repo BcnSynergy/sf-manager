@@ -4,6 +4,7 @@ import { PrismaService } from '../../../../shared/infrastructure/persistence/pri
 import { SoftDeletableRepository } from '../../../../shared/infrastructure/persistence/soft-deletable.repository';
 import { InspectableElementRepository } from '../../application/ports/inspectable-element.repository.port';
 import { InspectableElement } from '../../domain/inspectable-element.entity';
+import { ElementType } from '../../domain/element-type';
 import { ElementCodeAlreadyExistsError } from '../../domain/errors/element-code-already-exists.error';
 import { InspectableElementNotFoundError } from '../../domain/errors/inspectable-element-not-found.error';
 import { InspectableElementMapper } from './inspectable-element.mapper';
@@ -121,6 +122,31 @@ export class PrismaInspectableElementRepository
     } catch (error) {
       throw this.mapMutationError(error);
     }
+  }
+
+  // review-session/design.md Decision 6: one query, one `WHERE`, one
+  // failing return path — `code` is `@unique` so at most one row can ever
+  // match, and communityId/elementType/deletedAt/deactivatedAt are all
+  // additional predicates on that same row, not separate lookups. Unknown
+  // code, foreign community, wrong element type, decommissioned and
+  // soft-deleted all resolve to `null` identically; no branch here can
+  // distinguish them.
+  async findReviewableByCode(
+    communityId: string,
+    elementType: ElementType,
+    code: string,
+  ): Promise<InspectableElement | null> {
+    const record = await this.prisma.inspectableElement.findFirst({
+      where: {
+        code,
+        communityId,
+        elementType,
+        deletedAt: null,
+        deactivatedAt: null,
+      },
+    });
+
+    return record ? InspectableElementMapper.toDomain(record) : null;
   }
 
   // Fresh-context review CRITICAL finding (PR3), verified empirically

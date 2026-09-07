@@ -1,4 +1,5 @@
 import { InspectableElement } from '../../../domain/inspectable-element.entity';
+import { ElementType } from '../../../domain/element-type';
 import { ElementCodeAlreadyExistsError } from '../../../domain/errors/element-code-already-exists.error';
 import { InspectableElementRepository } from '../../ports/inspectable-element.repository.port';
 
@@ -103,5 +104,28 @@ export class InMemoryInspectableElementRepository implements InspectableElementR
       new InspectableElement({ ...existing, deletedAt: new Date() }),
     );
     return Promise.resolve();
+  }
+
+  // review-session/design.md Decision 6 — mirrors the real adapter's single
+  // collapsing `WHERE`: unknown code, foreign community, wrong element
+  // type, decommissioned and soft-deleted all resolve to `null` here too.
+  findReviewableByCode(
+    communityId: string,
+    elementType: ElementType,
+    code: string,
+  ): Promise<InspectableElement | null> {
+    const element = [...this.elementsById.values()].find(
+      (candidate) => candidate.code === code,
+    );
+    if (
+      !element ||
+      element.communityId !== communityId ||
+      element.elementType !== elementType ||
+      element.isDeleted ||
+      element.isDeactivated
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(element);
   }
 }

@@ -1,4 +1,5 @@
 import { InspectableElement } from '../../domain/inspectable-element.entity';
+import { ElementType } from '../../domain/element-type';
 
 // Port (application layer, ADR-002/013): the `inspectable-element`
 // presentation/infrastructure layers (PR 6) depend on this interface, never
@@ -56,6 +57,21 @@ export interface InspectableElementRepository {
   // cross-table invariant blocks this write, so there is nothing to make
   // atomic (contrast community's softDeleteById).
   softDeleteById(elementId: string): Promise<void>;
+
+  // review-session/design.md Decision 6: the ONE by-code method, scope in
+  // the signature — no `findByCode(code)` is ever added. `communityId` and
+  // `elementType` are read off the session the caller already loaded
+  // (SessionAccess), never accepted as request parameters, so the caller
+  // cannot widen the scope. Unknown code, foreign community, wrong element
+  // type, decommissioned (`deactivatedAt` set) and soft-deleted
+  // (`deletedAt` set) all collapse to the SAME `null` inside one `WHERE` —
+  // there is exactly one failing return path, so the use case cannot
+  // distinguish "why" and therefore cannot leak it.
+  findReviewableByCode(
+    communityId: string,
+    elementType: ElementType,
+    code: string,
+  ): Promise<InspectableElement | null>;
 }
 
 export const INSPECTABLE_ELEMENT_REPOSITORY = Symbol(
