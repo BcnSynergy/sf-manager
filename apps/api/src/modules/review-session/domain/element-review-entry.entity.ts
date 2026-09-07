@@ -44,7 +44,7 @@ export class ElementReviewEntry {
   readonly id: string;
   readonly reviewSessionId: string;
   readonly inspectableElementId: string;
-  readonly answers: QuestionAnswer[];
+  readonly answers: ReadonlyArray<QuestionAnswer>;
   readonly observations: string | null;
   readonly recordedAt: Date;
 
@@ -52,7 +52,12 @@ export class ElementReviewEntry {
     this.id = props.id;
     this.reviewSessionId = props.reviewSessionId;
     this.inspectableElementId = props.inspectableElementId;
-    this.answers = props.answers;
+    // Defensive copy: `readonly` alone only blocks reassignment of the
+    // field, not mutation of the array a caller still holds a reference
+    // to — copying here makes the stored entry immune to the caller's own
+    // post-construction mutation (design.md: immutability holds
+    // "regardless of which route, use case or repository method").
+    this.answers = [...props.answers];
     this.observations = props.observations;
     this.recordedAt = props.recordedAt;
   }
