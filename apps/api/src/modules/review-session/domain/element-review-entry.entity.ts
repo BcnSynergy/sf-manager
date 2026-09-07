@@ -1,5 +1,6 @@
 import { QuestionAnswer } from './question-answer.entity';
 import { MissingObservationsError } from './errors/missing-observations.error';
+import { MissingAnswersError } from './errors/missing-answers.error';
 
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
 // design.md Decision 1 (BLOCKING, resolved): `observations` lives here,
@@ -60,6 +61,10 @@ export class ElementReviewEntry {
   // `observations` is `null`, never `''` or "not applicable" (design.md
   // Decision 1).
   static reviewed(props: ReviewedProps): ElementReviewEntry {
+    if (props.answers.length === 0) {
+      throw new MissingAnswersError();
+    }
+
     return new ElementReviewEntry({
       id: props.id,
       reviewSessionId: props.reviewSessionId,

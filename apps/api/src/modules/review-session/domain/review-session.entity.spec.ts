@@ -1,6 +1,7 @@
 import { ReviewSession, ReviewSessionProps } from './review-session.entity';
 import { ReviewSessionNotEditableError } from './errors/review-session-not-editable.error';
 import { ElementReviewEntry } from './element-review-entry.entity';
+import { QuestionAnswer } from './question-answer.entity';
 import { ReviewSessionStatus } from './review-session-status';
 
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
@@ -29,7 +30,14 @@ const makeReviewedEntry = () =>
     id: 'entry-1',
     reviewSessionId: '01930000-0000-7000-8000-000000000701',
     inspectableElementId: 'element-1',
-    answers: [],
+    answers: [
+      new QuestionAnswer({
+        id: 'answer-1',
+        elementReviewEntryId: 'entry-1',
+        questionId: 'question-1',
+        answer: 'YES',
+      }),
+    ],
     recordedAt: new Date('2026-01-01T00:00:00.000Z'),
   });
 
