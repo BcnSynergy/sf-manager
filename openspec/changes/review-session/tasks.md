@@ -94,7 +94,7 @@ Chain strategy: stacked-to-main
 - [ ] 5.2 RED/GREEN `resolve-element-by-code.use-case.ts` — via `SessionAccess` -> `findReviewableByCode(session.communityId, session.elementType, code)` -> null => one `InspectableElementNotFoundError`; `findFrozenWithSnapshot(session.templateId)` for wording only (spec: "Sessions Render the Template's Frozen Snapshot").
 - [ ] 5.3 `packages/validation/src/review-session/**` — entry-write `z.discriminatedUnion` (`{answers:[...]}` | `{observations:string}`), answer-value schema, open-request schema.
 - [ ] 5.4 RED/GREEN `record-entry.use-case.ts` (`upsert-entry`) — via `SessionAccess` -> `session.recordEntry`/`markUnreviewed`; status != draft => 409 `REVIEW_SESSION_NOT_EDITABLE`; answer set != frozen question set => 400 `ANSWERS_DO_NOT_MATCH_TEMPLATE`; re-recording replaces, not duplicates (`@@unique([reviewSessionId, inspectableElementId])`) (spec: "Record an Element's Answers").
-- [ ] 5.5 `repository.upsertEntry(sessionId, entry, answers)` — Prisma adapter, durable immediately (design Data Flow "WALK").
+- [ ] 5.5 `repository.upsertEntry(sessionId, entry)` — Prisma adapter, durable immediately (design Data Flow "WALK"); `entry.answers` is the sole source (PR4 removed the redundant `answers` parameter).
 - [ ] 5.6 `presentation/review-session.controller.ts` (extend) + DTOs — `GET /review-sessions/:sessionId/elements/:code`, `PUT /review-sessions/:sessionId/entries/:elementId`; error-code mapping for `ELEMENT_NOT_FOUND`, `REVIEW_SESSION_NOT_EDITABLE`, `ANSWERS_DO_NOT_MATCH_TEMPLATE`.
 - [ ] 5.7 Unit: `ElementReviewEntry` `answers XOR observations` — both-populated state unconstructible (reconfirm at use-case boundary via the Zod discriminated union).
 
