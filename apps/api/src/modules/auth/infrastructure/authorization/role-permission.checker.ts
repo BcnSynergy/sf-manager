@@ -42,14 +42,30 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   // fill these in when the role becomes operational.
   //
   // authorization/spec.md "Maintenance-Role Permissions Stay Inert": holding
-  // a maintenanceCompanyId MUST NOT grant MAINTENANCE_COMPANY_MANAGER or
-  // MAINTENANCE_TECHNICIAN any API permission, including on the
-  // /maintenance-companies resource their own id references. Both stay []
-  // here, unchanged by this slice.
+  // a maintenanceCompanyId MUST NOT grant MAINTENANCE_COMPANY_MANAGER any
+  // API permission. Stays [] here, unchanged by this slice.
   MANAGER: [],
   MAINTENANCE_COMPANY_MANAGER: [],
-  MAINTENANCE_TECHNICIAN: [],
-  COMMUNITY_REPRESENTATIVE: [],
+  // review-session/authorization spec "Technician and Representative Become
+  // Operational" (design.md Decision 10): the first time either role maps
+  // to anything other than []. Both get the IDENTICAL reviewSession:* set —
+  // they perform sessions through the same flow — and nothing else. Holding
+  // these grants nothing on a community without also passing the
+  // resource-scope check (CommunityScopeChecker, application/authorization).
+  MAINTENANCE_TECHNICIAN: [
+    'reviewSession:create',
+    'reviewSession:read',
+    'reviewSession:perform',
+    'reviewSession:complete',
+    'reviewSession:discard',
+  ],
+  COMMUNITY_REPRESENTATIVE: [
+    'reviewSession:create',
+    'reviewSession:read',
+    'reviewSession:perform',
+    'reviewSession:complete',
+    'reviewSession:discard',
+  ],
 };
 
 @Injectable()
