@@ -303,3 +303,100 @@ model ReviewTemplateQuestion {
   // path (design.md Decision 5) filters on exactly this column.
   @@index([templateId])
 }
+
+// review-session/design.md Decision 8: two values only — `signed` is
+// deliberately NOT declared (FR-010's concern, added later by
+// `ALTER TYPE ... ADD VALUE`). The TypeScript union in
+// `review-session/domain/review-session-status.ts` is authoritative; this
+// enum is its persistence projection only, mirroring `ReviewTemplateStatus`'s
+// precedent.
+enum ReviewSessionStatus {
+  draft
+  completed
+}
+
+// review-session/design.md Decision 9: the TypeScript union in
+// `review-session/domain/answer-value.ts` is authoritative; this enum is its
+// persistence projection only.
+enum AnswerValue {
+  YES
+  NO
+  NOT_APPLICABLE
+}
+
+// review-session/design.md Decision 4/8: the aggregate root. NO `deletedAt`
+// (design.md Interfaces/Contracts — ADR-010's stricter rule for review
+// records, spec.md "Review Records Carry No Deletion Path"). Discarding a
+// `draft` is a hard delete (repository.discardDraft), the only removal path
+// that exists; a `completed` session is permanently immutable —
+// `recordEntry`/`markUnreviewed`/`complete`/`discard` all guard
+// `status === 'draft'` at the domain layer (Decision 8).
+//
+// The FKs to Community(id)/ReviewTemplate(id)/User(id, via performedById)
+// are hand-written in migration.sql, INVISIBLE to Prisma (no `@relation`
+// here, ADR-013 — mirroring every other cross-module FK in this schema).
+model ReviewSession {
+  id            String              @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  communityId   String              @db.Uuid
+  templateId    String              @db.Uuid // the FROZEN version row — Decision 7
+  performedById String              @db.Uuid
+  status        ReviewSessionStatus
+  startedAt     DateTime            @default(now())
+  completedAt   DateTime?
+  // NO deletedAt — ADR-010's stricter rule for review records (Decision 8)
+
+  // Prisma-VISIBLE regular indexes. Postgres does not auto-index
+  // FK-referencing columns; both are filtered by the by-community and
+  // by-performer read paths.
+  @@index([communityId])
+  @@index([performedById])
+  // One open draft per (community, template, performer) is a HAND-WRITTEN
+  // PARTIAL UNIQUE INDEX — `@@unique` has no `WHERE` clause, so Prisma
+  // cannot express it and is therefore INVISIBLE to Prisma's migration
+  // diffing (design.md Interfaces/Contracts):
+  //   CREATE UNIQUE INDEX "ReviewSession_open_draft_key"
+  //     ON "ReviewSession"("communityId","templateId","performedById")
+  //     WHERE "status" = 'draft';
+}
+
+// review-session/design.md Decision 1: `observations` is the entry's skip
+// reason, nullable, NON-NULL iff the element was left unreviewed. Enforced
+// at the domain layer (no public constructor — `.reviewed()`/`.unreviewed()`
+// factories) and backstopped by a hand-written CHECK constraint below
+// (intra-row half only — see migration.sql).
+//
+// The FK to ReviewSession(id) is hand-written in migration.sql and declares
+// `ON DELETE CASCADE` so discarding a draft removes its entries too
+// (Interfaces/Contracts, `discardDraft`). The FK to InspectableElement(id)
+// is hand-written with the default `ON DELETE RESTRICT` — elements are
+// never hard-deleted (ADR-010).
+model ElementReviewEntry {
+  id                   String   @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  reviewSessionId      String   @db.Uuid
+  inspectableElementId String   @db.Uuid
+  observations         String? // NON-NULL iff unreviewed — Decision 1
+  recordedAt           DateTime @default(now())
+
+  @@unique([reviewSessionId, inspectableElementId])
+  // Hand-written, Prisma-invisible backstop for the intra-row half of the
+  // `answers XOR observations` invariant only — a table CHECK cannot see
+  // child rows (design.md Decision 1):
+  //   ALTER TABLE "ElementReviewEntry" ADD CONSTRAINT
+  //     "ElementReviewEntry_observations_not_blank"
+  //     CHECK ("observations" IS NULL OR btrim("observations") <> '');
+}
+
+// review-session/design.md Decision 9: `questionId` is provenance only,
+// mirroring `ReviewTemplateQuestion.questionId` — the frozen wording lives
+// on the template snapshot, not copied here. The FK to
+// ElementReviewEntry(id) is hand-written in migration.sql and declares
+// `ON DELETE CASCADE`, chained from `ReviewSession`'s own cascade
+// (Interfaces/Contracts, `discardDraft`).
+model QuestionAnswer {
+  id                   String      @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  elementReviewEntryId String      @db.Uuid
+  questionId           String      @db.Uuid // provenance: ReviewTemplateQuestion.questionId
+  answer               AnswerValue
+
+  @@unique([elementReviewEntryId, questionId])
+}
