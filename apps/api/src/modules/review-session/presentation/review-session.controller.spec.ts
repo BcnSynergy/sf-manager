@@ -45,7 +45,10 @@ describe('ReviewSessionController', () => {
           provide: ListOwnReviewSessionsUseCase,
           useValue: listOwnReviewSessionsUseCase,
         },
-        { provide: ReadReviewSessionUseCase, useValue: readReviewSessionUseCase },
+        {
+          provide: ReadReviewSessionUseCase,
+          useValue: readReviewSessionUseCase,
+        },
         {
           provide: DiscardReviewSessionUseCase,
           useValue: discardReviewSessionUseCase,
@@ -105,8 +108,7 @@ describe('ReviewSessionController', () => {
       );
       const schemas = document.components?.schemas ?? {};
       const entrySchema = schemas['ReviewSessionEntryDto'] as
-        | { properties?: Record<string, unknown> }
-        | undefined;
+        { properties?: Record<string, unknown> } | undefined;
 
       expect(entrySchema?.properties).toHaveProperty('answers');
 
