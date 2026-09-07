@@ -9,6 +9,7 @@ import { MaintenanceCompanyModule } from './modules/maintenance-company/maintena
 import { InspectableElementModule } from './modules/inspectable-element/inspectable-element.module';
 import { ChecklistQuestionModule } from './modules/checklist-question/checklist-question.module';
 import { ReviewTemplateModule } from './modules/review-template/review-template.module';
+import { ReviewSessionModule } from './modules/review-session/review-session.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -31,6 +32,11 @@ import { ReviewTemplateModule } from './modules/review-template/review-template.
 // ChecklistQuestionModule for CHECKLIST_QUESTION_REPOSITORY (design.md
 // Decision 6 — the dependency direction is review-template -> checklist-question
 // only, never the reverse).
+// ReviewSessionModule (review-session PR 4) registers the first
+// review-session application/HTTP surface (open/resume/discard/list),
+// importing CommunityModule and ReviewTemplateModule — the first two
+// non-admin roles (MAINTENANCE_TECHNICIAN, COMMUNITY_REPRESENTATIVE)
+// actually reach a live route here.
 @Module({
   imports: [
     PrismaModule,
@@ -42,6 +48,7 @@ import { ReviewTemplateModule } from './modules/review-template/review-template.
     InspectableElementModule,
     ChecklistQuestionModule,
     ReviewTemplateModule,
+    ReviewSessionModule,
     HealthModule,
   ],
 })

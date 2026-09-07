@@ -35,5 +35,11 @@ import { ReviewTemplateController } from './presentation/review-template.control
     ActivateReviewTemplateUseCase,
     SoftDeleteDraftReviewTemplateUseCase,
   ],
+  // review-session/design.md Decision 7 (Phase 4, task 4.11): exported so
+  // ReviewSessionModule can import ReviewTemplateModule and inject
+  // REVIEW_TEMPLATE_REPOSITORY directly (findActiveByElementType/findById)
+  // — mirrors CommunityModule's own COMMUNITY_SCOPE_CHECKER export for the
+  // same consumer.
+  exports: [REVIEW_TEMPLATE_REPOSITORY],
 })
 export class ReviewTemplateModule {}

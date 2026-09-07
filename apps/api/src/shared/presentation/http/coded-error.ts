@@ -21,13 +21,23 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 // more than one reachable cause on the same call, which is exactly the
 // coded-error convention's earning test. Zero behaviour change for existing
 // BAD_REQUEST/CONFLICT callers.
+//
+// review-session/design.md Decision 4: FORBIDDEN is additive too —
+// `POST /review-sessions`'s 403 COMMUNITY_NOT_IN_SCOPE is the first
+// machine-readable code needed on a 403 response (every prior 403 in this
+// codebase is the bare PermissionsGuard rejection with no body beyond the
+// default Nest shape).
 type CodedErrorStatus =
-  HttpStatus.BAD_REQUEST | HttpStatus.CONFLICT | HttpStatus.NOT_FOUND;
+  | HttpStatus.BAD_REQUEST
+  | HttpStatus.CONFLICT
+  | HttpStatus.NOT_FOUND
+  | HttpStatus.FORBIDDEN;
 
 const STATUS_TEXT: Record<CodedErrorStatus, string> = {
   [HttpStatus.BAD_REQUEST]: 'Bad Request',
   [HttpStatus.CONFLICT]: 'Conflict',
   [HttpStatus.NOT_FOUND]: 'Not Found',
+  [HttpStatus.FORBIDDEN]: 'Forbidden',
 };
 
 export function buildCodedError<TCode extends string>(

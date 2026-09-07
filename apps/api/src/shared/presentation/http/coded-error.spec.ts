@@ -41,6 +41,23 @@ describe('buildCodedError', () => {
     });
   });
 
+  it('builds a 403 Forbidden body carrying the given message and code', () => {
+    const error = buildCodedError(
+      HttpStatus.FORBIDDEN,
+      'Community is not in the actor scope.',
+      'COMMUNITY_NOT_IN_SCOPE',
+    );
+
+    expect(error).toBeInstanceOf(HttpException);
+    expect(error.getStatus()).toBe(HttpStatus.FORBIDDEN);
+    expect(error.getResponse()).toEqual({
+      statusCode: HttpStatus.FORBIDDEN,
+      error: 'Forbidden',
+      message: 'Community is not in the actor scope.',
+      code: 'COMMUNITY_NOT_IN_SCOPE',
+    });
+  });
+
   it('narrows the code parameter type per call site without a shared union', () => {
     type LocalErrorCode = 'SOME_LOCAL_CODE';
     const error = buildCodedError<LocalErrorCode>(
