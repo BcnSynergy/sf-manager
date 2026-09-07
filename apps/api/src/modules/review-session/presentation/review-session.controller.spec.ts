@@ -261,5 +261,27 @@ describe('ReviewSessionController', () => {
         code: 'ANSWERS_DO_NOT_MATCH_TEMPLATE',
       });
     });
+
+    // Fresh-context review CRITICAL finding (PR5): an out-of-scope
+    // elementId (foreign community, wrong type, unknown, decommissioned or
+    // soft-deleted) must map to the SAME 404 the GET .../elements/:code
+    // route uses — mapError is generic across the whole controller, this
+    // confirms the PUT route actually reaches it.
+    it('maps InspectableElementNotFoundError to 404 ELEMENT_NOT_FOUND', async () => {
+      recordEntryUseCase.execute.mockRejectedValue(
+        new InspectableElementNotFoundError(),
+      );
+
+      const response = await controller
+        .recordEntry(actor, 'session-1', 'does-not-exist', {
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toMatchObject({
+        code: 'ELEMENT_NOT_FOUND',
+      });
+    });
   });
 });

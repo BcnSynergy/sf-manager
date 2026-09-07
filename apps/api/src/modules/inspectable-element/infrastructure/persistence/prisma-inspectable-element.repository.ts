@@ -149,6 +149,28 @@ export class PrismaInspectableElementRepository
     return record ? InspectableElementMapper.toDomain(record) : null;
   }
 
+  // review-session fresh-context review finding (PR5): mirrors
+  // findReviewableByCode's collapsing `WHERE` exactly, keyed by `id`
+  // instead of `code` — RecordEntryUseCase's scoping check for the
+  // `elementId` URL param on `PUT .../entries/:elementId`.
+  async findReviewableById(
+    communityId: string,
+    elementType: ElementType,
+    elementId: string,
+  ): Promise<InspectableElement | null> {
+    const record = await this.prisma.inspectableElement.findFirst({
+      where: {
+        id: elementId,
+        communityId,
+        elementType,
+        deletedAt: null,
+        deactivatedAt: null,
+      },
+    });
+
+    return record ? InspectableElementMapper.toDomain(record) : null;
+  }
+
   // Fresh-context review CRITICAL finding (PR3), verified empirically
   // against real Postgres: under Prisma 7 with the @prisma/adapter-pg driver
   // adapter, `error.meta.target` is NEVER populated for P2002s — the

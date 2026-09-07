@@ -2,6 +2,9 @@ import type { IdGenerator } from '../../../../shared/application/ports/id-genera
 import { InMemoryChecklistQuestionRepository } from '../../../checklist-question/application/use-cases/testing/in-memory-checklist-question.repository';
 import { InMemoryReviewTemplateRepository } from '../../../review-template/application/use-cases/testing/in-memory-review-template.repository';
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
+import { InMemoryInspectableElementRepository } from '../../../inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
+import { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
+import { InspectableElementNotFoundError } from '../../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotEditableError } from '../../domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
@@ -40,12 +43,32 @@ function frozenTemplate(): ReviewTemplate {
   });
 }
 
+function element(
+  overrides: Partial<InspectableElement> = {},
+): InspectableElement {
+  return new InspectableElement({
+    id: 'element-1',
+    communityId: 'community-1',
+    elementType: 'EXTINGUISHER',
+    name: 'Extinguisher #1',
+    description: null,
+    location: 'Lobby',
+    installedAt: new Date('2026-01-15'),
+    serialNumber: null,
+    deletedAt: null,
+    code: 'X1',
+    deactivatedAt: null,
+    ...overrides,
+  });
+}
+
 // spec.md "Record an Element's Answers" + "An Unreviewed Element Requires a
 // Recorded Reason" + "Completed Sessions Are Immutable". design.md
 // Decision 10: one write endpoint/use case for both outcomes.
 describe('RecordEntryUseCase', () => {
   let sessionRepository: InMemoryReviewSessionRepository;
   let templateRepository: InMemoryReviewTemplateRepository;
+  let elementRepository: InMemoryInspectableElementRepository;
   let scopeChecker: FakeCommunityScopeChecker;
   let sessionAccess: SessionAccessService;
   let idGenerator: jest.Mocked<IdGenerator>;
@@ -56,6 +79,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository = new InMemoryReviewTemplateRepository(
       new InMemoryChecklistQuestionRepository(),
     );
+    elementRepository = new InMemoryInspectableElementRepository();
     scopeChecker = new FakeCommunityScopeChecker();
     sessionAccess = new SessionAccessService(sessionRepository, scopeChecker);
     idGenerator = { generate: jest.fn() };
@@ -65,6 +89,7 @@ describe('RecordEntryUseCase', () => {
       sessionAccess,
       sessionRepository,
       templateRepository,
+      elementRepository,
       idGenerator,
     );
     scopeChecker.assign('user-1', 'community-1');
@@ -77,6 +102,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
 
     const result = await useCase.execute(
       'session-1',
@@ -105,6 +131,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
 
     await useCase.execute(
       'session-1',
@@ -138,6 +165,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
 
     const result = await useCase.execute(
       'session-1',
@@ -153,6 +181,7 @@ describe('RecordEntryUseCase', () => {
   it('rejects a blank observations reason with MissingObservationsError', async () => {
     sessionRepository.seed(draftSession());
     templateRepository.seed(frozenTemplate());
+    elementRepository.seed(element());
 
     await expect(
       useCase.execute(
@@ -174,6 +203,7 @@ describe('RecordEntryUseCase', () => {
         text: 'Is the pressure gauge green?',
       },
     ]);
+    elementRepository.seed(element());
 
     await expect(
       useCase.execute(
@@ -193,6 +223,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
 
     await expect(
       useCase.execute(
@@ -212,6 +243,7 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
 
     await expect(
       useCase.execute(
@@ -231,12 +263,14 @@ describe('RecordEntryUseCase', () => {
     templateRepository.seed(frozenTemplate(), [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
+    elementRepository.seed(element());
     scopeChecker = new FakeCommunityScopeChecker();
     sessionAccess = new SessionAccessService(sessionRepository, scopeChecker);
     useCase = new RecordEntryUseCase(
       sessionAccess,
       sessionRepository,
       templateRepository,
+      elementRepository,
       idGenerator,
     );
 
@@ -248,5 +282,56 @@ describe('RecordEntryUseCase', () => {
         actor,
       ),
     ).rejects.toThrow(ReviewSessionNotFoundError);
+  });
+
+  // Fresh-context review CRITICAL finding (PR5): elementId came verbatim
+  // from the URL with no check that it belongs to the session's community
+  // — a technician with legitimate access to session A could record an
+  // entry against an elementId from an entirely different community,
+  // corrupting that other community's coverage counts silently (200 OK).
+  it('rejects a cross-community elementId with InspectableElementNotFoundError', async () => {
+    sessionRepository.seed(draftSession());
+    templateRepository.seed(frozenTemplate(), [
+      { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+    ]);
+    elementRepository.seed(element({ communityId: 'community-2' }));
+
+    await expect(
+      useCase.execute(
+        'session-1',
+        'element-1',
+        {
+          kind: 'reviewed',
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        },
+        actor,
+      ),
+    ).rejects.toThrow(InspectableElementNotFoundError);
+  });
+
+  // Fresh-context review CRITICAL finding (PR5): a nonexistent elementId
+  // previously reached the repository's upsertEntry() unchecked and only
+  // failed there via a raw Prisma P2003 FK violation that the adapter's
+  // own error mapping does not recognize (it only recognizes the
+  // reviewSessionId FK, not inspectableElementId) — surfacing as an
+  // unhandled 500 instead of this domain 404.
+  it('rejects a nonexistent elementId with InspectableElementNotFoundError instead of an unhandled error', async () => {
+    sessionRepository.seed(draftSession());
+    templateRepository.seed(frozenTemplate(), [
+      { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+    ]);
+    // Deliberately no elementRepository.seed() call.
+
+    await expect(
+      useCase.execute(
+        'session-1',
+        'does-not-exist',
+        {
+          kind: 'reviewed',
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        },
+        actor,
+      ),
+    ).rejects.toThrow(InspectableElementNotFoundError);
   });
 });

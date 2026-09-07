@@ -72,6 +72,20 @@ export interface InspectableElementRepository {
     elementType: ElementType,
     code: string,
   ): Promise<InspectableElement | null>;
+
+  // review-session fresh-context review finding (PR5): RecordEntryUseCase
+  // needs the exact same scoping `findReviewableByCode` gives
+  // ResolveElementByCodeUseCase, but keyed by id — the URL param on
+  // `PUT /review-sessions/:sessionId/entries/:elementId` — instead of by
+  // code. Same collapsing semantics: unknown id, foreign community, wrong
+  // element type, decommissioned and soft-deleted all resolve to the SAME
+  // `null`, so the caller cannot distinguish "why" and therefore cannot
+  // leak it.
+  findReviewableById(
+    communityId: string,
+    elementType: ElementType,
+    elementId: string,
+  ): Promise<InspectableElement | null>;
 }
 
 export const INSPECTABLE_ELEMENT_REPOSITORY = Symbol(

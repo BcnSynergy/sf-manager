@@ -128,4 +128,25 @@ export class InMemoryInspectableElementRepository implements InspectableElementR
     }
     return Promise.resolve(element);
   }
+
+  // review-session fresh-context review finding (PR5) — mirrors
+  // findReviewableByCode's collapsing checks exactly, keyed by id instead
+  // of code.
+  findReviewableById(
+    communityId: string,
+    elementType: ElementType,
+    elementId: string,
+  ): Promise<InspectableElement | null> {
+    const element = this.elementsById.get(elementId);
+    if (
+      !element ||
+      element.communityId !== communityId ||
+      element.elementType !== elementType ||
+      element.isDeleted ||
+      element.isDeactivated
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(element);
+  }
 }

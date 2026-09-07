@@ -4,6 +4,11 @@ import {
   type IdGenerator,
 } from '../../../../shared/application/ports/id-generator.port';
 import {
+  INSPECTABLE_ELEMENT_REPOSITORY,
+  type InspectableElementRepository,
+} from '../../../inspectable-element/application/ports/inspectable-element.repository.port';
+import { InspectableElementNotFoundError } from '../../../inspectable-element/domain/errors/inspectable-element-not-found.error';
+import {
   REVIEW_TEMPLATE_REPOSITORY,
   type ReviewTemplateRepository,
 } from '../../../review-template/application/ports/review-template.repository.port';
@@ -57,6 +62,8 @@ export class RecordEntryUseCase {
     private readonly sessionRepository: ReviewSessionRepository,
     @Inject(REVIEW_TEMPLATE_REPOSITORY)
     private readonly templateRepository: ReviewTemplateRepository,
+    @Inject(INSPECTABLE_ELEMENT_REPOSITORY)
+    private readonly elementRepository: InspectableElementRepository,
     @Inject(ID_GENERATOR) private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -69,6 +76,35 @@ export class RecordEntryUseCase {
     // SessionAccess throws ReviewSessionNotFoundError for an unknown/
     // foreign/out-of-scope session BEFORE anything below runs.
     const session = await this.sessionAccess.loadForActor(sessionId, actor);
+
+    // design.md Decision 11: the frozen snapshot is the ONLY source of the
+    // session's elementType (a session stores templateId only, never a
+    // separate elementType column) — needed here up front, before the
+    // element-scope check below, not just for the reviewed-answers match
+    // further down.
+    const template = await this.templateRepository.findFrozenWithSnapshot(
+      session.templateId,
+    );
+    if (!template) {
+      throw new ActiveTemplateNotFoundError();
+    }
+
+    // Fresh-context review CRITICAL finding (PR5): `elementId` came
+    // verbatim from the URL with no check that it belongs to this
+    // session's scope — mirrors ResolveElementByCodeUseCase's own scoping
+    // call one-for-one (design.md Decision 6: communityId and elementType
+    // read off the already-loaded session/template, never accepted as
+    // request parameters). A foreign-community id, wrong-type id, unknown
+    // id, decommissioned and soft-deleted element all collapse to the SAME
+    // InspectableElementNotFoundError.
+    const element = await this.elementRepository.findReviewableById(
+      session.communityId,
+      template.elementType,
+      elementId,
+    );
+    if (!element) {
+      throw new InspectableElementNotFoundError();
+    }
 
     const entryId = this.idGenerator.generate();
     const recordedAt = new Date();
@@ -87,20 +123,10 @@ export class RecordEntryUseCase {
         recordedAt,
       });
     } else {
-      // design.md Decision 11: the frozen snapshot is the ONLY source of
-      // truth for which questions this element's answers must cover —
-      // never the live ChecklistQuestion pool. spec.md "An incomplete
-      // answer set is rejected" / "An unknown question is rejected": both
-      // collapse to the SAME AnswersDoNotMatchTemplateError, mirroring
-      // Decision 6's "one collapsing return path" philosophy for a
-      // different rejection.
-      const template = await this.templateRepository.findFrozenWithSnapshot(
-        session.templateId,
-      );
-      if (!template) {
-        throw new ActiveTemplateNotFoundError();
-      }
-
+      // spec.md "An incomplete answer set is rejected" / "An unknown
+      // question is rejected": both collapse to the SAME
+      // AnswersDoNotMatchTemplateError, mirroring Decision 6's "one
+      // collapsing return path" philosophy for a different rejection.
       const snapshotQuestionIds = new Set(
         template.questions.map((question) => question.questionId),
       );
