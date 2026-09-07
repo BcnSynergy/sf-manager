@@ -8,8 +8,13 @@ import { PrismaCommunityRepository } from '../../../community/infrastructure/per
 import { Community } from '../../../community/domain/community.entity';
 import { PrismaReviewTemplateRepository } from '../../../review-template/infrastructure/persistence/prisma-review-template.repository';
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
+import { PrismaInspectableElementRepository } from '../../../inspectable-element/infrastructure/persistence/prisma-inspectable-element.repository';
+import { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
+import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
+import { QuestionAnswer } from '../../domain/question-answer.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { OpenDraftAlreadyExistsError } from '../../domain/errors/open-draft-already-exists.error';
+import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import { PrismaReviewSessionRepository } from './prisma-review-session.repository';
 
 const idGenerator = new UuidV7IdGenerator();
@@ -198,5 +203,253 @@ describe('PrismaReviewSessionRepository.create() (integration, open-draft race)'
       where: { communityId, templateId, performedById, status: 'draft' },
     });
     expect(draftRows).toHaveLength(1);
+  });
+});
+
+// Fresh-context review on PR4, finding #C: the port's `upsertEntry` took a
+// separate `answers` parameter alongside `entry`, which already carries
+// `entry.answers` — the domain invariant's only construction paths
+// (ElementReviewEntry.reviewed()/.unreviewed(), design.md Decision 1)
+// always populate it. `entry.answers` is the single source of truth, so
+// the redundant parameter is gone; this suite proves the real adapter (1)
+// persists `entry.answers` with full-replace semantics against Postgres,
+// and (2) throws ReviewSessionNotFoundError for an unknown sessionId
+// instead of surfacing a raw FK-violation error — matching
+// InMemoryReviewSessionRepository's behaviour (in-memory-review-session
+// .repository.spec.ts) so Phase 5's tests against the fake reflect this.
+describe('PrismaReviewSessionRepository.upsertEntry() (integration, review finding #C)', () => {
+  let prisma: PrismaService;
+  let repository: PrismaReviewSessionRepository;
+  let communityRepository: PrismaCommunityRepository;
+  let templateRepository: PrismaReviewTemplateRepository;
+  let userRepository: PrismaUserRepository;
+  let elementRepository: PrismaInspectableElementRepository;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+    repository = new PrismaReviewSessionRepository(prisma);
+    communityRepository = new PrismaCommunityRepository(prisma);
+    templateRepository = new PrismaReviewTemplateRepository(prisma);
+    userRepository = new PrismaUserRepository(prisma);
+    elementRepository = new PrismaInspectableElementRepository(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  const uniqueName = (label: string) => `${label}-${randomUUID()}`;
+
+  const createCommunity = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await communityRepository.create(
+      new Community({
+        id,
+        name: uniqueName(label),
+        address: 'Carrer Major 1, Girona',
+        locale: 'ca',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createUser = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await userRepository.create(
+      new User({
+        id,
+        email: `${uniqueName(label)}@example.com`,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createActiveTemplate = async (label: string): Promise<string> => {
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        status: 'draft',
+      },
+    });
+
+    const id = idGenerator.generate();
+    await templateRepository.create(
+      new ReviewTemplate({
+        id,
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        name: uniqueName(label),
+        version: null,
+        status: 'draft',
+        draftQuestionIds: [],
+        createdAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
+    const nextVersion =
+      Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1;
+    await prisma.reviewTemplate.update({
+      where: { id },
+      data: { status: 'active', version: nextVersion },
+    });
+    return id;
+  };
+
+  const createElement = async (
+    communityId: string,
+    label: string,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    // `code` is @db.VarChar(10) — a short random code, not the full
+    // uniqueName(label) (which would overflow the column).
+    const code = randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
+    await elementRepository.create(
+      new InspectableElement({
+        id,
+        communityId,
+        elementType: 'EXTINGUISHER',
+        name: uniqueName(label),
+        description: null,
+        location: 'Ground floor',
+        installedAt: new Date(),
+        serialNumber: null,
+        deletedAt: null,
+        code,
+        deactivatedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createDraftSession = async (): Promise<{
+    sessionId: string;
+    communityId: string;
+    templateId: string;
+    performedById: string;
+    inspectableElementId: string;
+  }> => {
+    const communityId = await createCommunity('upsert-entry');
+    const templateId = await createActiveTemplate('upsert-entry');
+    const performedById = await createUser('upsert-entry');
+    const inspectableElementId = await createElement(
+      communityId,
+      'upsert-entry',
+    );
+    const sessionId = idGenerator.generate();
+    await repository.create(
+      new ReviewSession({
+        id: sessionId,
+        communityId,
+        templateId,
+        performedById,
+        status: 'draft',
+        startedAt: new Date(),
+        completedAt: null,
+      }),
+    );
+    return {
+      sessionId,
+      communityId,
+      templateId,
+      performedById,
+      inspectableElementId,
+    };
+  };
+
+  it("persists entry.answers with full-replace semantics — there is no separate answers argument", async () => {
+    const { sessionId, inspectableElementId } = await createDraftSession();
+
+    const entry = ElementReviewEntry.reviewed({
+      id: idGenerator.generate(),
+      reviewSessionId: sessionId,
+      inspectableElementId,
+      answers: [
+        new QuestionAnswer({
+          id: idGenerator.generate(),
+          elementReviewEntryId: 'placeholder',
+          questionId: idGenerator.generate(),
+          answer: 'YES',
+        }),
+      ],
+      recordedAt: new Date(),
+    });
+
+    await repository.upsertEntry(sessionId, entry);
+
+    const stored = await repository.findByIdForPerformer(
+      sessionId,
+      (await prisma.reviewSession.findUniqueOrThrow({ where: { id: sessionId } }))
+        .performedById,
+    );
+    expect(stored?.entries[0].answers).toHaveLength(1);
+    expect(stored?.entries[0].answers[0].answer).toBe('YES');
+
+    // A second upsertEntry with a DIFFERENT answer set fully replaces the
+    // first, not merges with it (design.md "Full-replace semantics").
+    const replacement = ElementReviewEntry.unreviewed({
+      id: entry.id,
+      reviewSessionId: sessionId,
+      inspectableElementId: entry.inspectableElementId,
+      observations: 'Not accessible this cycle',
+      recordedAt: new Date(),
+    });
+    await repository.upsertEntry(sessionId, replacement);
+
+    const replaced = await repository.findByIdForPerformer(
+      sessionId,
+      (await prisma.reviewSession.findUniqueOrThrow({ where: { id: sessionId } }))
+        .performedById,
+    );
+    expect(replaced?.entries[0].answers).toHaveLength(0);
+    expect(replaced?.entries[0].observations).toBe(
+      'Not accessible this cycle',
+    );
+  });
+
+  it('rejects with ReviewSessionNotFoundError for an unknown sessionId instead of a raw FK-violation error', async () => {
+    // A real (community, element) pair isolates this failure to the
+    // reviewSessionId FK specifically — this test is about the missing
+    // SESSION, not an incidentally-invalid element.
+    const communityId = await createCommunity('upsert-entry-missing-session');
+    const inspectableElementId = await createElement(
+      communityId,
+      'upsert-entry-missing-session',
+    );
+
+    const entry = ElementReviewEntry.unreviewed({
+      id: idGenerator.generate(),
+      reviewSessionId: 'does-not-exist',
+      inspectableElementId,
+      observations: 'Not accessible this cycle',
+      recordedAt: new Date(),
+    });
+
+    await expect(
+      repository.upsertEntry('does-not-exist', entry),
+    ).rejects.toBeInstanceOf(ReviewSessionNotFoundError);
   });
 });
