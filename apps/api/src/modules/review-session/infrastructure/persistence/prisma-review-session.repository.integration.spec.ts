@@ -10,6 +10,7 @@ import { PrismaReviewTemplateRepository } from '../../../review-template/infrast
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
 import { PrismaInspectableElementRepository } from '../../../inspectable-element/infrastructure/persistence/prisma-inspectable-element.repository';
 import { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
+import { RandomElementCodeGenerator } from '../../../inspectable-element/infrastructure/code/random-element-code.generator';
 import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
 import { QuestionAnswer } from '../../domain/question-answer.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
@@ -319,14 +320,18 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     return id;
   };
 
+  const codeGenerator = new RandomElementCodeGenerator();
+
   const createElement = async (
     communityId: string,
     label: string,
   ): Promise<string> => {
     const id = idGenerator.generate();
-    // `code` is @db.VarChar(10) — a short random code, not the full
-    // uniqueName(label) (which would overflow the column).
-    const code = randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
+    // inspectable-element-migration.integration.spec.ts asserts EVERY row
+    // in the table matches the app's code alphabet
+    // (/^[2-9A-HJKMNP-Z]{10}$/) — reuse the real generator, not an
+    // arbitrary hex string, so this suite's rows never violate that guard.
+    const code = codeGenerator.generate();
     await elementRepository.create(
       new InspectableElement({
         id,
