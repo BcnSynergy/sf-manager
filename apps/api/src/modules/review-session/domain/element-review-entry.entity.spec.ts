@@ -1,6 +1,7 @@
 import { ElementReviewEntry } from './element-review-entry.entity';
 import { QuestionAnswer } from './question-answer.entity';
 import { MissingObservationsError } from './errors/missing-observations.error';
+import { MissingAnswersError } from './errors/missing-answers.error';
 
 // design.md Decision 1 (BLOCKING, resolved): `observations` lives on
 // ElementReviewEntry, nullable, and is the entry's skip reason. An entry is
@@ -35,6 +36,23 @@ describe('ElementReviewEntry', () => {
         'question-1',
         'question-2',
       ]);
+    });
+
+    // design.md Decision 1: `answers.length > 0` is half of the "reviewed"
+    // side of the invariant — `reviewed({ answers: [] })` produces the
+    // illegal "neither answered nor explained" state the doc comment above
+    // declares unconstructible. The domain-layer backstop must reject it
+    // the same way `unreviewed()` rejects a blank reason.
+    it('throws MissingAnswersError when constructed with zero answers', () => {
+      expect(() =>
+        ElementReviewEntry.reviewed({
+          id: 'entry-1',
+          reviewSessionId: 'session-1',
+          inspectableElementId: 'element-1',
+          answers: [],
+          recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+      ).toThrow(MissingAnswersError);
     });
   });
 
