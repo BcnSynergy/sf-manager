@@ -42,6 +42,14 @@ import { RolePermissionChecker } from './role-permission.checker';
 // permitted on any /review-templates route, including activate; the other
 // 4 roles stay []. No `reviewTemplate:retire` permission is declared here
 // or anywhere — retirement is only ever a side effect of activation.
+//
+// reviewSession:* permissions (review-session PR 2, authorization/spec.md
+// "Technician and Representative Become Operational"): the first time
+// either MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE maps to
+// anything other than []. Both roles get the IDENTICAL set — they perform
+// sessions through the same flow — and gain nothing else (no user:*,
+// community:*, etc). SYSTEM_ADMIN, MANAGER and
+// MAINTENANCE_COMPANY_MANAGER are unchanged by this slice.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -74,16 +82,45 @@ describe('RolePermissionChecker', () => {
     'reviewTemplate:activate',
   ];
 
-  const NON_ADMIN_ROLES: Role[] = [
+  const REVIEW_SESSION_PERMISSIONS: Permission[] = [
+    'reviewSession:create',
+    'reviewSession:read',
+    'reviewSession:perform',
+    'reviewSession:complete',
+    'reviewSession:discard',
+  ];
+
+  // Non-admin roles that remain fully inert — no permission of any kind,
+  // including reviewSession:*.
+  const INERT_NON_ADMIN_ROLES: Role[] = [
     'MANAGER',
     'MAINTENANCE_COMPANY_MANAGER',
+  ];
+
+  // The two roles activated on the review-session surface only.
+  const REVIEW_SESSION_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
     'COMMUNITY_REPRESENTATIVE',
+  ];
+
+  const NON_ADMIN_ROLES: Role[] = [
+    ...INERT_NON_ADMIN_ROLES,
+    ...REVIEW_SESSION_ROLES,
   ];
 
   it.each(ALL_PERMISSIONS)('allows SYSTEM_ADMIN on %s', (permission) => {
     expect(checker.can('SYSTEM_ADMIN', permission)).toBe(true);
   });
+
+  // SYSTEM_ADMIN's row is unchanged by this slice — it gains no
+  // reviewSession:* permission (authorization/spec.md "SYSTEM_ADMIN's
+  // permissions are unchanged").
+  it.each(REVIEW_SESSION_PERMISSIONS)(
+    'denies SYSTEM_ADMIN on %s',
+    (permission) => {
+      expect(checker.can('SYSTEM_ADMIN', permission)).toBe(false);
+    },
+  );
 
   it.each(
     NON_ADMIN_ROLES.flatMap((role) =>
@@ -95,6 +132,47 @@ describe('RolePermissionChecker', () => {
   )('denies %s on %s', (role, permission) => {
     expect(checker.can(role, permission)).toBe(false);
   });
+
+  // authorization/spec.md "The two remaining non-admin roles stay inert":
+  // MANAGER and MAINTENANCE_COMPANY_MANAGER get nothing, including
+  // reviewSession:*.
+  it.each(
+    INERT_NON_ADMIN_ROLES.flatMap((role) =>
+      REVIEW_SESSION_PERMISSIONS.map((permission): [Role, Permission] => [
+        role,
+        permission,
+      ]),
+    ),
+  )('denies %s on %s', (role, permission) => {
+    expect(checker.can(role, permission)).toBe(false);
+  });
+
+  // authorization/spec.md "Both performing roles hold the same
+  // review-session permissions": MAINTENANCE_TECHNICIAN and
+  // COMMUNITY_REPRESENTATIVE are granted the identical reviewSession:*
+  // family, and nothing else.
+  it.each(
+    REVIEW_SESSION_ROLES.flatMap((role) =>
+      REVIEW_SESSION_PERMISSIONS.map((permission): [Role, Permission] => [
+        role,
+        permission,
+      ]),
+    ),
+  )('allows %s on %s', (role, permission) => {
+    expect(checker.can(role, permission)).toBe(true);
+  });
+
+  // authorization/spec.md "The performing roles gain nothing else": no
+  // review-session-role entry contains any permission outside the
+  // reviewSession:* family.
+  it.each(REVIEW_SESSION_ROLES)(
+    '%s gains no permission outside reviewSession:*',
+    (role) => {
+      for (const permission of ALL_PERMISSIONS) {
+        expect(checker.can(role, permission)).toBe(false);
+      }
+    },
+  );
 
   // authorization/spec.md "No Standalone Retire Permission": no
   // `reviewTemplate:retire` permission MUST exist anywhere in the

@@ -17,6 +17,13 @@ export interface CommunityTechnicianRepository {
   // Active AND deactivated records — Phase 10's list-assignments route.
   listByCommunity(communityId: string): Promise<CommunityTechnician[]>;
 
+  // Active-only, across communities, for the GET /review-scope LISTING
+  // (design.md Decision 5). Filtered `deactivatedAt IS NULL` — mirrors
+  // CommunityRepresentativeRepository.findActiveByUser. The per-request
+  // scope check (CommunityScopeChecker) does NOT use this method — it
+  // reuses findByCommunityAndUser above.
+  findActiveByUser(userId: string): Promise<CommunityTechnician[]>;
+
   // Plain insert. Rejects with AssignmentAlreadyExistsError when the
   // (communityId, userId) pair already has a record — active or deactivated
   // (design.md Decision 4; `@@unique([communityId, userId])`) — mirrors

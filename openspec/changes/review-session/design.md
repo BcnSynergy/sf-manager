@@ -663,3 +663,23 @@ roles return to `[]`.
       can navigate to them. That is a within-scope disclosure (the actor is
       assigned to the community), but it is the one place the API volunteers
       element codes the user did not ask for — worth a second look in review.
+- [ ] **Decision 4 premise re-check before Phase 4** — PR2 fresh-context review
+      found that `AssignmentCommunityScopeChecker.isAssignedTo` returns `true`
+      for an assignment active in a **soft-deleted** community: neither
+      `CommunityTechnician.findByCommunityAndUser` nor
+      `CommunityRepresentative.findByCommunityAndUser` filters on the
+      community's `deletedAt`, so a technician (or a representative active in
+      ≥2 communities, since only one active row per community is exclusive,
+      not per representative) can still hold an active assignment row on a
+      community that has since been soft-deleted. Decision 4 currently states
+      this boolean is the *only* existence check needed for `POST
+      /review-sessions` (no separate 404 path for "community does not
+      exist"/deleted) — that premise breaks once the open/resume review-session
+      use case (Phase 4) is wired on top of it, because it would let such an
+      actor open a session against a deleted community. Must be resolved
+      before Phase 4 implementation starts: either (a) correct Decision 4's
+      wording to require a companion `communityRepository.findById` /
+      not-deleted check in the use case, or (b) have `isAssignedTo` itself
+      consult community deletion state. Not fixed in PR2 — out of scope for
+      the Phase 2 scope-checker slice; deliberately deferred here, not a
+      Phase 2 defect.

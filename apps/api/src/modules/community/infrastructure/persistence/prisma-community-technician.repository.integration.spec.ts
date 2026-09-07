@@ -246,6 +246,66 @@ describe('PrismaCommunityTechnicianRepository (integration)', () => {
     expect(second?.isActive).toBe(true);
   });
 
+  // Fresh-context review finding: findActiveByUser was only covered against
+  // the in-memory fake (JS-level isActive filtering), never against the
+  // real Prisma `where: { userId, deactivatedAt: null }` query. Asserts the
+  // real adapter filters out a deactivated row for the same user.
+  it('findActiveByUser() returns only the active row for a user with both an active and a deactivated assignment', async () => {
+    const communityId = await createCommunity('find-active-by-user');
+    const userId = await createUser('find-active-by-user');
+    const otherCommunityId = await createCommunity('find-active-by-user-2');
+
+    await repository.create(
+      new CommunityTechnician({
+        id: idGenerator.generate(),
+        communityId,
+        userId,
+        deactivatedAt: new Date(),
+      }),
+    );
+    await repository.create(
+      new CommunityTechnician({
+        id: idGenerator.generate(),
+        communityId: otherCommunityId,
+        userId,
+        deactivatedAt: null,
+      }),
+    );
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].communityId).toBe(otherCommunityId);
+    expect(active[0].isActive).toBe(true);
+  });
+
+  it('findActiveByUser() returns an empty array for a user with no assignments', async () => {
+    const userId = await createUser('find-active-by-user-none');
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toEqual([]);
+  });
+
+  it("findActiveByUser() does not return another user's active assignment", async () => {
+    const communityId = await createCommunity('find-active-by-user-cross');
+    const userId = await createUser('find-active-by-user-cross');
+    const otherUserId = await createUser('find-active-by-user-cross-other');
+
+    await repository.create(
+      new CommunityTechnician({
+        id: idGenerator.generate(),
+        communityId,
+        userId: otherUserId,
+        deactivatedAt: null,
+      }),
+    );
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toEqual([]);
+  });
+
   // Confirms this table has NO partial unique index like
   // CommunityRepresentative_one_active_per_community — the absence itself
   // is the design intent (design.md Interfaces: "the asymmetry, made

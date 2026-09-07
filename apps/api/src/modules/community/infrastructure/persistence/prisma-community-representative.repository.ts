@@ -158,6 +158,19 @@ export class PrismaCommunityRepresentativeRepository implements CommunityReprese
     });
   }
 
+  // Active-only, across communities (design.md Decision 5, GET
+  // /review-scope's listing). Distinct from countActiveByUser above, left
+  // untouched by this addition.
+  async findActiveByUser(userId: string): Promise<CommunityRepresentative[]> {
+    const records = await this.prisma.communityRepresentative.findMany({
+      where: { userId, deactivatedAt: null },
+    });
+
+    return records.map((record) =>
+      CommunityRepresentativeMapper.toDomain(record),
+    );
+  }
+
   // Plain insert. A P2002 on the partial index means a concurrent
   // double-activation slipped past SERIALIZABLE -> TransactionConflictError.
   // A P2002 on the (communityId, userId) unique constraint means the pair

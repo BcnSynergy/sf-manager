@@ -27,6 +27,14 @@ export interface CommunityRepresentativeRepository {
   // never duplicated.
   countActiveByUser(userId: string): Promise<number>;
 
+  // Active-only, across communities, for the GET /review-scope LISTING
+  // (design.md Decision 5). Filtered `deactivatedAt IS NULL`. Distinct
+  // from countActiveByUser above — that one counts, this one returns the
+  // rows — and countActiveByUser is left untouched by this addition. The
+  // per-request scope check (CommunityScopeChecker) does NOT use this
+  // method — it reuses findByCommunityAndUser above.
+  findActiveByUser(userId: string): Promise<CommunityRepresentative[]>;
+
   // Plain insert. Rejects with AssignmentAlreadyExistsError when the
   // (communityId, userId) pair already has a record — active or deactivated
   // (design.md Decision 4; `@@unique([communityId, userId])`) — mirrors

@@ -58,6 +58,16 @@ export class PrismaCommunityTechnicianRepository implements CommunityTechnicianR
     return records.map((record) => CommunityTechnicianMapper.toDomain(record));
   }
 
+  // Active-only, across communities (design.md Decision 5, GET
+  // /review-scope's listing).
+  async findActiveByUser(userId: string): Promise<CommunityTechnician[]> {
+    const records = await this.prisma.communityTechnician.findMany({
+      where: { userId, deactivatedAt: null },
+    });
+
+    return records.map((record) => CommunityTechnicianMapper.toDomain(record));
+  }
+
   // Plain insert. The (communityId, userId) unique constraint means the
   // pair already has a record, active or deactivated ->
   // AssignmentAlreadyExistsError (design.md Decision 4). Unlike the

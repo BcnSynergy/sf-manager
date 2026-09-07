@@ -43,6 +43,17 @@
 // a standalone action, only an automatic side effect of activating a
 // successor (authorization spec "No Standalone Retire Permission"). All
 // five are granted only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
+//
+// reviewSession:* — review-session/authorization spec "Technician and
+// Representative Become Operational" (PR 2, design.md Decision 10): governs
+// every /review-scope and /review-sessions route (open, read, resume,
+// resolve-by-code, record answers, mark unreviewed, discard, complete).
+// Five permissions granted identically to MAINTENANCE_TECHNICIAN and
+// COMMUNITY_REPRESENTATIVE — the first time either role maps to anything
+// other than []. SYSTEM_ADMIN, MANAGER and MAINTENANCE_COMPANY_MANAGER get
+// none. Holding one of these grants nothing without also passing the
+// resource-scope check (an active community assignment) — see
+// `CommunityScopeChecker`.
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -69,4 +80,9 @@ export type Permission =
   | 'reviewTemplate:read'
   | 'reviewTemplate:update'
   | 'reviewTemplate:delete'
-  | 'reviewTemplate:activate';
+  | 'reviewTemplate:activate'
+  | 'reviewSession:create'
+  | 'reviewSession:read'
+  | 'reviewSession:perform'
+  | 'reviewSession:complete'
+  | 'reviewSession:discard';

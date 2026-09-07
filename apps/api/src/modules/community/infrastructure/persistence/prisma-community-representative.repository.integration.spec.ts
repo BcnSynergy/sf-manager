@@ -209,6 +209,66 @@ describe('PrismaCommunityRepresentativeRepository (integration)', () => {
     expect(await repository.countActiveByUser(userId)).toBe(2);
   });
 
+  // Fresh-context review finding: findActiveByUser was only covered against
+  // the in-memory fake (JS-level isActive filtering), never against the
+  // real Prisma `where: { userId, deactivatedAt: null }` query. Distinct
+  // from countActiveByUser above — this asserts the actual rows returned.
+  it('findActiveByUser() returns only the active row for a user with both an active and a deactivated assignment', async () => {
+    const communityId = await createCommunity('find-active-by-user');
+    const userId = await createUser('find-active-by-user');
+    const otherCommunityId = await createCommunity('find-active-by-user-2');
+
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId,
+        userId,
+        deactivatedAt: new Date(),
+      }),
+    );
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId: otherCommunityId,
+        userId,
+        deactivatedAt: null,
+      }),
+    );
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toHaveLength(1);
+    expect(active[0].communityId).toBe(otherCommunityId);
+    expect(active[0].isActive).toBe(true);
+  });
+
+  it('findActiveByUser() returns an empty array for a user with no assignments', async () => {
+    const userId = await createUser('find-active-by-user-none');
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toEqual([]);
+  });
+
+  it("findActiveByUser() does not return another user's active assignment", async () => {
+    const communityId = await createCommunity('find-active-by-user-cross');
+    const userId = await createUser('find-active-by-user-cross');
+    const otherUserId = await createUser('find-active-by-user-cross-other');
+
+    await repository.create(
+      new CommunityRepresentative({
+        id: idGenerator.generate(),
+        communityId,
+        userId: otherUserId,
+        deactivatedAt: null,
+      }),
+    );
+
+    const active = await repository.findActiveByUser(userId);
+
+    expect(active).toEqual([]);
+  });
+
   it('setDeactivatedAt() toggles deactivatedAt between a Date and null', async () => {
     const communityId = await createCommunity('set-deactivated');
     const userId = await createUser('set-deactivated');

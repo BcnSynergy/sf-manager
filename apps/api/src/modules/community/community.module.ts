@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { COMMUNITY_SCOPE_CHECKER } from '../../shared/application/authorization/community-scope.checker.port';
 import { UsersModule } from '../users/users.module';
 import { COMMUNITY_REPOSITORY } from './application/ports/community.repository.port';
 import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from './application/ports/community-representative.repository.port';
 import { COMMUNITY_TECHNICIAN_REPOSITORY } from './application/ports/community-technician.repository.port';
 import { INSPECTABLE_ELEMENT_COUNTER } from './application/ports/inspectable-element-counter.port';
+import { AssignmentCommunityScopeChecker } from './infrastructure/authorization/assignment-community-scope.checker';
 import { AddRepresentativeUseCase } from './application/use-cases/add-representative.use-case';
 import { AddTechnicianUseCase } from './application/use-cases/add-technician.use-case';
 import { CreateCommunityUseCase } from './application/use-cases/create-community.use-case';
@@ -46,6 +48,15 @@ import { CommunityController } from './presentation/community.controller';
 // count probe owned entirely by `community` — talks to PrismaService
 // (`@Global()` PrismaModule) directly, so no InspectableElementModule
 // import is added here, keeping the DI graph acyclic.
+//
+// COMMUNITY_SCOPE_CHECKER (review-session PR 2, design.md Decision 4 Layer
+// 2, tasks.md 2.7): bound to AssignmentCommunityScopeChecker, which
+// injects the two assignment repositories already provided below —
+// exported so the future ReviewSessionModule can import CommunityModule
+// and inject it, the same way it will inject
+// COMMUNITY_REPOSITORY/COMMUNITY_REPRESENTATIVE_REPOSITORY/
+// COMMUNITY_TECHNICIAN_REPOSITORY. `community` imports nothing from
+// `review-session` — the dependency runs one way only, no import cycle.
 @Module({
   imports: [UsersModule],
   controllers: [CommunityController],
@@ -63,6 +74,10 @@ import { CommunityController } from './presentation/community.controller';
       provide: INSPECTABLE_ELEMENT_COUNTER,
       useClass: PrismaInspectableElementCounter,
     },
+    {
+      provide: COMMUNITY_SCOPE_CHECKER,
+      useClass: AssignmentCommunityScopeChecker,
+    },
     CreateCommunityUseCase,
     ListCommunitiesUseCase,
     UpdateCommunityUseCase,
@@ -78,6 +93,7 @@ import { CommunityController } from './presentation/community.controller';
     COMMUNITY_REPOSITORY,
     COMMUNITY_REPRESENTATIVE_REPOSITORY,
     COMMUNITY_TECHNICIAN_REPOSITORY,
+    COMMUNITY_SCOPE_CHECKER,
   ],
 })
 export class CommunityModule {}

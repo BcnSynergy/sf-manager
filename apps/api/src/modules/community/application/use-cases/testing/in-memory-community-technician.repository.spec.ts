@@ -101,4 +101,42 @@ describe('InMemoryCommunityTechnicianRepository', () => {
 
     expect(rows.map((row) => row.userId).sort()).toEqual(['user-1', 'user-2']);
   });
+
+  // design.md Decision 5: findActiveByUser feeds GET /review-scope's
+  // listing only — filtered to deactivatedAt IS NULL, across communities.
+  it('findActiveByUser() returns only active rows for that user, across communities', async () => {
+    await repository.create(
+      makeTechnician({ id: 'a1', communityId: 'c1', userId: 'user-1' }),
+    );
+    await repository.create(
+      makeTechnician({ id: 'a2', communityId: 'c2', userId: 'user-1' }),
+    );
+    await repository.create(
+      makeTechnician({
+        id: 'a3',
+        communityId: 'c3',
+        userId: 'user-1',
+        deactivatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }),
+    );
+    await repository.create(
+      makeTechnician({ id: 'a4', communityId: 'c1', userId: 'user-2' }),
+    );
+
+    const rows = await repository.findActiveByUser('user-1');
+
+    expect(rows.map((row) => row.communityId).sort()).toEqual(['c1', 'c2']);
+  });
+
+  it('findActiveByUser() returns an empty list when the user has no active rows (triangulation)', async () => {
+    await repository.create(
+      makeTechnician({
+        id: 'a1',
+        userId: 'user-1',
+        deactivatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }),
+    );
+
+    expect(await repository.findActiveByUser('user-1')).toEqual([]);
+  });
 });

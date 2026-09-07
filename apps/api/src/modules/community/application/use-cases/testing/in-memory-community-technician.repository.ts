@@ -43,6 +43,16 @@ export class InMemoryCommunityTechnicianRepository implements CommunityTechnicia
     );
   }
 
+  // Active-only, across communities (design.md Decision 5, GET
+  // /review-scope's listing).
+  findActiveByUser(userId: string): Promise<CommunityTechnician[]> {
+    return Promise.resolve(
+      [...this.assignmentsByKey.values()].filter(
+        (technician) => technician.userId === userId && technician.isActive,
+      ),
+    );
+  }
+
   // Mirrors the real unique index on (communityId, userId) (design.md
   // Decision 4) — ANY existing row for this pair, active or deactivated,
   // rejects the insert. No exclusivity check against OTHER pairs: multiple

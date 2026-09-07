@@ -70,6 +70,18 @@ export class InMemoryCommunityRepresentativeRepository implements CommunityRepre
     return Promise.resolve(count);
   }
 
+  // Active-only, across communities (design.md Decision 5, GET
+  // /review-scope's listing). Distinct from countActiveByUser above, left
+  // untouched by this addition.
+  findActiveByUser(userId: string): Promise<CommunityRepresentative[]> {
+    return Promise.resolve(
+      [...this.assignmentsByKey.values()].filter(
+        (representative) =>
+          representative.userId === userId && representative.isActive,
+      ),
+    );
+  }
+
   // Mirrors the real unique index on (communityId, userId) (design.md
   // Decision 4) — ANY existing row for this pair, active or deactivated,
   // rejects the insert.
