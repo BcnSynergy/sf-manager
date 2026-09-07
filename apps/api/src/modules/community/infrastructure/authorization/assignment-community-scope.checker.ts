@@ -57,6 +57,15 @@ export class AssignmentCommunityScopeChecker implements CommunityScopeChecker {
       case 'MANAGER':
       case 'MAINTENANCE_COMPANY_MANAGER':
         return false;
+      default: {
+        // `role` comes from a JWT claim with no runtime enum validation, so
+        // an out-of-union value can reach here despite the switch being
+        // exhaustive at compile time. Fail closed at runtime too — the
+        // `satisfies never` check still forces a compile error if a 6th
+        // Role is added without a matching case above.
+        role satisfies never;
+        return false;
+      }
     }
   }
 }

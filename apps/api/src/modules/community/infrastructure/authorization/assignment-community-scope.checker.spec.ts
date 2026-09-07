@@ -162,4 +162,21 @@ describe('AssignmentCommunityScopeChecker', () => {
       checker.isAssignedTo(userId, 'MAINTENANCE_TECHNICIAN', communityId),
     ).resolves.toBe(false);
   });
+
+  // `role` originates from a JWT claim with no runtime enum validation, so
+  // an out-of-union value must still fail closed at runtime even though the
+  // switch is exhaustive at compile time (review finding: a missing
+  // `default` branch resolved to `undefined` instead of `false` for such a
+  // value).
+  it('refuses (does not resolve to undefined) for a role value outside the Role union', async () => {
+    const checker = buildChecker({});
+
+    await expect(
+      checker.isAssignedTo(
+        userId,
+        'NOT_A_REAL_ROLE' as unknown as Role,
+        communityId,
+      ),
+    ).resolves.toBe(false);
+  });
 });
