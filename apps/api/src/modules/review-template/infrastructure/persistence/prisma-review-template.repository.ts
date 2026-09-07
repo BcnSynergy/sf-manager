@@ -320,6 +320,20 @@ export class PrismaReviewTemplateRepository
     return result.count > 0;
   }
 
+  // review-session/design.md Decision 7 (Phase 4, task 4.1): every
+  // `status = 'active'` row for the requested element type — a plain
+  // `deletedAt` filter is not needed, frozen (active/retired) rows are
+  // never soft-deletable (spec.md "Only Drafts May Be Soft-Deleted").
+  async findActiveByElementType(
+    elementType: ElementType,
+  ): Promise<ReviewTemplate[]> {
+    const records = await this.prisma.reviewTemplate.findMany({
+      where: { elementType, status: 'active' },
+    });
+
+    return records.map((record) => ReviewTemplateMapper.toDomain(record));
+  }
+
   private toTemplateWithQuestions(
     template: {
       id: string;
