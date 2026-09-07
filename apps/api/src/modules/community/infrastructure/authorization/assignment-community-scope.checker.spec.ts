@@ -31,7 +31,10 @@ describe('AssignmentCommunityScopeChecker', () => {
     if (state.representative) {
       representativeRepo.seed(state.representative);
     }
-    return new AssignmentCommunityScopeChecker(technicianRepo, representativeRepo);
+    return new AssignmentCommunityScopeChecker(
+      technicianRepo,
+      representativeRepo,
+    );
   }
 
   describe.each<[Role, AssignmentKind]>([

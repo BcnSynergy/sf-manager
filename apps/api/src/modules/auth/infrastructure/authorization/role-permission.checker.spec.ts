@@ -103,7 +103,10 @@ describe('RolePermissionChecker', () => {
     'COMMUNITY_REPRESENTATIVE',
   ];
 
-  const NON_ADMIN_ROLES: Role[] = [...INERT_NON_ADMIN_ROLES, ...REVIEW_SESSION_ROLES];
+  const NON_ADMIN_ROLES: Role[] = [
+    ...INERT_NON_ADMIN_ROLES,
+    ...REVIEW_SESSION_ROLES,
+  ];
 
   it.each(ALL_PERMISSIONS)('allows SYSTEM_ADMIN on %s', (permission) => {
     expect(checker.can('SYSTEM_ADMIN', permission)).toBe(true);

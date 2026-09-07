@@ -1,14 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Role } from '../../../users/domain/role';
 import type { CommunityScopeChecker } from '../../../../shared/application/authorization/community-scope.checker.port';
-import {
-  COMMUNITY_REPRESENTATIVE_REPOSITORY,
-  CommunityRepresentativeRepository,
-} from '../../application/ports/community-representative.repository.port';
-import {
-  COMMUNITY_TECHNICIAN_REPOSITORY,
-  CommunityTechnicianRepository,
-} from '../../application/ports/community-technician.repository.port';
+import { COMMUNITY_REPRESENTATIVE_REPOSITORY } from '../../application/ports/community-representative.repository.port';
+import type { CommunityRepresentativeRepository } from '../../application/ports/community-representative.repository.port';
+import { COMMUNITY_TECHNICIAN_REPOSITORY } from '../../application/ports/community-technician.repository.port';
+import type { CommunityTechnicianRepository } from '../../application/ports/community-technician.repository.port';
 
 // Adapter for CommunityScopeChecker (design.md Decision 4, Layer 2).
 // Fail-closed and EXHAUSTIVE on Role via a switch, not a default branch —
@@ -41,10 +37,11 @@ export class AssignmentCommunityScopeChecker implements CommunityScopeChecker {
   ): Promise<boolean> {
     switch (role) {
       case 'MAINTENANCE_TECHNICIAN': {
-        const assignment = await this.technicianRepository.findByCommunityAndUser(
-          communityId,
-          userId,
-        );
+        const assignment =
+          await this.technicianRepository.findByCommunityAndUser(
+            communityId,
+            userId,
+          );
         return assignment !== null && assignment.deactivatedAt === null;
       }
       case 'COMMUNITY_REPRESENTATIVE': {
