@@ -54,6 +54,25 @@ describe('ElementReviewEntry', () => {
         }),
       ).toThrow(MissingAnswersError);
     });
+
+    // design.md Decision 8/1: immutability "holds regardless of which
+    // route, use case or repository method is used" — a caller mutating
+    // the array it originally passed into the constructor must not
+    // retroactively change the stored entry's observable state.
+    it('is not affected by mutation of the source array after construction', () => {
+      const sourceAnswers = [makeAnswer('question-1')];
+
+      const entry = ElementReviewEntry.reviewed({
+        id: 'entry-1',
+        reviewSessionId: 'session-1',
+        inspectableElementId: 'element-1',
+        answers: sourceAnswers,
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      sourceAnswers.push(makeAnswer('question-2'));
+
+      expect(entry.answers).toHaveLength(1);
+    });
   });
 
   describe('unreviewed', () => {
