@@ -8,9 +8,9 @@
 -- WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate this
 -- file or diff schema.prisma against the database in a way that could DROP
 -- any of the 6 FKs, the partial unique index or the CHECK constraint below,
--- or any of the 9 pre-existing hand-written objects from earlier
--- migrations — Prisma has no knowledge of any of them. Guarded by an
--- integration test asserting their continued presence in
+-- or any of the 12 pre-existing hand-written objects from earlier
+-- migrations (7 FKs + 5 indexes) — Prisma has no knowledge of any of them.
+-- Guarded by an integration test asserting their continued presence in
 -- pg_indexes/pg_constraint (tasks.md 3.3).
 
 -- CreateEnum

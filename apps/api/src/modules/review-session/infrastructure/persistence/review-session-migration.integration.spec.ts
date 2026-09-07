@@ -138,8 +138,8 @@ describe('ReviewSession/ElementReviewEntry/QuestionAnswer schema (migration inte
 
   // Regression guard mirroring inspectable-element-migration.integration.spec
   // .ts's own precedent: confirms this migration did not silently drop any
-  // of the 9 pre-existing hand-written FKs/indexes from earlier migrations
-  // (design.md "the now-9 pre-existing hand-written objects").
+  // of the 12 pre-existing hand-written FKs/indexes (7 FKs + 5 indexes)
+  // from earlier migrations.
   it('does not drop the pre-existing hand-written FKs and partial unique indexes', async () => {
     const constraintRows = await prisma.$queryRaw<Array<{ conname: string }>>`
       SELECT conname FROM pg_constraint
