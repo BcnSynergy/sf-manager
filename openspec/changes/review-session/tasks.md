@@ -54,14 +54,14 @@ Chain strategy: stacked-to-main
 - [x] 1.11 `apps/api/test/inspectable-element.e2e-spec.ts` — decommission/reactivate round trip, element list unaffected in lifecycle filtering (spec: "Element Lifecycle Filtering Unchanged").
 
 ## Phase 2: Scoped-Authorization Foundation (PR 2)
-- [ ] 2.1 `shared/application/authorization/permission.ts` — add 5 `reviewSession:create|read|perform|complete|discard` members (design Decision 10).
-- [ ] 2.2 `.../auth/infrastructure/authorization/role-permission.checker.ts` — `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` get the identical `reviewSession:*` set; `SYSTEM_ADMIN`, `MANAGER`, `MAINTENANCE_COMPANY_MANAGER` unchanged (spec: authorization "Technician and Representative Become Operational").
-- [ ] 2.3 RED/GREEN `shared/application/authorization/community-scope.checker.port.ts` — `isAssignedTo(userId, role, communityId): Promise<boolean>` (design Decision 4, Layer 2).
-- [ ] 2.4 RED/GREEN `.../community/infrastructure/authorization/assignment-community-scope.checker.ts` — fail-closed exhaustive `switch` on role, dispatches to technician/representative repo, `row !== null && row.deactivatedAt === null` (spec: authorization "Resource Scope"). Table-driven unit: all 5 roles x {no row, deactivated row, active row}.
-- [ ] 2.5 RED/GREEN `community-technician.repository.port.ts` + `community-representative.repository.port.ts` — add `findActiveByUser(userId): Promise<T[]>`, filtered `deactivatedAt IS NULL`; `countActiveByUser` untouched (design Decision 5).
-- [ ] 2.6 Prisma adapters + in-memory fakes for both new methods.
-- [ ] 2.7 `CommunityModule` exports `COMMUNITY_SCOPE_CHECKER`; confirm no import cycle (community does not import review-session).
-- [ ] 2.8 Unit: assignment-scope adapter enforces "deactivating an assignment removes access on the next request" with no cache (spec: "Deactivating an assignment removes access on the next request").
+- [x] 2.1 `shared/application/authorization/permission.ts` — add 5 `reviewSession:create|read|perform|complete|discard` members (design Decision 10).
+- [x] 2.2 `.../auth/infrastructure/authorization/role-permission.checker.ts` — `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` get the identical `reviewSession:*` set; `SYSTEM_ADMIN`, `MANAGER`, `MAINTENANCE_COMPANY_MANAGER` unchanged (spec: authorization "Technician and Representative Become Operational").
+- [x] 2.3 RED/GREEN `shared/application/authorization/community-scope.checker.port.ts` — `isAssignedTo(userId, role, communityId): Promise<boolean>` (design Decision 4, Layer 2).
+- [x] 2.4 RED/GREEN `.../community/infrastructure/authorization/assignment-community-scope.checker.ts` — fail-closed exhaustive `switch` on role, dispatches to technician/representative repo, `row !== null && row.deactivatedAt === null` (spec: authorization "Resource Scope"). Table-driven unit: all 5 roles x {no row, deactivated row, active row}.
+- [x] 2.5 RED/GREEN `community-technician.repository.port.ts` + `community-representative.repository.port.ts` — add `findActiveByUser(userId): Promise<T[]>`, filtered `deactivatedAt IS NULL`; `countActiveByUser` untouched (design Decision 5).
+- [x] 2.6 Prisma adapters + in-memory fakes for both new methods.
+- [x] 2.7 `CommunityModule` exports `COMMUNITY_SCOPE_CHECKER`; confirm no import cycle (community does not import review-session).
+- [x] 2.8 Unit: assignment-scope adapter enforces "deactivating an assignment removes access on the next request" with no cache (spec: "Deactivating an assignment removes access on the next request").
 
 ## Phase 3: Review-Session Schema + Domain (PR 3)
 - [ ] 3.1 `schema.prisma`: `enum ReviewSessionStatus { draft completed }`, `enum AnswerValue { YES NO NOT_APPLICABLE }`, `ReviewSession`, `ElementReviewEntry` (`observations String?`), `QuestionAnswer` models per design Interfaces/Contracts — no `deletedAt` on any of the three.
