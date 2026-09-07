@@ -58,13 +58,14 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     );
   }
 
-  // `entry.answers` is the single source of truth (review finding #C) —
-  // `session.recordEntry(entry)` stores the entry as-is. Rejects with
-  // ReviewSessionNotFoundError for an unknown sessionId instead of
-  // silently no-op-ing, matching PrismaReviewSessionRepository's mapped
-  // FK-violation behaviour.
-  upsertEntry(sessionId: string, entry: ElementReviewEntry): Promise<void> {
-    const session = this.sessionsById.get(sessionId);
+  // `entry.answers` is the single source of truth (review finding #C), and
+  // so is `entry.reviewSessionId` (Phase 5 follow-up — no separate
+  // `sessionId` parameter either). `session.recordEntry(entry)` stores the
+  // entry as-is. Rejects with ReviewSessionNotFoundError for an unknown
+  // sessionId instead of silently no-op-ing, matching
+  // PrismaReviewSessionRepository's mapped FK-violation behaviour.
+  upsertEntry(entry: ElementReviewEntry): Promise<void> {
+    const session = this.sessionsById.get(entry.reviewSessionId);
     if (!session) {
       return Promise.reject(new ReviewSessionNotFoundError());
     }

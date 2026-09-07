@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { HttpException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { VerifiedAccessToken } from '../../auth/application/ports/token-issuer.port';
@@ -7,6 +7,10 @@ import { GetReviewScopeUseCase } from '../application/use-cases/get-review-scope
 import { ListOwnReviewSessionsUseCase } from '../application/use-cases/list-own-review-sessions.use-case';
 import { OpenReviewSessionUseCase } from '../application/use-cases/open-review-session.use-case';
 import { ReadReviewSessionUseCase } from '../application/use-cases/read-review-session.use-case';
+import { ResolveElementByCodeUseCase } from '../application/use-cases/resolve-element-by-code.use-case';
+import { RecordEntryUseCase } from '../application/use-cases/record-entry.use-case';
+import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
+import { AnswersDoNotMatchTemplateError } from '../domain/errors/answers-do-not-match-template.error';
 import { ReviewSessionController } from './review-session.controller';
 
 // Fresh-context review on PR4, finding #A: ReadReviewSessionResult's
@@ -27,6 +31,8 @@ describe('ReviewSessionController', () => {
   const listOwnReviewSessionsUseCase = { execute: jest.fn() };
   const readReviewSessionUseCase = { execute: jest.fn() };
   const discardReviewSessionUseCase = { execute: jest.fn() };
+  const resolveElementByCodeUseCase = { execute: jest.fn() };
+  const recordEntryUseCase = { execute: jest.fn() };
 
   let controller: ReviewSessionController;
   let moduleRef: TestingModule;
@@ -52,6 +58,14 @@ describe('ReviewSessionController', () => {
         {
           provide: DiscardReviewSessionUseCase,
           useValue: discardReviewSessionUseCase,
+        },
+        {
+          provide: ResolveElementByCodeUseCase,
+          useValue: resolveElementByCodeUseCase,
+        },
+        {
+          provide: RecordEntryUseCase,
+          useValue: recordEntryUseCase,
         },
       ],
     }).compile();
@@ -113,6 +127,161 @@ describe('ReviewSessionController', () => {
       expect(entrySchema?.properties).toHaveProperty('answers');
 
       await app.close();
+    });
+  });
+
+  // Phase 5 (tasks.md 5.6): the two by-code/entry-recording routes and
+  // their error-code mappings.
+  describe('GET /review-sessions/:sessionId/elements/:code', () => {
+    const actor: VerifiedAccessToken = {
+      sub: 'user-1',
+      email: 'user-1@example.com',
+      role: 'MAINTENANCE_TECHNICIAN',
+      jti: 'jti-1',
+      exp: 9999999999,
+    };
+
+    it('returns the resolved element, questions and entry', async () => {
+      const fixture = {
+        element: {
+          id: 'element-1',
+          code: 'X1',
+          name: 'Extinguisher #1',
+          location: 'Lobby',
+        },
+        questions: [
+          { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+        ],
+        entry: null,
+      };
+      resolveElementByCodeUseCase.execute.mockResolvedValue(fixture);
+
+      const result = await controller.resolveElement(actor, 'session-1', 'X1');
+
+      expect(result).toEqual(fixture);
+    });
+
+    it('maps InspectableElementNotFoundError to 404 ELEMENT_NOT_FOUND', async () => {
+      resolveElementByCodeUseCase.execute.mockRejectedValue(
+        new InspectableElementNotFoundError(),
+      );
+
+      const response = await controller
+        .resolveElement(actor, 'session-1', 'UNKNOWN')
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toMatchObject({
+        code: 'ELEMENT_NOT_FOUND',
+      });
+    });
+  });
+
+  describe('PUT /review-sessions/:sessionId/entries/:elementId', () => {
+    const actor: VerifiedAccessToken = {
+      sub: 'user-1',
+      email: 'user-1@example.com',
+      role: 'MAINTENANCE_TECHNICIAN',
+      jti: 'jti-1',
+      exp: 9999999999,
+    };
+
+    it('records a reviewed entry from an answers body', async () => {
+      const fixture = {
+        inspectableElementId: 'element-1',
+        reviewed: true,
+        observations: null,
+        answers: [{ questionId: 'question-1', answer: 'YES' }],
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      recordEntryUseCase.execute.mockResolvedValue(fixture);
+
+      const result = await controller.recordEntry(
+        actor,
+        'session-1',
+        'element-1',
+        {
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        },
+      );
+
+      expect(result).toEqual(fixture);
+      expect(recordEntryUseCase.execute).toHaveBeenCalledWith(
+        'session-1',
+        'element-1',
+        {
+          kind: 'reviewed',
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        },
+        { userId: 'user-1', role: 'MAINTENANCE_TECHNICIAN' },
+      );
+    });
+
+    it('records an unreviewed entry from an observations body', async () => {
+      const fixture = {
+        inspectableElementId: 'element-1',
+        reviewed: false,
+        observations: 'sealed room, no access',
+        answers: [],
+        recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      recordEntryUseCase.execute.mockResolvedValue(fixture);
+
+      const result = await controller.recordEntry(
+        actor,
+        'session-1',
+        'element-1',
+        {
+          observations: 'sealed room, no access',
+        },
+      );
+
+      expect(result).toEqual(fixture);
+      expect(recordEntryUseCase.execute).toHaveBeenCalledWith(
+        'session-1',
+        'element-1',
+        { kind: 'unreviewed', observations: 'sealed room, no access' },
+        { userId: 'user-1', role: 'MAINTENANCE_TECHNICIAN' },
+      );
+    });
+
+    it('maps AnswersDoNotMatchTemplateError to 400 ANSWERS_DO_NOT_MATCH_TEMPLATE', async () => {
+      recordEntryUseCase.execute.mockRejectedValue(
+        new AnswersDoNotMatchTemplateError(),
+      );
+
+      const response = await controller
+        .recordEntry(actor, 'session-1', 'element-1', {
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toMatchObject({
+        code: 'ANSWERS_DO_NOT_MATCH_TEMPLATE',
+      });
+    });
+
+    // Fresh-context review CRITICAL finding (PR5): an out-of-scope
+    // elementId (foreign community, wrong type, unknown, decommissioned or
+    // soft-deleted) must map to the SAME 404 the GET .../elements/:code
+    // route uses — mapError is generic across the whole controller, this
+    // confirms the PUT route actually reaches it.
+    it('maps InspectableElementNotFoundError to 404 ELEMENT_NOT_FOUND', async () => {
+      recordEntryUseCase.execute.mockRejectedValue(
+        new InspectableElementNotFoundError(),
+      );
+
+      const response = await controller
+        .recordEntry(actor, 'session-1', 'does-not-exist', {
+          answers: [{ questionId: 'question-1', value: 'YES' }],
+        })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toMatchObject({
+        code: 'ELEMENT_NOT_FOUND',
+      });
     });
   });
 });

@@ -12,8 +12,15 @@ import { InMemoryReviewSessionRepository } from './in-memory-review-session.repo
 // AND on the missing-session case (this fake silently no-op'd; the Prisma
 // adapter would hit a real FK violation and throw). Resolution: `answers`
 // was redundant — `entry.answers` is the single source of truth — so the
-// port signature drops the second parameter entirely, and both doubles now
-// throw the SAME ReviewSessionNotFoundError for an unknown sessionId.
+// port signature dropped that second parameter, and both doubles now throw
+// the SAME ReviewSessionNotFoundError for an unknown sessionId.
+//
+// Phase 5 follow-up (PR4's carried-forward note): the SAME redundancy was
+// still present one level up — `entry.reviewSessionId` vs. the separate
+// `sessionId` parameter this test used to pass alongside it. There was no
+// real caller to notice the two diverging until record-entry.use-case.ts
+// (this PR); resolved identically — `entry.reviewSessionId` is now the
+// sole source of truth and `upsertEntry` takes `entry` alone.
 describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () => {
   function buildSession(
     overrides: Partial<{ status: 'draft' | 'completed' }> = {},
@@ -48,7 +55,7 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
       recordedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    await repository.upsertEntry('session-1', entry);
+    await repository.upsertEntry(entry);
 
     const stored = await repository.findByIdForPerformer('session-1', 'user-1');
     expect(stored?.entries[0].answers).toEqual([answer]);
@@ -64,8 +71,8 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
       recordedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    await expect(
-      repository.upsertEntry('does-not-exist', entry),
-    ).rejects.toBeInstanceOf(ReviewSessionNotFoundError);
+    await expect(repository.upsertEntry(entry)).rejects.toBeInstanceOf(
+      ReviewSessionNotFoundError,
+    );
   });
 });
