@@ -17,6 +17,10 @@ import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from './pages/MaintenanceCompanyEditPage';
+import { ReviewSessionDetailPage } from './pages/ReviewSessionDetailPage';
+import { ReviewSessionElementPage } from './pages/ReviewSessionElementPage';
+import { ReviewSessionNewPage } from './pages/ReviewSessionNewPage';
+import { ReviewSessionsPage } from './pages/ReviewSessionsPage';
 import { ReviewTemplateCreatePage } from './pages/ReviewTemplateCreatePage';
 import { ReviewTemplateDetailPage } from './pages/ReviewTemplateDetailPage';
 import { ReviewTemplatesListPage } from './pages/ReviewTemplatesListPage';
@@ -264,6 +268,63 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <ReviewTemplateDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* review-session-ui spec "Role-Gated Route Access for the Field
+              Flow" + design.md Decision 10: the first non-SYSTEM_ADMIN
+              routes in the app — MAINTENANCE_TECHNICIAN and
+              COMMUNITY_REPRESENTATIVE share the identical flow, no reduced
+              variant for either (spec "Both Non-Admin Roles ..."). Static
+              /review-sessions/new ranks above the dynamic
+              /review-sessions/:sessionId segment below regardless of
+              declaration order (React Router matches static path segments
+              first) — same reasoning as every other list/new pair in this
+              file (e.g. /communities/new above /communities/:id). */}
+          <Route
+            path="/review-sessions"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewSessionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review-sessions/new"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewSessionNewPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Depth-2 dynamic route: never conflicts with the static `new`
+              segment above (React Router matches static segments first),
+              and is distinct from the depth-4 `:sessionId/elements/:code`
+              route below regardless of declaration order. */}
+          <Route
+            path="/review-sessions/:sessionId"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewSessionDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Depth-4 route with two dynamic segments: never conflicts with
+              `/review-sessions/:sessionId` above (different depth) or with
+              `/review-sessions/new` (a distinct, shorter static route). */}
+          <Route
+            path="/review-sessions/:sessionId/elements/:code"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewSessionElementPage />
               </ProtectedRoute>
             }
           />

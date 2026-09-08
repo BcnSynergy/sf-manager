@@ -5,13 +5,19 @@ import '../i18n';
 import { AuthProvider } from '../auth/AuthProvider';
 import { HealthPage } from './HealthPage';
 
-function mockFetch(options: { logoutRejects?: boolean } = {}) {
+function mockFetch(
+  options: { logoutRejects?: boolean; role?: string } = {},
+) {
   return vi.fn((url: RequestInfo | URL) => {
     const href = String(url);
     if (href.includes('/auth/me')) {
       return Promise.resolve({
         ok: true,
-        json: async () => ({ id: '1', email: 'admin@sf-manager.example' }),
+        json: async () => ({
+          id: '1',
+          email: 'admin@sf-manager.example',
+          role: options.role ?? 'SYSTEM_ADMIN',
+        }),
       } as Response);
     }
     if (href.includes('/auth/logout')) {
@@ -64,6 +70,35 @@ describe('HealthPage', () => {
     });
 
     await waitFor(() => expect(screen.getByTestId('login-page')).toBeInTheDocument());
+  });
+
+  // review-session-ui spec "Both Non-Admin Roles Have a Reachable Entry
+  // Point": a logged-in MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE
+  // MUST be able to navigate into the review-session flow from here.
+  it('shows a review-sessions entry link for a MAINTENANCE_TECHNICIAN', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_TECHNICIAN' }));
+    renderHealthPage();
+
+    const link = await screen.findByTestId('review-sessions-entry-link');
+    expect(link).toHaveAttribute('href', '/review-sessions');
+  });
+
+  it('shows the identical review-sessions entry link for a COMMUNITY_REPRESENTATIVE', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'COMMUNITY_REPRESENTATIVE' }));
+    renderHealthPage();
+
+    const link = await screen.findByTestId('review-sessions-entry-link');
+    expect(link).toHaveAttribute('href', '/review-sessions');
+  });
+
+  it('does not show a review-sessions entry link for a SYSTEM_ADMIN', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+    renderHealthPage();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
+    );
+    expect(screen.queryByTestId('review-sessions-entry-link')).not.toBeInTheDocument();
   });
 
   it('still clears the session and navigates to /login when the logout request fails', async () => {
