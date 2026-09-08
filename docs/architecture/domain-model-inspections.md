@@ -123,10 +123,12 @@ exists with `deactivatedAt === null`. Deactivating an assignment therefore
 removes access on the very next request, with no cache to invalidate.
 
 This also corrects [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md),
-which still points at ADR-005's `CommunityMaintenanceAssignment` scoping
-model — `review-session/design.md`'s own text flags the same drift and
-records that writing the ADR-011 addendum to fix it is a separate,
-user-confirmed step, deliberately not done as part of this correction.
+which previously pointed at ADR-005's `CommunityMaintenanceAssignment`
+scoping model — `review-session/design.md`'s own text flagged the same
+drift and deferred the fix as a separate, user-confirmed step. That step
+is now done: ADR-011's Decision 1 is corrected in place and its
+**Addendum (2026-09-08)** records the shipped `CommunityScopeChecker`
+mechanism in full.
 
 > Open question, carried over unresolved: should a technician's assignment
 > be scoped to specific element types (e.g. one technician only handles

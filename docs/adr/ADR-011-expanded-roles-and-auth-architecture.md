@@ -40,10 +40,11 @@ MAINTENANCE_TECHNICIAN | COMMUNITY_REPRESENTATIVE`, replacing ADR-005's
   a technician who has performed reviews). Read access to every
   `ReviewSession` performed by any technician of their company.
 - **`MAINTENANCE_TECHNICIAN`**: scoped to their `maintenanceCompanyId` for
-  *performing* reviews (which communities their company is assigned to,
-  per ADR-005's `CommunityMaintenanceAssignment` scoping) — but review
-  **visibility** is narrower: only sessions where `performedById = self`.
-  No CRUD on other users.
+  company membership; *performing* reviews is scoped per-technician via a
+  direct `(communityId, userId)` assignment (**corrected 2026-09-08** — see
+  the addendum below; not a company-wide assignment inherited from
+  `maintenanceCompanyId`) — but review **visibility** is narrower: only
+  sessions where `performedById = self`. No CRUD on other users.
 - **`COMMUNITY_REPRESENTATIVE`**: unchanged from ADR-005 — full access to
   their own community's data, performs quarterly reviews.
 
@@ -197,6 +198,88 @@ extends them with the design decisions made for this slice.
    inert role becomes operational in its own later slice, adding entries
    to `ROLE_PERMISSIONS` rather than changing the authorization
    architecture itself.
+
+## Addendum (2026-09-08): `review-session` — Decision 3 made concrete, two roles made operational
+
+The `review-session` change (FR-007) is the first slice to implement
+Decision 3's "separate, composable check layered on top" of
+`PermissionChecker` as a concrete mechanism, and the first to give
+`MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` real, non-empty
+permissions — both had mapped to `[]` in `ROLE_PERMISSIONS` since the
+`user-management-roles` addendum above. This addendum records the shape
+that shipped and corrects Decision 1's own stale text (now fixed in
+place). Full rationale and alternatives:
+`openspec/changes/archive/2026-09-08-review-session/design.md` Decisions
+4-6, and `docs/architecture/domain-model-inspections.md`'s
+"Community-to-technician scope" section.
+
+1. **Resource scope is three composable layers, none of them inside
+   `PermissionChecker`.**
+   ```
+   Layer 1  role → permission        PermissionsGuard + @RequirePermission   (unchanged, per Decision 3)
+   Layer 2  user → community          CommunityScopeChecker port             (new, shared/application/authorization)
+   Layer 3  user → this session       SessionAccess application service      (new, review-session module-local)
+   ```
+   `CommunityScopeChecker.isAssignedTo(userId, role, communityId):
+   Promise<boolean>`
+   (`shared/application/authorization/community-scope.checker.port.ts`) is
+   the reusable Layer 2 primitive Decision 3 promised but did not design:
+   any future resource that needs "is this user actively assigned to this
+   community" gets it for free, without widening `PermissionChecker.can()`
+   into a resource-aware check (the alternative Decision 3 explicitly
+   rejected). Its one adapter (`AssignmentCommunityScopeChecker`, in
+   `modules/community/infrastructure/authorization/`) dispatches on role —
+   only `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` resolve to
+   a real lookup; every other role is fail-closed `false` via an
+   exhaustive `switch`.
+
+   Layer 3 (`SessionAccess`, in
+   `modules/review-session/application/services/session-access.service.ts`)
+   is module-local, not reusable — it is the one place a `sessionId`
+   becomes an aggregate, and it composes Layer 2 underneath it.
+   `ReviewSessionRepository` was deliberately not given a bare
+   `findById(id)`, so no use case can accidentally skip the scope check by
+   calling around `SessionAccess`.
+
+2. **`MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` become
+   operational, identically.** `ROLE_PERMISSIONS`
+   (`modules/auth/infrastructure/authorization/role-permission.checker.ts`)
+   maps both roles to the same five permissions —
+   `reviewSession:create/read/perform/complete/discard` — and nothing
+   else. Holding one of these permissions grants nothing on a specific
+   community without also passing the Layer 2 scope check;
+   `PermissionChecker` and `CommunityScopeChecker` are deliberately two
+   separate, AND-ed gates, not one merged check. `MANAGER` and
+   `MAINTENANCE_COMPANY_MANAGER` remain fully inert (`[]`), unchanged by
+   this slice.
+
+3. **Correction to Decision 1: no `CommunityMaintenanceAssignment`.**
+   Decision 1's `MAINTENANCE_TECHNICIAN` bullet originally described scope
+   as "which communities their company is assigned to, per ADR-005's
+   `CommunityMaintenanceAssignment` scoping" — that entity was **never
+   built**. It does not exist in the shipped schema or codebase, and never
+   has. The real, shipped mechanism is a direct per-technician
+   `(communityId, userId)` assignment:
+   ```prisma
+   model CommunityTechnician {
+     id            String    @id @db.Uuid
+     communityId   String    @db.Uuid
+     userId        String    @db.Uuid
+     deactivatedAt DateTime? // NULL = active
+     @@unique([communityId, userId])
+   }
+   ```
+   exposed through `CommunityTechnicianRepository`, with
+   `COMMUNITY_REPRESENTATIVE` mirroring it exactly via the sibling
+   `CommunityRepresentative`/`CommunityRepresentativeRepository` pair.
+   There is **no** company-to-community assignment at all: a technician's
+   scope is the set of communities *that technician* is individually
+   assigned to, never inherited from their `MaintenanceCompany`.
+   `CommunityScopeChecker.isAssignedTo` reuses the same
+   `findByCommunityAndUser` lookup at request time, returning `true` iff a
+   row exists with `deactivatedAt === null` — so deactivating an
+   assignment removes access on the very next request, with no cache to
+   invalidate. Decision 1's bullet above is corrected in place to match.
 
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
