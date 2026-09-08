@@ -505,3 +505,260 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     );
   });
 });
+
+// review-history design.md Decision 3, tasks.md 2.4/2.5/2.6: the four
+// `findCompleted…InCommunities` methods against a real Postgres instance —
+// the fail-closed empty-scope case (`communityIds = []`), the port-surface
+// guard (no unscoped read anywhere on the port), and ordering parity
+// between the two list methods.
+describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (integration)', () => {
+  let prisma: PrismaService;
+  let repository: PrismaReviewSessionRepository;
+  let communityRepository: PrismaCommunityRepository;
+  let templateRepository: PrismaReviewTemplateRepository;
+  let userRepository: PrismaUserRepository;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+    repository = new PrismaReviewSessionRepository(prisma);
+    communityRepository = new PrismaCommunityRepository(prisma);
+    templateRepository = new PrismaReviewTemplateRepository(prisma);
+    userRepository = new PrismaUserRepository(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  const uniqueName = (label: string) => `${label}-${randomUUID()}`;
+
+  const createCommunity = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await communityRepository.create(
+      new Community({
+        id,
+        name: uniqueName(label),
+        address: 'Carrer Major 1, Girona',
+        locale: 'ca',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createUser = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await userRepository.create(
+      new User({
+        id,
+        email: `${uniqueName(label)}@example.com`,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createActiveTemplate = async (label: string): Promise<string> => {
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'ANNUAL',
+        status: 'draft',
+      },
+    });
+
+    const id = idGenerator.generate();
+    await templateRepository.create(
+      new ReviewTemplate({
+        id,
+        elementType: 'EXTINGUISHER',
+        frequency: 'ANNUAL',
+        name: uniqueName(label),
+        version: null,
+        status: 'draft',
+        draftQuestionIds: [],
+        createdAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'ANNUAL',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'ANNUAL',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
+    const nextVersion =
+      Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1;
+    await prisma.reviewTemplate.update({
+      where: { id },
+      data: { status: 'active', version: nextVersion },
+    });
+    return id;
+  };
+
+  const createSession = async (
+    communityId: string,
+    templateId: string,
+    performedById: string,
+    status: 'draft' | 'completed',
+    completedAt: Date | null,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    await repository.create(
+      new ReviewSession({
+        id,
+        communityId,
+        templateId,
+        performedById,
+        status: 'draft',
+        startedAt: new Date(),
+        completedAt: null,
+      }),
+    );
+    if (status === 'completed') {
+      const completed = await repository.complete(
+        id,
+        completedAt ?? new Date(),
+      );
+      expect(completed).toBe(true);
+    }
+    return id;
+  };
+
+  it('communityIds = [] resolves to an empty list / null for all four methods — the fail-closed empty-scope case', async () => {
+    const communityId = await createCommunity('empty-scope');
+    const templateId = await createActiveTemplate('empty-scope');
+    const performedById = await createUser('empty-scope');
+    const sessionId = await createSession(
+      communityId,
+      templateId,
+      performedById,
+      'completed',
+      new Date(),
+    );
+
+    await expect(
+      repository.findCompletedForPerformerInCommunities(performedById, []),
+    ).resolves.toEqual([]);
+    await expect(repository.findCompletedInCommunities([])).resolves.toEqual(
+      [],
+    );
+    await expect(
+      repository.findCompletedByIdForPerformerInCommunities(
+        sessionId,
+        performedById,
+        [],
+      ),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdInCommunities(sessionId, []),
+    ).resolves.toBeNull();
+  });
+
+  it('findCompletedForPerformerInCommunities excludes drafts and other performers, findCompletedInCommunities includes every performer in scope', async () => {
+    const communityId = await createCommunity('scoped-lists');
+    const templateId = await createActiveTemplate('scoped-lists');
+    const performerU = await createUser('scoped-lists-u');
+    const performerW = await createUser('scoped-lists-w');
+
+    const completedByU = await createSession(
+      communityId,
+      templateId,
+      performerU,
+      'completed',
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
+    const completedByW = await createSession(
+      communityId,
+      templateId,
+      performerW,
+      'completed',
+      new Date('2026-01-02T00:00:00.000Z'),
+    );
+    await createSession(communityId, templateId, performerU, 'draft', null);
+
+    const ownHistory = await repository.findCompletedForPerformerInCommunities(
+      performerU,
+      [communityId],
+    );
+    expect(ownHistory.map((s) => s.id)).toEqual([completedByU]);
+
+    const communityHistory = await repository.findCompletedInCommunities([
+      communityId,
+    ]);
+    const communityHistoryIds = communityHistory.map((s) => s.id);
+    expect(communityHistoryIds).toContain(completedByU);
+    expect(communityHistoryIds).toContain(completedByW);
+    expect(communityHistoryIds).toHaveLength(2);
+  });
+
+  it('both list methods order completedAt DESC, id DESC — identical, deterministic direction', async () => {
+    const communityId = await createCommunity('ordering-parity');
+    const templateId = await createActiveTemplate('ordering-parity');
+    const performedById = await createUser('ordering-parity');
+
+    const earlier = await createSession(
+      communityId,
+      templateId,
+      performedById,
+      'completed',
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
+    const later = await createSession(
+      communityId,
+      templateId,
+      performedById,
+      'completed',
+      new Date('2026-01-02T00:00:00.000Z'),
+    );
+
+    const ownHistory = await repository.findCompletedForPerformerInCommunities(
+      performedById,
+      [communityId],
+    );
+    const communityHistory = await repository.findCompletedInCommunities([
+      communityId,
+    ]);
+
+    expect(ownHistory.map((s) => s.id)).toEqual([later, earlier]);
+    expect(communityHistory.map((s) => s.id)).toEqual([later, earlier]);
+  });
+
+  it('no repository port method returns a session or a list from an identifier alone — spec: "No unscoped session read exists"', () => {
+    const methodNames = Object.getOwnPropertyNames(
+      PrismaReviewSessionRepository.prototype,
+    ).filter((name) => name !== 'constructor' && !name.startsWith('_'));
+
+    // Every by-id/list read method's own first (or only identifying)
+    // parameter set MUST carry a performer or community scope alongside
+    // any bare identifier — asserted here by enumeration rather than by
+    // type inspection, mirroring the spec scenario's own wording.
+    const readMethods = methodNames.filter((name) => name.startsWith('find'));
+    expect(readMethods.sort()).toEqual(
+      [
+        'findByIdForPerformer',
+        'findDraftsByPerformer',
+        'findCompletedForPerformerInCommunities',
+        'findCompletedInCommunities',
+        'findCompletedByIdForPerformerInCommunities',
+        'findCompletedByIdInCommunities',
+      ].sort(),
+    );
+    expect(readMethods).not.toContain('findById');
+  });
+});

@@ -17,6 +17,13 @@ import { ReviewSessionMapper } from './review-session.mapper';
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 const FOREIGN_KEY_VIOLATION = 'P2003';
 
+// review-history design.md Decision 3: shared ordering constant used by
+// BOTH `findCompleted…InCommunities` list methods so the two scopes return
+// the identical, deterministic direction (`id` is a UUIDv7, ADR-009 —
+// stable tiebreak on equal `completedAt` values).
+const COMPLETED_HISTORY_ORDER_BY: Prisma.ReviewSessionOrderByWithRelationInput[] =
+  [{ completedAt: 'desc' }, { id: 'desc' }];
+
 function isUniqueConstraintViolation(
   error: unknown,
 ): error is Prisma.PrismaClientKnownRequestError {
@@ -240,6 +247,84 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     });
 
     return result.count > 0;
+  }
+
+  // review-history design.md Decision 3/6: list rows do not need entries
+  // hydrated (mirrors findDraftsByPerformer above) — the detail read (PR 2)
+  // is the only caller that needs the full aggregate. `communityIds = []`
+  // yields Prisma's `{ in: [] }`, which already compiles to a false
+  // predicate — no explicit empty-array guard needed for the fail-closed
+  // behaviour.
+  async findCompletedForPerformerInCommunities(
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]> {
+    const records = await this.prisma.reviewSession.findMany({
+      where: {
+        performedById,
+        status: 'completed',
+        communityId: { in: [...communityIds] },
+      },
+      orderBy: COMPLETED_HISTORY_ORDER_BY,
+    });
+
+    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
+  }
+
+  async findCompletedInCommunities(
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]> {
+    const records = await this.prisma.reviewSession.findMany({
+      where: {
+        status: 'completed',
+        communityId: { in: [...communityIds] },
+      },
+      orderBy: COMPLETED_HISTORY_ORDER_BY,
+    });
+
+    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
+  }
+
+  // Detail reads (PR 2's real callers) DO need entries hydrated, so these
+  // two mirror findByIdForPerformer's shape rather than the list methods'.
+  async findCompletedByIdForPerformerInCommunities(
+    id: string,
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null> {
+    const record = await this.prisma.reviewSession.findFirst({
+      where: {
+        id,
+        performedById,
+        status: 'completed',
+        communityId: { in: [...communityIds] },
+      },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const entries = await this.loadEntriesWithAnswers(id);
+    return ReviewSessionMapper.toDomain(record, entries);
+  }
+
+  async findCompletedByIdInCommunities(
+    id: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null> {
+    const record = await this.prisma.reviewSession.findFirst({
+      where: {
+        id,
+        status: 'completed',
+        communityId: { in: [...communityIds] },
+      },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const entries = await this.loadEntriesWithAnswers(id);
+    return ReviewSessionMapper.toDomain(record, entries);
   }
 
   private async loadEntriesWithAnswers(reviewSessionId: string) {

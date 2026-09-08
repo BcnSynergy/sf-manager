@@ -67,6 +67,50 @@ export interface ReviewSessionRepository {
   // `QuestionAnswer`'s FKs declare `ON DELETE CASCADE`, so a discarded
   // draft's recorded entries/answers are removed with it, never orphaned.
   discardDraft(id: string): Promise<boolean>;
+
+  // review-history design.md Decision 3: four named methods, one per
+  // (scope x shape) — no scope discriminant, no branching query builder.
+  // Every one of the four carries `status = 'completed'` in its `WHERE`,
+  // so a `draft` session never surfaces through any of them. Ordering for
+  // the two list methods is `completedAt DESC, id DESC` (a shared constant
+  // in each adapter) — both scopes MUST return the identical direction,
+  // deterministic on equal timestamps (`id` is a UUIDv7, ADR-009).
+  // `communityIds = []` is the fail-closed empty-scope case: it MUST
+  // resolve to an empty list / `null`, never "everything" (Prisma's
+  // `{ in: [] }` already compiles to a false predicate; the in-memory fake
+  // mirrors that explicitly). Still NO bare `findById` — every one of
+  // these four carries a performer and/or community scope as a required
+  // parameter (spec: "No unscoped session read exists").
+
+  // `GET /review-history` for a MAINTENANCE_TECHNICIAN — own completed
+  // sessions, narrowed to their currently active community scope.
+  findCompletedForPerformerInCommunities(
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]>;
+
+  // `GET /review-history` for a COMMUNITY_REPRESENTATIVE — every completed
+  // session in the caller's actively assigned communities, regardless of
+  // who performed it.
+  findCompletedInCommunities(
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]>;
+
+  // `GET /review-history/:sessionId` for a MAINTENANCE_TECHNICIAN (PR 2) —
+  // the technician's performer filter is a NARROWING of the community
+  // filter (design.md Decision 3), so this is its own method rather than a
+  // caller-side check layered on `findCompletedByIdInCommunities`.
+  findCompletedByIdForPerformerInCommunities(
+    id: string,
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null>;
+
+  // `GET /review-history/:sessionId` for a COMMUNITY_REPRESENTATIVE (PR 2).
+  findCompletedByIdInCommunities(
+    id: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null>;
 }
 
 export const REVIEW_SESSION_REPOSITORY = Symbol('REVIEW_SESSION_REPOSITORY');
