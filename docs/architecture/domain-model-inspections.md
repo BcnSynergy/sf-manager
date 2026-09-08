@@ -42,14 +42,19 @@ human/QR-facing public identifier, deliberately *not* time-ordered, distinct
 from `id` on purpose.
 
 Every **reference/master-data** entity — `Community`, `MaintenanceCompany`,
-`User`, `InspectableElement`, `ChecklistQuestion`, `ReviewTemplate`,
-`CommunityMaintenanceAssignment` — also has `deletedAt: Date | null`
-([ADR-010](../adr/ADR-010-soft-delete-strategy.md)), omitted from the
-per-entity field lists below to avoid repeating it six times. This is
-separate from any domain-state field an entity already has (e.g.
-`InspectableElement.active`). `ReviewSession`/`ElementReviewEntry`/
+`User`, `InspectableElement`, `ChecklistQuestion`, `ReviewTemplate` — also
+has `deletedAt: Date | null` ([ADR-010](../adr/ADR-010-soft-delete-strategy.md)),
+omitted from the per-entity field lists below to avoid repeating it six
+times. This is separate from any domain-state field an entity already has
+(e.g. `InspectableElement.deactivatedAt`, corrected below —
+`review-session/design.md` Decision 3). `ReviewSession`/`ElementReviewEntry`/
 `QuestionAnswer` deliberately do **not** get `deletedAt` — see ADR-010's
 stricter rule for those.
+
+**Correction (`review-session` PR 8)**: this list previously also named
+`CommunityMaintenanceAssignment`. That entity was never shipped — see the
+correction under "Community-to-technician scope" below for what actually
+exists in its place.
 
 ## Entities
 
@@ -81,13 +86,52 @@ A residential building managed under this installation. `id`, `name`,
 > manufacturer servicing a residential community directly is an edge case,
 > not the norm); revisit if it ever comes up for real.
 
-### CommunityMaintenanceAssignment
-Join entity. `communityId`, `maintenanceCompanyId`, `active`. A maintenance
-company's technicians get their access scope (ADR-011) from the set of
-communities assigned here.
-> Open question: should an assignment be scoped to specific element types
-> (e.g. company X only maintains extinguishers, company Y handles BIEs)?
-> Not decided — starting without that granularity, revisit if needed.
+### Community-to-technician scope (correction, `review-session` PR 8 — `CommunityMaintenanceAssignment` never shipped)
+This doc previously documented a `CommunityMaintenanceAssignment` join
+entity (`communityId`, `maintenanceCompanyId`, `active`) as the mechanism
+that resolves a `MAINTENANCE_TECHNICIAN`'s access scope. **That entity was
+never built** — it does not exist anywhere in the shipped schema or
+codebase. The real, shipped mechanism is a direct `(communityId, userId)`
+assignment, one row per technician per community:
+
+```prisma
+model CommunityTechnician {
+  id            String    @id @db.Uuid
+  communityId   String    @db.Uuid
+  userId        String    @db.Uuid
+  deactivatedAt DateTime? // NULL = active
+  @@unique([communityId, userId])
+}
+```
+
+Exposed through `CommunityTechnicianRepository` (`findByCommunityAndUser`,
+`findActiveByUser`, `listByCommunity`, `create`, `setDeactivatedAt` — no
+`deletedAt`, no assignment history kept; deactivating overwrites any prior
+timestamp). `COMMUNITY_REPRESENTATIVE` mirrors this exactly via the sibling
+`CommunityRepresentative`/`CommunityRepresentativeRepository` pair, already
+correctly documented on `User` below. There is no company-to-community
+assignment at all: a technician's scope is a set of communities *that
+technician* is individually assigned to, not a set inherited from their
+`MaintenanceCompany` having a company-wide assignment to that community.
+
+At request time, `review-session/design.md` Decision 4's
+`CommunityScopeChecker.isAssignedTo(userId, role, communityId)` reuses this
+same `findByCommunityAndUser` method — fail-closed per role, so any role
+other than the two operational ones (`MAINTENANCE_TECHNICIAN`,
+`COMMUNITY_REPRESENTATIVE`) is always denied — and returns `true` iff a row
+exists with `deactivatedAt === null`. Deactivating an assignment therefore
+removes access on the very next request, with no cache to invalidate.
+
+This also corrects [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md),
+which still points at ADR-005's `CommunityMaintenanceAssignment` scoping
+model — `review-session/design.md`'s own text flags the same drift and
+records that writing the ADR-011 addendum to fix it is a separate,
+user-confirmed step, deliberately not done as part of this correction.
+
+> Open question, carried over unresolved: should a technician's assignment
+> be scoped to specific element types (e.g. one technician only handles
+> extinguishers, another handles BIEs)? Not decided — starting without that
+> granularity, revisit if needed.
 
 ### User
 `id`, `name`, `email`, `passwordHash`, `role` (`SYSTEM_ADMIN` | `MANAGER` |
@@ -102,10 +146,13 @@ communities assigned here.
 - `MAINTENANCE_COMPANY_MANAGER` — `maintenanceCompanyId` (fixed scope).
   CRUD over that company's `MAINTENANCE_TECHNICIAN` users, read access to
   every review performed by any of them.
-- `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (scope for
-  *performing* reviews resolved dynamically via
-  `CommunityMaintenanceAssignment`); review **visibility** is narrower —
-  only sessions where `performedById = self`.
+- `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (fixed, for company
+  membership); the scope for *performing* reviews is resolved dynamically,
+  per community, via the direct `CommunityTechnician` `(communityId,
+  userId)` assignment — **correction**: not via `CommunityMaintenanceAssignment`,
+  which was never shipped; see "Community-to-technician scope" above.
+  Review **visibility** is narrower — only sessions where
+  `performedById = self`.
 - `COMMUNITY_REPRESENTATIVE` — `communityId` (fixed scope). This is a
   resident designated by the community (owner/occupant of record,
   president, vice-president...) on record as responsible in the
@@ -120,8 +167,26 @@ union, so each type's detail attributes stay strongly typed.
 ### InspectableElement
 Base fields shared by every element type: `id`, `communityId`,
 `elementType`, `name`, `description?`, `location` (free text, e.g. "planta
-baja, pasillo"), `imageUrl?`, `installedAt`, `active` (decommissioned
-elements keep their history but stop appearing in new reviews).
+baja, pasillo"), `imageUrl?`, `installedAt`.
+
+**`deactivatedAt: Date | null`** (added `review-session`, design.md
+Decision 3 — **correction**: this doc previously speculated a boolean
+`active` flag; the shipped field is `deactivatedAt`, following the
+`CommunityTechnician`/`CommunityRepresentative` precedent, `NULL` = active,
+not a boolean). Orthogonal to `deletedAt` (ADR-010) — two independent
+columns for two different audiences:
+
+| Column | Meaning | Effect on reads |
+|---|---|---|
+| `deletedAt` | administrative delete (ADR-010) | Hides the row from **every** read |
+| `deactivatedAt` | domain state: decommissioned | Hides it from review eligibility only; stays in the admin list so it can be reactivated |
+
+Review eligibility (whether an element is due for review, and whether a
+scanned `code` resolves at all) is `deletedAt IS NULL AND deactivatedAt IS
+NULL`. A soft-deleted element cannot be reactivated — the update path
+already 404s on it. Set/unset reuses the existing `inspectableElement:update`
+permission via the element's `PATCH` body (`{ "deactivated": true | false }`),
+so no new permission was added for this.
 
 **Identification**: the field workflow is scan → identify element → answer
 its questions → move to the next element. The manufacturer's serial number
@@ -280,8 +345,11 @@ the source of displayed wording), `order`, `questionText` (the frozen
 wording snapshot, `NOT NULL`).
 
 ### ReviewSession
-One review visit. `id`, `communityId`, `templateId`, `date`,
-`performedById` (User), `status` (`draft` | `completed` | `signed`).
+One review visit. `id`, `communityId`, `templateId`, `performedById`
+(User), `status` (`draft` | `completed` — binary, per `review-session/
+design.md` Decision 8; no `signed` value, no separate `date` field —
+`startedAt: Date` and `completedAt: Date | null` replace it, timestamping
+when the visit began and, if finalized, when it was completed).
 `elementType`/`frequency` are derived from the referenced `ReviewTemplate`,
 not duplicated as separate fields — the template is the single source of
 truth for both "what kind of review this is" and "what questions apply."
@@ -315,8 +383,28 @@ This protects RIPCI's 5-year documentary retention minimum.
   expected/due) and FR-009 (overdue/upcoming reminders).
 
 ### ElementReviewEntry
-`id`, `reviewSessionId`, `inspectableElementId`. One row per physical
-element checked in that session.
+`id`, `reviewSessionId`, `inspectableElementId`, `recordedAt`. One row per
+physical element checked in that session.
+
+**`observations: string | null`** (`review-session/design.md` Decision 1
+— placement settled during that slice's own design, not upfront). Lives on
+the entry, not on `ReviewSession` as session-level free text, because the
+mandatory-reason rule is per unreviewed **element**: one free-text blob
+could not be attributed to one element. An entry is valid iff exactly one
+of these holds:
+
+- `answers.length > 0 && observations === null` — the element was reviewed
+- `answers.length === 0 && observations !== null` — the element was not
+  reviewed, and this is why
+
+Enforced in three layers on purpose, not one: the domain entity has no
+public constructor (`ElementReviewEntry.reviewed(props)` /
+`.unreviewed(props)` are the only factories; `unreviewed('')`/whitespace
+throws), the wire schema in `packages/validation` rejects a body carrying
+both keys or neither before the use case runs, and a hand-written Postgres
+`CHECK ("observations" IS NULL OR btrim("observations") <> '')` backstops
+the intra-row half (it cannot see sibling `QuestionAnswer` rows, so it
+guards only what a table constraint honestly can).
 
 ### QuestionAnswer
 `id`, `elementReviewEntryId`, `questionId`, `answer`
@@ -328,7 +416,7 @@ element checked in that session.
 erDiagram
     Community ||--o{ InspectableElement : has
     Community ||--o{ User : "representatives"
-    Community }o--o{ MaintenanceCompany : "assigned via"
+    Community }o--o{ User : "technician assignment (CommunityTechnician)"
     MaintenanceCompany ||--o{ User : "technicians"
     InspectableElement ||--o{ ElementReviewEntry : "checked in"
     ReviewTemplate ||--o{ ReviewTemplateQuestion : bundles
