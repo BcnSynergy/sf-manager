@@ -119,6 +119,65 @@ describe('apiFetch', () => {
     expect((error as ApiError).code).toBeUndefined();
   });
 
+  // review-session design.md Decision 2 / spec "Complete a Session and
+  // Explain Its Gaps": the 409 UNREVIEWED_ELEMENTS_WITHOUT_REASON body
+  // carries an `elementCodes` array the UI must list. `ApiError` previously
+  // only kept `status`/`code`; this is the first caller that needs a third
+  // field off the error body, so `extra` is added as an additive,
+  // backward-compatible capture of the full parsed body rather than a
+  // one-off `elementCodes`-shaped field — a future coded error with a
+  // different extra payload shape reuses the same mechanism.
+  it('captures additional error-body fields on ApiError.extra', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            statusCode: 409,
+            error: 'Conflict',
+            message: 'Unreviewed elements remain',
+            code: 'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
+            elementCodes: ['23456789AB', 'CDEFGHJKMN'],
+          }),
+        }),
+      ),
+    );
+
+    const error = await apiFetch('/review-sessions/1/complete', { method: 'POST' }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe('UNREVIEWED_ELEMENTS_WITHOUT_REASON');
+    expect((error as ApiError).extra).toEqual({
+      elementCodes: ['23456789AB', 'CDEFGHJKMN'],
+    });
+  });
+
+  it('leaves ApiError.extra undefined when the error body has no fields beyond code', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            statusCode: 409,
+            error: 'Conflict',
+            message: 'Email already in use',
+            code: 'EMAIL_ALREADY_IN_USE',
+          }),
+        }),
+      ),
+    );
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).extra).toBeUndefined();
+  });
+
   it('throws ApiError with status 0 on a successful (200) response with an unparseable body', async () => {
     vi.stubGlobal(
       'fetch',

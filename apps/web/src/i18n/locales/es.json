@@ -352,11 +352,93 @@
       "retired": "Retirada"
     }
   },
+  "reviewSession": {
+    "entry": {
+      "title": "Sesiones de revisión",
+      "loading": "Cargando tus sesiones...",
+      "error": "Algo ha fallado al cargar tus sesiones.",
+      "empty": "No tienes sesiones abiertas.",
+      "startLink": "Iniciar una sesión",
+      "columnStarted": "Iniciada",
+      "resumeLink": "Reanudar"
+    },
+    "new": {
+      "title": "Iniciar una sesión de revisión",
+      "loading": "Cargando tus comunidades asignadas...",
+      "error": "Algo ha fallado al cargar tus comunidades asignadas.",
+      "communitiesEmpty": "Todavía no estás asignado a ninguna comunidad.",
+      "templatesEmpty": "Todavía no existe ninguna plantilla de revisión activa.",
+      "communityLabel": "Comunidad",
+      "templateLabel": "Plantilla de revisión",
+      "submitLabel": "Iniciar sesión",
+      "validationError": "Elige una comunidad y una plantilla de revisión."
+    },
+    "detail": {
+      "title": "Sesión de revisión",
+      "loading": "Cargando sesión...",
+      "notFound": "Esta sesión no se ha podido encontrar.",
+      "error": "Algo ha fallado al cargar esta sesión.",
+      "statusLabel": "Estado",
+      "statusDraft": "En curso",
+      "statusCompleted": "Completada",
+      "coverageLabel": "{{reviewed}} revisados, {{unreviewed}} sin revisar",
+      "completedNotice": "Esta sesión está completada y es de solo lectura.",
+      "codeLabel": "Código del elemento",
+      "codeSubmitLabel": "Introducir elemento",
+      "codeValidationError": "Introduce el código de un elemento.",
+      "entriesTitle": "Elementos registrados",
+      "entriesEmpty": "Todavía no se ha registrado ningún elemento.",
+      "entryReviewed": "Revisado",
+      "entryUnreviewed": "No revisado: {{reason}}",
+      "completeLabel": "Completar sesión",
+      "completeConfirmTitle": "Completar sesión",
+      "completeConfirmMessage": "Una vez completada, esta sesión no se puede editar. Esto no se puede deshacer.",
+      "completeError": "Esta sesión no se ha podido completar.",
+      "unreviewedGapsTitle": "Estos elementos todavía necesitan un motivo antes de completar:",
+      "unreviewedGapsElementLink": "Elemento {{code}}",
+      "discardLabel": "Descartar borrador",
+      "discardConfirmTitle": "Descartar borrador",
+      "discardConfirmMessage": "Este borrador y todo lo registrado en él se eliminará permanentemente. Esto no se puede deshacer.",
+      "discardError": "Este borrador no se ha podido descartar."
+    },
+    "element": {
+      "title": "Responder elemento",
+      "loading": "Cargando elemento...",
+      "notFound": "Este código no es válido para esta sesión.",
+      "error": "Algo ha fallado al cargar este elemento.",
+      "questionsTitle": "Preguntas",
+      "markUnreviewedToggle": "Este elemento no se puede revisar",
+      "observationsLabel": "Motivo",
+      "saveLabel": "Guardar y continuar",
+      "saveError": "Este elemento no se ha podido guardar.",
+      "saveConfirmation": "Guardado. Introduce el código del siguiente elemento.",
+      "backLabel": "Volver a la sesión"
+    },
+    "answer": {
+      "yes": "Sí",
+      "no": "No",
+      "notApplicable": "No aplica"
+    },
+    "error": {
+      "communityNotInScope": "Esta comunidad no está disponible para ti.",
+      "activeTemplateNotFound": "No existe ninguna plantilla de revisión activa para esta selección.",
+      "openDraftAlreadyExists": "Ya tienes una sesión abierta para esta comunidad y plantilla.",
+      "sessionNotFound": "Esta sesión no se ha podido encontrar.",
+      "sessionNotEditable": "Esta sesión ya está completada y no se puede modificar.",
+      "elementNotFound": "Este código no corresponde a ningún elemento que puedas revisar aquí.",
+      "answersDoNotMatchTemplate": "Responde todas las preguntas antes de guardar.",
+      "missingObservations": "Introduce un motivo.",
+      "missingAnswers": "Responde todas las preguntas antes de guardar.",
+      "unreviewedElementsWithoutReason": "Algunos elementos todavía necesitan un motivo antes de completar.",
+      "validationFailed": "Introduce datos de sesión válidos."
+    }
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",
     "ok": "Todo funciona correctamente",
-    "error": "Algo no está funcionando"
+    "error": "Algo no está funcionando",
+    "reviewSessionsLink": "Ir a sesiones de revisión"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",

@@ -111,18 +111,18 @@ Chain strategy: stacked-to-main
 - [x] 6.10 E2E: scope guards — grep/assert no history route, no scheduling/reminder/export mechanism, no `signed` value in the DB enum. Scan targets concrete implementation symbols and route-decorator path segments, not bare English words (this change's own comments discuss "history"/"export" as deliberately-not-built, which a prose scan would have false-flagged).
 - [x] 6.11 E2E: partial-completion + decommissioned/soft-deleted elements do not block completion; also asserts the rejection path (an uncovered active element blocks completion with 409 listing its code) (spec: "Decommissioned and soft-deleted elements do not block completion").
 
-## Phase 7: Web Flow (PR 7)
-- [ ] 7.1 `apps/web/src/api/review-session.ts` — `apiFetch` typed client for all 8 endpoints + error-code union.
-- [ ] 7.2 `review-session/error-messages.ts` — one uniform message for every code-rejection reason (spec: review-session-ui "Rejected Codes Get One Uniform Message").
-- [ ] 7.3 `apps/web/src/pages/ReviewSessionsPage.tsx` — entry point: resumable draft(s) + Start-a-session link (spec: "Both Non-Admin Roles Have a Reachable Entry Point").
-- [ ] 7.4 `apps/web/src/pages/ReviewSessionNewPage.tsx` — open form driven by `GET /review-scope`, community/template pickers limited to assigned communities (spec: "Open a Session From Assigned Communities Only").
-- [ ] 7.5 `apps/web/src/pages/ReviewSessionDetailPage.tsx` — code entry (manual only, no scanner control) (spec: "Manual Code Entry Only"), progress, complete, discard (spec: "Pause, Resume and Discard a Draft").
-- [ ] 7.6 `apps/web/src/pages/ReviewSessionElementPage.tsx` — answer form for one element, YES/NO/NOT_APPLICABLE + unreviewed-with-reason path (spec: "Answer an Element's Questions").
-- [ ] 7.7 Completion flow surfaces `UNREVIEWED_ELEMENTS_WITHOUT_REASON` listing offending elements (spec: "Complete a Session and Explain Its Gaps").
-- [ ] 7.8 `App.tsx` — first `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN','COMMUNITY_REPRESENTATIVE']}` routes, static-before-dynamic ordering (spec: "Role-Gated Route Access for the Field Flow").
-- [ ] 7.9 `HealthPage.tsx` — role-conditional link to `/review-sessions` (design Decision 10 rationale).
-- [ ] 7.10 `i18n/locales/{en,es,ca}.json` — real `reviewSession.*` keys; extend `locales.test.ts` (spec: "Internationalization Coverage").
-- [ ] 7.11 Unit (web): 4 pages x loading/error/empty; code-entry error path renders one message for every rejection reason; `locales.test.ts` parity.
+## Phase 7: Web Flow (PR 7) — COMPLETE, awaiting fresh-context review + push
+- [x] 7.1 `apps/web/src/api/review-session.ts` — `apiFetch` typed client for all 8 endpoints + error-code union.
+- [x] 7.2 `review-session/error-messages.ts` — one uniform message for every code-rejection reason (spec: review-session-ui "Rejected Codes Get One Uniform Message"). Also added `review-session/answer-value-labels.ts` (not a separate tasks.md bullet — the minimal glue "Enum values are never rendered raw" requires, mirroring `inspectable-element/element-type-labels.ts`'s precedent) and an additive `ApiError.extra` field on `api/client.ts` (needed to surface the 409 `UNREVIEWED_ELEMENTS_WITHOUT_REASON` body's `elementCodes` for task 7.7 — RED/GREEN covered in `client.test.ts`).
+- [x] 7.3 `apps/web/src/pages/ReviewSessionsPage.tsx` — entry point: resumable draft(s) + Start-a-session link (spec: "Both Non-Admin Roles Have a Reachable Entry Point").
+- [x] 7.4 `apps/web/src/pages/ReviewSessionNewPage.tsx` — open form driven by `GET /review-scope`, community/template pickers limited to assigned communities (spec: "Open a Session From Assigned Communities Only").
+- [x] 7.5 `apps/web/src/pages/ReviewSessionDetailPage.tsx` — code entry (manual only, no scanner control) (spec: "Manual Code Entry Only"), progress, complete, discard (spec: "Pause, Resume and Discard a Draft").
+- [x] 7.6 `apps/web/src/pages/ReviewSessionElementPage.tsx` — answer form for one element, YES/NO/NOT_APPLICABLE + unreviewed-with-reason path (spec: "Answer an Element's Questions").
+- [x] 7.7 Completion flow surfaces `UNREVIEWED_ELEMENTS_WITHOUT_REASON` listing offending elements as links straight to each element's answer route (design.md Decision 2's own rationale — "the UI can navigate to them" — reusing the existing per-element mark-unreviewed-with-reason path instead of a second in-page gap form).
+- [x] 7.8 `App.tsx` — first `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN','COMMUNITY_REPRESENTATIVE']}` routes, static-before-dynamic ordering (spec: "Role-Gated Route Access for the Field Flow").
+- [x] 7.9 `HealthPage.tsx` — role-conditional link to `/review-sessions` (design Decision 10 rationale).
+- [x] 7.10 `i18n/locales/{en,es,ca}.json` — real `reviewSession.*` keys; extended `locales.test.ts` with a `REQUIRED_REVIEW_SESSION_KEY_PATHS` existence guard (community/inspectable-element precedent).
+- [x] 7.11 Unit (web): 4 pages x loading/error/empty; code-entry error path (`ReviewSessionElementPage.test.tsx`) asserts the SAME rendered message across 3 distinct rejection causes (unknown/foreign-community/decommissioned, all served by the server as one `ELEMENT_NOT_FOUND`); `locales.test.ts` parity + existence guard. 636/636 web unit tests pass; `npm run build --workspace=apps/web` and `npm run lint --workspace=apps/web` both clean.
 
 ## Phase 8: Docs Correction, Browser Verification, Final Checks (PR 8)
 - [ ] 8.1 `docs/architecture/domain-model-inspections.md` — correct `CommunityMaintenanceAssignment` drift (never shipped; technician scope resolves through `CommunityTechnicianRepository`'s direct `(communityId, userId)` assignment); document `deactivatedAt`; document the `observations` placement decision.

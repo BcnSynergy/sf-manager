@@ -367,6 +367,90 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewTemplate.status.retired',
   ];
 
+  // Existence guard for review-session (Phase 7), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `reviewSession.*`/`health.reviewSessionsLink` key path referenced
+  // by source in PR7, so a future PR that adds a new call site without
+  // adding its translation fails here rather than silently rendering the
+  // raw key.
+  const REQUIRED_REVIEW_SESSION_KEY_PATHS = [
+    // entry point (ReviewSessionsPage)
+    'reviewSession.entry.title',
+    'reviewSession.entry.loading',
+    'reviewSession.entry.error',
+    'reviewSession.entry.empty',
+    'reviewSession.entry.startLink',
+    'reviewSession.entry.columnStarted',
+    'reviewSession.entry.resumeLink',
+    // open form (ReviewSessionNewPage)
+    'reviewSession.new.title',
+    'reviewSession.new.loading',
+    'reviewSession.new.error',
+    'reviewSession.new.communitiesEmpty',
+    'reviewSession.new.templatesEmpty',
+    'reviewSession.new.communityLabel',
+    'reviewSession.new.templateLabel',
+    'reviewSession.new.submitLabel',
+    'reviewSession.new.validationError',
+    // the walk (ReviewSessionDetailPage)
+    'reviewSession.detail.title',
+    'reviewSession.detail.loading',
+    'reviewSession.detail.notFound',
+    'reviewSession.detail.error',
+    'reviewSession.detail.statusLabel',
+    'reviewSession.detail.statusDraft',
+    'reviewSession.detail.statusCompleted',
+    'reviewSession.detail.coverageLabel',
+    'reviewSession.detail.completedNotice',
+    'reviewSession.detail.codeLabel',
+    'reviewSession.detail.codeSubmitLabel',
+    'reviewSession.detail.codeValidationError',
+    'reviewSession.detail.entriesTitle',
+    'reviewSession.detail.entriesEmpty',
+    'reviewSession.detail.entryReviewed',
+    'reviewSession.detail.entryUnreviewed',
+    'reviewSession.detail.completeLabel',
+    'reviewSession.detail.completeConfirmTitle',
+    'reviewSession.detail.completeConfirmMessage',
+    'reviewSession.detail.completeError',
+    'reviewSession.detail.unreviewedGapsTitle',
+    'reviewSession.detail.unreviewedGapsElementLink',
+    'reviewSession.detail.discardLabel',
+    'reviewSession.detail.discardConfirmTitle',
+    'reviewSession.detail.discardConfirmMessage',
+    'reviewSession.detail.discardError',
+    // answer form (ReviewSessionElementPage)
+    'reviewSession.element.title',
+    'reviewSession.element.loading',
+    'reviewSession.element.notFound',
+    'reviewSession.element.error',
+    'reviewSession.element.questionsTitle',
+    'reviewSession.element.markUnreviewedToggle',
+    'reviewSession.element.observationsLabel',
+    'reviewSession.element.saveLabel',
+    'reviewSession.element.saveError',
+    'reviewSession.element.saveConfirmation',
+    'reviewSession.element.backLabel',
+    // answer-value-labels.ts mapping targets
+    'reviewSession.answer.yes',
+    'reviewSession.answer.no',
+    'reviewSession.answer.notApplicable',
+    // error-messages.ts mapping targets
+    'reviewSession.error.communityNotInScope',
+    'reviewSession.error.activeTemplateNotFound',
+    'reviewSession.error.openDraftAlreadyExists',
+    'reviewSession.error.sessionNotFound',
+    'reviewSession.error.sessionNotEditable',
+    'reviewSession.error.elementNotFound',
+    'reviewSession.error.answersDoNotMatchTemplate',
+    'reviewSession.error.missingObservations',
+    'reviewSession.error.missingAnswers',
+    'reviewSession.error.unreviewedElementsWithoutReason',
+    'reviewSession.error.validationFailed',
+    // HealthPage's role-conditional entry link
+    'health.reviewSessionsLink',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -447,6 +531,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_REVIEW_TEMPLATE_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_REVIEW_SESSION_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

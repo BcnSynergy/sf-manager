@@ -352,11 +352,93 @@
       "retired": "Retired"
     }
   },
+  "reviewSession": {
+    "entry": {
+      "title": "Review sessions",
+      "loading": "Loading your sessions...",
+      "error": "Something went wrong loading your sessions.",
+      "empty": "You have no open sessions.",
+      "startLink": "Start a session",
+      "columnStarted": "Started",
+      "resumeLink": "Resume"
+    },
+    "new": {
+      "title": "Start a review session",
+      "loading": "Loading your assigned communities...",
+      "error": "Something went wrong loading your assigned communities.",
+      "communitiesEmpty": "You are not assigned to any community yet.",
+      "templatesEmpty": "No active review template exists yet.",
+      "communityLabel": "Community",
+      "templateLabel": "Review template",
+      "submitLabel": "Start session",
+      "validationError": "Choose a community and a review template."
+    },
+    "detail": {
+      "title": "Review session",
+      "loading": "Loading session...",
+      "notFound": "This session could not be found.",
+      "error": "Something went wrong loading this session.",
+      "statusLabel": "Status",
+      "statusDraft": "In progress",
+      "statusCompleted": "Completed",
+      "coverageLabel": "{{reviewed}} reviewed, {{unreviewed}} not reviewed",
+      "completedNotice": "This session is completed and read-only.",
+      "codeLabel": "Element code",
+      "codeSubmitLabel": "Enter element",
+      "codeValidationError": "Enter an element code.",
+      "entriesTitle": "Recorded elements",
+      "entriesEmpty": "No elements recorded yet.",
+      "entryReviewed": "Reviewed",
+      "entryUnreviewed": "Not reviewed: {{reason}}",
+      "completeLabel": "Complete session",
+      "completeConfirmTitle": "Complete session",
+      "completeConfirmMessage": "Once completed, this session cannot be edited. This cannot be undone.",
+      "completeError": "This session could not be completed.",
+      "unreviewedGapsTitle": "These elements still need a reason before completing:",
+      "unreviewedGapsElementLink": "Element {{code}}",
+      "discardLabel": "Discard draft",
+      "discardConfirmTitle": "Discard draft",
+      "discardConfirmMessage": "This draft and everything recorded in it will be permanently removed. This cannot be undone.",
+      "discardError": "This draft could not be discarded."
+    },
+    "element": {
+      "title": "Answer element",
+      "loading": "Loading element...",
+      "notFound": "This code is not valid for this session.",
+      "error": "Something went wrong loading this element.",
+      "questionsTitle": "Questions",
+      "markUnreviewedToggle": "This element cannot be reviewed",
+      "observationsLabel": "Reason",
+      "saveLabel": "Save and continue",
+      "saveError": "This element could not be saved.",
+      "saveConfirmation": "Saved. Enter the next element's code.",
+      "backLabel": "Back to session"
+    },
+    "answer": {
+      "yes": "Yes",
+      "no": "No",
+      "notApplicable": "Not applicable"
+    },
+    "error": {
+      "communityNotInScope": "This community is not available to you.",
+      "activeTemplateNotFound": "No active review template exists for this selection.",
+      "openDraftAlreadyExists": "You already have an open session for this community and template.",
+      "sessionNotFound": "This session could not be found.",
+      "sessionNotEditable": "This session is already completed and cannot be changed.",
+      "elementNotFound": "This code does not match an element you can review here.",
+      "answersDoNotMatchTemplate": "Answer every question before saving.",
+      "missingObservations": "Enter a reason.",
+      "missingAnswers": "Answer every question before saving.",
+      "unreviewedElementsWithoutReason": "Some elements still need a reason before completing.",
+      "validationFailed": "Enter valid session details."
+    }
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",
     "ok": "All systems operational",
-    "error": "Something is not working"
+    "error": "Something is not working",
+    "reviewSessionsLink": "Go to review sessions"
   },
   "auth": {
     "loginTitle": "Sign in",

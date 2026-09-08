@@ -352,11 +352,93 @@
       "retired": "Retirada"
     }
   },
+  "reviewSession": {
+    "entry": {
+      "title": "Sessions de revisió",
+      "loading": "Carregant les teves sessions...",
+      "error": "Alguna cosa ha fallat en carregar les teves sessions.",
+      "empty": "No tens cap sessió oberta.",
+      "startLink": "Iniciar una sessió",
+      "columnStarted": "Iniciada",
+      "resumeLink": "Reprendre"
+    },
+    "new": {
+      "title": "Iniciar una sessió de revisió",
+      "loading": "Carregant les teves comunitats assignades...",
+      "error": "Alguna cosa ha fallat en carregar les teves comunitats assignades.",
+      "communitiesEmpty": "Encara no estàs assignat a cap comunitat.",
+      "templatesEmpty": "Encara no existeix cap plantilla de revisió activa.",
+      "communityLabel": "Comunitat",
+      "templateLabel": "Plantilla de revisió",
+      "submitLabel": "Iniciar sessió",
+      "validationError": "Tria una comunitat i una plantilla de revisió."
+    },
+    "detail": {
+      "title": "Sessió de revisió",
+      "loading": "Carregant sessió...",
+      "notFound": "Aquesta sessió no s'ha pogut trobar.",
+      "error": "Alguna cosa ha fallat en carregar aquesta sessió.",
+      "statusLabel": "Estat",
+      "statusDraft": "En curs",
+      "statusCompleted": "Completada",
+      "coverageLabel": "{{reviewed}} revisats, {{unreviewed}} sense revisar",
+      "completedNotice": "Aquesta sessió està completada i és de només lectura.",
+      "codeLabel": "Codi de l'element",
+      "codeSubmitLabel": "Introduir element",
+      "codeValidationError": "Introdueix el codi d'un element.",
+      "entriesTitle": "Elements registrats",
+      "entriesEmpty": "Encara no s'ha registrat cap element.",
+      "entryReviewed": "Revisat",
+      "entryUnreviewed": "No revisat: {{reason}}",
+      "completeLabel": "Completar sessió",
+      "completeConfirmTitle": "Completar sessió",
+      "completeConfirmMessage": "Un cop completada, aquesta sessió no es pot editar. Això no es pot desfer.",
+      "completeError": "Aquesta sessió no s'ha pogut completar.",
+      "unreviewedGapsTitle": "Aquests elements encara necessiten un motiu abans de completar:",
+      "unreviewedGapsElementLink": "Element {{code}}",
+      "discardLabel": "Descartar esborrany",
+      "discardConfirmTitle": "Descartar esborrany",
+      "discardConfirmMessage": "Aquest esborrany i tot el que s'hi ha registrat s'eliminarà permanentment. Això no es pot desfer.",
+      "discardError": "Aquest esborrany no s'ha pogut descartar."
+    },
+    "element": {
+      "title": "Respondre element",
+      "loading": "Carregant element...",
+      "notFound": "Aquest codi no és vàlid per a aquesta sessió.",
+      "error": "Alguna cosa ha fallat en carregar aquest element.",
+      "questionsTitle": "Preguntes",
+      "markUnreviewedToggle": "Aquest element no es pot revisar",
+      "observationsLabel": "Motiu",
+      "saveLabel": "Desar i continuar",
+      "saveError": "Aquest element no s'ha pogut desar.",
+      "saveConfirmation": "Desat. Introdueix el codi del següent element.",
+      "backLabel": "Tornar a la sessió"
+    },
+    "answer": {
+      "yes": "Sí",
+      "no": "No",
+      "notApplicable": "No aplica"
+    },
+    "error": {
+      "communityNotInScope": "Aquesta comunitat no està disponible per a tu.",
+      "activeTemplateNotFound": "No existeix cap plantilla de revisió activa per a aquesta selecció.",
+      "openDraftAlreadyExists": "Ja tens una sessió oberta per a aquesta comunitat i plantilla.",
+      "sessionNotFound": "Aquesta sessió no s'ha pogut trobar.",
+      "sessionNotEditable": "Aquesta sessió ja està completada i no es pot modificar.",
+      "elementNotFound": "Aquest codi no correspon a cap element que puguis revisar aquí.",
+      "answersDoNotMatchTemplate": "Respon totes les preguntes abans de desar.",
+      "missingObservations": "Introdueix un motiu.",
+      "missingAnswers": "Respon totes les preguntes abans de desar.",
+      "unreviewedElementsWithoutReason": "Alguns elements encara necessiten un motiu abans de completar.",
+      "validationFailed": "Introdueix dades de sessió vàlides."
+    }
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",
     "ok": "Tot funciona correctament",
-    "error": "Alguna cosa no funciona"
+    "error": "Alguna cosa no funciona",
+    "reviewSessionsLink": "Anar a sessions de revisió"
   },
   "auth": {
     "loginTitle": "Inicia sessió",
