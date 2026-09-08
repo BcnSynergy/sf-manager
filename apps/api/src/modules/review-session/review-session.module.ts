@@ -11,6 +11,7 @@ import { GetReviewScopeUseCase } from './application/use-cases/get-review-scope.
 import { ListOwnReviewSessionsUseCase } from './application/use-cases/list-own-review-sessions.use-case';
 import { ListReviewHistoryUseCase } from './application/use-cases/list-review-history.use-case';
 import { OpenReviewSessionUseCase } from './application/use-cases/open-review-session.use-case';
+import { ReadReviewHistoryUseCase } from './application/use-cases/read-review-history.use-case';
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -21,11 +22,12 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
 // design.md File Changes (PR 4/5): registers the review-session
 // application/HTTP surface — open/resume/discard/list (PR 4) plus by-code
 // resolution and entry recording (PR 5), 7 endpoints. review-history
-// design.md File Changes (PR 1) adds the sibling read surface —
+// design.md File Changes (PR 1/2) adds the sibling read surface —
 // ReviewHistoryController + ReviewHistoryAccessService +
-// ListReviewHistoryUseCase, `GET /review-history` — on its OWN controller
-// (Decision 4), leaving ReviewSessionController and SessionAccessService
-// untouched. Imports CommunityModule for
+// ListReviewHistoryUseCase (`GET /review-history`, PR 1) +
+// ReadReviewHistoryUseCase (`GET /review-history/:sessionId`, PR 2) — on its
+// OWN controller (Decision 4), leaving ReviewSessionController and
+// SessionAccessService untouched. Imports CommunityModule for
 // COMMUNITY_REPOSITORY/COMMUNITY_TECHNICIAN_REPOSITORY/
 // COMMUNITY_REPRESENTATIVE_REPOSITORY/COMMUNITY_SCOPE_CHECKER (design.md
 // Decision 4/5), ReviewTemplateModule for REVIEW_TEMPLATE_REPOSITORY
@@ -47,6 +49,7 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     OpenReviewSessionUseCase,
     ListOwnReviewSessionsUseCase,
     ListReviewHistoryUseCase,
+    ReadReviewHistoryUseCase,
     ReadReviewSessionUseCase,
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,
