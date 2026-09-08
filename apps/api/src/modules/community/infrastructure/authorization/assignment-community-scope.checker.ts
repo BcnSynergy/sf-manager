@@ -71,4 +71,36 @@ export class AssignmentCommunityScopeChecker implements CommunityScopeChecker {
       }
     }
   }
+
+  // review-history design.md Decision 2 — same fail-closed exhaustive
+  // dispatch as isAssignedTo, re-read on every call (no cache), reusing the
+  // shipped findActiveByUser on both assignment ports. Only the two
+  // performing roles have an assignment kind at all.
+  async listAssignedCommunityIds(
+    userId: string,
+    role: Role,
+  ): Promise<string[]> {
+    switch (role) {
+      case 'MAINTENANCE_TECHNICIAN': {
+        const assignments =
+          await this.technicianRepository.findActiveByUser(userId);
+        return assignments.map((assignment) => assignment.communityId);
+      }
+      case 'COMMUNITY_REPRESENTATIVE': {
+        const assignments =
+          await this.representativeRepository.findActiveByUser(userId);
+        return assignments.map((assignment) => assignment.communityId);
+      }
+      // No assignment kind exists for these roles — fail closed.
+      case 'SYSTEM_ADMIN':
+      case 'MANAGER':
+      case 'MAINTENANCE_COMPANY_MANAGER':
+        return [];
+      default: {
+        // Same runtime fail-closed backstop as isAssignedTo above.
+        role satisfies never;
+        return [];
+      }
+    }
+  }
 }

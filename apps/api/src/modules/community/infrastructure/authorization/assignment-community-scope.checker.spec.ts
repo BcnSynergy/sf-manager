@@ -179,4 +179,130 @@ describe('AssignmentCommunityScopeChecker', () => {
       ),
     ).resolves.toBe(false);
   });
+
+  // review-history design.md Decision 2 / tasks.md 1.3: table-driven over
+  // all 5 roles x {no row, deactivated row, active rows} — deactivated rows
+  // never appear, non-operational roles always resolve to `[]` without
+  // reaching a repository call.
+  describe('listAssignedCommunityIds', () => {
+    describe.each<[Role, AssignmentKind]>([
+      ['MAINTENANCE_TECHNICIAN', 'technician'],
+      ['COMMUNITY_REPRESENTATIVE', 'representative'],
+      ['SYSTEM_ADMIN', 'none'],
+      ['MANAGER', 'none'],
+      ['MAINTENANCE_COMPANY_MANAGER', 'none'],
+    ])('role %s', (role, kind) => {
+      it('resolves to [] when no assignment row exists', async () => {
+        const checker = buildChecker({});
+
+        await expect(
+          checker.listAssignedCommunityIds(userId, role),
+        ).resolves.toEqual([]);
+      });
+
+      it('excludes a deactivated assignment row', async () => {
+        const checker = buildChecker(
+          kind === 'technician'
+            ? {
+                technician: new CommunityTechnician({
+                  id: 'technician-1',
+                  communityId,
+                  userId,
+                  deactivatedAt: new Date('2026-01-01T00:00:00.000Z'),
+                }),
+              }
+            : kind === 'representative'
+              ? {
+                  representative: new CommunityRepresentative({
+                    id: 'representative-1',
+                    communityId,
+                    userId,
+                    deactivatedAt: new Date('2026-01-01T00:00:00.000Z'),
+                  }),
+                }
+              : {},
+        );
+
+        await expect(
+          checker.listAssignedCommunityIds(userId, role),
+        ).resolves.toEqual([]);
+      });
+
+      it(
+        kind === 'none'
+          ? 'stays [] even with an active row present for another kind'
+          : 'includes the community for an active assignment row',
+        async () => {
+          const checker = buildChecker(
+            kind === 'technician'
+              ? {
+                  technician: new CommunityTechnician({
+                    id: 'technician-1',
+                    communityId,
+                    userId,
+                    deactivatedAt: null,
+                  }),
+                }
+              : kind === 'representative'
+                ? {
+                    representative: new CommunityRepresentative({
+                      id: 'representative-1',
+                      communityId,
+                      userId,
+                      deactivatedAt: null,
+                    }),
+                  }
+                : {},
+          );
+
+          await expect(
+            checker.listAssignedCommunityIds(userId, role),
+          ).resolves.toEqual(kind === 'none' ? [] : [communityId]);
+        },
+      );
+    });
+
+    it('removes a community from the set on the next call once the assignment is deactivated (no cache)', async () => {
+      const technicianRepo = new InMemoryCommunityTechnicianRepository();
+      const representativeRepo =
+        new InMemoryCommunityRepresentativeRepository();
+      technicianRepo.seed(
+        new CommunityTechnician({
+          id: 'technician-1',
+          communityId,
+          userId,
+          deactivatedAt: null,
+        }),
+      );
+      const checker = new AssignmentCommunityScopeChecker(
+        technicianRepo,
+        representativeRepo,
+      );
+
+      await expect(
+        checker.listAssignedCommunityIds(userId, 'MAINTENANCE_TECHNICIAN'),
+      ).resolves.toEqual([communityId]);
+
+      await technicianRepo.setDeactivatedAt(
+        communityId,
+        userId,
+        new Date('2026-02-01T00:00:00.000Z'),
+      );
+
+      await expect(
+        checker.listAssignedCommunityIds(userId, 'MAINTENANCE_TECHNICIAN'),
+      ).resolves.toEqual([]);
+    });
+
+    it('refuses (resolves to []) for a role value outside the Role union', async () => {
+      const checker = buildChecker({});
+
+      await expect(
+        checker.listAssignedCommunityIds(
+          userId,
+          'NOT_A_REAL_ROLE' as unknown as Role,
+        ),
+      ).resolves.toEqual([]);
+    });
+  });
 });

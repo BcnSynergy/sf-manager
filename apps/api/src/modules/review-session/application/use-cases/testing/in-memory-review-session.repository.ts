@@ -4,6 +4,21 @@ import { OpenDraftAlreadyExistsError } from '../../../domain/errors/open-draft-a
 import { ReviewSessionNotFoundError } from '../../../domain/errors/review-session-not-found.error';
 import { ReviewSessionRepository } from '../../ports/review-session.repository.port';
 
+// review-history design.md Decision 3: same `completedAt DESC, id DESC`
+// ordering as the Prisma adapter, and the same explicit empty-scope
+// fail-closed behaviour — `communityIds = []` yields an empty list here
+// exactly like Prisma's `{ in: [] }` compiles to a false predicate there.
+// A plain module-level function, not a class method, so `.sort(...)` can
+// reference it directly without an unbound-`this` lint concern.
+function orderByCompletedHistory(a: ReviewSession, b: ReviewSession): number {
+  const aCompletedAt = a.completedAt?.getTime() ?? 0;
+  const bCompletedAt = b.completedAt?.getTime() ?? 0;
+  if (aCompletedAt !== bCompletedAt) {
+    return bCompletedAt - aCompletedAt;
+  }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+}
+
 // Test double for ReviewSessionRepository (design.md Testing Strategy:
 // in-memory fakes mirroring the shipped module shape, tasks.md 4.9). Keyed
 // by id; also mirrors the hand-written partial unique index
@@ -112,5 +127,69 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     }
     this.sessionsById.delete(id);
     return Promise.resolve(true);
+  }
+
+  findCompletedForPerformerInCommunities(
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]> {
+    const communityIdSet = new Set(communityIds);
+    return Promise.resolve(
+      [...this.sessionsById.values()]
+        .filter(
+          (session) =>
+            session.status === 'completed' &&
+            session.performedById === performedById &&
+            communityIdSet.has(session.communityId),
+        )
+        .sort(orderByCompletedHistory),
+    );
+  }
+
+  findCompletedInCommunities(
+    communityIds: readonly string[],
+  ): Promise<ReviewSession[]> {
+    const communityIdSet = new Set(communityIds);
+    return Promise.resolve(
+      [...this.sessionsById.values()]
+        .filter(
+          (session) =>
+            session.status === 'completed' &&
+            communityIdSet.has(session.communityId),
+        )
+        .sort(orderByCompletedHistory),
+    );
+  }
+
+  findCompletedByIdForPerformerInCommunities(
+    id: string,
+    performedById: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null> {
+    const session = this.sessionsById.get(id);
+    if (
+      !session ||
+      session.status !== 'completed' ||
+      session.performedById !== performedById ||
+      !communityIds.includes(session.communityId)
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(session);
+  }
+
+  findCompletedByIdInCommunities(
+    id: string,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null> {
+    const session = this.sessionsById.get(id);
+    if (
+      !session ||
+      session.status !== 'completed' ||
+      !communityIds.includes(session.communityId)
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(session);
   }
 }
