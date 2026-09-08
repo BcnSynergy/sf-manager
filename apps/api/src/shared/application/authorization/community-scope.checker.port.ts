@@ -25,6 +25,15 @@ export interface CommunityScopeChecker {
     role: Role,
     communityId: string,
   ): Promise<boolean>;
+
+  // review-history design.md Decision 2: the actor's FULL set of currently
+  // active community ids for their own assignment kind — same fail-closed
+  // exhaustive role dispatch as isAssignedTo, same "no cache, re-read every
+  // call" contract, so deactivating an assignment drops the community out
+  // of the returned set on the caller's very next request. Any role with
+  // no assignment kind (SYSTEM_ADMIN, MANAGER, MAINTENANCE_COMPANY_MANAGER)
+  // resolves to `[]` without reaching a repository call.
+  listAssignedCommunityIds(userId: string, role: Role): Promise<string[]>;
 }
 
 export const COMMUNITY_SCOPE_CHECKER = Symbol('COMMUNITY_SCOPE_CHECKER');
