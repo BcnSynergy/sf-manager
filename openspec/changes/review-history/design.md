@@ -452,3 +452,13 @@ forecast.
       dispatches on role (Decision 2). Both are correct for their own purpose and
       this design deliberately does not refactor the write path — confirm
       `sdd-verify` reads the asymmetry as intentional rather than as drift.
+- [ ] **A soft-deleted community renders a blank `communityName`** (PR1 fresh-
+      context review, MINOR/NIT) — `SoftDeleteCommunityUseCase` deliberately
+      never touches technician assignments, so a technician can keep an active
+      assignment to a community that's since been soft-deleted;
+      `list-review-history.use-case.ts` then resolves that community's name via
+      `CommunityRepository.findById` (which excludes `deletedAt`-set rows) and
+      falls back to `''`. Not a scope leak — the row is legitimately the
+      caller's own, only the name column is empty. PR3 (web) should either
+      render a localized placeholder for an empty `communityName`, or this gets
+      addressed as a follow-up.
