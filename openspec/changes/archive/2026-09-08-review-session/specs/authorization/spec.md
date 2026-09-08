@@ -232,7 +232,7 @@ active community assignments — never from the company association. A
 technician's `maintenanceCompanyId` MUST have no effect on any
 authorization decision.
 (Previously: both maintenance roles mapped to `[]`; the company id
-activated none of ADR-011's scoped-permission behavior for either.)
+activated none of ADR-011's scoped-permission behavior for either role.)
 
 #### Scenario: The company manager role remains permission-less
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` user has a valid `maintenanceCompanyId` set

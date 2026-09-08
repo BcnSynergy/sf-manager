@@ -280,10 +280,9 @@ within a session's scope is left unreviewed. A request to leave an element
 unreviewed without a reason MUST be rejected and MUST persist nothing.
 Recording a reason MUST NOT count the element as reviewed.
 
-This requirement is stated in terms of observable behaviour only. **Where**
-that reason is persisted — on a per-element review record, as session-level
-text, or otherwise — is deliberately not specified here and is owned by
-`sdd-design`.
+This requirement is stated in terms of observable behaviour only. The
+reason is persisted on the per-element review record (`ElementReviewEntry.
+observations`), settled by `sdd-design`.
 
 #### Scenario: An element is left unreviewed with a reason
 - GIVEN a `draft` session for community C and element type T, containing active element E
