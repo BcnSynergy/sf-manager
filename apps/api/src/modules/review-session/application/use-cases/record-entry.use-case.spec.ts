@@ -13,6 +13,7 @@ import { AnswersDoNotMatchTemplateError } from '../../domain/errors/answers-do-n
 import { InMemoryReviewSessionRepository } from './testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from './testing/fake-community-scope.checker';
 import { SessionAccessService } from '../services/session-access.service';
+import type { ReviewSessionRepository } from '../ports/review-session.repository.port';
 import { RecordEntryUseCase } from './record-entry.use-case';
 
 function draftSession(
@@ -253,6 +254,55 @@ describe('RecordEntryUseCase', () => {
           kind: 'reviewed',
           answers: [{ questionId: 'question-1', value: 'YES' }],
         },
+        actor,
+      ),
+    ).rejects.toThrow(ReviewSessionNotEditableError);
+  });
+
+  // Fresh-context review finding M1: unlike complete()/discardDraft(),
+  // upsertEntry() had no `WHERE status='draft'` guard of its own — the
+  // domain-layer check above (session.recordEntry/markUnreviewed) only
+  // protects the aggregate reference SessionAccess already loaded; a
+  // concurrent complete() that commits at the DB layer between that load
+  // and this use case's own write could still land silently on an
+  // already-completed session. This test isolates RecordEntryUseCase's
+  // OWN responsibility — mapping a `false` "lost the race" result from the
+  // repository to ReviewSessionNotEditableError — with a hand-rolled
+  // repository double so it does not depend on any particular fake's
+  // internals (the real backstop, and its Postgres-level proof, live in
+  // prisma-review-session.repository.ts / .integration.spec.ts).
+  it('rejects with ReviewSessionNotEditableError when upsertEntry reports the write lost a concurrency race (returns false)', async () => {
+    const session = draftSession();
+    const racyRepository: ReviewSessionRepository = {
+      create: jest.fn(),
+      findByIdForPerformer: jest.fn().mockResolvedValue(session),
+      findDraftsByPerformer: jest.fn(),
+      upsertEntry: jest.fn().mockResolvedValue(false),
+      complete: jest.fn(),
+      discardDraft: jest.fn(),
+    };
+    scopeChecker.assign('user-1', 'community-1');
+    const racySessionAccess = new SessionAccessService(
+      racyRepository,
+      scopeChecker,
+    );
+    templateRepository.seed(frozenTemplate(), [
+      { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+    ]);
+    elementRepository.seed(element());
+    const racyUseCase = new RecordEntryUseCase(
+      racySessionAccess,
+      racyRepository,
+      templateRepository,
+      elementRepository,
+      idGenerator,
+    );
+
+    await expect(
+      racyUseCase.execute(
+        'session-1',
+        'element-1',
+        { kind: 'unreviewed', observations: 'race window' },
         actor,
       ),
     ).rejects.toThrow(ReviewSessionNotEditableError);

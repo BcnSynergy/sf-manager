@@ -443,6 +443,39 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     expect(replaced?.entries[0].observations).toBe('Not accessible this cycle');
   });
 
+  // Fresh-context review finding M1: complete()/discardDraft() both guard
+  // their write with `WHERE status='draft'` and treat 0 affected rows as
+  // "no longer editable" — upsertEntry() had no such guard, so a concurrent
+  // complete() that commits between RecordEntryUseCase's load of the
+  // aggregate (still draft) and this write could silently land on an
+  // already-completed session, breaking the immutability invariant. This
+  // is the real, sequential proof against Postgres: complete the session
+  // first (as if a concurrent request already committed it), THEN attempt
+  // upsertEntry() — it must report the loss (return `false`) and must NOT
+  // write an ElementReviewEntry row for the now-completed session.
+  it('returns false and writes no entry when the session was completed before upsertEntry reaches the database (concurrency backstop)', async () => {
+    const { sessionId, inspectableElementId } = await createDraftSession();
+
+    const completed = await repository.complete(sessionId, new Date());
+    expect(completed).toBe(true);
+
+    const entry = ElementReviewEntry.unreviewed({
+      id: idGenerator.generate(),
+      reviewSessionId: sessionId,
+      inspectableElementId,
+      observations: 'race window — session completed before this write',
+      recordedAt: new Date(),
+    });
+
+    const result = await repository.upsertEntry(entry);
+    expect(result).toBe(false);
+
+    const rows = await prisma.elementReviewEntry.findMany({
+      where: { reviewSessionId: sessionId },
+    });
+    expect(rows).toHaveLength(0);
+  });
+
   it('rejects with ReviewSessionNotFoundError for an unknown sessionId instead of a raw FK-violation error', async () => {
     // A real (community, element) pair isolates this failure to the
     // reviewSessionId FK specifically — this test is about the missing

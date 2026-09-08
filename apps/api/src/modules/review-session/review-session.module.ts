@@ -12,6 +12,7 @@ import { OpenReviewSessionUseCase } from './application/use-cases/open-review-se
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
+import { CompleteReviewSessionUseCase } from './application/use-cases/complete-review-session.use-case';
 import { ReviewSessionController } from './presentation/review-session.controller';
 
 // design.md File Changes (PR 4/5): registers the review-session
@@ -40,6 +41,7 @@ import { ReviewSessionController } from './presentation/review-session.controlle
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,
     RecordEntryUseCase,
+    CompleteReviewSessionUseCase,
   ],
 })
 export class ReviewSessionModule {}

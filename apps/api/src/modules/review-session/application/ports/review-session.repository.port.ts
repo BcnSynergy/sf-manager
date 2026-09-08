@@ -47,7 +47,15 @@ export interface ReviewSessionRepository {
   // Rejects with ReviewSessionNotFoundError for an unknown sessionId
   // (mirrors SessionAccess's own 404 mapping) rather than surfacing a raw
   // FK-violation error.
-  upsertEntry(entry: ElementReviewEntry): Promise<void>;
+  //
+  // Fresh-context review finding M1: carries the SAME `WHERE status='draft'`
+  // guard as complete()/discardDraft() — `false` => the caller maps this to
+  // 409 REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8). The domain-layer
+  // guard the caller runs before this call (session.recordEntry/
+  // markUnreviewed) only protects the aggregate reference it already holds;
+  // this is the concurrency backstop for a complete()/discardDraft() that
+  // committed at the DB layer between that load and this write.
+  upsertEntry(entry: ElementReviewEntry): Promise<boolean>;
 
   // `WHERE status='draft'`; false => the caller maps this to 409
   // REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8).

@@ -40,10 +40,16 @@ const STATUS_TEXT: Record<CodedErrorStatus, string> = {
   [HttpStatus.FORBIDDEN]: 'Forbidden',
 };
 
+// review-session/design.md Decision 2: the 4th, optional `extra` parameter
+// lets a single call site (409 UNREVIEWED_ELEMENTS_WITHOUT_REASON) carry more
+// than {message, code} — the offending element codes — without widening every
+// other coded error's shape. Omitted entirely by every existing caller, so
+// the base {statusCode, error, message, code} shape stays byte-identical.
 export function buildCodedError<TCode extends string>(
   status: CodedErrorStatus,
   message: string,
   code: TCode,
+  extra?: Record<string, unknown>,
 ): HttpException {
   return new HttpException(
     {
@@ -51,6 +57,7 @@ export function buildCodedError<TCode extends string>(
       error: STATUS_TEXT[status],
       message,
       code,
+      ...extra,
     },
     status,
   );

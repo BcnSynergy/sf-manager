@@ -86,6 +86,19 @@ export interface InspectableElementRepository {
     elementType: ElementType,
     elementId: string,
   ): Promise<InspectableElement | null>;
+
+  // review-session/design.md Decision 2 (Phase 6): the required set for
+  // completion coverage — "active elements of (community, elementType)".
+  // Same eligibility predicate as findReviewableByCode/findReviewableById
+  // (deletedAt IS NULL AND deactivatedAt IS NULL), but returns every
+  // matching row instead of resolving one by code/id.
+  // CompleteReviewSessionUseCase feeds this list into
+  // `computeUncoveredElements` (domain/completion-coverage.ts) alongside the
+  // session's own recorded entries.
+  findActiveByCommunityAndType(
+    communityId: string,
+    elementType: ElementType,
+  ): Promise<InspectableElement[]>;
 }
 
 export const INSPECTABLE_ELEMENT_REPOSITORY = Symbol(

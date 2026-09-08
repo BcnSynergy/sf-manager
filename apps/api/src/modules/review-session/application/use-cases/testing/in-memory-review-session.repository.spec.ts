@@ -61,6 +61,26 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
     expect(stored?.entries[0].answers).toEqual([answer]);
   });
 
+  // Fresh-context review finding M1: mirrors complete()/discardDraft()'s
+  // own `WHERE status='draft'` guard — `false`, not a thrown error, is the
+  // fake's contract for "the write lost a concurrency race" (the real
+  // Prisma adapter's own DB-level guard makes the same distinction; see
+  // prisma-review-session.repository.integration.spec.ts).
+  it('returns false instead of writing when the session is not draft (concurrency backstop)', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    repository.seed(buildSession({ status: 'completed' }));
+
+    const entry = ElementReviewEntry.unreviewed({
+      id: 'entry-1',
+      reviewSessionId: 'session-1',
+      inspectableElementId: 'element-1',
+      observations: 'race window',
+      recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    await expect(repository.upsertEntry(entry)).resolves.toBe(false);
+  });
+
   it('rejects with ReviewSessionNotFoundError for an unknown sessionId, matching the real Prisma adapter instead of silently no-op-ing', async () => {
     const repository = new InMemoryReviewSessionRepository();
     const entry = ElementReviewEntry.unreviewed({

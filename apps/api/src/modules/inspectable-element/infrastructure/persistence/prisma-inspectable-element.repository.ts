@@ -171,6 +171,25 @@ export class PrismaInspectableElementRepository
     return record ? InspectableElementMapper.toDomain(record) : null;
   }
 
+  // review-session/design.md Decision 2 (Phase 6): the required set for
+  // completion coverage. Same eligibility predicate as
+  // findReviewableByCode/findReviewableById, but returns every matching row.
+  async findActiveByCommunityAndType(
+    communityId: string,
+    elementType: ElementType,
+  ): Promise<InspectableElement[]> {
+    const records = await this.prisma.inspectableElement.findMany({
+      where: {
+        communityId,
+        elementType,
+        deletedAt: null,
+        deactivatedAt: null,
+      },
+    });
+
+    return records.map((record) => InspectableElementMapper.toDomain(record));
+  }
+
   // Fresh-context review CRITICAL finding (PR3), verified empirically
   // against real Postgres: under Prisma 7 with the @prisma/adapter-pg driver
   // adapter, `error.meta.target` is NEVER populated for P2002s — the

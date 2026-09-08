@@ -132,9 +132,41 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
   // is the single source of truth (review finding #C), and so is
   // `entry.reviewSessionId` (Phase 5 follow-up) — there is no separate
   // `sessionId` argument either.
-  async upsertEntry(entry: ElementReviewEntry): Promise<void> {
+  //
+  // Fresh-context review finding M1: unlike complete()/discardDraft(), this
+  // method previously had NO `WHERE status='draft'` guard of its own — a
+  // concurrent complete() committing between RecordEntryUseCase's load of
+  // the aggregate (still draft) and this write could silently land on an
+  // already-completed session. The `guard` updateMany below is that missing
+  // backstop: it re-asserts `status='draft'` inside THIS transaction (the
+  // SET is a no-op — same value — the WHERE clause's affected-row count is
+  // the point), so a concurrent complete()/discardDraft() that already
+  // committed makes `guard.count` 0 and the entry write below never runs.
+  // 0 affected rows for an id that still exists maps to `false` (mirrors
+  // complete()/discardDraft()'s own mapping); 0 affected rows for an id
+  // that never existed at all still maps to ReviewSessionNotFoundError
+  // (mirrors this method's own pre-existing FK-violation mapping below —
+  // SessionAccess's callers already validated existence moments earlier, so
+  // this is a defensive backstop for the port's direct-caller contract, not
+  // the expected path for record-entry.use-case.ts).
+  async upsertEntry(entry: ElementReviewEntry): Promise<boolean> {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx) => {
+        const guard = await tx.reviewSession.updateMany({
+          where: { id: entry.reviewSessionId, status: 'draft' },
+          data: { status: 'draft' },
+        });
+        if (guard.count === 0) {
+          const exists = await tx.reviewSession.findUnique({
+            where: { id: entry.reviewSessionId },
+            select: { id: true },
+          });
+          if (!exists) {
+            throw new ReviewSessionNotFoundError();
+          }
+          return false;
+        }
+
         const stored = await tx.elementReviewEntry.upsert({
           where: {
             reviewSessionId_inspectableElementId: {
@@ -169,8 +201,13 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
             })),
           });
         }
+
+        return true;
       });
     } catch (error) {
+      if (error instanceof ReviewSessionNotFoundError) {
+        throw error;
+      }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === FOREIGN_KEY_VIOLATION &&
