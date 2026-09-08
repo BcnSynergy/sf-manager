@@ -279,6 +279,30 @@ interface HistoryRowBody {
   performedById: string;
 }
 
+interface HistoryDetailEntryBody {
+  inspectableElementId: string;
+  elementCode: string | null;
+  reviewed: boolean;
+  observations: string | null;
+  answers: Array<{ questionId: string; answer: string }>;
+}
+
+interface HistoryDetailBody {
+  id: string;
+  communityId: string;
+  templateId: string;
+  performedById: string;
+  status: string;
+  entries: HistoryDetailEntryBody[];
+  questions: Array<{ questionId: string; order: number; text: string }>;
+}
+
+interface ErrorBody {
+  code?: string;
+  message?: string;
+  statusCode?: number;
+}
+
 // review-history spec.md "A Performer's Own Completed Review History" /
 // "A Representative's Community-Scoped Completed Review History" /
 // "Only Completed Sessions Appear in History" — the PR 1 read surface:
@@ -556,6 +580,581 @@ describe('Review History (e2e)', () => {
         communityName: communityC.name,
         performedById: 'rh-technician-u-id',
       });
+    });
+  });
+
+  // review-history spec.md "Scoped Read-Back of One Historical Session" /
+  // "An Out-of-Scope Historical Session Is Indistinguishable From a
+  // Nonexistent One" — PR 2's by-id detail read.
+  describe('GET /review-history/:sessionId', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rhd-admin@example.com';
+    const technicianUEmail = 'rhd-technician-u@example.com';
+    const technicianWEmail = 'rhd-technician-w@example.com';
+    const representativeEmail = 'rhd-representative@example.com';
+    const managerEmail = 'rhd-manager@example.com';
+    const companyManagerEmail = 'rhd-company-manager@example.com';
+
+    let communityC: CommunityBody;
+    let communityD: CommunityBody;
+    let templateId: string;
+    let question: QuestionBody;
+    let elementC: ElementBody;
+    let sessionByUForC: SessionBody;
+    let sessionByWForC: SessionBody;
+    let sessionForD: SessionBody;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rhd-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technicianU = await buildSeedUser({
+        id: 'rhd-technician-u-id',
+        email: technicianUEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const technicianW = await buildSeedUser({
+        id: 'rhd-technician-w-id',
+        email: technicianWEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const representative = await buildSeedUser({
+        id: 'rhd-representative-id',
+        email: representativeEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const manager = await buildSeedUser({
+        id: 'rhd-manager-id',
+        email: managerEmail,
+        role: 'MANAGER',
+      });
+      const companyManager = await buildSeedUser({
+        id: 'rhd-company-manager-id',
+        email: companyManagerEmail,
+        role: 'MAINTENANCE_COMPANY_MANAGER',
+      });
+      built = await buildApp({
+        users: [
+          admin,
+          technicianU,
+          technicianW,
+          representative,
+          manager,
+          companyManager,
+        ],
+      });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      communityC = await createCommunity(adminAgent, 'History detail community C');
+      communityD = await createCommunity(adminAgent, 'History detail community D');
+      await assignTechnician(adminAgent, communityC.id, 'rhd-technician-u-id');
+      await assignTechnician(adminAgent, communityC.id, 'rhd-technician-w-id');
+      await assignRepresentative(
+        adminAgent,
+        communityC.id,
+        'rhd-representative-id',
+      );
+
+      elementC = await createElement(
+        adminAgent,
+        communityC.id,
+        'History detail extinguisher C',
+      );
+      const elementD = await createElement(
+        adminAgent,
+        communityD.id,
+        'History detail extinguisher D',
+      );
+      question = await createQuestion(
+        adminAgent,
+        'Is the pressure gauge in range?',
+      );
+      const template = await createActiveTemplate(
+        adminAgent,
+        'History detail template',
+        [question.id],
+      );
+      templateId = template.id;
+
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const technicianWAgent = await loginAgent(built.app, technicianWEmail);
+
+      const openedByU = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianUAgent
+        .put(`/review-sessions/${openedByU.id}/entries/${elementC.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      sessionByUForC = (
+        await technicianUAgent
+          .post(`/review-sessions/${openedByU.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      const openedByW = (
+        await technicianWAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianWAgent
+        .put(`/review-sessions/${openedByW.id}/entries/${elementC.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'NO' }] })
+        .expect(200);
+      sessionByWForC = (
+        await technicianWAgent
+          .post(`/review-sessions/${openedByW.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      await assignTechnician(adminAgent, communityD.id, 'rhd-technician-u-id');
+      const openedForD = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityD.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianUAgent
+        .put(`/review-sessions/${openedForD.id}/entries/${elementD.id}`)
+        .send({ observations: 'Element inaccessible for inspection' })
+        .expect(200);
+      sessionForD = (
+        await technicianUAgent
+          .post(`/review-sessions/${openedForD.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it('a performer reads back their own completed session with the full recorded record', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+
+      const body = response.body as HistoryDetailBody;
+      expect(body.id).toBe(sessionByUForC.id);
+      expect(body.status).toBe('completed');
+      expect(body.entries).toHaveLength(1);
+      expect(body.entries[0]).toMatchObject({
+        inspectableElementId: elementC.id,
+        elementCode: elementC.code,
+        reviewed: true,
+        observations: null,
+      });
+      expect(body.entries[0].answers).toEqual([
+        { questionId: question.id, answer: 'YES' },
+      ]);
+      expect(body.questions).toEqual([
+        expect.objectContaining({ questionId: question.id }),
+      ]);
+    });
+
+    it('a performer reads back an unreviewed entry with its recorded reason', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionForD.id}`)
+        .expect(200);
+
+      const body = response.body as HistoryDetailBody;
+      expect(body.entries[0]).toMatchObject({
+        reviewed: false,
+        observations: 'Element inaccessible for inspection',
+        answers: [],
+      });
+    });
+
+    it('a representative reads back a technician-performed session they did not perform', async () => {
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      const response = await representativeAgent
+        .get(`/review-history/${sessionByWForC.id}`)
+        .expect(200);
+
+      const body = response.body as HistoryDetailBody;
+      expect(body.id).toBe(sessionByWForC.id);
+      expect(body.entries[0]).toMatchObject({
+        inspectableElementId: elementC.id,
+        elementCode: elementC.code,
+      });
+    });
+
+    it('each entry identifies the element it records', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+
+      const body = response.body as HistoryDetailBody;
+      expect(
+        body.entries.every((entry) => entry.inspectableElementId != null),
+      ).toBe(true);
+    });
+
+    it('a decommissioned element still returns its entry with elementCode: null', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const opened = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianUAgent
+        .put(`/review-sessions/${opened.id}/entries/${elementC.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      const completed = (
+        await technicianUAgent
+          .post(`/review-sessions/${opened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      await adminAgent
+        .patch(`/communities/${communityC.id}/inspectable-elements/${elementC.id}`)
+        .send({ deactivated: true })
+        .expect(200);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(200);
+      const body = response.body as HistoryDetailBody;
+      expect(body.entries[0]).toMatchObject({
+        inspectableElementId: elementC.id,
+        elementCode: null,
+      });
+
+      // Reactivate so later tests in this describe block are unaffected.
+      await adminAgent
+        .patch(`/communities/${communityC.id}/inspectable-elements/${elementC.id}`)
+        .send({ deactivated: false })
+        .expect(200);
+    });
+
+    it('an out-of-scope session behaves exactly like a nonexistent one (indistinguishable 404)', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const nonexistentResponse = await technicianUAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
+      const foreignResponse = await technicianUAgent
+        .get(`/review-history/${sessionByWForC.id}`)
+        .expect(404);
+
+      const nonexistentBody = nonexistentResponse.body as ErrorBody;
+      const foreignBody = foreignResponse.body as ErrorBody;
+      expect(foreignBody).toEqual(nonexistentBody);
+      expect(nonexistentBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
+    });
+
+    it("does not disclose another technician's completed session", async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionByWForC.id}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+    });
+
+    it("does not disclose another community's completed session to the representative", async () => {
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      const response = await representativeAgent
+        .get(`/review-history/${sessionForD.id}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+    });
+
+    it('a draft session is rejected as 404, identically to a nonexistent one', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const draft = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+
+      const response = await technicianUAgent
+        .get(`/review-history/${draft.id}`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+
+      await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
+    });
+
+    // review-history spec.md "The Deferred Review Visibility Scopes Are Not
+    // Built" / authorization spec "The Deferred Review Visibility Scopes
+    // Grant Nothing" — tasks.md 4.10.
+    it('MANAGER gets 403 on both the list and the detail route', async () => {
+      const managerAgent = await loginAgent(built.app, managerEmail);
+
+      await managerAgent.get('/review-history').expect(403);
+      await managerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(403);
+    });
+
+    it('MAINTENANCE_COMPANY_MANAGER gets 403 on both the list and the detail route', async () => {
+      const companyManagerAgent = await loginAgent(
+        built.app,
+        companyManagerEmail,
+      );
+
+      await companyManagerAgent.get('/review-history').expect(403);
+      await companyManagerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(403);
+    });
+
+    it('SYSTEM_ADMIN gets 403 on both the list and the detail route', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      await adminAgent.get('/review-history').expect(403);
+      await adminAgent.get(`/review-history/${sessionByUForC.id}`).expect(403);
+    });
+
+    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on either route', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const filteredListResponse = await technicianUAgent
+        .get('/review-history')
+        .query({
+          page: 1,
+          cursor: 'x',
+          limit: 1,
+          offset: 1,
+          from: '2020-01-01',
+          to: '2020-01-02',
+          sort: 'asc',
+          search: 'anything',
+        })
+        .expect(200);
+      const plainListResponse = await technicianUAgent
+        .get('/review-history')
+        .expect(200);
+      expect(filteredListResponse.body).toEqual(plainListResponse.body);
+
+      const filteredDetailResponse = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .query({ page: 1, limit: 1 })
+        .expect(200);
+      const plainDetailResponse = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+      expect(filteredDetailResponse.body).toEqual(plainDetailResponse.body);
+    });
+  });
+
+  // review-history spec.md "History Access Requires a Currently Active
+  // Community Assignment, Including for One's Own Sessions" — the
+  // retroactive revocation matrix (tasks.md 4.9), deliberately deferred from
+  // PR 1 to this PR.
+  describe('Retroactive revocation on assignment deactivation', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rhr-admin@example.com';
+    const technicianEmail = 'rhr-technician@example.com';
+    const representativeEmail = 'rhr-representative@example.com';
+
+    let community: CommunityBody;
+    let templateId: string;
+    let question: QuestionBody;
+    let element: ElementBody;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rhr-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'rhr-technician-id',
+        email: technicianEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const representative = await buildSeedUser({
+        id: 'rhr-representative-id',
+        email: representativeEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      built = await buildApp({ users: [admin, technician, representative] });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      community = await createCommunity(adminAgent, 'Retroactive revocation community');
+      await assignTechnician(adminAgent, community.id, 'rhr-technician-id');
+      await assignRepresentative(
+        adminAgent,
+        community.id,
+        'rhr-representative-id',
+      );
+
+      element = await createElement(
+        adminAgent,
+        community.id,
+        'Retroactive revocation extinguisher',
+      );
+      question = await createQuestion(adminAgent, 'Is the seal intact?');
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Retroactive revocation template',
+        [question.id],
+      );
+      templateId = template.id;
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it("a technician's own completed session becomes unreadable once their assignment is deactivated, and returns once reassigned", async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const opened = (
+        await technicianAgent
+          .post('/review-sessions')
+          .send({ communityId: community.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianAgent
+        .put(`/review-sessions/${opened.id}/entries/${element.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      const completed = (
+        await technicianAgent
+          .post(`/review-sessions/${opened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      // Successful before deactivation.
+      const beforeList = await technicianAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (beforeList.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(completed.id);
+      await technicianAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(200);
+
+      await adminAgent
+        .delete(`/communities/${community.id}/technicians/rhr-technician-id`)
+        .expect(204);
+
+      // The very next request, no grace period, no cached grant.
+      const afterList = await technicianAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (afterList.body as HistoryRowBody[]).map((row) => row.id),
+      ).not.toContain(completed.id);
+      const afterDetailResponse = await technicianAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(404);
+      expect((afterDetailResponse.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+
+      await adminAgent
+        .post(
+          `/communities/${community.id}/technicians/rhr-technician-id/reactivate`,
+        )
+        .expect(200);
+
+      const reassignedList = await technicianAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (reassignedList.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(completed.id);
+      await technicianAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(200);
+    });
+
+    it('a representative loses community history on deactivation and regains it on reassignment', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      const opened = (
+        await technicianAgent
+          .post('/review-sessions')
+          .send({ communityId: community.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianAgent
+        .put(`/review-sessions/${opened.id}/entries/${element.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      const completed = (
+        await technicianAgent
+          .post(`/review-sessions/${opened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      const beforeList = await representativeAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (beforeList.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(completed.id);
+
+      await adminAgent
+        .delete(
+          `/communities/${community.id}/representatives/rhr-representative-id`,
+        )
+        .expect(204);
+
+      const afterList = await representativeAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (afterList.body as HistoryRowBody[]).map((row) => row.id),
+      ).not.toContain(completed.id);
+      const afterDetailResponse = await representativeAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(404);
+      expect((afterDetailResponse.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+
+      await adminAgent
+        .post(
+          `/communities/${community.id}/representatives/rhr-representative-id/reactivate`,
+        )
+        .expect(200);
+
+      const reassignedList = await representativeAgent
+        .get('/review-history')
+        .expect(200);
+      expect(
+        (reassignedList.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(completed.id);
     });
   });
 });
