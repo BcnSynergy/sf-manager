@@ -49,16 +49,16 @@ Chain strategy: stacked-to-main
 - [x] 3.8 E2E: own-history list scenarios (own sessions only, another performer's never appears, empty history is 2xx empty list); representative community list scenarios (sees non-performed session, another community never appears, multi-community flat list); drafts excluded from both lists.
 
 ## Phase 4: Detail Read (PR 2)
-- [ ] 4.1 RED/GREEN `review-history-access.service.ts` — add `loadCompletedForActor(sessionId, actor)`: exhaustive role `switch` to the two by-id repo methods; `null` -> `ReviewSessionNotFoundError` (one throw site, one mapping).
-- [ ] 4.2 Unit: unknown / draft / foreign performer / foreign community / deactivated assignment all collapse to the same `ReviewSessionNotFoundError` path.
-- [ ] 4.3 RED/GREEN `.../review-session/application/use-cases/read-review-history.use-case.ts` — calls `loadCompletedForActor`, then `ReviewTemplateRepository.findFrozenWithSnapshot(templateId)` for frozen wording, then `InspectableElementRepository.findActiveByCommunityAndType` for live `elementCode` (nullable) per entry.
-- [ ] 4.4 Unit: a decommissioned/soft-deleted element yields `elementCode: null` on its entry rather than dropping the entry; answer stays paired with snapshotted wording after live question-pool edits.
-- [ ] 4.5 `.../review-session/presentation/dto/review-history-detail-response.dto.ts` — superset of `ReviewSessionDetailResponseDto` + `questions: TemplateQuestionEntry[]`, `elementCode: string | null` per entry.
-- [ ] 4.6 `review-history.controller.ts` — add `GET /review-history/:sessionId`.
-- [ ] 4.7 E2E: performer reads own record back in full (incl. unreviewed reason); representative reads a technician-performed session identically; each entry carries element identity; decommissioned element entry still returned with `elementCode: null`.
-- [ ] 4.8 E2E: indistinguishable 404 — deep-equal status/code/body for unknown id, another performer's, another community's; no distinct "exists but not yours" error code.
-- [ ] 4.9 E2E: retroactive revocation — technician reads own session, assignment deactivated, identical request now absent from list **and** 404 by id, on the very next request; same for representative community access; access returns once reassigned.
-- [ ] 4.10 E2E: scope guards — `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` still `[]`, `SYSTEM_ADMIN` 403 on both routes; no `ManagerCapability`; no page/cursor/limit/offset/date-range/sort/search parameter accepted; no new migration; no mutating operation among the added routes/use cases/port methods.
+- [x] 4.1 RED/GREEN `review-history-access.service.ts` — add `loadCompletedForActor(sessionId, actor)`: exhaustive role `switch` to the two by-id repo methods; `null` -> `ReviewSessionNotFoundError` (one throw site, one mapping).
+- [x] 4.2 Unit: unknown / draft / foreign performer / foreign community / deactivated assignment all collapse to the same `ReviewSessionNotFoundError` path.
+- [x] 4.3 RED/GREEN `.../review-session/application/use-cases/read-review-history.use-case.ts` — calls `loadCompletedForActor`, then `ReviewTemplateRepository.findFrozenWithSnapshot(templateId)` for frozen wording, then `InspectableElementRepository.findActiveByCommunityAndType` for live `elementCode` (nullable) per entry.
+- [x] 4.4 Unit: a decommissioned/soft-deleted element yields `elementCode: null` on its entry rather than dropping the entry; answer stays paired with snapshotted wording after live question-pool edits.
+- [x] 4.5 `.../review-session/presentation/dto/review-history-detail-response.dto.ts` — superset of `ReviewSessionDetailResponseDto` + `questions: TemplateQuestionEntry[]`, `elementCode: string | null` per entry.
+- [x] 4.6 `review-history.controller.ts` — add `GET /review-history/:sessionId`.
+- [x] 4.7 E2E: performer reads own record back in full (incl. unreviewed reason); representative reads a technician-performed session identically; each entry carries element identity; decommissioned element entry still returned with `elementCode: null`.
+- [x] 4.8 E2E: indistinguishable 404 — deep-equal status/code/body for unknown id, another performer's, another community's; no distinct "exists but not yours" error code.
+- [x] 4.9 E2E: retroactive revocation — technician reads own session, assignment deactivated, identical request now absent from list **and** 404 by id, on the very next request; same for representative community access; access returns once reassigned.
+- [x] 4.10 E2E: scope guards — `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` still `[]`, `SYSTEM_ADMIN` 403 on both routes; no `ManagerCapability`; no page/cursor/limit/offset/date-range/sort/search parameter accepted; no new migration; no mutating operation among the added routes/use cases/port methods.
 
 ## Phase 5: Web — List + Detail (PR 3)
 - [ ] 5.1 `apps/web/src/api/review-history.ts` — `apiFetch` client + response types mirroring `review-session.ts`.
