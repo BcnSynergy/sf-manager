@@ -4,6 +4,7 @@ import {
   type CommunityScopeChecker,
 } from '../../../../shared/application/authorization/community-scope.checker.port';
 import { ReviewSession } from '../../domain/review-session.entity';
+import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import {
   REVIEW_SESSION_REPOSITORY,
   type ReviewSessionRepository,
@@ -62,6 +63,64 @@ export class ReviewHistoryAccessService {
         // same fail-closed backstop as CommunityScopeChecker's own switch.
         actor.role satisfies never;
         return [];
+      }
+    }
+  }
+
+  // tasks.md 4.1: the by-id counterpart. Same Layer 2 scope resolution and
+  // exhaustive role dispatch as listForActor, but to the two by-id
+  // repository methods. `null` — unknown id, draft, foreign performer,
+  // foreign community, or a since-deactivated assignment (empty
+  // communityIds) — ALL collapse to the SAME ReviewSessionNotFoundError, one
+  // throw site, mirroring SessionAccessService.loadForActor's own rejection
+  // matrix (design.md Decision 1 / Data Flow).
+  async loadCompletedForActor(
+    sessionId: string,
+    actor: Actor,
+  ): Promise<ReviewSession> {
+    const communityIds =
+      await this.communityScopeChecker.listAssignedCommunityIds(
+        actor.userId,
+        actor.role,
+      );
+    if (communityIds.length === 0) {
+      throw new ReviewSessionNotFoundError();
+    }
+
+    const session = await this.loadByRole(sessionId, actor, communityIds);
+    if (!session) {
+      throw new ReviewSessionNotFoundError();
+    }
+
+    return session;
+  }
+
+  private loadByRole(
+    sessionId: string,
+    actor: Actor,
+    communityIds: readonly string[],
+  ): Promise<ReviewSession | null> {
+    switch (actor.role) {
+      case 'MAINTENANCE_TECHNICIAN':
+        return this.repository.findCompletedByIdForPerformerInCommunities(
+          sessionId,
+          actor.userId,
+          communityIds,
+        );
+      case 'COMMUNITY_REPRESENTATIVE':
+        return this.repository.findCompletedByIdInCommunities(
+          sessionId,
+          communityIds,
+        );
+      // Same fail-closed backstop as listForActor: no history scope for
+      // these roles at all, so they never reach a repository call.
+      case 'SYSTEM_ADMIN':
+      case 'MANAGER':
+      case 'MAINTENANCE_COMPANY_MANAGER':
+        return Promise.resolve(null);
+      default: {
+        actor.role satisfies never;
+        return Promise.resolve(null);
       }
     }
   }
