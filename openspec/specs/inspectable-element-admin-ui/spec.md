@@ -4,15 +4,20 @@
 
 The `SYSTEM_ADMIN`-gated web surface for a community's inspectable
 elements: route gating, active-element list (including each element's
-`code` and a per-element Print entry point into `element-label-printing`),
-create/edit forms, confirmed soft-delete, element-type label rendering,
-and the `ApiError` → localized-message contract for the new error codes.
-Reachable only through a valid community id, via the entry point on
-`CommunityDetailPage` (see `community-admin-ui`). No element detail
-page beyond edit (editing reuses the list, no `GET /:id`), no
-cross-community list, no pagination/filtering/search, no restore of
-soft-deleted elements, no audit-log UI (proposal Out of Scope — this
-slice stays minimal per ADR-006).
+`code`, its active/decommissioned state, and a per-element Print entry
+point into `element-label-printing`), create/edit forms, confirmed
+soft-delete, a per-element decommission/reactivate control, element-type
+label rendering, and the `ApiError` → localized-message contract for the
+new error codes. "Active elements" in *List Active Elements For a
+Community* means "not soft-deleted" — decommissioned elements are not
+soft-deleted and remain listed. Reachable only through a valid community
+id, via the entry point on `CommunityDetailPage` (see
+`community-admin-ui`). No element detail page beyond edit (editing
+reuses the list, no `GET /:id`), no cross-community list, no
+pagination/filtering/search, no restore of soft-deleted elements, no
+bulk decommission action, no decommission reason or history, no
+audit-log UI (proposal Out of Scope — this slice stays minimal per
+ADR-006).
 
 ## Requirements
 
@@ -208,3 +213,80 @@ be offered.
 - GIVEN the `SYSTEM_ADMIN` is viewing a community's elements list
 - WHEN the list-level actions are inspected
 - THEN no action that prints more than one element MUST be offered
+
+### Requirement: Element State Shown in the List
+
+The system MUST display each listed element's active/decommissioned state
+to a `SYSTEM_ADMIN`, and MUST distinguish a decommissioned element from an
+active one visually, not only by the label of its available action. The
+state MUST be rendered through a localized label, never as a raw field
+value. Soft-deleted elements MUST still never appear.
+
+#### Scenario: Decommissioned elements are listed and distinguishable
+- GIVEN community C has both active and decommissioned elements
+- WHEN a `SYSTEM_ADMIN` opens C's elements list
+- THEN both MUST appear, and the decommissioned ones MUST be visually distinguishable from the active ones
+
+#### Scenario: State is rendered through a localized label
+- GIVEN an element's state is displayed as visible text
+- WHEN it is rendered
+- THEN it MUST show a localized label, not a raw boolean, timestamp or enum value
+
+#### Scenario: Soft-deleted elements never shown
+- GIVEN community C has a soft-deleted element alongside active and decommissioned ones
+- WHEN a `SYSTEM_ADMIN` opens C's elements list
+- THEN the soft-deleted element MUST NOT appear
+
+### Requirement: Decommission and Reactivate Control
+
+The system MUST offer a `SYSTEM_ADMIN` a per-element control to
+decommission an active element and to reactivate a decommissioned one.
+The control MUST target exactly one element, MUST require an explicit
+confirmation before decommissioning, and MUST reflect the element's new
+state in the list once the action succeeds. A failure MUST show a distinct
+error state and MUST leave the displayed state unchanged. The control MUST
+NOT ask for a reason and MUST NOT offer a bulk or "decommission all"
+variant.
+
+#### Scenario: Admin decommissions an element from the list
+- GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is active
+- WHEN they trigger decommission for E and confirm
+- THEN E MUST be shown as decommissioned when community C's elements list is next viewed
+
+#### Scenario: Admin reactivates a decommissioned element
+- GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is decommissioned
+- WHEN they trigger reactivate for E
+- THEN E MUST be shown as active when community C's elements list is next viewed
+
+#### Scenario: Decommission is confirmed before it happens
+- GIVEN the `SYSTEM_ADMIN` triggers decommission for element E
+- WHEN they dismiss the confirmation
+- THEN E MUST remain active and no request MUST have been sent
+
+#### Scenario: A failed action is reported and does not change the shown state
+- GIVEN the decommission request fails
+- WHEN the failure is shown
+- THEN a distinct error state MUST be shown and E MUST still be displayed as active
+
+#### Scenario: The control is single-element and reason-free
+- GIVEN the elements list and edit surfaces after this change
+- WHEN their controls are inspected
+- THEN none MUST offer a bulk decommission action or ask for a decommission reason
+
+### Requirement: Internationalization Coverage for the State Controls
+
+The new state label and decommission/reactivate controls MUST contain zero
+hardcoded UI strings. All their user-facing text — labels, confirmation
+prompt, success and error messages — MUST come from translation keys with
+real (non-placeholder) values in `en`, `es` and `ca`, enforced by the
+existing locale parity test.
+
+#### Scenario: All new visible text is translated in every configured locale
+- GIVEN the elements list with its state labels and decommission/reactivate controls is rendered
+- WHEN the active locale is `en`, `es` or `ca`
+- THEN every visible string MUST come from a translation key with a real value for that locale, not a placeholder or English fallback
+
+#### Scenario: New error handling does not branch on English message text
+- GIVEN the client path mapping a decommission or reactivate failure to a UI message
+- WHEN it selects the message
+- THEN it MUST branch only on `ApiError.status` and `.code`
