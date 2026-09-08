@@ -1109,21 +1109,46 @@ describe('Review Templates (e2e)', () => {
   });
 
   // tasks.md 11.2 + spec: "No Review Session Surface" — this change is
-  // scoped to the question pool + template versioning ONLY. Confirms the
-  // scope boundary was never accidentally crossed across all 11 PRs by
-  // walking the shipped source trees (never docs, which deliberately
-  // discuss ReviewSession/ElementReviewEntry/QuestionAnswer as FR-007's
-  // future scope) for the three forbidden identifiers.
+  // scoped to the question pool + template versioning ONLY.
+  //
+  // Corrected review-session/08 (PR8/8): this test originally scanned the
+  // WHOLE apps/src and apps/web/src trees for the bare identifiers below,
+  // asserting they appeared nowhere in the codebase. That was only ever
+  // true because review-session (FR-007) had not shipped yet — Phases 3-7
+  // of that change have since shipped ReviewSession/ElementReviewEntry/
+  // QuestionAnswer throughout their OWN module by design, which made the
+  // old assertion permanently false and was never this test's real intent.
+  //
+  // The real intent (restated): review-template's OWN files must not
+  // reference review-session's internals — i.e. this change stays scoped
+  // to the question pool + template versioning and never reaches INTO
+  // review-session's implementation. So the scan is narrowed to exactly
+  // review-template's own shipped files (API module + its web pages/api
+  // client), not the whole repository, and it ignores comment text — this
+  // module's own comments legitimately document the one-way dependency
+  // direction ("ReviewSessionModule can import ReviewTemplateModule", not
+  // the reverse), which is documentation, not a code reference.
   describe('No Review Session Surface (tasks.md 11.2, spec: No Review Session Surface)', () => {
     const forbiddenIdentifiers = [
       'ReviewSession',
       'ElementReviewEntry',
       'QuestionAnswer',
     ];
+    // review-template's OWN files only — not the whole apps/src or
+    // apps/web/src tree, and not prisma/schema.prisma (a single shared
+    // schema file that now legitimately declares review-session's models
+    // alongside review-template's; that is not review-template's file).
     const scannedRoots = [
-      path.join(__dirname, '..', 'src'),
-      path.join(__dirname, '..', 'prisma', 'schema.prisma'),
-      path.join(__dirname, '..', '..', 'web', 'src'),
+      path.join(__dirname, '..', 'src', 'modules', 'review-template'),
+      path.join(
+        __dirname,
+        '..',
+        '..',
+        'web',
+        'src',
+        'api',
+        'review-template.ts',
+      ),
     ];
     const excludedDirs = new Set(['node_modules', 'dist', '.turbo']);
     // This file itself references the forbidden identifiers to describe
@@ -1151,21 +1176,46 @@ describe('Review Templates (e2e)', () => {
       return files;
     }
 
-    it('no ReviewSession, ElementReviewEntry or QuestionAnswer table, model, route or page exists anywhere in the shipped source', () => {
+    // review-template's own web pages live under apps/web/src/pages as
+    // ReviewTemplate*.tsx / ReviewTemplate*.test.tsx — glob them explicitly
+    // since they are siblings of every other page, not a subdirectory.
+    function collectReviewTemplateWebPages(): string[] {
+      const pagesDir = path.join(__dirname, '..', '..', 'web', 'src', 'pages');
+      if (!fs.existsSync(pagesDir)) {
+        return [];
+      }
+      return fs
+        .readdirSync(pagesDir)
+        .filter((name) => name.startsWith('ReviewTemplate'))
+        .map((name) => path.join(pagesDir, name));
+    }
+
+    // Strips `//` line comments and `/* */` block comments before scanning,
+    // so documentation describing the (legitimate, one-way) dependency
+    // direction between the two modules does not trip the assertion —
+    // mirroring tasks.md 6.10's "concrete implementation symbols, not bare
+    // prose" precedent one level further: a comment is prose even when it
+    // happens to contain the identifier verbatim.
+    function stripComments(content: string): string {
+      return content.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    }
+
+    it('review-template does not reference review-session internals in its own shipped files', () => {
       const offenders: string[] = [];
-      for (const root of scannedRoots) {
-        if (!fs.existsSync(root)) {
+      const files = [
+        ...scannedRoots.flatMap((root) =>
+          fs.existsSync(root) ? collectFiles(root) : [],
+        ),
+        ...collectReviewTemplateWebPages(),
+      ];
+      for (const file of files) {
+        if (path.resolve(file) === path.resolve(selfPath)) {
           continue;
         }
-        for (const file of collectFiles(root)) {
-          if (path.resolve(file) === path.resolve(selfPath)) {
-            continue;
-          }
-          const content = fs.readFileSync(file, 'utf-8');
-          for (const identifier of forbiddenIdentifiers) {
-            if (content.includes(identifier)) {
-              offenders.push(`${identifier} found in ${file}`);
-            }
+        const content = stripComments(fs.readFileSync(file, 'utf-8'));
+        for (const identifier of forbiddenIdentifiers) {
+          if (content.includes(identifier)) {
+            offenders.push(`${identifier} found in ${file}`);
           }
         }
       }
