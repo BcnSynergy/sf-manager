@@ -647,8 +647,14 @@ describe('Review History (e2e)', () => {
       });
 
       const adminAgent = await loginAgent(built.app, adminEmail);
-      communityC = await createCommunity(adminAgent, 'History detail community C');
-      communityD = await createCommunity(adminAgent, 'History detail community D');
+      communityC = await createCommunity(
+        adminAgent,
+        'History detail community C',
+      );
+      communityD = await createCommunity(
+        adminAgent,
+        'History detail community D',
+      );
       await assignTechnician(adminAgent, communityC.id, 'rhd-technician-u-id');
       await assignTechnician(adminAgent, communityC.id, 'rhd-technician-w-id');
       await assignRepresentative(
@@ -827,7 +833,9 @@ describe('Review History (e2e)', () => {
       ).body as SessionBody;
 
       await adminAgent
-        .patch(`/communities/${communityC.id}/inspectable-elements/${elementC.id}`)
+        .patch(
+          `/communities/${communityC.id}/inspectable-elements/${elementC.id}`,
+        )
         .send({ deactivated: true })
         .expect(200);
 
@@ -842,7 +850,9 @@ describe('Review History (e2e)', () => {
 
       // Reactivate so later tests in this describe block are unaffected.
       await adminAgent
-        .patch(`/communities/${communityC.id}/inspectable-elements/${elementC.id}`)
+        .patch(
+          `/communities/${communityC.id}/inspectable-elements/${elementC.id}`,
+        )
         .send({ deactivated: false })
         .expect(200);
     });
@@ -866,11 +876,17 @@ describe('Review History (e2e)', () => {
     it("does not disclose another technician's completed session", async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
+      const nonexistentResponse = await technicianUAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
       const response = await technicianUAgent
         .get(`/review-history/${sessionByWForC.id}`)
         .expect(404);
 
-      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+      expect(response.body).toEqual(nonexistentResponse.body);
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
     });
 
     it("does not disclose another community's completed session to the representative", async () => {
@@ -879,11 +895,17 @@ describe('Review History (e2e)', () => {
         representativeEmail,
       );
 
+      const nonexistentResponse = await representativeAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
       const response = await representativeAgent
         .get(`/review-history/${sessionForD.id}`)
         .expect(404);
 
-      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+      expect(response.body).toEqual(nonexistentResponse.body);
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
     });
 
     it('a draft session is rejected as 404, identically to a nonexistent one', async () => {
@@ -895,11 +917,17 @@ describe('Review History (e2e)', () => {
           .expect(201)
       ).body as { id: string };
 
+      const nonexistentResponse = await technicianUAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
       const response = await technicianUAgent
         .get(`/review-history/${draft.id}`)
         .expect(404);
 
-      expect((response.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+      expect(response.body).toEqual(nonexistentResponse.body);
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
 
       await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
     });
@@ -1001,7 +1029,10 @@ describe('Review History (e2e)', () => {
       built = await buildApp({ users: [admin, technician, representative] });
 
       const adminAgent = await loginAgent(built.app, adminEmail);
-      community = await createCommunity(adminAgent, 'Retroactive revocation community');
+      community = await createCommunity(
+        adminAgent,
+        'Retroactive revocation community',
+      );
       await assignTechnician(adminAgent, community.id, 'rhr-technician-id');
       await assignRepresentative(
         adminAgent,
@@ -1054,9 +1085,7 @@ describe('Review History (e2e)', () => {
       expect(
         (beforeList.body as HistoryRowBody[]).map((row) => row.id),
       ).toContain(completed.id);
-      await technicianAgent
-        .get(`/review-history/${completed.id}`)
-        .expect(200);
+      await technicianAgent.get(`/review-history/${completed.id}`).expect(200);
 
       await adminAgent
         .delete(`/communities/${community.id}/technicians/rhr-technician-id`)
@@ -1088,9 +1117,7 @@ describe('Review History (e2e)', () => {
       expect(
         (reassignedList.body as HistoryRowBody[]).map((row) => row.id),
       ).toContain(completed.id);
-      await technicianAgent
-        .get(`/review-history/${completed.id}`)
-        .expect(200);
+      await technicianAgent.get(`/review-history/${completed.id}`).expect(200);
     });
 
     it('a representative loses community history on deactivation and regains it on reassignment', async () => {
@@ -1123,6 +1150,9 @@ describe('Review History (e2e)', () => {
       expect(
         (beforeList.body as HistoryRowBody[]).map((row) => row.id),
       ).toContain(completed.id);
+      await representativeAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(200);
 
       await adminAgent
         .delete(
@@ -1155,6 +1185,9 @@ describe('Review History (e2e)', () => {
       expect(
         (reassignedList.body as HistoryRowBody[]).map((row) => row.id),
       ).toContain(completed.id);
+      await representativeAgent
+        .get(`/review-history/${completed.id}`)
+        .expect(200);
     });
   });
 });
