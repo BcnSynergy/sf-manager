@@ -17,6 +17,7 @@ import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
 import { QuestionAnswer } from '../../domain/question-answer.entity';
 import { AnswersDoNotMatchTemplateError } from '../../domain/errors/answers-do-not-match-template.error';
 import { ActiveTemplateNotFoundError } from '../../domain/errors/active-template-not-found.error';
+import { ReviewSessionNotEditableError } from '../../domain/errors/review-session-not-editable.error';
 import {
   Actor,
   SessionAccessService,
@@ -174,7 +175,17 @@ export class RecordEntryUseCase {
     // Full-replace semantics, `entry` alone is the source of truth for
     // which session it belongs to (Phase 5 redundancy fix — see
     // review-session.repository.port.ts).
-    await this.sessionRepository.upsertEntry(entry);
+    //
+    // Fresh-context review finding M1: `false` is the repository's own
+    // `WHERE status='draft'` concurrency backstop reporting a lost race —
+    // the domain guard above (session.recordEntry/markUnreviewed) only
+    // protects the aggregate reference this use case already holds; it
+    // cannot see a complete()/discardDraft() that committed at the DB layer
+    // after that reference was loaded.
+    const editable = await this.sessionRepository.upsertEntry(entry);
+    if (!editable) {
+      throw new ReviewSessionNotEditableError();
+    }
 
     return {
       inspectableElementId: entry.inspectableElementId,

@@ -149,4 +149,22 @@ export class InMemoryInspectableElementRepository implements InspectableElementR
     }
     return Promise.resolve(element);
   }
+
+  // review-session/design.md Decision 2 (Phase 6) — mirrors the real
+  // adapter's collapsing filter (deletedAt IS NULL AND deactivatedAt IS
+  // NULL), returning every matching row instead of resolving one.
+  findActiveByCommunityAndType(
+    communityId: string,
+    elementType: ElementType,
+  ): Promise<InspectableElement[]> {
+    return Promise.resolve(
+      [...this.elementsById.values()].filter(
+        (element) =>
+          element.communityId === communityId &&
+          element.elementType === elementType &&
+          !element.isDeleted &&
+          !element.isDeactivated,
+      ),
+    );
+  }
 }

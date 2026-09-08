@@ -64,13 +64,24 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
   // entry as-is. Rejects with ReviewSessionNotFoundError for an unknown
   // sessionId instead of silently no-op-ing, matching
   // PrismaReviewSessionRepository's mapped FK-violation behaviour.
-  upsertEntry(entry: ElementReviewEntry): Promise<void> {
+  //
+  // Fresh-context review finding M1: explicit `status !== 'draft'` guard
+  // mirroring complete()/discardDraft() below — `false` is the concurrency
+  // backstop's mapped result (PrismaReviewSessionRepository's own `WHERE
+  // status='draft'` guard), not a domain-guard throw. A fresh lookup here
+  // (rather than reusing a caller-held aggregate reference) is what lets
+  // this fake observe a concurrent complete()/discardDraft() that already
+  // replaced the map entry.
+  upsertEntry(entry: ElementReviewEntry): Promise<boolean> {
     const session = this.sessionsById.get(entry.reviewSessionId);
     if (!session) {
       return Promise.reject(new ReviewSessionNotFoundError());
     }
+    if (session.status !== 'draft') {
+      return Promise.resolve(false);
+    }
     session.recordEntry(entry);
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   complete(id: string, at: Date): Promise<boolean> {

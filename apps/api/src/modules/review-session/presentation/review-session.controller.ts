@@ -40,6 +40,8 @@ import { MissingObservationsError } from '../domain/errors/missing-observations.
 import { OpenDraftAlreadyExistsError } from '../domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotEditableError } from '../domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
+import { UnreviewedElementsWithoutReasonError } from '../domain/errors/unreviewed-elements-without-reason.error';
+import { CompleteReviewSessionUseCase } from '../application/use-cases/complete-review-session.use-case';
 import { DiscardReviewSessionUseCase } from '../application/use-cases/discard-review-session.use-case';
 import { GetReviewScopeUseCase } from '../application/use-cases/get-review-scope.use-case';
 import { ListOwnReviewSessionsUseCase } from '../application/use-cases/list-own-review-sessions.use-case';
@@ -78,6 +80,7 @@ export class ReviewSessionController {
     private readonly discardReviewSessionUseCase: DiscardReviewSessionUseCase,
     private readonly resolveElementByCodeUseCase: ResolveElementByCodeUseCase,
     private readonly recordEntryUseCase: RecordEntryUseCase,
+    private readonly completeReviewSessionUseCase: CompleteReviewSessionUseCase,
   ) {}
 
   @Get('review-scope')
@@ -316,6 +319,37 @@ export class ReviewSessionController {
     }
   }
 
+  @Post('review-sessions/:sessionId/complete')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('reviewSession:complete')
+  @ApiOkResponse({ type: ReviewSessionResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:complete.' })
+  @ApiNotFoundResponse({
+    description:
+      'Unknown/foreign/out-of-scope session. Body carries code: ' +
+      'REVIEW_SESSION_NOT_FOUND.',
+  })
+  @ApiConflictResponse({
+    description:
+      'Session is not a draft (code: REVIEW_SESSION_NOT_EDITABLE), or ' +
+      'active elements remain without a recorded review or reason (code: ' +
+      'UNREVIEWED_ELEMENTS_WITHOUT_REASON, body carries elementCodes).',
+  })
+  async complete(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId') sessionId: string,
+  ): Promise<Pick<ReviewSessionResponseDto, 'id' | 'status' | 'completedAt'>> {
+    try {
+      return await this.completeReviewSessionUseCase.execute(sessionId, {
+        userId: user.sub,
+        role: user.role,
+      });
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
   private mapError(error: unknown): unknown {
     if (error instanceof CommunityNotInScopeError) {
       return buildCodedError(
@@ -378,6 +412,14 @@ export class ReviewSessionController {
         HttpStatus.BAD_REQUEST,
         error.message,
         'MISSING_ANSWERS',
+      );
+    }
+    if (error instanceof UnreviewedElementsWithoutReasonError) {
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
+        { elementCodes: error.elementCodes },
       );
     }
     return error;

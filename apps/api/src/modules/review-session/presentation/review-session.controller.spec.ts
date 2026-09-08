@@ -9,8 +9,10 @@ import { OpenReviewSessionUseCase } from '../application/use-cases/open-review-s
 import { ReadReviewSessionUseCase } from '../application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from '../application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from '../application/use-cases/record-entry.use-case';
+import { CompleteReviewSessionUseCase } from '../application/use-cases/complete-review-session.use-case';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { AnswersDoNotMatchTemplateError } from '../domain/errors/answers-do-not-match-template.error';
+import { UnreviewedElementsWithoutReasonError } from '../domain/errors/unreviewed-elements-without-reason.error';
 import { ReviewSessionController } from './review-session.controller';
 
 // Fresh-context review on PR4, finding #A: ReadReviewSessionResult's
@@ -33,6 +35,7 @@ describe('ReviewSessionController', () => {
   const discardReviewSessionUseCase = { execute: jest.fn() };
   const resolveElementByCodeUseCase = { execute: jest.fn() };
   const recordEntryUseCase = { execute: jest.fn() };
+  const completeReviewSessionUseCase = { execute: jest.fn() };
 
   let controller: ReviewSessionController;
   let moduleRef: TestingModule;
@@ -66,6 +69,10 @@ describe('ReviewSessionController', () => {
         {
           provide: RecordEntryUseCase,
           useValue: recordEntryUseCase,
+        },
+        {
+          provide: CompleteReviewSessionUseCase,
+          useValue: completeReviewSessionUseCase,
         },
       ],
     }).compile();
@@ -281,6 +288,52 @@ describe('ReviewSessionController', () => {
       expect(response).toBeInstanceOf(HttpException);
       expect((response as HttpException).getResponse()).toMatchObject({
         code: 'ELEMENT_NOT_FOUND',
+      });
+    });
+  });
+
+  // Phase 6 (tasks.md 6.1): the completion route and its error-code mapping,
+  // including the 409 that carries the offending element codes
+  // (design.md Decision 2).
+  describe('POST /review-sessions/:sessionId/complete', () => {
+    const actor: VerifiedAccessToken = {
+      sub: 'user-1',
+      email: 'user-1@example.com',
+      role: 'MAINTENANCE_TECHNICIAN',
+      jti: 'jti-1',
+      exp: 9999999999,
+    };
+
+    it('completes the session', async () => {
+      const fixture = {
+        id: 'session-1',
+        status: 'completed' as const,
+        completedAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      completeReviewSessionUseCase.execute.mockResolvedValue(fixture);
+
+      const result = await controller.complete(actor, 'session-1');
+
+      expect(result).toEqual(fixture);
+      expect(completeReviewSessionUseCase.execute).toHaveBeenCalledWith(
+        'session-1',
+        { userId: 'user-1', role: 'MAINTENANCE_TECHNICIAN' },
+      );
+    });
+
+    it('maps UnreviewedElementsWithoutReasonError to 409, carrying elementCodes', async () => {
+      completeReviewSessionUseCase.execute.mockRejectedValue(
+        new UnreviewedElementsWithoutReasonError(['CODE0000A1', 'CODE0000A2']),
+      );
+
+      const response = await controller
+        .complete(actor, 'session-1')
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toMatchObject({
+        code: 'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
+        elementCodes: ['CODE0000A1', 'CODE0000A2'],
       });
     });
   });

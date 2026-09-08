@@ -58,6 +58,28 @@ describe('buildCodedError', () => {
     });
   });
 
+  // review-session/design.md Decision 2: 409 UNREVIEWED_ELEMENTS_WITHOUT_REASON
+  // is the first coded error that needs to carry more than {message, code} —
+  // the offending element codes, so the UI can navigate straight to them.
+  // Additive and optional: every existing call site (no 4th argument) keeps
+  // the exact byte-identical shape asserted above.
+  it('merges an optional extra payload into the body without disturbing the base shape', () => {
+    const error = buildCodedError(
+      HttpStatus.CONFLICT,
+      'Active elements remain without a recorded review or reason.',
+      'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
+      { elementCodes: ['CODE0000A1', 'CODE0000A2'] },
+    );
+
+    expect(error.getResponse()).toEqual({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      message: 'Active elements remain without a recorded review or reason.',
+      code: 'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
+      elementCodes: ['CODE0000A1', 'CODE0000A2'],
+    });
+  });
+
   it('narrows the code parameter type per call site without a shared union', () => {
     type LocalErrorCode = 'SOME_LOCAL_CODE';
     const error = buildCodedError<LocalErrorCode>(
