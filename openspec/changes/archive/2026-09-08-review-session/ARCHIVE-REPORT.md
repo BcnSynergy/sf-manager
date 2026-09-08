@@ -1,7 +1,7 @@
 # Archive Report: Perform a Review Session (FR-007)
 
 **Change**: `review-session` (FR-007)
-**Status**: ARCHIVED — source-folder removal, branch, and commit to be completed by the orchestrator (no Bash/shell tool available in this execution — see Known Limitation)
+**Status**: ARCHIVED — source-folder removal, branch, and commit completed by the orchestrator (`sdd-archive` had no Bash/shell tool available — see Known Limitation for what it prepared vs. what the orchestrator finished)
 **Date**: 2026-09-08
 **Artifact Store**: Hybrid (OpenSpec + Engram)
 **Branch this archive was prepared on**: `review-session/09-verify-and-archive`

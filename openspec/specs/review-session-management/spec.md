@@ -281,8 +281,8 @@ unreviewed without a reason MUST be rejected and MUST persist nothing.
 Recording a reason MUST NOT count the element as reviewed.
 
 This requirement is stated in terms of observable behaviour only. The
-reason is persisted on the per-element review record (`ElementReviewEntry.
-observations`), settled by `sdd-design`.
+reason is persisted on the per-element review record
+(`ElementReviewEntry.observations`), settled by `sdd-design`.
 
 #### Scenario: An element is left unreviewed with a reason
 - GIVEN a `draft` session for community C and element type T, containing active element E
