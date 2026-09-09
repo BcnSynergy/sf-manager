@@ -31,6 +31,7 @@ export class ReviewSessionMapper {
       status: record.status,
       startedAt: record.startedAt,
       completedAt: record.completedAt,
+      performedByCompanyId: record.performedByCompanyId,
       entries: entryRecords.map((entry) => this.entryToDomain(entry)),
     });
   }
@@ -79,6 +80,7 @@ export class ReviewSessionMapper {
       status: session.status,
       startedAt: session.startedAt,
       completedAt: session.completedAt,
+      performedByCompanyId: session.performedByCompanyId,
     };
   }
 }

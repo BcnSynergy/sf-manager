@@ -22,6 +22,7 @@ const makeSession = (
     status: 'draft',
     startedAt: new Date('2026-01-01T00:00:00.000Z'),
     completedAt: null,
+    performedByCompanyId: null,
     ...overrides,
   });
 
@@ -61,6 +62,21 @@ describe('ReviewSession', () => {
     expect(session.status).toBe('draft');
     expect(session.completedAt).toBeNull();
     expect(session.entries).toEqual([]);
+  });
+
+  // review-history-company-scope/design.md Decision 1: the performer's
+  // maintenance company, snapshotted at creation — a plain readonly field,
+  // no setter, mirroring every other field on this aggregate.
+  it('carries the performing company snapshot passed at construction', () => {
+    const attributed = makeSession({
+      performedByCompanyId: '01930000-0000-7000-8000-000000000901',
+    });
+    const unattributed = makeSession({ performedByCompanyId: null });
+
+    expect(attributed.performedByCompanyId).toBe(
+      '01930000-0000-7000-8000-000000000901',
+    );
+    expect(unattributed.performedByCompanyId).toBeNull();
   });
 
   // design.md Interfaces/Contracts: `@@unique([reviewSessionId,
