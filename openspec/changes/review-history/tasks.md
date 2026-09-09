@@ -70,9 +70,9 @@ Chain strategy: stacked-to-main
 - [x] 5.7 `apps/web/src/i18n/locales/{en,es,ca}.json` — real translations for all new keys (list, detail, empty state, unreachable message, neutral element label); extend `locales.test.ts` parity coverage.
 
 ## Phase 6: Spec Guards, Docs, Verification (PR 4)
-- [ ] 6.1 `openspec/specs/review-session-management/spec.md` — apply the delta: narrow "Adjacent Review Capabilities Are Not Introduced" per-performer/per-community rows to deferred-only (company/global visibility, per-element filtering); keep FR-009/FR-010 rows intact.
-- [ ] 6.2 `openspec/specs/review-session-ui/spec.md` — apply the delta: narrow "No Offline, History or Scheduling Surface" the same way; keep the rest intact.
-- [ ] 6.3 Merge `openspec/changes/review-history/specs/{authorization,review-history,review-history-ui}/spec.md` deltas into `openspec/specs/` as new/modified capability files.
+- [x] 6.1 `openspec/specs/review-session-management/spec.md` — apply the delta: narrow "Adjacent Review Capabilities Are Not Introduced" per-performer/per-community rows to deferred-only (company/global visibility, per-element filtering); keep FR-009/FR-010 rows intact.
+- [x] 6.2 `openspec/specs/review-session-ui/spec.md` — apply the delta: narrow "No Offline, History or Scheduling Surface" the same way; keep the rest intact.
+- [x] 6.3 Merge `openspec/changes/review-history/specs/{authorization,review-history,review-history-ui}/spec.md` deltas into `openspec/specs/` as new/modified capability files.
 - [ ] 6.4 Run full suites: `npm run test --workspace=apps/api`, `npm run test:integration --workspace=apps/api`, `npm run test:e2e --workspace=apps/api`, `npm run test --workspace=apps/web`, `npm run lint`, `npm run build`.
 - [ ] 6.5 Browser verification (CLAUDE.md) against a running dev server: log in as `MAINTENANCE_TECHNICIAN` — own history list + drill-in; log in as `COMMUNITY_REPRESENTATIVE` — cross-performer history + drill-in, multi-community row labeling if seeded; deactivate an assignment and re-load to confirm loss of access; empty-state render.
 - [ ] 6.6 Note the deferred ADR-011 addendum (design Open Questions — two access services) and the performer-identity / live-element-code gaps as explicit follow-ups; do not author the addendum in this change.
