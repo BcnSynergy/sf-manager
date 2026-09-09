@@ -32,9 +32,26 @@ import { INSPECTABLE_ELEMENT_REPOSITORY } from '../src/modules/inspectable-eleme
 import { InMemoryInspectableElementRepository } from '../src/modules/inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
 import { REVIEW_SESSION_REPOSITORY } from '../src/modules/review-session/application/ports/review-session.repository.port';
 import { InMemoryReviewSessionRepository } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-session.repository';
+import {
+  USER_DIRECTORY,
+  type UserDirectory,
+} from '../src/modules/review-session/application/ports/user-directory.port';
 import { User } from '../src/modules/users/domain/user.entity';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import type { Role } from '../src/modules/users/domain/role';
+
+// review-history-company-scope/design.md Decision 1/5: e2e's own
+// UserDirectory double, backed by the SAME InMemoryUserRepository this
+// suite already seeds — real DB access is stubbed out (PrismaService below)
+// so the real PrismaUserDirectory cannot run here.
+class InMemoryUserRepositoryBackedUserDirectory implements UserDirectory {
+  constructor(private readonly users: InMemoryUserRepository) {}
+
+  async findMaintenanceCompanyId(userId: string): Promise<string | null> {
+    const user = await this.users.findById(userId);
+    return user?.maintenanceCompanyId ?? null;
+  }
+}
 
 class InMemoryTokenDenylist implements TokenDenylist {
   private readonly revokedJtis = new Set<string>();
@@ -159,6 +176,8 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
     .useValue(elementRepository)
     .overrideProvider(REVIEW_SESSION_REPOSITORY)
     .useValue(sessionRepository)
+    .overrideProvider(USER_DIRECTORY)
+    .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),

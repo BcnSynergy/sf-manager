@@ -3,7 +3,9 @@ import { CommunityModule } from '../community/community.module';
 import { InspectableElementModule } from '../inspectable-element/inspectable-element.module';
 import { ReviewTemplateModule } from '../review-template/review-template.module';
 import { REVIEW_SESSION_REPOSITORY } from './application/ports/review-session.repository.port';
+import { USER_DIRECTORY } from './application/ports/user-directory.port';
 import { PrismaReviewSessionRepository } from './infrastructure/persistence/prisma-review-session.repository';
+import { PrismaUserDirectory } from './infrastructure/persistence/prisma-user-directory';
 import { SessionAccessService } from './application/services/session-access.service';
 import { ReviewHistoryAccessService } from './application/services/review-history-access.service';
 import { DiscardReviewSessionUseCase } from './application/use-cases/discard-review-session.use-case';
@@ -43,6 +45,10 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
       provide: REVIEW_SESSION_REPOSITORY,
       useClass: PrismaReviewSessionRepository,
     },
+    // review-history-company-scope/design.md Decision 5: module-local,
+    // non-authorizing cross-module read — bound here, not exported (no
+    // other module needs it).
+    { provide: USER_DIRECTORY, useClass: PrismaUserDirectory },
     SessionAccessService,
     ReviewHistoryAccessService,
     GetReviewScopeUseCase,

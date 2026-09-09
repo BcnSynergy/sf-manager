@@ -114,6 +114,11 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
         status: 'completed',
         startedAt: session.startedAt,
         completedAt: at,
+        // review-history-company-scope/design.md Decision 1: complete()
+        // NEVER writes performedByCompanyId — carried over unchanged from
+        // the pre-completion session, exactly like PrismaReviewSessionRepository
+        // .complete()'s UPDATE (which has no such column in its SET clause).
+        performedByCompanyId: session.performedByCompanyId,
         entries: session.entries,
       }),
     );
