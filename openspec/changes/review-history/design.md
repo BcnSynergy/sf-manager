@@ -452,13 +452,50 @@ forecast.
       dispatches on role (Decision 2). Both are correct for their own purpose and
       this design deliberately does not refactor the write path — confirm
       `sdd-verify` reads the asymmetry as intentional rather than as drift.
-- [ ] **A soft-deleted community renders a blank `communityName`** (PR1 fresh-
+- [x] **A soft-deleted community renders a blank `communityName`** (PR1 fresh-
       context review, MINOR/NIT) — `SoftDeleteCommunityUseCase` deliberately
       never touches technician assignments, so a technician can keep an active
       assignment to a community that's since been soft-deleted;
       `list-review-history.use-case.ts` then resolves that community's name via
       `CommunityRepository.findById` (which excludes `deletedAt`-set rows) and
       falls back to `''`. Not a scope leak — the row is legitimately the
-      caller's own, only the name column is empty. PR3 (web) should either
-      render a localized placeholder for an empty `communityName`, or this gets
-      addressed as a follow-up.
+      caller's own, only the name column is empty. **Resolved in PR3**:
+      `ReviewHistoryPage.tsx` renders a localized placeholder for an empty
+      `communityName` instead of a blank cell.
+
+### Carried forward as explicit follow-ups (Phase 6 / task 6.6)
+
+The two items below remain open after this change ships and are recorded
+here, not silently dropped, per `sdd-tasks` task 6.6. Neither is authored
+in this change — both need a separate, user-confirmed step, per the
+`review-session` precedent (its ADR-011 addendum shipped as its own
+follow-up commit after archive, not inside the chain that motivated it).
+
+- **ADR-011 addendum** (Decision 1, above) — the module now has two access
+  services, a departure from `review-session` Decision 4's "one door"
+  phrasing, and Layer 2 gained a listing method. Durable enough to record
+  per `rules.design`, but deliberately not authored here.
+- **Performer identity in the representative's view** (Decision 6, above) —
+  still a named, deliberate gap: resolving names needs a `users` read no
+  port supports today. Candidate for a follow-up slice.
+- **Element codes resolved live, not frozen** (Decision 6, above) — the
+  durable fix (snapshotting the code onto `ElementReviewEntry`) is a schema
+  change, explicitly out of scope here; worth revisiting as an FR-010
+  (signing/export) prerequisite if that slice is ever built.
+
+### Pre-existing app-wide gap found during PR4's browser verification (task 6.5) — NOT unique to review-history
+
+- **Timestamps render as raw ISO-8601, not localized** —
+  `ReviewHistoryPage.tsx` and `ReviewHistoryDetailPage.tsx` interpolate
+  `completedAt` straight from the API response (e.g.
+  `2026-09-09T07:10:22.208Z`), in pages that are otherwise fully translated.
+  Verified this is **not a review-history regression**: `ReviewSessionsPage.tsx`
+  (line 84, `{session.startedAt}`, shipped in the already-archived
+  `review-session` change) renders the identical raw ISO string today on
+  `main` — this is the established, if imperfect, convention across the
+  whole web app, not something this change introduced. Fixing it only in
+  review-history's two pages would make them inconsistent with every other
+  page; fixing it everywhere is a cross-cutting change touching an already-
+  shipped, unrelated slice, and is explicitly out of scope here per ADR-006.
+  Left as documented debt, not fixed in this change — a candidate for its
+  own small cross-cutting slice if/when it's prioritized.
