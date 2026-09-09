@@ -32,10 +32,11 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
   separate later retrofit. "Minimal" still means minimal — no more UI
   than the slice's own success criteria require (ADR-006 discipline
   applies to UI scope exactly as it does to domain scope).
-- Two retrofit slices are in flight to close the existing gap:
-  `users-minimal-ui` (in progress) then `community-minimal-ui`. Only
-  after both land does "new slice = domain + UI together" become the
-  steady state with no backlog behind it.
+- Both retrofit slices have landed and been archived (`users-minimal-ui`,
+  `community-minimal-ui` — see `openspec/changes/archive/`). "New slice =
+  domain + UI together" is now the steady state with no backlog behind
+  it; `review-history` (in progress) is the first slice built under this
+  rule from the start.
 - If a proposal is about to be written for API-only, ask explicitly
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
