@@ -360,7 +360,8 @@
       "empty": "No tens cap sessió oberta.",
       "startLink": "Iniciar una sessió",
       "columnStarted": "Iniciada",
-      "resumeLink": "Reprendre"
+      "resumeLink": "Reprendre",
+      "historyLink": "Veure historial de revisions"
     },
     "new": {
       "title": "Iniciar una sessió de revisió",
@@ -431,6 +432,28 @@
       "missingAnswers": "Respon totes les preguntes abans de desar.",
       "unreviewedElementsWithoutReason": "Alguns elements encara necessiten un motiu abans de completar.",
       "validationFailed": "Introdueix dades de sessió vàlides."
+    }
+  },
+  "reviewHistory": {
+    "list": {
+      "title": "Historial de revisions",
+      "loading": "Carregant historial de revisions...",
+      "error": "Alguna cosa ha fallat en carregar l'historial de revisions.",
+      "empty": "No s'han trobat revisions completades.",
+      "columnCommunity": "Comunitat",
+      "columnCompletedAt": "Completada el",
+      "communityUnknown": "Comunitat desconeguda",
+      "openLink": "Veure"
+    },
+    "detail": {
+      "title": "Detall de l'historial de revisió",
+      "loading": "Carregant historial de revisió...",
+      "completedAtLabel": "Completada el: {{completedAt}}",
+      "coverageLabel": "{{reviewed}} revisats, {{unreviewed}} sense revisar",
+      "entriesTitle": "Elements revisats",
+      "entriesEmpty": "No s'ha registrat cap element.",
+      "elementCodeUnknown": "Element desconegut",
+      "entryUnreviewedLabel": "No revisat:"
     }
   },
   "health": {

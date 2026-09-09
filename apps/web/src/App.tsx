@@ -17,6 +17,8 @@ import { LoginPage } from './pages/LoginPage';
 import { MaintenanceCompaniesListPage } from './pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from './pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from './pages/MaintenanceCompanyEditPage';
+import { ReviewHistoryDetailPage } from './pages/ReviewHistoryDetailPage';
+import { ReviewHistoryPage } from './pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from './pages/ReviewSessionDetailPage';
 import { ReviewSessionElementPage } from './pages/ReviewSessionElementPage';
 import { ReviewSessionNewPage } from './pages/ReviewSessionNewPage';
@@ -325,6 +327,31 @@ function App() {
                 allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
               >
                 <ReviewSessionElementPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* review-history-ui spec + design.md: same two non-admin roles as
+              the review-sessions flow above, read-only. Static
+              /review-history ranks above the dynamic /review-history/:sessionId
+              segment below regardless of declaration order (same reasoning as
+              every other list/detail pair in this file). */}
+          <Route
+            path="/review-history"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review-history/:sessionId"
+            element={
+              <ProtectedRoute
+                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+              >
+                <ReviewHistoryDetailPage />
               </ProtectedRoute>
             }
           />

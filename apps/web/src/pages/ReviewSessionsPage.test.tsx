@@ -77,4 +77,13 @@ describe('ReviewSessionsPage', () => {
     const link = await screen.findByTestId('review-sessions-start-link');
     expect(link).toHaveAttribute('href', '/review-sessions/new');
   });
+
+  it('always shows a link to review history', async () => {
+    mockedListOwnReviewSessions.mockResolvedValue([]);
+
+    renderPage();
+
+    const link = await screen.findByTestId('review-history-entry-link');
+    expect(link).toHaveAttribute('href', '/review-history');
+  });
 });

@@ -382,6 +382,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewSession.entry.startLink',
     'reviewSession.entry.columnStarted',
     'reviewSession.entry.resumeLink',
+    // review-history entry-point link (review-history change, Phase 5)
+    'reviewSession.entry.historyLink',
     // open form (ReviewSessionNewPage)
     'reviewSession.new.title',
     'reviewSession.new.loading',
@@ -449,6 +451,33 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewSession.error.validationFailed',
     // HealthPage's role-conditional entry link
     'health.reviewSessionsLink',
+  ];
+
+  // Existence guard for review-history (review-history change, Phase 5),
+  // same rationale as REQUIRED_COMMUNITY_KEY_PATHS above — a fixed,
+  // hand-maintained list of every `reviewHistory.*` key path referenced by
+  // source in this change's web PR, so a future PR that adds a new call
+  // site without adding its translation fails here rather than silently
+  // rendering the raw key.
+  const REQUIRED_REVIEW_HISTORY_KEY_PATHS = [
+    // list (ReviewHistoryPage)
+    'reviewHistory.list.title',
+    'reviewHistory.list.loading',
+    'reviewHistory.list.error',
+    'reviewHistory.list.empty',
+    'reviewHistory.list.columnCommunity',
+    'reviewHistory.list.columnCompletedAt',
+    'reviewHistory.list.communityUnknown',
+    'reviewHistory.list.openLink',
+    // detail (ReviewHistoryDetailPage)
+    'reviewHistory.detail.title',
+    'reviewHistory.detail.loading',
+    'reviewHistory.detail.completedAtLabel',
+    'reviewHistory.detail.coverageLabel',
+    'reviewHistory.detail.entriesTitle',
+    'reviewHistory.detail.entriesEmpty',
+    'reviewHistory.detail.elementCodeUnknown',
+    'reviewHistory.detail.entryUnreviewedLabel',
   ];
 
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
@@ -545,6 +574,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_REVIEW_SESSION_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_REVIEW_HISTORY_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

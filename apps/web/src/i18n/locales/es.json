@@ -360,7 +360,8 @@
       "empty": "No tienes sesiones abiertas.",
       "startLink": "Iniciar una sesión",
       "columnStarted": "Iniciada",
-      "resumeLink": "Reanudar"
+      "resumeLink": "Reanudar",
+      "historyLink": "Ver historial de revisiones"
     },
     "new": {
       "title": "Iniciar una sesión de revisión",
@@ -431,6 +432,28 @@
       "missingAnswers": "Responde todas las preguntas antes de guardar.",
       "unreviewedElementsWithoutReason": "Algunos elementos todavía necesitan un motivo antes de completar.",
       "validationFailed": "Introduce datos de sesión válidos."
+    }
+  },
+  "reviewHistory": {
+    "list": {
+      "title": "Historial de revisiones",
+      "loading": "Cargando historial de revisiones...",
+      "error": "Algo ha fallado al cargar el historial de revisiones.",
+      "empty": "No se han encontrado revisiones completadas.",
+      "columnCommunity": "Comunidad",
+      "columnCompletedAt": "Completada el",
+      "communityUnknown": "Comunidad desconocida",
+      "openLink": "Ver"
+    },
+    "detail": {
+      "title": "Detalle del historial de revisión",
+      "loading": "Cargando historial de revisión...",
+      "completedAtLabel": "Completada el: {{completedAt}}",
+      "coverageLabel": "{{reviewed}} revisados, {{unreviewed}} sin revisar",
+      "entriesTitle": "Elementos revisados",
+      "entriesEmpty": "No se ha registrado ningún elemento.",
+      "elementCodeUnknown": "Elemento desconocido",
+      "entryUnreviewedLabel": "No revisado:"
     }
   },
   "health": {

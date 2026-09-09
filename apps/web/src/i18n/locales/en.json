@@ -360,7 +360,8 @@
       "empty": "You have no open sessions.",
       "startLink": "Start a session",
       "columnStarted": "Started",
-      "resumeLink": "Resume"
+      "resumeLink": "Resume",
+      "historyLink": "View review history"
     },
     "new": {
       "title": "Start a review session",
@@ -431,6 +432,28 @@
       "missingAnswers": "Answer every question before saving.",
       "unreviewedElementsWithoutReason": "Some elements still need a reason before completing.",
       "validationFailed": "Enter valid session details."
+    }
+  },
+  "reviewHistory": {
+    "list": {
+      "title": "Review history",
+      "loading": "Loading review history...",
+      "error": "Something went wrong loading review history.",
+      "empty": "No completed reviews found.",
+      "columnCommunity": "Community",
+      "columnCompletedAt": "Completed at",
+      "communityUnknown": "Unknown community",
+      "openLink": "View"
+    },
+    "detail": {
+      "title": "Review history detail",
+      "loading": "Loading review history...",
+      "completedAtLabel": "Completed at: {{completedAt}}",
+      "coverageLabel": "{{reviewed}} reviewed, {{unreviewed}} not reviewed",
+      "entriesTitle": "Reviewed elements",
+      "entriesEmpty": "No elements recorded.",
+      "elementCodeUnknown": "Unknown element",
+      "entryUnreviewedLabel": "Not reviewed:"
     }
   },
   "health": {

@@ -51,6 +51,39 @@ describe('mapApiErrorToMessageKey (review-session)', () => {
     expect(keys.size).toBe(1);
   });
 
+  // review-history spec + design.md D1/D3: every cause a completed-session
+  // read can fail for — unknown id, a draft (never completed), another
+  // performer's session, another community's session — is collapsed
+  // server-side to the SAME REVIEW_SESSION_NOT_FOUND code (one
+  // ReviewSessionNotFoundError throw site). Mirrors the ELEMENT_NOT_FOUND
+  // test above: the mapper must key off `.code` only, never `.message`
+  // (which differs per cause on the server), so all four causes render the
+  // identical message in ReviewHistoryDetailPage.
+  it('the same REVIEW_SESSION_NOT_FOUND code maps to the same message across every unreachable-session cause', () => {
+    const nonexistent = new ApiError(404, 'REVIEW_SESSION_NOT_FOUND');
+    const draft = new ApiError(404, 'REVIEW_SESSION_NOT_FOUND');
+    Object.defineProperty(draft, 'message', {
+      value: 'This session has not been completed yet',
+    });
+    const foreignPerformer = new ApiError(404, 'REVIEW_SESSION_NOT_FOUND');
+    Object.defineProperty(foreignPerformer, 'message', {
+      value: 'This session belongs to another performer',
+    });
+    const foreignCommunity = new ApiError(404, 'REVIEW_SESSION_NOT_FOUND');
+    Object.defineProperty(foreignCommunity, 'message', {
+      value: 'This session belongs to another community',
+    });
+
+    const keys = new Set([
+      mapApiErrorToMessageKey(nonexistent),
+      mapApiErrorToMessageKey(draft),
+      mapApiErrorToMessageKey(foreignPerformer),
+      mapApiErrorToMessageKey(foreignCommunity),
+    ]);
+
+    expect(keys.size).toBe(1);
+  });
+
   it('maps a 400 with no code to reviewSession.error.validationFailed', () => {
     expect(mapApiErrorToMessageKey(new ApiError(400))).toBe(
       'reviewSession.error.validationFailed',
