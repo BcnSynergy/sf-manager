@@ -256,6 +256,7 @@ describe('InMemoryReviewSessionRepository — findCompletedForPerformer/findComp
   function completedSession(
     overrides: Partial<{
       id: string;
+      communityId: string;
       performedById: string;
       performedByCompanyId: string | null;
       completedAt: Date;
@@ -263,7 +264,7 @@ describe('InMemoryReviewSessionRepository — findCompletedForPerformer/findComp
   ): ReviewSession {
     return new ReviewSession({
       id: overrides.id ?? 'session-1',
-      communityId: 'community-1',
+      communityId: overrides.communityId ?? 'community-1',
       templateId: 'template-1',
       performedById: overrides.performedById ?? 'user-1',
       performedByCompanyId:
@@ -306,6 +307,7 @@ describe('InMemoryReviewSessionRepository — findCompletedForPerformer/findComp
     const differentCommunity = completedSession({
       id: 'session-different-community',
       performedById: 'user-1',
+      communityId: 'community-2',
     });
     repository.seed(differentCommunity);
 
