@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CommunityModule } from '../community/community.module';
 import { InspectableElementModule } from '../inspectable-element/inspectable-element.module';
 import { ReviewTemplateModule } from '../review-template/review-template.module';
+import { UsersModule } from '../users/users.module';
 import { REVIEW_SESSION_REPOSITORY } from './application/ports/review-session.repository.port';
 import { USER_DIRECTORY } from './application/ports/user-directory.port';
 import { PrismaReviewSessionRepository } from './infrastructure/persistence/prisma-review-session.repository';
@@ -37,8 +38,17 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
 // INSPECTABLE_ELEMENT_REPOSITORY (Decision 6, PR 5). `review-session`
 // imports all three; none of them imports `review-session` back — no
 // cycle.
+//
+// review-history-company-scope/design.md Decision 4: also imports
+// `UsersModule` for `COMPANY_SCOPE_CHECKER` — verified acyclic in design's
+// pre-work (`UsersModule` imports nothing from any module).
 @Module({
-  imports: [CommunityModule, ReviewTemplateModule, InspectableElementModule],
+  imports: [
+    CommunityModule,
+    ReviewTemplateModule,
+    InspectableElementModule,
+    UsersModule,
+  ],
   controllers: [ReviewSessionController, ReviewHistoryController],
   providers: [
     {
