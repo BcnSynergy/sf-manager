@@ -197,4 +197,64 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     }
     return Promise.resolve(session);
   }
+
+  // review-history-company-scope/design.md Decision 6/7: the technician's
+  // replacement pair — own completed sessions, unconditionally, no
+  // community conjunct at all.
+  findCompletedForPerformer(performedById: string): Promise<ReviewSession[]> {
+    return Promise.resolve(
+      [...this.sessionsById.values()]
+        .filter(
+          (session) =>
+            session.status === 'completed' &&
+            session.performedById === performedById,
+        )
+        .sort(orderByCompletedHistory),
+    );
+  }
+
+  findCompletedByIdForPerformer(
+    id: string,
+    performedById: string,
+  ): Promise<ReviewSession | null> {
+    const session = this.sessionsById.get(id);
+    if (
+      !session ||
+      session.status !== 'completed' ||
+      session.performedById !== performedById
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(session);
+  }
+
+  // review-history-company-scope/design.md Decision 3/4/6/9: the manager's
+  // company-wide pair — `performedByCompanyId` equality plus `completed`,
+  // no other conjunct.
+  findCompletedForCompany(companyId: string): Promise<ReviewSession[]> {
+    return Promise.resolve(
+      [...this.sessionsById.values()]
+        .filter(
+          (session) =>
+            session.status === 'completed' &&
+            session.performedByCompanyId === companyId,
+        )
+        .sort(orderByCompletedHistory),
+    );
+  }
+
+  findCompletedByIdForCompany(
+    id: string,
+    companyId: string,
+  ): Promise<ReviewSession | null> {
+    const session = this.sessionsById.get(id);
+    if (
+      !session ||
+      session.status !== 'completed' ||
+      session.performedByCompanyId !== companyId
+    ) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(session);
+  }
 }

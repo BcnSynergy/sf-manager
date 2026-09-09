@@ -6,6 +6,8 @@ import { PrismaUserRepository } from '../../../users/infrastructure/persistence/
 import { User } from '../../../users/domain/user.entity';
 import { PrismaCommunityRepository } from '../../../community/infrastructure/persistence/prisma-community.repository';
 import { Community } from '../../../community/domain/community.entity';
+import { PrismaMaintenanceCompanyRepository } from '../../../maintenance-company/infrastructure/persistence/prisma-maintenance-company.repository';
+import { MaintenanceCompany } from '../../../maintenance-company/domain/maintenance-company.entity';
 import { PrismaReviewTemplateRepository } from '../../../review-template/infrastructure/persistence/prisma-review-template.repository';
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
 import { PrismaInspectableElementRepository } from '../../../inspectable-element/infrastructure/persistence/prisma-inspectable-element.repository';
@@ -739,15 +741,23 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     expect(communityHistory.map((s) => s.id)).toEqual([later, earlier]);
   });
 
+  // review-history-company-scope/tasks.md 2.10: updated for the six new
+  // company/performer-only methods (design.md Decision 6). The two
+  // community-narrowed performer methods
+  // (`findCompletedForPerformerInCommunities` /
+  // `findCompletedByIdForPerformerInCommunities`) are STILL present —
+  // tasks.md 2.6's documented deviation on the repository port: Phase 3
+  // deletes them in the same PR that stops calling them from
+  // `ReviewHistoryAccessService`, not this one.
   it('no repository port method returns a session or a list from an identifier alone — spec: "No unscoped session read exists"', () => {
     const methodNames = Object.getOwnPropertyNames(
       PrismaReviewSessionRepository.prototype,
     ).filter((name) => name !== 'constructor' && !name.startsWith('_'));
 
     // Every by-id/list read method's own first (or only identifying)
-    // parameter set MUST carry a performer or community scope alongside
-    // any bare identifier — asserted here by enumeration rather than by
-    // type inspection, mirroring the spec scenario's own wording.
+    // parameter set MUST carry a performer, community or company scope
+    // alongside any bare identifier — asserted here by enumeration rather
+    // than by type inspection, mirroring the spec scenario's own wording.
     const readMethods = methodNames.filter((name) => name.startsWith('find'));
     expect(readMethods.sort()).toEqual(
       [
@@ -757,8 +767,301 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
         'findCompletedInCommunities',
         'findCompletedByIdForPerformerInCommunities',
         'findCompletedByIdInCommunities',
+        'findCompletedForPerformer',
+        'findCompletedByIdForPerformer',
+        'findCompletedForCompany',
+        'findCompletedByIdForCompany',
       ].sort(),
     );
     expect(readMethods).not.toContain('findById');
+  });
+});
+
+// review-history-company-scope/design.md Decision 3/4/6/9, tasks.md
+// 2.9/2.11/2.12: the manager's company-scoped pair against real Postgres.
+describe('PrismaReviewSessionRepository — findCompletedForCompany/findCompletedByIdForCompany (integration)', () => {
+  let prisma: PrismaService;
+  let repository: PrismaReviewSessionRepository;
+  let communityRepository: PrismaCommunityRepository;
+  let templateRepository: PrismaReviewTemplateRepository;
+  let userRepository: PrismaUserRepository;
+  let maintenanceCompanyRepository: PrismaMaintenanceCompanyRepository;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+    repository = new PrismaReviewSessionRepository(prisma);
+    communityRepository = new PrismaCommunityRepository(prisma);
+    templateRepository = new PrismaReviewTemplateRepository(prisma);
+    userRepository = new PrismaUserRepository(prisma);
+    maintenanceCompanyRepository = new PrismaMaintenanceCompanyRepository(
+      prisma,
+    );
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  const uniqueName = (label: string) => `${label}-${randomUUID()}`;
+
+  const createCommunity = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await communityRepository.create(
+      new Community({
+        id,
+        name: uniqueName(label),
+        address: 'Carrer Major 1, Girona',
+        locale: 'ca',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createCompany = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await maintenanceCompanyRepository.create(
+      new MaintenanceCompany({
+        id,
+        name: uniqueName(label),
+        taxId: uniqueName('tax'),
+        contactInfo: 'contact@example.com',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createUser = async (
+    label: string,
+    maintenanceCompanyId: string | null,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    await userRepository.create(
+      new User({
+        id,
+        email: `${uniqueName(label)}@example.com`,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        maintenanceCompanyId,
+      }),
+    );
+    return id;
+  };
+
+  const createActiveTemplate = async (label: string): Promise<string> => {
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        status: 'draft',
+      },
+    });
+
+    const id = idGenerator.generate();
+    await templateRepository.create(
+      new ReviewTemplate({
+        id,
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        name: uniqueName(label),
+        version: null,
+        status: 'draft',
+        draftQuestionIds: [],
+        createdAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
+    const nextVersion =
+      Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1;
+    await prisma.reviewTemplate.update({
+      where: { id },
+      data: { status: 'active', version: nextVersion },
+    });
+    return id;
+  };
+
+  // create() takes a domain ReviewSession — performedByCompanyId is a plain
+  // constructor field (design.md Decision 1), so tests can set it directly
+  // without going through OpenReviewSessionUseCase.
+  const createSession = async (params: {
+    communityId: string;
+    templateId: string;
+    performedById: string;
+    performedByCompanyId: string | null;
+    status: 'draft' | 'completed';
+    completedAt?: Date;
+  }): Promise<string> => {
+    const id = idGenerator.generate();
+    await repository.create(
+      new ReviewSession({
+        id,
+        communityId: params.communityId,
+        templateId: params.templateId,
+        performedById: params.performedById,
+        performedByCompanyId: params.performedByCompanyId,
+        status: 'draft',
+        startedAt: new Date(),
+        completedAt: null,
+      }),
+    );
+    if (params.status === 'completed') {
+      const completed = await repository.complete(
+        id,
+        params.completedAt ?? new Date(),
+      );
+      expect(completed).toBe(true);
+      // complete() never writes performedByCompanyId — reassert directly on
+      // the row for this test fixture, mirroring the migration backfill's
+      // own direct-SQL pattern (design.md Decision 1: no write path other
+      // than create() ever sets this column).
+      await prisma.reviewSession.update({
+        where: { id },
+        data: { performedByCompanyId: params.performedByCompanyId },
+      });
+    }
+    return id;
+  };
+
+  it('findCompletedForCompany/findCompletedByIdForCompany never return another company\'s or a null-company row — spec: "Another company\'s sessions never appear" / "A session with no attributed company appears nowhere"', async () => {
+    const communityId = await createCommunity('company-scope');
+    const templateId = await createActiveTemplate('company-scope');
+    const companyA = await createCompany('company-scope-a');
+    const companyB = await createCompany('company-scope-b');
+    const performerA = await createUser('company-scope-performer-a', companyA);
+    const performerB = await createUser('company-scope-performer-b', companyB);
+    const performerNone = await createUser(
+      'company-scope-performer-none',
+      null,
+    );
+
+    const sessionA = await createSession({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: companyA,
+      status: 'completed',
+    });
+    const sessionB = await createSession({
+      communityId,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: companyB,
+      status: 'completed',
+    });
+    const sessionNoCompany = await createSession({
+      communityId,
+      templateId,
+      performedById: performerNone,
+      performedByCompanyId: null,
+      status: 'completed',
+    });
+
+    const listForA = await repository.findCompletedForCompany(companyA);
+    expect(listForA.map((s) => s.id)).toEqual([sessionA]);
+    expect(listForA.map((s) => s.id)).not.toContain(sessionB);
+    expect(listForA.map((s) => s.id)).not.toContain(sessionNoCompany);
+
+    await expect(
+      repository.findCompletedByIdForCompany(sessionB, companyA),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdForCompany(sessionNoCompany, companyA),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdForCompany(sessionA, companyA),
+    ).resolves.not.toBeNull();
+  });
+
+  it('findCompletedForCompany orders completedAt DESC, id DESC — identical direction to the other list methods', async () => {
+    const communityId = await createCommunity('company-scope-ordering');
+    const templateId = await createActiveTemplate('company-scope-ordering');
+    const companyId = await createCompany('company-scope-ordering');
+    const performedById = await createUser('company-scope-ordering', companyId);
+
+    const earlier = await createSession({
+      communityId,
+      templateId,
+      performedById,
+      performedByCompanyId: companyId,
+      status: 'completed',
+      completedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const later = await createSession({
+      communityId,
+      templateId,
+      performedById,
+      performedByCompanyId: companyId,
+      status: 'completed',
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+
+    const result = await repository.findCompletedForCompany(companyId);
+
+    expect(result.map((s) => s.id)).toEqual([later, earlier]);
+  });
+
+  // spec: "The company scope never joins to the performer's current
+  // company" (design.md Decision 9) — a performer transferred to a
+  // DIFFERENT company after the session completed must still surface under
+  // the session's OWN frozen `performedByCompanyId`, never the performer's
+  // now-current one.
+  it("matches the session's own performedByCompanyId only — never a join through performedById -> User.maintenanceCompanyId", async () => {
+    const communityId = await createCommunity('company-scope-frozen');
+    const templateId = await createActiveTemplate('company-scope-frozen');
+    const originalCompany = await createCompany('company-scope-frozen-orig');
+    const newCompany = await createCompany('company-scope-frozen-new');
+    const performerId = await createUser(
+      'company-scope-frozen',
+      originalCompany,
+    );
+
+    const sessionId = await createSession({
+      communityId,
+      templateId,
+      performedById: performerId,
+      performedByCompanyId: originalCompany,
+      status: 'completed',
+    });
+
+    // Transfer the performer to a different company AFTER completion.
+    await prisma.user.update({
+      where: { id: performerId },
+      data: { maintenanceCompanyId: newCompany },
+    });
+
+    const staysWithOriginal =
+      await repository.findCompletedForCompany(originalCompany);
+    expect(staysWithOriginal.map((s) => s.id)).toContain(sessionId);
+
+    const notWithNew = await repository.findCompletedForCompany(newCompany);
+    expect(notWithNew.map((s) => s.id)).not.toContain(sessionId);
+
+    await expect(
+      repository.findCompletedByIdForCompany(sessionId, originalCompany),
+    ).resolves.not.toBeNull();
+    await expect(
+      repository.findCompletedByIdForCompany(sessionId, newCompany),
+    ).resolves.toBeNull();
   });
 });

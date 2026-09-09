@@ -327,6 +327,64 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     return ReviewSessionMapper.toDomain(record, entries);
   }
 
+  // review-history-company-scope/design.md Decision 6/7: the technician's
+  // replacement pair — own completed sessions, unconditionally, no
+  // community conjunct at all.
+  async findCompletedForPerformer(
+    performedById: string,
+  ): Promise<ReviewSession[]> {
+    const records = await this.prisma.reviewSession.findMany({
+      where: { performedById, status: 'completed' },
+      orderBy: COMPLETED_HISTORY_ORDER_BY,
+    });
+
+    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
+  }
+
+  async findCompletedByIdForPerformer(
+    id: string,
+    performedById: string,
+  ): Promise<ReviewSession | null> {
+    const record = await this.prisma.reviewSession.findFirst({
+      where: { id, performedById, status: 'completed' },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const entries = await this.loadEntriesWithAnswers(id);
+    return ReviewSessionMapper.toDomain(record, entries);
+  }
+
+  // review-history-company-scope/design.md Decision 3/4/6/9: the manager's
+  // company-wide pair. `WHERE performedByCompanyId = :companyId AND status
+  // = 'completed'` — no other conjunct (Decision 9): never joined to the
+  // performer's CURRENT employment, never gated by any community
+  // assignment, never filtered by a performer's or community's `deletedAt`.
+  async findCompletedForCompany(companyId: string): Promise<ReviewSession[]> {
+    const records = await this.prisma.reviewSession.findMany({
+      where: { performedByCompanyId: companyId, status: 'completed' },
+      orderBy: COMPLETED_HISTORY_ORDER_BY,
+    });
+
+    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
+  }
+
+  async findCompletedByIdForCompany(
+    id: string,
+    companyId: string,
+  ): Promise<ReviewSession | null> {
+    const record = await this.prisma.reviewSession.findFirst({
+      where: { id, performedByCompanyId: companyId, status: 'completed' },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const entries = await this.loadEntriesWithAnswers(id);
+    return ReviewSessionMapper.toDomain(record, entries);
+  }
+
   private async loadEntriesWithAnswers(reviewSessionId: string) {
     const entryRecords = await this.prisma.elementReviewEntry.findMany({
       where: { reviewSessionId },
