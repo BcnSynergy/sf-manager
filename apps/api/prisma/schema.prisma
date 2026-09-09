@@ -335,6 +335,10 @@ enum AnswerValue {
 // The FKs to Community(id)/ReviewTemplate(id)/User(id, via performedById)
 // are hand-written in migration.sql, INVISIBLE to Prisma (no `@relation`
 // here, ADR-013 — mirroring every other cross-module FK in this schema).
+//
+// review-history-company-scope/design.md Decision 2: performedByCompanyId's
+// FK to MaintenanceCompany(id) is ALSO hand-written and Prisma-invisible (no
+// `@relation` here either, same ADR-013 convention).
 model ReviewSession {
   id            String              @id @db.Uuid // UUIDv7 from the app (ADR-009)
   communityId   String              @db.Uuid
@@ -345,11 +349,23 @@ model ReviewSession {
   completedAt   DateTime?
   // NO deletedAt — ADR-010's stricter rule for review records (Decision 8)
 
+  // review-history-company-scope/design.md Decision 1/2: the performer's
+  // maintenance company, SNAPSHOTTED at session creation and never updated
+  // again — no `complete()`/`discardDraft()` write path touches it. Nullable
+  // forever (not a closing `SET NOT NULL` step) — a performer with no
+  // company is a legitimate, permanent state, not a transient gap. The FK to
+  // MaintenanceCompany(id) is hand-written in migration.sql, INVISIBLE to
+  // Prisma (no `@relation` here, ADR-013).
+  performedByCompanyId String? @db.Uuid
+
   // Prisma-VISIBLE regular indexes. Postgres does not auto-index
   // FK-referencing columns; both are filtered by the by-community and
   // by-performer read paths.
   @@index([communityId])
   @@index([performedById])
+  // review-history-company-scope/design.md Decision 2: filters the
+  // manager's company-wide read path.
+  @@index([performedByCompanyId])
   // One open draft per (community, template, performer) is a HAND-WRITTEN
   // PARTIAL UNIQUE INDEX — `@@unique` has no `WHERE` clause, so Prisma
   // cannot express it and is therefore INVISIBLE to Prisma's migration

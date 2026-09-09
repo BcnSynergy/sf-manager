@@ -17,6 +17,15 @@ export interface ReviewSessionProps {
   status: ReviewSessionStatus;
   startedAt: Date;
   completedAt: Date | null;
+  // review-history-company-scope/design.md Decision 1: the performer's
+  // maintenance company, SNAPSHOTTED at creation and never updated again —
+  // no setter exists on this class, so immutability after construction is
+  // structural, not test-enforced. `null` means the performer had no
+  // company at creation time, a legitimate permanent state (Decision 1).
+  // Optional (defaults to `null`), mirroring `entries?` above, so every
+  // pre-existing call site across this module's other layers (write-path
+  // siblings untouched by this slice) keeps compiling unchanged.
+  performedByCompanyId?: string | null;
   // Optional: the repository (Phase 4/5) is the source of truth for
   // persisted entries; this in-memory list lets the aggregate itself apply
   // the `@@unique([reviewSessionId, inspectableElementId])` upsert
@@ -33,6 +42,9 @@ export class ReviewSession {
   readonly status: ReviewSessionStatus;
   readonly startedAt: Date;
   readonly completedAt: Date | null;
+  // review-history-company-scope/design.md Decision 1: readonly, no setter
+  // — this class exposes no method that ever changes it after construction.
+  readonly performedByCompanyId: string | null;
   private readonly entriesByElementId: Map<string, ElementReviewEntry>;
 
   constructor(props: ReviewSessionProps) {
@@ -43,6 +55,7 @@ export class ReviewSession {
     this.status = props.status;
     this.startedAt = props.startedAt;
     this.completedAt = props.completedAt;
+    this.performedByCompanyId = props.performedByCompanyId ?? null;
     this.entriesByElementId = new Map(
       (props.entries ?? []).map((entry) => [entry.inspectableElementId, entry]),
     );

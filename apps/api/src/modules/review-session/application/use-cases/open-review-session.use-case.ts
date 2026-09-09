@@ -23,6 +23,10 @@ import {
   REVIEW_SESSION_REPOSITORY,
   type ReviewSessionRepository,
 } from '../ports/review-session.repository.port';
+import {
+  USER_DIRECTORY,
+  type UserDirectory,
+} from '../ports/user-directory.port';
 
 export interface OpenReviewSessionInput {
   communityId: string;
@@ -66,6 +70,7 @@ export class OpenReviewSessionUseCase {
     private readonly templateRepository: ReviewTemplateRepository,
     @Inject(COMMUNITY_SCOPE_CHECKER)
     private readonly communityScopeChecker: CommunityScopeChecker,
+    @Inject(USER_DIRECTORY) private readonly userDirectory: UserDirectory,
     @Inject(ID_GENERATOR) private readonly idGenerator: IdGenerator,
   ) {}
 
@@ -99,6 +104,14 @@ export class OpenReviewSessionUseCase {
       throw new ActiveTemplateNotFoundError();
     }
 
+    // design.md Decision 1: snapshotted ONCE, here, at creation — no other
+    // write path ever calls findMaintenanceCompanyId or sets this field.
+    // Role-agnostic: the SAME rule applies whether the performer is a
+    // technician or a representative (spec.md "A representative-opened
+    // session is attributed the same way").
+    const performedByCompanyId =
+      await this.userDirectory.findMaintenanceCompanyId(input.performedById);
+
     const session = new ReviewSession({
       id: this.idGenerator.generate(),
       communityId: input.communityId,
@@ -107,6 +120,7 @@ export class OpenReviewSessionUseCase {
       status: 'draft',
       startedAt: new Date(),
       completedAt: null,
+      performedByCompanyId,
     });
 
     // P2002 on the partial unique open-draft index -> the adapter throws
