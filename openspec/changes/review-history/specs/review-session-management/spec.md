@@ -45,7 +45,7 @@ implements.)
 #### Scenario: This capability's own surface adds no cross-session query
 - GIVEN the routes, use cases and repository reads belonging to the field write flow after this change
 - WHEN they are inspected
-- THEN each MUST still read at most the caller's own session, and every completed-session read MUST live in the `review-history` capability instead
+- THEN each MUST still read at most the caller's own session — the shipped performer-scoped, status-agnostic by-id read stays exactly as it is — and every read of a session the caller did not perform, and every cross-session list of completed sessions, MUST live in the `review-history` capability instead
 
 #### Scenario: No scheduling or due-date logic exists
 - GIVEN the shipped code after this change

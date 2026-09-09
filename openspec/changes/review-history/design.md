@@ -465,7 +465,7 @@ forecast.
 
 ### Carried forward as explicit follow-ups (Phase 6 / task 6.6)
 
-The two items below remain open after this change ships and are recorded
+The three items below remain open after this change ships and are recorded
 here, not silently dropped, per `sdd-tasks` task 6.6. Neither is authored
 in this change — both need a separate, user-confirmed step, per the
 `review-session` precedent (its ADR-011 addendum shipped as its own
