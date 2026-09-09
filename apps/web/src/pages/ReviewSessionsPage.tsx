@@ -65,6 +65,9 @@ export function ReviewSessionsPage() {
       <Link to="/review-sessions/new" data-testid="review-sessions-start-link">
         {t('reviewSession.entry.startLink')}
       </Link>
+      <Link to="/review-history" data-testid="review-history-entry-link">
+        {t('reviewSession.entry.historyLink')}
+      </Link>
       {sessions.length === 0 ? (
         <p data-testid="review-sessions-empty">{t('reviewSession.entry.empty')}</p>
       ) : (
