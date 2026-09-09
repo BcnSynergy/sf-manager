@@ -84,6 +84,15 @@ export interface ReviewSessionRepository {
 
   // `GET /review-history` for a MAINTENANCE_TECHNICIAN — own completed
   // sessions, narrowed to their currently active community scope.
+  //
+  // review-history-company-scope/tasks.md 2.6 DEVIATION (documented, not
+  // silent): design.md Decision 6 calls for this method to be DELETED in
+  // this same PR, replaced by `findCompletedForPerformer` below. It is kept
+  // here instead because `ReviewHistoryAccessService` (Phase 3's file,
+  // explicitly out of scope for this PR) is still the only caller and
+  // still calls it — deleting it now would break that service's build
+  // before Phase 3 lands. Phase 3 removes this method (and its Prisma/
+  // in-memory implementations) in the SAME PR that stops calling it.
   findCompletedForPerformerInCommunities(
     performedById: string,
     communityIds: readonly string[],
@@ -100,6 +109,10 @@ export interface ReviewSessionRepository {
   // the technician's performer filter is a NARROWING of the community
   // filter (design.md Decision 3), so this is its own method rather than a
   // caller-side check layered on `findCompletedByIdInCommunities`.
+  //
+  // review-history-company-scope/tasks.md 2.6 DEVIATION — same as
+  // `findCompletedForPerformerInCommunities` above: kept, not deleted, in
+  // this PR; removed together with it in Phase 3.
   findCompletedByIdForPerformerInCommunities(
     id: string,
     performedById: string,
@@ -110,6 +123,30 @@ export interface ReviewSessionRepository {
   findCompletedByIdInCommunities(
     id: string,
     communityIds: readonly string[],
+  ): Promise<ReviewSession | null>;
+
+  // review-history-company-scope/design.md Decision 6/7: the technician's
+  // REPLACEMENT pair — own completed sessions, unconditionally, no
+  // community narrowing at all. Not yet called by any production code in
+  // this PR (Phase 3 wires `ReviewHistoryAccessService`'s technician branch
+  // onto these); added here so the port, both adapters and their tests
+  // exist ahead of that rewiring, per tasks.md 2.6/2.7/2.8.
+  findCompletedForPerformer(performedById: string): Promise<ReviewSession[]>;
+
+  findCompletedByIdForPerformer(
+    id: string,
+    performedById: string,
+  ): Promise<ReviewSession | null>;
+
+  // review-history-company-scope/design.md Decision 3/4/6/9: the manager's
+  // company-wide pair. `WHERE performedByCompanyId = :companyId AND status
+  // = 'completed'` — full stop, no other conjunct (Decision 9). Same
+  // `COMPLETED_HISTORY_ORDER_BY` direction as the other list methods.
+  findCompletedForCompany(companyId: string): Promise<ReviewSession[]>;
+
+  findCompletedByIdForCompany(
+    id: string,
+    companyId: string,
   ): Promise<ReviewSession | null>;
 }
 

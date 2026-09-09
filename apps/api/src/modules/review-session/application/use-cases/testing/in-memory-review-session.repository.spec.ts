@@ -247,3 +247,154 @@ describe('InMemoryReviewSessionRepository — findCompleted…InCommunities', ()
     ).resolves.toBeNull();
   });
 });
+
+// review-history-company-scope/design.md Decision 6/7 (performer pair) and
+// Decision 3/4/6/9 (company pair), tasks.md 2.8: same fixtures as the
+// findCompleted…InCommunities describe block above, mirroring the Prisma
+// adapter's own coverage of the four NEW methods.
+describe('InMemoryReviewSessionRepository — findCompletedForPerformer/findCompletedForCompany (new methods)', () => {
+  function completedSession(
+    overrides: Partial<{
+      id: string;
+      communityId: string;
+      performedById: string;
+      performedByCompanyId: string | null;
+      completedAt: Date;
+    }> = {},
+  ): ReviewSession {
+    return new ReviewSession({
+      id: overrides.id ?? 'session-1',
+      communityId: overrides.communityId ?? 'community-1',
+      templateId: 'template-1',
+      performedById: overrides.performedById ?? 'user-1',
+      performedByCompanyId:
+        overrides.performedByCompanyId === undefined
+          ? 'company-1'
+          : overrides.performedByCompanyId,
+      status: 'completed',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt:
+        overrides.completedAt ?? new Date('2026-01-02T00:00:00.000Z'),
+    });
+  }
+
+  it("findCompletedForPerformer returns only that performer's completed sessions, with no community narrowing at all", async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    const own = completedSession({
+      id: 'session-own',
+      performedById: 'user-1',
+    });
+    const other = completedSession({
+      id: 'session-other',
+      performedById: 'user-2',
+    });
+    const draft = new ReviewSession({
+      id: 'session-draft',
+      communityId: 'community-2',
+      templateId: 'template-1',
+      performedById: 'user-1',
+      status: 'draft',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt: null,
+    });
+    repository.seed(own);
+    repository.seed(other);
+    repository.seed(draft);
+
+    // A session in a DIFFERENT community from the same performer still
+    // surfaces — no community conjunct on this method at all (the
+    // reversal's point).
+    const differentCommunity = completedSession({
+      id: 'session-different-community',
+      performedById: 'user-1',
+      communityId: 'community-2',
+    });
+    repository.seed(differentCommunity);
+
+    const result = await repository.findCompletedForPerformer('user-1');
+
+    expect(result.map((s) => s.id).sort()).toEqual(
+      ['session-own', 'session-different-community'].sort(),
+    );
+  });
+
+  it('findCompletedByIdForPerformer rejects a foreign performer and a draft', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    repository.seed(completedSession());
+
+    await expect(
+      repository.findCompletedByIdForPerformer('session-1', 'user-2'),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdForPerformer('session-1', 'user-1'),
+    ).resolves.not.toBeNull();
+  });
+
+  it("findCompletedForCompany never returns another company's or a null-company session", async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    const ownCompany = completedSession({
+      id: 'session-company-a',
+      performedByCompanyId: 'company-a',
+    });
+    const otherCompany = completedSession({
+      id: 'session-company-b',
+      performedByCompanyId: 'company-b',
+    });
+    const noCompany = completedSession({
+      id: 'session-no-company',
+      performedByCompanyId: null,
+    });
+    repository.seed(ownCompany);
+    repository.seed(otherCompany);
+    repository.seed(noCompany);
+
+    const result = await repository.findCompletedForCompany('company-a');
+
+    expect(result.map((s) => s.id)).toEqual(['session-company-a']);
+  });
+
+  it('findCompletedByIdForCompany rejects another company and a null-company session', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    repository.seed(
+      completedSession({ id: 'session-1', performedByCompanyId: 'company-a' }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-null',
+        performedByCompanyId: null,
+      }),
+    );
+
+    await expect(
+      repository.findCompletedByIdForCompany('session-1', 'company-b'),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdForCompany('session-null', 'company-a'),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findCompletedByIdForCompany('session-1', 'company-a'),
+    ).resolves.not.toBeNull();
+  });
+
+  it('both new list methods order completedAt DESC, id DESC — identical direction to the shipped list methods', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    const earlier = completedSession({
+      id: 'session-a',
+      performedByCompanyId: 'company-1',
+      completedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const later = completedSession({
+      id: 'session-b',
+      performedByCompanyId: 'company-1',
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    repository.seed(earlier);
+    repository.seed(later);
+
+    const forPerformer = await repository.findCompletedForPerformer('user-1');
+    const forCompany = await repository.findCompletedForCompany('company-1');
+
+    expect(forPerformer.map((s) => s.id)).toEqual(['session-b', 'session-a']);
+    expect(forCompany.map((s) => s.id)).toEqual(['session-b', 'session-a']);
+  });
+});
