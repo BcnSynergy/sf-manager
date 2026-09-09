@@ -240,11 +240,15 @@ single-`LoadState` table (`ReviewSessionsPage.tsx` renders literally one column
 plus a link).
 
 - `communityName` is resolved by calling the **existing**
-  `CommunityRepository.findById` **once per community in the actor's scope** —
-  not per row. Cost is bounded by the scope size, not the result size, which is
-  the same accepted cardinality `GetReviewScopeUseCase` already runs at
-  (Decision 5 of `review-session`). No new port method, no new module import
-  (`ReviewSessionModule` already depends on `CommunityModule`).
+  `CommunityRepository.findById` **once per distinct community in the
+  result** — not per row, and, as shipped, not per community in the full
+  actor scope either (a strictly tighter bound than originally sketched
+  here, since the result is always a subset of the scope; corrected at
+  archive time per `sdd-verify`'s S-6, `list-review-history.use-case.ts:18-24`
+  and its "resolves communityName once per distinct community, not per row"
+  test). Cost is bounded by the result size, not the scope size. No new port
+  method, no new module import (`ReviewSessionModule` already depends on
+  `CommunityModule`).
 - **No performer name.** Confirmed: that needs a `users` read no port supports,
   and the proposal fences it out. `performedById` ships in the payload (it is
   already on the aggregate and on the shipped detail DTO, so it costs nothing and
