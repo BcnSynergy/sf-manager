@@ -61,13 +61,13 @@ Chain strategy: stacked-to-main
 - [x] 4.10 E2E: scope guards — `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` still `[]`, `SYSTEM_ADMIN` 403 on both routes; no `ManagerCapability`; no page/cursor/limit/offset/date-range/sort/search parameter accepted; no new migration; no mutating operation among the added routes/use cases/port methods.
 
 ## Phase 5: Web — List + Detail (PR 3)
-- [ ] 5.1 `apps/web/src/api/review-history.ts` — `apiFetch` client + response types mirroring `review-session.ts`.
-- [ ] 5.2 RED/GREEN `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test) — single `LoadState`, flat table (community, completed at, open link), zero client-side filtering, localized empty state, distinct loading/error states.
-- [ ] 5.3 RED/GREEN `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) — fork, not reuse, of `ReviewSessionDetailPage.tsx`; renders entries/answers/observations + snapshotted question wording; neutral localized label when `elementCode` is `null`; test asserts **no** mutation control renders (no edit/reopen/answer/mark-unreviewed/code-entry/complete/discard/sign/export/delete).
-- [ ] 5.4 `apps/web/src/App.tsx` — `/review-history` and `/review-history/:sessionId` routes under `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN','COMMUNITY_REPRESENTATIVE']}`.
-- [ ] 5.5 `apps/web/src/pages/ReviewSessionsPage.tsx` — add a `Link` entry point to `/review-history`.
-- [ ] 5.6 Unit: another role sees explicit "not authorized"; unauthenticated redirected to `/login`; unreachable-session message identical across nonexistent/foreign-performer/foreign-community/draft, selected only via `ApiError.status`/`.code`.
-- [ ] 5.7 `apps/web/src/i18n/locales/{en,es,ca}.json` — real translations for all new keys (list, detail, empty state, unreachable message, neutral element label); extend `locales.test.ts` parity coverage.
+- [x] 5.1 `apps/web/src/api/review-history.ts` — `apiFetch` client + response types mirroring `review-session.ts`.
+- [x] 5.2 RED/GREEN `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test) — single `LoadState`, flat table (community, completed at, open link), zero client-side filtering, localized empty state, distinct loading/error states.
+- [x] 5.3 RED/GREEN `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) — fork, not reuse, of `ReviewSessionDetailPage.tsx`; renders entries/answers/observations + snapshotted question wording; neutral localized label when `elementCode` is `null`; test asserts **no** mutation control renders (no edit/reopen/answer/mark-unreviewed/code-entry/complete/discard/sign/export/delete).
+- [x] 5.4 `apps/web/src/App.tsx` — `/review-history` and `/review-history/:sessionId` routes under `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN','COMMUNITY_REPRESENTATIVE']}`.
+- [x] 5.5 `apps/web/src/pages/ReviewSessionsPage.tsx` — add a `Link` entry point to `/review-history`.
+- [x] 5.6 Unit: another role sees explicit "not authorized"; unauthenticated redirected to `/login`; unreachable-session message identical across nonexistent/foreign-performer/foreign-community/draft, selected only via `ApiError.status`/`.code`. (Role-gating half covered by the existing generic `ProtectedRoute.test.tsx` — repo convention is no per-page duplication; uniform-message half added to `error-messages.test.ts`.)
+- [x] 5.7 `apps/web/src/i18n/locales/{en,es,ca}.json` — real translations for all new keys (list, detail, empty state, unreachable message, neutral element label); extend `locales.test.ts` parity coverage.
 
 ## Phase 6: Spec Guards, Docs, Verification (PR 4)
 - [ ] 6.1 `openspec/specs/review-session-management/spec.md` — apply the delta: narrow "Adjacent Review Capabilities Are Not Introduced" per-performer/per-community rows to deferred-only (company/global visibility, per-element filtering); keep FR-009/FR-010 rows intact.
