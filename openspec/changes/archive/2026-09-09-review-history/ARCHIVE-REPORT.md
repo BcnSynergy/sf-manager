@@ -218,9 +218,11 @@ additionally be polished.
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
-- [x] All 10 files present in archive path, byte-verified against the source
-      change folder's content (`diff -q`, all identical) before the source
-      folder was removed
+- [x] All 10 files present in archive path; the 8 carried over from the
+      source change folder byte-verified identical (`diff -q`) before the
+      source folder was removed, except `design.md`'s deliberate S-6
+      correction; `verify-report.md` and `ARCHIVE-REPORT.md` are new to
+      this archive
 - [x] No unchecked implementation tasks (40/40 marked complete)
 - [x] Main specs merged into `openspec/specs/`: 2 new capability specs
       created (`review-history`, `review-history-ui`), 3 existing specs
