@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { readReviewHistory, type ReviewHistoryDetail } from '../api/review-history';
+import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -118,7 +119,7 @@ export function ReviewHistoryDetailPage() {
                     {entry.answers.map((answer) => (
                       <li key={answer.questionId}>
                         {questionTextById.get(answer.questionId) ?? answer.questionId}:{' '}
-                        {String(answer.answer)}
+                        {t(mapAnswerValueToLabelKey(answer.answer))}
                       </li>
                     ))}
                   </ul>

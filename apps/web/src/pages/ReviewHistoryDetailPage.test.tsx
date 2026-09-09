@@ -26,7 +26,7 @@ const detail = {
       elementCode: 'AB3456789C',
       reviewed: true,
       observations: null,
-      answers: [{ questionId: 'q1', answer: true }],
+      answers: [{ questionId: 'q1', answer: 'YES' as const }],
       recordedAt: '2026-09-01T00:30:00.000Z',
     },
     {
@@ -88,6 +88,8 @@ describe('ReviewHistoryDetailPage', () => {
 
     const entry = await screen.findByTestId('review-history-detail-entry-e1');
     expect(entry).toHaveTextContent('Is the extinguisher charged?');
+    expect(entry).toHaveTextContent('Yes');
+    expect(entry).not.toHaveTextContent('YES');
   });
 
   it('renders the observations for an unreviewed entry', async () => {
