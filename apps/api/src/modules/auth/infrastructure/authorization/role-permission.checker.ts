@@ -40,12 +40,15 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to
   // fill these in when the role becomes operational.
-  //
-  // authorization/spec.md "Maintenance-Role Permissions Stay Inert": holding
-  // a maintenanceCompanyId MUST NOT grant MAINTENANCE_COMPANY_MANAGER any
-  // API permission. Stays [] here, unchanged by this slice.
   MANAGER: [],
-  MAINTENANCE_COMPANY_MANAGER: [],
+  // review-history-company-scope/design.md Decision 11 point 3;
+  // authorization/spec.md "The Maintenance Company Manager Becomes
+  // Operational" / "The Company Association Itself Confers No Permission":
+  // the role's first non-empty entry. Read-only — no create/perform/
+  // complete/discard, and no other permission family. Holding this grants
+  // NOTHING on its own: which sessions it reaches is decided by
+  // CompanyScopeChecker (application/authorization), never by this table.
+  MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read'],
   // review-session/authorization spec "Technician and Representative Become
   // Operational" (design.md Decision 10): the first time either role maps
   // to anything other than []. Both get the IDENTICAL reviewSession:* set —
