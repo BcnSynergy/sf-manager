@@ -9,6 +9,8 @@ import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import { InMemoryReviewSessionRepository } from './testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from './testing/fake-community-scope.checker';
+import { FakeCompanyScopeChecker } from './testing/fake-company-scope.checker';
+import { InMemoryUserDirectory } from './testing/in-memory-user-directory';
 import { ReviewHistoryAccessService } from '../services/review-history-access.service';
 import { ReadReviewHistoryUseCase } from './read-review-history.use-case';
 
@@ -58,38 +60,45 @@ function buildElement(
 describe('ReadReviewHistoryUseCase', () => {
   let sessionRepository: InMemoryReviewSessionRepository;
   let scopeChecker: FakeCommunityScopeChecker;
+  let companyScopeChecker: FakeCompanyScopeChecker;
   let accessService: ReviewHistoryAccessService;
   let questionRepository: InMemoryChecklistQuestionRepository;
   let templateRepository: InMemoryReviewTemplateRepository;
   let elementRepository: InMemoryInspectableElementRepository;
+  let userDirectory: InMemoryUserDirectory;
   let useCase: ReadReviewHistoryUseCase;
 
   beforeEach(() => {
     sessionRepository = new InMemoryReviewSessionRepository();
     scopeChecker = new FakeCommunityScopeChecker();
+    companyScopeChecker = new FakeCompanyScopeChecker();
     accessService = new ReviewHistoryAccessService(
       sessionRepository,
       scopeChecker,
+      companyScopeChecker,
     );
     questionRepository = new InMemoryChecklistQuestionRepository();
     templateRepository = new InMemoryReviewTemplateRepository(
       questionRepository,
     );
     elementRepository = new InMemoryInspectableElementRepository();
+    userDirectory = new InMemoryUserDirectory();
     useCase = new ReadReviewHistoryUseCase(
       accessService,
       templateRepository,
       elementRepository,
+      userDirectory,
     );
   });
 
-  it('a performer reads back their own completed session with entries, questions and element codes', async () => {
+  it('a performer reads back their own completed session with entries, questions, element codes and their own email', async () => {
     const template = buildTemplate();
     templateRepository.seed(template, [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
     const element = buildElement();
     elementRepository.seed(element);
+    userDirectory.seedEmail('user-1', 'user-1@example.com');
     const entry = ElementReviewEntry.reviewed({
       id: 'entry-1',
       reviewSessionId: 'session-1',
@@ -123,6 +132,7 @@ describe('ReadReviewHistoryUseCase', () => {
     });
 
     expect(result.id).toBe('session-1');
+    expect(result.performedByEmail).toBe('user-1@example.com');
     expect(result.questions).toEqual([
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
     ]);
@@ -132,6 +142,51 @@ describe('ReadReviewHistoryUseCase', () => {
       elementCode: element.code,
       reviewed: true,
     });
+  });
+
+  // tasks.md 3.15: unresolvable performedByEmail renders as '' at the
+  // use-case boundary, not an error.
+  it('an unresolvable performer renders performedByEmail as an empty string', async () => {
+    const template = buildTemplate();
+    templateRepository.seed(template, [
+      { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+    ]);
+    const element = buildElement();
+    elementRepository.seed(element);
+    // Deliberately no userDirectory.seedEmail() call.
+    const entry = ElementReviewEntry.reviewed({
+      id: 'entry-1',
+      reviewSessionId: 'session-1',
+      inspectableElementId: element.id,
+      answers: [
+        new QuestionAnswer({
+          id: 'answer-1',
+          elementReviewEntryId: 'entry-1',
+          questionId: 'question-1',
+          answer: 'YES',
+        }),
+      ],
+      recordedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    const session = new ReviewSession({
+      id: 'session-1',
+      communityId: 'community-1',
+      templateId: template.id,
+      performedById: 'user-1',
+      status: 'completed',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+      entries: [entry],
+    });
+    sessionRepository.seed(session);
+    scopeChecker.assign('user-1', 'community-1');
+
+    const result = await useCase.execute('session-1', {
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(result.performedByEmail).toBe('');
   });
 
   it('a decommissioned element yields elementCode: null rather than dropping the entry', async () => {
