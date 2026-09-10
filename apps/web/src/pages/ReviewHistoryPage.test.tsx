@@ -15,6 +15,7 @@ const row = {
   communityId: 'c1',
   communityName: 'Maple Court',
   performedById: 'u1',
+  performedByEmail: 'tech@sf-manager.example',
   startedAt: '2026-09-01T00:00:00.000Z',
   completedAt: '2026-09-01T01:00:00.000Z',
 };
@@ -99,5 +100,53 @@ describe('ReviewHistoryPage', () => {
 
     const cell = await screen.findByTestId(`review-history-community-${row.id}`);
     expect(cell.textContent).not.toBe('');
+  });
+
+  // review-history-company-scope spec "A multi-performer caller sees who
+  // performed each row" / design.md Decision 8: the Performer column
+  // renders for every role, no role-conditional variant.
+  it('shows the performer email for each row', async () => {
+    mockedListReviewHistory.mockResolvedValue([row]);
+
+    renderPage();
+
+    expect(await screen.findByTestId(`review-history-performer-${row.id}`)).toHaveTextContent(
+      'tech@sf-manager.example',
+    );
+  });
+
+  it('shows a neutral placeholder when performedByEmail is empty (unresolvable performer)', async () => {
+    mockedListReviewHistory.mockResolvedValue([{ ...row, performedByEmail: '' }]);
+
+    renderPage();
+
+    const cell = await screen.findByTestId(`review-history-performer-${row.id}`);
+    expect(cell.textContent).not.toBe('');
+  });
+
+  // spec "A manager's company-wide list is rendered unfiltered": a
+  // multi-technician, multi-community result renders every row with no
+  // client-side narrowing by community, performer or date.
+  it("renders a manager's company-wide, multi-technician result unfiltered", async () => {
+    const rowTwo = {
+      ...row,
+      id: 'session-2',
+      communityId: 'c2',
+      communityName: 'Oak Court',
+      performedById: 'u2',
+      performedByEmail: 'other-tech@sf-manager.example',
+    };
+    mockedListReviewHistory.mockResolvedValue([row, rowTwo]);
+
+    renderPage();
+
+    const rows = await screen.findAllByTestId(/^review-history-row-/);
+    expect(rows).toHaveLength(2);
+    expect(await screen.findByTestId(`review-history-performer-${row.id}`)).toHaveTextContent(
+      'tech@sf-manager.example',
+    );
+    expect(await screen.findByTestId(`review-history-performer-${rowTwo.id}`)).toHaveTextContent(
+      'other-tech@sf-manager.example',
+    );
   });
 });

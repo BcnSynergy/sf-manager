@@ -441,14 +441,18 @@
       "error": "Alguna cosa ha fallat en carregar l'historial de revisions.",
       "empty": "No s'han trobat revisions completades.",
       "columnCommunity": "Comunitat",
+      "columnPerformer": "Realitzada per",
       "columnCompletedAt": "Completada el",
       "communityUnknown": "Comunitat desconeguda",
+      "performerUnknown": "Realitzador desconegut",
       "openLink": "Veure"
     },
     "detail": {
       "title": "Detall de l'historial de revisió",
       "loading": "Carregant historial de revisió...",
       "completedAtLabel": "Completada el: {{completedAt}}",
+      "performerLabel": "Realitzada per: {{performer}}",
+      "performerUnknown": "Realitzador desconegut",
       "coverageLabel": "{{reviewed}} revisats, {{unreviewed}} sense revisar",
       "entriesTitle": "Elements revisats",
       "entriesEmpty": "No s'ha registrat cap element.",
@@ -461,7 +465,8 @@
     "checking": "Comprovant...",
     "ok": "Tot funciona correctament",
     "error": "Alguna cosa no funciona",
-    "reviewSessionsLink": "Anar a sessions de revisió"
+    "reviewSessionsLink": "Anar a sessions de revisió",
+    "reviewHistoryLink": "Anar a l'historial de revisions"
   },
   "auth": {
     "loginTitle": "Inicia sessió",

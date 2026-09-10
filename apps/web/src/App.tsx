@@ -330,16 +330,24 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* review-history-ui spec + design.md: same two non-admin roles as
-              the review-sessions flow above, read-only. Static
-              /review-history ranks above the dynamic /review-history/:sessionId
-              segment below regardless of declaration order (same reasoning as
-              every other list/detail pair in this file). */}
+          {/* review-history-ui spec + design.md: read-only, reachable by the
+              two performing roles plus (review-history-company-scope,
+              design.md Q5/Decision 10) MAINTENANCE_COMPANY_MANAGER — all
+              three reach the identical surface, no reduced or manager-
+              specific variant. The write surface below (/review-sessions*)
+              is deliberately NOT widened. Static /review-history ranks
+              above the dynamic /review-history/:sessionId segment below
+              regardless of declaration order (same reasoning as every
+              other list/detail pair in this file). */}
           <Route
             path="/review-history"
             element={
               <ProtectedRoute
-                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+                allowedRoles={[
+                  'MAINTENANCE_TECHNICIAN',
+                  'COMMUNITY_REPRESENTATIVE',
+                  'MAINTENANCE_COMPANY_MANAGER',
+                ]}
               >
                 <ReviewHistoryPage />
               </ProtectedRoute>
@@ -349,7 +357,11 @@ function App() {
             path="/review-history/:sessionId"
             element={
               <ProtectedRoute
-                allowedRoles={['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']}
+                allowedRoles={[
+                  'MAINTENANCE_TECHNICIAN',
+                  'COMMUNITY_REPRESENTATIVE',
+                  'MAINTENANCE_COMPANY_MANAGER',
+                ]}
               >
                 <ReviewHistoryDetailPage />
               </ProtectedRoute>

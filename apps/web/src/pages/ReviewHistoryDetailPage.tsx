@@ -29,6 +29,10 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // with the message key resolved via the shared error-messages mapper
 // (never branching on the source page's `isDraft`/notFound distinction,
 // which does not apply to a completed-only record).
+//
+// review-history-company-scope design.md Decision 8: `performedByEmail` is
+// rendered for every role, no manager-specific variant — same placeholder
+// treatment as an unresolvable community name elsewhere in this surface.
 export function ReviewHistoryDetailPage() {
   const { t } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -90,6 +94,11 @@ export function ReviewHistoryDetailPage() {
       <h1>{t('reviewHistory.detail.title')}</h1>
       <p data-testid="review-history-detail-completed-at">
         {t('reviewHistory.detail.completedAtLabel', { completedAt: detail.completedAt })}
+      </p>
+      <p data-testid="review-history-detail-performer">
+        {t('reviewHistory.detail.performerLabel', {
+          performer: detail.performedByEmail || t('reviewHistory.detail.performerUnknown'),
+        })}
       </p>
       <p data-testid="review-history-detail-coverage">
         {t('reviewHistory.detail.coverageLabel', {

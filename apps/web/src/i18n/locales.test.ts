@@ -469,6 +469,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewHistory.list.columnCompletedAt',
     'reviewHistory.list.communityUnknown',
     'reviewHistory.list.openLink',
+    // performer column (review-history-company-scope, Phase 5)
+    'reviewHistory.list.columnPerformer',
+    'reviewHistory.list.performerUnknown',
     // detail (ReviewHistoryDetailPage)
     'reviewHistory.detail.title',
     'reviewHistory.detail.loading',
@@ -478,6 +481,11 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewHistory.detail.entriesEmpty',
     'reviewHistory.detail.elementCodeUnknown',
     'reviewHistory.detail.entryUnreviewedLabel',
+    // performer line (review-history-company-scope, Phase 5)
+    'reviewHistory.detail.performerLabel',
+    'reviewHistory.detail.performerUnknown',
+    // manager entry link on HealthPage (review-history-company-scope, Phase 5)
+    'health.reviewHistoryLink',
   ];
 
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
