@@ -255,22 +255,11 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
   // yields Prisma's `{ in: [] }`, which already compiles to a false
   // predicate — no explicit empty-array guard needed for the fail-closed
   // behaviour.
-  async findCompletedForPerformerInCommunities(
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession[]> {
-    const records = await this.prisma.reviewSession.findMany({
-      where: {
-        performedById,
-        status: 'completed',
-        communityId: { in: [...communityIds] },
-      },
-      orderBy: COMPLETED_HISTORY_ORDER_BY,
-    });
-
-    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
-  }
-
+  //
+  // review-history-company-scope/tasks.md 3.6: `findCompletedForPerformerInCommunities`/
+  // `findCompletedByIdForPerformerInCommunities` were deleted here —
+  // `findCompletedForPerformer`/`findCompletedByIdForPerformer` below are
+  // their replacement.
   async findCompletedInCommunities(
     communityIds: readonly string[],
   ): Promise<ReviewSession[]> {
@@ -285,29 +274,8 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     return records.map((record) => ReviewSessionMapper.toDomain(record, []));
   }
 
-  // Detail reads (PR 2's real callers) DO need entries hydrated, so these
-  // two mirror findByIdForPerformer's shape rather than the list methods'.
-  async findCompletedByIdForPerformerInCommunities(
-    id: string,
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession | null> {
-    const record = await this.prisma.reviewSession.findFirst({
-      where: {
-        id,
-        performedById,
-        status: 'completed',
-        communityId: { in: [...communityIds] },
-      },
-    });
-    if (!record) {
-      return null;
-    }
-
-    const entries = await this.loadEntriesWithAnswers(id);
-    return ReviewSessionMapper.toDomain(record, entries);
-  }
-
+  // Detail reads (PR 2's real callers) DO need entries hydrated, so this
+  // mirrors findByIdForPerformer's shape rather than the list methods'.
   async findCompletedByIdInCommunities(
     id: string,
     communityIds: readonly string[],

@@ -134,23 +134,6 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     return Promise.resolve(true);
   }
 
-  findCompletedForPerformerInCommunities(
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession[]> {
-    const communityIdSet = new Set(communityIds);
-    return Promise.resolve(
-      [...this.sessionsById.values()]
-        .filter(
-          (session) =>
-            session.status === 'completed' &&
-            session.performedById === performedById &&
-            communityIdSet.has(session.communityId),
-        )
-        .sort(orderByCompletedHistory),
-    );
-  }
-
   findCompletedInCommunities(
     communityIds: readonly string[],
   ): Promise<ReviewSession[]> {
@@ -164,23 +147,6 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
         )
         .sort(orderByCompletedHistory),
     );
-  }
-
-  findCompletedByIdForPerformerInCommunities(
-    id: string,
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession | null> {
-    const session = this.sessionsById.get(id);
-    if (
-      !session ||
-      session.status !== 'completed' ||
-      session.performedById !== performedById ||
-      !communityIds.includes(session.communityId)
-    ) {
-      return Promise.resolve(null);
-    }
-    return Promise.resolve(session);
   }
 
   findCompletedByIdInCommunities(

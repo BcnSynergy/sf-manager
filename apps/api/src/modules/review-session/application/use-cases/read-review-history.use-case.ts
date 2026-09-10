@@ -11,6 +11,10 @@ import {
   type TemplateQuestionEntry,
 } from '../../../review-template/application/ports/review-template.repository.port';
 import { ActiveTemplateNotFoundError } from '../../domain/errors/active-template-not-found.error';
+import {
+  USER_DIRECTORY,
+  type UserDirectory,
+} from '../ports/user-directory.port';
 import type { Actor } from '../services/session-access.service';
 import { ReviewHistoryAccessService } from '../services/review-history-access.service';
 
@@ -28,6 +32,7 @@ export interface ReadReviewHistoryResult {
   communityId: string;
   templateId: string;
   performedById: string;
+  performedByEmail: string;
   status: ReviewSessionStatus;
   startedAt: Date;
   completedAt: Date | null;
@@ -52,6 +57,8 @@ export class ReadReviewHistoryUseCase {
     private readonly templateRepository: ReviewTemplateRepository,
     @Inject(INSPECTABLE_ELEMENT_REPOSITORY)
     private readonly elementRepository: InspectableElementRepository,
+    @Inject(USER_DIRECTORY)
+    private readonly userDirectory: UserDirectory,
   ) {}
 
   async execute(
@@ -86,6 +93,14 @@ export class ReadReviewHistoryUseCase {
       activeElements.map((element) => [element.id, element.code]),
     );
 
+    // design.md Decision 8: single-performer resolution via the same
+    // batched port method the list use case uses — one call over one id.
+    const emailByPerformerId = await this.userDirectory.findEmailsByIds([
+      session.performedById,
+    ]);
+    const performedByEmail =
+      emailByPerformerId.get(session.performedById) ?? '';
+
     const entries: ReadReviewHistoryEntry[] = session.entries.map((entry) => ({
       inspectableElementId: entry.inspectableElementId,
       elementCode: codeByElementId.get(entry.inspectableElementId) ?? null,
@@ -110,6 +125,7 @@ export class ReadReviewHistoryUseCase {
       communityId: session.communityId,
       templateId: session.templateId,
       performedById: session.performedById,
+      performedByEmail,
       status: session.status,
       startedAt: session.startedAt,
       completedAt: session.completedAt,

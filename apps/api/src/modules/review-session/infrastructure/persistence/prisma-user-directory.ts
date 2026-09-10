@@ -8,9 +8,9 @@ import { UserDirectory } from '../../application/ports/user-directory.port';
 // repository. This is a data-fact lookup, not an authorization port: no
 // role dispatch, no fail-closed default.
 //
-// Phase 1 implements only `findMaintenanceCompanyId` (the write-path half,
-// Decision 1). `findEmailsByIds` (the read-path half, deliberately
-// soft-delete-inclusive, Decision 5) is added in Phase 3.
+// Phase 1 implemented `findMaintenanceCompanyId` (the write-path half,
+// Decision 1). Phase 3 (this) adds `findEmailsByIds` (the read-path half,
+// deliberately soft-delete-inclusive, Decision 5).
 @Injectable()
 export class PrismaUserDirectory implements UserDirectory {
   constructor(private readonly prisma: PrismaService) {}
@@ -28,5 +28,26 @@ export class PrismaUserDirectory implements UserDirectory {
     });
 
     return record?.maintenanceCompanyId ?? null;
+  }
+
+  // design.md Decision 5/8: ONE batched query for the whole distinct id
+  // set, not N. Deliberately NOT filtered by `deletedAt` — this is the
+  // module's first deliberate bypass of ADR-010's default soft-delete
+  // filter, because a manager's whole purpose is reading sessions
+  // performed by technicians who have since left. An id with no matching
+  // row is simply absent from the returned map.
+  async findEmailsByIds(
+    userIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    if (userIds.length === 0) {
+      return new Map();
+    }
+
+    const records = await this.prisma.user.findMany({
+      where: { id: { in: [...userIds] } },
+      select: { id: true, email: true },
+    });
+
+    return new Map(records.map((record) => [record.id, record.email]));
   }
 }

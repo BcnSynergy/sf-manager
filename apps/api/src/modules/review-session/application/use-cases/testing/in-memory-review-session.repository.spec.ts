@@ -97,10 +97,16 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
   });
 });
 
-// review-history design.md Decision 3, tasks.md 2.3/2.4: the four
-// findCompleted…InCommunities methods, including the fail-closed
-// empty-scope case, mirroring the Prisma adapter's own integration
-// coverage.
+// review-history design.md Decision 3, tasks.md 2.3/2.4: the representative's
+// findCompleted…InCommunities pair, including the fail-closed empty-scope
+// case, mirroring the Prisma adapter's own integration coverage.
+//
+// review-history-company-scope/tasks.md 3.6: the technician's
+// community-narrowed pair (`findCompletedForPerformerInCommunities`/
+// `findCompletedByIdForPerformerInCommunities`) was deleted from the port
+// (design.md Decision 6/7) — coverage for the technician's replacement pair
+// lives in the `findCompletedForPerformer/findCompletedForCompany` describe
+// block below.
 describe('InMemoryReviewSessionRepository — findCompleted…InCommunities', () => {
   function completedSession(
     overrides: Partial<{
@@ -122,54 +128,16 @@ describe('InMemoryReviewSessionRepository — findCompleted…InCommunities', ()
     });
   }
 
-  it('communityIds = [] resolves to an empty list / null for all four methods (fail-closed empty scope)', async () => {
+  it('communityIds = [] resolves to an empty list / null (fail-closed empty scope)', async () => {
     const repository = new InMemoryReviewSessionRepository();
     repository.seed(completedSession());
 
-    await expect(
-      repository.findCompletedForPerformerInCommunities('user-1', []),
-    ).resolves.toEqual([]);
     await expect(repository.findCompletedInCommunities([])).resolves.toEqual(
       [],
     );
     await expect(
-      repository.findCompletedByIdForPerformerInCommunities(
-        'session-1',
-        'user-1',
-        [],
-      ),
-    ).resolves.toBeNull();
-    await expect(
       repository.findCompletedByIdInCommunities('session-1', []),
     ).resolves.toBeNull();
-  });
-
-  it('findCompletedForPerformerInCommunities excludes drafts and other performers', async () => {
-    const repository = new InMemoryReviewSessionRepository();
-    const ownCompleted = completedSession({ id: 'session-own' });
-    const otherPerformer = completedSession({
-      id: 'session-other',
-      performedById: 'user-2',
-    });
-    const draft = new ReviewSession({
-      id: 'session-draft',
-      communityId: 'community-1',
-      templateId: 'template-1',
-      performedById: 'user-1',
-      status: 'draft',
-      startedAt: new Date('2026-01-01T00:00:00.000Z'),
-      completedAt: null,
-    });
-    repository.seed(ownCompleted);
-    repository.seed(otherPerformer);
-    repository.seed(draft);
-
-    const result = await repository.findCompletedForPerformerInCommunities(
-      'user-1',
-      ['community-1'],
-    );
-
-    expect(result.map((s) => s.id)).toEqual(['session-own']);
   });
 
   it('findCompletedInCommunities includes every performer in scope but excludes other communities and drafts', async () => {
@@ -187,7 +155,7 @@ describe('InMemoryReviewSessionRepository — findCompleted…InCommunities', ()
     expect(result.map((s) => s.id)).toEqual(['session-in-scope']);
   });
 
-  it('orders both lists completedAt DESC, id DESC — identical, deterministic direction', async () => {
+  it('orders completedAt DESC, id DESC — deterministic direction', async () => {
     const repository = new InMemoryReviewSessionRepository();
     const earlier = completedSession({
       id: 'session-a',
@@ -200,32 +168,20 @@ describe('InMemoryReviewSessionRepository — findCompleted…InCommunities', ()
     repository.seed(earlier);
     repository.seed(later);
 
-    const ownHistory = await repository.findCompletedForPerformerInCommunities(
-      'user-1',
-      ['community-1'],
-    );
     const communityHistory = await repository.findCompletedInCommunities([
       'community-1',
     ]);
 
-    expect(ownHistory.map((s) => s.id)).toEqual(['session-b', 'session-a']);
     expect(communityHistory.map((s) => s.id)).toEqual([
       'session-b',
       'session-a',
     ]);
   });
 
-  it('findCompletedByIdForPerformerInCommunities/findCompletedByIdInCommunities reject a draft, a foreign performer, and an out-of-scope community', async () => {
+  it('findCompletedByIdInCommunities rejects an out-of-scope community', async () => {
     const repository = new InMemoryReviewSessionRepository();
     repository.seed(completedSession());
 
-    await expect(
-      repository.findCompletedByIdForPerformerInCommunities(
-        'session-1',
-        'user-2',
-        ['community-1'],
-      ),
-    ).resolves.toBeNull();
     await expect(
       repository.findCompletedByIdInCommunities('session-1', ['community-2']),
     ).resolves.toBeNull();

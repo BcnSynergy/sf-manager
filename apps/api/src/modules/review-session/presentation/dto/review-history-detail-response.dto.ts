@@ -58,6 +58,11 @@ export class ReviewHistoryDetailResponseDto {
   @ApiProperty()
   performedById!: string;
 
+  // review-history-company-scope/design.md Decision 8: same resolution and
+  // fallback rule as ReviewHistoryRowDto.performedByEmail.
+  @ApiProperty()
+  performedByEmail!: string;
+
   @ApiProperty({ enum: ['completed'] })
   status!: string;
 

@@ -280,10 +280,12 @@ describe('RecordEntryUseCase', () => {
       upsertEntry: jest.fn().mockResolvedValue(false),
       complete: jest.fn(),
       discardDraft: jest.fn(),
-      findCompletedForPerformerInCommunities: jest.fn(),
       findCompletedInCommunities: jest.fn(),
-      findCompletedByIdForPerformerInCommunities: jest.fn(),
       findCompletedByIdInCommunities: jest.fn(),
+      findCompletedForPerformer: jest.fn(),
+      findCompletedByIdForPerformer: jest.fn(),
+      findCompletedForCompany: jest.fn(),
+      findCompletedByIdForCompany: jest.fn(),
     };
     scopeChecker.assign('user-1', 'community-1');
     const racySessionAccess = new SessionAccessService(
