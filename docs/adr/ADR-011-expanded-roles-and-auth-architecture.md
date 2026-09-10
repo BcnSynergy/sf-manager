@@ -281,6 +281,76 @@ place). Full rationale and alternatives:
    assignment removes access on the very next request, with no cache to
    invalidate. Decision 1's bullet above is corrected in place to match.
 
+## Addendum (2026-09-09): review-history-company-scope — a third scope-resolution path, and the first MAINTENANCE_COMPANY_MANAGER permission
+
+The `review-history-company-scope` change (FR-008, third slice) is the
+first to give `MAINTENANCE_COMPANY_MANAGER` an operational permission, and
+the first to add a scope-resolution path to the review-session module that
+is not `CommunityScopeChecker`. Full rationale: `openspec/changes/archive/`
+(once archived) `review-history-company-scope/design.md`, Decisions 3-9.
+
+1. **Layer 2 now has two ports, not one.** Extend the shipped three-layer
+   table from the 2026-09-08 addendum above:
+   ```
+   Layer 2  user → community          CommunityScopeChecker port   (community module adapter)
+   Layer 2  user → own company        CompanyScopeChecker port     (users module adapter)
+   ```
+   `CompanyScopeChecker.resolveCompanyScope(userId, role): Promise<string |
+   null>` (`shared/application/authorization/company-scope.checker.port.ts`)
+   is a sibling to `CommunityScopeChecker`, not a third branch of it — both
+   are fail-closed, exhaustive on `Role`, and re-read per request with no
+   cache. A `MAINTENANCE_COMPANY_MANAGER` resolves through the second and
+   **never** through the first: routing them through `CommunityScopeChecker`
+   would grant them exactly nothing, since they hold no community
+   assignment. Its one adapter (`UserCompanyScopeChecker`, in
+   `modules/users/infrastructure/authorization/`) dispatches on role —
+   only `MAINTENANCE_COMPANY_MANAGER` ever resolves a non-null company;
+   every other role is fail-closed `null` via an exhaustive `switch`, and
+   the lookup excludes soft-deleted users (ADR-010).
+
+2. **The review-session module has multiple access services and, now,
+   three scope-resolution paths** — the deferred-twice record (proposal
+   `review-session-company-scope`, then `review-history`, now settled
+   here). `SessionAccessService` (write, performer-only, any status) and
+   `ReviewHistoryAccessService` (read, completed-only, three scopes:
+   performer, community, company) are siblings, a departure from
+   `review-session`'s own design Decision 4's "one door" phrasing. The
+   invariant that phrasing existed to protect is preserved **by the port,
+   not by the service count**: `ReviewSessionRepository` still exposes no
+   identifier-only read; all six history methods and `findByIdForPerformer`
+   carry a performer, community or company scope as a required parameter.
+
+3. **`MAINTENANCE_COMPANY_MANAGER` becomes operational** — `ROLE_PERMISSIONS`
+   maps it to `['reviewSession:read']`, its first non-empty entry since the
+   2026-08-22 addendum declared all four non-admin roles inert, and it
+   delivers this ADR's Decision 1 promise of *"read access to every
+   `ReviewSession` performed by any technician of their company"*. `MANAGER`
+   stays `[]`; `SYSTEM_ADMIN` still holds no `reviewSession:*`; Decision 1's
+   other two `MAINTENANCE_COMPANY_MANAGER` powers (scoped technician CRUD,
+   onboarding/disabling) and Decision 2's `ManagerCapability` mechanism
+   remain unbuilt.
+
+4. **Attribution is frozen, not derived** — `ReviewSession.performedByCompanyId`
+   snapshots the performer's maintenance company at creation, written once,
+   with no update path. Decision 1's phrase *"performed by any technician of
+   their company"* is therefore implemented as *"performed **on behalf of**
+   their company"*: a technician who transfers does not move their past
+   reviews to the new company, nor lose them from the old one. Backfill of
+   pre-existing rows is best-effort from current employment at migration
+   time — stated, accepted limitation, not a mechanism this ADR promises to
+   correct later.
+
+5. **Rejected, with the reason**: adding `maintenanceCompanyId` to the
+   access token. A per-request database read costs one indexed lookup and
+   matches how `role`'s own staleness is already accepted; a token claim
+   would instead make the token a bearer of tenant scope with no revocation
+   path shorter than its full lifetime, crossing a customer boundary rather
+   than merely widening which endpoints one authorized session reaches. This
+   is a **deliberate divergence** from how `role` is handled (accepted as
+   stale in the 2026-08-22 addendum above) — a future reader MUST NOT
+   "harmonize" the two without re-deciding the company case on its own
+   merits.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
