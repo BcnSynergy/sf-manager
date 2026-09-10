@@ -3,6 +3,10 @@ import {
   COMMUNITY_SCOPE_CHECKER,
   type CommunityScopeChecker,
 } from '../../../../shared/application/authorization/community-scope.checker.port';
+import {
+  COMPANY_SCOPE_CHECKER,
+  type CompanyScopeChecker,
+} from '../../../../shared/application/authorization/company-scope.checker.port';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import {
@@ -14,14 +18,22 @@ import type { Actor } from './session-access.service';
 // design.md Decision 1: a read-only SIBLING of SessionAccessService, not an
 // extension of it. SessionAccess = "may this actor ACT on this draft"
 // (performer-only, any status); this = "may this actor READ this completed
-// record" (completed-only, scope-widened for a representative). Different
-// invariants, different status filter, different scope predicate —
-// SessionAccessService is left byte-unchanged (Decision 1's whole point).
+// record" (completed-only, scope-widened for a representative or a
+// company-wide manager). Different invariants, different status filter,
+// different scope predicate — SessionAccessService is left byte-unchanged.
 //
-// The invariant both rely on is preserved by the PORT, not by the service
-// count: ReviewSessionRepository still exposes no identifier-only read —
-// all four `findCompleted…` methods carry a performer and/or community
-// scope as a required parameter.
+// review-history-company-scope/design.md Decision 7 (the 2026-09-09
+// reversal): scope resolution no longer happens once, before the `switch`.
+// Each role branch resolves ONLY the scope it needs, and only inside its
+// own branch — a MAINTENANCE_TECHNICIAN makes no Layer 2 call at all
+// ("mine" is performer identity, Layer 3, never community membership); a
+// MAINTENANCE_COMPANY_MANAGER resolves through CompanyScopeChecker and
+// fails closed to `[]`/404 BEFORE any repository call on a `null` company.
+//
+// The invariant both services rely on is preserved by the PORT, not by the
+// service count: ReviewSessionRepository still exposes no identifier-only
+// read — every `findCompleted…` method carries a performer, community or
+// company scope as a required parameter.
 @Injectable()
 export class ReviewHistoryAccessService {
   constructor(
@@ -29,34 +41,56 @@ export class ReviewHistoryAccessService {
     private readonly repository: ReviewSessionRepository,
     @Inject(COMMUNITY_SCOPE_CHECKER)
     private readonly communityScopeChecker: CommunityScopeChecker,
+    @Inject(COMPANY_SCOPE_CHECKER)
+    private readonly companyScopeChecker: CompanyScopeChecker,
   ) {}
 
-  // Empty scope => empty list, never an error and never an unscoped query
-  // (design.md Decision 3's "empty-scope footgun, made explicit").
   async listForActor(actor: Actor): Promise<ReviewSession[]> {
-    const communityIds =
-      await this.communityScopeChecker.listAssignedCommunityIds(
-        actor.userId,
-        actor.role,
-      );
-    if (communityIds.length === 0) {
-      return [];
-    }
-
     switch (actor.role) {
+      // REVERSED 2026-09-09 (design.md Decision 7): own performed sessions,
+      // unconditionally. No Layer 2 call at all — there is no
+      // `communityIds` parameter left to forget, and the performer filter
+      // is still the only conjunct in the `WHERE`, so this widens the
+      // technician's view by exactly zero other people's sessions. A
+      // deactivated assignment can no longer swallow this branch, because
+      // it never runs the community check that used to gate it.
       case 'MAINTENANCE_TECHNICIAN':
-        return this.repository.findCompletedForPerformerInCommunities(
-          actor.userId,
-          communityIds,
-        );
-      case 'COMMUNITY_REPRESENTATIVE':
+        return this.repository.findCompletedForPerformer(actor.userId);
+
+      // UNCHANGED, byte for byte in behaviour — still gated on a currently
+      // active assignment, still re-read per request, still an
+      // empty-scope early return before any repository call.
+      case 'COMMUNITY_REPRESENTATIVE': {
+        const communityIds =
+          await this.communityScopeChecker.listAssignedCommunityIds(
+            actor.userId,
+            actor.role,
+          );
+        if (communityIds.length === 0) {
+          return [];
+        }
         return this.repository.findCompletedInCommunities(communityIds);
+      }
+
+      // NEW (design.md Decision 3/4/7/9): the manager's scope is their own
+      // maintenance company, re-read per request, ANDed with nothing else.
+      // `null` — no company, or a soft-deleted manager — fails closed
+      // BEFORE any repository call.
+      case 'MAINTENANCE_COMPANY_MANAGER': {
+        const companyId = await this.companyScopeChecker.resolveCompanyScope(
+          actor.userId,
+          actor.role,
+        );
+        if (companyId === null) {
+          return [];
+        }
+        return this.repository.findCompletedForCompany(companyId);
+      }
+
       // No history scope for these roles at all (proposal Settled scope
-      // decisions) — they never reach a repository call, even though
-      // listAssignedCommunityIds already returns `[]` for them too.
+      // decisions) — they never reach a repository call.
       case 'SYSTEM_ADMIN':
       case 'MANAGER':
-      case 'MAINTENANCE_COMPANY_MANAGER':
         return [];
       default: {
         // `role` comes from a JWT claim with no runtime enum validation —
@@ -67,27 +101,18 @@ export class ReviewHistoryAccessService {
     }
   }
 
-  // tasks.md 4.1: the by-id counterpart. Same Layer 2 scope resolution and
-  // exhaustive role dispatch as listForActor, but to the two by-id
-  // repository methods. `null` — unknown id, draft, foreign performer,
-  // foreign community, or a since-deactivated assignment (empty
-  // communityIds) — ALL collapse to the SAME ReviewSessionNotFoundError, one
-  // throw site, mirroring SessionAccessService.loadForActor's own rejection
-  // matrix (design.md Decision 1 / Data Flow).
+  // The by-id counterpart. Same per-branch scope resolution and exhaustive
+  // role dispatch as listForActor, but to the by-id repository methods.
+  // `null` — unknown id, draft, foreign performer, foreign community,
+  // foreign company, a since-deactivated assignment, or a null company
+  // scope — ALL collapse to the SAME ReviewSessionNotFoundError, ONE throw
+  // site, mirroring SessionAccessService.loadForActor's own rejection
+  // matrix (design.md Decision 7 table).
   async loadCompletedForActor(
     sessionId: string,
     actor: Actor,
   ): Promise<ReviewSession> {
-    const communityIds =
-      await this.communityScopeChecker.listAssignedCommunityIds(
-        actor.userId,
-        actor.role,
-      );
-    if (communityIds.length === 0) {
-      throw new ReviewSessionNotFoundError();
-    }
-
-    const session = await this.loadByRole(sessionId, actor, communityIds);
+    const session = await this.loadByRole(sessionId, actor);
     if (!session) {
       throw new ReviewSessionNotFoundError();
     }
@@ -95,32 +120,54 @@ export class ReviewHistoryAccessService {
     return session;
   }
 
-  private loadByRole(
+  private async loadByRole(
     sessionId: string,
     actor: Actor,
-    communityIds: readonly string[],
   ): Promise<ReviewSession | null> {
     switch (actor.role) {
       case 'MAINTENANCE_TECHNICIAN':
-        return this.repository.findCompletedByIdForPerformerInCommunities(
+        return this.repository.findCompletedByIdForPerformer(
           sessionId,
           actor.userId,
-          communityIds,
         );
-      case 'COMMUNITY_REPRESENTATIVE':
+
+      case 'COMMUNITY_REPRESENTATIVE': {
+        const communityIds =
+          await this.communityScopeChecker.listAssignedCommunityIds(
+            actor.userId,
+            actor.role,
+          );
+        if (communityIds.length === 0) {
+          return null;
+        }
         return this.repository.findCompletedByIdInCommunities(
           sessionId,
           communityIds,
         );
+      }
+
+      case 'MAINTENANCE_COMPANY_MANAGER': {
+        const companyId = await this.companyScopeChecker.resolveCompanyScope(
+          actor.userId,
+          actor.role,
+        );
+        if (companyId === null) {
+          return null;
+        }
+        return this.repository.findCompletedByIdForCompany(
+          sessionId,
+          companyId,
+        );
+      }
+
       // Same fail-closed backstop as listForActor: no history scope for
       // these roles at all, so they never reach a repository call.
       case 'SYSTEM_ADMIN':
       case 'MANAGER':
-      case 'MAINTENANCE_COMPANY_MANAGER':
-        return Promise.resolve(null);
+        return null;
       default: {
         actor.role satisfies never;
-        return Promise.resolve(null);
+        return null;
       }
     }
   }

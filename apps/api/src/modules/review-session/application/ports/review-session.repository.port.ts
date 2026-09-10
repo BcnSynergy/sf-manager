@@ -82,42 +82,21 @@ export interface ReviewSessionRepository {
   // these four carries a performer and/or community scope as a required
   // parameter (spec: "No unscoped session read exists").
 
-  // `GET /review-history` for a MAINTENANCE_TECHNICIAN — own completed
-  // sessions, narrowed to their currently active community scope.
-  //
-  // review-history-company-scope/tasks.md 2.6 DEVIATION (documented, not
-  // silent): design.md Decision 6 calls for this method to be DELETED in
-  // this same PR, replaced by `findCompletedForPerformer` below. It is kept
-  // here instead because `ReviewHistoryAccessService` (Phase 3's file,
-  // explicitly out of scope for this PR) is still the only caller and
-  // still calls it — deleting it now would break that service's build
-  // before Phase 3 lands. Phase 3 removes this method (and its Prisma/
-  // in-memory implementations) in the SAME PR that stops calling it.
-  findCompletedForPerformerInCommunities(
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession[]>;
-
   // `GET /review-history` for a COMMUNITY_REPRESENTATIVE — every completed
   // session in the caller's actively assigned communities, regardless of
   // who performed it.
+  //
+  // review-history-company-scope/tasks.md 3.6: the technician's
+  // community-narrowed pair (`findCompletedForPerformerInCommunities`/
+  // `findCompletedByIdForPerformerInCommunities`) was deleted here — the
+  // reversal (design.md Decision 7) means `ReviewHistoryAccessService` no
+  // longer calls them, and a dead-but-plausibly-named method on a
+  // security-critical port is worse than the delete (design.md Decision 6:
+  // "the one a future caller picks by autocomplete, silently reinstating
+  // the reversed rule").
   findCompletedInCommunities(
     communityIds: readonly string[],
   ): Promise<ReviewSession[]>;
-
-  // `GET /review-history/:sessionId` for a MAINTENANCE_TECHNICIAN (PR 2) —
-  // the technician's performer filter is a NARROWING of the community
-  // filter (design.md Decision 3), so this is its own method rather than a
-  // caller-side check layered on `findCompletedByIdInCommunities`.
-  //
-  // review-history-company-scope/tasks.md 2.6 DEVIATION — same as
-  // `findCompletedForPerformerInCommunities` above: kept, not deleted, in
-  // this PR; removed together with it in Phase 3.
-  findCompletedByIdForPerformerInCommunities(
-    id: string,
-    performedById: string,
-    communityIds: readonly string[],
-  ): Promise<ReviewSession | null>;
 
   // `GET /review-history/:sessionId` for a COMMUNITY_REPRESENTATIVE (PR 2).
   findCompletedByIdInCommunities(

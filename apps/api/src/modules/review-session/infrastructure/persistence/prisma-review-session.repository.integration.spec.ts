@@ -654,25 +654,18 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
       new Date(),
     );
 
-    await expect(
-      repository.findCompletedForPerformerInCommunities(performedById, []),
-    ).resolves.toEqual([]);
     await expect(repository.findCompletedInCommunities([])).resolves.toEqual(
       [],
     );
     await expect(
-      repository.findCompletedByIdForPerformerInCommunities(
-        sessionId,
-        performedById,
-        [],
-      ),
+      repository.findCompletedByIdInCommunities(sessionId, []),
     ).resolves.toBeNull();
     await expect(
-      repository.findCompletedByIdInCommunities(sessionId, []),
+      repository.findCompletedByIdForCompany(sessionId, 'nonexistent-company'),
     ).resolves.toBeNull();
   });
 
-  it('findCompletedForPerformerInCommunities excludes drafts and other performers, findCompletedInCommunities includes every performer in scope', async () => {
+  it('findCompletedInCommunities includes every performer in scope, excluding drafts', async () => {
     const communityId = await createCommunity('scoped-lists');
     const templateId = await createActiveTemplate('scoped-lists');
     const performerU = await createUser('scoped-lists-u');
@@ -694,12 +687,6 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     );
     await createSession(communityId, templateId, performerU, 'draft', null);
 
-    const ownHistory = await repository.findCompletedForPerformerInCommunities(
-      performerU,
-      [communityId],
-    );
-    expect(ownHistory.map((s) => s.id)).toEqual([completedByU]);
-
     const communityHistory = await repository.findCompletedInCommunities([
       communityId,
     ]);
@@ -709,7 +696,7 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     expect(communityHistoryIds).toHaveLength(2);
   });
 
-  it('both list methods order completedAt DESC, id DESC — identical, deterministic direction', async () => {
+  it('findCompletedInCommunities orders completedAt DESC, id DESC — deterministic direction', async () => {
     const communityId = await createCommunity('ordering-parity');
     const templateId = await createActiveTemplate('ordering-parity');
     const performedById = await createUser('ordering-parity');
@@ -729,26 +716,19 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
       new Date('2026-01-02T00:00:00.000Z'),
     );
 
-    const ownHistory = await repository.findCompletedForPerformerInCommunities(
-      performedById,
-      [communityId],
-    );
     const communityHistory = await repository.findCompletedInCommunities([
       communityId,
     ]);
 
-    expect(ownHistory.map((s) => s.id)).toEqual([later, earlier]);
     expect(communityHistory.map((s) => s.id)).toEqual([later, earlier]);
   });
 
-  // review-history-company-scope/tasks.md 2.10: updated for the six new
-  // company/performer-only methods (design.md Decision 6). The two
-  // community-narrowed performer methods
-  // (`findCompletedForPerformerInCommunities` /
-  // `findCompletedByIdForPerformerInCommunities`) are STILL present —
-  // tasks.md 2.6's documented deviation on the repository port: Phase 3
-  // deletes them in the same PR that stops calling them from
-  // `ReviewHistoryAccessService`, not this one.
+  // review-history-company-scope/tasks.md 3.6: updated for the reversal —
+  // `findCompletedForPerformerInCommunities`/
+  // `findCompletedByIdForPerformerInCommunities` are DELETED from the port
+  // (design.md Decision 6/7), replaced by the technician's unconditional
+  // `findCompletedForPerformer`/`findCompletedByIdForPerformer` pair. No
+  // orphaned methods survive on this port past this PR.
   it('no repository port method returns a session or a list from an identifier alone — spec: "No unscoped session read exists"', () => {
     const methodNames = Object.getOwnPropertyNames(
       PrismaReviewSessionRepository.prototype,
@@ -763,9 +743,7 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
       [
         'findByIdForPerformer',
         'findDraftsByPerformer',
-        'findCompletedForPerformerInCommunities',
         'findCompletedInCommunities',
-        'findCompletedByIdForPerformerInCommunities',
         'findCompletedByIdInCommunities',
         'findCompletedForPerformer',
         'findCompletedByIdForPerformer',
