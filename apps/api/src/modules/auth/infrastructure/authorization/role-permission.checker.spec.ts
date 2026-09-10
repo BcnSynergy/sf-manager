@@ -48,8 +48,14 @@ import { RolePermissionChecker } from './role-permission.checker';
 // either MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE maps to
 // anything other than []. Both roles get the IDENTICAL set — they perform
 // sessions through the same flow — and gain nothing else (no user:*,
-// community:*, etc). SYSTEM_ADMIN, MANAGER and
-// MAINTENANCE_COMPANY_MANAGER are unchanged by this slice.
+// community:*, etc). SYSTEM_ADMIN and MANAGER are unchanged by this slice.
+//
+// review-history-company-scope PR 4 (authorization/spec.md "The Maintenance
+// Company Manager Becomes Operational", "The Company Association Itself
+// Confers No Permission"): MAINTENANCE_COMPANY_MANAGER gains its first
+// non-empty entry, exactly `['reviewSession:read']` — read-only, no other
+// reviewSession:* member and no other permission family. MANAGER and
+// SYSTEM_ADMIN stay exactly as before.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -90,12 +96,14 @@ describe('RolePermissionChecker', () => {
     'reviewSession:discard',
   ];
 
+  const REVIEW_SESSION_WRITE_PERMISSIONS: Permission[] =
+    REVIEW_SESSION_PERMISSIONS.filter(
+      (permission) => permission !== 'reviewSession:read',
+    );
+
   // Non-admin roles that remain fully inert — no permission of any kind,
   // including reviewSession:*.
-  const INERT_NON_ADMIN_ROLES: Role[] = [
-    'MANAGER',
-    'MAINTENANCE_COMPANY_MANAGER',
-  ];
+  const INERT_NON_ADMIN_ROLES: Role[] = ['MANAGER'];
 
   // The two roles activated on the review-session surface only.
   const REVIEW_SESSION_ROLES: Role[] = [
@@ -103,9 +111,15 @@ describe('RolePermissionChecker', () => {
     'COMMUNITY_REPRESENTATIVE',
   ];
 
+  // MAINTENANCE_COMPANY_MANAGER: the first entry with exactly one
+  // permission — reviewSession:read — never bundled with the fully inert
+  // roles nor with the two full-access performing roles.
+  const COMPANY_MANAGER_ROLE: Role = 'MAINTENANCE_COMPANY_MANAGER';
+
   const NON_ADMIN_ROLES: Role[] = [
     ...INERT_NON_ADMIN_ROLES,
     ...REVIEW_SESSION_ROLES,
+    COMPANY_MANAGER_ROLE,
   ];
 
   it.each(ALL_PERMISSIONS)('allows SYSTEM_ADMIN on %s', (permission) => {
@@ -133,9 +147,8 @@ describe('RolePermissionChecker', () => {
     expect(checker.can(role, permission)).toBe(false);
   });
 
-  // authorization/spec.md "The two remaining non-admin roles stay inert":
-  // MANAGER and MAINTENANCE_COMPANY_MANAGER get nothing, including
-  // reviewSession:*.
+  // authorization/spec.md "MANAGER stays mapped to no permissions": MANAGER
+  // gets nothing, including reviewSession:*.
   it.each(
     INERT_NON_ADMIN_ROLES.flatMap((role) =>
       REVIEW_SESSION_PERMISSIONS.map((permission): [Role, Permission] => [
@@ -146,6 +159,21 @@ describe('RolePermissionChecker', () => {
   )('denies %s on %s', (role, permission) => {
     expect(checker.can(role, permission)).toBe(false);
   });
+
+  // authorization/spec.md "The Maintenance Company Manager Becomes
+  // Operational" — the manager holds exactly one permission.
+  it('grants MAINTENANCE_COMPANY_MANAGER exactly reviewSession:read', () => {
+    expect(checker.can(COMPANY_MANAGER_ROLE, 'reviewSession:read')).toBe(true);
+  });
+
+  // "The manager gains no write member of the review-session family": no
+  // create/perform/complete/discard.
+  it.each(REVIEW_SESSION_WRITE_PERMISSIONS)(
+    'denies MAINTENANCE_COMPANY_MANAGER on %s',
+    (permission) => {
+      expect(checker.can(COMPANY_MANAGER_ROLE, permission)).toBe(false);
+    },
+  );
 
   // authorization/spec.md "Both performing roles hold the same
   // review-session permissions": MAINTENANCE_TECHNICIAN and
