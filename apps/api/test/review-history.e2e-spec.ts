@@ -1374,6 +1374,11 @@ describe('Review History (e2e)', () => {
     const technicianYEmail = 'rhc-technician-y@example.com';
     const technicianNoCompanyEmail = 'rhc-technician-nocompany@example.com';
     const technicianTransferEmail = 'rhc-technician-transfer@example.com';
+    // Cross-role 404-parity fixture (tasks.md 4.10): a representative on
+    // communityC, alongside technicianX1 and managerX, so the "byte-identical
+    // ACROSS roles" test below can compare all three roles' out-of-scope 404
+    // for the SAME foreign session, not just each role against itself.
+    const representativeCEmail = 'rhc-representative-c@example.com';
     // Bypasses normal maintenance-company-assignment policy on purpose
     // (User's constructor performs no validation — design.md's own
     // precedent): a company set on a role that holds no reviewSession:read
@@ -1469,6 +1474,11 @@ describe('Review History (e2e)', () => {
         role: 'SYSTEM_ADMIN',
         maintenanceCompanyId: COMPANY_X,
       });
+      const representativeC = await buildSeedUser({
+        id: 'rhc-representative-c-id',
+        email: representativeCEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
 
       built = await buildApp({
         users: [
@@ -1483,6 +1493,7 @@ describe('Review History (e2e)', () => {
           technicianTransfer,
           managerRoleNoPermission,
           adminWithCompany,
+          representativeC,
         ],
         liveCompanyIds: [COMPANY_X, COMPANY_Y],
       });
@@ -1506,6 +1517,11 @@ describe('Review History (e2e)', () => {
         adminAgent,
         communityG.id,
         'rhc-technician-transfer-id',
+      );
+      await assignRepresentative(
+        adminAgent,
+        communityC.id,
+        'rhc-representative-c-id',
       );
 
       elementC = await createElement(adminAgent, communityC.id, 'Element C');
@@ -1754,23 +1770,38 @@ describe('Review History (e2e)', () => {
 
     // tasks.md 4.10: the 404 is not just identical to "nonexistent" per
     // role — it is identical ACROSS roles, so there is no distinct
-    // "exists but not yours" shape leaking anywhere.
+    // "exists but not yours" shape leaking anywhere. sessionYForE (company Y,
+    // community E) is out of scope for all three: technicianX1 never
+    // performed it, representativeC's community is C (not E), and managerX's
+    // company is X (not Y).
     it('the out-of-scope 404 is byte-identical across all three roles', async () => {
+      const technicianX1Agent = await loginAgent(built.app, technicianX1Email);
+      const representativeCAgent = await loginAgent(
+        built.app,
+        representativeCEmail,
+      );
       const managerXAgent = await loginAgent(built.app, managerXEmail);
       const nonexistentId = '00000000-0000-7000-8000-000000000000';
 
-      const managerResponse = await managerXAgent
-        .get(`/review-history/${nonexistentId}`)
-        .expect(404);
-      const managerForeignResponse = await managerXAgent
+      const technicianResponse = await technicianX1Agent
         .get(`/review-history/${sessionYForE.id}`)
         .expect(404);
+      const representativeResponse = await representativeCAgent
+        .get(`/review-history/${sessionYForE.id}`)
+        .expect(404);
+      const managerResponse = await managerXAgent
+        .get(`/review-history/${sessionYForE.id}`)
+        .expect(404);
+      const managerNonexistentResponse = await managerXAgent
+        .get(`/review-history/${nonexistentId}`)
+        .expect(404);
 
-      expect(managerForeignResponse.body).toEqual(managerResponse.body);
-      expect((managerResponse.body as ErrorBody).code).toBe(
+      expect(representativeResponse.body).toEqual(technicianResponse.body);
+      expect(managerResponse.body).toEqual(technicianResponse.body);
+      expect(managerNonexistentResponse.body).toEqual(technicianResponse.body);
+      expect((technicianResponse.body as ErrorBody).code).toBe(
         'REVIEW_SESSION_NOT_FOUND',
       );
-      expect(managerResponse.status).toBe(404);
     });
 
     // tasks.md 4.11: no list-control parameter has any effect on the

@@ -16,7 +16,9 @@
 // mirroring community:*'s granularity, so a future slice (e.g. a MANAGER
 // with managerCapabilities) can grant read without granting delete
 // (design.md Routes). All four are granted only on the SYSTEM_ADMIN row of
-// ROLE_PERMISSIONS — see "Maintenance-Role Permissions Stay Inert".
+// ROLE_PERMISSIONS — see "The Company Association Itself Confers No
+// Permission" (renamed from "Maintenance-Role Permissions Stay Inert" by
+// review-history-company-scope).
 //
 // inspectableElement:* — inspectable-elements/authorization spec "Permission
 // Check on Inspectable Element Endpoints" (PR 4): governs every

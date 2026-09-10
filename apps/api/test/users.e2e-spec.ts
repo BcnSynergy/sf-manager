@@ -963,19 +963,20 @@ describe('Users (e2e)', () => {
     });
   });
 
-  // authorization spec.md "Maintenance-Role Permissions Stay Inert" —
-  // tasks.md 13.4. Unit-level exhaustive coverage of ROLE_PERMISSIONS
-  // (SYSTEM_ADMIN gets everything, the other 4 roles including both
-  // maintenance roles stay []) already exists in
-  // role-permission.checker.spec.ts (tasks.md 4.2). The targeted addition
-  // this suite is missing: confirming, at the HTTP/e2e level and from the
-  // /users routes specifically, that a MAINTENANCE_TECHNICIAN or
+  // authorization spec.md "The Company Association Itself Confers No
+  // Permission" (renamed from "Maintenance-Role Permissions Stay Inert" by
+  // review-history-company-scope) — tasks.md 13.4. Unit-level exhaustive
+  // coverage of ROLE_PERMISSIONS (SYSTEM_ADMIN gets everything; MANAGER and
+  // MAINTENANCE_TECHNICIAN stay []; MAINTENANCE_COMPANY_MANAGER holds only
+  // reviewSession:read as of review-history-company-scope Phase 4) already
+  // exists in role-permission.checker.spec.ts (tasks.md 4.2). The targeted
+  // addition this suite is missing: confirming, at the HTTP/e2e level and
+  // from the /users routes specifically, that a MAINTENANCE_TECHNICIAN or
   // MAINTENANCE_COMPANY_MANAGER caller — not just a generic non-admin
   // (MANAGER) as the existing "Anonymous and non-admin access control"
   // group already covers — gets 403 on every /users route, even though
-  // their own maintenanceCompanyId is set (authorization spec: "A
-  // maintenance-role user cannot access any endpoint via their company
-  // association").
+  // their own maintenanceCompanyId is set (authorization spec: "The company
+  // association itself confers no permission").
   describe('Maintenance-role holder gets 403 on /users (authorization spec) — tasks.md 13.4', () => {
     let app: INestApplication<App>;
     const technicianEmail = 'permissions-technician@example.com';

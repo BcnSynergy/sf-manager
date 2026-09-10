@@ -51,6 +51,25 @@ class InMemoryUserRepositoryBackedUserDirectory implements UserDirectory {
     const user = await this.users.findById(userId);
     return user?.maintenanceCompanyId ?? null;
   }
+
+  // review-history-company-scope/design.md Decision 5/8: this e2e double
+  // doesn't need the port's soft-delete-INCLUSIVE guarantee — this suite
+  // doesn't exercise review-history routes — so `findById` (active users
+  // only) is sufficient here. Kept in sync with review-history.e2e-spec.ts's
+  // identical double so this class never silently drifts out of `UserDirectory`
+  // conformance again (isolatedModules doesn't type-check `implements` here).
+  async findEmailsByIds(
+    userIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    for (const userId of new Set(userIds)) {
+      const user = await this.users.findById(userId);
+      if (user) {
+        result.set(userId, user.email);
+      }
+    }
+    return result;
+  }
 }
 
 class InMemoryTokenDenylist implements TokenDenylist {
