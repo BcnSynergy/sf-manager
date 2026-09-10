@@ -441,14 +441,18 @@
       "error": "Algo ha fallado al cargar el historial de revisiones.",
       "empty": "No se han encontrado revisiones completadas.",
       "columnCommunity": "Comunidad",
+      "columnPerformer": "Realizada por",
       "columnCompletedAt": "Completada el",
       "communityUnknown": "Comunidad desconocida",
+      "performerUnknown": "Realizador desconocido",
       "openLink": "Ver"
     },
     "detail": {
       "title": "Detalle del historial de revisión",
       "loading": "Cargando historial de revisión...",
       "completedAtLabel": "Completada el: {{completedAt}}",
+      "performerLabel": "Realizada por: {{performer}}",
+      "performerUnknown": "Realizador desconocido",
       "coverageLabel": "{{reviewed}} revisados, {{unreviewed}} sin revisar",
       "entriesTitle": "Elementos revisados",
       "entriesEmpty": "No se ha registrado ningún elemento.",
@@ -461,7 +465,8 @@
     "checking": "Comprobando...",
     "ok": "Todo funciona correctamente",
     "error": "Algo no está funcionando",
-    "reviewSessionsLink": "Ir a sesiones de revisión"
+    "reviewSessionsLink": "Ir a sesiones de revisión",
+    "reviewHistoryLink": "Ir al historial de revisiones"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",

@@ -17,6 +17,7 @@ const detail = {
   communityId: 'c1',
   templateId: 't1',
   performedById: 'u1',
+  performedByEmail: 'tech@sf-manager.example',
   status: 'completed' as const,
   startedAt: '2026-09-01T00:00:00.000Z',
   completedAt: '2026-09-01T01:00:00.000Z',
@@ -126,6 +127,42 @@ describe('ReviewHistoryDetailPage', () => {
     renderPage();
 
     await screen.findByTestId('review-history-detail-entry-e1');
+
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+    expect(document.querySelector('form')).not.toBeInTheDocument();
+    expect(document.querySelector('input')).not.toBeInTheDocument();
+  });
+
+  // review-history-company-scope spec "A manager reads back a session
+  // performed under their company" — same recorded record every role sees,
+  // no manager-specific variant. design.md Decision 8: performer email
+  // rendered for every role.
+  it('renders the performer line for every role', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    expect(await screen.findByTestId('review-history-detail-performer')).toHaveTextContent(
+      'tech@sf-manager.example',
+    );
+  });
+
+  it('renders a neutral placeholder when performedByEmail is empty (unresolvable performer)', async () => {
+    mockedReadReviewHistory.mockResolvedValue({ ...detail, performedByEmail: '' });
+
+    renderPage();
+
+    const performerLine = await screen.findByTestId('review-history-detail-performer');
+    expect(performerLine.textContent).not.toBe('');
+  });
+
+  it('renders no manager-specific variant and still no mutation control', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    await screen.findByTestId('review-history-detail-performer');
 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);

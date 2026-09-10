@@ -441,14 +441,18 @@
       "error": "Something went wrong loading review history.",
       "empty": "No completed reviews found.",
       "columnCommunity": "Community",
+      "columnPerformer": "Performed by",
       "columnCompletedAt": "Completed at",
       "communityUnknown": "Unknown community",
+      "performerUnknown": "Unknown performer",
       "openLink": "View"
     },
     "detail": {
       "title": "Review history detail",
       "loading": "Loading review history...",
       "completedAtLabel": "Completed at: {{completedAt}}",
+      "performerLabel": "Performed by: {{performer}}",
+      "performerUnknown": "Unknown performer",
       "coverageLabel": "{{reviewed}} reviewed, {{unreviewed}} not reviewed",
       "entriesTitle": "Reviewed elements",
       "entriesEmpty": "No elements recorded.",
@@ -461,7 +465,8 @@
     "checking": "Checking...",
     "ok": "All systems operational",
     "error": "Something is not working",
-    "reviewSessionsLink": "Go to review sessions"
+    "reviewSessionsLink": "Go to review sessions",
+    "reviewHistoryLink": "Go to review history"
   },
   "auth": {
     "loginTitle": "Sign in",

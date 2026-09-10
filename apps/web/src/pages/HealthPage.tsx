@@ -17,6 +17,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000
 // either.
 const REVIEW_SESSION_ROLES = new Set(['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE']);
 
+// review-history-company-scope design.md Q5/Decision 10: the manager's
+// entry point lives here too, but points at /review-history only — never
+// at /review-sessions, the write surface this role must never reach.
+const REVIEW_HISTORY_ROLES = new Set(['MAINTENANCE_COMPANY_MANAGER']);
+
 export function HealthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -47,6 +52,11 @@ export function HealthPage() {
       {user && REVIEW_SESSION_ROLES.has(user.role) && (
         <Link to="/review-sessions" data-testid="review-sessions-entry-link">
           {t('health.reviewSessionsLink')}
+        </Link>
+      )}
+      {user && REVIEW_HISTORY_ROLES.has(user.role) && (
+        <Link to="/review-history" data-testid="review-history-entry-link">
+          {t('health.reviewHistoryLink')}
         </Link>
       )}
       <button type="button" data-testid="logout-button" onClick={() => void handleLogout()}>

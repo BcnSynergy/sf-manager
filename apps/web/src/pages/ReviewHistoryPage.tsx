@@ -9,10 +9,17 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // server-side by ReviewHistoryAccessService.listForActor): this page
 // performs zero client-side filtering, mirroring ReviewSessionsPage.tsx's
 // precedent of trusting an already-scoped list endpoint. GET
-// /review-history never rejects with a coded error for either role (it can
+// /review-history never rejects with a coded error for any role (it can
 // only ever return an empty array or throw a network/unexpected failure),
 // so this page does not need review-session/error-messages.ts's per-code
 // mapping — a single generic error message covers every failure here.
+//
+// review-history-company-scope spec "A manager's company-wide list is
+// rendered unfiltered": a MAINTENANCE_COMPANY_MANAGER's result may span
+// several technicians and communities — this page has no role branch and
+// applies no client-side narrowing by community, performer or date for
+// that case either, same as every other role. The Performer column
+// (design.md Decision 8) renders for every role unconditionally.
 export function ReviewHistoryPage() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<ReviewHistoryRow[]>([]);
@@ -61,6 +68,7 @@ export function ReviewHistoryPage() {
           <thead>
             <tr>
               <th>{t('reviewHistory.list.columnCommunity')}</th>
+              <th>{t('reviewHistory.list.columnPerformer')}</th>
               <th>{t('reviewHistory.list.columnCompletedAt')}</th>
               <th></th>
             </tr>
@@ -70,6 +78,9 @@ export function ReviewHistoryPage() {
               <tr key={row.id} data-testid={`review-history-row-${row.id}`}>
                 <td data-testid={`review-history-community-${row.id}`}>
                   {row.communityName || t('reviewHistory.list.communityUnknown')}
+                </td>
+                <td data-testid={`review-history-performer-${row.id}`}>
+                  {row.performedByEmail || t('reviewHistory.list.performerUnknown')}
                 </td>
                 <td>{row.completedAt}</td>
                 <td>

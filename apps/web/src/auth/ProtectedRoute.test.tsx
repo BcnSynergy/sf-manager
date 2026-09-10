@@ -148,3 +148,103 @@ describe('ProtectedRoute with allowedRoles', () => {
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
 });
+
+// review-history-company-scope spec "Role-Gated Route Access for the
+// History Views" (MODIFIED): the /review-history* routes in App.tsx use
+// this exact 3-role array. Exercised here against the generic
+// ProtectedRoute mechanism (App.tsx itself has no dedicated route test
+// file, per this repo's existing precedent) rather than booting the full
+// app with real auth.
+describe('ProtectedRoute with the review-history route family (3 allowed roles)', () => {
+  const REVIEW_HISTORY_ALLOWED_ROLES: Role[] = [
+    'MAINTENANCE_TECHNICIAN',
+    'COMMUNITY_REPRESENTATIVE',
+    'MAINTENANCE_COMPANY_MANAGER',
+  ];
+
+  function renderReviewHistoryRoute() {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={REVIEW_HISTORY_ALLOWED_ROLES}>
+                <div data-testid="protected-content">history</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">login</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('a technician reaches the history views (regression)', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'tech@sf-manager.example', role: 'MAINTENANCE_TECHNICIAN' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  it('a representative reaches the identical history views (regression)', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'rep@sf-manager.example', role: 'COMMUNITY_REPRESENTATIVE' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  it('a maintenance company manager reaches the identical history views', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'manager@sf-manager.example', role: 'MAINTENANCE_COMPANY_MANAGER' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  it('another role is denied with an explicit "not authorized" message, not a silent redirect', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'manager@sf-manager.example', role: 'MANAGER' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('not-authorized')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+  });
+
+  it('an unauthenticated visitor is redirected to /login', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+  });
+});

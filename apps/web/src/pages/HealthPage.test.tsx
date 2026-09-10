@@ -101,6 +101,57 @@ describe('HealthPage', () => {
     expect(screen.queryByTestId('review-sessions-entry-link')).not.toBeInTheDocument();
   });
 
+  // review-history-company-scope spec "The manager reaches history from the
+  // app's entry page" / design.md Q5 (Decision 10): a MAINTENANCE_COMPANY_MANAGER
+  // gets a control here that navigates directly to /review-history, never
+  // through the /review-sessions write surface.
+  it('shows a review-history entry link for a MAINTENANCE_COMPANY_MANAGER', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
+    renderHealthPage();
+
+    const link = await screen.findByTestId('review-history-entry-link');
+    expect(link).toHaveAttribute('href', '/review-history');
+  });
+
+  it('does not show a review-sessions entry link for a MAINTENANCE_COMPANY_MANAGER', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
+    renderHealthPage();
+
+    await screen.findByTestId('review-history-entry-link');
+    expect(screen.queryByTestId('review-sessions-entry-link')).not.toBeInTheDocument();
+  });
+
+  it('does not show a review-history entry link for a MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_TECHNICIAN' }));
+    renderHealthPage();
+
+    await screen.findByTestId('review-sessions-entry-link');
+    expect(screen.queryByTestId('review-history-entry-link')).not.toBeInTheDocument();
+  });
+
+  // spec "The manager's path never crosses the write surface" +
+  // "No write control is rendered for the manager": enumerate every
+  // navigation control rendered on this page for a signed-in manager —
+  // none navigates to /review-sessions or any session-performing view, and
+  // the only controls present are the history link and logout.
+  it('enumerates every navigation control for a MAINTENANCE_COMPANY_MANAGER — none leads to /review-sessions', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
+    renderHealthPage();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
+    );
+
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/review-history']);
+    expect(hrefs.some((href) => href?.startsWith('/review-sessions'))).toBe(false);
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
+  });
+
   it('still clears the session and navigates to /login when the logout request fails', async () => {
     vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
     renderHealthPage();

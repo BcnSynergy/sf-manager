@@ -12,15 +12,19 @@ import { apiFetch } from './client';
 // second mapper for the same code.
 
 // Mirrors ReviewHistoryRowDto (GET /review-history) — design.md Decision 6:
-// no coverage counts, no template/element-type column, no performer name.
-// `communityName` may be `''` for a soft-deleted community the caller is
-// still assigned to (design.md Open Questions) — the list page renders a
-// neutral placeholder for that case, not the empty string.
+// no coverage counts, no template/element-type column. `communityName` may
+// be `''` for a soft-deleted community the caller is still assigned to
+// (design.md Open Questions) — the list page renders a neutral placeholder
+// for that case, not the empty string. `performedByEmail` (review-history-
+// company-scope design.md Decision 8) is resolved server-side from
+// `performedById` via one batched query and may also be `''` when
+// unresolvable — same placeholder treatment as `communityName`.
 export type ReviewHistoryRow = {
   id: string;
   communityId: string;
   communityName: string;
   performedById: string;
+  performedByEmail: string;
   startedAt: string;
   completedAt: string;
 };
@@ -44,6 +48,7 @@ export type ReviewHistoryDetail = {
   communityId: string;
   templateId: string;
   performedById: string;
+  performedByEmail: string;
   status: 'completed';
   startedAt: string;
   completedAt: string;
