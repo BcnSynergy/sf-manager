@@ -514,18 +514,25 @@ will claim a deferral the code no longer honours.
 
 ## Open Questions
 
-- [ ] **Company-scoped list volume is unmeasured by this apply batch**
-      (Decision 9 + the settled no-filtering decision). This is the first
-      query in the app with no narrowing conjunct beyond one indexed
-      equality; the index makes the query cheap, but the payload and the
-      page are unbounded. Not a blocker — the app-wide filtering initiative
-      is the named remedy. Task 6.8's browser verification (measuring this
-      with realistic seeded volume) is being run separately by the
-      orchestrator, in parallel with this apply batch, against a running
-      dev server — this note records that the measurement is pending that
-      pass, not skipped; the orchestrator checks off 6.8 and should fold
-      the measured result into this line once done, so the pain stays on
-      record for the app-wide filtering initiative.
+- [x] **Company-scoped list volume measured via task 6.8's browser
+      verification** (Decision 9 + the settled no-filtering decision). This
+      is the first query in the app with no narrowing conjunct beyond one
+      indexed equality; the index makes the query cheap, but the payload and
+      the page are unbounded. At the seeded volume exercised (a company with
+      2 technicians completing sessions across 2 communities, plus a
+      cross-company and an unattributed control) the manager's list rendered
+      instantly with no observable pain — too small a sample to validate
+      unbounded growth, but nothing to fix at this change's scale. Also
+      exercised and confirmed working end-to-end in the real browser: a
+      technician transferred to a different company AFTER completing a
+      session stays attributed to the original company's manager, and is
+      correctly absent from the new company's manager (Decision 1,
+      attribution frozen at performance time — the highest-risk scenario for
+      an unbounded/unfiltered query to get wrong); and the empty-list state
+      for a company with zero completed sessions renders a clean "No
+      completed reviews found" message, not an error. Not a blocker at
+      current scale — the app-wide filtering initiative remains the named
+      remedy for volume once it materializes as a real pain point.
 - [x] **`UserDirectory` is review-session's first deliberate bypass of ADR-010's
       soft-delete default filter** (Decision 5). Correct here, and narrowly
       scoped to one email lookup (`findEmailsByIds`, shipped in Phase 3).
