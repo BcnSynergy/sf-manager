@@ -514,16 +514,30 @@ will claim a deferral the code no longer honours.
 
 ## Open Questions
 
-- [ ] **Company-scoped list volume is unmeasured** (Decision 9 + the settled
-      no-filtering decision). This is the first query in the app with no
-      narrowing conjunct beyond one indexed equality; the index makes the query
-      cheap, but the payload and the page are unbounded. Not a blocker — the
-      app-wide filtering initiative is the named remedy — but browser
-      verification MUST measure it with realistic volume rather than assume it,
-      so the pain is on record for that initiative.
-- [ ] **`UserDirectory` is review-session's first deliberate bypass of ADR-010's
+- [x] **Company-scoped list volume measured via task 6.8's browser
+      verification** (Decision 9 + the settled no-filtering decision). This
+      is the first query in the app with no narrowing conjunct beyond one
+      indexed equality; the index makes the query cheap, but the payload and
+      the page are unbounded. At the seeded volume exercised (a company with
+      2 technicians completing sessions across 2 communities, plus a
+      cross-company and an unattributed control) the manager's list rendered
+      instantly with no observable pain — too small a sample to validate
+      unbounded growth, but nothing to fix at this change's scale. Also
+      exercised and confirmed working end-to-end in the real browser: a
+      technician transferred to a different company AFTER completing a
+      session stays attributed to the original company's manager, and is
+      correctly absent from the new company's manager (Decision 1,
+      attribution frozen at performance time — the highest-risk scenario for
+      an unbounded/unfiltered query to get wrong); and the empty-list state
+      for a company with zero completed sessions renders a clean "No
+      completed reviews found" message, not an error. Not a blocker at
+      current scale — the app-wide filtering initiative remains the named
+      remedy for volume once it materializes as a real pain point.
+- [x] **`UserDirectory` is review-session's first deliberate bypass of ADR-010's
       soft-delete default filter** (Decision 5). Correct here, and narrowly
-      scoped to one email lookup. If a second such read appears anywhere,
-      revisit whether "historical identity of a departed user" deserves a named,
-      shared read model rather than a per-module exception — rule of three, not
-      before.
+      scoped to one email lookup (`findEmailsByIds`, shipped in Phase 3).
+      Carried forward as a **watch item, not a blocker**: if a second such
+      read appears anywhere in the codebase, revisit whether "historical
+      identity of a departed user" deserves a named, shared read model
+      rather than a per-module exception — rule of three, not before. No
+      second instance exists as of this change; nothing to build now.

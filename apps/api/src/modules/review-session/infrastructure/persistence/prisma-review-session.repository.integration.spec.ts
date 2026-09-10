@@ -660,8 +660,18 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     await expect(
       repository.findCompletedByIdInCommunities(sessionId, []),
     ).resolves.toBeNull();
+    // performedByCompanyId is `@db.Uuid` — a non-UUID-shaped placeholder
+    // would fail at the Postgres type level (a malformed string never
+    // reaches this method in production either: CompanyScopeChecker only
+    // ever returns a real company UUID or null, short-circuited before any
+    // repository call), so the "no match" case uses a syntactically valid
+    // but nonexistent UUID, matching this codebase's established
+    // nonexistent-id convention (e.g. review-history.e2e-spec.ts).
     await expect(
-      repository.findCompletedByIdForCompany(sessionId, 'nonexistent-company'),
+      repository.findCompletedByIdForCompany(
+        sessionId,
+        '00000000-0000-7000-8000-000000000000',
+      ),
     ).resolves.toBeNull();
   });
 

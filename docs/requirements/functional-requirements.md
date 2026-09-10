@@ -35,7 +35,7 @@ values.
 | FR | Description | Status |
 |----|-------------|--------|
 | FR-007 | Perform a review session: open a session against a community's currently `active` `ReviewTemplate` for an element type, scan/enter each element's `code`, answer its templated questions, repeat, complete the session | identified |
-| FR-008 | View review history, per element and per community — visibility scoped per [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md): a technician sees only their own sessions, a `MAINTENANCE_COMPANY_MANAGER` sees all of their company's, a community representative sees their community's, `SYSTEM_ADMIN`/`MANAGER` with `VIEW_ALL_REVIEWS` sees everything | identified |
+| FR-008 | View review history, per element and per community — visibility scoped per [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md): a technician sees only their own sessions, a `MAINTENANCE_COMPANY_MANAGER` sees all of their company's, a community representative sees their community's, `SYSTEM_ADMIN`/`MANAGER` with `VIEW_ALL_REVIEWS` sees everything | three of four visibility scopes shipped (technician, representative, company — `review-history` + `review-history-company-scope`); global scope (`SYSTEM_ADMIN`/`MANAGER` + `VIEW_ALL_REVIEWS`) and per-element history remain the last piece |
 | FR-009 | List overdue/upcoming reviews and send reminders to responsible parties | identified |
 | FR-010 | Sign and export the completed review as a document, to send to the property management company | identified |
 

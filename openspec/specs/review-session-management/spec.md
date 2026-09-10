@@ -12,14 +12,16 @@ they are recorded — there is no atomic end-of-walk submit. A session in
 `draft` is mutable; a `completed` session is permanently immutable and
 undeletable by every role. Access control (who holds the permissions, and
 the community-assignment scope rule) is owned by the `authorization` spec.
-The per-performer and per-community completed-session reads (FR-008) now
-exist, owned by the separate `review-history` capability — not by this
-one; this capability still owns the write flow only, and still introduces
-no history surface of its own. Out of scope here: company-wide and global
-visibility, per-element history filtering, scheduling / due dates /
-reminders (FR-009), signing and export (FR-010), offline operation, camera
-scanning, photos, attachments, per-answer notes, defect records, and
-notifications.
+The per-performer, per-community and per-company completed-session reads
+(FR-008) now exist, owned by the separate `review-history` capability —
+not by this one; this capability still owns the write flow only, and
+still introduces no history surface of its own. What this capability owns
+directly is a **write-path fact**: a session records the maintenance
+company on whose behalf it was performed, frozen at performance time. Out
+of scope here: global visibility, per-element history filtering,
+scheduling / due dates / reminders (FR-009), signing and export (FR-010),
+offline operation, camera scanning, photos, attachments, per-answer
+notes, defect records, and notifications.
 
 ## Requirements
 
@@ -68,6 +70,71 @@ persisted.
 - GIVEN more than one `active` template exists for element type T across different frequency lineages
 - WHEN a user opens a session for T
 - THEN the system MUST NOT choose one arbitrarily; the requester MUST identify which template applies, or the request MUST be rejected
+
+### Requirement: A Session Records the Company on Whose Behalf It Was Performed
+
+Every review session MUST carry the maintenance company of the user
+performing it, recorded by the system **when the session is opened** and
+never re-derived afterwards. The value MUST be a snapshot of the
+performer's maintenance company at that moment, not a live reference to
+it: once written it MUST be immutable for the life of the session, and a
+later change to the performer's employment MUST NOT alter it.
+
+The system MUST record it in the session's own creation path, not by
+asking each caller to supply it: no route, client or use-case caller MUST
+be able to set, override or omit it, and a session MUST NOT be created
+carrying an attribution that differs from the performer's company at that
+moment.
+
+The value MAY be absent when the performing user has no maintenance
+company, because that association is itself optional. An absent
+attribution MUST be treated as "attributed to no company" by every
+consumer — never as a wildcard (see `review-history`).
+
+Pre-existing `completed` sessions MUST be attributed by a **one-time data
+migration** using each performer's maintenance company at migration time.
+This is explicitly best-effort: sessions whose performer had already
+changed employer MUST be accepted as wrongly attributed, and the system
+MUST NOT grow an employment-history mechanism, an attribution version
+history or a correction path to repair them. No application code path
+MUST write this column on a session whose status is not `draft`; the
+backfill MUST occur as a migration only, and MUST NOT weaken *Completed
+Sessions Are Immutable*.
+
+#### Scenario: A newly opened session carries the performer's company
+- GIVEN a `MAINTENANCE_TECHNICIAN` employed by company X opens a session for community C
+- WHEN the created session is inspected
+- THEN it MUST record X as the company on whose behalf it was performed
+
+#### Scenario: A representative-opened session is attributed the same way
+- GIVEN a `COMMUNITY_REPRESENTATIVE` opens a session through the identical flow
+- WHEN the created session is inspected
+- THEN it MUST record that user's maintenance company by the same rule, or no company if they have none
+
+#### Scenario: The attribution never changes after the fact
+- GIVEN a session opened by a technician employed by company X
+- WHEN that technician is later reassigned to company Y, and the session is subsequently completed and read
+- THEN the session MUST still record X, in `draft` and in `completed` alike
+
+#### Scenario: No caller can supply or override the attribution
+- GIVEN the request contracts, routes and use cases of the session write flow after this change
+- WHEN they are inspected
+- THEN none MUST accept a company identifier as input, and none MUST expose an operation that sets or changes a session's recorded performing company
+
+#### Scenario: A performer with no company yields an absent attribution
+- GIVEN a user with no maintenance company opens a session
+- WHEN the created session is inspected
+- THEN its recorded performing company MUST be absent, and the session MUST still be created successfully
+
+#### Scenario: Pre-existing completed sessions are backfilled once
+- GIVEN completed sessions that existed before this change
+- WHEN the migration has been applied
+- THEN each MUST carry its performer's maintenance company as of migration time, and no runtime code path MUST have written it
+
+#### Scenario: Immutability of completed sessions is not weakened
+- GIVEN a `completed` session after this change
+- WHEN every application write path is enumerated
+- THEN none MUST write, clear or change its recorded performing company, and every mutation attempt MUST still be refused by the domain layer
 
 ### Requirement: At Most One Open Draft Per Community, Template and User
 
@@ -390,22 +457,31 @@ reachable for any other status.
 ### Requirement: Adjacent Review Capabilities Are Not Introduced
 
 Sessions existing makes history, scheduling and signing feel adjacent.
-Reading completed sessions now ships — in the separate `review-history`
-capability, for the per-performer and per-community scopes only — and is
-therefore no longer deferred wholesale. Everything below still MUST NOT
-be introduced, and none of it MUST be introduced by **this** capability.
+Reading completed sessions ships in the separate `review-history`
+capability — now for the per-performer, per-community **and per-company**
+scopes — and is therefore no longer deferred wholesale. Everything below
+still MUST NOT be introduced, and none of it MUST be introduced by
+**this** capability, which still owns the write flow only.
+(Previously: the FR-008 row also deferred company-scoped review
+visibility and any `MAINTENANCE_COMPANY_MANAGER` review visibility rule,
+which `review-history` now implements.)
 
 | Deferred to | Must not exist |
 |---|---|
-| FR-008 (remaining half) | Company-scoped or global review visibility — any review query, route, page or use case scoped by maintenance company, or unscoped across the installation; any `ManagerCapability` / `User.managerCapabilities` / `VIEW_ALL_REVIEWS` mechanism; any `MANAGER` or `MAINTENANCE_COMPANY_MANAGER` review visibility rule. Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads |
+| FR-008 (remaining half) | Global review visibility — any review query, route, page or use case unscoped across the installation; any `ManagerCapability` / `User.managerCapabilities` / `VIEW_ALL_REVIEWS` mechanism; any `MANAGER` review visibility rule. Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped one |
 | FR-009 | Scheduling service, due dates, overdue lists, cadence rules or reminders |
 | FR-010 | Any code path transitioning a session to `signed`; any document, PDF or export generation |
 | — | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications |
 
-#### Scenario: No company-scoped or global review visibility exists
+#### Scenario: No global review visibility exists
 - GIVEN the routes, pages, use cases and repository queries after this change
-- WHEN they are searched for review reads scoped by maintenance company, or unscoped across the installation, and for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
-- THEN none MUST be found, and `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` MUST hold no review visibility
+- WHEN they are searched for review reads unscoped across the installation, and for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
+- THEN none MUST be found, and `MANAGER` MUST hold no review visibility
+
+#### Scenario: The company scope lives in review-history, not here
+- GIVEN this capability's own routes, use cases and repository reads after this change
+- WHEN they are inspected
+- THEN none MUST contain a company-scoped review query — this capability's only contact with the performing company MUST be writing the attribution when a session is opened
 
 #### Scenario: No per-element review history surface exists
 - GIVEN the routes, pages, use cases and repository queries after this change
