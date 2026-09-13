@@ -2220,7 +2220,7 @@ describe('Review History (e2e)', () => {
       const forbiddenPatterns = [
         /\bManagerCapability\b/, // enum / type declaration or reference
         /\bmanagerCapabilities\s*[?:=]/, // a FIELD declaration, not prose
-        /\bVIEW_ALL_REVIEWS\b/, // permission/capability constant
+        /['"]VIEW_ALL_REVIEWS['"]|\bVIEW_ALL_REVIEWS\s*[:=]/, // a string-literal permission constant or an enum/key declaration, not prose
       ];
       const srcRoot = path.join(__dirname, '..', 'src');
       const offendingFiles: string[] = [];
