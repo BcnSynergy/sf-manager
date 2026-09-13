@@ -17,6 +17,7 @@
 | [ADR-013](ADR-013-orm-prisma-strict-boundary.md) | ORM strategy — Prisma, with a strictly enforced Clean Architecture boundary | Accepted |
 | [ADR-014](ADR-014-api-style-rest-openapi.md) | API style — REST + OpenAPI | Accepted |
 | [ADR-015](ADR-015-frontend-and-tooling-defaults.md) | Frontend and cross-cutting tooling defaults (Vite, Zod, Jest/Vitest, Node LTS) | Accepted |
+| [ADR-016](ADR-016-strict-tdd-in-sdd-apply-verify.md) | Strict TDD Mode for sdd-apply / sdd-verify | Accepted |
 
 See also: [domain model — inspections](../architecture/domain-model-inspections.md)
 (entities implementing ADR-011 and ADR-008).
