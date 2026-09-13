@@ -9,6 +9,12 @@ import type { PermissionChecker } from '../../application/ports/permission-check
 // operational in this slice; the other 4 map to [] with an explicit comment
 // (not omitted) so the emptiness reads as intentional, not forgotten.
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  // review-history-admin-scope/design.md Decision 4, authorization/spec.md
+  // "The System Admin Becomes Operational on Review History Reads": the
+  // role's FIRST reviewSession:* member ever — read-only. Which sessions it
+  // reaches (the whole installation, no scope predicate) is decided by
+  // ReviewHistoryAccessService, never by this table — mirroring the
+  // maintenance-company manager's shipped comment below.
   SYSTEM_ADMIN: [
     'user:create',
     'user:read',
@@ -36,6 +42,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewTemplate:update',
     'reviewTemplate:delete',
     'reviewTemplate:activate',
+    'reviewSession:read',
   ],
   // Declared per ADR-011, NOT operational in this slice — intentionally
   // empty, not forgotten. The exhaustive Record forces future slices to

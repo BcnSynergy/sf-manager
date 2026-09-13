@@ -54,8 +54,14 @@ import { RolePermissionChecker } from './role-permission.checker';
 // Company Manager Becomes Operational", "The Company Association Itself
 // Confers No Permission"): MAINTENANCE_COMPANY_MANAGER gains its first
 // non-empty entry, exactly `['reviewSession:read']` — read-only, no other
-// reviewSession:* member and no other permission family. MANAGER and
-// SYSTEM_ADMIN stay exactly as before.
+// reviewSession:* member and no other permission family. MANAGER stays
+// exactly as before.
+//
+// review-history-admin-scope PR 2 (design.md Decision 4, authorization/
+// spec.md "The System Admin Becomes Operational on Review History Reads"):
+// SYSTEM_ADMIN gains its FIRST reviewSession:* member ever —
+// `reviewSession:read`, and nothing else in that family. Every other
+// existing SYSTEM_ADMIN permission is unchanged.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -126,10 +132,15 @@ describe('RolePermissionChecker', () => {
     expect(checker.can('SYSTEM_ADMIN', permission)).toBe(true);
   });
 
-  // SYSTEM_ADMIN's row is unchanged by this slice — it gains no
-  // reviewSession:* permission (authorization/spec.md "SYSTEM_ADMIN's
-  // permissions are unchanged").
-  it.each(REVIEW_SESSION_PERMISSIONS)(
+  // authorization/spec.md "The System Admin Becomes Operational on Review
+  // History Reads": SYSTEM_ADMIN's only reviewSession:* member is `read`.
+  it('grants SYSTEM_ADMIN exactly reviewSession:read', () => {
+    expect(checker.can('SYSTEM_ADMIN', 'reviewSession:read')).toBe(true);
+  });
+
+  // "The admin gains no write member of the review-session family": no
+  // create/perform/complete/discard.
+  it.each(REVIEW_SESSION_WRITE_PERMISSIONS)(
     'denies SYSTEM_ADMIN on %s',
     (permission) => {
       expect(checker.can('SYSTEM_ADMIN', permission)).toBe(false);
