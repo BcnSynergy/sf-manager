@@ -333,127 +333,74 @@ this change is asymmetric, and that is its defining rollback property.
 
 **Reading company history**
 
-- [ ] A `MAINTENANCE_COMPANY_MANAGER` sees every completed session attributed
+- [x] A `MAINTENANCE_COMPANY_MANAGER` sees every completed session attributed
       to their company, across all their technicians and all communities, in
       the same deterministic order the other scopes use.
-- [ ] They can open any of those sessions and read back the full recorded
+- [x] They can open any of those sessions and read back the full recorded
       record, identically to what the performer would see.
-- [ ] Each row identifies who performed the session.
-- [ ] An empty company history renders an empty state, not an error.
+- [x] Each row identifies who performed the session.
+- [x] An empty company history renders an empty state, not an error.
 
 **Attribution**
 
-- [ ] A session completed by a technician who **later transfers** to another
+- [x] A session completed by a technician who **later transfers** to another
       company still appears for the original company's manager, and does **not**
       appear for the new company's manager.
-- [ ] Every newly opened session carries the performer's company.
-- [ ] Pre-existing completed sessions were backfilled and are visible.
+- [x] Every newly opened session carries the performer's company.
+- [x] Pre-existing completed sessions were backfilled and are visible.
 
 **Visibility**
 
-- [ ] A manager sees **none** of another company's sessions, on any route.
-- [ ] A manager with no maintenance company sees **nothing** — not everything.
-- [ ] A session with no attributed company appears in no manager's list.
-- [ ] An out-of-scope `sessionId` returns `404 REVIEW_SESSION_NOT_FOUND`,
+- [x] A manager sees **none** of another company's sessions, on any route.
+- [x] A manager with no maintenance company sees **nothing** — not everything.
+- [x] A session with no attributed company appears in no manager's list.
+- [x] An out-of-scope `sessionId` returns `404 REVIEW_SESSION_NOT_FOUND`,
       indistinguishable from a nonexistent one.
-- [ ] The representative's visibility, including the assignment-deactivation
+- [x] The representative's visibility, including the assignment-deactivation
       rule, is unchanged and still enforced.
-- [ ] A technician's OWN performed sessions remain visible to them after their
+- [x] A technician's OWN performed sessions remain visible to them after their
       community assignment is deactivated (reversed 2026-09-09, see settled
       decisions) — but they still see **none** of another technician's
       sessions on that community, deactivated or not.
-- [ ] `MAINTENANCE_COMPANY_MANAGER` holds `reviewSession:read` and nothing
+- [x] `MAINTENANCE_COMPANY_MANAGER` holds `reviewSession:read` and nothing
       else; `MANAGER` is still `[]`; `SYSTEM_ADMIN` holds no `reviewSession:*`.
 
 **Scope guards**
 
-- [ ] No `ManagerCapability` enum, `User.managerCapabilities` field or
+- [x] No `ManagerCapability` enum, `User.managerCapabilities` field or
       `VIEW_ALL_REVIEWS` permission exists.
-- [ ] No unscoped "all sessions" query exists.
-- [ ] No pagination, date filter, sort or search control ships on any history
+- [x] No unscoped "all sessions" query exists.
+- [x] No pagination, date filter, sort or search control ships on any history
       read or page.
-- [ ] No per-element history query, route or view exists.
-- [ ] The repository port still exposes no unscoped `findById`.
-- [ ] No write path touches a completed session beyond the attribution column
+- [x] No per-element history query, route or view exists.
+- [x] The repository port still exposes no unscoped `findById`.
+- [x] No write path touches a completed session beyond the attribution column
       written at performance time.
-- [ ] `modules/users/**` and `modules/maintenance-company/**` gain no new
+- [x] `modules/users/**` and `modules/maintenance-company/**` gain no new
       manager-facing CRUD.
 
 **Documentation**
 
-- [ ] The ADR-011 addendum is written, recording the module's multiple
+- [x] The ADR-011 addendum is written, recording the module's multiple
       access-service/scope-resolution paths and this slice's activation of the
       first `MAINTENANCE_COMPANY_MANAGER` permission.
-- [ ] FR-008's status reflects three of four scopes shipped, with the global
+- [x] FR-008's status reflects three of four scopes shipped, with the global
       scope named as the remaining one.
 
 **Quality**
 
-- [ ] Zero hardcoded UI strings; new keys have real `en`/`es`/`ca`
+- [x] Zero hardcoded UI strings; new keys have real `en`/`es`/`ca`
       translations, parity test-enforced.
-- [ ] `no-restricted-imports` passes — no `@prisma/client` outside
+- [x] `no-restricted-imports` passes — no `@prisma/client` outside
       `infrastructure/persistence/**` (ADR-013).
-- [ ] The migration applies and rolls back cleanly against real Postgres, with
+- [x] The migration applies and rolls back cleanly against real Postgres, with
       the hand-written partial unique index and FKs intact.
-- [ ] API and web suites, lint and build all pass.
-- [ ] Every UI criterion is **browser-verified** against a running dev server,
+- [x] API and web suites, lint and build all pass.
+- [x] Every UI criterion is **browser-verified** against a running dev server,
       including a login as `MAINTENANCE_COMPANY_MANAGER` — not only
       test-verified (CLAUDE.md).
 
 ## Open questions for `sdd-spec` / `sdd-design`
 
-Deliberately unresolved here. Each has a working assumption; none blocks the
-next phases from starting. **None of them reopens a settled decision above.**
-
-1. **Snapshot at creation or at completion?** The settled decision says "at
-   creation/completion" without picking. Creation is earlier and simpler but
-   attributes a draft opened before a transfer; completion matches "performed on
-   behalf of" more literally but leaves drafts unattributed. *Working
-   assumption*: at creation, since a draft is already the performer's committed
-   act — but state it explicitly as a requirement either way.
-2. **Where the manager's company is resolved.** The access token carries only
-   `sub`, `email`, `role` (verified in `token-issuer.port.ts`) — **not**
-   `maintenanceCompanyId`. So either a per-request read of the actor's company
-   (a cross-module port the review-session module does not have), or a new token
-   claim (inheriting `role`'s documented accepted-staleness tradeoff, and its
-   consequence: a company change would not take effect until the token expires).
-   *Working assumption*: a per-request read, mirroring how the community scope is
-   re-read on every request with no cached grant. **This is the biggest single
-   decision in the slice** and it has a security-staleness dimension.
-3. **The shape of the company-scope resolution.** A shared authorization port
-   sibling to `CommunityScopeChecker`, versus a review-session-local port. Bears
-   directly on the ADR-011 addendum's content. *Working assumption*: `sdd-design`
-   chooses; the invariant (scope carried in the port signature, fail-closed on
-   null) is not negotiable either way.
-4. **Whether a history row already carries the performer's identity.** The
-   shipped row shape was designed for scopes where the performer is usually the
-   caller or a single community's visitor; a company-wide list needs the
-   performer's name, which may be a cross-module read into `users` that no port
-   supports. *Working assumption*: reuse whatever the shipped row already
-   exposes; add a cross-module read only if it genuinely does not identify the
-   performer.
-5. **What the manager's entry point looks like.** A direct `/review-history`
-   link from `/` (the `HealthPage.tsx` precedent) versus something else. The
-   shipped requirement's route through `/review-sessions` cannot be reused — the
-   manager must not reach the write surface. *Working assumption*: a
-   role-conditional link on `/`, exactly as the other two roles got theirs.
-6. **Does the manager's own-company scope AND with anything at all?** No
-   community assignment, no per-community narrowing, no active-employment check
-   on the performing technician. *Working assumption*: company id alone, plus
-   completed-only. Any additional conjunct must be stated as a requirement, not
-   inherited by accident.
-
-## Next step
-
-Run `sdd-spec` and `sdd-design` — they can run in parallel; no blocking product
-input is outstanding.
-
-`sdd-spec` writes the settled decisions above as already-decided requirements:
-the company-wide visibility scope, the frozen-attribution rule, and the
-fail-closed null rule, each in its own right — and must **narrow rather than
-delete** the shipped deferral guards and the community-assignment requirement.
-
-`sdd-design` owns open questions 1–6, above all question 2 (where the manager's
-company is resolved, and its staleness tradeoff) and question 3 (the shape of
-the company-scope resolution), which together determine the ADR-011 addendum's
-content.
+All resolved in `design.md` — see Decisions 1-11. None reopened a settled
+decision above.
