@@ -777,21 +777,26 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
   // *.spec.ts files are excluded), for both new method names. Precedent for
   // reading source from a test: review-session-migration.integration.spec.ts.
   //
+  // THIS GUARD VERIFIES EXACTLY 3 PRODUCTION CALL SITES (see
+  // `expectedSuffixes` below) — the port, the Prisma adapter and the
+  // service. It does NOT, and structurally cannot, cover
+  // `in-memory-review-session.repository.ts`: that file lives under
+  // `**/testing/**`, which this scan deliberately excludes (test doubles
+  // are not production callers — the same reason `*.spec.ts` is excluded —
+  // and without the exclusion the in-memory adapter would match as a false
+  // positive purely for IMPLEMENTING the port). The in-memory adapter's own
+  // correct implementation of the pair is proven separately, by task 1.8's
+  // unit tests, not by this guard.
+  //
   // NOTE (deviation from design.md's literal wording — reported to
   // orchestrator per apply-progress): design.md Decision 2 mechanism 2 and
-  // tasks.md 1.10 both say the expected match set is "the port, BOTH
-  // adapters and review-history-access.service.ts" (4 files), but also say
-  // to exclude `**/testing/**` from the scan — and
-  // in-memory-review-session.repository.ts lives AT
-  // `application/use-cases/testing/in-memory-review-session.repository.ts`.
-  // Excluding `**/testing/**` and expecting the in-memory adapter to still
-  // appear in the match set are mutually exclusive; the two adapters can
-  // only both appear if `**/testing/**` is NOT excluded. This test follows
-  // the literal glob instruction (exclude `**/testing/**`), so the
-  // production-call-site match set is 3 files — the port, the Prisma
-  // adapter and the service — not 4. The in-memory adapter's own
-  // implementation of the pair is separately proven by task 1.8's unit
-  // tests, not by this guard.
+  // tasks.md 1.10 both describe the expected match set as "the port, BOTH
+  // adapters and review-history-access.service.ts" (4 files). That wording
+  // and the "exclude `**/testing/**`" instruction are mutually exclusive
+  // given where the in-memory adapter lives, so they cannot both be
+  // followed literally. This test follows the exclusion (matching every
+  // other guard test's `**/testing/**` convention) and the 3-file count
+  // above is what it actually asserts.
   it('findCompletedAcrossInstallation/findCompletedByIdAcrossInstallation appear only in the port, the Prisma adapter and the service — no other production file', () => {
     const srcRoot = join(__dirname, '..', '..', '..', '..');
     const entries = readdirSync(srcRoot, {
@@ -1353,12 +1358,19 @@ describe('PrismaReviewSessionRepository — findCompletedAcrossInstallation/find
     ).resolves.not.toBeNull();
   });
 
-  // tasks.md 1.12: an empty installation returns a successful empty list,
-  // not an error. This suite reuses the app's own dev database with no
-  // per-test isolation, so a strictly-empty global state can't be
-  // asserted directly; instead this proves the ONLY behaviour the spec
-  // requires — the call resolves, not rejects, and yields an array.
-  it('an empty installation renders a successful empty list, not an error', async () => {
+  // tasks.md 1.12: this suite reuses the app's own dev database with no
+  // per-test isolation, so a strictly-empty installation can never be
+  // observed here — other describe blocks in the same run routinely leave
+  // behind completed sessions. `expect.any(Array)` against that shared
+  // state is NOT a true empty-list assertion (it would pass whether the
+  // installation is empty or not) — this test verifies only that the call
+  // resolves rather than rejects against real Postgres, i.e. the query
+  // itself is well-formed. The actual empty-list contract ("no seeded
+  // completed sessions -> []") is covered where it CAN be asserted
+  // honestly: `in-memory-review-session.repository.spec.ts`'s "a draft
+  // never surfaces in the list or the by-id read" test, which seeds zero
+  // completed sessions and asserts `resolves.toEqual([])`.
+  it('resolves without throwing against real Postgres (true empty-list contract covered by the in-memory unit test)', async () => {
     await expect(repository.findCompletedAcrossInstallation()).resolves.toEqual(
       expect.any(Array),
     );

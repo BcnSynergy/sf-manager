@@ -141,6 +141,89 @@ describe('ListReviewHistoryUseCase', () => {
     expect(findByIdSpy).toHaveBeenCalledTimes(1);
   });
 
+  // review-history-admin-scope PR1 fix-up (4R fresh-context review CRITICAL
+  // #2, post-b8fb5a9): SYSTEM_ADMIN's installation-wide branch removed the
+  // implicit bound that kept the old sequential `for`-`await` loop safe.
+  // Proves the fix is actually concurrent (`Promise.all`), not just
+  // correct: both `findById` calls must fire before EITHER resolves. A
+  // sequential `for`-`await` loop would only issue the second call after
+  // the first settles, so this test hangs/fails under the old
+  // implementation and passes only once the calls are fired together.
+  it('calls communityRepository.findById concurrently for all distinct communities, not sequentially', async () => {
+    const sessionRepository = new InMemoryReviewSessionRepository();
+    const scopeChecker = new FakeCommunityScopeChecker();
+    const userDirectory = new InMemoryUserDirectory();
+    sessionRepository.seed(
+      completedSession({
+        id: 'session-1',
+        communityId: 'community-1',
+        completedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }),
+    );
+    sessionRepository.seed(
+      completedSession({
+        id: 'session-2',
+        communityId: 'community-2',
+        completedAt: new Date('2026-01-02T00:00:00.000Z'),
+      }),
+    );
+    scopeChecker.assign('rep-1', 'community-1');
+    scopeChecker.assign('rep-1', 'community-2');
+
+    const calledIds: string[] = [];
+    const resolvers: Array<() => void> = [];
+    const communityRepository = {
+      findById: jest.fn((id: string) => {
+        calledIds.push(id);
+        return new Promise((resolve) => {
+          resolvers.push(() =>
+            resolve(
+              new Community({
+                id,
+                name: `Name for ${id}`,
+                address: 'irrelevant',
+                locale: 'ca',
+                deletedAt: null,
+              }),
+            ),
+          );
+        });
+      }),
+    } as unknown as InMemoryCommunityRepository;
+
+    const useCase = buildUseCase(
+      sessionRepository,
+      scopeChecker,
+      communityRepository,
+      userDirectory,
+    );
+
+    const resultPromise = useCase.execute({
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    // Flush pending microtasks so the (still-unresolved) findById promises
+    // have had a chance to be created, WITHOUT resolving any of them. Several
+    // ticks are needed: listForActor -> listAssignedCommunityIds ->
+    // findCompletedInCommunities all await in sequence before execute()
+    // reaches the community-name resolution loop.
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+
+    expect(calledIds.sort()).toEqual(['community-1', 'community-2']);
+    expect(resolvers).toHaveLength(2);
+
+    resolvers.forEach((resolve) => resolve());
+    const rows = await resultPromise;
+
+    expect(rows.map((r) => r.communityName).sort()).toEqual([
+      'Name for community-1',
+      'Name for community-2',
+    ]);
+  });
+
   it('an unknown community resolves to an empty communityName rather than throwing', async () => {
     const sessionRepository = new InMemoryReviewSessionRepository();
     const scopeChecker = new FakeCommunityScopeChecker();

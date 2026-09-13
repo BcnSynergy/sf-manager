@@ -45,7 +45,29 @@ History Scope for a System Admin*.
 - [x] 1.9 RED/GREEN extend `prisma-review-session.repository.integration.spec.ts:742`'s port-surface guard — exact allowlist grows from 8 to 10 named reads (both new methods added); `not.toContain('findById')` assertion stays (design "Verified on main" baseline; Testing Strategy row 4).
 - [x] 1.10 RED/GREEN new call-site source-scan guard test in the same integration spec file (or a sibling file, per design Decision 2 mechanism 2) — scan `apps/api/src/**/*.ts` excluding `*.spec.ts` and `**/testing/**` for both new method names; assert matching files are exactly the port, both adapters, and `review-history-access.service.ts`; precedent `review-session-migration.integration.spec.ts` (Testing Strategy row 5). **DEVIATION**: excluding `**/testing/**` and expecting the in-memory adapter (which lives at `application/use-cases/testing/in-memory-review-session.repository.ts`) to still appear in the match set are mutually exclusive — see the NOTE comment at the test for the resolution taken (literal glob followed; match set is 3 files, not 4; the in-memory adapter's implementation is proven separately by task 1.8's unit tests).
 - [x] 1.11 Integration: installation-wide queries against real Postgres — rows across ≥2 companies and ≥2 communities, including one whose community is deactivated/soft-deleted and one whose maintenance company is soft-deleted; never a draft; `completedAt DESC, id DESC` (Testing Strategy row 6).
-- [x] 1.12 Integration: an empty installation returns a successful empty list, not an error (spec `review-history` scenario *An empty installation renders a successful empty list*).
+- [x] 1.12 Integration: an empty installation returns a successful empty list, not an error (spec `review-history` scenario *An empty installation renders a successful empty list*). **NOTE (PR1 fix-up)**: this suite's shared, non-isolated dev-DB cannot prove strict emptiness; the test now asserts only "resolves without throwing" and points to `in-memory-review-session.repository.spec.ts`'s "a draft never surfaces…" test for the honest empty-list contract — see PR1 fix-up commit below.
+
+### PR1 fix-up (post-`b8fb5a9`, pre-push 4R fresh-context review)
+
+A fresh-context 4R review (risk/resilience/readability/reliability) of PR1
+before push found 2 CRITICAL and 3 actionable WARNING findings, all fixed in
+a follow-up commit on the same branch (no scope change to Phase 1/2/3):
+
+- [x] 1.13 CRITICAL (resilience): `findCompletedAcrossInstallation`/`findCompletedByIdAcrossInstallation` filtered on `status` only — no FK, unlike the three sibling scope methods — full seq scan + filesort. Added Prisma migration `20260913210000_add_review_session_status_completed_at_index` — composite `@@index([status, completedAt, id])` on `ReviewSession`, covering both the filter and the `completedAt DESC, id DESC` sort.
+- [x] 1.14 CRITICAL (resilience): `list-review-history.use-case.ts`'s community-name resolution loop was a sequential `for`-`await` over `CommunityRepository.findById` — previously bounded by scope, now unbounded for `SYSTEM_ADMIN`. Fixed with `Promise.all` (parallel, same query count) rather than a new `CommunityRepository.findByIds` port method — adding batch-read surface to a different bounded context for one caller was judged disproportionate scope for a fix-up (ADR-006). RED/GREEN: new concurrency-proving unit test in `list-review-history.use-case.spec.ts` (deferred-promise mock proves both `findById` calls fire before either resolves; fails under the old sequential loop, passes under `Promise.all`).
+- [x] 1.15 WARNING (readability): guard test at `prisma-review-session.repository.integration.spec.ts` (task 1.10) had an internal comment that quoted design.md's "4 files" wording without leading with the actual 3-file assertion — reworded so the test's own comment states upfront, unambiguously, what it verifies (3 production call sites) before explaining the design.md/`**/testing/**` exclusion conflict.
+- [x] 1.16 WARNING (reliability): the empty-installation integration test (task 1.12) used `expect.any(Array)` against the shared dev DB — tautological, can't fail for the behaviour it claims. Reworded name/assertion to state only "resolves without throwing", with a comment pointing at the in-memory unit test that covers the real empty-list contract.
+- [x] 1.17 WARNING (resilience/consistency): `GET /review-history` controller's `list()` had no try/catch, unlike `read()`'s `mapError` pattern. Added the same try/catch + `mapError` wrapping to `list()`.
+
+Left as-is (SUGGESTION-level, out of scope for this fix-up): redundant
+"deliberately unscoped" comments across 6+ sites, missing integration-layer
+coverage for the null-company-attribution case (unit-covered only), and the
+call-site guard's `.spec.ts`-only exclusion (currently inert, no
+`.e2e-spec.ts` files in this module).
+
+Full suite re-verified after the fix-up: 820/820 unit, 125/125 integration
+(`--runInBand`), lint clean (pre-existing unrelated warnings only), build
+green.
 
 ## Phase 2: Authorization Entry + E2E Visibility Matrix (PR 2)
 

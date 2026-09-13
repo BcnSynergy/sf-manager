@@ -46,14 +46,30 @@ export class ListReviewHistoryUseCase {
   async execute(actor: Actor): Promise<ReviewHistoryRow[]> {
     const sessions = await this.reviewHistoryAccessService.listForActor(actor);
 
+    // review-history-admin-scope PR1 fix-up (4R fresh-context review
+    // CRITICAL #2, post-b8fb5a9): this loop was previously bounded by a
+    // single community/company scope; SYSTEM_ADMIN's installation-wide
+    // branch removes that bound, so the sequential `for`-`await` became an
+    // unbounded N+1. `CommunityRepository` has no `findByIds` batch method
+    // and this is the only caller shaped to need one — adding a new port
+    // method (and its Prisma + in-memory implementations) to a different
+    // bounded context for one caller would be disproportionate scope for a
+    // fix-up (ADR-006). `Promise.all` fires the same N `findById` calls
+    // concurrently instead of sequentially — same query count, no new port
+    // surface, and each call still resolves the same soft-deleted/deleted
+    // -community rule `findById` already applies.
     const communityIds = [...new Set(sessions.map((s) => s.communityId))];
+    const communities = await Promise.all(
+      communityIds.map((communityId) =>
+        this.communityRepository.findById(communityId),
+      ),
+    );
     const communityNameById = new Map<string, string>();
-    for (const communityId of communityIds) {
-      const community = await this.communityRepository.findById(communityId);
+    communities.forEach((community, index) => {
       if (community) {
-        communityNameById.set(communityId, community.name);
+        communityNameById.set(communityIds[index], community.name);
       }
-    }
+    });
 
     const performerIds = [...new Set(sessions.map((s) => s.performedById))];
     const emailByPerformerId =

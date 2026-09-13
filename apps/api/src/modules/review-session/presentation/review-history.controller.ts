@@ -45,10 +45,14 @@ export class ReviewHistoryController {
   async list(
     @CurrentUser() user: VerifiedAccessToken,
   ): Promise<ReviewHistoryRowDto[]> {
-    return this.listReviewHistoryUseCase.execute({
-      userId: user.sub,
-      role: user.role,
-    });
+    try {
+      return await this.listReviewHistoryUseCase.execute({
+        userId: user.sub,
+        role: user.role,
+      });
+    } catch (error) {
+      throw this.mapError(error);
+    }
   }
 
   @Get('review-history/:sessionId')
