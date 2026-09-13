@@ -353,6 +353,33 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     return ReviewSessionMapper.toDomain(record, entries);
   }
 
+  // review-history-admin-scope design.md Decision 1/2: the SYSTEM_ADMIN's
+  // unscoped pair — `WHERE status = 'completed'` and nothing else.
+  // Deactivated communities and soft-deleted maintenance companies are
+  // INCLUDED on purpose (total-oversight audit, not operational scoping).
+  async findCompletedAcrossInstallation(): Promise<ReviewSession[]> {
+    const records = await this.prisma.reviewSession.findMany({
+      where: { status: 'completed' },
+      orderBy: COMPLETED_HISTORY_ORDER_BY,
+    });
+
+    return records.map((record) => ReviewSessionMapper.toDomain(record, []));
+  }
+
+  async findCompletedByIdAcrossInstallation(
+    id: string,
+  ): Promise<ReviewSession | null> {
+    const record = await this.prisma.reviewSession.findFirst({
+      where: { id, status: 'completed' },
+    });
+    if (!record) {
+      return null;
+    }
+
+    const entries = await this.loadEntriesWithAnswers(id);
+    return ReviewSessionMapper.toDomain(record, entries);
+  }
+
   private async loadEntriesWithAnswers(reviewSessionId: string) {
     const entryRecords = await this.prisma.elementReviewEntry.findMany({
       where: { reviewSessionId },

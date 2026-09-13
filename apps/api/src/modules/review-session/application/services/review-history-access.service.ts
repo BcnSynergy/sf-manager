@@ -87,9 +87,19 @@ export class ReviewHistoryAccessService {
         return this.repository.findCompletedForCompany(companyId);
       }
 
-      // No history scope for these roles at all (proposal Settled scope
-      // decisions) — they never reach a repository call.
+      // NEW (review-history-admin-scope design.md Decision 1/3): the ONLY
+      // branch in this service with no scope resolution at all. There is
+      // no AdminScopeChecker to call — a checker that always answers
+      // "everything" would be ceremony that dilutes the meaning of the two
+      // real checkers. The ROLE *is* the scope (proposal "No scope
+      // predicate at all"), so there is nothing to fail closed ON, and no
+      // early return belongs here.
       case 'SYSTEM_ADMIN':
+        return this.repository.findCompletedAcrossInstallation();
+
+      // Still no history scope for this role (proposal non-goal: MANAGER +
+      // VIEW_ALL_REVIEWS is a separate, unbuilt slice) — intentionally [],
+      // not forgotten. MANAGER never reaches a repository call.
       case 'MANAGER':
         return [];
       default: {
@@ -160,9 +170,14 @@ export class ReviewHistoryAccessService {
         );
       }
 
-      // Same fail-closed backstop as listForActor: no history scope for
-      // these roles at all, so they never reach a repository call.
+      // NEW (review-history-admin-scope design.md Decision 1/3): identical
+      // split to listForActor — no scope resolution, straight to the
+      // unscoped by-id read.
       case 'SYSTEM_ADMIN':
+        return this.repository.findCompletedByIdAcrossInstallation(sessionId);
+
+      // Same fail-closed backstop as listForActor: still no history scope
+      // for this role, so it never reaches a repository call.
       case 'MANAGER':
         return null;
       default: {

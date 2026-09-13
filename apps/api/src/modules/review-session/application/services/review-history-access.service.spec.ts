@@ -181,23 +181,64 @@ describe('ReviewHistoryAccessService.listForActor', () => {
     expect(spy).toHaveBeenCalledWith('company-1');
   });
 
-  it.each<Role>(['SYSTEM_ADMIN', 'MANAGER'])(
-    '%s reaches no repository call and yields []',
-    async (role) => {
-      communityScopeChecker.assign('user-1', 'community-1');
-      companyScopeChecker.assign('user-1', 'company-1');
-      const performerSpy = jest.spyOn(repository, 'findCompletedForPerformer');
-      const communitySpy = jest.spyOn(repository, 'findCompletedInCommunities');
-      const companySpy = jest.spyOn(repository, 'findCompletedForCompany');
+  it('MANAGER reaches no repository call and yields [] (still unbuilt)', async () => {
+    communityScopeChecker.assign('user-1', 'community-1');
+    companyScopeChecker.assign('user-1', 'company-1');
+    const performerSpy = jest.spyOn(repository, 'findCompletedForPerformer');
+    const communitySpy = jest.spyOn(repository, 'findCompletedInCommunities');
+    const companySpy = jest.spyOn(repository, 'findCompletedForCompany');
+    const adminSpy = jest.spyOn(repository, 'findCompletedAcrossInstallation');
 
-      const result = await service.listForActor({ userId: 'user-1', role });
+    const result = await service.listForActor({
+      userId: 'user-1',
+      role: 'MANAGER',
+    });
 
-      expect(result).toEqual([]);
-      expect(performerSpy).not.toHaveBeenCalled();
-      expect(communitySpy).not.toHaveBeenCalled();
-      expect(companySpy).not.toHaveBeenCalled();
-    },
-  );
+    expect(result).toEqual([]);
+    expect(performerSpy).not.toHaveBeenCalled();
+    expect(communitySpy).not.toHaveBeenCalled();
+    expect(companySpy).not.toHaveBeenCalled();
+    expect(adminSpy).not.toHaveBeenCalled();
+  });
+
+  // review-history-admin-scope design.md Decision 1/3, tasks.md 1.6: the
+  // ONLY branch with no Layer 2 call at all — reaches
+  // findCompletedAcrossInstallation with no arguments, and touches NEITHER
+  // scope checker.
+  it('a SYSTEM_ADMIN reaches findCompletedAcrossInstallation with no arguments and touches neither scope checker', async () => {
+    repository.seed(
+      completedSession({ id: 'any-company', performedById: 'tech-1' }),
+    );
+    const adminSpy = jest.spyOn(repository, 'findCompletedAcrossInstallation');
+    const communitySpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+    const companySpy = jest.spyOn(companyScopeChecker, 'resolveCompanyScope');
+
+    const result = await service.listForActor({
+      userId: 'admin-1',
+      role: 'SYSTEM_ADMIN',
+    });
+
+    expect(result.map((s) => s.id)).toEqual(['any-company']);
+    expect(adminSpy).toHaveBeenCalledWith();
+    expect(communitySpy).not.toHaveBeenCalled();
+    expect(companySpy).not.toHaveBeenCalled();
+  });
+
+  it("a SYSTEM_ADMIN's result is unaffected by holding no community assignment and no company", async () => {
+    repository.seed(completedSession({ id: 'session-1' }));
+    // Deliberately no communityScopeChecker.assign() / companyScopeChecker.assign()
+    // calls — the admin's scope must resolve from the role alone.
+
+    const result = await service.listForActor({
+      userId: 'admin-1',
+      role: 'SYSTEM_ADMIN',
+    });
+
+    expect(result.map((s) => s.id)).toEqual(['session-1']);
+  });
 
   it('refuses (yields []) for a role value outside the Role union', async () => {
     const result = await service.listForActor({
@@ -400,38 +441,90 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
     ).rejects.toThrow(ReviewSessionNotFoundError);
   });
 
-  it.each<Role>(['SYSTEM_ADMIN', 'MANAGER'])(
-    '%s reaches no repository call and gets ReviewSessionNotFoundError',
-    async (role) => {
-      const session = completedSession({
-        id: 'session-x',
-        performedById: 'user-1',
-        communityId: 'community-1',
-      });
-      repository.seed(session);
-      communityScopeChecker.assign('user-1', 'community-1');
-      companyScopeChecker.assign('user-1', 'company-1');
-      const byPerformerSpy = jest.spyOn(
-        repository,
-        'findCompletedByIdForPerformer',
-      );
-      const byCommunitySpy = jest.spyOn(
-        repository,
-        'findCompletedByIdInCommunities',
-      );
-      const byCompanySpy = jest.spyOn(
-        repository,
-        'findCompletedByIdForCompany',
-      );
+  it('MANAGER reaches no repository call and gets ReviewSessionNotFoundError (still unbuilt)', async () => {
+    const session = completedSession({
+      id: 'session-x',
+      performedById: 'user-1',
+      communityId: 'community-1',
+    });
+    repository.seed(session);
+    communityScopeChecker.assign('user-1', 'community-1');
+    companyScopeChecker.assign('user-1', 'company-1');
+    const byPerformerSpy = jest.spyOn(
+      repository,
+      'findCompletedByIdForPerformer',
+    );
+    const byCommunitySpy = jest.spyOn(
+      repository,
+      'findCompletedByIdInCommunities',
+    );
+    const byCompanySpy = jest.spyOn(repository, 'findCompletedByIdForCompany');
+    const byAdminSpy = jest.spyOn(
+      repository,
+      'findCompletedByIdAcrossInstallation',
+    );
 
-      await expect(
-        service.loadCompletedForActor('session-x', { userId: 'user-1', role }),
-      ).rejects.toThrow(ReviewSessionNotFoundError);
-      expect(byPerformerSpy).not.toHaveBeenCalled();
-      expect(byCommunitySpy).not.toHaveBeenCalled();
-      expect(byCompanySpy).not.toHaveBeenCalled();
-    },
-  );
+    await expect(
+      service.loadCompletedForActor('session-x', {
+        userId: 'user-1',
+        role: 'MANAGER',
+      }),
+    ).rejects.toThrow(ReviewSessionNotFoundError);
+    expect(byPerformerSpy).not.toHaveBeenCalled();
+    expect(byCommunitySpy).not.toHaveBeenCalled();
+    expect(byCompanySpy).not.toHaveBeenCalled();
+    expect(byAdminSpy).not.toHaveBeenCalled();
+  });
+
+  // review-history-admin-scope design.md Decision 1/2/3, tasks.md 1.5/1.6:
+  // the admin's by-id counterpart — findCompletedByIdAcrossInstallation(id),
+  // no scope condition evaluated against the actor.
+  it('a SYSTEM_ADMIN reads back any completed session by id via findCompletedByIdAcrossInstallation, unconditionally', async () => {
+    const session = completedSession({
+      id: 'any-session',
+      performedById: 'tech-1',
+      communityId: 'community-9',
+    });
+    repository.seed(session);
+    const adminByIdSpy = jest.spyOn(
+      repository,
+      'findCompletedByIdAcrossInstallation',
+    );
+
+    const result = await service.loadCompletedForActor('any-session', {
+      userId: 'admin-1',
+      role: 'SYSTEM_ADMIN',
+    });
+
+    expect(result.id).toBe('any-session');
+    expect(adminByIdSpy).toHaveBeenCalledWith('any-session');
+  });
+
+  it('a SYSTEM_ADMIN gets ReviewSessionNotFoundError for a draft or a nonexistent id', async () => {
+    const draft = new ReviewSession({
+      id: 'draft-1',
+      communityId: 'community-1',
+      templateId: 'template-1',
+      performedById: 'user-1',
+      status: 'draft',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt: null,
+    });
+    repository.seed(draft);
+
+    await expect(
+      service.loadCompletedForActor('draft-1', {
+        userId: 'admin-1',
+        role: 'SYSTEM_ADMIN',
+      }),
+    ).rejects.toThrow(ReviewSessionNotFoundError);
+    await expect(
+      service.loadCompletedForActor('nonexistent', {
+        userId: 'admin-1',
+        role: 'SYSTEM_ADMIN',
+      }),
+    ).rejects.toThrow(ReviewSessionNotFoundError);
+  });
 });
 
 // tasks.md 3.11: SessionAccessService's existing suite passes unmodified —
