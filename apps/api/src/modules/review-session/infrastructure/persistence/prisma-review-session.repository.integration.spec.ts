@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, sep } from 'node:path';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { PrismaUserRepository } from '../../../users/infrastructure/persistence/prisma-user.repository';
@@ -759,9 +761,74 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
         'findCompletedByIdForPerformer',
         'findCompletedForCompany',
         'findCompletedByIdForCompany',
+        'findCompletedAcrossInstallation',
+        'findCompletedByIdAcrossInstallation',
       ].sort(),
     );
     expect(readMethods).not.toContain('findById');
+  });
+
+  // review-history-admin-scope design.md Decision 2, mechanism 2, tasks.md
+  // 1.10: a second production caller of the unscoped pair must fail the
+  // build. Scan `apps/api/src/**/*.ts`, excluding `*.spec.ts` and
+  // `**/testing/**` (test doubles are not production callers — this is a
+  // textual scan, so InMemoryReviewSessionRepository would otherwise match
+  // as a false positive purely for IMPLEMENTING the port, the same reason
+  // *.spec.ts files are excluded), for both new method names. Precedent for
+  // reading source from a test: review-session-migration.integration.spec.ts.
+  //
+  // THIS GUARD VERIFIES EXACTLY 3 PRODUCTION CALL SITES (see
+  // `expectedSuffixes` below) — the port, the Prisma adapter and the
+  // service. It does NOT, and structurally cannot, cover
+  // `in-memory-review-session.repository.ts`: that file lives under
+  // `**/testing/**`, which this scan deliberately excludes (test doubles
+  // are not production callers — the same reason `*.spec.ts` is excluded —
+  // and without the exclusion the in-memory adapter would match as a false
+  // positive purely for IMPLEMENTING the port). The in-memory adapter's own
+  // correct implementation of the pair is proven separately, by task 1.8's
+  // unit tests, not by this guard.
+  //
+  // NOTE (deviation from design.md's literal wording — reported to
+  // orchestrator per apply-progress): design.md Decision 2 mechanism 2 and
+  // tasks.md 1.10 both describe the expected match set as "the port, BOTH
+  // adapters and review-history-access.service.ts" (4 files). That wording
+  // and the "exclude `**/testing/**`" instruction are mutually exclusive
+  // given where the in-memory adapter lives, so they cannot both be
+  // followed literally. This test follows the exclusion (matching every
+  // other guard test's `**/testing/**` convention) and the 3-file count
+  // above is what it actually asserts.
+  it('findCompletedAcrossInstallation/findCompletedByIdAcrossInstallation appear only in the port, the Prisma adapter and the service — no other production file', () => {
+    const srcRoot = join(__dirname, '..', '..', '..', '..');
+    const entries = readdirSync(srcRoot, {
+      recursive: true,
+      withFileTypes: true,
+    });
+
+    const candidateFiles = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .filter((entry) => !entry.name.endsWith('.spec.ts'))
+      .map((entry) => join(entry.parentPath ?? entry.path, entry.name))
+      .filter((filePath) => !filePath.split(sep).includes('testing'));
+
+    const methodNamePattern =
+      /findCompletedAcrossInstallation|findCompletedByIdAcrossInstallation/;
+
+    const matchingFiles = candidateFiles
+      .filter((filePath) =>
+        methodNamePattern.test(readFileSync(filePath, 'utf8')),
+      )
+      .map((filePath) => filePath.split(sep).join('/'));
+
+    const expectedSuffixes = [
+      'application/ports/review-session.repository.port.ts',
+      'infrastructure/persistence/prisma-review-session.repository.ts',
+      'application/services/review-history-access.service.ts',
+    ];
+
+    expect(matchingFiles).toHaveLength(expectedSuffixes.length);
+    for (const suffix of expectedSuffixes) {
+      expect(matchingFiles.some((f) => f.endsWith(suffix))).toBe(true);
+    }
   });
 });
 
@@ -1051,5 +1118,261 @@ describe('PrismaReviewSessionRepository — findCompletedForCompany/findComplete
     await expect(
       repository.findCompletedByIdForCompany(sessionId, newCompany),
     ).resolves.toBeNull();
+  });
+});
+
+// review-history-admin-scope design.md Decision 1/2, tasks.md 1.11/1.12:
+// the SYSTEM_ADMIN's unscoped pair against real Postgres — rows across
+// several companies and communities, including deactivated/soft-deleted
+// context (which MUST NOT hide the row, unlike every other scope), and the
+// empty-installation case.
+describe('PrismaReviewSessionRepository — findCompletedAcrossInstallation/findCompletedByIdAcrossInstallation (integration)', () => {
+  let prisma: PrismaService;
+  let repository: PrismaReviewSessionRepository;
+  let communityRepository: PrismaCommunityRepository;
+  let templateRepository: PrismaReviewTemplateRepository;
+  let userRepository: PrismaUserRepository;
+  let maintenanceCompanyRepository: PrismaMaintenanceCompanyRepository;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+    repository = new PrismaReviewSessionRepository(prisma);
+    communityRepository = new PrismaCommunityRepository(prisma);
+    templateRepository = new PrismaReviewTemplateRepository(prisma);
+    userRepository = new PrismaUserRepository(prisma);
+    maintenanceCompanyRepository = new PrismaMaintenanceCompanyRepository(
+      prisma,
+    );
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  const uniqueName = (label: string) => `${label}-${randomUUID()}`;
+
+  const createCommunity = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await communityRepository.create(
+      new Community({
+        id,
+        name: uniqueName(label),
+        address: 'Carrer Major 1, Girona',
+        locale: 'ca',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createCompany = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await maintenanceCompanyRepository.create(
+      new MaintenanceCompany({
+        id,
+        name: uniqueName(label),
+        taxId: uniqueName('tax'),
+        contactInfo: 'contact@example.com',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createUser = async (
+    label: string,
+    maintenanceCompanyId: string | null = null,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    await userRepository.create(
+      new User({
+        id,
+        email: `${uniqueName(label)}@example.com`,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        maintenanceCompanyId,
+      }),
+    );
+    return id;
+  };
+
+  const createActiveTemplate = async (label: string): Promise<string> => {
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        status: 'draft',
+      },
+    });
+
+    const id = idGenerator.generate();
+    await templateRepository.create(
+      new ReviewTemplate({
+        id,
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        name: uniqueName(label),
+        version: null,
+        status: 'draft',
+        draftQuestionIds: [],
+        createdAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'SEMIANNUAL',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
+    const nextVersion =
+      Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1;
+    await prisma.reviewTemplate.update({
+      where: { id },
+      data: { status: 'active', version: nextVersion },
+    });
+    return id;
+  };
+
+  const createSession = async (params: {
+    communityId: string;
+    templateId: string;
+    performedById: string;
+    performedByCompanyId: string | null;
+    status: 'draft' | 'completed';
+    completedAt?: Date;
+  }): Promise<string> => {
+    const id = idGenerator.generate();
+    await repository.create(
+      new ReviewSession({
+        id,
+        communityId: params.communityId,
+        templateId: params.templateId,
+        performedById: params.performedById,
+        performedByCompanyId: params.performedByCompanyId,
+        status: 'draft',
+        startedAt: new Date(),
+        completedAt: null,
+      }),
+    );
+    if (params.status === 'completed') {
+      const completed = await repository.complete(
+        id,
+        params.completedAt ?? new Date(),
+      );
+      expect(completed).toBe(true);
+      await prisma.reviewSession.update({
+        where: { id },
+        data: { performedByCompanyId: params.performedByCompanyId },
+      });
+    }
+    return id;
+  };
+
+  // tasks.md 1.11: rows across ≥2 companies and ≥2 communities, including
+  // one whose community is deactivated/soft-deleted and one whose
+  // maintenance company is soft-deleted — never a draft; completedAt DESC,
+  // id DESC.
+  it('returns every completed session across ≥2 companies and ≥2 communities, including deactivated/soft-deleted context, never a draft', async () => {
+    const communityX = await createCommunity('admin-scope-x');
+    const communityY = await createCommunity('admin-scope-y');
+    const templateId = await createActiveTemplate('admin-scope');
+    const companyA = await createCompany('admin-scope-a');
+    const companyB = await createCompany('admin-scope-b');
+    const performerA = await createUser('admin-scope-performer-a', companyA);
+    const performerB = await createUser('admin-scope-performer-b', companyB);
+
+    const sessionOnX = await createSession({
+      communityId: communityX,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: companyA,
+      status: 'completed',
+      completedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const sessionOnY = await createSession({
+      communityId: communityY,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: companyB,
+      status: 'completed',
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    await createSession({
+      communityId: communityX,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: companyA,
+      status: 'draft',
+    });
+
+    // Deactivate community Y, soft-delete performer A's user (so company A
+    // carries no active user and can itself be soft-deleted next), then
+    // soft-delete company A — all AFTER their sessions completed. Spec:
+    // "Visibility MUST NOT be reduced by deleted or deactivated context —
+    // the one scope with no exceptions".
+    const communityYDeleted =
+      await communityRepository.softDeleteById(communityY);
+    expect(communityYDeleted).toBe(true);
+    await userRepository.softDeleteById(performerA);
+    const companyASoftDeleted =
+      await maintenanceCompanyRepository.softDeleteById(companyA);
+    expect(companyASoftDeleted).toBe(true);
+
+    // This suite reuses the app's own dev database with no per-test
+    // isolation (same caveat as the other describe blocks in this file) —
+    // findCompletedAcrossInstallation is, BY DESIGN, unscoped, so it also
+    // returns every OTHER completed session created by sibling tests in
+    // this same run. Assertions below use `toContain`/relative-order
+    // checks on the two ids this test created, never exact length or
+    // full-array equality.
+    const result = await repository.findCompletedAcrossInstallation();
+    const resultIds = result.map((s) => s.id);
+
+    expect(resultIds).toContain(sessionOnX);
+    expect(resultIds).toContain(sessionOnY);
+    expect(resultIds.indexOf(sessionOnY)).toBeLessThan(
+      resultIds.indexOf(sessionOnX),
+    );
+
+    // The by-id read must also survive the deactivation/soft-deletion.
+    await expect(
+      repository.findCompletedByIdAcrossInstallation(sessionOnX),
+    ).resolves.not.toBeNull();
+    await expect(
+      repository.findCompletedByIdAcrossInstallation(sessionOnY),
+    ).resolves.not.toBeNull();
+  });
+
+  // tasks.md 1.12: this suite reuses the app's own dev database with no
+  // per-test isolation, so a strictly-empty installation can never be
+  // observed here — other describe blocks in the same run routinely leave
+  // behind completed sessions. `expect.any(Array)` against that shared
+  // state is NOT a true empty-list assertion (it would pass whether the
+  // installation is empty or not) — this test verifies only that the call
+  // resolves rather than rejects against real Postgres, i.e. the query
+  // itself is well-formed. The actual empty-list contract ("no seeded
+  // completed sessions -> []") is covered where it CAN be asserted
+  // honestly: `in-memory-review-session.repository.spec.ts`'s "a draft
+  // never surfaces in the list or the by-id read" test, which seeds zero
+  // completed sessions and asserts `resolves.toEqual([])`.
+  it('resolves without throwing against real Postgres (true empty-list contract covered by the in-memory unit test)', async () => {
+    await expect(repository.findCompletedAcrossInstallation()).resolves.toEqual(
+      expect.any(Array),
+    );
   });
 });

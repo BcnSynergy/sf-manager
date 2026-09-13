@@ -354,3 +354,128 @@ describe('InMemoryReviewSessionRepository — findCompletedForPerformer/findComp
     expect(forCompany.map((s) => s.id)).toEqual(['session-b', 'session-a']);
   });
 });
+
+// review-history-admin-scope design.md Decision 1/2, tasks.md 1.8: the
+// SYSTEM_ADMIN's unscoped pair — returns every completed session regardless
+// of community/company/performer, a draft never surfaces, and ordering is
+// identical to the other list methods.
+describe('InMemoryReviewSessionRepository — findCompletedAcrossInstallation/findCompletedByIdAcrossInstallation (new methods)', () => {
+  function completedSession(
+    overrides: Partial<{
+      id: string;
+      communityId: string;
+      performedById: string;
+      performedByCompanyId: string | null;
+      completedAt: Date;
+    }> = {},
+  ): ReviewSession {
+    return new ReviewSession({
+      id: overrides.id ?? 'session-1',
+      communityId: overrides.communityId ?? 'community-1',
+      templateId: 'template-1',
+      performedById: overrides.performedById ?? 'user-1',
+      performedByCompanyId:
+        overrides.performedByCompanyId === undefined
+          ? 'company-1'
+          : overrides.performedByCompanyId,
+      status: 'completed',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt:
+        overrides.completedAt ?? new Date('2026-01-02T00:00:00.000Z'),
+    });
+  }
+
+  it('returns every completed session regardless of community, company or performer', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    repository.seed(
+      completedSession({
+        id: 'session-a',
+        communityId: 'community-1',
+        performedById: 'user-1',
+        performedByCompanyId: 'company-1',
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-b',
+        communityId: 'community-2',
+        performedById: 'user-2',
+        performedByCompanyId: 'company-2',
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-c',
+        communityId: 'community-3',
+        performedById: 'user-3',
+        performedByCompanyId: null,
+      }),
+    );
+
+    const result = await repository.findCompletedAcrossInstallation();
+
+    expect(result.map((s) => s.id).sort()).toEqual([
+      'session-a',
+      'session-b',
+      'session-c',
+    ]);
+  });
+
+  it('a draft never surfaces in the list or the by-id read', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    const draft = new ReviewSession({
+      id: 'session-draft',
+      communityId: 'community-1',
+      templateId: 'template-1',
+      performedById: 'user-1',
+      status: 'draft',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt: null,
+    });
+    repository.seed(draft);
+
+    await expect(repository.findCompletedAcrossInstallation()).resolves.toEqual(
+      [],
+    );
+    await expect(
+      repository.findCompletedByIdAcrossInstallation('session-draft'),
+    ).resolves.toBeNull();
+  });
+
+  it('orders completedAt DESC, id DESC — identical direction to the other list methods', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    const earlier = completedSession({
+      id: 'session-a',
+      completedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const later = completedSession({
+      id: 'session-b',
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    repository.seed(earlier);
+    repository.seed(later);
+
+    const result = await repository.findCompletedAcrossInstallation();
+
+    expect(result.map((s) => s.id)).toEqual(['session-b', 'session-a']);
+  });
+
+  it('the by-id read returns any completed session unconditionally, and null for an unknown id', async () => {
+    const repository = new InMemoryReviewSessionRepository();
+    repository.seed(
+      completedSession({
+        id: 'session-a',
+        communityId: 'community-9',
+        performedById: 'user-9',
+        performedByCompanyId: null,
+      }),
+    );
+
+    await expect(
+      repository.findCompletedByIdAcrossInstallation('session-a'),
+    ).resolves.not.toBeNull();
+    await expect(
+      repository.findCompletedByIdAcrossInstallation('nonexistent'),
+    ).resolves.toBeNull();
+  });
+});

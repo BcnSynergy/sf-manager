@@ -127,6 +127,32 @@ export interface ReviewSessionRepository {
     id: string,
     companyId: string,
   ): Promise<ReviewSession | null>;
+
+  // review-history-admin-scope design.md Decision 1/2: the SYSTEM_ADMIN
+  // scope. The scope IS the installation — `WHERE status = 'completed'` and
+  // nothing else. This is the ONLY read on this port with no narrowing
+  // conjunct, and that is DELIBERATE, not an omission: total-oversight
+  // audit is the whole point of the SYSTEM_ADMIN scope (proposal "Total
+  // oversight, no exceptions"). Deactivated communities and soft-deleted
+  // maintenance companies are INCLUDED on purpose — deleted context must
+  // not hide a compliance record from the auditor. Callable from exactly
+  // ONE place: ReviewHistoryAccessService's SYSTEM_ADMIN branch. Do NOT
+  // reach for this pair for a scoped need; use the
+  // …InCommunities/…ForPerformer/…ForCompany method for that scope. Same
+  // COMPLETED_HISTORY_ORDER_BY as every other list method.
+  //
+  // design.md Decision 2 — the "no identifier-only read" invariant,
+  // restated: every by-id read on this port names its scope in its own
+  // name and takes that scope as a required parameter UNLESS the named
+  // scope is the whole installation — in which case the method is
+  // reachable from exactly one call site, the SYSTEM_ADMIN branch of
+  // ReviewHistoryAccessService. `findById` still does not exist, and never
+  // will.
+  findCompletedAcrossInstallation(): Promise<ReviewSession[]>;
+
+  findCompletedByIdAcrossInstallation(
+    id: string,
+  ): Promise<ReviewSession | null>;
 }
 
 export const REVIEW_SESSION_REPOSITORY = Symbol('REVIEW_SESSION_REPOSITORY');

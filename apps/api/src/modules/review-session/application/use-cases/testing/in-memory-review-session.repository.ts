@@ -223,4 +223,26 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     }
     return Promise.resolve(session);
   }
+
+  // review-history-admin-scope design.md Decision 1/2: the SYSTEM_ADMIN's
+  // unscoped pair — every completed session, no narrowing of any kind
+  // (not even a deactivated/soft-deleted community or company, which this
+  // fake has no liveness state to filter by anyway).
+  findCompletedAcrossInstallation(): Promise<ReviewSession[]> {
+    return Promise.resolve(
+      [...this.sessionsById.values()]
+        .filter((session) => session.status === 'completed')
+        .sort(orderByCompletedHistory),
+    );
+  }
+
+  findCompletedByIdAcrossInstallation(
+    id: string,
+  ): Promise<ReviewSession | null> {
+    const session = this.sessionsById.get(id);
+    if (!session || session.status !== 'completed') {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(session);
+  }
 }

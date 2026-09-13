@@ -366,6 +366,13 @@ model ReviewSession {
   // review-history-company-scope/design.md Decision 2: filters the
   // manager's company-wide read path.
   @@index([performedByCompanyId])
+  // review-history-admin-scope PR1 fix-up (4R review CRITICAL #1): the
+  // SYSTEM_ADMIN pair's `WHERE status = 'completed' ORDER BY completedAt
+  // DESC, id DESC` has no FK to filter on (installation-wide, by design —
+  // Decision 1/2), so unlike the three sibling scope methods it had NO
+  // index support at all: full seq scan + filesort. This composite index
+  // covers the filter AND the sort in one pass.
+  @@index([status, completedAt, id])
   // One open draft per (community, template, performer) is a HAND-WRITTEN
   // PARTIAL UNIQUE INDEX — `@@unique` has no `WHERE` clause, so Prisma
   // cannot express it and is therefore INVISIBLE to Prisma's migration
