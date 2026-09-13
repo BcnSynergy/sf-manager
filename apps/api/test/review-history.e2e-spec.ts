@@ -1042,11 +1042,27 @@ describe('Review History (e2e)', () => {
       );
     });
 
-    it('SYSTEM_ADMIN gets 403 on both the list and the detail route', async () => {
+    // review-history-admin-scope/authorization/spec.md "Installation-Wide
+    // Review History Scope for a System Admin": SYSTEM_ADMIN is now the
+    // fourth operational scope — every completed session, list and by-id,
+    // regardless of who performed it or which community it belongs to.
+    it('SYSTEM_ADMIN sees every completed session in the installation on both the list and the detail route', async () => {
       const adminAgent = await loginAgent(built.app, adminEmail);
 
-      await adminAgent.get('/review-history').expect(403);
-      await adminAgent.get(`/review-history/${sessionByUForC.id}`).expect(403);
+      const listResponse = await adminAgent.get('/review-history').expect(200);
+      const rowIds = (listResponse.body as HistoryRowBody[]).map(
+        (row) => row.id,
+      );
+      expect(rowIds).toContain(sessionByUForC.id);
+      expect(rowIds).toContain(sessionByWForC.id);
+      expect(rowIds).toContain(sessionForD.id);
+
+      const detailResponse = await adminAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+      expect((detailResponse.body as HistoryDetailBody).id).toBe(
+        sessionByUForC.id,
+      );
     });
 
     it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on either route', async () => {
@@ -1741,9 +1757,8 @@ describe('Review History (e2e)', () => {
     });
 
     // tasks.md 4.12: the company association is checked IN ADDITION to the
-    // permission, never instead of it — both roles' variant: MANAGER and
-    // SYSTEM_ADMIN each have a company set (bypassing normal policy) but
-    // neither role holds reviewSession:read.
+    // permission, never instead of it — MANAGER has a company set (bypassing
+    // normal policy) but holds no reviewSession:read at all.
     it('a caller with a set company but no reviewSession:read gets 403 on every history endpoint (MANAGER variant)', async () => {
       const managerRoleAgent = await loginAgent(
         built.app,
@@ -1756,16 +1771,27 @@ describe('Review History (e2e)', () => {
         .expect(403);
     });
 
-    it('a caller with a set company but no reviewSession:read gets 403 on every history endpoint (SYSTEM_ADMIN variant)', async () => {
+    // review-history-admin-scope/design.md Decision 3, authorization/spec.md
+    // "The admin's scope resolves from the role alone": SYSTEM_ADMIN now
+    // DOES hold reviewSession:read (unlike MANAGER above), so this fixture's
+    // role changes what it proves — a maintenanceCompanyId set on a
+    // SYSTEM_ADMIN (bypassing normal policy, same precedent as
+    // managerRoleNoPermission) MUST NOT narrow the admin's installation-wide
+    // result to that one company; the admin still sees every completed
+    // session, including other companies' and the unattributed one.
+    it("an admin's own maintenance company has no effect on their installation-wide scope", async () => {
       const adminWithCompanyAgent = await loginAgent(
         built.app,
         adminWithCompanyEmail,
       );
 
-      await adminWithCompanyAgent.get('/review-history').expect(403);
-      await adminWithCompanyAgent
-        .get(`/review-history/${sessionX1ForC.id}`)
-        .expect(403);
+      const response = await adminWithCompanyAgent
+        .get('/review-history')
+        .expect(200);
+      const rowIds = (response.body as HistoryRowBody[]).map((row) => row.id);
+      expect(rowIds).toContain(sessionX1ForC.id);
+      expect(rowIds).toContain(sessionYForE.id);
+      expect(rowIds).toContain(sessionNoCompanyForF.id);
     });
 
     // tasks.md 4.10: the 404 is not just identical to "nonexistent" per
@@ -1847,6 +1873,335 @@ describe('Review History (e2e)', () => {
       await managerXAgent
         .delete(`/review-sessions/${draftXForC.id}`)
         .expect(403);
+    });
+  });
+
+  // review-history-admin-scope/design.md Decisions 1-4, authorization/
+  // spec.md "Installation-Wide Review History Scope for a System Admin" /
+  // "The System Admin Becomes Operational on Review History Reads" /
+  // "The Deferred Review Visibility Scopes Grant Nothing" (MODIFIED) —
+  // tasks.md 2.3-2.7: the fourth scope, no predicate at all. Deactivated
+  // context and no company/community assignment must not narrow it.
+  describe('Installation-wide history scope for SYSTEM_ADMIN', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rha-admin@example.com';
+    const technicianXEmail = 'rha-technician-x@example.com';
+    const technicianYEmail = 'rha-technician-y@example.com';
+    const technicianNoCompanyEmail = 'rha-technician-nocompany@example.com';
+    const technicianDeletedEmail = 'rha-technician-deleted@example.com';
+
+    const COMPANY_X = 'rha-company-x';
+    const COMPANY_Y = 'rha-company-y';
+
+    let communityX: CommunityBody;
+    let communityY: CommunityBody;
+    let templateId: string;
+    let question: QuestionBody;
+    let elementX: ElementBody;
+    let sessionForX: SessionBody;
+    let sessionForY: SessionBody;
+    let sessionNoCompany: SessionBody;
+    let sessionSoftDeletedPerformer: SessionBody;
+    let draftForX: { id: string };
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rha-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technicianX = await buildSeedUser({
+        id: 'rha-technician-x-id',
+        email: technicianXEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: COMPANY_X,
+      });
+      const technicianY = await buildSeedUser({
+        id: 'rha-technician-y-id',
+        email: technicianYEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: COMPANY_Y,
+      });
+      const technicianNoCompany = await buildSeedUser({
+        id: 'rha-technician-nocompany-id',
+        email: technicianNoCompanyEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const technicianDeleted = await buildSeedUser({
+        id: 'rha-technician-deleted-id',
+        email: technicianDeletedEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: COMPANY_X,
+      });
+
+      // The admin fixture is seeded with NO maintenanceCompanyId and gets NO
+      // community assignment anywhere below — authorization/spec.md "The
+      // admin's scope resolves from the role alone" is proven by every test
+      // in this block using this SAME fixture, not a separate "bare" one.
+      built = await buildApp({
+        users: [
+          admin,
+          technicianX,
+          technicianY,
+          technicianNoCompany,
+          technicianDeleted,
+        ],
+        liveCompanyIds: [COMPANY_X, COMPANY_Y],
+      });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      communityX = await createCommunity(adminAgent, 'Admin scope X');
+      communityY = await createCommunity(adminAgent, 'Admin scope Y');
+      await assignTechnician(adminAgent, communityX.id, 'rha-technician-x-id');
+      await assignTechnician(adminAgent, communityY.id, 'rha-technician-y-id');
+      await assignTechnician(
+        adminAgent,
+        communityX.id,
+        'rha-technician-nocompany-id',
+      );
+      await assignTechnician(
+        adminAgent,
+        communityX.id,
+        'rha-technician-deleted-id',
+      );
+
+      elementX = await createElement(adminAgent, communityX.id, 'Element X');
+      const elementY = await createElement(
+        adminAgent,
+        communityY.id,
+        'Element Y',
+      );
+      question = await createQuestion(adminAgent, 'Is it operational?');
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Admin scope template',
+        [question.id],
+      );
+      templateId = template.id;
+
+      async function completeSession(
+        email: string,
+        communityId: string,
+        elementId: string,
+      ): Promise<SessionBody> {
+        const agent = await loginAgent(built.app, email);
+        const opened = (
+          await agent
+            .post('/review-sessions')
+            .send({ communityId, templateId })
+            .expect(201)
+        ).body as { id: string };
+        await agent
+          .put(`/review-sessions/${opened.id}/entries/${elementId}`)
+          .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+          .expect(200);
+        return (
+          await agent.post(`/review-sessions/${opened.id}/complete`).expect(200)
+        ).body as SessionBody;
+      }
+
+      sessionForX = await completeSession(
+        technicianXEmail,
+        communityX.id,
+        elementX.id,
+      );
+      sessionForY = await completeSession(
+        technicianYEmail,
+        communityY.id,
+        elementY.id,
+      );
+      sessionNoCompany = await completeSession(
+        technicianNoCompanyEmail,
+        communityX.id,
+        elementX.id,
+      );
+      sessionSoftDeletedPerformer = await completeSession(
+        technicianDeletedEmail,
+        communityX.id,
+        elementX.id,
+      );
+
+      const technicianXAgent = await loginAgent(built.app, technicianXEmail);
+      draftForX = (
+        await technicianXAgent
+          .post('/review-sessions')
+          .send({ communityId: communityX.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+
+      // Deactivate community Y AFTER its session completed — its only
+      // element must be cleared first (community.e2e-spec.ts precedent:
+      // active elements block community deletion).
+      await adminAgent
+        .delete(
+          `/communities/${communityY.id}/inspectable-elements/${elementY.id}`,
+        )
+        .expect(204);
+      await adminAgent.delete(`/communities/${communityY.id}`).expect(204);
+
+      // Soft-delete the performer AFTER their session completed
+      // (authorization/spec.md: "A session was performed by a user who has
+      // since... been soft-deleted" — the session MUST still be visible).
+      // Full soft-deleted-MAINTENANCE-COMPANY persistence coverage is
+      // integration-level (tasks.md 1.11) — this harness stubs PrismaService
+      // for the real MaintenanceCompany aggregate, so it cannot exercise a
+      // real company soft-delete through HTTP here; `sessionNoCompany`
+      // above stands in for "no attribution", the e2e-reachable half of
+      // that row.
+      await adminAgent.delete(`/users/rha-technician-deleted-id`).expect(204);
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it('sees every completed session in the installation, across companies and communities, no sampling', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const response = await adminAgent.get('/review-history').expect(200);
+      const rowIds = (response.body as HistoryRowBody[]).map((row) => row.id);
+      expect(rowIds).toContain(sessionForX.id);
+      expect(rowIds).toContain(sessionForY.id);
+      expect(rowIds).toContain(sessionNoCompany.id);
+      expect(rowIds).toContain(sessionSoftDeletedPerformer.id);
+      expect(rowIds).not.toContain(draftForX.id);
+    });
+
+    it("a deactivated community's session stays visible on the list and by id", async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const listResponse = await adminAgent.get('/review-history').expect(200);
+      expect(
+        (listResponse.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(sessionForY.id);
+
+      const detailResponse = await adminAgent
+        .get(`/review-history/${sessionForY.id}`)
+        .expect(200);
+      expect((detailResponse.body as HistoryDetailBody).id).toBe(
+        sessionForY.id,
+      );
+    });
+
+    it("a soft-deleted performer's session stays visible on the list and by id", async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const listResponse = await adminAgent.get('/review-history').expect(200);
+      expect(
+        (listResponse.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(sessionSoftDeletedPerformer.id);
+
+      const detailResponse = await adminAgent
+        .get(`/review-history/${sessionSoftDeletedPerformer.id}`)
+        .expect(200);
+      expect((detailResponse.body as HistoryDetailBody).id).toBe(
+        sessionSoftDeletedPerformer.id,
+      );
+    });
+
+    it('a session carrying no company attribution stays visible on the list and by id', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const listResponse = await adminAgent.get('/review-history').expect(200);
+      expect(
+        (listResponse.body as HistoryRowBody[]).map((row) => row.id),
+      ).toContain(sessionNoCompany.id);
+
+      await adminAgent
+        .get(`/review-history/${sessionNoCompany.id}`)
+        .expect(200);
+    });
+
+    // authorization/spec.md "The admin's scope resolves from the role
+    // alone": this fixture holds no community assignment and no
+    // maintenanceCompanyId anywhere in this block, yet reaches everything.
+    it("the admin's scope resolves from the role alone — no community assignment and no company decide it", async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const response = await adminAgent.get('/review-history').expect(200);
+      const rowIds = (response.body as HistoryRowBody[]).map((row) => row.id);
+      expect(rowIds).toContain(sessionForX.id);
+      expect(rowIds).toContain(sessionForY.id);
+    });
+
+    it('gets 404 REVIEW_SESSION_NOT_FOUND on a draft and on a nonexistent id, identically', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const nonexistentResponse = await adminAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
+      const draftResponse = await adminAgent
+        .get(`/review-history/${draftForX.id}`)
+        .expect(404);
+
+      expect(draftResponse.body).toEqual(nonexistentResponse.body);
+      expect((draftResponse.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+    });
+
+    // authorization/spec.md "The admin gains no write member of the
+    // review-session family": reviewSession:read grants nothing on the
+    // write surface — same four routes the manager variant above checks.
+    it('is refused on every review-session write endpoint, performing no write', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      await adminAgent
+        .post('/review-sessions')
+        .send({ communityId: communityX.id, templateId })
+        .expect(403);
+      await adminAgent
+        .put(`/review-sessions/${sessionForX.id}/entries/${elementX.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(403);
+      await adminAgent
+        .post(`/review-sessions/${sessionForX.id}/complete`)
+        .expect(403);
+      await adminAgent.delete(`/review-sessions/${draftForX.id}`).expect(403);
+    });
+
+    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on the admin scope', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const filteredListResponse = await adminAgent
+        .get('/review-history')
+        .query({
+          page: 1,
+          cursor: 'x',
+          limit: 1,
+          offset: 1,
+          from: '2020-01-01',
+          to: '2020-01-02',
+          sort: 'asc',
+          search: 'anything',
+        })
+        .expect(200);
+      const plainListResponse = await adminAgent
+        .get('/review-history')
+        .expect(200);
+      expect(filteredListResponse.body).toEqual(plainListResponse.body);
+
+      const filteredDetailResponse = await adminAgent
+        .get(`/review-history/${sessionForX.id}`)
+        .query({ page: 1, limit: 1 })
+        .expect(200);
+      const plainDetailResponse = await adminAgent
+        .get(`/review-history/${sessionForX.id}`)
+        .expect(200);
+      expect(filteredDetailResponse.body).toEqual(plainDetailResponse.body);
+    });
+
+    // authorization/spec.md "Scope is checked in addition to the
+    // permission, not instead of it" — admin variant: authentication is
+    // still evaluated before anything role- or permission-related, on the
+    // exact same guard chain every other scope goes through.
+    it('rejects an unauthenticated caller with 401 before any role or permission check', async () => {
+      await request(built.app.getHttpServer())
+        .get('/review-history')
+        .expect(401);
+      await request(built.app.getHttpServer())
+        .get(`/review-history/${sessionForX.id}`)
+        .expect(401);
     });
   });
 

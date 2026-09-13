@@ -97,9 +97,11 @@ export class ReviewHistoryAccessService {
       case 'SYSTEM_ADMIN':
         return this.repository.findCompletedAcrossInstallation();
 
-      // Still no history scope for this role (proposal non-goal: MANAGER +
-      // VIEW_ALL_REVIEWS is a separate, unbuilt slice) — intentionally [],
-      // not forgotten. MANAGER never reaches a repository call.
+      // Still no history scope for this role (proposal non-goal: MANAGER's
+      // deferred global-visibility permission is a separate, unbuilt slice
+      // — see authorization/spec.md "The Deferred Review Visibility Scopes
+      // Grant Nothing") — intentionally [], not forgotten. MANAGER never
+      // reaches a repository call.
       case 'MANAGER':
         return [];
       default: {
