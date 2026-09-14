@@ -286,11 +286,16 @@ describe('PrismaUserRepository (integration)', () => {
     expect(revoked?.managerCapabilities).toEqual([]);
   });
 
-  // design.md Decision 1: the column defaults to `[]` for every row created
-  // with no explicit value — including a plain create() call, mirroring
-  // findAll()'s existing "no managerCapabilities in the payload" fixtures
-  // above, none of which set it explicitly.
-  it('defaults managerCapabilities to an empty array for a newly created user', async () => {
+  // NOTE what this pins and what it does NOT: `repository.create()` goes
+  // through `UserMapper.toPersistence()`, which always emits an explicit
+  // `managerCapabilities: []` for an entity built with no value supplied
+  // (the entity's own default, design.md Decision 1's "class field defaults
+  // to `[]`") — so this round-trips the ENTITY default through the MAPPER,
+  // it never exercises the Postgres column's own `DEFAULT` expression (an
+  // `INSERT` that omits the column entirely). The column-level default is
+  // pinned for real by `user-manager-capability-migration.integration.spec
+  // .ts`'s `information_schema.columns.column_default` assertion.
+  it('round-trips the entity/mapper default of an empty managerCapabilities array for a newly created user', async () => {
     const email = uniqueEmail('default-empty-capabilities');
     const id = idGenerator.generate();
 

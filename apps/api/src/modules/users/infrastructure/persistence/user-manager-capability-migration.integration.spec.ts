@@ -51,11 +51,17 @@ describe('User.managerCapabilities schema (migration integration guard)', () => 
 
   // design.md Decision 1: NOT NULL from the start with a default covering
   // every pre-existing row — no backfill step exists, so every row (seeded
-  // before or after this migration) must read `[]`, never a SQL NULL.
-  it('every existing row reads an empty managerCapabilities array (no NULLs, no backfill step)', async () => {
+  // before or after this migration) must read `[]`, never anything else.
+  // Deliberately NOT an `IS NULL` check: the column is already pinned
+  // NOT NULL by the assertion above, so an `IS NULL` count can never be
+  // non-zero regardless of correctness — it would pass even if a backfill
+  // bug left rows with a non-empty array. This queries for the opposite of
+  // `{}` instead, which actually exercises the "no backfill needed, every
+  // row reads `{}`" premise.
+  it('every existing row reads an empty managerCapabilities array (no backfill step)', async () => {
     const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
       SELECT count(*)::bigint AS count FROM "User"
-      WHERE "managerCapabilities" IS NULL
+      WHERE "managerCapabilities" <> ARRAY[]::"ManagerCapability"[]
     `;
 
     expect(Number(rows[0].count)).toBe(0);
