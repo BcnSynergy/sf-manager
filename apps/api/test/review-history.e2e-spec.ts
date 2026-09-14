@@ -2205,23 +2205,61 @@ describe('Review History (e2e)', () => {
     });
   });
 
-  // tasks.md 4.11: no manager-capability mechanism or global-review symbol
-  // was introduced anywhere by this slice, and the migration directory
-  // still contains only the one attribution-column migration (spec: "No
-  // manager capability or global-review mechanism is introduced", "The only
-  // migration is the attribution column and its backfill").
-  describe('No manager-capability mechanism or extra migration was introduced', () => {
-    it('no ManagerCapability/managerCapabilities/VIEW_ALL_REVIEWS symbol is DECLARED anywhere under apps/api/src', () => {
-      // Declaration-shaped patterns, not a bare substring search — a
-      // pre-existing explanatory CODE COMMENT is allowed to use the words
-      // in prose (e.g. "a hypothetical field like managerCapabilities
-      // could…"); what the spec forbids is an actual enum, field or
-      // permission constant being introduced.
-      const forbiddenPatterns = [
-        /\bManagerCapability\b/, // enum / type declaration or reference
-        /\bmanagerCapabilities\s*[?:=]/, // a FIELD declaration, not prose
-        /['"]VIEW_ALL_REVIEWS['"]|\bVIEW_ALL_REVIEWS\s*[:=]/, // a string-literal permission constant or an enum/key declaration, not prose
-      ];
+  // review-history-manager-capability/design.md's Testing Strategy row "Two
+  // shipped guards must be INVERTED, not left alone" documents the pattern
+  // applied here to a THIRD shipped guard: `review-history-admin-scope`
+  // pinned "no manager-capability mechanism exists yet" until this slice
+  // built it. PR 1/4 is what falsifies that premise (schema + domain +
+  // persistence-layer plumbing only — the checker, the permission grant and
+  // the DTO/controller surface are still PR 2/3, tasks.md 1.1-1.10), so a
+  // blanket "declared nowhere" assertion is now WRONG, not merely stale.
+  // Inverted the same way as the other two guards: keep it as a real
+  // regression guard, just pointed at the opposite fact — the mechanism
+  // DOES exist, but ONLY in the persistence-layer files this PR touched,
+  // and has not yet leaked into the DTO, the controller, the response type
+  // or any authorization surface, all of which are still out of scope until
+  // their own PR.
+  describe('The manager-capability mechanism exists only in the persistence layer so far', () => {
+    // Exactly the production (non-spec) files PR 1/4 added or modified to
+    // declare/reference ManagerCapability/managerCapabilities/VIEW_ALL_REVIEWS
+    // (design.md File Changes table, PR 1 rows only).
+    const EXPECTED_PRODUCTION_FILES = [
+      'modules/users/domain/manager-capability.ts',
+      'modules/users/domain/user.entity.ts',
+      'modules/users/infrastructure/persistence/user.mapper.ts',
+      'modules/users/infrastructure/persistence/prisma-user.repository.ts',
+      'modules/users/application/ports/user.repository.port.ts',
+      'modules/users/application/use-cases/testing/in-memory-user.repository.ts',
+    ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
+
+    // The unit/integration specs PR 1/4 added or extended alongside those
+    // production files — allowed for the same reason the production files
+    // are.
+    const EXPECTED_SPEC_FILES = [
+      'modules/users/domain/user.entity.spec.ts',
+      'modules/users/infrastructure/persistence/user.mapper.spec.ts',
+      'modules/users/infrastructure/persistence/prisma-user.repository.integration.spec.ts',
+      'modules/users/infrastructure/persistence/user-manager-capability-migration.integration.spec.ts',
+      'modules/users/application/use-cases/testing/in-memory-user.repository.spec.ts',
+    ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
+
+    const ALLOWED_FILES = [
+      ...EXPECTED_PRODUCTION_FILES,
+      ...EXPECTED_SPEC_FILES,
+    ];
+
+    // Declaration-shaped patterns, not a bare substring search — a
+    // pre-existing explanatory CODE COMMENT is allowed to use the words in
+    // prose (e.g. "a hypothetical field like managerCapabilities could…");
+    // what this guard tracks is an actual enum, field or permission
+    // constant being declared or referenced.
+    const forbiddenPatterns = [
+      /\bManagerCapability\b/, // enum / type declaration or reference
+      /\bmanagerCapabilities\s*[?:=]/, // a FIELD declaration, not prose
+      /['"]VIEW_ALL_REVIEWS['"]|\bVIEW_ALL_REVIEWS\s*[:=]/, // a string-literal permission constant or an enum/key declaration, not prose
+    ];
+
+    const findDeclaringFiles = (): string[] => {
       const srcRoot = path.join(__dirname, '..', 'src');
       const offendingFiles: string[] = [];
 
@@ -2240,8 +2278,45 @@ describe('Review History (e2e)', () => {
         }
       };
       walk(srcRoot);
+      return offendingFiles.sort();
+    };
 
-      expect(offendingFiles).toEqual([]);
+    it('is declared/referenced in exactly the persistence-layer files this PR added, and nowhere else', () => {
+      const declaringFiles = findDeclaringFiles();
+
+      expect(declaringFiles).toEqual([...ALLOWED_FILES].sort());
+    });
+
+    it('has NOT leaked into the DTO, the controller, the response type, or any authorization surface yet', () => {
+      // Named explicitly, one at a time, so a future PR that DOES touch one
+      // of these (PR 2/3, per design.md) gets a loud, specific failure
+      // here rather than a silent pass from the allowlist diff above.
+      const notYetTouched = [
+        'modules/users/presentation/dto/user-response.dto.ts',
+        'modules/users/presentation/users.controller.ts',
+        'modules/users/application/use-cases/create-user.use-case.ts',
+        'modules/users/application/use-cases/update-user.use-case.ts',
+        'modules/users/application/use-cases/list-user.use-case.ts',
+        'shared/application/authorization/manager-capability.checker.port.ts',
+        'modules/users/infrastructure/authorization/user-manager-capability.checker.ts',
+        'modules/auth/infrastructure/authorization/role-permission.checker.ts',
+      ];
+
+      for (const relativePath of notYetTouched) {
+        const fullPath = path.join(
+          __dirname,
+          '..',
+          'src',
+          ...relativePath.split('/'),
+        );
+        if (!fs.existsSync(fullPath)) {
+          continue; // not created yet (e.g. the PR 2 checker) — nothing to assert
+        }
+        const content = fs.readFileSync(fullPath, 'utf8');
+        expect(forbiddenPatterns.some((pattern) => pattern.test(content))).toBe(
+          false,
+        );
+      }
     });
 
     it('the migration directory contains only the one attribution-column migration added by this change', () => {
