@@ -56,6 +56,18 @@ export class PrismaUserRepository
   // path the `id` field is deliberately omitted from the payload so the
   // existing row's identity is preserved (ADR-009) — a fresh id generated
   // by the caller (e.g. seed.ts on every run) never overwrites it.
+  //
+  // review-history-manager-capability/design.md Decision 5: `managerCapabilities`
+  // is a privilege grant, not a plain field — unlike `maintenanceCompanyId`,
+  // treating a stale/omitted value as harmless is NOT safe here. This
+  // upsert's UPDATE path writes `managerCapabilities` from whatever `User`
+  // entity is passed in, straight through `UserMapper.toPersistence`; a
+  // caller that reconstructs (or seeds) a `User` without the row's current,
+  // persisted `managerCapabilities` and then calls `save()` SILENTLY
+  // REVOKES any existing grant. No live caller does this today (only
+  // `prisma/seed.ts` upserts, and only for `SYSTEM_ADMIN`, never `MANAGER`),
+  // but `save()` MUST always be called with the full, current
+  // `managerCapabilities` value for any user it may touch.
   async save(user: User): Promise<void> {
     const { id, ...updateData } = UserMapper.toPersistence(user);
 
