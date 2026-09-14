@@ -18,6 +18,10 @@ export class UserMapper {
       updatedAt: record.updatedAt,
       deletedAt: record.deletedAt,
       maintenanceCompanyId: record.maintenanceCompanyId,
+      // review-history-manager-capability/design.md Decision 1: Prisma's
+      // generated `$Enums.ManagerCapability[]` is structurally assignable to
+      // the hand-written domain `ManagerCapability[]` — no cast needed.
+      managerCapabilities: record.managerCapabilities,
     });
   }
 
@@ -34,6 +38,7 @@ export class UserMapper {
       role: user.role,
       deletedAt: user.deletedAt,
       maintenanceCompanyId: user.maintenanceCompanyId,
+      managerCapabilities: user.managerCapabilities,
     };
   }
 }

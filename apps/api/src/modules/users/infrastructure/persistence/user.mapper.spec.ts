@@ -12,6 +12,7 @@ describe('UserMapper', () => {
         passwordHash: 'argon2id$hash',
         role: 'SYSTEM_ADMIN' as const,
         maintenanceCompanyId: null,
+        managerCapabilities: [],
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
         deletedAt: null,
@@ -41,6 +42,7 @@ describe('UserMapper', () => {
         passwordHash: 'argon2id$hash',
         role: 'MAINTENANCE_TECHNICIAN' as const,
         maintenanceCompanyId: '01930000-0000-7000-8000-00000000abcd',
+        managerCapabilities: [],
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
         deletedAt: null,
@@ -53,6 +55,45 @@ describe('UserMapper', () => {
       );
     });
 
+    // review-history-manager-capability/design.md Decision 1: Prisma's
+    // generated `$Enums.ManagerCapability` is structurally assignable to the
+    // hand-written domain type, so no cast is needed here.
+    it('maps a non-empty managerCapabilities column through to the domain entity', () => {
+      const record = {
+        id: '01930000-0000-7000-8000-000000000008',
+        email: 'manager@example.com',
+        passwordHash: 'argon2id$hash',
+        role: 'MANAGER' as const,
+        maintenanceCompanyId: null,
+        managerCapabilities: ['VIEW_ALL_REVIEWS' as const],
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        deletedAt: null,
+      };
+
+      const user = UserMapper.toDomain(record);
+
+      expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+    });
+
+    it('defaults managerCapabilities to an empty array when the column is empty', () => {
+      const record = {
+        id: '01930000-0000-7000-8000-000000000009',
+        email: 'admin4@example.com',
+        passwordHash: 'argon2id$hash',
+        role: 'SYSTEM_ADMIN' as const,
+        maintenanceCompanyId: null,
+        managerCapabilities: [],
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        deletedAt: null,
+      };
+
+      const user = UserMapper.toDomain(record);
+
+      expect(user.managerCapabilities).toEqual([]);
+    });
+
     it('preserves a non-null deletedAt (ADR-010 soft-deleted row)', () => {
       const deletedAt = new Date('2026-03-01T00:00:00.000Z');
       const record = {
@@ -61,6 +102,7 @@ describe('UserMapper', () => {
         passwordHash: 'argon2id$hash',
         role: 'MANAGER' as const,
         maintenanceCompanyId: null,
+        managerCapabilities: [],
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
         deletedAt,
@@ -93,7 +135,25 @@ describe('UserMapper', () => {
         role: 'SYSTEM_ADMIN',
         deletedAt: null,
         maintenanceCompanyId: null,
+        managerCapabilities: [],
       });
+    });
+
+    it('maps a non-empty managerCapabilities array through to the Prisma payload', () => {
+      const user = new User({
+        id: '01930000-0000-7000-8000-00000000000a',
+        email: 'manager2@example.com',
+        passwordHash: 'argon2id$hash',
+        role: 'MANAGER',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        deletedAt: null,
+        managerCapabilities: ['VIEW_ALL_REVIEWS' as const],
+      });
+
+      const data = UserMapper.toPersistence(user);
+
+      expect(data.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
     });
 
     it('maps a non-null maintenanceCompanyId through to the Prisma payload', () => {
