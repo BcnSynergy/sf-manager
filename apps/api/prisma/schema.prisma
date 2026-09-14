@@ -37,11 +37,33 @@ model User {
   updatedAt            DateTime  @updatedAt
   deletedAt            DateTime? // ADR-010
 
+  // review-history-manager-capability/design.md Decision 1: `@default([])`
+  // IS deliberate here, and does not contradict `Role`'s standing "no
+  // silent @default" note above — that note exists because a default would
+  // silently decide a PRIVILEGE-BEARING value for every future insert. This
+  // default is the ZERO-privilege value, the only one that can never grant
+  // anything, and it is the correct value for every existing row and every
+  // future insert (a capability is always a deliberate second act, never a
+  // creation-time field — POST /users cannot express it at all). NOT NULL
+  // from the start: a Prisma scalar list cannot be null, and the default
+  // covers every pre-existing row, so there is NO backfill and no
+  // `SET NOT NULL` closing step. NOT indexed: this column is only ever read
+  // through findById by primary key (Decision 2), never filtered on.
+  managerCapabilities ManagerCapability[] @default([])
+
   // Prisma-VISIBLE regular index (not the partial unique one — that lives
   // only on MaintenanceCompany.taxId). Postgres does not auto-index FK
   // columns, and countActiveByMaintenanceCompany filters on exactly this
   // column on every delete attempt (maintenance-company/design.md Decision 4).
   @@index([maintenanceCompanyId])
+}
+
+// review-history-manager-capability/design.md Decision 1: one enum member
+// declared (proposal non-goal: the other five ADR-011 capability names stay
+// undeclared until their own slices, ADR-006). An array, not a boolean — the
+// second capability must be an additive enum member, never a breaking rename.
+enum ManagerCapability {
+  VIEW_ALL_REVIEWS
 }
 
 // Deny-list, not a session table: only ever holds explicitly logged-out
