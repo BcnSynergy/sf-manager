@@ -62,6 +62,15 @@ import { RolePermissionChecker } from './role-permission.checker';
 // SYSTEM_ADMIN gains its FIRST reviewSession:* member ever —
 // `reviewSession:read`, and nothing else in that family. Every other
 // existing SYSTEM_ADMIN permission is unchanged.
+//
+// review-history-manager-capability PR 2 (design.md Decision 4,
+// authorization/spec.md "The Manager Becomes Operational…"): MANAGER gains
+// its FIRST permission ever, exactly `reviewSession:read`, ending the
+// 2026-08-22 addendum's "four inert roles" era — the role is no longer
+// fully inert, so the old `INERT_NON_ADMIN_ROLES` fixture (and its
+// `it.each` block asserting a blanket denial of every reviewSession:*
+// permission) is removed rather than left with an empty array (`jest-each`
+// errors on an empty table, it does not skip).
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -107,10 +116,6 @@ describe('RolePermissionChecker', () => {
       (permission) => permission !== 'reviewSession:read',
     );
 
-  // Non-admin roles that remain fully inert — no permission of any kind,
-  // including reviewSession:*.
-  const INERT_NON_ADMIN_ROLES: Role[] = ['MANAGER'];
-
   // The two roles activated on the review-session surface only.
   const REVIEW_SESSION_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
@@ -118,14 +123,19 @@ describe('RolePermissionChecker', () => {
   ];
 
   // MAINTENANCE_COMPANY_MANAGER: the first entry with exactly one
-  // permission — reviewSession:read — never bundled with the fully inert
-  // roles nor with the two full-access performing roles.
+  // permission — reviewSession:read — never bundled with the two
+  // full-access performing roles.
   const COMPANY_MANAGER_ROLE: Role = 'MAINTENANCE_COMPANY_MANAGER';
 
+  // MANAGER: review-history-manager-capability PR 2 — the role's own first
+  // (and only) permission, `reviewSession:read`, identical shape to
+  // COMPANY_MANAGER_ROLE above. No longer inert.
+  const MANAGER_ROLE: Role = 'MANAGER';
+
   const NON_ADMIN_ROLES: Role[] = [
-    ...INERT_NON_ADMIN_ROLES,
     ...REVIEW_SESSION_ROLES,
     COMPANY_MANAGER_ROLE,
+    MANAGER_ROLE,
   ];
 
   it.each(ALL_PERMISSIONS)('allows SYSTEM_ADMIN on %s', (permission) => {
@@ -158,18 +168,21 @@ describe('RolePermissionChecker', () => {
     expect(checker.can(role, permission)).toBe(false);
   });
 
-  // authorization/spec.md "MANAGER stays mapped to no permissions": MANAGER
-  // gets nothing, including reviewSession:*.
-  it.each(
-    INERT_NON_ADMIN_ROLES.flatMap((role) =>
-      REVIEW_SESSION_PERMISSIONS.map((permission): [Role, Permission] => [
-        role,
-        permission,
-      ]),
-    ),
-  )('denies %s on %s', (role, permission) => {
-    expect(checker.can(role, permission)).toBe(false);
+  // authorization/spec.md "The Manager Becomes Operational…" — the manager
+  // holds exactly one permission, identical shape to
+  // MAINTENANCE_COMPANY_MANAGER below.
+  it('grants MANAGER exactly reviewSession:read', () => {
+    expect(checker.can(MANAGER_ROLE, 'reviewSession:read')).toBe(true);
   });
+
+  // "The manager gains no write member of the review-session family": no
+  // create/perform/complete/discard.
+  it.each(REVIEW_SESSION_WRITE_PERMISSIONS)(
+    'denies MANAGER on %s',
+    (permission) => {
+      expect(checker.can(MANAGER_ROLE, permission)).toBe(false);
+    },
+  );
 
   // authorization/spec.md "The Maintenance Company Manager Becomes
   // Operational" — the manager holds exactly one permission.
