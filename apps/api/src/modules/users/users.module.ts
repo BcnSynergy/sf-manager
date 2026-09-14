@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { COMPANY_SCOPE_CHECKER } from '../../shared/application/authorization/company-scope.checker.port';
+import { MANAGER_CAPABILITY_CHECKER } from '../../shared/application/authorization/manager-capability.checker.port';
 import { MAINTENANCE_COMPANY_LOOKUP } from './application/ports/maintenance-company-lookup.port';
 import { USER_REPOSITORY } from './application/ports/user.repository.port';
 import { CreateUserUseCase } from './application/use-cases/create-user.use-case';
@@ -7,6 +8,7 @@ import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.u
 import { ListUsersUseCase } from './application/use-cases/list-users.use-case';
 import { UpdateUserUseCase } from './application/use-cases/update-user.use-case';
 import { UserCompanyScopeChecker } from './infrastructure/authorization/user-company-scope.checker';
+import { UserManagerCapabilityChecker } from './infrastructure/authorization/user-manager-capability.checker';
 import { PrismaMaintenanceCompanyLookup } from './infrastructure/persistence/prisma-maintenance-company-lookup.repository';
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
 import { UsersController } from './presentation/users.controller';
@@ -27,6 +29,11 @@ import { UsersController } from './presentation/users.controller';
 // COMMUNITY_SCOPE_CHECKER — `review-session` imports `UsersModule` to reach
 // it. `UsersModule` itself still imports nothing from any other module, so
 // this import stays one-directional and acyclic.
+//
+// review-history-manager-capability/design.md Decision 2: MANAGER_CAPABILITY_CHECKER
+// is bound AND exported here too, same reasoning as COMPANY_SCOPE_CHECKER —
+// `review-session` already imports `UsersModule`, so no new wiring
+// direction is needed to reach it.
 @Module({
   controllers: [UsersController],
   providers: [
@@ -36,11 +43,15 @@ import { UsersController } from './presentation/users.controller';
       useClass: PrismaMaintenanceCompanyLookup,
     },
     { provide: COMPANY_SCOPE_CHECKER, useClass: UserCompanyScopeChecker },
+    {
+      provide: MANAGER_CAPABILITY_CHECKER,
+      useClass: UserManagerCapabilityChecker,
+    },
     CreateUserUseCase,
     ListUsersUseCase,
     UpdateUserUseCase,
     DeactivateUserUseCase,
   ],
-  exports: [USER_REPOSITORY, COMPANY_SCOPE_CHECKER],
+  exports: [USER_REPOSITORY, COMPANY_SCOPE_CHECKER, MANAGER_CAPABILITY_CHECKER],
 })
 export class UsersModule {}
