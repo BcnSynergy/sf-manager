@@ -434,6 +434,11 @@ unchanged and MUST NOT gain any `reviewSession:*` permission.)
 - WHEN they call any review-session write endpoint — opening, resuming, resolving a code, recording answers, marking unreviewed, discarding or completing
 - THEN every response MUST be 403, with no write performed
 
+#### Scenario: The manager's own scope is unchanged by the admin scope
+- GIVEN a `MAINTENANCE_COMPANY_MANAGER` of company X and completed sessions attributed to companies X and Y
+- WHEN they request review history after this change
+- THEN the result MUST be exactly what it was before this change — only X's sessions, with no widening
+
 #### Scenario: MANAGER is untouched and the admin holds read only
 - GIVEN the `MANAGER` and `SYSTEM_ADMIN` entries before and after this change
 - WHEN they are compared

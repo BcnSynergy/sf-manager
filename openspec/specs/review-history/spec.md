@@ -563,7 +563,12 @@ was the performing-company attribution column and its backfill.)
 - WHEN they are inspected
 - THEN none MUST accept a page, cursor, limit, offset, date-range, sort or search parameter, on any of the four scopes
 
-#### Scenario: This change adds no migration
+#### Scenario: This change adds no new column, table or backfill
 - GIVEN the migration directory and `schema.prisma` after this change
 - WHEN they are compared with the state before the change
-- THEN both MUST be unchanged — installation-wide visibility MUST require no new column, index or backfill
+- THEN neither MUST gain a new column, a new table, or a backfill — installation-wide visibility MUST require no change to the domain model's shape
+
+#### Scenario: The installation-wide read is backed by a covering index, not a model change
+- GIVEN the unscoped `findCompletedAcrossInstallation` / `findCompletedByIdAcrossInstallation` pair filters `ReviewSession` on `status` alone, with no FK to lean on the way the three scoped siblings do
+- WHEN the migration directory and `schema.prisma` are compared with the state before the change
+- THEN exactly one migration MUST exist, adding a composite index on `ReviewSession(status, completedAt, id)` and nothing else — this index exists solely to keep the unscoped read off a full table scan and filesort, and MUST NOT be read as license to drop it
