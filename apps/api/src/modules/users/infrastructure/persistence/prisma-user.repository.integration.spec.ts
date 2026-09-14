@@ -287,12 +287,23 @@ describe('PrismaUserRepository (integration)', () => {
   // nothing else can write that role between the two reads. Jest runs
   // integration spec FILES in parallel workers but `it` blocks within one
   // file sequentially — 'COMMUNITY_REPRESENTATIVE' fixtures also exist in 3
-  // other integration spec files (community, review-session x2) that can
-  // run concurrently with this one, racing the count; 'MANAGER' fixtures
-  // exist only in this file, so no other worker can move this count
-  // mid-test. (Diagnosed as a real, intermittent flake — not attributable
-  // to any behavior change — across the review-history-company-scope and
-  // review-history-admin-scope verify runs.)
+  // other integration spec files (community, review-session x2) that run
+  // concurrently with this one under `npm run test:integration`, racing the
+  // count; 'MANAGER' fixtures don't appear in any other *.integration.spec.ts
+  // file, so this removes the specific race that was actually observed
+  // (diagnosed as a real, intermittent flake — not attributable to any
+  // behavior change — across the review-history-company-scope and
+  // review-history-admin-scope verify runs).
+  //
+  // Scope of this fix: only `test:integration`'s own parallel workers.
+  // 'MANAGER' is written far more heavily than 'COMMUNITY_REPRESENTATIVE'
+  // was across the e2e suite (`apps/api/test/**/*.e2e-spec.ts`), which hits
+  // the same shared dev DB via a separate Jest invocation — this repo has no
+  // per-test DB isolation and no CI config guaranteeing `test:integration`
+  // and `test:e2e` never run concurrently, so running both at once could
+  // still race this exact assertion. If that ever needs to be closed too,
+  // don't just pick yet another role; this suite needs real per-test
+  // isolation (transactional rollback or a scoped/dedicated schema).
   it('countActiveByRole() excludes soft-deleted users', async () => {
     const activeId = idGenerator.generate();
     const deletedId = idGenerator.generate();
