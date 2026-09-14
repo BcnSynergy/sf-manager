@@ -279,6 +279,20 @@ describe('PrismaUserRepository (integration)', () => {
   });
 
   // tasks.md 6.3 (part 1): countActiveByRole excludes soft-deleted users.
+  //
+  // Role fixture is deliberately 'MANAGER', not 'COMMUNITY_REPRESENTATIVE'
+  // (the tasks.md-era choice): countActiveByRole() is a GLOBAL count with no
+  // per-test isolation (this suite reuses the shared dev DB, see file
+  // header), so a before/after delta assertion is only deterministic if
+  // nothing else can write that role between the two reads. Jest runs
+  // integration spec FILES in parallel workers but `it` blocks within one
+  // file sequentially — 'COMMUNITY_REPRESENTATIVE' fixtures also exist in 3
+  // other integration spec files (community, review-session x2) that can
+  // run concurrently with this one, racing the count; 'MANAGER' fixtures
+  // exist only in this file, so no other worker can move this count
+  // mid-test. (Diagnosed as a real, intermittent flake — not attributable
+  // to any behavior change — across the review-history-company-scope and
+  // review-history-admin-scope verify runs.)
   it('countActiveByRole() excludes soft-deleted users', async () => {
     const activeId = idGenerator.generate();
     const deletedId = idGenerator.generate();
@@ -288,7 +302,7 @@ describe('PrismaUserRepository (integration)', () => {
         id: activeId,
         email: uniqueEmail('count-active'),
         passwordHash: 'argon2id$hash',
-        role: 'COMMUNITY_REPRESENTATIVE',
+        role: 'MANAGER',
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -299,20 +313,16 @@ describe('PrismaUserRepository (integration)', () => {
         id: deletedId,
         email: uniqueEmail('count-deleted'),
         passwordHash: 'argon2id$hash',
-        role: 'COMMUNITY_REPRESENTATIVE',
+        role: 'MANAGER',
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: new Date(),
       }),
     );
 
-    const before = await repository.countActiveByRole(
-      'COMMUNITY_REPRESENTATIVE',
-    );
+    const before = await repository.countActiveByRole('MANAGER');
     await repository.softDeleteById(activeId);
-    const after = await repository.countActiveByRole(
-      'COMMUNITY_REPRESENTATIVE',
-    );
+    const after = await repository.countActiveByRole('MANAGER');
 
     expect(after).toBe(before - 1);
   });
