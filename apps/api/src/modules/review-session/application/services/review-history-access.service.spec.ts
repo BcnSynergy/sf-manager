@@ -219,6 +219,10 @@ describe('ReviewHistoryAccessService.listForActor', () => {
     );
     managerCapabilityChecker.grant('manager-1');
     const adminSpy = jest.spyOn(repository, 'findCompletedAcrossInstallation');
+    const capabilitySpy = jest.spyOn(
+      managerCapabilityChecker,
+      'hasManagerCapability',
+    );
 
     const result = await service.listForActor({
       userId: 'manager-1',
@@ -227,6 +231,11 @@ describe('ReviewHistoryAccessService.listForActor', () => {
 
     expect(result.map((s) => s.id)).toEqual(['any-company']);
     expect(adminSpy).toHaveBeenCalledWith();
+    expect(capabilitySpy).toHaveBeenCalledWith(
+      'manager-1',
+      'MANAGER',
+      'VIEW_ALL_REVIEWS',
+    );
   });
 
   // review-history-admin-scope design.md Decision 1/3, tasks.md 1.6: the
@@ -522,6 +531,10 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
       repository,
       'findCompletedByIdAcrossInstallation',
     );
+    const capabilitySpy = jest.spyOn(
+      managerCapabilityChecker,
+      'hasManagerCapability',
+    );
 
     const result = await service.loadCompletedForActor('any-session', {
       userId: 'manager-1',
@@ -530,6 +543,11 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
 
     expect(result.id).toBe('any-session');
     expect(adminByIdSpy).toHaveBeenCalledWith('any-session');
+    expect(capabilitySpy).toHaveBeenCalledWith(
+      'manager-1',
+      'MANAGER',
+      'VIEW_ALL_REVIEWS',
+    );
   });
 
   // review-history-admin-scope design.md Decision 1/2/3, tasks.md 1.5/1.6:
