@@ -44,13 +44,27 @@ export class InMemoryUserRepository implements UserRepository {
     if (!user || user.isDeleted) {
       return Promise.resolve(null);
     }
-    return Promise.resolve(user);
+    return Promise.resolve(this.cloneUser(user));
   }
 
   findAll(): Promise<User[]> {
     return Promise.resolve(
-      [...this.usersById.values()].filter((user) => !user.isDeleted),
+      [...this.usersById.values()]
+        .filter((user) => !user.isDeleted)
+        .map((user) => this.cloneUser(user)),
     );
+  }
+
+  // PR 1/4 review fix: findById/findAll used to return the stored User
+  // instance directly — `managerCapabilities` is `readonly`, but that only
+  // blocks rebinding the property, not mutating the array in place, so a
+  // caller doing `found.managerCapabilities.push(...)` would corrupt this
+  // fake's internal state for every later read of the same user. `new
+  // User({...user})` re-runs the entity constructor, which already
+  // defensively copies `managerCapabilities` (user.entity.ts), so this
+  // returns an independent copy on every read.
+  private cloneUser(user: User): User {
+    return new User({ ...user });
   }
 
   create(user: User): Promise<void> {

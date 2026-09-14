@@ -59,7 +59,12 @@ export class User {
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;
     this.maintenanceCompanyId = props.maintenanceCompanyId ?? null;
-    this.managerCapabilities = props.managerCapabilities ?? [];
+    // PR 1/4 review fix: `readonly` only blocks rebinding this property, not
+    // mutating the array in place — a defensive copy is REQUIRED so a caller
+    // mutating its own input array after construction (or PR 2's capability
+    // checker reading this value for an authorization decision) can never
+    // observe/cause a change that bypassed the write path's policy checks.
+    this.managerCapabilities = [...(props.managerCapabilities ?? [])];
   }
 
   // ADR-010: a non-null deletedAt marks the row as soft-deleted. The

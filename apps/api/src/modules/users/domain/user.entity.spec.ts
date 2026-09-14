@@ -1,3 +1,4 @@
+import { ManagerCapability } from './manager-capability';
 import { User } from './user.entity';
 
 // ADR-013: hand-written domain entity, zero Prisma/framework dependency.
@@ -134,6 +135,31 @@ describe('User', () => {
       deletedAt: null,
       managerCapabilities: ['VIEW_ALL_REVIEWS'],
     });
+
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
+
+  // PR 1/4 review fix: `readonly managerCapabilities` only blocks REBINDING
+  // the property, not mutating the array in place, and the constructor was
+  // storing the caller's array by reference. PR 2's capability checker will
+  // read this array for an authorization decision, so a caller mutating its
+  // own input array after construction must NOT be able to change what the
+  // entity reports.
+  it('is not affected by a mutation of the array passed into the constructor', () => {
+    const input: ManagerCapability[] = ['VIEW_ALL_REVIEWS'];
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000008',
+      email: 'manager2@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: input,
+    });
+
+    input.push('VIEW_ALL_REVIEWS');
+    input.length = 0;
 
     expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
   });
