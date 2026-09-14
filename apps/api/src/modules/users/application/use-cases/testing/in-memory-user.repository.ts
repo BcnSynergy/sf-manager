@@ -1,4 +1,5 @@
 import { EmailAlreadyInUseError } from '../../../domain/errors/email-already-in-use.error';
+import { ManagerCapability } from '../../../domain/manager-capability';
 import { Role } from '../../../domain/role';
 import { User } from '../../../domain/user.entity';
 import { UserRepository } from '../../ports/user.repository.port';
@@ -72,6 +73,7 @@ export class InMemoryUserRepository implements UserRepository {
       email?: string;
       role?: Role;
       maintenanceCompanyId?: string | null;
+      managerCapabilities?: ManagerCapability[];
     },
   ): Promise<void> {
     const existing = this.usersById.get(id);
@@ -95,6 +97,14 @@ export class InMemoryUserRepository implements UserRepository {
           changes.maintenanceCompanyId !== undefined
             ? changes.maintenanceCompanyId
             : existing.maintenanceCompanyId,
+        // Same absent-vs-supplied contract as maintenanceCompanyId above,
+        // with `[]` playing null's role (design.md Decision 5/6 — port
+        // comment): `!== undefined` (not `'in' changes`), so a
+        // present-but-undefined key is never mistaken for "clear".
+        managerCapabilities:
+          changes.managerCapabilities !== undefined
+            ? changes.managerCapabilities
+            : existing.managerCapabilities,
         updatedAt: new Date(),
       }),
     );

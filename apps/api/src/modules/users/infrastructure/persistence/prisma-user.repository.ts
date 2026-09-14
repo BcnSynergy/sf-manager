@@ -5,6 +5,7 @@ import { SoftDeletableRepository } from '../../../../shared/infrastructure/persi
 import { UserRepository } from '../../application/ports/user.repository.port';
 import { EmailAlreadyInUseError } from '../../domain/errors/email-already-in-use.error';
 import { TransactionConflictError } from '../../domain/errors/transaction-conflict.error';
+import { ManagerCapability } from '../../domain/manager-capability';
 import { Role } from '../../domain/role';
 import { User } from '../../domain/user.entity';
 import { UserMapper } from './user.mapper';
@@ -104,12 +105,18 @@ export class PrismaUserRepository
     }
   }
 
+  // review-history-manager-capability/design.md File Changes: type-only
+  // widening — `changes` already spreads straight into Prisma `data`, which
+  // is exactly what makes an absent key a genuine no-op and an explicit `[]`
+  // a genuine write (design.md Decision 6), with no adapter logic needed
+  // here.
   async updateById(
     id: string,
     changes: {
       email?: string;
       role?: Role;
       maintenanceCompanyId?: string | null;
+      managerCapabilities?: ManagerCapability[];
     },
   ): Promise<void> {
     await this.prisma.user.update({
