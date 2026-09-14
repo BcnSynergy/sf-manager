@@ -7,6 +7,10 @@ import {
   COMPANY_SCOPE_CHECKER,
   type CompanyScopeChecker,
 } from '../../../../shared/application/authorization/company-scope.checker.port';
+import {
+  MANAGER_CAPABILITY_CHECKER,
+  type ManagerCapabilityChecker,
+} from '../../../../shared/application/authorization/manager-capability.checker.port';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import {
@@ -43,6 +47,8 @@ export class ReviewHistoryAccessService {
     private readonly communityScopeChecker: CommunityScopeChecker,
     @Inject(COMPANY_SCOPE_CHECKER)
     private readonly companyScopeChecker: CompanyScopeChecker,
+    @Inject(MANAGER_CAPABILITY_CHECKER)
+    private readonly managerCapabilityChecker: ManagerCapabilityChecker,
   ) {}
 
   async listForActor(actor: Actor): Promise<ReviewSession[]> {
@@ -97,13 +103,26 @@ export class ReviewHistoryAccessService {
       case 'SYSTEM_ADMIN':
         return this.repository.findCompletedAcrossInstallation();
 
-      // Still no history scope for this role (proposal non-goal: MANAGER's
-      // deferred global-visibility permission is a separate, unbuilt slice
-      // — see authorization/spec.md "The Deferred Review Visibility Scopes
-      // Grant Nothing") — intentionally [], not forgotten. MANAGER never
-      // reaches a repository call.
-      case 'MANAGER':
-        return [];
+      // NEW (review-history-manager-capability/design.md Decision 2/3): the
+      // role is no longer inert, but the ROLE alone still grants nothing —
+      // the capability is the scope predicate (ADR-011 Decision 2, first
+      // implementation). Fail closed BEFORE any repository call: an
+      // ungranted MANAGER reaches no query at all, observably identical to
+      // the `[]` this branch returned before this slice. A granted MANAGER
+      // gets the SYSTEM_ADMIN read VERBATIM — the SAME method, second call
+      // site (no new repository method).
+      case 'MANAGER': {
+        const granted =
+          await this.managerCapabilityChecker.hasManagerCapability(
+            actor.userId,
+            actor.role,
+            'VIEW_ALL_REVIEWS',
+          );
+        if (!granted) {
+          return [];
+        }
+        return this.repository.findCompletedAcrossInstallation();
+      }
       default: {
         // `role` comes from a JWT claim with no runtime enum validation —
         // same fail-closed backstop as CommunityScopeChecker's own switch.
@@ -178,10 +197,22 @@ export class ReviewHistoryAccessService {
       case 'SYSTEM_ADMIN':
         return this.repository.findCompletedByIdAcrossInstallation(sessionId);
 
-      // Same fail-closed backstop as listForActor: still no history scope
-      // for this role, so it never reaches a repository call.
-      case 'MANAGER':
-        return null;
+      // NEW (review-history-manager-capability/design.md Decision 2/3):
+      // identical split to listForActor — fail closed before any
+      // repository call; a granted MANAGER reuses the by-id
+      // …AcrossInstallation read verbatim.
+      case 'MANAGER': {
+        const granted =
+          await this.managerCapabilityChecker.hasManagerCapability(
+            actor.userId,
+            actor.role,
+            'VIEW_ALL_REVIEWS',
+          );
+        if (!granted) {
+          return null;
+        }
+        return this.repository.findCompletedByIdAcrossInstallation(sessionId);
+      }
       default: {
         actor.role satisfies never;
         return null;

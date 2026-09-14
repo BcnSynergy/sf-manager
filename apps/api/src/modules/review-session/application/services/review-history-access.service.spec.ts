@@ -3,6 +3,7 @@ import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-n
 import { InMemoryReviewSessionRepository } from '../use-cases/testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from '../use-cases/testing/fake-community-scope.checker';
 import { FakeCompanyScopeChecker } from '../use-cases/testing/fake-company-scope.checker';
+import { FakeManagerCapabilityChecker } from '../use-cases/testing/fake-manager-capability.checker';
 import { ReviewHistoryAccessService } from './review-history-access.service';
 import type { Role } from '../../../users/domain/role';
 
@@ -30,11 +31,13 @@ function buildService(
   repository: InMemoryReviewSessionRepository,
   communityScopeChecker: FakeCommunityScopeChecker,
   companyScopeChecker: FakeCompanyScopeChecker,
+  managerCapabilityChecker: FakeManagerCapabilityChecker,
 ): ReviewHistoryAccessService {
   return new ReviewHistoryAccessService(
     repository,
     communityScopeChecker,
     companyScopeChecker,
+    managerCapabilityChecker,
   );
 }
 
@@ -47,16 +50,19 @@ describe('ReviewHistoryAccessService.listForActor', () => {
   let repository: InMemoryReviewSessionRepository;
   let communityScopeChecker: FakeCommunityScopeChecker;
   let companyScopeChecker: FakeCompanyScopeChecker;
+  let managerCapabilityChecker: FakeManagerCapabilityChecker;
   let service: ReviewHistoryAccessService;
 
   beforeEach(() => {
     repository = new InMemoryReviewSessionRepository();
     communityScopeChecker = new FakeCommunityScopeChecker();
     companyScopeChecker = new FakeCompanyScopeChecker();
+    managerCapabilityChecker = new FakeManagerCapabilityChecker();
     service = buildService(
       repository,
       communityScopeChecker,
       companyScopeChecker,
+      managerCapabilityChecker,
     );
   });
 
@@ -181,7 +187,11 @@ describe('ReviewHistoryAccessService.listForActor', () => {
     expect(spy).toHaveBeenCalledWith('company-1');
   });
 
-  it('MANAGER reaches no repository call and yields [] (still unbuilt)', async () => {
+  // design.md Decision 2/3: an ungranted MANAGER fails closed BEFORE any
+  // repository call — the capability checker is consulted, answers false,
+  // and NO scope checker other than managerCapabilityChecker is ever
+  // touched for this role.
+  it('an ungranted MANAGER reaches no repository call and yields []', async () => {
     communityScopeChecker.assign('user-1', 'community-1');
     companyScopeChecker.assign('user-1', 'company-1');
     const performerSpy = jest.spyOn(repository, 'findCompletedForPerformer');
@@ -199,6 +209,24 @@ describe('ReviewHistoryAccessService.listForActor', () => {
     expect(communitySpy).not.toHaveBeenCalled();
     expect(companySpy).not.toHaveBeenCalled();
     expect(adminSpy).not.toHaveBeenCalled();
+  });
+
+  // design.md Decision 3: a granted MANAGER reuses the SYSTEM_ADMIN read
+  // VERBATIM — the same call, same method, second call site.
+  it('a granted MANAGER reaches findCompletedAcrossInstallation, the SAME read as SYSTEM_ADMIN', async () => {
+    repository.seed(
+      completedSession({ id: 'any-company', performedById: 'tech-1' }),
+    );
+    managerCapabilityChecker.grant('manager-1');
+    const adminSpy = jest.spyOn(repository, 'findCompletedAcrossInstallation');
+
+    const result = await service.listForActor({
+      userId: 'manager-1',
+      role: 'MANAGER',
+    });
+
+    expect(result.map((s) => s.id)).toEqual(['any-company']);
+    expect(adminSpy).toHaveBeenCalledWith();
   });
 
   // review-history-admin-scope design.md Decision 1/3, tasks.md 1.6: the
@@ -258,16 +286,19 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
   let repository: InMemoryReviewSessionRepository;
   let communityScopeChecker: FakeCommunityScopeChecker;
   let companyScopeChecker: FakeCompanyScopeChecker;
+  let managerCapabilityChecker: FakeManagerCapabilityChecker;
   let service: ReviewHistoryAccessService;
 
   beforeEach(() => {
     repository = new InMemoryReviewSessionRepository();
     communityScopeChecker = new FakeCommunityScopeChecker();
     companyScopeChecker = new FakeCompanyScopeChecker();
+    managerCapabilityChecker = new FakeManagerCapabilityChecker();
     service = buildService(
       repository,
       communityScopeChecker,
       companyScopeChecker,
+      managerCapabilityChecker,
     );
   });
 
@@ -441,7 +472,7 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
     ).rejects.toThrow(ReviewSessionNotFoundError);
   });
 
-  it('MANAGER reaches no repository call and gets ReviewSessionNotFoundError (still unbuilt)', async () => {
+  it('an ungranted MANAGER reaches no repository call and gets ReviewSessionNotFoundError', async () => {
     const session = completedSession({
       id: 'session-x',
       performedById: 'user-1',
@@ -474,6 +505,31 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
     expect(byCommunitySpy).not.toHaveBeenCalled();
     expect(byCompanySpy).not.toHaveBeenCalled();
     expect(byAdminSpy).not.toHaveBeenCalled();
+  });
+
+  // design.md Decision 3: the by-id counterpart — a granted MANAGER reuses
+  // findCompletedByIdAcrossInstallation VERBATIM, the same method SYSTEM_ADMIN
+  // uses.
+  it('a granted MANAGER reads back any completed session by id via findCompletedByIdAcrossInstallation', async () => {
+    const session = completedSession({
+      id: 'any-session',
+      performedById: 'tech-1',
+      communityId: 'community-9',
+    });
+    repository.seed(session);
+    managerCapabilityChecker.grant('manager-1');
+    const adminByIdSpy = jest.spyOn(
+      repository,
+      'findCompletedByIdAcrossInstallation',
+    );
+
+    const result = await service.loadCompletedForActor('any-session', {
+      userId: 'manager-1',
+      role: 'MANAGER',
+    });
+
+    expect(result.id).toBe('any-session');
+    expect(adminByIdSpy).toHaveBeenCalledWith('any-session');
   });
 
   // review-history-admin-scope design.md Decision 1/2/3, tasks.md 1.5/1.6:

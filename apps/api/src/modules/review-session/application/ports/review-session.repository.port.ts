@@ -136,8 +136,10 @@ export interface ReviewSessionRepository {
   // oversight, no exceptions"). Deactivated communities and soft-deleted
   // maintenance companies are INCLUDED on purpose — deleted context must
   // not hide a compliance record from the auditor. Callable from exactly
-  // ONE place: ReviewHistoryAccessService's SYSTEM_ADMIN branch. Do NOT
-  // reach for this pair for a scoped need; use the
+  // TWO places (review-history-manager-capability/design.md Decision 3):
+  // ReviewHistoryAccessService's `SYSTEM_ADMIN` branch unconditionally, and
+  // its `MANAGER` branch once `VIEW_ALL_REVIEWS` is granted. Do NOT reach
+  // for this pair for a scoped need; use the
   // …InCommunities/…ForPerformer/…ForCompany method for that scope. Same
   // COMPLETED_HISTORY_ORDER_BY as every other list method.
   //
@@ -145,9 +147,10 @@ export interface ReviewSessionRepository {
   // restated: every by-id read on this port names its scope in its own
   // name and takes that scope as a required parameter UNLESS the named
   // scope is the whole installation — in which case the method is
-  // reachable from exactly one call site, the SYSTEM_ADMIN branch of
-  // ReviewHistoryAccessService. `findById` still does not exist, and never
-  // will.
+  // reachable from exactly two branches of that one service (design.md
+  // review-history-manager-capability Decision 3): `SYSTEM_ADMIN`
+  // unconditionally, and `MANAGER` holding `VIEW_ALL_REVIEWS`. `findById`
+  // still does not exist, and never will.
   findCompletedAcrossInstallation(): Promise<ReviewSession[]>;
 
   findCompletedByIdAcrossInstallation(
