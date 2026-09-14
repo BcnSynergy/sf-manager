@@ -458,24 +458,31 @@ reachable for any other status.
 
 Sessions existing makes history, scheduling and signing feel adjacent.
 Reading completed sessions ships in the separate `review-history`
-capability — now for the per-performer, per-community **and per-company**
-scopes — and is therefore no longer deferred wholesale. Everything below
-still MUST NOT be introduced, and none of it MUST be introduced by
-**this** capability, which still owns the write flow only.
-(Previously: the FR-008 row also deferred company-scoped review
-visibility and any `MAINTENANCE_COMPANY_MANAGER` review visibility rule,
-which `review-history` now implements.)
+capability — now for the per-performer, per-community, per-company
+**and installation-wide** scopes — and is therefore no longer deferred
+wholesale. Everything below still MUST NOT be introduced, and none of it
+MUST be introduced by **this** capability, which still owns the write
+flow only and whose own reads MUST stay byte-unchanged.
+(Previously: the FR-008 row deferred **all** global review visibility —
+any review query, route, page or use case unscoped across the
+installation — which `review-history` now implements for `SYSTEM_ADMIN`
+only.)
 
 | Deferred to | Must not exist |
 |---|---|
-| FR-008 (remaining half) | Global review visibility — any review query, route, page or use case unscoped across the installation; any `ManagerCapability` / `User.managerCapabilities` / `VIEW_ALL_REVIEWS` mechanism; any `MANAGER` review visibility rule. Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped one |
+| FR-008 (remaining half) | Global review visibility for `MANAGER` — any `ManagerCapability` / `User.managerCapabilities` / `VIEW_ALL_REVIEWS` mechanism; any `MANAGER` review visibility rule. Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped or installation-wide one |
 | FR-009 | Scheduling service, due dates, overdue lists, cadence rules or reminders |
 | FR-010 | Any code path transitioning a session to `signed`; any document, PDF or export generation |
 | — | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications |
 
-#### Scenario: No global review visibility exists
+#### Scenario: The one installation-wide read lives in review-history, not here
+- GIVEN this capability's own routes, pages, use cases and repository reads after this change
+- WHEN they are inspected
+- THEN none MUST contain a review read unscoped across the installation — the single such read MUST belong to `review-history` and MUST be reachable only by a `SYSTEM_ADMIN`
+
+#### Scenario: No MANAGER capability mechanism exists
 - GIVEN the routes, pages, use cases and repository queries after this change
-- WHEN they are searched for review reads unscoped across the installation, and for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
+- WHEN they are searched for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
 - THEN none MUST be found, and `MANAGER` MUST hold no review visibility
 
 #### Scenario: The company scope lives in review-history, not here
