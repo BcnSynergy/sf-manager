@@ -100,4 +100,41 @@ describe('User', () => {
         }),
     ).not.toThrow();
   });
+
+  // review-history-manager-capability/design.md Decision 1: optional prop,
+  // field defaults to `[]` — mirrors maintenanceCompanyId's shipped
+  // precedent so no existing `new User({…})` call site (seed, fixtures, use
+  // cases) breaks.
+  it('defaults managerCapabilities to an empty array when omitted', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000006',
+      email: 'admin3@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'SYSTEM_ADMIN',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+    });
+
+    expect(user.managerCapabilities).toEqual([]);
+  });
+
+  // No constructor validation against role, same reasoning as
+  // maintenanceCompanyId — UserMapper.toDomain reconstitutes every row,
+  // including a capability left on a non-MANAGER row (policy-enforced only
+  // on the write path, design.md Decision 5).
+  it('carries a supplied managerCapabilities array with no role-based validation', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000007',
+      email: 'manager@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: ['VIEW_ALL_REVIEWS'],
+    });
+
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
 });

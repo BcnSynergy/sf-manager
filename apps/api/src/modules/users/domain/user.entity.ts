@@ -1,3 +1,4 @@
+import { ManagerCapability } from './manager-capability';
 import { Role } from './role';
 
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
@@ -19,6 +20,11 @@ export interface UserProps {
   // create/update-user use cases). The class field itself is always
   // `string | null`, never `undefined`.
   maintenanceCompanyId?: string | null;
+  // review-history-manager-capability/design.md Decision 1: optional here
+  // too, defaults to `[]` — mirrors maintenanceCompanyId's precedent above
+  // so no existing `new User({…})` call site breaks. The class field is
+  // always `ManagerCapability[]`, never `undefined`.
+  managerCapabilities?: ManagerCapability[];
 }
 
 export class User {
@@ -38,6 +44,11 @@ export class User {
   // enforced at the write path only, by
   // maintenance-company-assignment.policy.ts.
   readonly maintenanceCompanyId: string | null;
+  // review-history-manager-capability/design.md Decision 1: NO constructor
+  // validation, same reasoning as maintenanceCompanyId above — a capability
+  // is meaningful only for MANAGER, enforced at the write path only
+  // (domain/manager-capability.policy.ts, PR 3), never here.
+  readonly managerCapabilities: ManagerCapability[];
 
   constructor(props: UserProps) {
     this.id = props.id;
@@ -48,6 +59,7 @@ export class User {
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;
     this.maintenanceCompanyId = props.maintenanceCompanyId ?? null;
+    this.managerCapabilities = props.managerCapabilities ?? [];
   }
 
   // ADR-010: a non-null deletedAt marks the row as soft-deleted. The
