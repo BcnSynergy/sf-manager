@@ -149,17 +149,19 @@ describe('ProtectedRoute with allowedRoles', () => {
   });
 });
 
-// review-history-company-scope spec "Role-Gated Route Access for the
-// History Views" (MODIFIED): the /review-history* routes in App.tsx use
-// this exact 3-role array. Exercised here against the generic
-// ProtectedRoute mechanism (App.tsx itself has no dedicated route test
-// file, per this repo's existing precedent) rather than booting the full
-// app with real auth.
-describe('ProtectedRoute with the review-history route family (3 allowed roles)', () => {
+// review-history-admin-scope spec "Role-Gated Route Access for the History
+// Views" (MODIFIED): the /review-history* routes in App.tsx use this exact
+// 4-role array — SYSTEM_ADMIN joins the three shipped roles, the
+// /review-sessions* write surface stays untouched. Exercised here against
+// the generic ProtectedRoute mechanism (App.tsx itself has no dedicated
+// route test file, per this repo's existing precedent) rather than booting
+// the full app with real auth.
+describe('ProtectedRoute with the review-history route family (4 allowed roles)', () => {
   const REVIEW_HISTORY_ALLOWED_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
     'COMMUNITY_REPRESENTATIVE',
     'MAINTENANCE_COMPANY_MANAGER',
+    'SYSTEM_ADMIN',
   ];
 
   function renderReviewHistoryRoute() {
@@ -217,6 +219,60 @@ describe('ProtectedRoute with the review-history route family (3 allowed roles)'
     renderReviewHistoryRoute();
 
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  it('a system admin reaches the identical history views', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  // review-history-admin-scope spec: the admin's new reviewSession:read
+  // permission is read-only history access — it must NOT widen
+  // /review-sessions*, the write surface. Asserted here against the write
+  // route's own 2-role array (unchanged by this slice) with an explicit
+  // "not authorized" message, not a redirect — same shape as the denial
+  // case above, proving SYSTEM_ADMIN is blocked exactly like any other
+  // role outside that array.
+  it('a system admin is blocked from /review-sessions* with an explicit "not authorized" message, not a redirect', () => {
+    const REVIEW_SESSIONS_ALLOWED_ROLES: Role[] = [
+      'MAINTENANCE_TECHNICIAN',
+      'COMMUNITY_REPRESENTATIVE',
+    ];
+
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={REVIEW_SESSIONS_ALLOWED_ROLES}>
+                <div data-testid="protected-content">write-surface</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">login</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('not-authorized')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
   });
 
   it('another role is denied with an explicit "not authorized" message, not a silent redirect', () => {

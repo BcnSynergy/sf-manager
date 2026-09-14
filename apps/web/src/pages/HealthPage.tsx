@@ -20,7 +20,11 @@ const REVIEW_SESSION_ROLES = new Set(['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRE
 // review-history-company-scope design.md Q5/Decision 10: the manager's
 // entry point lives here too, but points at /review-history only — never
 // at /review-sessions, the write surface this role must never reach.
-const REVIEW_HISTORY_ROLES = new Set(['MAINTENANCE_COMPANY_MANAGER']);
+// review-history-admin-scope design.md "File Changes": SYSTEM_ADMIN joins
+// the same set for the same reason — no admin dashboard exists, so "/" is
+// this role's entry point too, pointing at the identical /review-history
+// surface, never /review-sessions.
+const REVIEW_HISTORY_ROLES = new Set(['MAINTENANCE_COMPANY_MANAGER', 'SYSTEM_ADMIN']);
 
 export function HealthPage() {
   const { t } = useTranslation();

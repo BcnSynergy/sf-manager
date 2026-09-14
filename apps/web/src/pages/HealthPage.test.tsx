@@ -152,6 +152,28 @@ describe('HealthPage', () => {
     expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
   });
 
+  // review-history-admin-scope spec "The System Admin Reaches the Shipped
+  // History Surface Unchanged": a SYSTEM_ADMIN gets the identical
+  // /review-history entry link the manager gets, and nothing else —
+  // enumerated the same way as the manager's sibling test above (line
+  // 137-153), which stays untouched by this change.
+  it('enumerates every navigation control for a SYSTEM_ADMIN — only the history link and logout', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+    renderHealthPage();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
+    );
+
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/review-history']);
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
+  });
+
   it('still clears the session and navigates to /login when the logout request fails', async () => {
     vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
     renderHealthPage();
