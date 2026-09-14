@@ -1068,10 +1068,98 @@ describe('Review History (e2e)', () => {
         (row) => row.id,
       );
       expect(rowIds).toContain(sessionByUForC.id);
+      expect(rowIds).toContain(sessionByWForC.id);
+      expect(rowIds).toContain(sessionForD.id);
 
       await grantedManagerAgent
         .get(`/review-history/${sessionByUForC.id}`)
         .expect(200);
+    });
+
+    // design.md Testing Strategy row "a soft-deleted granted manager sees
+    // nothing" (unit-pinned in user-manager-capability.checker.spec.ts) —
+    // this is the e2e counterpart, reusing the SAME session/JWT across the
+    // soft-delete the way the "Revoke -> invisible, no re-login" row does:
+    // a granted MANAGER's capability check resolves via `findById`, which
+    // excludes soft-deleted rows by construction (ADR-010), so the account
+    // being soft-deleted fails the capability closed even with a still-valid
+    // JWT.
+    it('a soft-deleted granted MANAGER sees nothing, even reusing the same session', async () => {
+      const softDeletedManager = await buildSeedUser({
+        id: 'rhd-manager-granted-deleted-id',
+        email: 'rhd-manager-granted-deleted@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      built.userRepository.seed(softDeletedManager);
+      const softDeletedManagerAgent = await loginAgent(
+        built.app,
+        'rhd-manager-granted-deleted@example.com',
+      );
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      await adminAgent
+        .delete('/users/rhd-manager-granted-deleted-id')
+        .expect(204);
+
+      const listResponse = await softDeletedManagerAgent
+        .get('/review-history')
+        .expect(200);
+      expect(listResponse.body).toEqual([]);
+
+      const byIdResponse = await softDeletedManagerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(404);
+      expect((byIdResponse.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+    });
+
+    // authorization/spec.md "The manager is refused on every review-session
+    // write endpoint" — reviewSession:read grants NOTHING on the write
+    // surface, the same shape as the MAINTENANCE_COMPANY_MANAGER and
+    // SYSTEM_ADMIN siblings elsewhere in this suite.
+    it('the manager is refused on every review-session write endpoint, performing no write', async () => {
+      const managerAgent = await loginAgent(built.app, managerEmail);
+
+      await managerAgent
+        .post('/review-sessions')
+        .send({ communityId: communityC.id, templateId })
+        .expect(403);
+      await managerAgent
+        .put(`/review-sessions/${sessionByUForC.id}/entries/${elementC.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(403);
+      await managerAgent
+        .post(`/review-sessions/${sessionByUForC.id}/complete`)
+        .expect(403);
+      await managerAgent
+        .delete(`/review-sessions/${sessionByUForC.id}`)
+        .expect(403);
+    });
+
+    // authorization/spec.md "The manager gains the two review-sessions GET
+    // routes (listOwn, read) as an accepted, named consequence" — the one
+    // genuinely new read-access surface the unconditional Layer-1 grant
+    // opens. Pinned here so a future refactor can't silently widen or
+    // narrow it: listOwn stays performer-scoped (unaffected by this PR),
+    // and read on a session the manager did not perform still goes through
+    // the ordinary SessionAccessService community-scope check — NOT the
+    // review-history scope — and 404s exactly like any other non-performer.
+    it('the manager gains listOwn and read on /review-sessions, scoped exactly as any other caller', async () => {
+      const managerAgent = await loginAgent(built.app, managerEmail);
+
+      const listOwnResponse = await managerAgent
+        .get('/review-sessions')
+        .expect(200);
+      expect(listOwnResponse.body).toEqual([]);
+
+      const readResponse = await managerAgent
+        .get(`/review-sessions/${sessionByUForC.id}`)
+        .expect(404);
+      expect((readResponse.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
     });
 
     // review-history-company-scope/tasks.md 4.4: MAINTENANCE_COMPANY_MANAGER
@@ -1459,18 +1547,6 @@ describe('Review History (e2e)', () => {
     // ACROSS roles" test below can compare all three roles' out-of-scope 404
     // for the SAME foreign session, not just each role against itself.
     const representativeCEmail = 'rhc-representative-c@example.com';
-    // Bypasses normal maintenance-company-assignment policy on purpose
-    // (User's constructor performs no validation — design.md's own
-    // precedent): a company set on a MANAGER. Originally proved "the
-    // company association never substitutes for reviewSession:read"
-    // (tasks.md 4.12, "both roles' variant") back when MANAGER held no
-    // permission at all — review-history-manager-capability/design.md's
-    // Testing Strategy: that guard moved to the unit level once MANAGER
-    // gained reviewSession:read unconditionally (Decision 4), since no
-    // role in the current five-role set is left to prove the HTTP case
-    // with. Kept seeded (harmless) for shape-parity with the other manager
-    // fixtures in this block; no dedicated assertion of its own anymore.
-    const managerRoleNoPermissionEmail = 'rhc-manager-role@example.com';
     const adminWithCompanyEmail = 'rhc-admin-with-company@example.com';
 
     const COMPANY_X = 'rhc-company-x';
@@ -1548,12 +1624,6 @@ describe('Review History (e2e)', () => {
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: COMPANY_X,
       });
-      const managerRoleNoPermission = await buildSeedUser({
-        id: 'rhc-manager-role-id',
-        email: managerRoleNoPermissionEmail,
-        role: 'MANAGER',
-        maintenanceCompanyId: COMPANY_X,
-      });
       const adminWithCompany = await buildSeedUser({
         id: 'rhc-admin-with-company-id',
         email: adminWithCompanyEmail,
@@ -1577,7 +1647,6 @@ describe('Review History (e2e)', () => {
           technicianY,
           technicianNoCompany,
           technicianTransfer,
-          managerRoleNoPermission,
           adminWithCompany,
           representativeC,
         ],
@@ -1833,24 +1902,23 @@ describe('Review History (e2e)', () => {
     // holds — Decision 4 grants MANAGER `reviewSession:read` unconditionally,
     // so no role in the current five-role set holds a company/community
     // association while lacking the permission, and this e2e case has no
-    // substitute role to prove the same point at the HTTP layer. Per
-    // design.md, the guard moves to the unit level instead: the exhaustive
-    // `NON_ADMIN_ROLES x ALL_PERMISSIONS` matrix in
-    // `role-permission.checker.spec.ts` already re-asserts that a
-    // maintenanceCompanyId grants NOTHING beyond a role's own table entry —
-    // permission is never company-association-derived, structurally, not
-    // merely by this one HTTP case. `managerRoleNoPermission` stays seeded
-    // below (harmless — MANAGER now legitimately holds reviewSession:read)
-    // but no longer has a dedicated assertion of its own.
+    // substitute role to prove the same point at the HTTP layer. The real
+    // replacement is `apps/api/src/modules/auth/presentation/guards/
+    // permissions.guard.spec.ts`'s "rejects with 403 when the caller role
+    // lacks the required permission" — it re-asserts, at the guard level,
+    // that lacking the permission is what drives the 403, independent of
+    // any company/community association. The now-pointless MANAGER-with-
+    // company bypass fixture that used to back this case was removed
+    // entirely, not left seeded with no assertion.
 
     // review-history-admin-scope/design.md Decision 3, authorization/spec.md
     // "The admin's scope resolves from the role alone": SYSTEM_ADMIN now
-    // DOES hold reviewSession:read (unlike MANAGER above), so this fixture's
-    // role changes what it proves — a maintenanceCompanyId set on a
-    // SYSTEM_ADMIN (bypassing normal policy, same precedent as
-    // managerRoleNoPermission) MUST NOT narrow the admin's installation-wide
-    // result to that one company; the admin still sees every completed
-    // session, including other companies' and the unattributed one.
+    // DOES hold reviewSession:read, so this fixture's role changes what it
+    // proves — a maintenanceCompanyId set on a SYSTEM_ADMIN (bypassing
+    // normal policy on purpose, since User's constructor performs no
+    // validation) MUST NOT narrow the admin's installation-wide result to
+    // that one company; the admin still sees every completed session,
+    // including other companies' and the unattributed one.
     it("an admin's own maintenance company has no effect on their installation-wide scope", async () => {
       const adminWithCompanyAgent = await loginAgent(
         built.app,
@@ -2326,8 +2394,9 @@ describe('Review History (e2e)', () => {
       'modules/users/infrastructure/persistence/prisma-user.repository.integration.spec.ts',
       'modules/users/infrastructure/persistence/user-manager-capability-migration.integration.spec.ts',
       'modules/users/application/use-cases/testing/in-memory-user.repository.spec.ts',
-      // PR 2/4 addition:
+      // PR 2/4 additions:
       'modules/users/infrastructure/authorization/user-manager-capability.checker.spec.ts',
+      'modules/review-session/application/services/review-history-access.service.spec.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     const ALLOWED_FILES = [
