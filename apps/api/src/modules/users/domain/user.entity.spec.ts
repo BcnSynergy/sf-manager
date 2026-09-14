@@ -173,8 +173,11 @@ describe('User', () => {
   // capability checker reads this array for an authorization decision).
   // user.entity.ts now types the field `readonly ManagerCapability[]`,
   // making `.push()` a COMPILE-TIME error. `@ts-expect-error` proves that:
-  // this test fails loudly (the expected error stops being reported) if
-  // anyone ever loosens the type back to a mutable array.
+  // running `npx tsc --noEmit` fails loudly (the expected error stops being
+  // reported) if anyone ever loosens the type back to a mutable array. This
+  // repo's `ts-jest` does NOT type-check, so this guard is enforced by a
+  // manual/pre-commit `tsc --noEmit` run, not by `jest` itself — the Jest
+  // assertions below only cover runtime behavior.
   it('does not allow mutating the returned managerCapabilities array (compile-time guard)', () => {
     const user = new User({
       id: '01930000-0000-7000-8000-000000000009',
