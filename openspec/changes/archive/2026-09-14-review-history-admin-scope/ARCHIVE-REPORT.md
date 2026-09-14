@@ -342,63 +342,33 @@ remains, named on record and not started here:
 - OpenSpec: 1 archive folder created at
   `openspec/changes/archive/2026-09-14-review-history-admin-scope/`
   (9 files)
-- `openspec/changes/review-history-admin-scope/` (source folder): **NOT
-  removed by this archive run** — see Known Limitation below
+- `openspec/changes/review-history-admin-scope/` (source folder): removed
+  by the orchestrator in the same commit as this report — see note below
 
-## Known Limitation — Source Folder Not Removed, No Git Commit Performed by This Sub-Agent
+## Note — Source Folder Removal and Git Commit Completed by the Orchestrator
 
-This `sdd-archive` execution had access only to file-read/file-write
-tools (`Read`, `Edit`, `Write`, `Glob`) and Engram tools — **no shell/Bash
-tool and no file-delete/move primitive were available in this session**,
-identically to the prior `review-history-company-scope` archive run. As a
-direct consequence:
+The `sdd-archive` sub-agent that produced this report had access only to
+file-read/file-write tools (`Read`, `Edit`, `Write`, `Glob`) and Engram
+tools — no shell/Bash tool, so it could not delete the source folder or
+run git commands (identically to the prior `review-history-company-scope`
+archive run). It copied all 7 source files byte-for-byte to this archive
+path and flagged the gap explicitly rather than claim completion it
+hadn't done.
 
-1. **The source folder `openspec/changes/review-history-admin-scope/`
-   was NOT deleted.** All 7 of its files (proposal, design, tasks, 4
-   delta specs) have been byte-for-byte copied to the new archive path
-   `openspec/changes/archive/2026-09-14-review-history-admin-scope/`
-   (which additionally now contains `verify-report.md`, reconstructed
-   from Engram obs #246 since it was never written to disk during
-   `sdd-verify`, and this `ARCHIVE-REPORT.md`), but the original folder
-   still exists on disk alongside the archive copy.
-2. **No `git add`/`git commit` was performed.** The user's request to
-   stage and commit the archive move on a new branch
-   `review-history-admin-scope/05-sdd-archive` requires shell/git access
-   this run did not have.
-
-**Recommended remediation** (for the orchestrator or a follow-up session
-with shell access):
-1. Create branch `review-history-admin-scope/05-sdd-archive` from `main`.
-2. Delete `openspec/changes/review-history-admin-scope/` (the source
-   folder) now that its full contents are duplicated, verified complete,
-   and byte-identical (plus the reconstructed `verify-report.md` and this
-   `ARCHIVE-REPORT.md`) in the archive path.
-3. `git add openspec/changes/archive/2026-09-14-review-history-admin-scope/`
-   and the deletion of the source folder (the specs under
-   `openspec/specs/` were already merged and committed in PR3/PR4 —
-   confirm no diff there).
-4. Commit with a conventional-commit message:
-   `docs(review-history-admin-scope): archive change`.
-5. Do NOT push without a separate explicit confirmation, per this repo's
-   established convention (CLAUDE.md: every PR/commit gets independent
-   confirmation before push) — and per this repo's convention, get an
-   independent fresh-context review of the archive commit before push
-   and before merge, same as every other PR in this chain.
-
-This is recorded here rather than silently worked around, per the
-instruction to report accurately rather than claim an action was taken
-that was not.
+The orchestrator then completed the mechanical steps in the same commit
+that added this report (`624fef8`, branch
+`review-history-admin-scope/05-sdd-archive`): re-copied the 7 files
+directly from the source (to guard against any incidental retyping by
+the sub-agent's Write tool), deleted
+`openspec/changes/review-history-admin-scope/`, and committed — git
+recorded it as a clean rename with zero content diff on all 7 files.
 
 ## Next Steps
 
-1. **Complete the archive mechanically**: create the branch, remove the
-   source `openspec/changes/review-history-admin-scope/` folder, and
-   commit the archive (see Known Limitation above) — requires shell/git
-   access this `sdd-archive` run did not have.
-2. **Fresh-context review**: per this repo's convention, even a docs-only
+1. **Fresh-context review**: per this repo's convention, even a docs-only
    archive commit gets an independent fresh-context review before push
    and before merge — confirm with the user at each step.
-3. **Follow-up items surfaced by verify (not archive-blocking, not part
+2. **Follow-up items surfaced by verify (not archive-blocking, not part
    of this change)**:
    - Close W-1: scope `countActiveByRole()`'s integration test to a
      seeded role/company instead of counting the whole table, or pin the
@@ -440,9 +410,9 @@ that was not.
      on record as the eventual remedy for the installation-wide list's
      unbounded size (now the largest list in the app), not started,
      stubbed or parameterized here
-4. **Close**: once the source folder is removed, the fresh-context review
-   + user confirmation complete, and the commit merges, the SDD cycle is
-   fully complete; the change is archived and ready for reference.
+3. **Close**: once the fresh-context review + user confirmation are
+   complete and the commit merges, the SDD cycle is fully complete; the
+   change is archived and ready for reference.
 
 ## Traceability
 
@@ -460,9 +430,10 @@ source of truth for future development.
 
 ---
 
-**Archive Status**: CLOSED (artifact-complete; mechanical source-folder
-removal and git commit pending shell/git access — see Known Limitation)
-**Prepared by**: `sdd-archive` sub-agent (this run had file read/write and
-Engram tools only; no shell/Bash tool was available for file
-deletion/move or git operations)
+**Archive Status**: CLOSED (artifact-complete; source-folder removal and
+git commit completed by the orchestrator in the same commit — see note
+above)
+**Prepared by**: `sdd-archive` sub-agent (drafted this report; had file
+read/write and Engram tools only, no shell/Bash tool) + orchestrator
+(completed the file removal and git commit)
 **Date**: 2026-09-14
