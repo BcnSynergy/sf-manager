@@ -2296,7 +2296,7 @@ describe('Review History (e2e)', () => {
         'modules/users/presentation/users.controller.ts',
         'modules/users/application/use-cases/create-user.use-case.ts',
         'modules/users/application/use-cases/update-user.use-case.ts',
-        'modules/users/application/use-cases/list-user.use-case.ts',
+        'modules/users/application/use-cases/list-users.use-case.ts',
         'shared/application/authorization/manager-capability.checker.port.ts',
         'modules/users/infrastructure/authorization/user-manager-capability.checker.ts',
         'modules/auth/infrastructure/authorization/role-permission.checker.ts',
