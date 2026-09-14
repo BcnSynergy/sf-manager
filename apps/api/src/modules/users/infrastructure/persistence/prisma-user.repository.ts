@@ -5,6 +5,7 @@ import { SoftDeletableRepository } from '../../../../shared/infrastructure/persi
 import { UserRepository } from '../../application/ports/user.repository.port';
 import { EmailAlreadyInUseError } from '../../domain/errors/email-already-in-use.error';
 import { TransactionConflictError } from '../../domain/errors/transaction-conflict.error';
+import { ManagerCapability } from '../../domain/manager-capability';
 import { Role } from '../../domain/role';
 import { User } from '../../domain/user.entity';
 import { UserMapper } from './user.mapper';
@@ -55,6 +56,18 @@ export class PrismaUserRepository
   // path the `id` field is deliberately omitted from the payload so the
   // existing row's identity is preserved (ADR-009) — a fresh id generated
   // by the caller (e.g. seed.ts on every run) never overwrites it.
+  //
+  // review-history-manager-capability/design.md Decision 5: `managerCapabilities`
+  // is a privilege grant, not a plain field — unlike `maintenanceCompanyId`,
+  // treating a stale/omitted value as harmless is NOT safe here. This
+  // upsert's UPDATE path writes `managerCapabilities` from whatever `User`
+  // entity is passed in, straight through `UserMapper.toPersistence`; a
+  // caller that reconstructs (or seeds) a `User` without the row's current,
+  // persisted `managerCapabilities` and then calls `save()` SILENTLY
+  // REVOKES any existing grant. No live caller does this today (only
+  // `prisma/seed.ts` upserts, and only for `SYSTEM_ADMIN`, never `MANAGER`),
+  // but `save()` MUST always be called with the full, current
+  // `managerCapabilities` value for any user it may touch.
   async save(user: User): Promise<void> {
     const { id, ...updateData } = UserMapper.toPersistence(user);
 
@@ -104,12 +117,18 @@ export class PrismaUserRepository
     }
   }
 
+  // review-history-manager-capability/design.md File Changes: type-only
+  // widening — `changes` already spreads straight into Prisma `data`, which
+  // is exactly what makes an absent key a genuine no-op and an explicit `[]`
+  // a genuine write (design.md Decision 6), with no adapter logic needed
+  // here.
   async updateById(
     id: string,
     changes: {
       email?: string;
       role?: Role;
       maintenanceCompanyId?: string | null;
+      managerCapabilities?: ManagerCapability[];
     },
   ): Promise<void> {
     await this.prisma.user.update({

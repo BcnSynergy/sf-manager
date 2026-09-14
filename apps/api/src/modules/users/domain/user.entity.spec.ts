@@ -1,3 +1,4 @@
+import { ManagerCapability } from './manager-capability';
 import { User } from './user.entity';
 
 // ADR-013: hand-written domain entity, zero Prisma/framework dependency.
@@ -99,5 +100,116 @@ describe('User', () => {
           maintenanceCompanyId: null,
         }),
     ).not.toThrow();
+  });
+
+  // review-history-manager-capability/design.md Decision 1: optional prop,
+  // field defaults to `[]` — mirrors maintenanceCompanyId's shipped
+  // precedent so no existing `new User({…})` call site (seed, fixtures, use
+  // cases) breaks.
+  it('defaults managerCapabilities to an empty array when omitted', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000006',
+      email: 'admin3@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'SYSTEM_ADMIN',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+    });
+
+    expect(user.managerCapabilities).toEqual([]);
+  });
+
+  // No constructor validation against role, same reasoning as
+  // maintenanceCompanyId — UserMapper.toDomain reconstitutes every row,
+  // including a capability left on a non-MANAGER row (policy-enforced only
+  // on the write path, design.md Decision 5).
+  it('carries a supplied managerCapabilities array with no role-based validation', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000007',
+      email: 'manager@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: ['VIEW_ALL_REVIEWS'],
+    });
+
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
+
+  // PR 1/4 review fix: `readonly managerCapabilities` only blocks REBINDING
+  // the property, not mutating the array in place, and the constructor was
+  // storing the caller's array by reference. PR 2's capability checker will
+  // read this array for an authorization decision, so a caller mutating its
+  // own input array after construction must NOT be able to change what the
+  // entity reports.
+  it('is not affected by a mutation of the array passed into the constructor', () => {
+    const input: ManagerCapability[] = ['VIEW_ALL_REVIEWS'];
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000008',
+      email: 'manager2@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: input,
+    });
+
+    input.push('VIEW_ALL_REVIEWS');
+    input.length = 0;
+
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
+
+  // PR 1/4 review fix (round 2): the first fix pass made the constructor
+  // defensively copy `managerCapabilities` (the test above), but left the
+  // field's TYPE as a plain `ManagerCapability[]` — `readonly` on the
+  // property alone only blocks REBINDING it, not mutating the array in
+  // place, so `user.managerCapabilities.push(...)` still compiled clean and
+  // could mutate the entity's internal state (which matters because PR 2's
+  // capability checker reads this array for an authorization decision).
+  // user.entity.ts now types the field `readonly ManagerCapability[]`,
+  // making `.push()` a COMPILE-TIME error. `@ts-expect-error` proves that:
+  // running `npx tsc --noEmit` fails loudly (the expected error stops being
+  // reported) if anyone ever loosens the type back to a mutable array. This
+  // repo's `ts-jest` does NOT type-check, so this guard is enforced by a
+  // manual/pre-commit `tsc --noEmit` run, not by `jest` itself — the Jest
+  // assertions below only cover runtime behavior.
+  it('does not allow mutating the returned managerCapabilities array (compile-time guard)', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000009',
+      email: 'manager3@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: ['VIEW_ALL_REVIEWS'],
+    });
+
+    // Wrapped in a function that is declared but deliberately NEVER CALLED:
+    // `readonly` is a TypeScript-only guard, not a runtime Object.freeze —
+    // the real JS array underneath still has a `.push` method, so actually
+    // invoking it would silently mutate the entity's internal state and
+    // defeat the point of this test. TypeScript still type-checks the
+    // function BODY at compile time regardless of whether it is ever
+    // called, so the `@ts-expect-error` below still does its job.
+    const attemptToMutateManagerCapabilities = (): void => {
+      // @ts-expect-error managerCapabilities is `readonly
+      // ManagerCapability[]` — `.push` must not type-check. If this stops
+      // being a type error, the field's compile-time mutability guard has
+      // regressed.
+      // (`.push` is expected to be typed `any` here BECAUSE of the
+      // `@ts-expect-error` above; that IS the guard this test pins, not an
+      // accidental unsafe call.)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      user.managerCapabilities.push('VIEW_ALL_REVIEWS');
+    };
+
+    expect(typeof attemptToMutateManagerCapabilities).toBe('function');
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
   });
 });

@@ -1,3 +1,4 @@
+import { ManagerCapability } from '../../domain/manager-capability';
 import { Role } from '../../domain/role';
 import { User } from '../../domain/user.entity';
 
@@ -51,6 +52,14 @@ export interface UserRepository {
       // leaves an existing maintenanceCompanyId untouched by construction
       // (no auto-clear), which is the settled product decision.
       maintenanceCompanyId?: string | null;
+      // review-history-manager-capability/design.md Decision 5/6: present
+      // only when the PATCH itself carries the field (grant/revoke logic
+      // lands in PR 3) — `undefined` here means "not part of this PATCH",
+      // never "clear the value"; an explicit `[]` IS a genuine write (the
+      // revoke), mirroring maintenanceCompanyId's absent-vs-null contract
+      // above but with `[]` playing null's role, since a Prisma scalar list
+      // cannot be null.
+      managerCapabilities?: ManagerCapability[];
     },
   ): Promise<void>;
 

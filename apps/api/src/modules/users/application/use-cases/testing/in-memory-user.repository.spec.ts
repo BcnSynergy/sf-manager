@@ -57,4 +57,41 @@ describe('InMemoryUserRepository (test double parity)', () => {
       'active-2',
     ]);
   });
+
+  // review-history-manager-capability/design.md File Changes: fake parity
+  // for the new field, mirroring maintenanceCompanyId's shipped
+  // updateById() precedent (design.md Decision 5's absent/[] semantics land
+  // in PR 3 — this test only pins updateById's existing "absent leaves
+  // value, an explicit value overwrites it" contract, unchanged in shape).
+  it('updateById() leaves managerCapabilities untouched when the key is absent', async () => {
+    repository.seed(
+      buildUser({
+        id: 'manager-1',
+        email: 'manager1@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      }),
+    );
+
+    await repository.updateById('manager-1', { email: 'updated@example.com' });
+
+    const updated = await repository.findById('manager-1');
+    expect(updated?.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
+
+  it('updateById() overwrites managerCapabilities when the key is supplied, including an explicit []', async () => {
+    repository.seed(
+      buildUser({
+        id: 'manager-2',
+        email: 'manager2@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      }),
+    );
+
+    await repository.updateById('manager-2', { managerCapabilities: [] });
+
+    const updated = await repository.findById('manager-2');
+    expect(updated?.managerCapabilities).toEqual([]);
+  });
 });

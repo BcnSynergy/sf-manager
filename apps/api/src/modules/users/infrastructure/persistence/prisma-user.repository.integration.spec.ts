@@ -257,6 +257,64 @@ describe('PrismaUserRepository (integration)', () => {
     expect(updated?.maintenanceCompanyId).toBe(companyId);
   });
 
+  // review-history-manager-capability/design.md Decision 1/Testing Strategy:
+  // column round-trip against a real Postgres instance, tasks.md 1.8.
+  it('findById() and updateById() round-trip an empty and a non-empty managerCapabilities array', async () => {
+    const email = uniqueEmail('update-by-id-capabilities');
+    const id = idGenerator.generate();
+
+    await repository.create(
+      new User({
+        id,
+        email,
+        passwordHash: 'argon2id$hash',
+        role: 'MANAGER',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+
+    await repository.updateById(id, {
+      managerCapabilities: ['VIEW_ALL_REVIEWS'],
+    });
+    const granted = await repository.findById(id);
+    expect(granted?.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+
+    await repository.updateById(id, { managerCapabilities: [] });
+    const revoked = await repository.findById(id);
+    expect(revoked?.managerCapabilities).toEqual([]);
+  });
+
+  // NOTE what this pins and what it does NOT: `repository.create()` goes
+  // through `UserMapper.toPersistence()`, which always emits an explicit
+  // `managerCapabilities: []` for an entity built with no value supplied
+  // (the entity's own default, design.md Decision 1's "class field defaults
+  // to `[]`") — so this round-trips the ENTITY default through the MAPPER,
+  // it never exercises the Postgres column's own `DEFAULT` expression (an
+  // `INSERT` that omits the column entirely). The column-level default is
+  // pinned for real by `user-manager-capability-migration.integration.spec
+  // .ts`'s `information_schema.columns.column_default` assertion.
+  it('round-trips the entity/mapper default of an empty managerCapabilities array for a newly created user', async () => {
+    const email = uniqueEmail('default-empty-capabilities');
+    const id = idGenerator.generate();
+
+    await repository.create(
+      new User({
+        id,
+        email,
+        passwordHash: 'argon2id$hash',
+        role: 'SYSTEM_ADMIN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+
+    const found = await repository.findById(id);
+    expect(found?.managerCapabilities).toEqual([]);
+  });
+
   it('softDeleteById() sets deletedAt so the user is excluded from findById()', async () => {
     const email = uniqueEmail('soft-delete-by-id');
     const id = idGenerator.generate();

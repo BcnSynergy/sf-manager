@@ -1,3 +1,4 @@
+import { ManagerCapability } from './manager-capability';
 import { Role } from './role';
 
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
@@ -19,6 +20,11 @@ export interface UserProps {
   // create/update-user use cases). The class field itself is always
   // `string | null`, never `undefined`.
   maintenanceCompanyId?: string | null;
+  // review-history-manager-capability/design.md Decision 1: optional here
+  // too, defaults to `[]` — mirrors maintenanceCompanyId's precedent above
+  // so no existing `new User({…})` call site breaks. The class field is
+  // always `ManagerCapability[]`, never `undefined`.
+  managerCapabilities?: ManagerCapability[];
 }
 
 export class User {
@@ -38,6 +44,21 @@ export class User {
   // enforced at the write path only, by
   // maintenance-company-assignment.policy.ts.
   readonly maintenanceCompanyId: string | null;
+  // review-history-manager-capability/design.md Decision 1: NO constructor
+  // validation, same reasoning as maintenanceCompanyId above — a capability
+  // is meaningful only for MANAGER, enforced at the write path only
+  // (domain/manager-capability.policy.ts, PR 3), never here.
+  // PR 1/4 review fix (round 2): the field type itself is now `readonly
+  // ManagerCapability[]` (a readonly array type), not just a readonly
+  // PROPERTY — `readonly` on the property alone only blocks rebinding
+  // (`user.managerCapabilities = [...]`), it does nothing to stop mutating
+  // the array in place (`user.managerCapabilities.push(...)`), which still
+  // compiled clean and would have let a caller mutate the entity's internal
+  // state. `UserProps` below stays a plain, caller-owned
+  // `ManagerCapability[]` (mutable in, defensively copied by the
+  // constructor, readonly out) so existing call sites that build the input
+  // array normally are unaffected.
+  readonly managerCapabilities: readonly ManagerCapability[];
 
   constructor(props: UserProps) {
     this.id = props.id;
@@ -48,6 +69,12 @@ export class User {
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;
     this.maintenanceCompanyId = props.maintenanceCompanyId ?? null;
+    // PR 1/4 review fix: `readonly` only blocks rebinding this property, not
+    // mutating the array in place — a defensive copy is REQUIRED so a caller
+    // mutating its own input array after construction (or PR 2's capability
+    // checker reading this value for an authorization decision) can never
+    // observe/cause a change that bypassed the write path's policy checks.
+    this.managerCapabilities = [...(props.managerCapabilities ?? [])];
   }
 
   // ADR-010: a non-null deletedAt marks the row as soft-deleted. The
