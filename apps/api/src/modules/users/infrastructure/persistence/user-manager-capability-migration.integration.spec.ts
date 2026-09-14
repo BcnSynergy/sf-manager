@@ -77,8 +77,8 @@ describe('User.managerCapabilities schema (migration integration guard)', () => 
     const email = `managercapability-migration-guard-${randomUUID()}@example.com`;
 
     await prisma.$executeRaw`
-      INSERT INTO "User" (id, email, "passwordHash", role, "createdAt", "updatedAt")
-      VALUES (${id}::uuid, ${email}, 'irrelevant-hash', 'SYSTEM_ADMIN'::"Role", now(), now())
+      INSERT INTO "User" (id, email, "passwordHash", role, "createdAt", "updatedAt", "deletedAt")
+      VALUES (${id}::uuid, ${email}, 'irrelevant-hash', 'SYSTEM_ADMIN'::"Role", now(), now(), now())
     `;
 
     try {
