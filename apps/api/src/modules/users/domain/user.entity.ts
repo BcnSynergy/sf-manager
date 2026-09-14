@@ -48,7 +48,17 @@ export class User {
   // validation, same reasoning as maintenanceCompanyId above — a capability
   // is meaningful only for MANAGER, enforced at the write path only
   // (domain/manager-capability.policy.ts, PR 3), never here.
-  readonly managerCapabilities: ManagerCapability[];
+  // PR 1/4 review fix (round 2): the field type itself is now `readonly
+  // ManagerCapability[]` (a readonly array type), not just a readonly
+  // PROPERTY — `readonly` on the property alone only blocks rebinding
+  // (`user.managerCapabilities = [...]`), it does nothing to stop mutating
+  // the array in place (`user.managerCapabilities.push(...)`), which still
+  // compiled clean and would have let a caller mutate the entity's internal
+  // state. `UserProps` below stays a plain, caller-owned
+  // `ManagerCapability[]` (mutable in, defensively copied by the
+  // constructor, readonly out) so existing call sites that build the input
+  // array normally are unaffected.
+  readonly managerCapabilities: readonly ManagerCapability[];
 
   constructor(props: UserProps) {
     this.id = props.id;

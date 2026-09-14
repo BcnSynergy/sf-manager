@@ -163,4 +163,50 @@ describe('User', () => {
 
     expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
   });
+
+  // PR 1/4 review fix (round 2): the first fix pass made the constructor
+  // defensively copy `managerCapabilities` (the test above), but left the
+  // field's TYPE as a plain `ManagerCapability[]` — `readonly` on the
+  // property alone only blocks REBINDING it, not mutating the array in
+  // place, so `user.managerCapabilities.push(...)` still compiled clean and
+  // could mutate the entity's internal state (which matters because PR 2's
+  // capability checker reads this array for an authorization decision).
+  // user.entity.ts now types the field `readonly ManagerCapability[]`,
+  // making `.push()` a COMPILE-TIME error. `@ts-expect-error` proves that:
+  // this test fails loudly (the expected error stops being reported) if
+  // anyone ever loosens the type back to a mutable array.
+  it('does not allow mutating the returned managerCapabilities array (compile-time guard)', () => {
+    const user = new User({
+      id: '01930000-0000-7000-8000-000000000009',
+      email: 'manager3@example.com',
+      passwordHash: 'argon2id$hash',
+      role: 'MANAGER',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      managerCapabilities: ['VIEW_ALL_REVIEWS'],
+    });
+
+    // Wrapped in a function that is declared but deliberately NEVER CALLED:
+    // `readonly` is a TypeScript-only guard, not a runtime Object.freeze —
+    // the real JS array underneath still has a `.push` method, so actually
+    // invoking it would silently mutate the entity's internal state and
+    // defeat the point of this test. TypeScript still type-checks the
+    // function BODY at compile time regardless of whether it is ever
+    // called, so the `@ts-expect-error` below still does its job.
+    const attemptToMutateManagerCapabilities = (): void => {
+      // @ts-expect-error managerCapabilities is `readonly
+      // ManagerCapability[]` — `.push` must not type-check. If this stops
+      // being a type error, the field's compile-time mutability guard has
+      // regressed.
+      // (`.push` is expected to be typed `any` here BECAUSE of the
+      // `@ts-expect-error` above; that IS the guard this test pins, not an
+      // accidental unsafe call.)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      user.managerCapabilities.push('VIEW_ALL_REVIEWS');
+    };
+
+    expect(typeof attemptToMutateManagerCapabilities).toBe('function');
+    expect(user.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+  });
 });

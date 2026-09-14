@@ -12,14 +12,22 @@ import { UserRepository } from '../../ports/user.repository.port';
 export class InMemoryUserRepository implements UserRepository {
   private readonly usersById = new Map<string, User>();
 
+  // PR 1/4 review fix (round 2): clone on the way IN too — the caller keeps
+  // its own reference to `user` after this call returns, and without a copy
+  // here that reference is the SAME object stored internally, so a later
+  // external mutation (however unlikely now that #1 makes the array
+  // readonly at the type level — this is defense-in-depth for the fake's
+  // own internal consistency, matching PrismaUserRepository where every
+  // read builds a fresh entity through the mapper) would corrupt the fake's
+  // stored state without going through create()/save()/updateById().
   seed(user: User): void {
-    this.usersById.set(user.id, user);
+    this.usersById.set(user.id, this.cloneUser(user));
   }
 
   findByEmail(email: string): Promise<User | null> {
     for (const user of this.usersById.values()) {
       if (user.email === email && !user.isDeleted) {
-        return Promise.resolve(user);
+        return Promise.resolve(this.cloneUser(user));
       }
     }
     return Promise.resolve(null);
@@ -35,7 +43,7 @@ export class InMemoryUserRepository implements UserRepository {
         break;
       }
     }
-    this.usersById.set(user.id, user);
+    this.usersById.set(user.id, this.cloneUser(user));
     return Promise.resolve();
   }
 
@@ -55,16 +63,25 @@ export class InMemoryUserRepository implements UserRepository {
     );
   }
 
-  // PR 1/4 review fix: findById/findAll used to return the stored User
-  // instance directly — `managerCapabilities` is `readonly`, but that only
-  // blocks rebinding the property, not mutating the array in place, so a
-  // caller doing `found.managerCapabilities.push(...)` would corrupt this
-  // fake's internal state for every later read of the same user. `new
-  // User({...user})` re-runs the entity constructor, which already
-  // defensively copies `managerCapabilities` (user.entity.ts), so this
-  // returns an independent copy on every read.
+  // PR 1/4 review fix: findById/findAll/findByEmail used to return the
+  // stored User instance directly — `managerCapabilities` was `readonly`,
+  // but that only blocked rebinding the property, not mutating the array in
+  // place, so a caller doing `found.managerCapabilities.push(...)` would
+  // corrupt this fake's internal state for every later read of the same
+  // user. Round 2: the field's TYPE is now `readonly ManagerCapability[]`
+  // (user.entity.ts), so `.push()` on a read value is a compile-time error
+  // regardless of cloning — this clone is now defense-in-depth for the
+  // fake's own internal consistency (matching PrismaUserRepository, where
+  // every read builds a fresh entity through the mapper) rather than the
+  // only thing preventing a leak. `[...user.managerCapabilities]` produces
+  // a fresh mutable array to satisfy `UserProps`'s (caller-owned, mutable)
+  // input type; `new User(...)` re-runs the constructor's own defensive
+  // copy on top, so this returns a fully independent copy on every read.
   private cloneUser(user: User): User {
-    return new User({ ...user });
+    return new User({
+      ...user,
+      managerCapabilities: [...user.managerCapabilities],
+    });
   }
 
   create(user: User): Promise<void> {
@@ -77,7 +94,7 @@ export class InMemoryUserRepository implements UserRepository {
         return Promise.reject(new EmailAlreadyInUseError());
       }
     }
-    this.usersById.set(user.id, user);
+    this.usersById.set(user.id, this.cloneUser(user));
     return Promise.resolve();
   }
 
@@ -115,10 +132,16 @@ export class InMemoryUserRepository implements UserRepository {
         // with `[]` playing null's role (design.md Decision 5/6 — port
         // comment): `!== undefined` (not `'in' changes`), so a
         // present-but-undefined key is never mistaken for "clear".
+        // Round 2 review fix: spread into a fresh mutable array either way —
+        // `existing.managerCapabilities` is now typed `readonly
+        // ManagerCapability[]` (user.entity.ts), which UserProps's
+        // (caller-owned, mutable) input type does not accept directly, and
+        // `changes.managerCapabilities` is cloned too for the same
+        // clone-on-the-way-in reasoning as create()/save()/seed() above.
         managerCapabilities:
           changes.managerCapabilities !== undefined
-            ? changes.managerCapabilities
-            : existing.managerCapabilities,
+            ? [...changes.managerCapabilities]
+            : [...existing.managerCapabilities],
         updatedAt: new Date(),
       }),
     );
@@ -132,7 +155,14 @@ export class InMemoryUserRepository implements UserRepository {
     }
     this.usersById.set(
       id,
-      new User({ ...existing, deletedAt: new Date(), updatedAt: new Date() }),
+      new User({
+        ...existing,
+        // Round 2 review fix: same readonly-array-not-assignable-to-mutable
+        // reasoning as updateById above.
+        managerCapabilities: [...existing.managerCapabilities],
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      }),
     );
     return Promise.resolve();
   }

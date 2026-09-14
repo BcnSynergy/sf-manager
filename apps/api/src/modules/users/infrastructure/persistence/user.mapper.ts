@@ -38,7 +38,13 @@ export class UserMapper {
       role: user.role,
       deletedAt: user.deletedAt,
       maintenanceCompanyId: user.maintenanceCompanyId,
-      managerCapabilities: user.managerCapabilities,
+      // PR 1/4 review fix (round 2): `user.managerCapabilities` is now typed
+      // `readonly ManagerCapability[]` (user.entity.ts) — Prisma's generated
+      // `UserCreateInput.managerCapabilities` wants a plain mutable
+      // `ManagerCapability[]`, so this spreads into a fresh array at the
+      // serialization boundary. That's a copy, not a leak — the entity's
+      // own array is never handed out.
+      managerCapabilities: [...user.managerCapabilities],
     };
   }
 }
