@@ -4,6 +4,7 @@ import { InMemoryCommunityRepository } from '../../../community/application/use-
 import { InMemoryReviewSessionRepository } from './testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from './testing/fake-community-scope.checker';
 import { FakeCompanyScopeChecker } from './testing/fake-company-scope.checker';
+import { FakeManagerCapabilityChecker } from './testing/fake-manager-capability.checker';
 import { InMemoryUserDirectory } from './testing/in-memory-user-directory';
 import { ReviewHistoryAccessService } from '../services/review-history-access.service';
 import { ListReviewHistoryUseCase } from './list-review-history.use-case';
@@ -39,6 +40,7 @@ function buildUseCase(
       sessionRepository,
       communityScopeChecker,
       companyScopeChecker,
+      new FakeManagerCapabilityChecker(),
     ),
     communityRepository,
     userDirectory,

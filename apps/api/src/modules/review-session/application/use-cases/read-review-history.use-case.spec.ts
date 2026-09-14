@@ -10,6 +10,7 @@ import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-n
 import { InMemoryReviewSessionRepository } from './testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from './testing/fake-community-scope.checker';
 import { FakeCompanyScopeChecker } from './testing/fake-company-scope.checker';
+import { FakeManagerCapabilityChecker } from './testing/fake-manager-capability.checker';
 import { InMemoryUserDirectory } from './testing/in-memory-user-directory';
 import { ReviewHistoryAccessService } from '../services/review-history-access.service';
 import { ReadReviewHistoryUseCase } from './read-review-history.use-case';
@@ -76,6 +77,7 @@ describe('ReadReviewHistoryUseCase', () => {
       sessionRepository,
       scopeChecker,
       companyScopeChecker,
+      new FakeManagerCapabilityChecker(),
     );
     questionRepository = new InMemoryChecklistQuestionRepository();
     templateRepository = new InMemoryReviewTemplateRepository(
