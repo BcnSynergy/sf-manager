@@ -332,8 +332,9 @@ function App() {
           />
           {/* review-history-ui spec + design.md: read-only, reachable by the
               two performing roles plus (review-history-company-scope,
-              design.md Q5/Decision 10) MAINTENANCE_COMPANY_MANAGER — all
-              three reach the identical surface, no reduced or manager-
+              design.md Q5/Decision 10) MAINTENANCE_COMPANY_MANAGER, plus
+              (review-history-admin-scope design.md "File Changes") SYSTEM_ADMIN
+              — all four reach the identical surface, no reduced or admin-
               specific variant. The write surface below (/review-sessions*)
               is deliberately NOT widened. Static /review-history ranks
               above the dynamic /review-history/:sessionId segment below
@@ -347,6 +348,7 @@ function App() {
                   'MAINTENANCE_TECHNICIAN',
                   'COMMUNITY_REPRESENTATIVE',
                   'MAINTENANCE_COMPANY_MANAGER',
+                  'SYSTEM_ADMIN',
                 ]}
               >
                 <ReviewHistoryPage />
@@ -361,6 +363,7 @@ function App() {
                   'MAINTENANCE_TECHNICIAN',
                   'COMMUNITY_REPRESENTATIVE',
                   'MAINTENANCE_COMPANY_MANAGER',
+                  'SYSTEM_ADMIN',
                 ]}
               >
                 <ReviewHistoryDetailPage />

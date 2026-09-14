@@ -94,10 +94,10 @@ Traces: spec `review-history-ui` — *The System Admin Reaches the Shipped
 History Surface Unchanged*, *Role-Gated Route Access for the History Views*
 (MODIFIED); proposal Success Criteria (Documentation & quality).
 
-- [ ] 3.1 `apps/web/src/App.tsx` — add `SYSTEM_ADMIN` to both `/review-history*` `ProtectedRoute allowedRoles` (3 → 4); `/review-sessions*` routes untouched.
-- [ ] 3.2 `apps/web/src/pages/HealthPage.tsx` — add `SYSTEM_ADMIN` to `REVIEW_HISTORY_ROLES`.
-- [ ] 3.3 RED/GREEN `apps/web/src/pages/HealthPage.test.tsx` — leave the manager's link-enumeration test (`:137-153`) **passing and unmodified**; add a new, separate admin sibling test: for `SYSTEM_ADMIN`, `hrefs` equals exactly `['/review-history']` and one button (logout) (Testing Strategy row `HealthPage`, explicit note).
-- [ ] 3.4 RED/GREEN `apps/web/src/auth/ProtectedRoute.test.tsx` — the review-history route family becomes 4 roles; assert `SYSTEM_ADMIN` still blocked from `/review-sessions*` with an explicit "not authorized" message, not a redirect.
+- [x] 3.1 `apps/web/src/App.tsx` — add `SYSTEM_ADMIN` to both `/review-history*` `ProtectedRoute allowedRoles` (3 → 4); `/review-sessions*` routes untouched.
+- [x] 3.2 `apps/web/src/pages/HealthPage.tsx` — add `SYSTEM_ADMIN` to `REVIEW_HISTORY_ROLES`.
+- [x] 3.3 RED/GREEN `apps/web/src/pages/HealthPage.test.tsx` — leave the manager's link-enumeration test (`:137-153`) **passing and unmodified**; add a new, separate admin sibling test: for `SYSTEM_ADMIN`, `hrefs` equals exactly `['/review-history']` and one button (logout) (Testing Strategy row `HealthPage`, explicit note).
+- [x] 3.4 RED/GREEN `apps/web/src/auth/ProtectedRoute.test.tsx` — the review-history route family becomes 4 roles; assert `SYSTEM_ADMIN` still blocked from `/review-sessions*` with an explicit "not authorized" message, not a redirect.
 - [ ] 3.5 Merge `openspec/changes/review-history-admin-scope/specs/authorization/spec.md` deltas into `openspec/specs/authorization/spec.md` — ADDED requirements inserted, MODIFIED requirements replaced wholesale, scenarios carried over verbatim.
 - [ ] 3.6 Merge `.../specs/review-history/spec.md` deltas into `openspec/specs/review-history/spec.md`.
 - [ ] 3.7 Merge `.../specs/review-history-ui/spec.md` deltas into `openspec/specs/review-history-ui/spec.md`.
