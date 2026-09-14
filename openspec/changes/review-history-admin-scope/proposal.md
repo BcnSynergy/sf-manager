@@ -212,8 +212,15 @@ previous two slices; `sdd-tasks` owns the split and the 400-line forecast.
 | `docs/requirements/functional-requirements.md` | Modified | FR-008 status |
 | `apps/api/test/*.e2e-spec.ts` | New/Modified | Four-role visibility matrix + deactivated/soft-deleted visibility cases |
 
-**No schema change, no migration, no new column, no backfill** — a real relief
-versus the company-scope slice. Untouched: `modules/users/**`,
+**No new column, no new table, no backfill** — a real relief versus the
+company-scope slice. **One exception**: a PR1 fix-up (4R fresh-context review
+CRITICAL) added migration
+`20260913210000_add_review_session_status_completed_at_index`, a composite
+index on `ReviewSession(status, completedAt, id)`. The unscoped
+`SYSTEM_ADMIN` read has no FK to filter on, unlike the three scoped siblings,
+so without it this query is a full table scan plus a filesort on every
+admin request — the index exists solely to keep that read off the app's
+largest list from being pathological. Untouched: `modules/users/**`,
 `modules/maintenance-company/**`, `modules/community/**`, both scope checkers,
 `SessionAccessService`, and the entire write path.
 
@@ -231,9 +238,14 @@ versus the company-scope slice. Untouched: `modules/users/**`,
 
 ## Rollback Plan
 
-`git revert` the branch. **There is no migration and no schema change**, so
-nothing is asymmetric — unlike `review-history-company-scope`, this rollback is
-lossless. Reverting removes the unscoped port method pair and its adapters, the
+`git revert` the branch. **There is no new column, table or backfill**, so
+application-data asymmetry is not a concern — unlike
+`review-history-company-scope`. There is one migration to account for:
+`20260913210000_add_review_session_status_completed_at_index` (a composite
+index only, additive and reversible on its own). Reverting the code without
+also dropping that index leaves a harmless, unused index behind — safe to
+leave in place or drop separately; it does not need to block the code
+revert. Reverting removes the unscoped port method pair and its adapters, the
 access-service branch (back to `[]`/`null`), the `ROLE_PERMISSIONS` entry and
 the two web role widenings, returning `SYSTEM_ADMIN` to holding no
 `reviewSession:*`. No shipped port signature breaks; the other three roles'
@@ -295,7 +307,10 @@ chain reverts independently.
       read or page.
 - [ ] The unscoped pair is called **only** from the `SYSTEM_ADMIN` branch of
       `ReviewHistoryAccessService`; no other use case or service reaches it.
-- [ ] No migration was added; `schema.prisma` is unchanged.
+- [ ] No new column, table or backfill was added; the one migration that
+      shipped (`20260913210000_add_review_session_status_completed_at_index`,
+      PR1 fix-up) is a composite index only, added to keep the unscoped admin
+      read off a full table scan.
 - [ ] No demo-mode-specific branch was added.
 
 **Documentation & quality**
