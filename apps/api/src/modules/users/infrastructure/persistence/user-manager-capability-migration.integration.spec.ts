@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 
 // Integration test against a real Postgres instance (design.md Testing
@@ -55,16 +56,45 @@ describe('User.managerCapabilities schema (migration integration guard)', () => 
   // Deliberately NOT an `IS NULL` check: the column is already pinned
   // NOT NULL by the assertion above, so an `IS NULL` count can never be
   // non-zero regardless of correctness — it would pass even if a backfill
-  // bug left rows with a non-empty array. This queries for the opposite of
-  // `{}` instead, which actually exercises the "no backfill needed, every
-  // row reads `{}`" premise.
-  it('every existing row reads an empty managerCapabilities array (no backfill step)', async () => {
-    const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT count(*)::bigint AS count FROM "User"
-      WHERE "managerCapabilities" <> ARRAY[]::"ManagerCapability"[]
+  // bug left rows with a non-empty array. This exercises the opposite of
+  // `{}` instead, which actually pins the "no backfill needed, every row
+  // reads `{}`" premise.
+  //
+  // PR 1/4 review fix (round 2): this USED TO count over the entire `User`
+  // table, which Jest's parallel workers share across every integration
+  // spec file — `prisma-user.repository.integration.spec.ts` grants then
+  // revokes a capability on a real row within the same test run, so a
+  // whole-table count could spuriously observe a non-empty array mid-grant
+  // and fail (passing today, but by luck of scheduling, not by guarantee).
+  // Fixed by inserting and pinning a single, isolated row of THIS test's
+  // own — via raw SQL that OMITS the `managerCapabilities` column entirely,
+  // so the assertion is exercising the column's own Postgres `DEFAULT`
+  // expression directly, not the entity/mapper's `[]` default (see the note
+  // on the sibling round-trip test above) — instead of scanning a table
+  // shared with concurrently-running specs.
+  it('a freshly inserted row (column omitted) reads an empty managerCapabilities array via the column DEFAULT', async () => {
+    const id = randomUUID();
+    const email = `managercapability-migration-guard-${randomUUID()}@example.com`;
+
+    await prisma.$executeRaw`
+      INSERT INTO "User" (id, email, "passwordHash", role, "createdAt", "updatedAt")
+      VALUES (${id}::uuid, ${email}, 'irrelevant-hash', 'SYSTEM_ADMIN'::"Role", now(), now())
     `;
 
-    expect(Number(rows[0].count)).toBe(0);
+    try {
+      // Read back through the Prisma Client model API, not `$queryRaw` —
+      // `$queryRaw` returns a Postgres enum-array column as its raw wire
+      // text (e.g. the literal string `"{}"`, not `[]`), since no type
+      // parser is registered for it outside Prisma's own generated
+      // client. The model API is what every real caller (UserMapper /
+      // PrismaUserRepository) actually goes through, so this also matches
+      // production read behavior more closely than a raw SELECT would.
+      const record = await prisma.user.findUniqueOrThrow({ where: { id } });
+
+      expect(record.managerCapabilities).toEqual([]);
+    } finally {
+      await prisma.$executeRaw`DELETE FROM "User" WHERE id = ${id}::uuid`;
+    }
   });
 
   // Regression guard mirroring maintenance-company-migration.integration
