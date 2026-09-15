@@ -351,6 +351,102 @@ is not `CommunityScopeChecker`. Full rationale: `openspec/changes/archive/`
    "harmonize" the two without re-deciding the company case on its own
    merits.
 
+## Addendum (2026-09-15): review-history-manager-capability — Decision 2's first implementation, and Decision 3's text superseded
+
+The `review-history-manager-capability` change (FR-008, fifth and last
+role-based visibility slice) is the first to implement any
+`ManagerCapability` member and the first to give `MANAGER` a permission of
+its own. Full rationale: `openspec/changes/archive/`
+(once archived) `review-history-manager-capability/design.md`, Decisions
+1-7.
+
+1. **One declared member, not six.** Decision 2's enum names six
+   capabilities; this slice declares and implements exactly one —
+   `VIEW_ALL_REVIEWS` — as a Prisma enum with a single label, plus
+   `User.managerCapabilities ManagerCapability[] @default([])`. The other
+   five (`MANAGE_COMMUNITIES`, `MANAGE_MAINTENANCE_COMPANIES`,
+   `MANAGE_CHECKLIST_CONTENT`, `MANAGE_INSPECTABLE_ELEMENTS`,
+   `MANAGE_ORGANIZATION_PROFILE`) remain undeclared until their own
+   slices (ADR-006) — the enum's shape is Decision 2's, its population is
+   each slice's own.
+
+2. **Decision 3's text is superseded, not merely extended.** Decision 3
+   says `PermissionChecker` "resolves permissions from a static
+   role→permission lookup table **plus the `managerCapabilities` flags
+   above**" — implying capability-awareness inside `PermissionChecker`
+   itself. That is not the shape this slice ships, and the sentence is
+   corrected here rather than left to silently disagree with the code:
+   `PermissionChecker.can(role, permission)` stays a pure, synchronous,
+   static-table lookup — no user argument, no capability parameter, no
+   database read, unchanged by this slice. The capability is instead
+   resolved by a **separate Layer 2 port**,
+   `ManagerCapabilityChecker.hasManagerCapability(userId, role,
+   capability): Promise<boolean>`
+   (`shared/application/authorization/manager-capability.checker.port.ts`),
+   a sibling of `CompanyScopeChecker` and `CommunityScopeChecker` from the
+   2026-09-08/2026-09-09 addenda above — fail-closed, exhaustive on
+   `Role`, re-read per request, no cache. `ReviewHistoryAccessService`
+   consults it directly in its `MANAGER` branch; `PermissionChecker` never
+   sees it. This is the authoritative, current text: any future reader
+   who finds Decision 3's original sentence should treat *this* addendum
+   as controlling for the capability-resolution shape.
+
+3. **Why a boolean return, parameterized by the capability — not a list.**
+   Decision 2's signature is a list (`ManagerCapability[]`); the checker
+   returns a boolean instead, taking the capability as a parameter:
+   `hasManagerCapability(userId, role, 'VIEW_ALL_REVIEWS')`. An empty
+   array is truthy in JavaScript, so a caller who wrote `if (caps)`
+   instead of `if (caps.includes(X))` would fail **open** — exactly the
+   risk this slice names as its top one (an inert role becoming the
+   largest unscoped reader in the system). The boolean return closes that
+   failure direction structurally; ADR-011's array *shape* is preserved by
+   the `capability` **parameter**, not by the return type — each future
+   capability is a new enum member and a new argument, never a second
+   checker or a signature change.
+
+4. **`MANAGER` becomes operational — one permission, capability-gated
+   scope.** `ROLE_PERMISSIONS.MANAGER` becomes `['reviewSession:read']`,
+   the role's first permission of any family since the 2026-08-22
+   addendum declared it inert. Holding the permission grants **nothing**
+   by itself: `ReviewHistoryAccessService`'s `MANAGER` branch resolves the
+   capability first and returns `[]`/`null` before any repository call
+   when it is absent, reusing `SYSTEM_ADMIN`'s unscoped
+   `findCompletedAcrossInstallation` /
+   `findCompletedByIdAcrossInstallation` pair verbatim when it is present
+   — no new repository method, no new route. **Accepted, named
+   consequence**: the same unconditional Layer 1 grant also widens two
+   `GET` routes owned by `review-session-management` —
+   `GET /review-sessions` and `GET /review-sessions/:sessionId` — from
+   `403` to `200 []`/`404` for every `MANAGER`, granted or not, since
+   neither route consults the capability. This is new read access nobody
+   decided on before this slice's proposal; it is recorded here rather
+   than silently absorbed into "the capability changes nothing outside
+   review-history."
+
+5. **Resolved fresh from the database, never the JWT.** Following the
+   2026-09-09 addendum's reasoning for `maintenanceCompanyId` (and
+   applying it at least as strongly to a security grant): the capability
+   is read from the persisted `User` row on every request through
+   `USER_REPOSITORY.findById`, which applies ADR-010's `deletedAt: null`
+   filter for free. `Actor` gains no field. A revoke takes effect on the
+   very next request, with no re-login and no grace period.
+
+6. **Granting is edit-only, and clearing is stricter than
+   `maintenanceCompanyId`'s.** `PATCH /users/:id` accepts an optional
+   `managerCapabilities`; `POST /users` and `createUserSchema` do not, so
+   a newly created `MANAGER` is always inert by construction. Unlike a
+   stale `maintenanceCompanyId` (left untouched on a role change away from
+   a maintenance role, per the 2026-09-08 addendum), a role change away
+   from `MANAGER` **clears** `managerCapabilities` — a company is an
+   identity fact the role requires; a capability is a privilege nobody
+   re-consented to. No `user:grantCapability` permission exists: granting
+   reuses the existing `user:update` gate, since no second trust tier
+   holds `user:update` without capability-grant rights.
+
+7. **No audit trail ships.** Consistent with Decision 5's already-deferred
+   audit logging of `SYSTEM_ADMIN`/`MANAGER` writes — role changes are
+   equally unaudited today, so this is existing precedent, not a new gap.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
