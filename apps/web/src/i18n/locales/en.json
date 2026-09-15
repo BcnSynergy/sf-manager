@@ -41,6 +41,8 @@
       "roleLabel": "Role",
       "companyLabel": "Maintenance company",
       "companyPlaceholder": "Select a maintenance company",
+      "capabilitiesLabel": "Manager capabilities",
+      "viewAllReviewsLabel": "Can view every completed review in the installation",
       "submitLabel": "Save changes",
       "validationError": "Enter a valid email.",
       "notFound": "This user could not be found."
@@ -53,7 +55,8 @@
       "notFound": "This user could not be found.",
       "maintenanceCompanyRequired": "This role requires selecting a maintenance company.",
       "maintenanceCompanyNotAllowed": "This role does not accept a maintenance company.",
-      "maintenanceCompanyNotFound": "The selected maintenance company no longer exists."
+      "maintenanceCompanyNotFound": "The selected maintenance company no longer exists.",
+      "managerCapabilitiesNotAllowed": "This role does not accept manager capabilities."
     },
     "role": {
       "systemAdmin": "System administrator",

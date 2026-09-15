@@ -30,18 +30,28 @@ const admin = {
   email: 'admin@sf-manager.example',
   role: 'SYSTEM_ADMIN' as const,
   maintenanceCompanyId: null,
+  managerCapabilities: [],
 };
 const otherUser = {
   id: 'user-2',
   email: 'user2@sf-manager.example',
   role: 'MANAGER' as const,
   maintenanceCompanyId: null,
+  managerCapabilities: [],
+};
+const grantedManager = {
+  id: 'user-4',
+  email: 'manager@sf-manager.example',
+  role: 'MANAGER' as const,
+  maintenanceCompanyId: null,
+  managerCapabilities: ['VIEW_ALL_REVIEWS'] as const,
 };
 const technician = {
   id: 'user-3',
   email: 'tech@sf-manager.example',
   role: 'MAINTENANCE_TECHNICIAN' as const,
   maintenanceCompanyId: 'company-1',
+  managerCapabilities: [],
 };
 
 function renderPage(id: string) {
@@ -123,6 +133,7 @@ describe('UserEditPage', () => {
       expect(mockedUpdateUser).toHaveBeenCalledWith(otherUser.id, {
         email: 'updated@sf-manager.example',
         role: otherUser.role,
+        managerCapabilities: [],
       }),
     );
     expect(await screen.findByTestId('users-list-sentinel')).toBeInTheDocument();
@@ -199,6 +210,7 @@ describe('UserEditPage', () => {
       expect(mockedUpdateUser).toHaveBeenCalledWith(technician.id, {
         email: technician.email,
         role: 'MANAGER',
+        managerCapabilities: [],
       }),
     );
   });
@@ -255,6 +267,100 @@ describe('UserEditPage', () => {
 
     expect(await screen.findByTestId('user-edit-error')).toHaveTextContent(
       'The selected maintenance company no longer exists.',
+    );
+  });
+
+  // review-history-manager-capability design.md Decision 7: the capability
+  // toggle exists ONLY for the exact structural shape showCompanySelector
+  // already uses for maintenanceCompanyId — role-conditional, prefilled from
+  // listUsers() (no GET /users/:id), reset on a role change away, and always
+  // submitted while the CURRENT role is MANAGER so a revoke arrives as `[]`
+  // rather than as an absent field (Decision 6).
+  it('does not render the capability toggle for a non-MANAGER row', async () => {
+    mockedListUsers.mockResolvedValue([admin, technician]);
+    renderPage(technician.id);
+
+    await screen.findByTestId('user-edit-email');
+    expect(screen.queryByTestId('user-edit-view-all-reviews')).not.toBeInTheDocument();
+  });
+
+  it('renders the capability toggle, unchecked, for an ungranted MANAGER row', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    renderPage(otherUser.id);
+
+    expect(await screen.findByTestId('user-edit-view-all-reviews')).not.toBeChecked();
+  });
+
+  it('renders the capability toggle, prefilled checked, for a granted MANAGER row', async () => {
+    mockedListUsers.mockResolvedValue([admin, grantedManager]);
+    renderPage(grantedManager.id);
+
+    expect(await screen.findByTestId('user-edit-view-all-reviews')).toBeChecked();
+  });
+
+  it('hides the capability toggle, and omits it from the payload, when the role is changed away from MANAGER', async () => {
+    mockedListUsers.mockResolvedValue([admin, grantedManager]);
+    mockedUpdateUser.mockResolvedValue({ ...grantedManager, role: 'SYSTEM_ADMIN', managerCapabilities: [] });
+    renderPage(grantedManager.id);
+
+    await screen.findByTestId('user-edit-view-all-reviews');
+    fireEvent.change(screen.getByTestId('user-edit-role'), { target: { value: 'SYSTEM_ADMIN' } });
+
+    expect(screen.queryByTestId('user-edit-view-all-reviews')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    await waitFor(() =>
+      expect(mockedUpdateUser).toHaveBeenCalledWith(grantedManager.id, {
+        email: grantedManager.email,
+        role: 'SYSTEM_ADMIN',
+      }),
+    );
+  });
+
+  it('submits managerCapabilities: ["VIEW_ALL_REVIEWS"] when the toggle is ticked', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedUpdateUser.mockResolvedValue({ ...otherUser, managerCapabilities: ['VIEW_ALL_REVIEWS'] });
+    renderPage(otherUser.id);
+
+    fireEvent.click(await screen.findByTestId('user-edit-view-all-reviews'));
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    await waitFor(() =>
+      expect(mockedUpdateUser).toHaveBeenCalledWith(otherUser.id, {
+        email: otherUser.email,
+        role: otherUser.role,
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      }),
+    );
+  });
+
+  it('submits managerCapabilities: [] (an explicit revoke) when the toggle is unticked', async () => {
+    mockedListUsers.mockResolvedValue([admin, grantedManager]);
+    mockedUpdateUser.mockResolvedValue({ ...grantedManager, managerCapabilities: [] });
+    renderPage(grantedManager.id);
+
+    fireEvent.click(await screen.findByTestId('user-edit-view-all-reviews'));
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    await waitFor(() =>
+      expect(mockedUpdateUser).toHaveBeenCalledWith(grantedManager.id, {
+        email: grantedManager.email,
+        role: grantedManager.role,
+        managerCapabilities: [],
+      }),
+    );
+  });
+
+  it('shows a distinct message for a 400 MANAGER_CAPABILITIES_NOT_ALLOWED response', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedUpdateUser.mockRejectedValue(new ApiError(400, 'MANAGER_CAPABILITIES_NOT_ALLOWED'));
+    renderPage(otherUser.id);
+
+    fireEvent.click(await screen.findByTestId('user-edit-submit'));
+
+    expect(await screen.findByTestId('user-edit-error')).toHaveTextContent(
+      'This role does not accept manager capabilities.',
     );
   });
 });

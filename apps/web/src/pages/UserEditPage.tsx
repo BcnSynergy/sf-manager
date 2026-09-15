@@ -1,7 +1,13 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
-import { updateUserSchema, isMaintenanceRole, roleSchema, type Role } from '@sf-manager/validation';
+import {
+  updateUserSchema,
+  isMaintenanceRole,
+  roleSchema,
+  type ManagerCapability,
+  type Role,
+} from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { listUsers, updateUser } from '../api/users';
@@ -48,6 +54,7 @@ export function UserEditPage() {
   const [role, setRole] = useState<Role>('SYSTEM_ADMIN');
   const [companyId, setCompanyId] = useState('');
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
+  const [canViewAllReviews, setCanViewAllReviews] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -67,6 +74,12 @@ export function UserEditPage() {
         setEmail(found.email);
         setRole(found.role);
         setCompanyId(found.maintenanceCompanyId ?? '');
+        // review-history-manager-capability design.md Decision 7: the `?? []`
+        // guard is deliberate, not defensive filler — apiFetch's response is
+        // not runtime-validated, so a version-skewed API response could omit
+        // the field, and an unguarded `.includes()` on `undefined` would
+        // throw inside this effect.
+        setCanViewAllReviews((found.managerCapabilities ?? []).includes('VIEW_ALL_REVIEWS'));
         setLoadState('loaded');
       })
       .catch(() => {
@@ -107,18 +120,37 @@ export function UserEditPage() {
     if (!isMaintenanceRole(nextRole)) {
       setCompanyId('');
     }
+    // design.md Decision 7: resets to unchecked (never remembers the
+    // pre-change value), mirroring the maintenance-company selector's reset
+    // above — a deliberate, accepted consequence, not an oversight.
+    if (nextRole !== 'MANAGER') {
+      setCanViewAllReviews(false);
+    }
   }
 
   const showCompanySelector = isMaintenanceRole(role);
+  const showCapabilityToggle = role === 'MANAGER';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
+    // design.md Decision 6/7: ALWAYS submits the array while the CURRENT
+    // role is MANAGER — including `[]` — so a revoke arrives explicitly
+    // rather than being swallowed by the shipped "field absent means
+    // unchanged" partial-PATCH contract; never a stale value carried across
+    // a role change away from MANAGER.
+    const managerCapabilities: ManagerCapability[] | undefined = showCapabilityToggle
+      ? canViewAllReviews
+        ? ['VIEW_ALL_REVIEWS']
+        : []
+      : undefined;
+
     const result = updateUserSchema.safeParse({
       email,
       role,
       maintenanceCompanyId: showCompanySelector ? companyId : undefined,
+      managerCapabilities,
     });
     if (!result.success) {
       setError(t('users.edit.validationError'));
@@ -216,6 +248,21 @@ export function UserEditPage() {
               ))}
             </select>
           </>
+        )}
+        {showCapabilityToggle && (
+          <fieldset>
+            <legend>{t('users.edit.capabilitiesLabel')}</legend>
+            <input
+              id="user-edit-view-all-reviews-input"
+              type="checkbox"
+              checked={canViewAllReviews}
+              onChange={(event) => setCanViewAllReviews(event.target.checked)}
+              data-testid="user-edit-view-all-reviews"
+            />
+            <label htmlFor="user-edit-view-all-reviews-input">
+              {t('users.edit.viewAllReviewsLabel')}
+            </label>
+          </fieldset>
         )}
         {error && <p data-testid="user-edit-error">{error}</p>}
         <button type="submit" data-testid="user-edit-submit" disabled={submitting}>
