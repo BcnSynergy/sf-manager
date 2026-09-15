@@ -55,26 +55,26 @@ Chain strategy: stacked-to-main
 
 ## PR 3: Grant/Revoke Write Path
 
-- [ ] 3.1 Create `packages/validation/src/users/manager-capability.schema.ts` (`managerCapabilitySchema`, `applyManagerCapabilitiesNotAllowedRefinement`, non-empty-array-only trigger)
-- [ ] 3.2 Modify `packages/validation/src/index.ts`: re-export new schema module
-- [ ] 3.3 Modify `packages/validation/src/users/update-user.schema.ts`: optional field + refinement, fixed precedence (maintenance-company refinement first)
-- [ ] 3.4 Modify `packages/validation/src/users/create-user.schema.ts`: tag-key rename occurrences only, parse behaviour unchanged
-- [ ] 3.5 (TDD) Unit test: `updateUserSchema` — accepts `[]`/`['VIEW_ALL_REVIEWS']`, rejects unknown member, refinement fires only when `role` present & non-MANAGER, dual-violation precedence test; `createUserSchema` unchanged
-- [ ] 3.6 Create `.../users/domain/manager-capability.policy.ts`: `assertCapabilitiesAllowedForRole` + `resolveManagerCapabilities` (Decision 5 table incl. promotion-reset rule)
-- [ ] 3.7 Create `.../users/domain/errors/invalid-manager-capability-assignment.error.ts`
-- [ ] 3.8 (TDD) Unit test: policy module — both functions, all table rows including `undefined` no-ops and promotion reset
-- [ ] 3.9 Modify `.../users/application/use-cases/update-user.use-case.ts`: policy calls, `changes` merge, `SERIALIZABLE` transaction generalized to every write touching `role`/`managerCapabilities`, result computed as `resolved ?? existing`
-- [ ] 3.10 (TDD) Unit test: `UpdateUserUseCase` — grant, revoke via `[]`, absent no-op, clear-on-demotion, reject on non-MANAGER resulting role, round-trip reset
-- [ ] 3.11 Modify `.../users/application/use-cases/{create,list}-user.use-case.ts`: carry entity value into DTO
-- [ ] 3.12 Modify `.../users/presentation/dto/user-response.dto.ts`: add `managerCapabilities`
-- [ ] 3.13 Rename `maintenance-company-zod-validation.pipe.ts(.spec.ts)` → `user-coded-zod-validation.pipe.ts(.spec.ts)`, tag key → `userErrorCode`
-- [ ] 3.14 Modify `apps/api/src/shared/presentation/pipes/zod-validation.pipe.ts`: docblock comment only
-- [ ] 3.15 Modify `.../users/presentation/user-error-code.ts`: add `MANAGER_CAPABILITIES_NOT_ALLOWED`
-- [ ] 3.16 Modify `.../users/presentation/users.controller.ts`: `@ApiBody` + 400 doc, pipe rename call sites, `mapMutationError` branch for `InvalidManagerCapabilityAssignmentError`
-- [ ] 3.17 Modify `apps/api/test/users.e2e-spec.ts:592-593`: comment-only rename update
-- [ ] 3.18 E2E: grant/revoke round trip, absent-field no-op, role-change clear, reject-on-non-MANAGER 400
-  - [ ] PR 3's e2e work must also close the 3 granted-manager scenarios in `review-history/spec.md` that PR 2 left without an e2e owner ("the granted manager's list is identical to the admin's", "deleted/deactivated context hides nothing from the granted manager", "an empty installation renders a successful empty list") by adding a granted MANAGER to the SYSTEM_ADMIN installation-wide `describe` block in `apps/api/test/review-history.e2e-spec.ts` (~line 2025, which already has the company/soft-deleted fixtures PR 2's own describe block lacks) and asserting its `/review-history` list `toEqual`s the admin's list, closing all three scenarios at once
-- [ ] 3.19 Verify: in-memory fake parity (absent leaves value, `[]` clears); `create` path untouched
+- [x] 3.1 Create `packages/validation/src/users/manager-capability.schema.ts` (`managerCapabilitySchema`, `applyManagerCapabilitiesNotAllowedRefinement`, non-empty-array-only trigger)
+- [x] 3.2 Modify `packages/validation/src/index.ts`: re-export new schema module
+- [x] 3.3 Modify `packages/validation/src/users/update-user.schema.ts`: optional field + refinement, fixed precedence (maintenance-company refinement first)
+- [x] 3.4 Modify `packages/validation/src/users/create-user.schema.ts`: tag-key rename occurrences only, parse behaviour unchanged
+- [x] 3.5 (TDD) Unit test: `updateUserSchema` — accepts `[]`/`['VIEW_ALL_REVIEWS']`, rejects unknown member, refinement fires only when `role` present & non-MANAGER, dual-violation precedence test; `createUserSchema` unchanged
+- [x] 3.6 Create `.../users/domain/manager-capability.policy.ts`: `assertCapabilitiesAllowedForRole` + `resolveManagerCapabilities` (Decision 5 table incl. promotion-reset rule)
+- [x] 3.7 Create `.../users/domain/errors/invalid-manager-capability-assignment.error.ts`
+- [x] 3.8 (TDD) Unit test: policy module — both functions, all table rows including `undefined` no-ops and promotion reset
+- [x] 3.9 Modify `.../users/application/use-cases/update-user.use-case.ts`: policy calls, `changes` merge, `SERIALIZABLE` transaction generalized to every write touching `role`/`managerCapabilities`, result computed as `resolved ?? existing`
+- [x] 3.10 (TDD) Unit test: `UpdateUserUseCase` — grant, revoke via `[]`, absent no-op, clear-on-demotion, reject on non-MANAGER resulting role, round-trip reset
+- [x] 3.11 Modify `.../users/application/use-cases/{create,list}-user.use-case.ts`: carry entity value into DTO
+- [x] 3.12 Modify `.../users/presentation/dto/user-response.dto.ts`: add `managerCapabilities`
+- [x] 3.13 Rename `maintenance-company-zod-validation.pipe.ts(.spec.ts)` → `user-coded-zod-validation.pipe.ts(.spec.ts)`, tag key → `userErrorCode`
+- [x] 3.14 Modify `apps/api/src/shared/presentation/pipes/zod-validation.pipe.ts`: docblock comment only
+- [x] 3.15 Modify `.../users/presentation/user-error-code.ts`: add `MANAGER_CAPABILITIES_NOT_ALLOWED`
+- [x] 3.16 Modify `.../users/presentation/users.controller.ts`: `@ApiBody` + 400 doc, pipe rename call sites, `mapMutationError` branch for `InvalidManagerCapabilityAssignmentError`
+- [x] 3.17 Modify `apps/api/test/users.e2e-spec.ts:592-593`: comment-only rename update
+- [x] 3.18 E2E: grant/revoke round trip, absent-field no-op, role-change clear, reject-on-non-MANAGER 400
+  - [x] PR 3's e2e work must also close the 3 granted-manager scenarios in `review-history/spec.md` that PR 2 left without an e2e owner ("the granted manager's list is identical to the admin's", "deleted/deactivated context hides nothing from the granted manager", "an empty installation renders a successful empty list") by adding a granted MANAGER to the SYSTEM_ADMIN installation-wide `describe` block in `apps/api/test/review-history.e2e-spec.ts` (~line 2025, which already has the company/soft-deleted fixtures PR 2's own describe block lacks) and asserting its `/review-history` list `toEqual`s the admin's list, closing all three scenarios at once
+- [x] 3.19 Verify: in-memory fake parity (absent leaves value, `[]` clears); `create` path untouched
 
 ## PR 4: Web UI, i18n, Docs & Verification
 
