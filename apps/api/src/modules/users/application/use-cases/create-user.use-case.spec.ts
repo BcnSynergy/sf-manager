@@ -53,6 +53,7 @@ describe('CreateUserUseCase', () => {
       email: 'newadmin@example.com',
       role: 'MANAGER',
       maintenanceCompanyId: null,
+      managerCapabilities: [],
     });
     expect(result).not.toHaveProperty('passwordHash');
     expect(companyLookup.existsActive).not.toHaveBeenCalled();
@@ -114,6 +115,7 @@ describe('CreateUserUseCase', () => {
       email: 'tech@example.com',
       role: 'MAINTENANCE_TECHNICIAN',
       maintenanceCompanyId: 'company-1',
+      managerCapabilities: [],
     });
     const stored = await userRepository.findById('tech-id');
     expect(stored?.maintenanceCompanyId).toBe('company-1');

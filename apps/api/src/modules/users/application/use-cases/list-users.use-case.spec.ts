@@ -46,12 +46,14 @@ describe('ListUsersUseCase', () => {
         email: 'a@example.com',
         role: 'MANAGER',
         maintenanceCompanyId: null,
+        managerCapabilities: [],
       },
       {
         id: 'u2',
         email: 'b@example.com',
         role: 'SYSTEM_ADMIN',
         maintenanceCompanyId: null,
+        managerCapabilities: [],
       },
     ]);
     result.forEach((user) => expect(user).not.toHaveProperty('passwordHash'));
@@ -89,6 +91,7 @@ describe('ListUsersUseCase', () => {
         email: 'active@example.com',
         role: 'MANAGER',
         maintenanceCompanyId: null,
+        managerCapabilities: [],
       },
     ]);
   });
