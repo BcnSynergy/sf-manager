@@ -40,18 +40,18 @@ Chain strategy: stacked-to-main
 
 ## PR 2: Capability Checker & Read-Side Scope
 
-- [ ] 2.1 Create `shared/application/authorization/manager-capability.checker.port.ts` (`hasManagerCapability(userId, role, capability): Promise<boolean>` + `MANAGER_CAPABILITY_CHECKER` symbol)
-- [ ] 2.2 Create `.../users/infrastructure/authorization/user-manager-capability.checker.ts`: exhaustive `switch`, `satisfies never`, `MANAGER` resolves via `findById`, re-checks persisted `role === 'MANAGER'`, no try/catch
-- [ ] 2.3 Modify `.../users/users.module.ts`: bind + export `MANAGER_CAPABILITY_CHECKER`
-- [ ] 2.4 (TDD) Unit test: checker — table-driven 5 roles × {none, granted, soft-deleted}; stale-JWT-role guard; `findById` called every invocation
-- [ ] 2.5 Modify `.../review-session/application/services/review-history-access.service.ts`: `MANAGER` branch in `listForActor`/`loadByRole` — resolve capability, `[]`/`null` before any repo call if absent, else reuse `findCompleted{,ById}AcrossInstallation`
-- [ ] 2.6 (TDD) Unit test: `ReviewHistoryAccessService` MANAGER dispatch — ungranted asserts repository `not.toHaveBeenCalled()`; granted reaches the shared read; other four branches re-asserted unchanged
-- [ ] 2.7 Modify `.../auth/infrastructure/authorization/role-permission.checker.ts`: `MANAGER: ['reviewSession:read']`
-- [ ] 2.8 Modify `role-permission.checker.spec.ts`: remove/restructure `INERT_NON_ADMIN_ROLES`, invert the `denies MANAGER on reviewSession:read` case, update stale comment
-- [ ] 2.9 Modify `.../review-session/application/ports/review-session.repository.port.ts`: update "exactly ONE call site" comment to "two branches" (Decision 3)
-- [ ] 2.10 Integration test: call-site guard — allowlist file unchanged, comment updated
-- [ ] 2.11 E2E: five-role matrix widened — ungranted MANAGER gets `[]`/403 everywhere, other four scopes byte-unchanged; invert the two shipped 403-blanket assertions per design Testing Strategy
-- [ ] 2.12 Verify: `MANAGER` holds only `reviewSession:read`; two `/review-sessions*` GET routes widen (accepted, named); no write route widened
+- [x] 2.1 Create `shared/application/authorization/manager-capability.checker.port.ts` (`hasManagerCapability(userId, role, capability): Promise<boolean>` + `MANAGER_CAPABILITY_CHECKER` symbol)
+- [x] 2.2 Create `.../users/infrastructure/authorization/user-manager-capability.checker.ts`: exhaustive `switch`, `satisfies never`, `MANAGER` resolves via `findById`, re-checks persisted `role === 'MANAGER'`, no try/catch
+- [x] 2.3 Modify `.../users/users.module.ts`: bind + export `MANAGER_CAPABILITY_CHECKER`
+- [x] 2.4 (TDD) Unit test: checker — table-driven 5 roles × {none, granted, soft-deleted}; stale-JWT-role guard; `findById` called every invocation
+- [x] 2.5 Modify `.../review-session/application/services/review-history-access.service.ts`: `MANAGER` branch in `listForActor`/`loadByRole` — resolve capability, `[]`/`null` before any repo call if absent, else reuse `findCompleted{,ById}AcrossInstallation`
+- [x] 2.6 (TDD) Unit test: `ReviewHistoryAccessService` MANAGER dispatch — ungranted asserts repository `not.toHaveBeenCalled()`; granted reaches the shared read; other four branches re-asserted unchanged
+- [x] 2.7 Modify `.../auth/infrastructure/authorization/role-permission.checker.ts`: `MANAGER: ['reviewSession:read']`
+- [x] 2.8 Modify `role-permission.checker.spec.ts`: remove/restructure `INERT_NON_ADMIN_ROLES`, invert the `denies MANAGER on reviewSession:read` case, update stale comment
+- [x] 2.9 Modify `.../review-session/application/ports/review-session.repository.port.ts`: update "exactly ONE call site" comment to "two branches" (Decision 3)
+- [x] 2.10 Integration test: call-site guard — allowlist file unchanged, comment updated
+- [x] 2.11 E2E: five-role matrix widened — ungranted MANAGER gets `[]`/403 everywhere, other four scopes byte-unchanged; invert the two shipped 403-blanket assertions per design Testing Strategy (deviation: implemented ungranted-MANAGER as `200 []`/`404`, not `403` — see apply-progress)
+- [x] 2.12 Verify: `MANAGER` holds only `reviewSession:read`; two `/review-sessions*` GET routes widen (accepted, named); no write route widened
 
 ## PR 3: Grant/Revoke Write Path
 
@@ -73,6 +73,7 @@ Chain strategy: stacked-to-main
 - [ ] 3.16 Modify `.../users/presentation/users.controller.ts`: `@ApiBody` + 400 doc, pipe rename call sites, `mapMutationError` branch for `InvalidManagerCapabilityAssignmentError`
 - [ ] 3.17 Modify `apps/api/test/users.e2e-spec.ts:592-593`: comment-only rename update
 - [ ] 3.18 E2E: grant/revoke round trip, absent-field no-op, role-change clear, reject-on-non-MANAGER 400
+  - [ ] PR 3's e2e work must also close the 3 granted-manager scenarios in `review-history/spec.md` that PR 2 left without an e2e owner ("the granted manager's list is identical to the admin's", "deleted/deactivated context hides nothing from the granted manager", "an empty installation renders a successful empty list") by adding a granted MANAGER to the SYSTEM_ADMIN installation-wide `describe` block in `apps/api/test/review-history.e2e-spec.ts` (~line 2025, which already has the company/soft-deleted fixtures PR 2's own describe block lacks) and asserting its `/review-history` list `toEqual`s the admin's list, closing all three scenarios at once
 - [ ] 3.19 Verify: in-memory fake parity (absent leaves value, `[]` clears); `create` path untouched
 
 ## PR 4: Web UI, i18n, Docs & Verification

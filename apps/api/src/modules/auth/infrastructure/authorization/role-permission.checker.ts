@@ -44,10 +44,16 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewTemplate:activate',
     'reviewSession:read',
   ],
-  // Declared per ADR-011, NOT operational in this slice — intentionally
-  // empty, not forgotten. The exhaustive Record forces future slices to
-  // fill these in when the role becomes operational.
-  MANAGER: [],
+  // review-history-manager-capability/design.md Decision 4, authorization/
+  // spec.md "The Manager Becomes Operational…": the role's FIRST permission
+  // ever — read-only, mirroring the maintenance-company manager's shipped
+  // comment below. Holding this grants NOTHING on its own for the
+  // review-history surface: WHICH sessions it reaches is decided by
+  // ReviewHistoryAccessService and ManagerCapabilityChecker
+  // (application/authorization), never by this table. No
+  // `user:grantCapability` permission exists — granting reuses the
+  // existing `user:update` gate on `PATCH /users/:id`.
+  MANAGER: ['reviewSession:read'],
   // review-history-company-scope/design.md Decision 11 point 3;
   // authorization/spec.md "The Maintenance Company Manager Becomes
   // Operational" / "The Company Association Itself Confers No Permission":
