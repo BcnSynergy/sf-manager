@@ -195,9 +195,20 @@ describe('ReviewHistoryAccessService.listForActor', () => {
     communityScopeChecker.assign('user-1', 'community-1');
     companyScopeChecker.assign('user-1', 'company-1');
     const performerSpy = jest.spyOn(repository, 'findCompletedForPerformer');
-    const communitySpy = jest.spyOn(repository, 'findCompletedInCommunities');
-    const companySpy = jest.spyOn(repository, 'findCompletedForCompany');
+    const communityRepoSpy = jest.spyOn(
+      repository,
+      'findCompletedInCommunities',
+    );
+    const companyRepoSpy = jest.spyOn(repository, 'findCompletedForCompany');
     const adminSpy = jest.spyOn(repository, 'findCompletedAcrossInstallation');
+    const communityScopeSpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+    const companyScopeSpy = jest.spyOn(
+      companyScopeChecker,
+      'resolveCompanyScope',
+    );
 
     const result = await service.listForActor({
       userId: 'user-1',
@@ -206,9 +217,11 @@ describe('ReviewHistoryAccessService.listForActor', () => {
 
     expect(result).toEqual([]);
     expect(performerSpy).not.toHaveBeenCalled();
-    expect(communitySpy).not.toHaveBeenCalled();
-    expect(companySpy).not.toHaveBeenCalled();
+    expect(communityRepoSpy).not.toHaveBeenCalled();
+    expect(companyRepoSpy).not.toHaveBeenCalled();
     expect(adminSpy).not.toHaveBeenCalled();
+    expect(communityScopeSpy).not.toHaveBeenCalled();
+    expect(companyScopeSpy).not.toHaveBeenCalled();
   });
 
   // design.md Decision 3: a granted MANAGER reuses the SYSTEM_ADMIN read
@@ -223,6 +236,14 @@ describe('ReviewHistoryAccessService.listForActor', () => {
       managerCapabilityChecker,
       'hasManagerCapability',
     );
+    const communityScopeSpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+    const companyScopeSpy = jest.spyOn(
+      companyScopeChecker,
+      'resolveCompanyScope',
+    );
 
     const result = await service.listForActor({
       userId: 'manager-1',
@@ -236,6 +257,8 @@ describe('ReviewHistoryAccessService.listForActor', () => {
       'MANAGER',
       'VIEW_ALL_REVIEWS',
     );
+    expect(communityScopeSpy).not.toHaveBeenCalled();
+    expect(companyScopeSpy).not.toHaveBeenCalled();
   });
 
   // review-history-admin-scope design.md Decision 1/3, tasks.md 1.6: the
