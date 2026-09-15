@@ -2278,6 +2278,20 @@ describe('Review History (e2e)', () => {
         .expect(200);
 
       expect(managerResponse.body).toEqual(adminResponse.body);
+
+      // PR 3/4 review fix (M2): `toEqual` alone passes vacuously if both
+      // lists come back empty (e.g. a regression breaking
+      // findCompletedAcrossInstallation for everyone). Pin the specific
+      // fixture rows this test's own name claims are covered, the same
+      // way the sibling "sees every completed session..." test above
+      // does.
+      const managerRowIds = (managerResponse.body as HistoryRowBody[]).map(
+        (row) => row.id,
+      );
+      expect(managerRowIds).toContain(sessionForY.id); // deactivated community
+      expect(managerRowIds).toContain(sessionSoftDeletedPerformer.id); // soft-deleted performer
+      expect(managerRowIds).toContain(sessionNoCompany.id); // unattributed session
+      expect(managerRowIds).not.toContain(draftForX.id); // draft, excluded
     });
 
     it("a deactivated community's session stays visible on the list and by id", async () => {
