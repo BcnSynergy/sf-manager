@@ -50,11 +50,12 @@ export interface UpdateUserResult {
 // (i.e. essentially every PATCH, since almost every one can) now runs
 // inside the same SERIALIZABLE transactional pattern previously reserved
 // for the demote-a-SYSTEM_ADMIN path — `existing` is re-read INSIDE the
-// transaction, and both the maintenance-company and manager-capability
-// resulting-state checks run against that freshly-read snapshot, closing a
-// race between two near-simultaneous PATCHes against the same user (e.g.
-// one demoting away from MANAGER, one granting a capability) that a
-// non-transactional read could otherwise interleave.
+// transaction, and both the maintenance-company (null-company case only —
+// see the M1 note below for the liveness/isLive case) and manager-
+// capability resulting-state checks run against that freshly-read
+// snapshot, closing a race between two near-simultaneous PATCHes against
+// the same user (e.g. one demoting away from MANAGER, one granting a
+// capability) that a non-transactional read could otherwise interleave.
 @Injectable()
 export class UpdateUserUseCase {
   constructor(
@@ -65,6 +66,43 @@ export class UpdateUserUseCase {
 
   async execute(input: UpdateUserInput): Promise<UpdateUserResult> {
     const { id, ...changes } = input;
+
+    // PR 3/4 review fix (M1): the maintenance-company liveness probe
+    // (`existsActive`) is resolved HERE, before the transaction opens, not
+    // inside `userRepository.transactional(...)` below. `companyLookup` is
+    // bound to the root PrismaService, not the transaction's scoped
+    // client — calling it from inside the transaction held a pooled
+    // interactive-transaction connection while acquiring a SECOND
+    // connection for this lookup, risking connection-pool exhaustion /
+    // deadlock under concurrent PATCHes (resolving only via the
+    // interactive-transaction timeout) and adding an avoidable network
+    // round-trip inside every such transaction.
+    //
+    // This pre-check reads `existing` OUTSIDE the transaction, so it has
+    // the same TOCTOU window against the maintenance-company aggregate
+    // that existed before PR 3 (the lookup has always read a different
+    // aggregate than the user row being updated) — unchanged, not
+    // widened, by moving it back out. The RESULT of this check is not
+    // re-validated against the transactionally-fresh `existing` read
+    // below; only the null-company case (no async work needed) still runs
+    // inside the transaction.
+    const preCheckExisting = await this.userRepository.findById(id);
+    if (!preCheckExisting) {
+      throw new UserNotFoundError();
+    }
+
+    const preCheckRole = changes.role ?? preCheckExisting.role;
+    const preCheckCompanyId =
+      changes.maintenanceCompanyId !== undefined
+        ? changes.maintenanceCompanyId
+        : preCheckExisting.maintenanceCompanyId;
+
+    if (isMaintenanceRole(preCheckRole) && preCheckCompanyId !== null) {
+      const isLive = await this.companyLookup.existsActive(preCheckCompanyId);
+      if (!isLive) {
+        throw new MaintenanceCompanyNotFoundError();
+      }
+    }
 
     return this.userRepository.transactional(async (repo) => {
       // Re-read INSIDE the transaction (design.md Decision 5) — same
@@ -112,22 +150,12 @@ export class UpdateUserUseCase {
         changes.managerCapabilities ?? [],
       );
 
-      // Liveness is scoped to the RESULTING state, not to whether this
-      // request's payload happens to supply maintenanceCompanyId. A bare
-      // demotion away from a maintenance role is excluded here because the
-      // outer condition requires isMaintenanceRole(resultingRole) — a stale
-      // company id on a demoted user is left untouched, never rejected. But
-      // a PATCH that re-promotes a user back into a maintenance role while
-      // inheriting an existing maintenanceCompanyId (this request doesn't
-      // supply one) must still be checked: that inherited id can point at a
-      // company that was soft-deleted after it was originally assigned.
-      if (isMaintenanceRole(resultingRole) && resultingCompanyId !== null) {
-        const isLive =
-          await this.companyLookup.existsActive(resultingCompanyId);
-        if (!isLive) {
-          throw new MaintenanceCompanyNotFoundError();
-        }
-      }
+      // Liveness (isMaintenanceRole(resultingRole) && resultingCompanyId
+      // !== null) is checked ABOVE, before this transaction opens (M1 —
+      // see the block preceding `userRepository.transactional(...)`), not
+      // here. That check reads `preCheckExisting`/`changes`, not this
+      // transaction's freshly-read `existing`; see the M1 comment above
+      // for why that TOCTOU window is accepted rather than closed.
 
       // design.md Decision 5's resolution table — reads BOTH `priorRole`
       // and `existing` from the SAME transactionally-fresh snapshot

@@ -285,6 +285,45 @@ describe('UpdateUserUseCase', () => {
     expect((await userRepository.findById('tech-1'))?.role).toBe('MANAGER');
   });
 
+  // PR 3/4 review fix (M1): `companyLookup.existsActive` is bound to the
+  // root PrismaService, not the transaction's scoped client — calling it
+  // from inside `userRepository.transactional(...)` would hold a pooled
+  // interactive-transaction connection while acquiring a SECOND connection
+  // for the lookup, risking pool exhaustion/deadlock under concurrent
+  // PATCHes. This pins the call ORDER: the pre-check `findById` and the
+  // liveness probe must both resolve BEFORE the transaction opens (which
+  // re-reads via a second `findById` as its first step) — not after.
+  it('resolves the maintenance-company liveness probe before the in-transaction read, not after', async () => {
+    userRepository.seed(
+      makeUser({
+        id: 'tech-1',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'company-1',
+      }),
+    );
+
+    // `jest.spyOn` calls through to the real implementation by default (no
+    // `mockImplementation` override needed) while still recording
+    // `invocationCallOrder`, jest's own global call-sequence counter shared
+    // across every mock/spy in the test.
+    const findByIdSpy = jest.spyOn(userRepository, 'findById');
+    companyLookup.existsActive.mockResolvedValue(true);
+
+    await useCase.execute({ id: 'tech-1', maintenanceCompanyId: 'company-2' });
+
+    const findByIdOrder = findByIdSpy.mock.invocationCallOrder;
+    const existsActiveOrder =
+      companyLookup.existsActive.mock.invocationCallOrder;
+
+    // First findById = the pre-transaction pre-check read; existsActive
+    // fires next (still before the transaction); second findById = the
+    // in-transaction re-read (design.md Decision 5).
+    expect(findByIdOrder).toHaveLength(2);
+    expect(existsActiveOrder).toHaveLength(1);
+    expect(findByIdOrder[0]).toBeLessThan(existsActiveOrder[0]);
+    expect(existsActiveOrder[0]).toBeLessThan(findByIdOrder[1]);
+  });
+
   // review-history-manager-capability/design.md Decision 5/6 (tasks.md
   // 3.10).
   describe('managerCapabilities', () => {
