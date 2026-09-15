@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import type { ManagerCapability } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import * as usersApi from '../api/users';
@@ -44,7 +45,7 @@ const grantedManager = {
   email: 'manager@sf-manager.example',
   role: 'MANAGER' as const,
   maintenanceCompanyId: null,
-  managerCapabilities: ['VIEW_ALL_REVIEWS'] as const,
+  managerCapabilities: ['VIEW_ALL_REVIEWS'] as ManagerCapability[],
 };
 const technician = {
   id: 'user-3',

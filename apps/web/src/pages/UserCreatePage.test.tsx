@@ -55,6 +55,7 @@ describe('UserCreatePage', () => {
       email: VALID_EMAIL,
       role: 'SYSTEM_ADMIN',
       maintenanceCompanyId: null,
+      managerCapabilities: [],
     });
     renderPage();
 
@@ -110,6 +111,7 @@ describe('UserCreatePage', () => {
       email: VALID_EMAIL,
       role: 'SYSTEM_ADMIN',
       maintenanceCompanyId: null,
+      managerCapabilities: [],
     });
     renderPage();
 
@@ -142,6 +144,7 @@ describe('UserCreatePage', () => {
       email: VALID_EMAIL,
       role: 'MAINTENANCE_TECHNICIAN',
       maintenanceCompanyId: 'company-2',
+      managerCapabilities: [],
     });
     renderPage();
 

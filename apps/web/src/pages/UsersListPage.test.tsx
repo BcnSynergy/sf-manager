@@ -25,30 +25,35 @@ const admin = {
   email: 'admin@sf-manager.example',
   role: 'SYSTEM_ADMIN' as const,
   maintenanceCompanyId: null,
+  managerCapabilities: [],
 };
 const otherUser = {
   id: 'user-2',
   email: 'user2@sf-manager.example',
   role: 'MANAGER' as const,
   maintenanceCompanyId: null,
+  managerCapabilities: [],
 };
 const technician = {
   id: 'user-3',
   email: 'tech@sf-manager.example',
   role: 'MAINTENANCE_TECHNICIAN' as const,
   maintenanceCompanyId: 'company-1',
+  managerCapabilities: [],
 };
 const orphanedTechnician = {
   id: 'user-4',
   email: 'orphan@sf-manager.example',
   role: 'MAINTENANCE_TECHNICIAN' as const,
   maintenanceCompanyId: 'company-does-not-exist',
+  managerCapabilities: [],
 };
 const grandfatheredTechnician = {
   id: 'user-5',
   email: 'grandfathered@sf-manager.example',
   role: 'MAINTENANCE_TECHNICIAN' as const,
   maintenanceCompanyId: null,
+  managerCapabilities: [],
 };
 
 function renderPage() {
