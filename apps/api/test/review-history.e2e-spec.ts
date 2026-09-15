@@ -1119,24 +1119,44 @@ describe('Review History (e2e)', () => {
     // write endpoint" — reviewSession:read grants NOTHING on the write
     // surface, the same shape as the MAINTENANCE_COMPANY_MANAGER and
     // SYSTEM_ADMIN siblings elsewhere in this suite.
-    it('the manager is refused on every review-session write endpoint, performing no write', async () => {
-      const managerAgent = await loginAgent(built.app, managerEmail);
+    // authorization/spec.md requires this refusal to hold "once holding
+    // VIEW_ALL_REVIEWS and once holding no capability" — the write surface
+    // is governed by role/permission (reviewSession:read is not a write
+    // grant), never by ManagerCapabilityChecker, so a GRANTED manager must
+    // be refused identically to an ungranted one.
+    it.each([
+      ['ungranted', managerEmail],
+      ['granted', 'rhd-manager-granted-write-refusal@example.com'],
+    ])(
+      'the manager (%s) is refused on every review-session write endpoint, performing no write',
+      async (variant, email) => {
+        if (variant === 'granted') {
+          const grantedManager = await buildSeedUser({
+            id: 'rhd-manager-granted-write-refusal-id',
+            email,
+            role: 'MANAGER',
+            managerCapabilities: ['VIEW_ALL_REVIEWS'],
+          });
+          built.userRepository.seed(grantedManager);
+        }
+        const managerAgent = await loginAgent(built.app, email);
 
-      await managerAgent
-        .post('/review-sessions')
-        .send({ communityId: communityC.id, templateId })
-        .expect(403);
-      await managerAgent
-        .put(`/review-sessions/${sessionByUForC.id}/entries/${elementC.id}`)
-        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
-        .expect(403);
-      await managerAgent
-        .post(`/review-sessions/${sessionByUForC.id}/complete`)
-        .expect(403);
-      await managerAgent
-        .delete(`/review-sessions/${sessionByUForC.id}`)
-        .expect(403);
-    });
+        await managerAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(403);
+        await managerAgent
+          .put(`/review-sessions/${sessionByUForC.id}/entries/${elementC.id}`)
+          .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+          .expect(403);
+        await managerAgent
+          .post(`/review-sessions/${sessionByUForC.id}/complete`)
+          .expect(403);
+        await managerAgent
+          .delete(`/review-sessions/${sessionByUForC.id}`)
+          .expect(403);
+      },
+    );
 
     // authorization/spec.md "The manager gains the two review-sessions GET
     // routes (listOwn, read) as an accepted, named consequence" — the one
@@ -1146,21 +1166,36 @@ describe('Review History (e2e)', () => {
     // and read on a session the manager did not perform still goes through
     // the ordinary SessionAccessService community-scope check — NOT the
     // review-history scope — and 404s exactly like any other non-performer.
-    it('the manager gains listOwn and read on /review-sessions, scoped exactly as any other caller', async () => {
-      const managerAgent = await loginAgent(built.app, managerEmail);
+    it.each([
+      ['ungranted', managerEmail],
+      ['granted', 'rhd-manager-granted-own-scope@example.com'],
+    ])(
+      'the manager (%s) gains listOwn and read on /review-sessions, scoped exactly as any other caller',
+      async (variant, email) => {
+        if (variant === 'granted') {
+          const grantedManager = await buildSeedUser({
+            id: 'rhd-manager-granted-own-scope-id',
+            email,
+            role: 'MANAGER',
+            managerCapabilities: ['VIEW_ALL_REVIEWS'],
+          });
+          built.userRepository.seed(grantedManager);
+        }
+        const managerAgent = await loginAgent(built.app, email);
 
-      const listOwnResponse = await managerAgent
-        .get('/review-sessions')
-        .expect(200);
-      expect(listOwnResponse.body).toEqual([]);
+        const listOwnResponse = await managerAgent
+          .get('/review-sessions')
+          .expect(200);
+        expect(listOwnResponse.body).toEqual([]);
 
-      const readResponse = await managerAgent
-        .get(`/review-sessions/${sessionByUForC.id}`)
-        .expect(404);
-      expect((readResponse.body as ErrorBody).code).toBe(
-        'REVIEW_SESSION_NOT_FOUND',
-      );
-    });
+        const readResponse = await managerAgent
+          .get(`/review-sessions/${sessionByUForC.id}`)
+          .expect(404);
+        expect((readResponse.body as ErrorBody).code).toBe(
+          'REVIEW_SESSION_NOT_FOUND',
+        );
+      },
+    );
 
     // review-history-company-scope/tasks.md 4.4: MAINTENANCE_COMPANY_MANAGER
     // is no longer denied by permission (authorization/spec.md "The
