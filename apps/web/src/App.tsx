@@ -333,13 +333,16 @@ function App() {
           {/* review-history-ui spec + design.md: read-only, reachable by the
               two performing roles plus (review-history-company-scope,
               design.md Q5/Decision 10) MAINTENANCE_COMPANY_MANAGER, plus
-              (review-history-admin-scope design.md "File Changes") SYSTEM_ADMIN
-              — all four reach the identical surface, no reduced or admin-
-              specific variant. The write surface below (/review-sessions*)
-              is deliberately NOT widened. Static /review-history ranks
-              above the dynamic /review-history/:sessionId segment below
-              regardless of declaration order (same reasoning as every
-              other list/detail pair in this file). */}
+              (review-history-admin-scope design.md "File Changes") SYSTEM_ADMIN,
+              plus (review-history-manager-capability design.md Decision 7)
+              MANAGER — all five reach the identical surface, no reduced or
+              admin-specific variant; MANAGER's actual visibility is gated
+              server-side by the VIEW_ALL_REVIEWS capability, never here. The
+              write surface below (/review-sessions*) is deliberately NOT
+              widened. Static /review-history ranks above the dynamic
+              /review-history/:sessionId segment below regardless of
+              declaration order (same reasoning as every other list/detail
+              pair in this file). */}
           <Route
             path="/review-history"
             element={
@@ -349,6 +352,7 @@ function App() {
                   'COMMUNITY_REPRESENTATIVE',
                   'MAINTENANCE_COMPANY_MANAGER',
                   'SYSTEM_ADMIN',
+                  'MANAGER',
                 ]}
               >
                 <ReviewHistoryPage />
@@ -364,6 +368,7 @@ function App() {
                   'COMMUNITY_REPRESENTATIVE',
                   'MAINTENANCE_COMPANY_MANAGER',
                   'SYSTEM_ADMIN',
+                  'MANAGER',
                 ]}
               >
                 <ReviewHistoryDetailPage />

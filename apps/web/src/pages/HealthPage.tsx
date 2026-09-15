@@ -24,7 +24,13 @@ const REVIEW_SESSION_ROLES = new Set(['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRE
 // the same set for the same reason — no admin dashboard exists, so "/" is
 // this role's entry point too, pointing at the identical /review-history
 // surface, never /review-sessions.
-const REVIEW_HISTORY_ROLES = new Set(['MAINTENANCE_COMPANY_MANAGER', 'SYSTEM_ADMIN']);
+// review-history-manager-capability design.md Decision 7 "Route gating stays
+// role-only": MANAGER joins the same set, gated on the ROLE alone — never on
+// the VIEW_ALL_REVIEWS capability, which /auth/me never carries (settled
+// scope decision "Ungranted MANAGER's web experience: link visible, empty
+// result"). An ungranted manager reaches this identical link and the
+// already-shipped empty state; the server stays the sole authority.
+const REVIEW_HISTORY_ROLES = new Set(['MAINTENANCE_COMPANY_MANAGER', 'SYSTEM_ADMIN', 'MANAGER']);
 
 export function HealthPage() {
   const { t } = useTranslation();

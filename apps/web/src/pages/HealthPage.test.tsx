@@ -174,6 +174,42 @@ describe('HealthPage', () => {
     expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
   });
 
+  // review-history-manager-capability spec: MANAGER joins the same entry-link
+  // set, gated on the ROLE alone — never on the VIEW_ALL_REVIEWS capability,
+  // which this page's /auth/me-derived user object never carries (design.md
+  // Decision 7 "Route gating stays role-only"). An UNGRANTED manager gets the
+  // identical link and reaches the already-shipped empty state — there is no
+  // way for this page to distinguish granted from ungranted, by design.
+  it('shows a review-history entry link for a MANAGER, granted or not', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
+    renderHealthPage();
+
+    const link = await screen.findByTestId('review-history-entry-link');
+    expect(link).toHaveAttribute('href', '/review-history');
+  });
+
+  // Sibling of the granted-manager/admin enumeration tests above (lines
+  // 137-153, 160-175, both unmodified) — a MANAGER (ungranted, since this
+  // page's HealthPage/auth/me shape never carries the capability at all)
+  // sees exactly the history link and logout, nothing that leads toward
+  // /review-sessions.
+  it('enumerates every navigation control for a MANAGER — only the history link and logout, for an ungranted manager too', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
+    renderHealthPage();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
+    );
+
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/review-history']);
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
+  });
+
   it('still clears the session and navigates to /login when the logout request fails', async () => {
     vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
     renderHealthPage();
