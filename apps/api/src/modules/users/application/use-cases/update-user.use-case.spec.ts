@@ -1,5 +1,6 @@
 import { User, UserProps } from '../../domain/user.entity';
 import { InvalidMaintenanceCompanyAssignmentError } from '../../domain/errors/invalid-maintenance-company-assignment.error';
+import { InvalidManagerCapabilityAssignmentError } from '../../domain/errors/invalid-manager-capability-assignment.error';
 import { LastSystemAdminError } from '../../domain/errors/last-system-admin.error';
 import { MaintenanceCompanyNotFoundError } from '../../domain/errors/maintenance-company-not-found.error';
 import { UserNotFoundError } from '../../domain/errors/user-not-found.error';
@@ -49,6 +50,7 @@ describe('UpdateUserUseCase', () => {
       email: 'new@example.com',
       role: 'MANAGER',
       maintenanceCompanyId: null,
+      managerCapabilities: [],
     });
     expect((await userRepository.findById('user-1'))?.email).toBe(
       'new@example.com',
@@ -103,6 +105,7 @@ describe('UpdateUserUseCase', () => {
       email: 'renamed@example.com',
       role: 'MANAGER',
       maintenanceCompanyId: null,
+      managerCapabilities: [],
     });
   });
 
@@ -164,6 +167,7 @@ describe('UpdateUserUseCase', () => {
       email: 'user@example.com',
       role: 'MANAGER',
       maintenanceCompanyId: 'company-1',
+      managerCapabilities: [],
     });
     expect(
       (await userRepository.findById('tech-1'))?.maintenanceCompanyId,
@@ -279,5 +283,189 @@ describe('UpdateUserUseCase', () => {
 
     expect(companyLookup.existsActive).toHaveBeenCalledWith('company-deleted');
     expect((await userRepository.findById('tech-1'))?.role).toBe('MANAGER');
+  });
+
+  // PR 3/4 review fix (M1): `companyLookup.existsActive` is bound to the
+  // root PrismaService, not the transaction's scoped client — calling it
+  // from inside `userRepository.transactional(...)` would hold a pooled
+  // interactive-transaction connection while acquiring a SECOND connection
+  // for the lookup, risking pool exhaustion/deadlock under concurrent
+  // PATCHes. This pins the call ORDER: the pre-check `findById` and the
+  // liveness probe must both resolve BEFORE the transaction opens (which
+  // re-reads via a second `findById` as its first step) — not after.
+  it('resolves the maintenance-company liveness probe before the in-transaction read, not after', async () => {
+    userRepository.seed(
+      makeUser({
+        id: 'tech-1',
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'company-1',
+      }),
+    );
+
+    // `jest.spyOn` calls through to the real implementation by default (no
+    // `mockImplementation` override needed) while still recording
+    // `invocationCallOrder`, jest's own global call-sequence counter shared
+    // across every mock/spy in the test.
+    const findByIdSpy = jest.spyOn(userRepository, 'findById');
+    companyLookup.existsActive.mockResolvedValue(true);
+
+    await useCase.execute({ id: 'tech-1', maintenanceCompanyId: 'company-2' });
+
+    const findByIdOrder = findByIdSpy.mock.invocationCallOrder;
+    const existsActiveOrder =
+      companyLookup.existsActive.mock.invocationCallOrder;
+
+    // First findById = the pre-transaction pre-check read; existsActive
+    // fires next (still before the transaction); second findById = the
+    // in-transaction re-read (design.md Decision 5).
+    expect(findByIdOrder).toHaveLength(2);
+    expect(existsActiveOrder).toHaveLength(1);
+    expect(findByIdOrder[0]).toBeLessThan(existsActiveOrder[0]);
+    expect(existsActiveOrder[0]).toBeLessThan(findByIdOrder[1]);
+  });
+
+  // review-history-manager-capability/design.md Decision 5/6 (tasks.md
+  // 3.10).
+  describe('managerCapabilities', () => {
+    it('grants the capability to an existing MANAGER', async () => {
+      userRepository.seed(makeUser({ id: 'manager-1', role: 'MANAGER' }));
+
+      const result = await useCase.execute({
+        id: 'manager-1',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+
+      expect(result.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+      expect(
+        (await userRepository.findById('manager-1'))?.managerCapabilities,
+      ).toEqual(['VIEW_ALL_REVIEWS']);
+    });
+
+    it('revokes the capability via an explicit empty array', async () => {
+      userRepository.seed(
+        makeUser({
+          id: 'manager-1',
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+
+      const result = await useCase.execute({
+        id: 'manager-1',
+        managerCapabilities: [],
+      });
+
+      expect(result.managerCapabilities).toEqual([]);
+      expect(
+        (await userRepository.findById('manager-1'))?.managerCapabilities,
+      ).toEqual([]);
+    });
+
+    it('leaves the capability unchanged when the field is absent from the PATCH', async () => {
+      userRepository.seed(
+        makeUser({
+          id: 'manager-1',
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+
+      const result = await useCase.execute({
+        id: 'manager-1',
+        email: 'renamed@example.com',
+      });
+
+      expect(result.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+      expect(
+        (await userRepository.findById('manager-1'))?.managerCapabilities,
+      ).toEqual(['VIEW_ALL_REVIEWS']);
+    });
+
+    it('clears the capability server-side on a bare role change away from MANAGER, with no field in the payload', async () => {
+      userRepository.seed(
+        makeUser({
+          id: 'manager-1',
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+
+      const result = await useCase.execute({
+        id: 'manager-1',
+        role: 'SYSTEM_ADMIN',
+      });
+
+      expect(result.managerCapabilities).toEqual([]);
+      expect(
+        (await userRepository.findById('manager-1'))?.managerCapabilities,
+      ).toEqual([]);
+    });
+
+    it('rejects a capability set for a non-MANAGER resulting role, leaving the user unchanged', async () => {
+      userRepository.seed(makeUser({ id: 'admin-1', role: 'SYSTEM_ADMIN' }));
+
+      await expect(
+        useCase.execute({
+          id: 'admin-1',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      ).rejects.toThrow(InvalidManagerCapabilityAssignmentError);
+
+      expect(
+        (await userRepository.findById('admin-1'))?.managerCapabilities,
+      ).toEqual([]);
+    });
+
+    it('rejects a capability set on the SAME payload that changes role to a non-MANAGER role', async () => {
+      userRepository.seed(
+        makeUser({
+          id: 'manager-1',
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+
+      await expect(
+        useCase.execute({
+          id: 'manager-1',
+          role: 'SYSTEM_ADMIN',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      ).rejects.toThrow(InvalidManagerCapabilityAssignmentError);
+
+      const stored = await userRepository.findById('manager-1');
+      expect(stored?.role).toBe('MANAGER');
+      expect(stored?.managerCapabilities).toEqual(['VIEW_ALL_REVIEWS']);
+    });
+
+    it('a MANAGER -> other -> MANAGER round trip ends with an empty capability list when the final promotion supplies no explicit value', async () => {
+      userRepository.seed(
+        makeUser({
+          id: 'manager-1',
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+      // A second SYSTEM_ADMIN so the final SYSTEM_ADMIN -> MANAGER step
+      // below is not itself a last-admin-lockout demotion.
+      userRepository.seed(
+        makeUser({
+          id: 'admin-1',
+          email: 'admin1@example.com',
+          role: 'SYSTEM_ADMIN',
+        }),
+      );
+
+      await useCase.execute({ id: 'manager-1', role: 'SYSTEM_ADMIN' });
+      const roundTrip = await useCase.execute({
+        id: 'manager-1',
+        role: 'MANAGER',
+      });
+
+      expect(roundTrip.managerCapabilities).toEqual([]);
+      expect(
+        (await userRepository.findById('manager-1'))?.managerCapabilities,
+      ).toEqual([]);
+    });
   });
 });

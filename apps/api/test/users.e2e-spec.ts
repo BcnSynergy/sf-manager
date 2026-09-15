@@ -20,6 +20,7 @@ import {
   MAINTENANCE_COMPANY_LOOKUP,
   type MaintenanceCompanyLookup,
 } from '../src/modules/users/application/ports/maintenance-company-lookup.port';
+import type { ManagerCapability } from '../src/modules/users/domain/manager-capability';
 // design.md Testing Strategy (E2E row) + tasks.md 8.1: reuse the SAME
 // in-memory fake the four use-case unit specs already exercise (PR 5),
 // rather than hand-rolling a second one for this suite. tasks.md 8.2 pins
@@ -82,6 +83,7 @@ interface SeedUserInput {
   password?: string;
   deletedAt?: Date | null;
   maintenanceCompanyId?: string | null;
+  managerCapabilities?: ManagerCapability[];
 }
 
 async function buildSeedUser(input: SeedUserInput): Promise<User> {
@@ -95,6 +97,7 @@ async function buildSeedUser(input: SeedUserInput): Promise<User> {
     updatedAt: now,
     deletedAt: input.deletedAt ?? null,
     maintenanceCompanyId: input.maintenanceCompanyId ?? null,
+    managerCapabilities: input.managerCapabilities ?? [],
   });
 }
 
@@ -589,9 +592,12 @@ describe('Users (e2e)', () => {
   // PATCH only when `role` is itself present in the body. These 3
   // combinations were originally found to reject with a plain 400 (Zod
   // issues as `message`, no `code`) BEFORE the controller/use case ever
-  // ran — `MaintenanceCompanyZodValidationPipe` closes that gap by reading
-  // the schema's own `params.maintenanceCompanyCode` tag and attaching the
-  // matching `code` before the pipe throws, so these 3 combinations now
+  // ran — `UserCodedZodValidationPipe` (renamed from
+  // `MaintenanceCompanyZodValidationPipe`, review-history-manager-capability/
+  // design.md Decision 6) closes that gap by reading the schema's own
+  // `params.userErrorCode` tag (renamed from `maintenanceCompanyCode`) and
+  // attaching the matching `code` before the pipe throws, so these 3
+  // combinations now
   // carry the same `code` the domain-policy path already produced for the
   // schema-undecidable shapes. The domain-policy `code` mapping
   // (`UsersController.mapMaintenanceCompanyError`) remains the sole
@@ -863,6 +869,239 @@ describe('Users (e2e)', () => {
         ).find((user) => user.id === technician.id);
         expect(found?.role).toBe('MANAGER');
         expect(found?.maintenanceCompanyId).toBe('demote-company-a');
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
+  // review-history-manager-capability/design.md Decision 5/6, spec.md
+  // "Update User" managerCapabilities scenarios — tasks.md 3.18.
+  describe('Manager capability grant/revoke (design.md Decision 5/6) — tasks.md 3.18', () => {
+    it('grants VIEW_ALL_REVIEWS to a MANAGER and revokes it via an explicit empty array, both reflected immediately on GET', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-admin-id',
+        email: 'cap-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const manager = await buildSeedUser({
+        id: 'cap-manager-id',
+        email: 'cap-manager@example.com',
+        role: 'MANAGER',
+      });
+      const { app } = await buildApp([admin, manager]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-admin@example.com');
+
+        const grantResponse = await agent
+          .patch(`/users/${manager.id}`)
+          .send({ managerCapabilities: ['VIEW_ALL_REVIEWS'] })
+          .expect(200);
+        expect(grantResponse.body).toMatchObject({
+          id: manager.id,
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        });
+
+        const listAfterGrant = await agent.get('/users').expect(200);
+        const foundAfterGrant = (
+          listAfterGrant.body as Array<{
+            id: string;
+            managerCapabilities: string[];
+          }>
+        ).find((user) => user.id === manager.id);
+        expect(foundAfterGrant?.managerCapabilities).toEqual([
+          'VIEW_ALL_REVIEWS',
+        ]);
+
+        const revokeResponse = await agent
+          .patch(`/users/${manager.id}`)
+          .send({ managerCapabilities: [] })
+          .expect(200);
+        expect(revokeResponse.body).toMatchObject({
+          id: manager.id,
+          managerCapabilities: [],
+        });
+
+        const listAfterRevoke = await agent.get('/users').expect(200);
+        const foundAfterRevoke = (
+          listAfterRevoke.body as Array<{
+            id: string;
+            managerCapabilities: string[];
+          }>
+        ).find((user) => user.id === manager.id);
+        expect(foundAfterRevoke?.managerCapabilities).toEqual([]);
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('leaves the capability unchanged when a PATCH omits the field entirely', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-noop-admin-id',
+        email: 'cap-noop-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const manager = await buildSeedUser({
+        id: 'cap-noop-manager-id',
+        email: 'cap-noop-manager@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      const { app } = await buildApp([admin, manager]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-noop-admin@example.com');
+
+        const patchResponse = await agent
+          .patch(`/users/${manager.id}`)
+          .send({ email: 'cap-noop-manager-renamed@example.com' })
+          .expect(200);
+
+        expect(patchResponse.body).toMatchObject({
+          id: manager.id,
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        });
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('clears the capability server-side on a bare role change away from MANAGER, with no field in the payload', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-clear-admin-id',
+        email: 'cap-clear-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const manager = await buildSeedUser({
+        id: 'cap-clear-manager-id',
+        email: 'cap-clear-manager@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      const { app } = await buildApp([admin, manager]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-clear-admin@example.com');
+
+        const patchResponse = await agent
+          .patch(`/users/${manager.id}`)
+          .send({ role: 'SYSTEM_ADMIN' })
+          .expect(200);
+
+        expect(patchResponse.body).toMatchObject({
+          id: manager.id,
+          role: 'SYSTEM_ADMIN',
+          managerCapabilities: [],
+        });
+
+        const list = await agent.get('/users').expect(200);
+        const found = (
+          list.body as Array<{ id: string; managerCapabilities: string[] }>
+        ).find((user) => user.id === manager.id);
+        expect(found?.managerCapabilities).toEqual([]);
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('rejects a managerCapabilities grant for a non-MANAGER resulting role with 400 MANAGER_CAPABILITIES_NOT_ALLOWED, leaving the user unchanged', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-reject-admin-id',
+        email: 'cap-reject-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const otherAdmin = await buildSeedUser({
+        id: 'cap-reject-other-admin-id',
+        email: 'cap-reject-other-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const { app } = await buildApp([admin, otherAdmin]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-reject-admin@example.com');
+
+        const response = await agent
+          .patch(`/users/${otherAdmin.id}`)
+          .send({ managerCapabilities: ['VIEW_ALL_REVIEWS'] })
+          .expect(400);
+        expect(response.body).toMatchObject({
+          code: 'MANAGER_CAPABILITIES_NOT_ALLOWED',
+        });
+
+        const list = await agent.get('/users').expect(200);
+        const found = (
+          list.body as Array<{ id: string; managerCapabilities: string[] }>
+        ).find((user) => user.id === otherAdmin.id);
+        expect(found?.managerCapabilities).toEqual([]);
+      } finally {
+        await app.close();
+      }
+    });
+
+    // design.md Decision 6's payload-decidable shape — the schema itself
+    // rejects role+managerCapabilities in the SAME payload before the
+    // request ever reaches UpdateUserUseCase.
+    it('rejects a managerCapabilities grant on the SAME payload that changes role to a non-MANAGER role, with the schema-level 400', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-schema-admin-id',
+        email: 'cap-schema-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const manager = await buildSeedUser({
+        id: 'cap-schema-manager-id',
+        email: 'cap-schema-manager@example.com',
+        role: 'MANAGER',
+      });
+      const { app } = await buildApp([admin, manager]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-schema-admin@example.com');
+
+        const response = await agent
+          .patch(`/users/${manager.id}`)
+          .send({
+            role: 'SYSTEM_ADMIN',
+            managerCapabilities: ['VIEW_ALL_REVIEWS'],
+          })
+          .expect(400);
+        expect(response.body).toMatchObject({
+          code: 'MANAGER_CAPABILITIES_NOT_ALLOWED',
+        });
+      } finally {
+        await app.close();
+      }
+    });
+
+    it('a newly created MANAGER holds an empty capability list, and POST /users rejects the field', async () => {
+      const admin = await buildSeedUser({
+        id: 'cap-create-admin-id',
+        email: 'cap-create-admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+      const { app } = await buildApp([admin]);
+
+      try {
+        const agent = await loginAgent(app, 'cap-create-admin@example.com');
+
+        const createResponse = await agent
+          .post('/users')
+          .send({
+            email: 'cap-created-manager@example.com',
+            password: 'aValidPassw0rd',
+            role: 'MANAGER',
+            managerCapabilities: ['VIEW_ALL_REVIEWS'],
+          })
+          .expect(201);
+
+        // createUserSchema has no managerCapabilities field at all — an
+        // unknown key is silently stripped by Zod's default (non-strict)
+        // object parsing, never persisted (proposal non-goal: "Granted on
+        // edit only, never on creation").
+        expect(createResponse.body).toMatchObject({
+          role: 'MANAGER',
+          managerCapabilities: [],
+        });
       } finally {
         await app.close();
       }

@@ -4,16 +4,13 @@ import { buildCodedError } from '../../../../shared/presentation/http/coded-erro
 import { ZodValidationPipe } from '../../../../shared/presentation/pipes/zod-validation.pipe';
 import type { UserErrorCode } from '../user-error-code';
 
-type TaggedMaintenanceCompanyIssue = Extract<ZodIssue, { code: 'custom' }> & {
-  params: { maintenanceCompanyCode: string };
+type TaggedUserIssue = Extract<ZodIssue, { code: 'custom' }> & {
+  params: { userErrorCode: string };
 };
 
-function isTaggedMaintenanceCompanyIssue(
-  issue: ZodIssue,
-): issue is TaggedMaintenanceCompanyIssue {
+function isTaggedUserIssue(issue: ZodIssue): issue is TaggedUserIssue {
   return (
-    issue.code === 'custom' &&
-    typeof issue.params?.maintenanceCompanyCode === 'string'
+    issue.code === 'custom' && typeof issue.params?.userErrorCode === 'string'
   );
 }
 
@@ -24,18 +21,27 @@ function isTaggedMaintenanceCompanyIssue(
 // (and therefore never reaches mapMaintenanceCompanyError, which is what
 // normally attaches `code: MAINTENANCE_COMPANY_REQUIRED`/
 // `MAINTENANCE_COMPANY_NOT_ALLOWED`). This subclass closes that gap for the
-// 2 maintenanceCompanyId shapes that ARE payload-decidable (REQUIRED on
-// create, NOT_ALLOWED on create/update) by recognizing the schema's own
-// `params.maintenanceCompanyCode` tag (createMaintenanceCompanyRefinement /
-// applyMaintenanceCompanyNotAllowedRefinement in
-// packages/validation/src/users/create-user.schema.ts) — not by
-// string-matching the Zod issue's `message` — and raising the same
-// `{statusCode, error, message, code}` shape buildCodedError already
+// payload-decidable shapes (REQUIRED on create, NOT_ALLOWED on
+// create/update for maintenanceCompanyId; and NOT_ALLOWED for
+// managerCapabilities, review-history-manager-capability/design.md
+// Decision 6 — its second consumer) by recognizing the schema's own
+// `params.userErrorCode` tag (renamed from `maintenanceCompanyCode` now
+// that a second consumer shares the mechanism — createMaintenanceCompanyRefinement
+// / applyMaintenanceCompanyNotAllowedRefinement / applyManagerCapabilitiesNotAllowedRefinement
+// in packages/validation/src/users/{create-user,manager-capability}.schema.ts)
+// — not by string-matching the Zod issue's `message` — and raising the
+// same `{statusCode, error, message, code}` shape buildCodedError already
 // produces for the resulting-state-checked cases. Any other schema failure
 // (or a schema failure that isn't tagged) falls through unchanged to
 // ZodValidationPipe's generic BadRequestException. See
 // openspec/changes/maintenance-company/tasks.md's 13.1 finding.
-export class MaintenanceCompanyZodValidationPipe
+//
+// Renamed from MaintenanceCompanyZodValidationPipe
+// (review-history-manager-capability/design.md Decision 6, "one small
+// generalization, flagged rather than smuggled") — same folder, same
+// behaviour, now with a name that doesn't lie about having a second
+// consumer.
+export class UserCodedZodValidationPipe
   extends ZodValidationPipe
   implements PipeTransform
 {
@@ -46,14 +52,12 @@ export class MaintenanceCompanyZodValidationPipe
   override transform(value: unknown) {
     const result = this.schema.safeParse(value);
     if (!result.success) {
-      const taggedIssue = result.error.issues.find(
-        isTaggedMaintenanceCompanyIssue,
-      );
+      const taggedIssue = result.error.issues.find(isTaggedUserIssue);
       if (taggedIssue) {
         throw buildCodedError(
           HttpStatus.BAD_REQUEST,
           taggedIssue.message,
-          taggedIssue.params.maintenanceCompanyCode as UserErrorCode,
+          taggedIssue.params.userErrorCode as UserErrorCode,
         );
       }
     }

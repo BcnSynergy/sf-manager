@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ManagerCapability } from '../../domain/manager-capability';
 import { Role } from '../../domain/role';
 import {
   USER_REPOSITORY,
@@ -13,6 +14,9 @@ export interface ListedUser {
   // resolves it to a company name client-side via its own
   // GET /maintenance-companies fetch, never a server-side join.
   maintenanceCompanyId: string | null;
+  // review-history-manager-capability/design.md OQ1: the edit form prefills
+  // the capability toggle from this list response (no GET /users/:id).
+  managerCapabilities: ManagerCapability[];
 }
 
 // design.md Data Flow / Testing Strategy: findAll() already excludes
@@ -32,6 +36,7 @@ export class ListUsersUseCase {
       email: user.email,
       role: user.role,
       maintenanceCompanyId: user.maintenanceCompanyId,
+      managerCapabilities: [...user.managerCapabilities],
     }));
   }
 }

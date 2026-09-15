@@ -9,6 +9,7 @@ import {
 } from '../../../../shared/application/ports/password-hasher.port';
 import { assertCompanyMatchesRole } from '../../domain/maintenance-company-assignment.policy';
 import { MaintenanceCompanyNotFoundError } from '../../domain/errors/maintenance-company-not-found.error';
+import { ManagerCapability } from '../../domain/manager-capability';
 import { PlainPassword } from '../../domain/password';
 import { Role } from '../../domain/role';
 import { User } from '../../domain/user.entity';
@@ -33,6 +34,10 @@ export interface CreateUserResult {
   email: string;
   role: Role;
   maintenanceCompanyId: string | null;
+  // POST /users cannot express a capability (proposal non-goal, settled
+  // decision "Granted on edit only") — the entity defaults to `[]`, so this
+  // is always empty on create.
+  managerCapabilities: ManagerCapability[];
 }
 
 // design.md Data Flow (POST /users) + Decision 8: PlainPassword.create(raw)
@@ -96,6 +101,7 @@ export class CreateUserUseCase {
       email: user.email,
       role: user.role,
       maintenanceCompanyId: user.maintenanceCompanyId,
+      managerCapabilities: [...user.managerCapabilities],
     };
   }
 }

@@ -10,6 +10,7 @@ import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
 import { UpdateUserUseCase } from '../application/use-cases/update-user.use-case';
 import { EmailAlreadyInUseError } from '../domain/errors/email-already-in-use.error';
 import { InvalidMaintenanceCompanyAssignmentError } from '../domain/errors/invalid-maintenance-company-assignment.error';
+import { InvalidManagerCapabilityAssignmentError } from '../domain/errors/invalid-manager-capability-assignment.error';
 import { LastSystemAdminError } from '../domain/errors/last-system-admin.error';
 import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-company-not-found.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
@@ -338,6 +339,28 @@ describe('UsersController', () => {
         error: 'Bad Request',
         message: domainError.message,
         code: 'MAINTENANCE_COMPANY_NOT_FOUND',
+      });
+    });
+
+    // review-history-manager-capability/design.md File Changes: without
+    // this mapping, the non-payload-decidable case (capability set with no
+    // `role` in the payload) would surface as an unmapped 500.
+    it('maps InvalidManagerCapabilityAssignmentError to a 400 body with code MANAGER_CAPABILITIES_NOT_ALLOWED', async () => {
+      const domainError = new InvalidManagerCapabilityAssignmentError(
+        'SYSTEM_ADMIN',
+      );
+      updateUserUseCase.execute.mockRejectedValue(domainError);
+
+      const response = await controller
+        .update('admin-1', { managerCapabilities: ['VIEW_ALL_REVIEWS'] })
+        .catch((error: HttpException) => error);
+
+      expect(response).toBeInstanceOf(HttpException);
+      expect((response as HttpException).getResponse()).toEqual({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: domainError.message,
+        code: 'MANAGER_CAPABILITIES_NOT_ALLOWED',
       });
     });
   });

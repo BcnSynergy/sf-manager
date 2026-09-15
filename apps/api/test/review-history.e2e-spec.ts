@@ -2064,6 +2064,16 @@ describe('Review History (e2e)', () => {
     const technicianYEmail = 'rha-technician-y@example.com';
     const technicianNoCompanyEmail = 'rha-technician-nocompany@example.com';
     const technicianDeletedEmail = 'rha-technician-deleted@example.com';
+    // review-history-manager-capability/tasks.md 3.18: a granted MANAGER
+    // added to THIS SAME installation-wide fixture (the one carrying the
+    // company/soft-deleted/no-attribution fixtures PR 2's own describe
+    // block lacked), closing the 3 e2e-orphaned granted-manager scenarios
+    // from review-history/spec.md ("the granted manager's list is
+    // identical to the admin's", "deleted/deactivated context hides
+    // nothing from the granted manager", "an empty installation renders a
+    // successful empty list" — the last covered by this block's admin
+    // equivalent already).
+    const grantedManagerEmail = 'rha-granted-manager@example.com';
 
     const COMPANY_X = 'rha-company-x';
     const COMPANY_Y = 'rha-company-y';
@@ -2108,6 +2118,12 @@ describe('Review History (e2e)', () => {
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: COMPANY_X,
       });
+      const grantedManager = await buildSeedUser({
+        id: 'rha-granted-manager-id',
+        email: grantedManagerEmail,
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
 
       // The admin fixture is seeded with NO maintenanceCompanyId and gets NO
       // community assignment anywhere below — authorization/spec.md "The
@@ -2120,6 +2136,7 @@ describe('Review History (e2e)', () => {
           technicianY,
           technicianNoCompany,
           technicianDeleted,
+          grantedManager,
         ],
         liveCompanyIds: [COMPANY_X, COMPANY_Y],
       });
@@ -2240,6 +2257,41 @@ describe('Review History (e2e)', () => {
       expect(rowIds).toContain(sessionNoCompany.id);
       expect(rowIds).toContain(sessionSoftDeletedPerformer.id);
       expect(rowIds).not.toContain(draftForX.id);
+    });
+
+    // review-history/spec.md "The ordering matches every other scope's
+    // list, including a granted manager's" + tasks.md 3.18: closes the 3
+    // e2e-orphaned granted-manager scenarios by proving the granted
+    // manager's list is session-for-session IDENTICAL to the admin's on
+    // this same installation-wide fixture (companies X/Y, a deactivated
+    // community, a soft-deleted performer, an unattributed session).
+    it("a granted MANAGER's list is identical to the SYSTEM_ADMIN's, including the deactivated community, the soft-deleted performer and the unattributed session", async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const grantedManagerAgent = await loginAgent(
+        built.app,
+        grantedManagerEmail,
+      );
+
+      const adminResponse = await adminAgent.get('/review-history').expect(200);
+      const managerResponse = await grantedManagerAgent
+        .get('/review-history')
+        .expect(200);
+
+      expect(managerResponse.body).toEqual(adminResponse.body);
+
+      // PR 3/4 review fix (M2): `toEqual` alone passes vacuously if both
+      // lists come back empty (e.g. a regression breaking
+      // findCompletedAcrossInstallation for everyone). Pin the specific
+      // fixture rows this test's own name claims are covered, the same
+      // way the sibling "sees every completed session..." test above
+      // does.
+      const managerRowIds = (managerResponse.body as HistoryRowBody[]).map(
+        (row) => row.id,
+      );
+      expect(managerRowIds).toContain(sessionForY.id); // deactivated community
+      expect(managerRowIds).toContain(sessionSoftDeletedPerformer.id); // soft-deleted performer
+      expect(managerRowIds).toContain(sessionNoCompany.id); // unattributed session
+      expect(managerRowIds).not.toContain(draftForX.id); // draft, excluded
     });
 
     it("a deactivated community's session stays visible on the list and by id", async () => {
@@ -2418,11 +2470,26 @@ describe('Review History (e2e)', () => {
       'modules/users/infrastructure/authorization/user-manager-capability.checker.ts',
       'modules/review-session/application/services/review-history-access.service.ts',
       'modules/review-session/application/use-cases/testing/fake-manager-capability.checker.ts',
+      // PR 3/4 additions — the write path and its DTO/controller surface,
+      // previously named on the "not yet touched" list below.
+      // `errors/invalid-manager-capability-assignment.error.ts` and
+      // `presentation/pipes/user-coded-zod-validation.pipe.ts` are
+      // DELIBERATELY excluded here: neither declares/references
+      // `ManagerCapability`, a `managerCapabilities` field, or the
+      // `VIEW_ALL_REVIEWS` literal — the error carries only a `Role`, and
+      // the pipe is capability-agnostic by design (it reads any tagged
+      // `userErrorCode`, generically).
+      'modules/users/domain/manager-capability.policy.ts',
+      'modules/users/application/use-cases/update-user.use-case.ts',
+      'modules/users/application/use-cases/create-user.use-case.ts',
+      'modules/users/application/use-cases/list-users.use-case.ts',
+      'modules/users/presentation/dto/user-response.dto.ts',
+      'modules/users/presentation/users.controller.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
-    // The unit/integration specs PR 1/4 and PR 2/4 added or extended
-    // alongside those production files — allowed for the same reason the
-    // production files are.
+    // The unit/integration specs PR 1/4, PR 2/4 and PR 3/4 added or
+    // extended alongside those production files — allowed for the same
+    // reason the production files are.
     const EXPECTED_SPEC_FILES = [
       'modules/users/domain/user.entity.spec.ts',
       'modules/users/infrastructure/persistence/user.mapper.spec.ts',
@@ -2432,6 +2499,12 @@ describe('Review History (e2e)', () => {
       // PR 2/4 additions:
       'modules/users/infrastructure/authorization/user-manager-capability.checker.spec.ts',
       'modules/review-session/application/services/review-history-access.service.spec.ts',
+      // PR 3/4 additions:
+      'modules/users/domain/manager-capability.policy.spec.ts',
+      'modules/users/application/use-cases/update-user.use-case.spec.ts',
+      'modules/users/application/use-cases/create-user.use-case.spec.ts',
+      'modules/users/application/use-cases/list-users.use-case.spec.ts',
+      'modules/users/presentation/users.controller.spec.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     const ALLOWED_FILES = [
@@ -2478,23 +2551,22 @@ describe('Review History (e2e)', () => {
       expect(declaringFiles).toEqual([...ALLOWED_FILES].sort());
     });
 
-    it('has NOT leaked into the DTO, the controller, the write-path use cases, or the permission table yet', () => {
-      // Named explicitly, one at a time, so a future PR that DOES touch one
-      // of these (PR 3, per design.md) gets a loud, specific failure here
-      // rather than a silent pass from the allowlist diff above.
+    it('has NOT leaked into the permission table (still PR-3-scoped elsewhere)', () => {
+      // Named explicitly, one at a time, so a future slice that DOES touch
+      // one of these gets a loud, specific failure here rather than a
+      // silent pass from the allowlist diff above.
       //
       // PR 2/4 update: the checker port/adapter are now LEGITIMATELY
       // touched (tasks.md 2.1/2.2) and moved to EXPECTED_PRODUCTION_FILES
       // above — removed from this "not yet touched" list.
-      // `role-permission.checker.ts` grants a plain string PERMISSION
-      // (`'reviewSession:read'`), never a capability reference, so it stays
-      // on this list.
+      // PR 3/4 update: the DTO, the controller and the three write-path use
+      // cases are now LEGITIMATELY touched (tasks.md 3.9/3.11/3.12/3.16)
+      // and moved to EXPECTED_PRODUCTION_FILES above — removed from this
+      // list. `role-permission.checker.ts` grants a plain string
+      // PERMISSION (`'reviewSession:read'`), never a capability reference,
+      // so it stays on this list — no PR in this change ever touches it a
+      // second time for a capability reason.
       const notYetTouched = [
-        'modules/users/presentation/dto/user-response.dto.ts',
-        'modules/users/presentation/users.controller.ts',
-        'modules/users/application/use-cases/create-user.use-case.ts',
-        'modules/users/application/use-cases/update-user.use-case.ts',
-        'modules/users/application/use-cases/list-users.use-case.ts',
         'modules/auth/infrastructure/authorization/role-permission.checker.ts',
       ];
 
