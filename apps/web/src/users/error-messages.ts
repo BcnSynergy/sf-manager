@@ -13,6 +13,7 @@ const CODE_MESSAGE_KEYS: Record<UserErrorCode, string> = {
   MAINTENANCE_COMPANY_REQUIRED: 'users.error.maintenanceCompanyRequired',
   MAINTENANCE_COMPANY_NOT_ALLOWED: 'users.error.maintenanceCompanyNotAllowed',
   MAINTENANCE_COMPANY_NOT_FOUND: 'users.error.maintenanceCompanyNotFound',
+  MANAGER_CAPABILITIES_NOT_ALLOWED: 'users.error.managerCapabilitiesNotAllowed',
 };
 
 const HTTP_BAD_REQUEST = 400;

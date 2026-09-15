@@ -458,19 +458,21 @@ reachable for any other status.
 
 Sessions existing makes history, scheduling and signing feel adjacent.
 Reading completed sessions ships in the separate `review-history`
-capability — now for the per-performer, per-community, per-company
-**and installation-wide** scopes — and is therefore no longer deferred
-wholesale. Everything below still MUST NOT be introduced, and none of it
-MUST be introduced by **this** capability, which still owns the write
-flow only and whose own reads MUST stay byte-unchanged.
-(Previously: the FR-008 row deferred **all** global review visibility —
-any review query, route, page or use case unscoped across the
-installation — which `review-history` now implements for `SYSTEM_ADMIN`
-only.)
+capability — now for the per-performer, per-community, per-company,
+installation-wide **and capability-gated manager** scopes — and is
+therefore no longer deferred wholesale. Everything below still MUST NOT
+be introduced, and none of it MUST be introduced by **this** capability,
+which still owns the write flow only and whose own reads MUST stay
+byte-unchanged.
+(Previously: the FR-008 row deferred global review visibility for
+`MANAGER` — any `ManagerCapability` / `User.managerCapabilities` /
+`VIEW_ALL_REVIEWS` mechanism and any `MANAGER` review visibility rule —
+which `review-history` now implements, leaving only per-element history
+deferred.)
 
 | Deferred to | Must not exist |
 |---|---|
-| FR-008 (remaining half) | Global review visibility for `MANAGER` — any `ManagerCapability` / `User.managerCapabilities` / `VIEW_ALL_REVIEWS` mechanism; any `MANAGER` review visibility rule. Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped or installation-wide one |
+| FR-008 (remaining half) | Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped, installation-wide or capability-gated one. Any `managerCapabilities` or `VIEW_ALL_REVIEWS` reference inside this capability: the manager capability MUST affect the `review-history` read only, and MUST grant nothing on this capability's write flow |
 | FR-009 | Scheduling service, due dates, overdue lists, cadence rules or reminders |
 | FR-010 | Any code path transitioning a session to `signed`; any document, PDF or export generation |
 | — | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications |
@@ -478,12 +480,17 @@ only.)
 #### Scenario: The one installation-wide read lives in review-history, not here
 - GIVEN this capability's own routes, pages, use cases and repository reads after this change
 - WHEN they are inspected
-- THEN none MUST contain a review read unscoped across the installation — the single such read MUST belong to `review-history` and MUST be reachable only by a `SYSTEM_ADMIN`
+- THEN none MUST contain a review read unscoped across the installation — the single such read MUST belong to `review-history` and MUST be reachable only by a `SYSTEM_ADMIN` or a `MANAGER` whose `VIEW_ALL_REVIEWS` capability resolved affirmatively
 
-#### Scenario: No MANAGER capability mechanism exists
-- GIVEN the routes, pages, use cases and repository queries after this change
+#### Scenario: No capability mechanism reaches this capability
+- GIVEN the routes, pages, use cases and repository queries of this capability after this change
 - WHEN they are searched for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
-- THEN none MUST be found, and `MANAGER` MUST hold no review visibility
+- THEN none MUST be found — the capability MUST live in the users and review-history capabilities only, and `MANAGER` MUST hold no write access here, granted or not
+
+#### Scenario: This capability's two GET routes widen to MANAGER as an accepted, unrelated consequence
+- GIVEN `GET /review-sessions` (the draft-resume list) and `GET /review-sessions/:sessionId` (the performer-scoped read), both gated by `reviewSession:read` and both belonging to this capability, not to `review-history`
+- WHEN an authenticated `MANAGER` — granted or ungranted, since neither route consults `VIEW_ALL_REVIEWS` — calls either route
+- THEN the response MUST be `200`/`404` rather than `403`; this is an accepted, named consequence of `authorization`'s unconditional `reviewSession:read` grant to `MANAGER` (see the `authorization` delta's *The Manager Becomes Operational…* requirement), not a capability-gated read, and it MUST NOT be treated as license to add a capability check, a company scope, or any cross-session query to either route — they remain performer-scoped and status-agnostic exactly as shipped
 
 #### Scenario: The company scope lives in review-history, not here
 - GIVEN this capability's own routes, use cases and repository reads after this change

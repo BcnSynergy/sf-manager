@@ -488,6 +488,21 @@ describe('locale key-set parity (en/es/ca)', () => {
     'health.reviewHistoryLink',
   ];
 
+  // Existence guard for review-history-manager-capability (PR 4), same
+  // rationale as REQUIRED_COMMUNITY_KEY_PATHS above — a fixed,
+  // hand-maintained list of every `users.edit.capabilities*` /
+  // `users.error.managerCapabilitiesNotAllowed` key path referenced by
+  // source in this PR, so a future PR that adds a new call site without
+  // adding its translation fails here rather than silently rendering the
+  // raw key.
+  const REQUIRED_MANAGER_CAPABILITY_KEY_PATHS = [
+    // UserEditPage role-conditional toggle (design.md Decision 7)
+    'users.edit.capabilitiesLabel',
+    'users.edit.viewAllReviewsLabel',
+    // error-messages.ts mapping target (design.md Decision 6)
+    'users.error.managerCapabilitiesNotAllowed',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -596,6 +611,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_REVIEW_HISTORY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_MANAGER_CAPABILITY_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

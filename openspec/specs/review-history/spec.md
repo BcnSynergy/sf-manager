@@ -5,30 +5,38 @@
 Reading completed reviews (FR-008). `review-session` (FR-007) shipped the
 write path and left completed sessions unreadable: the only by-id read is
 performer-scoped and the only list is the draft-resume list. This
-capability adds the read side for **four** visibility scopes: a
+capability adds the read side for **five** visibility scopes: a
 `MAINTENANCE_TECHNICIAN` sees the sessions **they** performed, a
 `COMMUNITY_REPRESENTATIVE` sees the sessions performed on **their**
 actively assigned communities regardless of who performed them, a
 `MAINTENANCE_COMPANY_MANAGER` sees every `completed` session attributed to
 their own maintenance company, across every technician and every
-community, with no community assignment involved, and a `SYSTEM_ADMIN`
-sees **every** `completed` session in the installation, with no scope
-filter at all — the first and only read in the system that narrows
-nothing. The first two scopes are resolved by the shipped Layer 2
-community-scope check; the third is not — it resolves from the
-performing-company attribution frozen onto the session (owned by
-`review-session-management`); the fourth resolves from the role alone,
-with no scope predicate whatsoever. Plus the completed-only rule and a
-scoped read-back of one historical session. Who holds the permission, and
-each scope rule itself, are owned by `authorization`; the field write flow
-is owned by `review-session-management`; the web surface by
+community, with no community assignment involved, a `SYSTEM_ADMIN` sees
+**every** `completed` session in the installation, with no scope filter at
+all, and a `MANAGER` holding the `VIEW_ALL_REVIEWS` capability (ADR-011
+Decision 2) sees **every** `completed` session in the installation,
+identically to a `SYSTEM_ADMIN` — a `MANAGER` without it sees nothing. The
+first two scopes are resolved by the shipped Layer 2 community-scope
+check; the third is not — it resolves from the performing-company
+attribution frozen onto the session (owned by `review-session-management`);
+the fourth resolves from the role alone, with no scope predicate
+whatsoever; the fifth resolves neither from an assignment, nor a company,
+nor the role alone, but from a per-user capability read fresh from the
+database on every request. Plus the completed-only rule and a scoped
+read-back of one historical session. Who holds the permission, and each
+scope rule itself, are owned by `authorization`; the field write flow is
+owned by `review-session-management`; the web surface by
 `review-history-ui`.
 
+FR-008's role-based visibility axis closes here; **per-element** history
+remains the only deferred half. No new repository read, route or port
+signature ships for the fifth scope: the granted manager reuses the
+single unscoped pair the admin scope introduced.
+
 Deliberately **not** here (deferred, see the guard requirements below):
-the `MANAGER` half of global visibility and therefore the whole
-`ManagerCapability` mechanism, per-element history filtering, pagination,
-date filters, sorting and search, and any write, signing, export,
-scheduling or analytics path.
+the other five `ManagerCapability` names ADR-011 Decision 2 lists,
+per-element history filtering, pagination, date filters, sorting and
+search, and any write, signing, export, scheduling or analytics path.
 
 ## Requirements
 
@@ -149,6 +157,130 @@ carrying no attributed company MUST appear in no manager's list.
 - WHEN the manager of the attributed company requests their company review history
 - THEN those sessions MUST be listed alongside newly completed ones, with no distinction in shape
 
+### Requirement: A Granted Manager's Installation-Wide Completed Review History
+
+The system MUST let a `MANAGER` holding the `VIEW_ALL_REVIEWS` capability
+list **every** `completed` review session in the installation, and open
+any of them by identifier — the **same** result, in the **same** order,
+with the **same** row shape as *A System Admin's Installation-Wide
+Completed Review History* produces for a `SYSTEM_ADMIN`. There MUST be no
+manager-specific variant: no reduced result, no enriched result, no extra
+or missing row field, and no separate route.
+
+It MUST be served by the **same** unscoped read pair the admin scope
+already ships. No new repository method, no new route and no
+`ReviewSessionRepository` port signature change MUST be introduced, and
+the read MUST NOT be re-expressed as a scoped read issued with an empty,
+wildcard or null scope value.
+
+Visibility MUST NOT be reduced by deleted or deactivated context, exactly
+as for the admin: a session whose community, attributed maintenance
+company or performer has been deactivated or soft-deleted, and a session
+carrying no performing-company attribution at all, MUST still be listed
+and readable by id. `VIEW_ALL_REVIEWS` means literally everything.
+
+The `completed`-only rule MUST still hold: a `draft` MUST NOT appear in
+this list and MUST NOT be readable through the history detail read by
+this actor either. An empty installation MUST produce a successful empty
+list, never an error.
+
+#### Scenario: A granted manager sees every completed session
+- GIVEN completed sessions attributed to companies X and Y, on communities C and D, performed by three different technicians, and a `MANAGER` holding `VIEW_ALL_REVIEWS`
+- WHEN they request review history
+- THEN the response MUST be 2xx and MUST contain every one of those sessions in one flat list, in deterministic chronological order by completion time
+
+#### Scenario: The granted manager's list is identical to the admin's
+- GIVEN the same installation, a `SYSTEM_ADMIN` and a `MANAGER` holding `VIEW_ALL_REVIEWS`
+- WHEN both request review history and both lists are compared
+- THEN they MUST contain exactly the same sessions, in exactly the same order, with exactly the same row fields
+
+#### Scenario: Deleted or deactivated context hides nothing from the granted manager
+- GIVEN a `completed` session on a soft-deleted community, one attributed to a soft-deleted maintenance company, and one carrying no attributed company at all
+- WHEN a `MANAGER` holding `VIEW_ALL_REVIEWS` requests review history and opens each of the three
+- THEN all three MUST be listed and each MUST return its full recorded record
+
+#### Scenario: The granted manager reads back any completed session
+- GIVEN a `completed` session S performed by a technician of company X on community C, and a `MANAGER` holding `VIEW_ALL_REVIEWS` with no relationship to either
+- WHEN they open S
+- THEN the response MUST be 2xx and MUST return the same recorded record the performer and the admin would see, with no manager-specific variant
+
+#### Scenario: An empty installation renders a successful empty list
+- GIVEN an installation with no `completed` session at all
+- WHEN a `MANAGER` holding `VIEW_ALL_REVIEWS` requests review history
+- THEN the response MUST be 2xx carrying an empty list, and MUST NOT be an error
+
+#### Scenario: Drafts and unknown ids still 404 for the granted manager
+- GIVEN one `draft` session and a well-formed session identifier matching no session anywhere
+- WHEN a `MANAGER` holding `VIEW_ALL_REVIEWS` requests each through the history detail read
+- THEN both responses MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical in status, code and message
+
+#### Scenario: The fifth scope adds no repository read
+- GIVEN the `ReviewSessionRepository` port and its adapters before and after this change
+- WHEN their methods and signatures are compared
+- THEN they MUST be identical — the granted manager MUST be served by the existing unscoped list/by-id pair, with no method added, removed or re-signed
+
+### Requirement: An Ungranted Manager Reads Nothing
+
+A `MANAGER` who does **not** hold `VIEW_ALL_REVIEWS` MUST read nothing
+through the history surface, and MUST be **observably identical** to the
+role's behaviour before this change. This is a binding regression
+requirement, to be proven rather than asserted: the list MUST be empty
+and every by-id request MUST be `404 REVIEW_SESSION_NOT_FOUND`,
+indistinguishable in status, code and message from a nonexistent
+session, on **every** history route — proven for each route, not sampled.
+
+The empty result MUST be produced **before** any review-session data
+access: an absent capability MUST short-circuit, and MUST NOT fall
+through to the unscoped read, to a scoped read with an empty or null
+scope value, or to any post-hoc filtering of a broader result set.
+
+The ungranted state MUST be the default and MUST be recoverable only by
+an explicit grant. A newly created `MANAGER` MUST hold no capability; a
+`MANAGER` whose capability was revoked MUST read nothing from their very
+next request; a user changed away from `MANAGER` and later changed back
+MUST hold **no** capability; and a soft-deleted `MANAGER` MUST read
+nothing regardless of what their record carries.
+
+#### Scenario: An ungranted manager's list is empty on every route
+- GIVEN completed sessions existing across two companies and two communities, and an authenticated `MANAGER` holding no capability
+- WHEN they request the history list
+- THEN the response MUST be 2xx carrying an empty list
+
+#### Scenario: An ungranted manager's by-id read is indistinguishable from nonexistent
+- GIVEN any `completed` session in the installation and an authenticated `MANAGER` holding no capability
+- WHEN they request it by id, and separately request a well-formed identifier matching no session
+- THEN both responses MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical in status, error code and message, disclosing nothing about the session's existence
+
+#### Scenario: An ungranted manager reaches no repository call
+- GIVEN an authenticated `MANAGER` holding no capability
+- WHEN they call the history list and the history by-id read
+- THEN no `ReviewSessionRepository` read MUST be issued for either request
+
+#### Scenario: An absent capability never widens the query
+- GIVEN the manager history path after this change
+- WHEN its data access is inspected
+- THEN an unresolved or absent capability MUST NOT issue the unscoped read, MUST NOT issue any read with an empty, wildcard or null scope value, and MUST NOT fetch-then-filter
+
+#### Scenario: A newly created manager holds no capability
+- GIVEN a `SYSTEM_ADMIN` creates a new `MANAGER`
+- WHEN that manager requests review history
+- THEN the list MUST be empty — creation MUST offer no way to hold a capability
+
+#### Scenario: A revoked manager reads nothing from the next request
+- GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` who has just listed every completed session
+- WHEN the capability is revoked and they repeat the identical request without logging out or back in
+- THEN the list MUST be empty
+
+#### Scenario: A role round trip leaves no capability behind
+- GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` whose role is changed to another role and later changed back to `MANAGER`
+- WHEN they request review history
+- THEN the list MUST be empty — the previously granted capability MUST NOT have survived the round trip
+
+#### Scenario: A soft-deleted manager holding the capability reads nothing
+- GIVEN a `MANAGER` whose record holds `VIEW_ALL_REVIEWS` and who has since been soft-deleted
+- WHEN a history request is made on their behalf
+- THEN it MUST return nothing
+
 ### Requirement: A System Admin's Installation-Wide Completed Review History
 
 The system MUST let a `SYSTEM_ADMIN` list **every** `completed` review
@@ -160,8 +292,11 @@ that re-introduces any narrowing on this read MUST be treated as a
 regression.
 
 The result MUST be a single flat list in the same deterministic
-chronological order by completion time, and in the same direction, as the
-other three scopes' lists. An empty installation MUST produce a
+chronological order by completion time, and in the same direction, as
+every other scope's list, including a granted `MANAGER`'s (see *A Granted
+Manager's Installation-Wide Completed Review History*), whose list is
+this same read and is therefore identical to the admin's, session for
+session and in the same order. An empty installation MUST produce a
 successful empty list, never an error.
 
 Because this list spans companies, communities and performers, every row
@@ -169,8 +304,9 @@ MUST identify its community and **who performed** the session, exactly as
 the company-wide list already does. No additional row field is required
 by this scope.
 
-Visibility MUST NOT be reduced by deleted or deactivated context — the
-one scope with no exceptions:
+Visibility MUST NOT be reduced by deleted or deactivated context — this
+and the granted-manager scope are now the **two** scopes with no
+exceptions:
 
 | Case | Required behaviour |
 |---|---|
@@ -179,24 +315,33 @@ one scope with no exceptions:
 | The session carries no performing-company attribution at all | The session MUST still be listed and readable by id |
 | The session's performer has been deactivated or soft-deleted, or has changed employer | The session MUST still be listed and readable by id |
 
-This deliberately diverges from the other three scopes, where deactivated
-context removes visibility. The purpose here is total system audit, not
+This deliberately diverges from the technician, representative and
+company-manager scopes, where deactivated context removes visibility. The
+purpose here — as for a granted manager — is total system audit, not
 operational scoping: deleted context MUST NOT hide a compliance record
 from the auditor.
 
 The `completed`-only rule MUST still hold: a `draft` MUST NOT appear in
 this list and MUST NOT be readable through the history detail read by
 this actor either.
+(Previously: described as diverging from "the other three scopes" and
+ordering compared against "the other three scopes' lists" — both counts
+now understate the picture, since a granted `MANAGER`'s scope is the
+identical read and therefore shares this scope's every property,
+including the no-narrowing behaviour and the deactivated/deleted-context
+exceptions table. The divergence from the technician, representative and
+company-manager scopes — the three that still narrow — is otherwise
+unchanged.)
 
 #### Scenario: The admin sees every completed session in the installation
 - GIVEN completed sessions attributed to companies X and Y, on communities C and D, performed by three different technicians
 - WHEN a `SYSTEM_ADMIN` requests review history
 - THEN the response MUST be 2xx and MUST contain every one of those sessions in one flat list, in deterministic chronological order by completion time
 
-#### Scenario: The ordering matches the other three scopes
-- GIVEN the same set of completed sessions visible to a technician, a representative, a manager and a `SYSTEM_ADMIN`
+#### Scenario: The ordering matches every other scope's list, including a granted manager's
+- GIVEN the same set of completed sessions visible to a technician, a representative, a company manager, a `SYSTEM_ADMIN` and a `MANAGER` holding `VIEW_ALL_REVIEWS`
 - WHEN each list is compared
-- THEN the relative order of any two sessions present in more than one of them MUST be identical
+- THEN the relative order of any two sessions present in more than one of them MUST be identical, and the admin's and the granted manager's lists MUST be identical session for session
 
 #### Scenario: A deactivated community's sessions remain visible
 - GIVEN a `completed` session on a community that has since been deactivated or soft-deleted
@@ -206,7 +351,7 @@ this actor either.
 #### Scenario: A soft-deleted or absent company does not hide a session
 - GIVEN a `completed` session attributed to a soft-deleted maintenance company, and another carrying no attributed company at all
 - WHEN a `SYSTEM_ADMIN` requests review history
-- THEN both MUST appear — even though the unattributed one appears in no manager's list
+- THEN both MUST appear — even though the unattributed one appears in no company manager's list
 
 #### Scenario: An empty installation renders a successful empty list
 - GIVEN an installation with no `completed` session at all
@@ -250,9 +395,16 @@ not `completed`; both MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical
 in status, error code and message, per *An Out-of-Scope Historical
 Session Is Indistinguishable From a Nonexistent One*.
 
-This read MUST be reachable **only** for a `SYSTEM_ADMIN`. For every
-other role, the shipped scope rules MUST decide the outcome exactly as
-they did before this change.
+This unconditional read MUST be reachable by exactly **two** actors: a
+`SYSTEM_ADMIN`, whose access is unconditional on anything beyond the
+role, and a `MANAGER` for whom `VIEW_ALL_REVIEWS` resolves affirmatively,
+whose access is conditional on that capability alone (see *A Granted
+Manager's Installation-Wide Completed Review History*). For every other
+role — and for a `MANAGER` without the capability — the shipped scope
+rules MUST decide the outcome exactly as they did before this change.
+(Previously: the read was reachable **only** for a `SYSTEM_ADMIN`, and
+every other role, `MANAGER` included, was decided by the shipped scope
+rules.)
 
 #### Scenario: The admin opens a session from a company and community they have no relation to
 - GIVEN a `completed` session S attributed to company X, performed by X's technician on community C, and a `SYSTEM_ADMIN` with no assignment and no company
@@ -264,8 +416,13 @@ they did before this change.
 - WHEN a `SYSTEM_ADMIN` opens it
 - THEN the response MUST be 2xx and MUST return its full recorded record
 
-#### Scenario: No other role gains the unconditional by-id read
-- GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE` and a `MAINTENANCE_COMPANY_MANAGER`, and a `completed` session outside each one's scope
+#### Scenario: The admin's access stays unconditional on any capability
+- GIVEN a `SYSTEM_ADMIN` whose user record carries no capability of any kind
+- WHEN they open any `completed` session by id
+- THEN the response MUST be 2xx — the capability mechanism MUST NOT be consulted for this actor
+
+#### Scenario: No role other than the admin and a granted manager gains the unconditional by-id read
+- GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE`, a `MAINTENANCE_COMPANY_MANAGER` and a `MANAGER` holding no capability, and a `completed` session outside each one's scope
 - WHEN each requests that session by id after this change
 - THEN each MUST receive `404 REVIEW_SESSION_NOT_FOUND`, exactly as before this change
 
@@ -318,18 +475,22 @@ read-back MUST be available to the session's performer; to a
 `COMMUNITY_REPRESENTATIVE` **who did not perform it**, for a session on a
 community they are actively assigned to; to a
 `MAINTENANCE_COMPANY_MANAGER` **who did not perform it**, for a session
-attributed to their own maintenance company; and to a `SYSTEM_ADMIN`,
-for **any** `completed` session in the installation, whose scope is the
-whole installation (see *A System Admin Can Read Any Completed Session by
-Identifier*). All four MUST receive the identical record — there MUST be
-no reduced or role-specific variant of the recorded record. The record
-MUST be returned as it was answered, paired with the template snapshot's
-wording, per *Sessions Render the Template's Frozen Snapshot*. Each entry
-MUST carry the identity of the inspectable element it records — a record
-whose entries cannot be attributed to a physical element is not a
-compliance record.
-(Previously: the read-back was available to the performer, an actively
-assigned representative, and the manager of the attributed company only.)
+attributed to their own maintenance company; to a `SYSTEM_ADMIN`, for
+**any** `completed` session in the installation, whose scope is the whole
+installation (see *A System Admin Can Read Any Completed Session by
+Identifier*); and to a `MANAGER` holding `VIEW_ALL_REVIEWS`, for **any**
+`completed` session in the installation on exactly the same terms (see
+*A Granted Manager's Installation-Wide Completed Review History*). All
+five MUST receive the identical record — there MUST be no reduced or
+role-specific variant of the recorded record. The record MUST be returned
+as it was answered, paired with the template snapshot's wording, per
+*Sessions Render the Template's Frozen Snapshot*. Each entry MUST carry
+the identity of the inspectable element it records — a record whose
+entries cannot be attributed to a physical element is not a compliance
+record.
+(Previously: available to the performer, an actively assigned
+representative, the manager of the attributed company and a
+`SYSTEM_ADMIN` — four callers, with no capability-gated caller.)
 
 #### Scenario: A performer reads back their own completed session
 - GIVEN a `MAINTENANCE_TECHNICIAN` completed a session with three elements answered and one marked unreviewed with a reason
@@ -351,6 +512,16 @@ assigned representative, and the manager of the attributed company only.)
 - WHEN the admin opens S from their history
 - THEN the response MUST be 2xx and MUST return the same recorded record the performer would see, with no admin-specific variant
 
+#### Scenario: A granted MANAGER reads back the identical record
+- GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` and the same `completed` session S the admin just read back
+- WHEN they open S
+- THEN the response MUST be 2xx and MUST return byte-for-byte the same recorded record the admin received, with no manager-specific variant
+
+#### Scenario: An ungranted MANAGER gets no read-back
+- GIVEN a `MANAGER` holding no capability and any `completed` session S
+- WHEN they open S
+- THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`
+
 #### Scenario: Each entry identifies the element it records
 - GIVEN a `completed` session read back through history
 - WHEN its entries are inspected
@@ -371,35 +542,37 @@ assigned representative, and the manager of the attributed company only.)
 Every history read MUST have its visibility scope expressed in the data
 access itself, and the system MUST NOT obtain a broader result set and
 narrow it in a use case, controller or client. This MUST hold for all
-four scopes — including the `SYSTEM_ADMIN` scope, where the scope **is**
-the whole installation: the admin read MUST be a distinct data access
-whose only predicate is the `completed` status, never a scoped read
-issued with an empty, wildcard or null scope value. A scope that cannot
-be resolved MUST still produce no result rather than an unscoped one, for
-every role that has a scope to resolve.
+**five** scopes — including the two installation-wide ones, where the
+scope **is** the whole installation: that read MUST be a distinct data
+access whose only predicate is the `completed` status, never a scoped
+read issued with an empty, wildcard or null scope value. A scope that
+cannot be resolved MUST still produce no result rather than an unscoped
+one, for every role that has a scope to resolve — and an unresolved or
+absent `VIEW_ALL_REVIEWS` capability MUST be treated as exactly such an
+unresolvable scope.
 
-The installation-wide read MUST be reachable **only** from the
-`SYSTEM_ADMIN` path. It MUST be impossible to reach it while serving any
-other role, and it MUST be named and expressed so that a reader — and an
-autocomplete list — cannot mistake it for, or accidentally select it in
-place of, a scoped read. *How* this is achieved, and how the shipped
-property that no read of a session is available from an identifier alone
-is restated now that one such read legitimately exists, is a design
-decision; *that* the unscoped read is unreachable from every non-admin
-path is a requirement.
-(Previously: the system MUST NOT expose an unscoped by-id read of a
-review session at all, and no port method MUST return a session from an
-identifier alone.)
+The installation-wide read MUST be reachable from exactly **two**
+enumerable call sites: the `SYSTEM_ADMIN` path, and the `MANAGER` path
+after the capability has resolved affirmatively. It MUST be impossible to
+reach it while serving any other role or an ungranted `MANAGER`, and it
+MUST be named and expressed so that a reader — and an autocomplete list —
+cannot mistake it for, or accidentally select it in place of, a scoped
+read. *How* this is achieved, and how the shipped property that no read
+of a session is available from an identifier alone is restated now that
+one such read legitimately exists, is a design decision; *that* the
+unscoped read is unreachable from every other path is a requirement.
+(Previously: the unscoped read had to be reachable only from the
+`SYSTEM_ADMIN` path, and there were four scopes.)
 
 #### Scenario: Exactly one unscoped read exists
 - GIVEN the review-session repository port and its adapters after this change
 - WHEN the methods that read `completed` sessions are enumerated
 - THEN exactly one list method and one by-id method MUST carry no performer, community or maintenance-company scope, and every other method MUST carry one
 
-#### Scenario: The unscoped read is reachable only from the admin path
+#### Scenario: The unscoped read is reachable only from the admin and granted-manager paths
 - GIVEN the call sites of the unscoped read after this change
 - WHEN every one of them is enumerated — no sampling
-- THEN each MUST be the `SYSTEM_ADMIN` path of the history access resolution, and no other use case, service, controller or adapter MUST call it
+- THEN there MUST be exactly two, both in the history access resolution: the `SYSTEM_ADMIN` path and the `MANAGER` path guarded by an affirmative capability resolution — and no other use case, service, controller or adapter MUST call it
 
 #### Scenario: Scope is never applied after the fact
 - GIVEN the history use cases and routes after this change
@@ -409,10 +582,15 @@ identifier alone.)
 #### Scenario: An unresolvable company never widens the query
 - GIVEN a company-scoped history read whose caller has no maintenance company
 - WHEN the data access is inspected
-- THEN it MUST NOT be issued without a company predicate, and MUST NOT fall back to an unfiltered read — and in particular MUST NOT fall through to the admin's unscoped read
+- THEN it MUST NOT be issued without a company predicate, and MUST NOT fall back to an unfiltered read — and in particular MUST NOT fall through to the unscoped read
+
+#### Scenario: An absent capability never widens the query
+- GIVEN a `MANAGER` history read whose caller holds no `VIEW_ALL_REVIEWS`
+- WHEN the data access is inspected
+- THEN no read MUST be issued at all, and the path MUST NOT fall through to the unscoped read
 
 #### Scenario: The scoped reads are not re-expressed as the unscoped one
-- GIVEN the technician, representative and manager history reads after this change
+- GIVEN the technician, representative and company-manager history reads after this change
 - WHEN their data access is inspected
 - THEN each MUST still carry its own scope predicate, and none MUST be implemented by issuing the unscoped read and narrowing the result
 
@@ -521,27 +699,39 @@ Immutable*. No history read MUST mutate any persisted state.
 
 ### Requirement: The Deferred Review Visibility Scopes Are Not Built
 
-FR-008's global visibility scope is now **half** built: the
-`SYSTEM_ADMIN` half ships in this change (see *A System Admin's
-Installation-Wide Completed Review History*). The `MANAGER` half stays
-deferred, and so does per-element history. FR-008 does **not** close with
-this change. The system MUST NOT introduce any of the following.
-(Previously: the whole global scope was deferred, no unscoped "all
-sessions" query was allowed to exist, and the capability's only migration
-was the performing-company attribution column and its backfill.)
+FR-008's **role-based** visibility axis is now fully built: this change
+ships the fifth and last scope (see *A Granted Manager's
+Installation-Wide Completed Review History*). **Per-element** history
+stays deferred, and FR-008 does **not** close with this change. The
+`ManagerCapability` mechanism now exists, but MUST declare exactly one
+member, `VIEW_ALL_REVIEWS`, and MUST gate review-history visibility only.
+The system MUST NOT introduce any of the following.
+(Previously: the `MANAGER` half of global visibility was deferred
+entirely, and no `VIEW_ALL_REVIEWS` permission or capability,
+`ManagerCapability` enum, `User.managerCapabilities` field, migration or
+capability-gated layer, and no `MANAGER` review visibility rule, was
+allowed to exist.)
 
 | Deferred | Must not exist |
 |---|---|
-| Global visibility for `MANAGER` | Any `VIEW_ALL_REVIEWS` permission or capability; any `ManagerCapability` enum, `User.managerCapabilities` field, migration or capability-gated permission layer; any `MANAGER` review visibility rule |
-| A second unscoped read | Any unscoped "all sessions" query beyond the single admin pair, and any path reaching that pair while serving a non-`SYSTEM_ADMIN` caller |
+| ADR-011 Decision 2's other five capabilities | Any declaration, gate, branch, UI or reference to `MANAGE_COMMUNITIES`, `MANAGE_MAINTENANCE_COMPANIES`, `MANAGE_CHECKLIST_CONTENT`, `MANAGE_INSPECTABLE_ELEMENTS` or `MANAGE_ORGANIZATION_PROFILE`, anywhere in `apps/**` or `packages/**`; any capability gating anything other than the review-history read |
+| A second unscoped read | Any unscoped "all sessions" query beyond the single shipped pair, and any path reaching that pair while serving a caller who is neither a `SYSTEM_ADMIN` nor a `MANAGER` with an affirmatively resolved capability |
+| Capability state outside the database | Any `managerCapabilities` claim in a JWT or token payload, any cached or precomputed capability, and any client-side authorization decision derived from one |
+| An audit trail | Any audit table, event or write recording a capability grant, a capability revoke or a role change |
+| A narrowed variant of the granted read | Any per-company, per-community or date-bounded variant of `VIEW_ALL_REVIEWS`, and any granted-manager-specific repository method or route |
 | Per-element history (FR-008's other half) | Any query, route or use case returning the past reviews of one inspectable element |
 | List controls | Any pagination, date-range filter, sorting or search parameter on a history read — including on the installation-wide list, by far the largest |
 | Company-attribution history | Any effective-dated employment table, attribution version history, or route/use case that rewrites a session's recorded performing company |
 
-#### Scenario: No manager capability mechanism exists
-- GIVEN the user model, schema and authorization code after this change
-- WHEN they are searched for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
-- THEN none MUST exist, and no migration MUST have added such a field
+#### Scenario: Exactly one manager capability is declared
+- GIVEN the `ManagerCapability` enum, the user model, the schema and the authorization code after this change
+- WHEN they are searched for capability names
+- THEN exactly one — `VIEW_ALL_REVIEWS` — MUST exist, and none of ADR-011's other five names MUST appear anywhere in `apps/**` or `packages/**`
+
+#### Scenario: The capability lives only in the database
+- GIVEN the token payload, the authenticated actor, the current-user endpoint's response and the client's authorization code after this change
+- WHEN each is inspected
+- THEN none MUST carry `managerCapabilities`, and the capability MUST be re-read from the database on every request with no cache
 
 #### Scenario: Every scoped query still names its scope, and only one query names none
 - GIVEN the review-session repository port and its adapters after this change
@@ -561,14 +751,14 @@ was the performing-company attribution column and its backfill.)
 #### Scenario: No list-control parameters are accepted
 - GIVEN the history read routes and their request contracts after this change
 - WHEN they are inspected
-- THEN none MUST accept a page, cursor, limit, offset, date-range, sort or search parameter, on any of the four scopes
+- THEN none MUST accept a page, cursor, limit, offset, date-range, sort or search parameter, on any of the five scopes
 
-#### Scenario: This change adds no new column, table or backfill
+#### Scenario: This change adds exactly one additive column and no backfill
 - GIVEN the migration directory and `schema.prisma` after this change
 - WHEN they are compared with the state before the change
-- THEN neither MUST gain a new column, a new table, or a backfill — installation-wide visibility MUST require no change to the domain model's shape
+- THEN the only difference MUST be the additive `ManagerCapability` enum and the `User.managerCapabilities` column with an empty default — no table, no backfill, no data migration, and no change to `ReviewSession`
 
-#### Scenario: The installation-wide read is backed by a covering index, not a model change
-- GIVEN the unscoped `findCompletedAcrossInstallation` / `findCompletedByIdAcrossInstallation` pair filters `ReviewSession` on `status` alone, with no FK to lean on the way the three scoped siblings do
-- WHEN the migration directory and `schema.prisma` are compared with the state before the change
-- THEN exactly one migration MUST exist, adding a composite index on `ReviewSession(status, completedAt, id)` and nothing else — this index exists solely to keep the unscoped read off a full table scan and filesort, and MUST NOT be read as license to drop it
+#### Scenario: The installation-wide read keeps its covering index
+- GIVEN the composite index on `ReviewSession(status, completedAt, id)` that keeps the unscoped read off a full table scan and filesort
+- WHEN the schema and migration directory are inspected after this change
+- THEN that index MUST still exist unchanged — a second role reaching the same unscoped read MUST NOT be read as license to drop it, and MUST NOT add a further index to `ReviewSession`

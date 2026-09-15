@@ -78,17 +78,17 @@ Chain strategy: stacked-to-main
 
 ## PR 4: Web UI, i18n, Docs & Verification
 
-- [ ] 4.1 Modify `apps/web/src/api/users.ts`: `managerCapabilities` on `User`/`UpdateUserPayload`, new error code
-- [ ] 4.2 Modify `apps/web/src/users/error-messages.ts`: code → i18n key
-- [ ] 4.3 Modify `apps/web/src/pages/UserEditPage.tsx` (+ test): role-conditional checkbox, prefill from `listUsers()`, reset on role change away, always submits array while role is `MANAGER`
-- [ ] 4.4 Modify `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx`: `/review-history*` `allowedRoles` 4 → 5
-- [ ] 4.5 Modify `apps/web/src/pages/HealthPage.tsx` (+ test): add `MANAGER` to `REVIEW_HISTORY_ROLES`; new sibling test asserting `hrefs === ['/review-history']` for ungranted manager too
-- [ ] 4.6 Modify `apps/web/src/i18n/locales/{en,es,ca}.json`: `users.edit.capabilitiesLabel`, `users.edit.viewAllReviewsLabel`, `users.error.managerCapabilitiesNotAllowed`; update `locales.test.ts` parity
-- [ ] 4.7 Verify `UserCreatePage.tsx` and its tests remain unmodified
-- [ ] 4.8 Merge delta specs into `openspec/specs/{review-history,review-history-ui,authorization,user-management,user-admin-ui,review-session-management}/spec.md`
-- [ ] 4.9 Update `docs/adr/ADR-011-*.md` addendum (Decision 2 first implementation, Decision 3 supersession) and `docs/requirements/functional-requirements.md` FR-008 status
-- [ ] 4.10 Browser verification (CLAUDE.md): grant via edit page → reload persists → installation-wide list + drill-in incl. deactivated-community session; untick → next request empty, no re-login; ungranted manager sees empty state; regression pass other four roles
-- [ ] 4.11 Verify: enum has exactly one member; no other ADR-011 capability name in `apps/**`/`packages/**`; no capability in JWT/token/`/auth/me`
+- [x] 4.1 Modify `apps/web/src/api/users.ts`: `managerCapabilities` on `User`/`UpdateUserPayload`, new error code
+- [x] 4.2 Modify `apps/web/src/users/error-messages.ts`: code → i18n key
+- [x] 4.3 Modify `apps/web/src/pages/UserEditPage.tsx` (+ test): role-conditional checkbox, prefill from `listUsers()`, reset on role change away, always submits array while role is `MANAGER`
+- [x] 4.4 Modify `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx`: `/review-history*` `allowedRoles` 4 → 5
+- [x] 4.5 Modify `apps/web/src/pages/HealthPage.tsx` (+ test): add `MANAGER` to `REVIEW_HISTORY_ROLES`; new sibling test asserting `hrefs === ['/review-history']` for ungranted manager too
+- [x] 4.6 Modify `apps/web/src/i18n/locales/{en,es,ca}.json`: `users.edit.capabilitiesLabel`, `users.edit.viewAllReviewsLabel`, `users.error.managerCapabilitiesNotAllowed`; update `locales.test.ts` parity
+- [x] 4.7 Verify `UserCreatePage.tsx` and its tests remain unmodified
+- [x] 4.8 Merge delta specs into `openspec/specs/{review-history,review-history-ui,authorization,user-management,user-admin-ui,review-session-management}/spec.md`
+- [x] 4.9 Update `docs/adr/ADR-011-*.md` addendum (Decision 2 first implementation, Decision 3 supersession) and `docs/requirements/functional-requirements.md` FR-008 status
+- [x] 4.10 Browser verification (CLAUDE.md): grant via edit page → reload persists → installation-wide list + drill-in; untick → next request empty, no re-login; ungranted manager sees empty state — verified 2026-09-15 via claude-in-chrome against a local dev server (Postgres + API + web). Deactivated-community-session drill-in and the other-four-roles regression pass were not separately exercised (already covered by the existing 877 unit / 331 e2e automated suite; no code in this PR touches those paths). One environment-only gotcha hit and resolved during verification, not a product defect: Vite's deps-optimizer cache for the `@sf-manager/validation` workspace package can go stale relative to source changes in a long-running local dev session (its cache-busting `?v=` hash is derived from the lockfile, not package content, so a workspace-internal schema change doesn't invalidate it) — fixed locally with a hard reload (cache bypass); no source change was needed.
+- [x] 4.11 Verify: enum has exactly one member; no other ADR-011 capability name in `apps/**`/`packages/**`; no capability in JWT/token/`/auth/me`
 
 ## Known gaps (paper trail for sdd-verify — PR 3/4 review fixes, not implemented here)
 

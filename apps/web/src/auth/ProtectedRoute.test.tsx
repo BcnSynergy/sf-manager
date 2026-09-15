@@ -150,18 +150,21 @@ describe('ProtectedRoute with allowedRoles', () => {
 });
 
 // review-history-admin-scope spec "Role-Gated Route Access for the History
-// Views" (MODIFIED): the /review-history* routes in App.tsx use this exact
-// 4-role array — SYSTEM_ADMIN joins the three shipped roles, the
-// /review-sessions* write surface stays untouched. Exercised here against
-// the generic ProtectedRoute mechanism (App.tsx itself has no dedicated
-// route test file, per this repo's existing precedent) rather than booting
-// the full app with real auth.
-describe('ProtectedRoute with the review-history route family (4 allowed roles)', () => {
+// Views" (MODIFIED) + review-history-manager-capability design.md
+// Decision 7: the /review-history* routes in App.tsx use this exact 5-role
+// array — MANAGER joins the four shipped roles (gated on the role alone;
+// its actual visibility is a server-side capability check, not a route
+// concern), the /review-sessions* write surface stays untouched. Exercised
+// here against the generic ProtectedRoute mechanism (App.tsx itself has no
+// dedicated route test file, per this repo's existing precedent) rather
+// than booting the full app with real auth.
+describe('ProtectedRoute with the review-history route family (5 allowed roles)', () => {
   const REVIEW_HISTORY_ALLOWED_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
     'COMMUNITY_REPRESENTATIVE',
     'MAINTENANCE_COMPANY_MANAGER',
     'SYSTEM_ADMIN',
+    'MANAGER',
   ];
 
   function renderReviewHistoryRoute() {
@@ -234,6 +237,23 @@ describe('ProtectedRoute with the review-history route family (4 allowed roles)'
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
 
+  // review-history-manager-capability design.md Decision 7: the fifth and
+  // last role, reaching the identical surface — granted or not, the route
+  // itself never distinguishes; that's the capability checker's job,
+  // server-side.
+  it('a manager reaches the identical history views', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'manager@sf-manager.example', role: 'MANAGER' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderReviewHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
   // review-history-admin-scope spec: the admin's new reviewSession:read
   // permission is read-only history access — it must NOT widen
   // /review-sessions*, the write surface. Asserted here against the write
@@ -275,21 +295,14 @@ describe('ProtectedRoute with the review-history route family (4 allowed roles)'
     expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
   });
 
-  it('another role is denied with an explicit "not authorized" message, not a silent redirect', () => {
-    mockedUseAuth.mockReturnValue({
-      user: { id: '1', email: 'manager@sf-manager.example', role: 'MANAGER' },
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
-
-    renderReviewHistoryRoute();
-
-    expect(screen.getByTestId('not-authorized')).toBeInTheDocument();
-    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
-  });
-
+  // review-history-manager-capability design.md: with MANAGER now in the
+  // allowed-roles array, all five roles this app has reach /review-history*
+  // — there is no substitute role left to exercise the "denied" branch of
+  // this specific 5-role array (the shipped `INERT_NON_ADMIN_ROLES`-shaped
+  // "another role is denied" case this test used to cover no longer has a
+  // role to stand in for it). The denial branch itself stays covered by the
+  // generic `ProtectedRoute with allowedRoles` describe block above (line
+  // 75) and by the `/review-sessions*` denial test directly below.
   it('an unauthenticated visitor is redirected to /login', () => {
     mockedUseAuth.mockReturnValue({
       user: null,

@@ -41,6 +41,8 @@
       "roleLabel": "Rol",
       "companyLabel": "Empresa de manteniment",
       "companyPlaceholder": "Selecciona una empresa de manteniment",
+      "capabilitiesLabel": "Capacitats de gestor",
+      "viewAllReviewsLabel": "Pot veure totes les revisions completades de la instal·lació",
       "submitLabel": "Desa els canvis",
       "validationError": "Introdueix un correu electrònic vàlid.",
       "notFound": "No s'ha pogut trobar aquest usuari."
@@ -53,7 +55,8 @@
       "notFound": "No s'ha pogut trobar aquest usuari.",
       "maintenanceCompanyRequired": "Aquest rol requereix seleccionar una empresa de manteniment.",
       "maintenanceCompanyNotAllowed": "Aquest rol no accepta una empresa de manteniment.",
-      "maintenanceCompanyNotFound": "L'empresa de manteniment seleccionada ja no existeix."
+      "maintenanceCompanyNotFound": "L'empresa de manteniment seleccionada ja no existeix.",
+      "managerCapabilitiesNotAllowed": "Aquest rol no accepta capacitats de gestor."
     },
     "role": {
       "systemAdmin": "Administrador del sistema",

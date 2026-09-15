@@ -41,6 +41,8 @@
       "roleLabel": "Rol",
       "companyLabel": "Empresa de mantenimiento",
       "companyPlaceholder": "Selecciona una empresa de mantenimiento",
+      "capabilitiesLabel": "Capacidades de gestor",
+      "viewAllReviewsLabel": "Puede ver todas las revisiones completadas de la instalación",
       "submitLabel": "Guardar cambios",
       "validationError": "Introduce un correo electrónico válido.",
       "notFound": "No se ha podido encontrar este usuario."
@@ -53,7 +55,8 @@
       "notFound": "No se ha podido encontrar este usuario.",
       "maintenanceCompanyRequired": "Este rol requiere seleccionar una empresa de mantenimiento.",
       "maintenanceCompanyNotAllowed": "Este rol no acepta una empresa de mantenimiento.",
-      "maintenanceCompanyNotFound": "La empresa de mantenimiento seleccionada ya no existe."
+      "maintenanceCompanyNotFound": "La empresa de mantenimiento seleccionada ya no existe.",
+      "managerCapabilitiesNotAllowed": "Este rol no acepta capacidades de gestor."
     },
     "role": {
       "systemAdmin": "Administrador del sistema",
