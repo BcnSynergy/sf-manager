@@ -73,6 +73,7 @@ Chain strategy: stacked-to-main
 - [ ] 3.16 Modify `.../users/presentation/users.controller.ts`: `@ApiBody` + 400 doc, pipe rename call sites, `mapMutationError` branch for `InvalidManagerCapabilityAssignmentError`
 - [ ] 3.17 Modify `apps/api/test/users.e2e-spec.ts:592-593`: comment-only rename update
 - [ ] 3.18 E2E: grant/revoke round trip, absent-field no-op, role-change clear, reject-on-non-MANAGER 400
+  - [ ] PR 3's e2e work must also close the 3 granted-manager scenarios in `review-history/spec.md` that PR 2 left without an e2e owner ("the granted manager's list is identical to the admin's", "deleted/deactivated context hides nothing from the granted manager", "an empty installation renders a successful empty list") by adding a granted MANAGER to the SYSTEM_ADMIN installation-wide `describe` block in `apps/api/test/review-history.e2e-spec.ts` (~line 2025, which already has the company/soft-deleted fixtures PR 2's own describe block lacks) and asserting its `/review-history` list `toEqual`s the admin's list, closing all three scenarios at once
 - [ ] 3.19 Verify: in-memory fake parity (absent leaves value, `[]` clears); `create` path untouched
 
 ## PR 4: Web UI, i18n, Docs & Verification
