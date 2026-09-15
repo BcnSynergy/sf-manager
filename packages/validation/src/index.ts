@@ -16,6 +16,7 @@ export * from './auth/login.schema';
 export * from './users/password.schema';
 export * from './users/create-user.schema';
 export * from './users/update-user.schema';
+export * from './users/manager-capability.schema';
 export * from './community/community.schema';
 export * from './maintenance-company/maintenance-company.schema';
 export * from './inspectable-element/inspectable-element.schema';
