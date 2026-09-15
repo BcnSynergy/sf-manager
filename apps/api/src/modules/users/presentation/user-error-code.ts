@@ -16,4 +16,8 @@ export type UserErrorCode =
   | 'TRANSACTION_CONFLICT'
   | 'MAINTENANCE_COMPANY_REQUIRED'
   | 'MAINTENANCE_COMPANY_NOT_ALLOWED'
-  | 'MAINTENANCE_COMPANY_NOT_FOUND';
+  | 'MAINTENANCE_COMPANY_NOT_FOUND'
+  // review-history-manager-capability/design.md Decision 6: a PATCH that
+  // would leave a non-MANAGER resulting role holding a non-empty
+  // managerCapabilities array.
+  | 'MANAGER_CAPABILITIES_NOT_ALLOWED';

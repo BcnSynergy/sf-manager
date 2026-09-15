@@ -7,8 +7,10 @@ import { ZodType } from 'zod';
 // Zod-inferred types carry no decorator metadata (design.md Interfaces).
 export class ZodValidationPipe implements PipeTransform {
   // protected (not private) so module-local subclasses — e.g.
-  // MaintenanceCompanyZodValidationPipe — can re-run safeParse and inspect
-  // the raw issues before falling back to this class's generic rejection.
+  // UserCodedZodValidationPipe (renamed from MaintenanceCompanyZodValidationPipe,
+  // review-history-manager-capability/design.md Decision 6) — can re-run
+  // safeParse and inspect the raw issues before falling back to this
+  // class's generic rejection.
   constructor(protected readonly schema: ZodType) {}
 
   transform(value: unknown) {

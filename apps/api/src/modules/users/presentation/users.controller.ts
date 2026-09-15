@@ -32,6 +32,7 @@ import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
 import { UpdateUserUseCase } from '../application/use-cases/update-user.use-case';
 import { EmailAlreadyInUseError } from '../domain/errors/email-already-in-use.error';
 import { InvalidMaintenanceCompanyAssignmentError } from '../domain/errors/invalid-maintenance-company-assignment.error';
+import { InvalidManagerCapabilityAssignmentError } from '../domain/errors/invalid-manager-capability-assignment.error';
 import { LastSystemAdminError } from '../domain/errors/last-system-admin.error';
 import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-company-not-found.error';
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
@@ -41,7 +42,7 @@ import type { UserErrorCode } from './user-error-code';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { MaintenanceCompanyZodValidationPipe } from './pipes/maintenance-company-zod-validation.pipe';
+import { UserCodedZodValidationPipe } from './pipes/user-coded-zod-validation.pipe';
 
 const ROLE_ENUM = [
   'SYSTEM_ADMIN',
@@ -100,7 +101,7 @@ export class UsersController {
       'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND).',
   })
   async create(
-    @Body(new MaintenanceCompanyZodValidationPipe(createUserSchema))
+    @Body(new UserCodedZodValidationPipe(createUserSchema))
     body: CreateUserRequestDto,
   ): Promise<UserResponseDto> {
     try {
@@ -145,6 +146,17 @@ export class UsersController {
             'even when this field is absent (spec.md "Grandfathered ' +
             'Maintenance-Role Users").',
         },
+        managerCapabilities: {
+          type: 'array',
+          items: { type: 'string', enum: ['VIEW_ALL_REVIEWS'] },
+          description:
+            'Present iff this request grants/revokes a manager capability. ' +
+            'Absent leaves the value unchanged; an explicit empty array is ' +
+            'always a legal revoke; a non-empty array is legal only when ' +
+            'the resulting role is MANAGER (review-history-manager-capability/' +
+            'design.md Decision 6). A role change away from MANAGER clears ' +
+            'this field server-side regardless of payload shape.',
+        },
       },
     },
   })
@@ -160,12 +172,14 @@ export class UsersController {
   @ApiBadRequestResponse({
     description:
       'Maintenance-company assignment invalid (code: MAINTENANCE_COMPANY_REQUIRED ' +
-      'or MAINTENANCE_COMPANY_NOT_ALLOWED) or the referenced company is ' +
-      'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND).',
+      'or MAINTENANCE_COMPANY_NOT_ALLOWED), the referenced company is ' +
+      'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND), or a ' +
+      'managerCapabilities grant was requested for a non-MANAGER resulting ' +
+      'role (code: MANAGER_CAPABILITIES_NOT_ALLOWED).',
   })
   async update(
     @Param('id') id: string,
-    @Body(new MaintenanceCompanyZodValidationPipe(updateUserSchema))
+    @Body(new UserCodedZodValidationPipe(updateUserSchema))
     body: UpdateUserRequestDto,
   ): Promise<UserResponseDto> {
     try {
@@ -219,6 +233,19 @@ export class UsersController {
         HttpStatus.CONFLICT,
         error.message,
         'TRANSACTION_CONFLICT',
+      );
+    }
+    // review-history-manager-capability/design.md File Changes: without
+    // this branch, the non-payload-decidable case (capability set with no
+    // `role` in the payload, resulting role non-MANAGER) would surface as
+    // an unmapped 500 — the schema's own refinement only catches the
+    // payload-decidable shape (role present + non-MANAGER in the same
+    // request).
+    if (error instanceof InvalidManagerCapabilityAssignmentError) {
+      return buildCodedError(
+        HttpStatus.BAD_REQUEST,
+        error.message,
+        'MANAGER_CAPABILITIES_NOT_ALLOWED',
       );
     }
     return this.mapMaintenanceCompanyError(error) ?? error;
