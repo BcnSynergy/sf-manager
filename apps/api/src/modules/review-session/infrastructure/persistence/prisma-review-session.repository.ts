@@ -5,7 +5,10 @@ import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { OpenDraftAlreadyExistsError } from '../../domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
-import { ReviewSessionRepository } from '../../application/ports/review-session.repository.port';
+import {
+  ElementReviewEntryRow,
+  ReviewSessionRepository,
+} from '../../application/ports/review-session.repository.port';
 import { ReviewSessionMapper } from './review-session.mapper';
 
 // Prisma unique-constraint violation code — mirrors
@@ -23,6 +26,24 @@ const FOREIGN_KEY_VIOLATION = 'P2003';
 // stable tiebreak on equal `completedAt` values).
 const COMPLETED_HISTORY_ORDER_BY: Prisma.ReviewSessionOrderByWithRelationInput[] =
   [{ completedAt: 'desc' }, { id: 'desc' }];
+
+// review-history-per-element design.md Decision 1: shared ordering for the
+// four element-keyed reads, `recordedAt DESC, entryId DESC` (`entryId` is a
+// UUIDv7, ADR-009 — deterministic tiebreak on equal timestamps). Exported so
+// the use case (Phase 2) applies it ONCE after the in-memory join
+// (Decision 2/5), rather than each adapter method sorting independently —
+// this is why the four methods below return their rows UNSORTED.
+export function ELEMENT_HISTORY_ORDER_BY(
+  a: ElementReviewEntryRow,
+  b: ElementReviewEntryRow,
+): number {
+  const aRecordedAt = a.recordedAt.getTime();
+  const bRecordedAt = b.recordedAt.getTime();
+  if (aRecordedAt !== bRecordedAt) {
+    return bRecordedAt - aRecordedAt;
+  }
+  return a.entryId < b.entryId ? 1 : a.entryId > b.entryId ? -1 : 0;
+}
 
 function isUniqueConstraintViolation(
   error: unknown,
@@ -378,6 +399,104 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
 
     const entries = await this.loadEntriesWithAnswers(id);
     return ReviewSessionMapper.toDomain(record, entries);
+  }
+
+  // review-history-per-element design.md Decision 2: entry-first, two-query
+  // join, forced by this schema's review FKs being Prisma-invisible (no
+  // `include`/join expressible). Step 1 bounds the candidate set by how
+  // many times THIS element has ever been reviewed (small), not by the
+  // scope's session count — the reverse order would build an unbounded `IN`
+  // list for the two unscoped branches. Step 3 is a NARROWING filter only:
+  // an entry can only survive if its session survived the scoped query, so
+  // there is no code path that can widen the result beyond `sessionScope`.
+  // Named without a `find` prefix on purpose: the port-surface enumeration
+  // guard test (`no repository port method returns a session or a list from
+  // an identifier alone`) enumerates every `find*` method on this class's
+  // prototype BY NAME — this private join helper is not itself a scoped
+  // port method (its scope comes from the caller-supplied `sessionScope`),
+  // so it must not collide with that list.
+  private async joinCompletedEntriesForElement(
+    elementId: string,
+    sessionScope: Prisma.ReviewSessionWhereInput,
+  ): Promise<ElementReviewEntryRow[]> {
+    const candidateEntries = await this.prisma.elementReviewEntry.findMany({
+      where: { inspectableElementId: elementId },
+    });
+    if (candidateEntries.length === 0) {
+      return [];
+    }
+
+    const sessions = await this.prisma.reviewSession.findMany({
+      where: {
+        id: { in: candidateEntries.map((entry) => entry.reviewSessionId) },
+        status: 'completed',
+        ...sessionScope,
+      },
+      select: { id: true, performedById: true, completedAt: true },
+    });
+    const sessionById = new Map(
+      sessions.map((session) => [session.id, session]),
+    );
+
+    const rows: ElementReviewEntryRow[] = [];
+    for (const entry of candidateEntries) {
+      const session = sessionById.get(entry.reviewSessionId);
+      if (!session || !session.completedAt) {
+        continue;
+      }
+      rows.push({
+        entryId: entry.id,
+        reviewSessionId: entry.reviewSessionId,
+        performedById: session.performedById,
+        completedAt: session.completedAt,
+        recordedAt: entry.recordedAt,
+        observations: entry.observations,
+      });
+    }
+    return rows;
+  }
+
+  // MAINTENANCE_TECHNICIAN — own recorded entries for this element, nothing
+  // else.
+  findCompletedEntriesForElementForPerformer(
+    elementId: string,
+    performedById: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return this.joinCompletedEntriesForElement(elementId, { performedById });
+  }
+
+  // COMMUNITY_REPRESENTATIVE — entries whose session is in one of the
+  // caller's currently active communities. `communityIds = []` yields
+  // Prisma's `{ in: [] }`, already a false predicate — no explicit
+  // empty-array guard needed for the fail-closed behaviour.
+  findCompletedEntriesForElementInCommunities(
+    elementId: string,
+    communityIds: readonly string[],
+  ): Promise<ElementReviewEntryRow[]> {
+    return this.joinCompletedEntriesForElement(elementId, {
+      communityId: { in: [...communityIds] },
+    });
+  }
+
+  // MAINTENANCE_COMPANY_MANAGER — entries whose session was performed by the
+  // caller's own company, no other conjunct (review-history-company-scope
+  // Decision 9, unchanged).
+  findCompletedEntriesForElementForCompany(
+    elementId: string,
+    companyId: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return this.joinCompletedEntriesForElement(elementId, {
+      performedByCompanyId: companyId,
+    });
+  }
+
+  // SYSTEM_ADMIN, and MANAGER holding VIEW_ALL_REVIEWS. The scope IS the
+  // installation — no narrowing conjunct beyond `status = 'completed'`
+  // (already applied by the shared private helper).
+  findCompletedEntriesForElementAcrossInstallation(
+    elementId: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return this.joinCompletedEntriesForElement(elementId, {});
   }
 
   private async loadEntriesWithAnswers(reviewSessionId: string) {
