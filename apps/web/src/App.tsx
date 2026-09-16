@@ -9,6 +9,7 @@ import { CommunityCreatePage } from './pages/CommunityCreatePage';
 import { CommunityDetailPage } from './pages/CommunityDetailPage';
 import { CommunityEditPage } from './pages/CommunityEditPage';
 import { CommunityElementsListPage } from './pages/CommunityElementsListPage';
+import { ElementReviewHistoryPage } from './pages/ElementReviewHistoryPage';
 import { HealthPage } from './pages/HealthPage';
 import { InspectableElementCreatePage } from './pages/InspectableElementCreatePage';
 import { InspectableElementEditPage } from './pages/InspectableElementEditPage';
@@ -169,6 +170,37 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
                 <InspectableElementLabelPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* review-history-per-element/design.md Decision 7: DELIBERATELY
+              five roles, unlike EVERY other route in this
+              `inspectable-elements` family, which is SYSTEM_ADMIN-only.
+              This is a review-history read that happens to be keyed by an
+              element, gated server-side on `reviewSession:read` (never
+              `inspectableElement:read`, which SYSTEM_ADMIN alone holds) —
+              so this route matches /review-history*'s 5-role array below,
+              not its own URL neighbours (`/edit`, `/label`, the list). Do
+              NOT "harmonize" it downward to SYSTEM_ADMIN, and do NOT copy
+              it upward onto `/edit`, `/label` or the element list.
+              ProtectedRoute.test.tsx pins both facts. Depth-5 dynamic route:
+              never conflicts with `/edit`/`/label` above (distinct final
+              path segments under the same dynamic `:elementId` parent — see
+              the ordering note on `/label` above) regardless of declaration
+              order. */}
+          <Route
+            path="/communities/:communityId/inspectable-elements/:elementId/history"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  'MAINTENANCE_TECHNICIAN',
+                  'COMMUNITY_REPRESENTATIVE',
+                  'MAINTENANCE_COMPANY_MANAGER',
+                  'SYSTEM_ADMIN',
+                  'MANAGER',
+                ]}
+              >
+                <ElementReviewHistoryPage />
               </ProtectedRoute>
             }
           />
