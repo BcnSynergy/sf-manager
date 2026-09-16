@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { Role } from '@sf-manager/validation';
+import { ELEMENT_HISTORY_ALLOWED_ROLES } from './element-history-route.roles';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from './AuthProvider';
 
@@ -326,14 +327,21 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
 // This block pins BOTH facts the in-file App.tsx comment calls out: the
 // five roles reach this route, and its SYSTEM_ADMIN-only siblings do not
 // widen alongside it.
+//
+// verify-report.md W-4: `ELEMENT_HISTORY_ALLOWED_ROLES` is imported from
+// `../App` (not hand-declared here) so an accidental narrowing of the real
+// route's `allowedRoles` in App.tsx fails this suite via an import-level
+// mismatch, instead of silently passing against a stale local copy.
 describe('ProtectedRoute for the element review-history route (5 allowed roles, admin-only siblings unchanged)', () => {
-  const ELEMENT_HISTORY_ALLOWED_ROLES: Role[] = [
-    'MAINTENANCE_TECHNICIAN',
-    'COMMUNITY_REPRESENTATIVE',
-    'MAINTENANCE_COMPANY_MANAGER',
-    'SYSTEM_ADMIN',
-    'MANAGER',
-  ];
+  it('App.tsx exports exactly the 5 roles the anomaly comment promises', () => {
+    expect(ELEMENT_HISTORY_ALLOWED_ROLES).toEqual<Role[]>([
+      'MAINTENANCE_TECHNICIAN',
+      'COMMUNITY_REPRESENTATIVE',
+      'MAINTENANCE_COMPANY_MANAGER',
+      'SYSTEM_ADMIN',
+      'MANAGER',
+    ]);
+  });
 
   function renderElementHistoryRoute() {
     return render(
