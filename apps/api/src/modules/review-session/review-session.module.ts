@@ -15,6 +15,7 @@ import { ListOwnReviewSessionsUseCase } from './application/use-cases/list-own-r
 import { ListReviewHistoryUseCase } from './application/use-cases/list-review-history.use-case';
 import { OpenReviewSessionUseCase } from './application/use-cases/open-review-session.use-case';
 import { ReadReviewHistoryUseCase } from './application/use-cases/read-review-history.use-case';
+import { ReadElementReviewHistoryUseCase } from './application/use-cases/read-element-review-history.use-case';
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -66,6 +67,7 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ListOwnReviewSessionsUseCase,
     ListReviewHistoryUseCase,
     ReadReviewHistoryUseCase,
+    ReadElementReviewHistoryUseCase,
     ReadReviewSessionUseCase,
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,

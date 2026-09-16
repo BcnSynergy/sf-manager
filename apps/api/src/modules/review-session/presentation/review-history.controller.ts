@@ -12,10 +12,13 @@ import { RequirePermission } from '../../../shared/presentation/decorators/requi
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
+import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ListReviewHistoryUseCase } from '../application/use-cases/list-review-history.use-case';
 import { ReadReviewHistoryUseCase } from '../application/use-cases/read-review-history.use-case';
+import { ReadElementReviewHistoryUseCase } from '../application/use-cases/read-element-review-history.use-case';
 import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
+import { ElementReviewHistoryResponseDto } from './dto/element-review-history-response.dto';
 
 // review-history design.md Decision 4: a SEPARATE controller file from
 // review-session.controller.ts, not an appended route. `review-history/
@@ -35,6 +38,7 @@ export class ReviewHistoryController {
   constructor(
     private readonly listReviewHistoryUseCase: ListReviewHistoryUseCase,
     private readonly readReviewHistoryUseCase: ReadReviewHistoryUseCase,
+    private readonly readElementReviewHistoryUseCase: ReadElementReviewHistoryUseCase,
   ) {}
 
   @Get('review-history')
@@ -80,6 +84,41 @@ export class ReviewHistoryController {
     }
   }
 
+  // review-history-per-element/design.md Decision 6: one nested route on
+  // THIS controller, never on InspectableElementController — the gate is
+  // `reviewSession:read` (a review-history read keyed by an element), never
+  // `inspectableElement:read` (SYSTEM_ADMIN alone). Scope is resolved
+  // SERVER-SIDE by ReadElementReviewHistoryUseCase from the actor's role;
+  // the client cannot widen it.
+  @Get(
+    'communities/:communityId/inspectable-elements/:elementId/review-history',
+  )
+  @RequirePermission('reviewSession:read')
+  @ApiOkResponse({ type: ElementReviewHistoryResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiNotFoundResponse({
+    description:
+      'Unknown element, soft-deleted element, wrong community, or an ' +
+      "element outside the caller's scope — all indistinguishable. Body " +
+      'carries code: INSPECTABLE_ELEMENT_NOT_FOUND.',
+  })
+  async readElementHistory(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('communityId') communityId: string,
+    @Param('elementId') elementId: string,
+  ): Promise<ElementReviewHistoryResponseDto> {
+    try {
+      return await this.readElementReviewHistoryUseCase.execute(
+        communityId,
+        elementId,
+        { userId: user.sub, role: user.role },
+      );
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
   // review-history design.md Decision 4: this controller's own mapError for
   // the errors it can throw. ActiveTemplateNotFoundError is defensive-only
   // (read-review-history.use-case.ts) — the schema does not allow a bound
@@ -99,6 +138,13 @@ export class ReviewHistoryController {
         HttpStatus.NOT_FOUND,
         error.message,
         'ACTIVE_TEMPLATE_NOT_FOUND',
+      );
+    }
+    if (error instanceof InspectableElementNotFoundError) {
+      return buildCodedError(
+        HttpStatus.NOT_FOUND,
+        error.message,
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
       );
     }
     return error;
