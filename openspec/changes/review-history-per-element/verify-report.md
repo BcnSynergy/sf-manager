@@ -394,3 +394,42 @@ docs-only, no source change, no tests affected:
 
 W-2, W-3, W-4, W-6, S-1, S-2 and S-3 are unchanged — out of scope for this docs-only pass, per
 the verdict above.
+
+## Code/test hardening addendum (2026-09-16)
+
+W-2, W-3 and W-4 were remediated on branch `review-history-per-element/05-verify-hardening`
+(3 commits, not pushed/merged as of this note), no behaviour change, full suites green:
+
+- **W-2** — the dead, unimported `ELEMENT_HISTORY_ORDER_BY` export and its misleading "applies
+  it ONCE" comment are removed from `prisma-review-session.repository.ts`; the port's comment
+  referencing it is corrected to point at the use case's own private `elementHistoryOrder`
+  comparator instead. Confirmed via grep: no production import ever existed. Confirmed no
+  existing use case in this codebase imports from `infrastructure/persistence/**` — ADR-013's
+  boundary makes design.md Decision 1's literal "shared adapter constant applied by the use
+  case" unimplementable, so deleting the dead export (rather than relocating sort logic) is the
+  correct minimal fix.
+- **W-3** — `prisma-review-session.repository.integration.spec.ts` gains a second file-scan
+  guard, mirroring the existing `findCompletedAcrossInstallation` /
+  `findCompletedByIdAcrossInstallation` guard, proving
+  `findCompletedEntriesForElementAcrossInstallation` is reachable from exactly the port, the
+  Prisma adapter and `ReviewHistoryAccessService` — no other production file.
+- **W-4** — `ELEMENT_HISTORY_ALLOWED_ROLES` is extracted into its own module
+  (`apps/web/src/auth/element-history-route.roles.ts` — `react-refresh/only-export-components`
+  forbids sharing a plain-constant export with the `App` component's file) and imported by both
+  `App.tsx`'s route definition and `ProtectedRoute.test.tsx`, replacing the test's hand-copied
+  inline array. A future accidental narrowing of the real route now fails via an import-level
+  mismatch instead of silently passing against a stale duplicate.
+
+Test results after remediation: `apps/api` unit 111/111 suites, 909/909 tests PASS;
+`apps/api` e2e 10/10 suites, 349/349 tests PASS; `apps/api` integration 22 suites, 140/141
+tests PASS (the sole failure is W-6, unchanged, environmental — a decommissioned-element
+fixture row left in the shared dev DB by this change's own PR3 browser verification, in a
+module (`inspectable-element`) this change's diff never touches); `apps/web` unit 48/48 files,
+740/740 tests PASS (+1 test for W-4). `npx tsc --noEmit` clean for both workspaces (the
+pre-existing, unrelated `Dirent.path` TS2339 warning in this same integration spec file,
+present on `main` before this remediation, is out of scope — `nest build`, the project's actual
+build command, does not surface it). `eslint --fix` clean on all touched files.
+
+W-6, S-1, S-2 and S-3 remain unchanged — W-6 is a local-DB-fixture/environment issue, not a
+code defect, and out of scope for a code-hardening pass; S-1/S-2/S-3 were not part of this
+batch's assignment.
