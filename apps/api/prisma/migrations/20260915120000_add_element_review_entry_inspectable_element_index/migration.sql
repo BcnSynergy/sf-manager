@@ -1,0 +1,33 @@
+-- Hand-written migration (same convention as every other migration in this
+-- schema, ADR-013): written directly rather than via `prisma migrate dev
+-- --create-only` + edit, because Prisma cannot see the hand-written
+-- FKs/indexes this schema already carries and `migrate dev` would offer a
+-- shadow-database reset instead of a clean diff. Applied via
+-- `prisma migrate deploy`.
+--
+-- review-history-per-element/design.md Decision 3: `ElementReviewEntry`'s
+-- only non-PK index today is `@@unique([reviewSessionId,
+-- inspectableElementId])`, whose LEADING column is `reviewSessionId` — an
+-- equality predicate on `inspectableElementId` alone has no usable prefix
+-- and degrades to a full index scan of the app's fastest-growing table.
+-- This is the first read in the app whose scope is applied to
+-- `ElementReviewEntry` rows directly (the four
+-- `findCompletedEntriesForElement*` port methods), so the column needs its
+-- own index. SINGLE-COLUMN on purpose: the final ordering is an
+-- application-level sort applied after an in-memory join (Decision 2), so
+-- an index-provided sort order cannot survive to the response — covering
+-- `recordedAt` here would buy nothing while adding write amplification on
+-- `upsertEntry`, the hottest write path in the app.
+--
+-- Additive only: no backfill, no column, no enum, no downtime. Rollback is
+-- `DROP INDEX "ElementReviewEntry_inspectableElementId_idx"` — complete and
+-- independent.
+--
+-- WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate this
+-- file or diff schema.prisma against the database in a way that could DROP
+-- this index or any pre-existing hand-written object from earlier
+-- migrations.
+
+-- CreateIndex: Prisma-VISIBLE (@@index in schema.prisma).
+CREATE INDEX "ElementReviewEntry_inspectableElementId_idx"
+  ON "ElementReviewEntry"("inspectableElementId");

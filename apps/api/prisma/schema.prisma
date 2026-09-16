@@ -429,6 +429,18 @@ model ElementReviewEntry {
   //   ALTER TABLE "ElementReviewEntry" ADD CONSTRAINT
   //     "ElementReviewEntry_observations_not_blank"
   //     CHECK ("observations" IS NULL OR btrim("observations") <> '');
+  //
+  // review-history-per-element/design.md Decision 3: Prisma-VISIBLE regular
+  // index. Postgres does not auto-index FK columns (same standing note as
+  // ReviewSession's three FK indexes), and the @@unique above CANNOT serve
+  // this filter: its LEADING column is reviewSessionId, so an equality
+  // predicate on inspectableElementId alone has no usable prefix and
+  // degrades to a full index scan of the app's fastest-growing table.
+  // SINGLE-COLUMN on purpose — the final ordering is an application-level
+  // sort applied after the in-memory join (Decision 2), so covering
+  // recordedAt in this index would buy nothing while adding write
+  // amplification on upsertEntry, the hottest write path in the app.
+  @@index([inspectableElementId])
 }
 
 // review-session/design.md Decision 9: `questionId` is provenance only,
