@@ -34,8 +34,11 @@ capability adds a second, **element-keyed** read surface — every past
 review of **one** inspectable element, across **every** session it was
 ever reviewed in — resolved through the **same five** visibility scopes,
 now applied at **entry** level instead of session level. No new scope, no
-new permission, no new authorization primitive and no schema change
-ships: the element-keyed read reuses `ReviewHistoryAccessService`'s
+new permission and no new authorization primitive ship; the only
+additive schema object is a single-column index on
+`ElementReviewEntry.inspectableElementId` (no new table, column, enum,
+backfill or data migration — see the guard requirements below). The
+element-keyed read reuses `ReviewHistoryAccessService`'s
 existing checkers branch for branch, and the element itself is resolved
 through the shipped community-scoped element lookup, which is what makes
 the `:communityId` segment verified rather than decorative. The
@@ -1073,10 +1076,10 @@ scopes, no controls, no second variant.)
 - WHEN they are inspected
 - THEN no stored `lastInspectedAt` or equivalent projection MUST exist, and no overdue computation, trend, chart, export or signing path MUST be derived from an element's record
 
-#### Scenario: The capability column stays the only additive schema change, and this change adds none of its own
+#### Scenario: The capability column and the element-index stay the only additive schema changes
 - GIVEN the migration directory and `schema.prisma` before and after this change
 - WHEN they are compared
-- THEN this change MUST introduce no table, no column, no enum, no backfill and no data migration — the `ManagerCapability` enum and the `User.managerCapabilities` column MUST remain the only additive schema objects the history slices introduced, and `ReviewSession` MUST be unchanged
+- THEN this change MUST introduce no table, no column, no enum, no backfill and no data migration beyond the one additive index on `ElementReviewEntry.inspectableElementId` (see the next scenario) — the `ManagerCapability` enum, the `User.managerCapabilities` column and that index MUST remain the only additive schema objects the history slices introduced, and `ReviewSession` MUST be unchanged
 
 #### Scenario: Any index for the element-keyed read is measured, additive and independently revertable
 - GIVEN the element-filtered read's query plan

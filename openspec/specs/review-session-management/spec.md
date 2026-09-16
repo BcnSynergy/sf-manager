@@ -472,7 +472,7 @@ deferred.)
 
 | Deferred to | Must not exist |
 |---|---|
-| FR-008 (remaining half) | Per-element history — any query, route, page or use case returning one inspectable element's past reviews. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped, installation-wide or capability-gated one. Any `managerCapabilities` or `VIEW_ALL_REVIEWS` reference inside this capability: the manager capability MUST affect the `review-history` read only, and MUST grant nothing on this capability's write flow |
+| FR-008 (closed — per-element history shipped in `review-history` / `review-history-ui`) | Per-element history — any query, route, page or use case in **this** capability's own routes, use cases or repository reads returning one inspectable element's past reviews; that surface belongs to `review-history` and `review-history-ui` instead. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped, installation-wide or capability-gated one. Any `managerCapabilities` or `VIEW_ALL_REVIEWS` reference inside this capability: the manager capability MUST affect the `review-history` read only, and MUST grant nothing on this capability's write flow |
 | FR-009 | Scheduling service, due dates, overdue lists, cadence rules or reminders |
 | FR-010 | Any code path transitioning a session to `signed`; any document, PDF or export generation |
 | — | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications |
@@ -497,10 +497,11 @@ deferred.)
 - WHEN they are inspected
 - THEN none MUST contain a company-scoped review query — this capability's only contact with the performing company MUST be writing the attribution when a session is opened
 
-#### Scenario: No per-element review history surface exists
-- GIVEN the routes, pages, use cases and repository queries after this change
-- WHEN they are searched for the past reviews of a single inspectable element
-- THEN none MUST be found
+#### Scenario: The per-element review history read lives in review-history, not here
+- GIVEN this capability's own routes, pages, use cases and repository queries after this change
+- WHEN they are searched for a query, route, page or use case returning the past reviews of a single inspectable element
+- THEN none MUST be found there — the per-element read MUST belong to `review-history` and `review-history-ui` instead, reached through the routes and page shipped there
+(Previously: *No per-element review history surface exists* — unqualified, forbidding the feature outright. Per-element history shipped as part of `review-history-per-element`, deliberately outside this capability's own surface, which is what this scenario now asserts.)
 
 #### Scenario: This capability's own surface adds no cross-session query
 - GIVEN the routes, use cases and repository reads belonging to the field write flow after this change
