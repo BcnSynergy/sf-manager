@@ -1637,6 +1637,19 @@ describe('PrismaReviewSessionRepository — findCompletedEntriesForElement* (int
       inspectableElementId: elementId,
       status: 'completed',
     });
+    // Performer A's entry for a DIFFERENT element — must never surface.
+    // Created before the draft below: only one open draft per
+    // (community, template, user) may exist at a time, and this session
+    // must be completed (closing its own draft slot) before performer A's
+    // next session — the one below — opens a new one.
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: siblingElementId,
+      status: 'completed',
+    });
     // Draft by performer A on the SAME element — must never surface.
     await createSessionWithEntry({
       communityId,
@@ -1645,15 +1658,6 @@ describe('PrismaReviewSessionRepository — findCompletedEntriesForElement* (int
       performedByCompanyId: null,
       inspectableElementId: elementId,
       status: 'draft',
-    });
-    // Performer A's entry for a DIFFERENT element — must never surface.
-    await createSessionWithEntry({
-      communityId,
-      templateId,
-      performedById: performerA,
-      performedByCompanyId: null,
-      inspectableElementId: siblingElementId,
-      status: 'completed',
     });
 
     const rows = await repository.findCompletedEntriesForElementForPerformer(
