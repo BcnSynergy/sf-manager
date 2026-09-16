@@ -183,9 +183,9 @@ export interface ReviewSessionRepository {
   // reads. Each carries the element id AND a scope conjunct as required
   // parameters — no scope discriminant, no branching query builder — and
   // filters `status = 'completed'` so a draft session's entries never
-  // surface. `ELEMENT_HISTORY_ORDER_BY` (adapter-owned constant) orders
-  // `recordedAt DESC, id DESC`; the use case applies it once, after the
-  // join, so all four scopes are identical by construction.
+  // surface. Rows are returned UNSORTED; the use case's own private
+  // `elementHistoryOrder` comparator orders them `recordedAt DESC, id DESC`
+  // once, after the join, so all four scopes are identical by construction.
 
   // MAINTENANCE_TECHNICIAN — own recorded entries for this element, nothing
   // else.

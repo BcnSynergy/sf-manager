@@ -27,23 +27,13 @@ const FOREIGN_KEY_VIOLATION = 'P2003';
 const COMPLETED_HISTORY_ORDER_BY: Prisma.ReviewSessionOrderByWithRelationInput[] =
   [{ completedAt: 'desc' }, { id: 'desc' }];
 
-// review-history-per-element design.md Decision 1: shared ordering for the
-// four element-keyed reads, `recordedAt DESC, entryId DESC` (`entryId` is a
-// UUIDv7, ADR-009 — deterministic tiebreak on equal timestamps). Exported so
-// the use case (Phase 2) applies it ONCE after the in-memory join
-// (Decision 2/5), rather than each adapter method sorting independently —
-// this is why the four methods below return their rows UNSORTED.
-export function ELEMENT_HISTORY_ORDER_BY(
-  a: ElementReviewEntryRow,
-  b: ElementReviewEntryRow,
-): number {
-  const aRecordedAt = a.recordedAt.getTime();
-  const bRecordedAt = b.recordedAt.getTime();
-  if (aRecordedAt !== bRecordedAt) {
-    return bRecordedAt - aRecordedAt;
-  }
-  return a.entryId < b.entryId ? 1 : a.entryId > b.entryId ? -1 : 0;
-}
+// review-history-per-element design.md Decision 1 called for a shared
+// adapter-owned ordering constant applied once by the use case, but the
+// application layer cannot import from infrastructure/persistence (ADR-013 /
+// no-restricted-imports). The use case therefore carries its own private
+// `elementHistoryOrder` comparator (read-element-review-history.use-case.ts)
+// and applies it after the in-memory join — this is why the four methods
+// below return their rows UNSORTED; no comparator lives in this adapter.
 
 function isUniqueConstraintViolation(
   error: unknown,
