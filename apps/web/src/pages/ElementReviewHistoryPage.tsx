@@ -91,7 +91,7 @@ export function ElementReviewHistoryPage() {
       <h1>{t('reviewHistory.elementHistory.title')}</h1>
 
       <section data-testid="element-review-history-header">
-        <p>{element.code}</p>
+        <p>{t('reviewHistory.elementHistory.codeLabel', { code: element.code })}</p>
         <p>{element.name}</p>
         <p>
           {t('reviewHistory.elementHistory.typeLabel', {
