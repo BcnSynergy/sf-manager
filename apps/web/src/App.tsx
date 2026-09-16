@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth/AuthProvider';
+import { ELEMENT_HISTORY_ALLOWED_ROLES } from './auth/element-history-route.roles';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { ChecklistQuestionCreatePage } from './pages/ChecklistQuestionCreatePage';
 import { ChecklistQuestionEditPage } from './pages/ChecklistQuestionEditPage';
@@ -191,15 +192,7 @@ function App() {
           <Route
             path="/communities/:communityId/inspectable-elements/:elementId/history"
             element={
-              <ProtectedRoute
-                allowedRoles={[
-                  'MAINTENANCE_TECHNICIAN',
-                  'COMMUNITY_REPRESENTATIVE',
-                  'MAINTENANCE_COMPANY_MANAGER',
-                  'SYSTEM_ADMIN',
-                  'MANAGER',
-                ]}
-              >
+              <ProtectedRoute allowedRoles={ELEMENT_HISTORY_ALLOWED_ROLES}>
                 <ElementReviewHistoryPage />
               </ProtectedRoute>
             }

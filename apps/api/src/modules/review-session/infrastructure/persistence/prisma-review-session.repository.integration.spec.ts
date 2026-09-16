@@ -840,6 +840,55 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
       expect(matchingFiles.some((f) => f.endsWith(suffix))).toBe(true);
     }
   });
+
+  // review-history-per-element/design.md Decision 1, verify-report.md W-3:
+  // the element-keyed installation-wide read is this change's own
+  // actor-unscoped read, and needs the SAME call-site guard as
+  // findCompletedAcrossInstallation/findCompletedByIdAcrossInstallation
+  // above. Mirrors that guard exactly (same exclusion rules, same
+  // reasoning for why `**/testing/**` and `*.spec.ts` are excluded): the
+  // in-memory fake and unit/e2e spec files are not production callers —
+  // this scan is a textual source scan, so they would otherwise match as
+  // false positives purely for implementing the port or exercising it.
+  //
+  // THIS GUARD VERIFIES EXACTLY 3 PRODUCTION CALL SITES — the port, the
+  // Prisma adapter, and `ReviewHistoryAccessService` (the two legitimate
+  // call sites named in verify-report.md W-3: `listElementHistoryForActor`'s
+  // ADMIN branch and its granted-MANAGER branch). A second production
+  // caller anywhere else fails the build.
+  it('findCompletedEntriesForElementAcrossInstallation appears only in the port, the Prisma adapter and the access service — no other production file', () => {
+    const srcRoot = join(__dirname, '..', '..', '..', '..');
+    const entries = readdirSync(srcRoot, {
+      recursive: true,
+      withFileTypes: true,
+    });
+
+    const candidateFiles = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .filter((entry) => !entry.name.endsWith('.spec.ts'))
+      .map((entry) => join(entry.parentPath ?? entry.path, entry.name))
+      .filter((filePath) => !filePath.split(sep).includes('testing'));
+
+    const methodNamePattern =
+      /findCompletedEntriesForElementAcrossInstallation/;
+
+    const matchingFiles = candidateFiles
+      .filter((filePath) =>
+        methodNamePattern.test(readFileSync(filePath, 'utf8')),
+      )
+      .map((filePath) => filePath.split(sep).join('/'));
+
+    const expectedSuffixes = [
+      'application/ports/review-session.repository.port.ts',
+      'infrastructure/persistence/prisma-review-session.repository.ts',
+      'application/services/review-history-access.service.ts',
+    ];
+
+    expect(matchingFiles).toHaveLength(expectedSuffixes.length);
+    for (const suffix of expectedSuffixes) {
+      expect(matchingFiles.some((f) => f.endsWith(suffix))).toBe(true);
+    }
+  });
 });
 
 // review-history-company-scope/design.md Decision 3/4/6/9, tasks.md
