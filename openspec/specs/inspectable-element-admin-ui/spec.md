@@ -4,8 +4,10 @@
 
 The `SYSTEM_ADMIN`-gated web surface for a community's inspectable
 elements: route gating, active-element list (including each element's
-`code`, its active/decommissioned state, and a per-element Print entry
-point into `element-label-printing`), create/edit forms, confirmed
+`code`, its active/decommissioned state, a per-element Print entry
+point into `element-label-printing`, and a per-element History entry
+point into the element's own review-history page, owned and specified
+by `review-history-ui`), create/edit forms, confirmed
 soft-delete, a per-element decommission/reactivate control, element-type
 label rendering, and the `ApiError` → localized-message contract for the
 new error codes. "Active elements" in *List Active Elements For a
