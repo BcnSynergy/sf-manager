@@ -2,7 +2,10 @@ import { ElementReviewEntry } from '../../../domain/element-review-entry.entity'
 import { ReviewSession } from '../../../domain/review-session.entity';
 import { OpenDraftAlreadyExistsError } from '../../../domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotFoundError } from '../../../domain/errors/review-session-not-found.error';
-import { ReviewSessionRepository } from '../../ports/review-session.repository.port';
+import {
+  ElementReviewEntryRow,
+  ReviewSessionRepository,
+} from '../../ports/review-session.repository.port';
 
 // review-history design.md Decision 3: same `completedAt DESC, id DESC`
 // ordering as the Prisma adapter, and the same explicit empty-scope
@@ -244,5 +247,88 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
       return Promise.resolve(null);
     }
     return Promise.resolve(session);
+  }
+
+  // review-history-per-element design.md Decision 1/2: mirrors the Prisma
+  // adapter's entry-first shape without actually needing two passes here —
+  // this fake iterates completed sessions directly and flattens their
+  // matching entry for `elementId`, `sessionPredicate` carrying the same
+  // scope conjunct each Prisma method's `sessionScope` argument does.
+  private completedEntriesForElement(
+    elementId: string,
+    sessionPredicate: (session: ReviewSession) => boolean,
+  ): ElementReviewEntryRow[] {
+    const rows: ElementReviewEntryRow[] = [];
+    for (const session of this.sessionsById.values()) {
+      if (
+        session.status !== 'completed' ||
+        !session.completedAt ||
+        !sessionPredicate(session)
+      ) {
+        continue;
+      }
+      const entry = session.entries.find(
+        (candidate) => candidate.inspectableElementId === elementId,
+      );
+      if (!entry) {
+        continue;
+      }
+      rows.push({
+        entryId: entry.id,
+        reviewSessionId: session.id,
+        performedById: session.performedById,
+        completedAt: session.completedAt,
+        recordedAt: entry.recordedAt,
+        observations: entry.observations,
+      });
+    }
+    return rows;
+  }
+
+  findCompletedEntriesForElementForPerformer(
+    elementId: string,
+    performedById: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return Promise.resolve(
+      this.completedEntriesForElement(
+        elementId,
+        (session) => session.performedById === performedById,
+      ),
+    );
+  }
+
+  // `communityIds = []` yields no `Set` membership matches — mirrors
+  // Prisma's `{ in: [] }` false predicate explicitly, since this fake has no
+  // Prisma runtime to rely on for that behaviour.
+  findCompletedEntriesForElementInCommunities(
+    elementId: string,
+    communityIds: readonly string[],
+  ): Promise<ElementReviewEntryRow[]> {
+    const communityIdSet = new Set(communityIds);
+    return Promise.resolve(
+      this.completedEntriesForElement(elementId, (session) =>
+        communityIdSet.has(session.communityId),
+      ),
+    );
+  }
+
+  findCompletedEntriesForElementForCompany(
+    elementId: string,
+    companyId: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return Promise.resolve(
+      this.completedEntriesForElement(
+        elementId,
+        (session) => session.performedByCompanyId === companyId,
+      ),
+    );
+  }
+
+  findCompletedEntriesForElementAcrossInstallation(
+    elementId: string,
+  ): Promise<ElementReviewEntryRow[]> {
+    return Promise.resolve(
+      this.completedEntriesForElement(elementId, () => true),
+    );
   }
 }

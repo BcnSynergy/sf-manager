@@ -286,6 +286,15 @@ describe('RecordEntryUseCase', () => {
       findCompletedByIdForPerformer: jest.fn(),
       findCompletedForCompany: jest.fn(),
       findCompletedByIdForCompany: jest.fn(),
+      findCompletedAcrossInstallation: jest.fn(),
+      findCompletedByIdAcrossInstallation: jest.fn(),
+      // review-history-per-element/tasks.md 1.7: port-surface parity — this
+      // hand-rolled double must implement the full port shape, same as any
+      // other ReviewSessionRepository implementer.
+      findCompletedEntriesForElementForPerformer: jest.fn(),
+      findCompletedEntriesForElementInCommunities: jest.fn(),
+      findCompletedEntriesForElementForCompany: jest.fn(),
+      findCompletedEntriesForElementAcrossInstallation: jest.fn(),
     };
     scopeChecker.assign('user-1', 'community-1');
     const racySessionAccess = new SessionAccessService(
