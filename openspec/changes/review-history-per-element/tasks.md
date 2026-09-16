@@ -38,8 +38,8 @@ Chain strategy: stacked-to-main
 ## Phase 2: Authorization, Use Case, Route (PR 2) — `.../02-access-use-case-route`
 
 - [x] 2.1 `review-history-access.service.ts`: add `ElementHistoryScope` discriminated union + `listElementHistoryForActor` + private per-role dispatcher (Decision 4); `listForActor`/`loadByRole` untouched
-- [ ] 2.2 Create `read-element-review-history.use-case.ts`: element-first lookup via `findByIdInCommunity`, one throw site `InspectableElementNotFoundError`, header + `communityName`/`performedByEmail` batched lookups, `reviewed` derivation, sort (Decision 5)
-- [ ] 2.3 Create `element-review-history-response.dto.ts`
+- [x] 2.2 Create `read-element-review-history.use-case.ts`: element-first lookup via `findByIdInCommunity`, one throw site `InspectableElementNotFoundError`, header + `communityName`/`performedByEmail` batched lookups, `reviewed` derivation, sort (Decision 5)
+- [x] 2.3 Create `element-review-history-response.dto.ts`
 - [ ] 2.4 `review-history.controller.ts`: add `GET :communityId/inspectable-elements/:elementId/review-history` with `@RequirePermission('reviewSession:read')`; add `mapError` branch
 - [ ] 2.5 Wire use case in `review-session.module.ts` (no new imports)
 - [ ] 2.6 Unit tests: access-service table-driven over 5 roles incl. `not.toHaveBeenCalled()` fail-closed cases; use-case call-order/throw-site tests
