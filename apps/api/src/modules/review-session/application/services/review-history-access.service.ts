@@ -11,13 +11,23 @@ import {
   MANAGER_CAPABILITY_CHECKER,
   type ManagerCapabilityChecker,
 } from '../../../../shared/application/authorization/manager-capability.checker.port';
+import type { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import {
   REVIEW_SESSION_REPOSITORY,
+  type ElementReviewEntryRow,
   type ReviewSessionRepository,
 } from '../ports/review-session.repository.port';
 import type { Actor } from './session-access.service';
+
+// review-history-per-element/design.md Decision 4: the reachability
+// verdict for the element-keyed read. A DISCRIMINATED UNION, deliberately
+// NOT `ElementReviewEntryRow[] | null` — this is the one surface where an
+// empty array and "not reachable" are different answers, and `{ reachable:
+// false }` has no `entries` property to read at all.
+export type ElementHistoryScope =
+  { reachable: false } | { reachable: true; entries: ElementReviewEntryRow[] };
 
 // design.md Decision 1: a read-only SIBLING of SessionAccessService, not an
 // extension of it. SessionAccess = "may this actor ACT on this draft"
@@ -216,6 +226,106 @@ export class ReviewHistoryAccessService {
       default: {
         actor.role satisfies never;
         return null;
+      }
+    }
+  }
+
+  // review-history-per-element/design.md Decision 4: the element-keyed
+  // counterpart — a read-only SIBLING dispatcher beside listForActor/
+  // loadByRole, same checkers, same fail-closed-before-any-repository-call
+  // discipline. UNLIKE those two, "no entries" means TWO different things
+  // depending on role: for TECHNICIAN and COMPANY_MANAGER the scope is
+  // session-derived, so zero entries IS unreachable (404, spec.md "Element
+  // Reachability Decides 404 Versus an Empty History"); for
+  // REPRESENTATIVE/SYSTEM_ADMIN/granted MANAGER the scope is relational to
+  // the element's own context (an assignment, or the whole installation),
+  // so zero entries is a true, disclosable empty state.
+  async listElementHistoryForActor(
+    element: InspectableElement,
+    actor: Actor,
+  ): Promise<ElementHistoryScope> {
+    switch (actor.role) {
+      case 'MAINTENANCE_TECHNICIAN': {
+        const entries =
+          await this.repository.findCompletedEntriesForElementForPerformer(
+            element.id,
+            actor.userId,
+          );
+        return entries.length === 0
+          ? { reachable: false }
+          : { reachable: true, entries };
+      }
+
+      case 'COMMUNITY_REPRESENTATIVE': {
+        const communityIds =
+          await this.communityScopeChecker.listAssignedCommunityIds(
+            actor.userId,
+            actor.role,
+          );
+        // The REACHABILITY gate consults the ASSIGNMENT, never the entry
+        // set — a never-reviewed element in an assigned community renders
+        // an empty state, not a 404 (design.md Decision 4, OQ5).
+        if (!communityIds.includes(element.communityId)) {
+          return { reachable: false };
+        }
+        return {
+          reachable: true,
+          entries:
+            await this.repository.findCompletedEntriesForElementInCommunities(
+              element.id,
+              communityIds,
+            ),
+        };
+      }
+
+      case 'MAINTENANCE_COMPANY_MANAGER': {
+        const companyId = await this.companyScopeChecker.resolveCompanyScope(
+          actor.userId,
+          actor.role,
+        );
+        if (companyId === null) {
+          return { reachable: false };
+        }
+        const entries =
+          await this.repository.findCompletedEntriesForElementForCompany(
+            element.id,
+            companyId,
+          );
+        return entries.length === 0
+          ? { reachable: false }
+          : { reachable: true, entries };
+      }
+
+      case 'SYSTEM_ADMIN':
+        return {
+          reachable: true,
+          entries:
+            await this.repository.findCompletedEntriesForElementAcrossInstallation(
+              element.id,
+            ),
+        };
+
+      case 'MANAGER': {
+        const granted =
+          await this.managerCapabilityChecker.hasManagerCapability(
+            actor.userId,
+            actor.role,
+            'VIEW_ALL_REVIEWS',
+          );
+        if (!granted) {
+          return { reachable: false };
+        }
+        return {
+          reachable: true,
+          entries:
+            await this.repository.findCompletedEntriesForElementAcrossInstallation(
+              element.id,
+            ),
+        };
+      }
+      default: {
+        actor.role satisfies never;
+        return { reachable: false };
       }
     }
   }

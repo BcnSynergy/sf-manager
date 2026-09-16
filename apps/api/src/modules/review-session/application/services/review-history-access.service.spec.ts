@@ -1,5 +1,8 @@
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
+import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
+import { QuestionAnswer } from '../../domain/question-answer.entity';
+import { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
 import { InMemoryReviewSessionRepository } from '../use-cases/testing/in-memory-review-session.repository';
 import { FakeCommunityScopeChecker } from '../use-cases/testing/fake-community-scope.checker';
 import { FakeCompanyScopeChecker } from '../use-cases/testing/fake-company-scope.checker';
@@ -13,6 +16,7 @@ function completedSession(
     communityId: string;
     performedById: string;
     performedByCompanyId: string | null;
+    entries: ElementReviewEntry[];
   }> = {},
 ): ReviewSession {
   return new ReviewSession({
@@ -24,6 +28,50 @@ function completedSession(
     startedAt: new Date('2026-01-01T00:00:00.000Z'),
     completedAt: new Date('2026-01-02T00:00:00.000Z'),
     performedByCompanyId: overrides.performedByCompanyId ?? null,
+    entries: overrides.entries ?? [],
+  });
+}
+
+function buildElement(
+  overrides: Partial<{ id: string; communityId: string }> = {},
+): InspectableElement {
+  return new InspectableElement({
+    id: overrides.id ?? 'element-1',
+    communityId: overrides.communityId ?? 'community-1',
+    elementType: 'EXTINGUISHER',
+    name: 'Extinguisher',
+    description: null,
+    location: 'Ground floor',
+    installedAt: new Date('2026-01-01T00:00:00.000Z'),
+    serialNumber: null,
+    deletedAt: null,
+    code: 'EXT-001',
+    deactivatedAt: null,
+  });
+}
+
+function reviewedEntry(
+  overrides: Partial<{
+    id: string;
+    reviewSessionId: string;
+    inspectableElementId: string;
+    recordedAt: Date;
+  }> = {},
+): ElementReviewEntry {
+  const entryId = overrides.id ?? 'entry-1';
+  return ElementReviewEntry.reviewed({
+    id: entryId,
+    reviewSessionId: overrides.reviewSessionId ?? 'session-1',
+    inspectableElementId: overrides.inspectableElementId ?? 'element-1',
+    answers: [
+      new QuestionAnswer({
+        id: `${entryId}-answer`,
+        elementReviewEntryId: entryId,
+        questionId: 'question-1',
+        answer: 'YES',
+      }),
+    ],
+    recordedAt: overrides.recordedAt ?? new Date('2026-01-02T00:00:00.000Z'),
   });
 }
 
@@ -621,6 +669,291 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
         role: 'SYSTEM_ADMIN',
       }),
     ).rejects.toThrow(ReviewSessionNotFoundError);
+  });
+});
+
+// review-history-per-element/design.md Decision 4: the element-keyed
+// counterpart — a private per-role dispatcher returning the
+// ElementHistoryScope discriminated union, table-driven over all five
+// roles. `not.toHaveBeenCalled()` on the fail-closed branches asserts the
+// dispatcher short-circuits BEFORE any repository call, mirroring
+// loadCompletedForActor's own fail-closed assertions above.
+describe('ReviewHistoryAccessService.listElementHistoryForActor', () => {
+  let repository: InMemoryReviewSessionRepository;
+  let communityScopeChecker: FakeCommunityScopeChecker;
+  let companyScopeChecker: FakeCompanyScopeChecker;
+  let managerCapabilityChecker: FakeManagerCapabilityChecker;
+  let service: ReviewHistoryAccessService;
+
+  beforeEach(() => {
+    repository = new InMemoryReviewSessionRepository();
+    communityScopeChecker = new FakeCommunityScopeChecker();
+    companyScopeChecker = new FakeCompanyScopeChecker();
+    managerCapabilityChecker = new FakeManagerCapabilityChecker();
+    service = buildService(
+      repository,
+      communityScopeChecker,
+      companyScopeChecker,
+      managerCapabilityChecker,
+    );
+  });
+
+  const element = buildElement({ id: 'element-1', communityId: 'community-1' });
+
+  // design.md Decision 4 table: MAINTENANCE_TECHNICIAN — own entries only,
+  // no entries => unreachable (404), never an empty state.
+  it('a technician sees only their own entry on the element', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-mine',
+        performedById: 'user-1',
+        entries: [
+          reviewedEntry({ id: 'entry-mine', reviewSessionId: 'session-mine' }),
+        ],
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-other',
+        performedById: 'user-2',
+        entries: [
+          reviewedEntry({
+            id: 'entry-other',
+            reviewSessionId: 'session-other',
+          }),
+        ],
+      }),
+    );
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-mine',
+    ]);
+  });
+
+  it('a technician with no recorded entries on the element is unreachable (404), and no scope checker is touched', async () => {
+    const communitySpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+    const companySpy = jest.spyOn(companyScopeChecker, 'resolveCompanyScope');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(scope).toEqual({ reachable: false });
+    expect(communitySpy).not.toHaveBeenCalled();
+    expect(companySpy).not.toHaveBeenCalled();
+  });
+
+  // design.md Decision 4: representative — reachable iff actively assigned
+  // to the element's community, REGARDLESS of whether the element has ever
+  // been reviewed (empty state, not 404).
+  it('an assigned representative sees every entry on the element, in any order the repository returns', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-a',
+        performedById: 'user-2',
+        entries: [
+          reviewedEntry({ id: 'entry-a', reviewSessionId: 'session-a' }),
+        ],
+      }),
+    );
+    communityScopeChecker.assign('rep-1', 'community-1');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-a',
+    ]);
+  });
+
+  it('an assigned representative on a never-reviewed element gets an empty state, never 404', async () => {
+    communityScopeChecker.assign('rep-1', 'community-1');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(scope).toEqual({ reachable: true, entries: [] });
+  });
+
+  it('a representative without an active assignment to the element community is unreachable, with no repository call', async () => {
+    const repoSpy = jest.spyOn(
+      repository,
+      'findCompletedEntriesForElementInCommunities',
+    );
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(scope).toEqual({ reachable: false });
+    expect(repoSpy).not.toHaveBeenCalled();
+  });
+
+  // design.md Decision 4: company manager — resolved company but no entries
+  // => unreachable (404), same session-derived rule as the technician.
+  it('a company manager sees only their own company entries on the element', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-x',
+        performedById: 'tech-x',
+        performedByCompanyId: 'company-x',
+        entries: [
+          reviewedEntry({ id: 'entry-x', reviewSessionId: 'session-x' }),
+        ],
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-y',
+        performedById: 'tech-y',
+        performedByCompanyId: 'company-y',
+        entries: [
+          reviewedEntry({ id: 'entry-y', reviewSessionId: 'session-y' }),
+        ],
+      }),
+    );
+    companyScopeChecker.assign('manager-1', 'company-x');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'manager-1',
+      role: 'MAINTENANCE_COMPANY_MANAGER',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-x',
+    ]);
+  });
+
+  it('a company manager with no resolved company reaches no repository call and is unreachable', async () => {
+    const repoSpy = jest.spyOn(
+      repository,
+      'findCompletedEntriesForElementForCompany',
+    );
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'manager-1',
+      role: 'MAINTENANCE_COMPANY_MANAGER',
+    });
+
+    expect(scope).toEqual({ reachable: false });
+    expect(repoSpy).not.toHaveBeenCalled();
+  });
+
+  it('a company manager with a resolved company but zero entries on the element is unreachable, not an empty state', async () => {
+    companyScopeChecker.assign('manager-1', 'company-x');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'manager-1',
+      role: 'MAINTENANCE_COMPANY_MANAGER',
+    });
+
+    expect(scope).toEqual({ reachable: false });
+  });
+
+  // design.md Decision 4: SYSTEM_ADMIN — always reachable, empty state on a
+  // never-reviewed element, no scope checker touched.
+  it('a SYSTEM_ADMIN sees every entry on the element unconditionally', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-any',
+        performedById: 'tech-1',
+        entries: [
+          reviewedEntry({ id: 'entry-any', reviewSessionId: 'session-any' }),
+        ],
+      }),
+    );
+    const communitySpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+    const companySpy = jest.spyOn(companyScopeChecker, 'resolveCompanyScope');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'admin-1',
+      role: 'SYSTEM_ADMIN',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-any',
+    ]);
+    expect(communitySpy).not.toHaveBeenCalled();
+    expect(companySpy).not.toHaveBeenCalled();
+  });
+
+  it('a SYSTEM_ADMIN gets an empty state, never 404, for a never-reviewed element', async () => {
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'admin-1',
+      role: 'SYSTEM_ADMIN',
+    });
+
+    expect(scope).toEqual({ reachable: true, entries: [] });
+  });
+
+  // design.md Decision 4: MANAGER — granted reuses the installation-wide
+  // read verbatim; ungranted fails closed before any repository call.
+  it('a granted MANAGER sees every entry on the element, identical to SYSTEM_ADMIN', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-any',
+        performedById: 'tech-1',
+        entries: [
+          reviewedEntry({ id: 'entry-any', reviewSessionId: 'session-any' }),
+        ],
+      }),
+    );
+    managerCapabilityChecker.grant('manager-1');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'manager-1',
+      role: 'MANAGER',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-any',
+    ]);
+  });
+
+  it('an ungranted MANAGER reaches no repository call and is unreachable', async () => {
+    const repoSpy = jest.spyOn(
+      repository,
+      'findCompletedEntriesForElementAcrossInstallation',
+    );
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'manager-1',
+      role: 'MANAGER',
+    });
+
+    expect(scope).toEqual({ reachable: false });
+    expect(repoSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses (unreachable) for a role value outside the Role union', async () => {
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'user-1',
+      role: 'NOT_A_REAL_ROLE' as unknown as Role,
+    });
+
+    expect(scope).toEqual({ reachable: false });
   });
 });
 
