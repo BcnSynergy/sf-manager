@@ -152,6 +152,15 @@ export function CommunityElementsListPage() {
                     data-testid={`community-elements-list-print-${row.id}`}
                   >
                     {t('inspectableElement.list.printLink')}
+                  </Link>{' '}
+                  {/* review-history-per-element/design.md Decision 7: the
+                      Print link's shape verbatim, one new per-row link to
+                      the element's review-history page. */}
+                  <Link
+                    to={`/communities/${communityId}/inspectable-elements/${row.id}/history`}
+                    data-testid={`community-elements-list-history-${row.id}`}
+                  >
+                    {t('inspectableElement.list.historyLink')}
                   </Link>
                 </td>
               </tr>
