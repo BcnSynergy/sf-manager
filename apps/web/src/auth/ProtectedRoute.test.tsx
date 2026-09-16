@@ -329,7 +329,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
 // widen alongside it.
 //
 // verify-report.md W-4: `ELEMENT_HISTORY_ALLOWED_ROLES` is imported from
-// `../App` (not hand-declared here) so an accidental narrowing of the real
+// `./element-history-route.roles` (the same module App.tsx imports it
+// from, not hand-declared here) so an accidental narrowing of the real
 // route's `allowedRoles` in App.tsx fails this suite via an import-level
 // mismatch, instead of silently passing against a stale local copy.
 describe('ProtectedRoute for the element review-history route (5 allowed roles, admin-only siblings unchanged)', () => {
