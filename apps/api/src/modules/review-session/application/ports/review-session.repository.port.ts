@@ -1,6 +1,24 @@
 import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
 
+// review-history-per-element/design.md Decision 1/2: the element-keyed
+// reads. FLATTENED projection rows, not ReviewSession aggregates — the
+// element conjunct and the scope conjunct are both required parameters of
+// the four methods below, so no caller can forget either one, and a
+// session's OTHER elements' entries are never loaded in the first place.
+// `answers` is deliberately absent (this surface renders no answers,
+// proposal non-goal) and `reviewed` is NOT a column here — the application
+// layer derives it from `observations === null` (Decision 5), keeping the
+// adapter a dumb projection (ADR-013).
+export interface ElementReviewEntryRow {
+  entryId: string;
+  reviewSessionId: string;
+  performedById: string;
+  completedAt: Date; // non-null: every one of these carries status='completed'
+  recordedAt: Date;
+  observations: string | null;
+}
+
 // Port (application layer, ADR-002/013): design.md Decision 4/8 — scope is
 // a PROPERTY OF THE PORT, not a per-caller discipline check, verbatim the
 // `InspectableElementRepository.findByIdInCommunity` precedent. There is
@@ -149,13 +167,56 @@ export interface ReviewSessionRepository {
   // scope is the whole installation — in which case the method is
   // reachable from exactly two branches of that one service (design.md
   // review-history-manager-capability Decision 3): `SYSTEM_ADMIN`
-  // unconditionally, and `MANAGER` holding `VIEW_ALL_REVIEWS`. `findById`
-  // still does not exist, and never will.
+  // unconditionally, and `MANAGER` holding `VIEW_ALL_REVIEWS`. The same
+  // installation-scope carve-out now also covers
+  // `findCompletedEntriesForElementAcrossInstallation` below (review-history-
+  // per-element/design.md Decision 1) — reachable from the identical two
+  // branches, this time of `listElementHistoryForActor`. `findById` still
+  // does not exist, and never will.
   findCompletedAcrossInstallation(): Promise<ReviewSession[]>;
 
   findCompletedByIdAcrossInstallation(
     id: string,
   ): Promise<ReviewSession | null>;
+
+  // review-history-per-element/design.md Decision 1/2: the four element-keyed
+  // reads. Each carries the element id AND a scope conjunct as required
+  // parameters — no scope discriminant, no branching query builder — and
+  // filters `status = 'completed'` so a draft session's entries never
+  // surface. `ELEMENT_HISTORY_ORDER_BY` (adapter-owned constant) orders
+  // `recordedAt DESC, id DESC`; the use case applies it once, after the
+  // join, so all four scopes are identical by construction.
+
+  // MAINTENANCE_TECHNICIAN — own recorded entries for this element, nothing
+  // else.
+  findCompletedEntriesForElementForPerformer(
+    elementId: string,
+    performedById: string,
+  ): Promise<ElementReviewEntryRow[]>;
+
+  // COMMUNITY_REPRESENTATIVE — entries whose session is in one of the
+  // caller's currently active communities. `communityIds = []` is the
+  // fail-closed empty scope (Prisma's `{ in: [] }` is already a false
+  // predicate; the in-memory fake mirrors that explicitly).
+  findCompletedEntriesForElementInCommunities(
+    elementId: string,
+    communityIds: readonly string[],
+  ): Promise<ElementReviewEntryRow[]>;
+
+  // MAINTENANCE_COMPANY_MANAGER — entries whose session was performed by the
+  // caller's own company (the snapshotted `performedByCompanyId`, no other
+  // conjunct — review-history-company-scope Decision 9, unchanged).
+  findCompletedEntriesForElementForCompany(
+    elementId: string,
+    companyId: string,
+  ): Promise<ElementReviewEntryRow[]>;
+
+  // SYSTEM_ADMIN, and MANAGER holding VIEW_ALL_REVIEWS. The scope IS the
+  // installation — same deliberate carve-out from the "no identifier-only
+  // read" invariant that findCompletedAcrossInstallation already carries.
+  findCompletedEntriesForElementAcrossInstallation(
+    elementId: string,
+  ): Promise<ElementReviewEntryRow[]>;
 }
 
 export const REVIEW_SESSION_REPOSITORY = Symbol('REVIEW_SESSION_REPOSITORY');
