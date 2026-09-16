@@ -42,8 +42,8 @@ Chain strategy: stacked-to-main
 - [x] 2.3 Create `element-review-history-response.dto.ts`
 - [x] 2.4 `review-history.controller.ts`: add `GET :communityId/inspectable-elements/:elementId/review-history` with `@RequirePermission('reviewSession:read')`; add `mapError` branch
 - [x] 2.5 Wire use case in `review-session.module.ts` (no new imports)
-- [ ] 2.6 Unit tests: access-service table-driven over 5 roles incl. `not.toHaveBeenCalled()` fail-closed cases; use-case call-order/throw-site tests
-- [ ] 2.7 E2E: five-scope matrix + 404-vs-empty matrix + scope guards (`ROLE_PERMISSIONS` unchanged, no `inspectableElement:read` gain, no new element port method, no list-control params)
+- [x] 2.6 Unit tests: access-service table-driven over 5 roles incl. `not.toHaveBeenCalled()` fail-closed cases; use-case call-order/throw-site tests
+- [x] 2.7 E2E: five-scope matrix + 404-vs-empty matrix + scope guards (`ROLE_PERMISSIONS` unchanged, no `inspectableElement:read` gain, no new element port method, no list-control params)
 
 ## Phase 3: Web UI + Docs (PR 3) — `.../03-web-ui-i18n-docs`
 

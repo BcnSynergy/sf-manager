@@ -2600,4 +2600,573 @@ describe('Review History (e2e)', () => {
       expect(attributionMigrations).toHaveLength(1);
     });
   });
+
+  // review-history-per-element/design.md Decision 4/5/6, tasks.md 2.7: the
+  // PR 2 read surface — GET
+  // /communities/:communityId/inspectable-elements/:elementId/review-history,
+  // resolving the SAME five visibility scopes at entry level. Five-scope
+  // matrix (no sampling), the 404-vs-empty reachability matrix, and the
+  // scope guards named in the design's Testing Strategy row.
+  describe('GET /communities/:communityId/inspectable-elements/:elementId/review-history', () => {
+    interface ElementHistoryHeaderBody {
+      id: string;
+      code: string;
+      name: string;
+      elementType: string;
+      location: string;
+      communityId: string;
+      communityName: string;
+      deactivatedAt: string | null;
+    }
+    interface ElementHistoryRowBody {
+      reviewSessionId: string;
+      performedById: string;
+      performedByEmail: string;
+      reviewed: boolean;
+      observations: string | null;
+      recordedAt: string;
+    }
+    interface ElementHistoryBody {
+      element: ElementHistoryHeaderBody;
+      entries: ElementHistoryRowBody[];
+    }
+
+    let built: BuiltApp;
+    const adminEmail = 'reh-admin@example.com';
+    const technicianUEmail = 'reh-technician-u@example.com';
+    const technicianWEmail = 'reh-technician-w@example.com';
+    const representativeEmail = 'reh-representative@example.com';
+    const managerGrantedEmail = 'reh-manager-granted@example.com';
+    const managerUngrantedEmail = 'reh-manager-ungranted@example.com';
+    const companyManagerXEmail = 'reh-company-manager-x@example.com';
+    const companyManagerYEmail = 'reh-company-manager-y@example.com';
+    const companyManagerNoneEmail = 'reh-company-manager-none@example.com';
+
+    const COMPANY_X = 'reh-company-x';
+    const COMPANY_Y = 'reh-company-y';
+
+    let communityC: CommunityBody;
+    let communityD: CommunityBody;
+    let templateId: string;
+    let question: QuestionBody;
+    let elementShared: ElementBody;
+    let elementNeverReviewed: ElementBody;
+    let elementD: ElementBody;
+    let sessionByU: SessionBody;
+    let sessionByW: SessionBody;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'reh-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technicianU = await buildSeedUser({
+        id: 'reh-technician-u-id',
+        email: technicianUEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: COMPANY_X,
+      });
+      const technicianW = await buildSeedUser({
+        id: 'reh-technician-w-id',
+        email: technicianWEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: COMPANY_Y,
+      });
+      const representative = await buildSeedUser({
+        id: 'reh-representative-id',
+        email: representativeEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const managerGranted = await buildSeedUser({
+        id: 'reh-manager-granted-id',
+        email: managerGrantedEmail,
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      const managerUngranted = await buildSeedUser({
+        id: 'reh-manager-ungranted-id',
+        email: managerUngrantedEmail,
+        role: 'MANAGER',
+      });
+      const companyManagerX = await buildSeedUser({
+        id: 'reh-company-manager-x-id',
+        email: companyManagerXEmail,
+        role: 'MAINTENANCE_COMPANY_MANAGER',
+        maintenanceCompanyId: COMPANY_X,
+      });
+      const companyManagerY = await buildSeedUser({
+        id: 'reh-company-manager-y-id',
+        email: companyManagerYEmail,
+        role: 'MAINTENANCE_COMPANY_MANAGER',
+        maintenanceCompanyId: COMPANY_Y,
+      });
+      const companyManagerNone = await buildSeedUser({
+        id: 'reh-company-manager-none-id',
+        email: companyManagerNoneEmail,
+        role: 'MAINTENANCE_COMPANY_MANAGER',
+      });
+
+      built = await buildApp({
+        users: [
+          admin,
+          technicianU,
+          technicianW,
+          representative,
+          managerGranted,
+          managerUngranted,
+          companyManagerX,
+          companyManagerY,
+          companyManagerNone,
+        ],
+        liveCompanyIds: [COMPANY_X, COMPANY_Y],
+      });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      communityC = await createCommunity(adminAgent, 'Element history C');
+      communityD = await createCommunity(adminAgent, 'Element history D');
+      await assignTechnician(adminAgent, communityC.id, 'reh-technician-u-id');
+      await assignTechnician(adminAgent, communityC.id, 'reh-technician-w-id');
+      await assignRepresentative(
+        adminAgent,
+        communityC.id,
+        'reh-representative-id',
+      );
+
+      elementShared = await createElement(
+        adminAgent,
+        communityC.id,
+        'Element history shared extinguisher',
+      );
+      elementD = await createElement(
+        adminAgent,
+        communityD.id,
+        'Element history D extinguisher',
+      );
+      question = await createQuestion(
+        adminAgent,
+        'Is the element operational?',
+      );
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Element history template',
+        [question.id],
+      );
+      templateId = template.id;
+
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const technicianWAgent = await loginAgent(built.app, technicianWEmail);
+
+      const openedByU = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianUAgent
+        .put(`/review-sessions/${openedByU.id}/entries/${elementShared.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      sessionByU = (
+        await technicianUAgent
+          .post(`/review-sessions/${openedByU.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      const openedByW = (
+        await technicianWAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianWAgent
+        .put(`/review-sessions/${openedByW.id}/entries/${elementShared.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'NO' }] })
+        .expect(200);
+      sessionByW = (
+        await technicianWAgent
+          .post(`/review-sessions/${openedByW.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      // Created AFTER both sessions above complete — completion coverage
+      // requires an entry for every active element of the community/type,
+      // so a never-reviewed element must not exist yet while sessionByU/
+      // sessionByW are being completed.
+      elementNeverReviewed = await createElement(
+        adminAgent,
+        communityC.id,
+        'Element history never-reviewed extinguisher',
+      );
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    function elementHistoryPath(
+      communityId: string,
+      elementId: string,
+    ): string {
+      return `/communities/${communityId}/inspectable-elements/${elementId}/review-history`;
+    }
+
+    // --- Five-scope matrix, no sampling -------------------------------
+
+    it('a technician sees exactly their own entry on a shared element, never the other performer', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+
+      const body = response.body as ElementHistoryBody;
+      expect(body.entries).toHaveLength(1);
+      expect(body.entries[0].performedById).toBe('reh-technician-u-id');
+      expect(JSON.stringify(body)).not.toContain(sessionByW.id);
+    });
+
+    it('a representative sees every entry on a shared element in an assigned community, regardless of performer', async () => {
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      const response = await representativeAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+
+      const body = response.body as ElementHistoryBody;
+      const sessionIds = body.entries.map((row) => row.reviewSessionId);
+      expect(sessionIds).toContain(sessionByU.id);
+      expect(sessionIds).toContain(sessionByW.id);
+    });
+
+    it("a company manager sees only their own company's entry on the shared element", async () => {
+      const companyManagerXAgent = await loginAgent(
+        built.app,
+        companyManagerXEmail,
+      );
+
+      const response = await companyManagerXAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+
+      const body = response.body as ElementHistoryBody;
+      expect(body.entries).toHaveLength(1);
+      expect(body.entries[0].reviewSessionId).toBe(sessionByU.id);
+      expect(JSON.stringify(body)).not.toContain(sessionByW.id);
+    });
+
+    it('SYSTEM_ADMIN and a granted MANAGER return byte-identical bodies', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const managerGrantedAgent = await loginAgent(
+        built.app,
+        managerGrantedEmail,
+      );
+
+      const adminResponse = await adminAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+      const managerResponse = await managerGrantedAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+
+      expect(managerResponse.body).toEqual(adminResponse.body);
+      expect((adminResponse.body as ElementHistoryBody).entries).toHaveLength(
+        2,
+      );
+    });
+
+    it('an ungranted MANAGER gets 404 on every element, reviewed or not', async () => {
+      const managerUngrantedAgent = await loginAgent(
+        built.app,
+        managerUngrantedEmail,
+      );
+
+      const onShared = await managerUngrantedAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(404);
+      const onNeverReviewed = await managerUngrantedAgent
+        .get(elementHistoryPath(communityC.id, elementNeverReviewed.id))
+        .expect(404);
+
+      expect((onShared.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+      expect((onNeverReviewed.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+    });
+
+    // --- 404-vs-empty reachability matrix -------------------------------
+
+    it('a never-reviewed element renders an empty history for admin, granted manager and assigned representative', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const managerGrantedAgent = await loginAgent(
+        built.app,
+        managerGrantedEmail,
+      );
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      for (const agent of [
+        adminAgent,
+        managerGrantedAgent,
+        representativeAgent,
+      ]) {
+        const response = await agent
+          .get(elementHistoryPath(communityC.id, elementNeverReviewed.id))
+          .expect(200);
+        const body = response.body as ElementHistoryBody;
+        expect(body.entries).toEqual([]);
+        expect(body.element.id).toBe(elementNeverReviewed.id);
+      }
+    });
+
+    it('a never-reviewed element gets 404 for a technician and a company manager, never an empty list', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const companyManagerXAgent = await loginAgent(
+        built.app,
+        companyManagerXEmail,
+      );
+
+      const technicianResponse = await technicianUAgent
+        .get(elementHistoryPath(communityC.id, elementNeverReviewed.id))
+        .expect(404);
+      const companyManagerResponse = await companyManagerXAgent
+        .get(elementHistoryPath(communityC.id, elementNeverReviewed.id))
+        .expect(404);
+
+      expect((technicianResponse.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+      expect((companyManagerResponse.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+    });
+
+    it('a company manager with no maintenance company gets 404, no maintenance company gets 404 with no wider read', async () => {
+      const companyManagerNoneAgent = await loginAgent(
+        built.app,
+        companyManagerNoneEmail,
+      );
+
+      const response = await companyManagerNoneAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+    });
+
+    it('a representative without an active assignment gets 404, indistinguishable from a nonexistent element', async () => {
+      const representativeAgent = await loginAgent(
+        built.app,
+        representativeEmail,
+      );
+
+      const nonexistentResponse = await representativeAgent
+        .get(
+          elementHistoryPath(
+            communityC.id,
+            '00000000-0000-7000-8000-000000000000',
+          ),
+        )
+        .expect(404);
+      const foreignResponse = await representativeAgent
+        .get(elementHistoryPath(communityD.id, elementD.id))
+        .expect(404);
+
+      expect(foreignResponse.body).toEqual(nonexistentResponse.body);
+      expect((foreignResponse.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+    });
+
+    it('unknown, wrong-community and soft-deleted elements are indistinguishable, even to SYSTEM_ADMIN', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const softDeleted = await createElement(
+        adminAgent,
+        communityC.id,
+        'Element history soft-deleted extinguisher',
+      );
+      await adminAgent
+        .delete(
+          `/communities/${communityC.id}/inspectable-elements/${softDeleted.id}`,
+        )
+        .expect(204);
+
+      const nonexistentResponse = await adminAgent
+        .get(
+          elementHistoryPath(
+            communityC.id,
+            '00000000-0000-7000-8000-000000000000',
+          ),
+        )
+        .expect(404);
+      const wrongCommunityResponse = await adminAgent
+        .get(elementHistoryPath(communityD.id, elementShared.id))
+        .expect(404);
+      const softDeletedResponse = await adminAgent
+        .get(elementHistoryPath(communityC.id, softDeleted.id))
+        .expect(404);
+
+      expect(wrongCommunityResponse.body).toEqual(nonexistentResponse.body);
+      expect(softDeletedResponse.body).toEqual(nonexistentResponse.body);
+      expect((nonexistentResponse.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+    });
+
+    it('a decommissioned element keeps its full history, and the header reports deactivatedAt', async () => {
+      // Isolated community + template: completion requires covering EVERY
+      // active element of (community, elementType), and communityC already
+      // carries elementShared/elementNeverReviewed/the soft-deleted fixture
+      // above — a dedicated single-element community keeps this session's
+      // coverage requirement to exactly the one element under test.
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const isolatedCommunity = await createCommunity(
+        adminAgent,
+        'Element history decommission community',
+      );
+      await assignTechnician(
+        adminAgent,
+        isolatedCommunity.id,
+        'reh-technician-u-id',
+      );
+      const decommissioned = await createElement(
+        adminAgent,
+        isolatedCommunity.id,
+        'Element history decommissioned extinguisher',
+      );
+      const opened = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: isolatedCommunity.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      await technicianUAgent
+        .put(`/review-sessions/${opened.id}/entries/${decommissioned.id}`)
+        .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+        .expect(200);
+      await technicianUAgent
+        .post(`/review-sessions/${opened.id}/complete`)
+        .expect(200);
+
+      await adminAgent
+        .patch(
+          `/communities/${isolatedCommunity.id}/inspectable-elements/${decommissioned.id}`,
+        )
+        .send({ deactivated: true })
+        .expect(200);
+
+      const response = await adminAgent
+        .get(elementHistoryPath(isolatedCommunity.id, decommissioned.id))
+        .expect(200);
+      const body = response.body as ElementHistoryBody;
+      expect(body.entries).toHaveLength(1);
+      expect(body.element.deactivatedAt).not.toBeNull();
+    });
+
+    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const filteredResponse = await adminAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .query({
+          page: 1,
+          cursor: 'x',
+          limit: 1,
+          offset: 1,
+          from: '2020-01-01',
+          to: '2020-01-02',
+          sort: 'asc',
+          search: 'anything',
+        })
+        .expect(200);
+      const plainResponse = await adminAgent
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(200);
+
+      expect(filteredResponse.body).toEqual(plainResponse.body);
+    });
+
+    it('rejects an unauthenticated caller with 401 before any permission or scope check', async () => {
+      await request(built.app.getHttpServer())
+        .get(elementHistoryPath(communityC.id, elementShared.id))
+        .expect(401);
+    });
+
+    // --- Scope guards --------------------------------------------------
+
+    it('ROLE_PERMISSIONS is unchanged — inspectableElement:read still belongs to SYSTEM_ADMIN alone', () => {
+      const checkerPath = path.join(
+        __dirname,
+        '..',
+        'src',
+        'modules',
+        'auth',
+        'infrastructure',
+        'authorization',
+        'role-permission.checker.ts',
+      );
+      const content = fs.readFileSync(checkerPath, 'utf8');
+      const matches = content.match(/'inspectableElement:read'/g) ?? [];
+      // Exactly one occurrence — the SYSTEM_ADMIN row. If a second role
+      // gained it, this count would grow; a comment referencing the
+      // permission in prose would not match the quoted literal.
+      expect(matches).toHaveLength(1);
+    });
+
+    it('no GET /communities/:communityId/inspectable-elements/:elementId route exists (by-id) on the element-management controller', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      // Depth-4 (no trailing /review-history segment) — the element
+      // controller declares no @Get(':elementId'); this must 404 as an
+      // unmatched route, not resolve to any element-management handler.
+      await adminAgent
+        .get(
+          `/communities/${communityC.id}/inspectable-elements/${elementShared.id}`,
+        )
+        .expect(404);
+    });
+
+    it('the inspectable-element repository port gained no method — no unscoped findById', () => {
+      const portPath = path.join(
+        __dirname,
+        '..',
+        'src',
+        'modules',
+        'inspectable-element',
+        'application',
+        'ports',
+        'inspectable-element.repository.port.ts',
+      );
+      const content = fs.readFileSync(portPath, 'utf8');
+      expect(content).not.toMatch(/\bfindById\s*\(/);
+    });
+
+    it('the element-management surface is not widened by this endpoint', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      // technicianU holds reviewSession:read (and now reaches the
+      // element-keyed history) but no inspectableElement:* permission —
+      // the management routes must still refuse it with 403.
+      await technicianUAgent
+        .get(`/communities/${communityC.id}/inspectable-elements`)
+        .expect(403);
+      await technicianUAgent
+        .patch(
+          `/communities/${communityC.id}/inspectable-elements/${elementShared.id}`,
+        )
+        .send({ name: 'Renamed' })
+        .expect(403);
+    });
+  });
 });
