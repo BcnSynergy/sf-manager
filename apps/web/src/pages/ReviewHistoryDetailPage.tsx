@@ -127,13 +127,20 @@ export function ReviewHistoryDetailPage() {
                     other of the two entry links into
                     ElementReviewHistoryPage (the sibling lives on
                     CommunityElementsListPage). This is what makes the four
-                    non-admin scopes reachable in a browser at all. */}
-                <Link
-                  to={`/communities/${detail.communityId}/inspectable-elements/${entry.inspectableElementId}/history`}
-                  data-testid={`review-history-detail-entry-history-${entry.inspectableElementId}`}
-                >
-                  {t('reviewHistory.detail.elementHistoryLink')}
-                </Link>
+                    non-admin scopes reachable in a browser at all.
+                    review-history-per-element/spec.md "Two Entry Links Reach
+                    the Element History Page": an entry whose element no
+                    longer resolves (elementCode === null, e.g.
+                    soft-deleted) MUST NOT offer the link at all, rather than
+                    a link leading to a rejection. */}
+                {entry.elementCode !== null && (
+                  <Link
+                    to={`/communities/${detail.communityId}/inspectable-elements/${entry.inspectableElementId}/history`}
+                    data-testid={`review-history-detail-entry-history-${entry.inspectableElementId}`}
+                  >
+                    {t('reviewHistory.detail.elementHistoryLink')}
+                  </Link>
+                )}
                 {entry.reviewed ? (
                   <ul>
                     {entry.answers.map((answer) => (

@@ -161,7 +161,7 @@ describe('ReviewHistoryDetailPage', () => {
   // two entry links into ElementReviewHistoryPage — the one that makes the
   // four non-admin scopes reachable in a browser at all (the other is on
   // CommunityElementsListPage, SYSTEM_ADMIN-only).
-  it('renders a per-entry element-history link for each entry', async () => {
+  it('renders a per-entry element-history link for an entry with a resolvable element', async () => {
     mockedReadReviewHistory.mockResolvedValue(detail);
 
     renderPage();
@@ -171,12 +171,20 @@ describe('ReviewHistoryDetailPage', () => {
       'href',
       `/communities/${detail.communityId}/inspectable-elements/e1/history`,
     );
+  });
 
-    const link2 = screen.getByTestId('review-history-detail-entry-history-e2');
-    expect(link2).toHaveAttribute(
-      'href',
-      `/communities/${detail.communityId}/inspectable-elements/e2/history`,
-    );
+  // review-history-per-element/spec.md "Two Entry Links Reach the Element
+  // History Page": an entry whose element no longer resolves (elementCode
+  // === null, e.g. soft-deleted) MUST NOT offer the link at all, rather
+  // than one that leads to a rejection.
+  it('does not render a per-entry element-history link when the element no longer resolves', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    await screen.findByTestId('review-history-detail-entry-e2');
+
+    expect(screen.queryByTestId('review-history-detail-entry-history-e2')).not.toBeInTheDocument();
   });
 
   it('renders no manager-specific variant and still no mutation control', async () => {
