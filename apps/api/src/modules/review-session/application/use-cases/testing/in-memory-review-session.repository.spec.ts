@@ -479,3 +479,287 @@ describe('InMemoryReviewSessionRepository — findCompletedAcrossInstallation/fi
     ).resolves.toBeNull();
   });
 });
+
+// review-history-per-element design.md Decision 1/2, tasks.md coverage gap
+// (fresh-context review, PR1): the entry-first `findCompletedEntriesForElement*`
+// quartet — same fixture/style precedent as the describe blocks above, plus
+// the prisma-review-session.repository.integration.spec.ts scenarios
+// (element-history-*) this fake mirrors: draft exclusion, sibling-element
+// exclusion, and the InCommunities fail-closed empty-scope case.
+describe('InMemoryReviewSessionRepository — findCompletedEntriesForElement* (new methods)', () => {
+  const elementId = 'element-1';
+  const siblingElementId = 'element-2';
+
+  function completedSessionWithEntry(
+    overrides: Partial<{
+      id: string;
+      communityId: string;
+      performedById: string;
+      performedByCompanyId: string | null;
+      status: 'draft' | 'completed';
+      completedAt: Date;
+      inspectableElementId: string;
+      entryId: string;
+    }> = {},
+  ): ReviewSession {
+    const status = overrides.status ?? 'completed';
+    const entry = ElementReviewEntry.reviewed({
+      id: overrides.entryId ?? `${overrides.id ?? 'session-1'}-entry`,
+      reviewSessionId: overrides.id ?? 'session-1',
+      inspectableElementId: overrides.inspectableElementId ?? elementId,
+      answers: [
+        new QuestionAnswer({
+          id: 'answer-1',
+          elementReviewEntryId: 'placeholder',
+          questionId: 'question-1',
+          answer: 'YES',
+        }),
+      ],
+      recordedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    return new ReviewSession({
+      id: overrides.id ?? 'session-1',
+      communityId: overrides.communityId ?? 'community-1',
+      templateId: 'template-1',
+      performedById: overrides.performedById ?? 'user-1',
+      performedByCompanyId:
+        overrides.performedByCompanyId === undefined
+          ? 'company-1'
+          : overrides.performedByCompanyId,
+      status,
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt:
+        status === 'completed'
+          ? (overrides.completedAt ?? new Date('2026-01-02T00:00:00.000Z'))
+          : null,
+      entries: [entry],
+    });
+  }
+
+  describe('findCompletedEntriesForElementForPerformer', () => {
+    it("returns exactly the caller's own completed entries for this element", async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const own = completedSessionWithEntry({
+        id: 'session-own',
+        performedById: 'user-1',
+      });
+      const other = completedSessionWithEntry({
+        id: 'session-other',
+        performedById: 'user-2',
+      });
+      repository.seed(own);
+      repository.seed(other);
+
+      const rows = await repository.findCompletedEntriesForElementForPerformer(
+        elementId,
+        'user-1',
+      );
+
+      expect(rows.map((r) => r.entryId)).toEqual(['session-own-entry']);
+    });
+
+    it('excludes a draft session by the same performer on the same element', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const draft = completedSessionWithEntry({
+        id: 'session-draft',
+        performedById: 'user-1',
+        status: 'draft',
+      });
+      repository.seed(draft);
+
+      await expect(
+        repository.findCompletedEntriesForElementForPerformer(
+          elementId,
+          'user-1',
+        ),
+      ).resolves.toEqual([]);
+    });
+
+    it('excludes the same performer entry for a sibling element', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const sibling = completedSessionWithEntry({
+        id: 'session-sibling',
+        performedById: 'user-1',
+        inspectableElementId: siblingElementId,
+      });
+      repository.seed(sibling);
+
+      await expect(
+        repository.findCompletedEntriesForElementForPerformer(
+          elementId,
+          'user-1',
+        ),
+      ).resolves.toEqual([]);
+    });
+  });
+
+  describe('findCompletedEntriesForElementInCommunities', () => {
+    it('communityIds = [] resolves to an empty list (fail-closed empty scope)', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      repository.seed(completedSessionWithEntry());
+
+      await expect(
+        repository.findCompletedEntriesForElementInCommunities(elementId, []),
+      ).resolves.toEqual([]);
+    });
+
+    it('returns entries from every performer in an in-scope community — excludes an out-of-scope community', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const inScope = completedSessionWithEntry({
+        id: 'session-in-scope',
+        communityId: 'community-1',
+        performedById: 'user-1',
+      });
+      const otherPerformerInScope = completedSessionWithEntry({
+        id: 'session-in-scope-other-performer',
+        communityId: 'community-1',
+        performedById: 'user-2',
+      });
+      const outOfScope = completedSessionWithEntry({
+        id: 'session-out-of-scope',
+        communityId: 'community-2',
+        performedById: 'user-1',
+      });
+      repository.seed(inScope);
+      repository.seed(otherPerformerInScope);
+      repository.seed(outOfScope);
+
+      const rows = await repository.findCompletedEntriesForElementInCommunities(
+        elementId,
+        ['community-1'],
+      );
+
+      expect(rows.map((r) => r.entryId).sort()).toEqual(
+        [
+          'session-in-scope-entry',
+          'session-in-scope-other-performer-entry',
+        ].sort(),
+      );
+    });
+
+    it('excludes a draft session and a sibling element in an in-scope community', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const draft = completedSessionWithEntry({
+        id: 'session-draft',
+        communityId: 'community-1',
+        status: 'draft',
+      });
+      const sibling = completedSessionWithEntry({
+        id: 'session-sibling',
+        communityId: 'community-1',
+        inspectableElementId: siblingElementId,
+      });
+      repository.seed(draft);
+      repository.seed(sibling);
+
+      await expect(
+        repository.findCompletedEntriesForElementInCommunities(elementId, [
+          'community-1',
+        ]),
+      ).resolves.toEqual([]);
+    });
+  });
+
+  describe('findCompletedEntriesForElementForCompany', () => {
+    it("returns only the caller's own company's entries", async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const ownCompany = completedSessionWithEntry({
+        id: 'session-company-a',
+        performedByCompanyId: 'company-a',
+      });
+      const otherCompany = completedSessionWithEntry({
+        id: 'session-company-b',
+        performedByCompanyId: 'company-b',
+      });
+      const noCompany = completedSessionWithEntry({
+        id: 'session-no-company',
+        performedByCompanyId: null,
+      });
+      repository.seed(ownCompany);
+      repository.seed(otherCompany);
+      repository.seed(noCompany);
+
+      const rows = await repository.findCompletedEntriesForElementForCompany(
+        elementId,
+        'company-a',
+      );
+
+      expect(rows.map((r) => r.entryId)).toEqual(['session-company-a-entry']);
+    });
+
+    it('excludes a draft session and a sibling element for the same company', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const draft = completedSessionWithEntry({
+        id: 'session-draft',
+        performedByCompanyId: 'company-a',
+        status: 'draft',
+      });
+      const sibling = completedSessionWithEntry({
+        id: 'session-sibling',
+        performedByCompanyId: 'company-a',
+        inspectableElementId: siblingElementId,
+      });
+      repository.seed(draft);
+      repository.seed(sibling);
+
+      await expect(
+        repository.findCompletedEntriesForElementForCompany(
+          elementId,
+          'company-a',
+        ),
+      ).resolves.toEqual([]);
+    });
+  });
+
+  describe('findCompletedEntriesForElementAcrossInstallation', () => {
+    it('returns entries across every performer and company', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const sessionA = completedSessionWithEntry({
+        id: 'session-a',
+        performedById: 'user-1',
+        performedByCompanyId: 'company-1',
+      });
+      const sessionB = completedSessionWithEntry({
+        id: 'session-b',
+        performedById: 'user-2',
+        performedByCompanyId: 'company-2',
+      });
+      const sessionC = completedSessionWithEntry({
+        id: 'session-c',
+        performedById: 'user-3',
+        performedByCompanyId: null,
+      });
+      repository.seed(sessionA);
+      repository.seed(sessionB);
+      repository.seed(sessionC);
+
+      const rows =
+        await repository.findCompletedEntriesForElementAcrossInstallation(
+          elementId,
+        );
+
+      expect(rows.map((r) => r.entryId).sort()).toEqual(
+        ['session-a-entry', 'session-b-entry', 'session-c-entry'].sort(),
+      );
+    });
+
+    it('excludes a draft session and a sibling element', async () => {
+      const repository = new InMemoryReviewSessionRepository();
+      const draft = completedSessionWithEntry({
+        id: 'session-draft',
+        status: 'draft',
+      });
+      const sibling = completedSessionWithEntry({
+        id: 'session-sibling',
+        inspectableElementId: siblingElementId,
+      });
+      repository.seed(draft);
+      repository.seed(sibling);
+
+      await expect(
+        repository.findCompletedEntriesForElementAcrossInstallation(elementId),
+      ).resolves.toEqual([]);
+    });
+  });
+});
