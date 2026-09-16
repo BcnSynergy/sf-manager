@@ -750,6 +750,12 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     // parameter set MUST carry a performer, community or company scope
     // alongside any bare identifier — asserted here by enumeration rather
     // than by type inspection, mirroring the spec scenario's own wording.
+    //
+    // review-history-per-element/tasks.md 1.6: grows by exactly the 4 new
+    // `findCompletedEntriesForElement*` methods (design.md Decision 1/2).
+    // The private join helper `joinCompletedEntriesForElement` is
+    // deliberately named WITHOUT a `find` prefix so it never enters this
+    // list in the first place.
     const readMethods = methodNames.filter((name) => name.startsWith('find'));
     expect(readMethods.sort()).toEqual(
       [
@@ -763,6 +769,10 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
         'findCompletedByIdForCompany',
         'findCompletedAcrossInstallation',
         'findCompletedByIdAcrossInstallation',
+        'findCompletedEntriesForElementForPerformer',
+        'findCompletedEntriesForElementInCommunities',
+        'findCompletedEntriesForElementForCompany',
+        'findCompletedEntriesForElementAcrossInstallation',
       ].sort(),
     );
     expect(readMethods).not.toContain('findById');
@@ -1374,5 +1384,604 @@ describe('PrismaReviewSessionRepository — findCompletedAcrossInstallation/find
     await expect(repository.findCompletedAcrossInstallation()).resolves.toEqual(
       expect.any(Array),
     );
+  });
+});
+
+// review-history-per-element/design.md Decision 1/2, tasks.md 1.7: the four
+// `findCompletedEntriesForElement*` methods against real Postgres — the
+// entry-first two-query join, a draft session and a sibling element's entry
+// both excluded, and the fail-closed empty-scope case.
+describe('PrismaReviewSessionRepository — findCompletedEntriesForElement* (integration, review-history-per-element)', () => {
+  let prisma: PrismaService;
+  let repository: PrismaReviewSessionRepository;
+  let communityRepository: PrismaCommunityRepository;
+  let templateRepository: PrismaReviewTemplateRepository;
+  let userRepository: PrismaUserRepository;
+  let maintenanceCompanyRepository: PrismaMaintenanceCompanyRepository;
+  let elementRepository: PrismaInspectableElementRepository;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+    repository = new PrismaReviewSessionRepository(prisma);
+    communityRepository = new PrismaCommunityRepository(prisma);
+    templateRepository = new PrismaReviewTemplateRepository(prisma);
+    userRepository = new PrismaUserRepository(prisma);
+    maintenanceCompanyRepository = new PrismaMaintenanceCompanyRepository(
+      prisma,
+    );
+    elementRepository = new PrismaInspectableElementRepository(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  const uniqueName = (label: string) => `${label}-${randomUUID()}`;
+
+  const createCommunity = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await communityRepository.create(
+      new Community({
+        id,
+        name: uniqueName(label),
+        address: 'Carrer Major 1, Girona',
+        locale: 'ca',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createCompany = async (label: string): Promise<string> => {
+    const id = idGenerator.generate();
+    await maintenanceCompanyRepository.create(
+      new MaintenanceCompany({
+        id,
+        name: uniqueName(label),
+        taxId: uniqueName('tax'),
+        contactInfo: 'contact@example.com',
+        deletedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  const createUser = async (
+    label: string,
+    maintenanceCompanyId: string | null = null,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    await userRepository.create(
+      new User({
+        id,
+        email: `${uniqueName(label)}@example.com`,
+        passwordHash: 'argon2id$hash',
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        maintenanceCompanyId,
+      }),
+    );
+    return id;
+  };
+
+  const createActiveTemplate = async (label: string): Promise<string> => {
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        status: 'draft',
+      },
+    });
+
+    const id = idGenerator.generate();
+    await templateRepository.create(
+      new ReviewTemplate({
+        id,
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        name: uniqueName(label),
+        version: null,
+        status: 'draft',
+        draftQuestionIds: [],
+        createdAt: new Date(),
+        deletedAt: null,
+      }),
+    );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'MONTHLY',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
+    const nextVersion =
+      Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1;
+    await prisma.reviewTemplate.update({
+      where: { id },
+      data: { status: 'active', version: nextVersion },
+    });
+    return id;
+  };
+
+  const codeGenerator = new RandomElementCodeGenerator();
+
+  const createElement = async (
+    communityId: string,
+    label: string,
+  ): Promise<string> => {
+    const id = idGenerator.generate();
+    const code = codeGenerator.generate();
+    await elementRepository.create(
+      new InspectableElement({
+        id,
+        communityId,
+        elementType: 'EXTINGUISHER',
+        name: uniqueName(label),
+        description: null,
+        location: 'Ground floor',
+        installedAt: new Date(),
+        serialNumber: null,
+        deletedAt: null,
+        code,
+        deactivatedAt: null,
+      }),
+    );
+    return id;
+  };
+
+  // Creates a session (draft or completed) with one recorded entry for
+  // `inspectableElementId`. Mirrors the upsertEntry describe block's own
+  // draft-then-complete sequence — upsertEntry() only accepts a draft
+  // session (design.md Decision 8's `WHERE status='draft'` guard).
+  const createSessionWithEntry = async (params: {
+    communityId: string;
+    templateId: string;
+    performedById: string;
+    performedByCompanyId: string | null;
+    inspectableElementId: string;
+    status: 'draft' | 'completed';
+    recordedAt?: Date;
+    reviewed?: boolean;
+  }): Promise<{ sessionId: string; entryId: string }> => {
+    const sessionId = idGenerator.generate();
+    await repository.create(
+      new ReviewSession({
+        id: sessionId,
+        communityId: params.communityId,
+        templateId: params.templateId,
+        performedById: params.performedById,
+        performedByCompanyId: params.performedByCompanyId,
+        status: 'draft',
+        startedAt: new Date(),
+        completedAt: null,
+      }),
+    );
+
+    const entryId = idGenerator.generate();
+    const reviewed = params.reviewed ?? true;
+    const entry = reviewed
+      ? ElementReviewEntry.reviewed({
+          id: entryId,
+          reviewSessionId: sessionId,
+          inspectableElementId: params.inspectableElementId,
+          answers: [
+            new QuestionAnswer({
+              id: idGenerator.generate(),
+              elementReviewEntryId: 'placeholder',
+              questionId: idGenerator.generate(),
+              answer: 'YES',
+            }),
+          ],
+          recordedAt: params.recordedAt ?? new Date(),
+        })
+      : ElementReviewEntry.unreviewed({
+          id: entryId,
+          reviewSessionId: sessionId,
+          inspectableElementId: params.inspectableElementId,
+          observations: 'Not accessible this cycle',
+          recordedAt: params.recordedAt ?? new Date(),
+        });
+    await repository.upsertEntry(entry);
+
+    if (params.status === 'completed') {
+      const completed = await repository.complete(sessionId, new Date());
+      expect(completed).toBe(true);
+      await prisma.reviewSession.update({
+        where: { id: sessionId },
+        data: { performedByCompanyId: params.performedByCompanyId },
+      });
+    }
+
+    return { sessionId, entryId };
+  };
+
+  it("findCompletedEntriesForElementForPerformer returns exactly the caller's own completed entries for this element — excludes the other performer, a draft and a sibling element", async () => {
+    const communityId = await createCommunity('element-history-performer');
+    const templateId = await createActiveTemplate('element-history-performer');
+    const performerA = await createUser('element-history-performer-a');
+    const performerB = await createUser('element-history-performer-b');
+    const elementId = await createElement(
+      communityId,
+      'element-history-performer',
+    );
+    const siblingElementId = await createElement(
+      communityId,
+      'element-history-performer-sibling',
+    );
+
+    const { entryId: entryA } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    // Draft by performer A on the SAME element — must never surface.
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'draft',
+    });
+    // Performer A's entry for a DIFFERENT element — must never surface.
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: siblingElementId,
+      status: 'completed',
+    });
+
+    const rows = await repository.findCompletedEntriesForElementForPerformer(
+      elementId,
+      performerA,
+    );
+
+    expect(rows.map((r) => r.entryId)).toEqual([entryA]);
+  });
+
+  it('findCompletedEntriesForElementInCommunities returns entries from every performer in an in-scope community — excludes an out-of-scope community', async () => {
+    const communityInScope = await createCommunity(
+      'element-history-community-in',
+    );
+    const communityOutOfScope = await createCommunity(
+      'element-history-community-out',
+    );
+    const templateId = await createActiveTemplate('element-history-community');
+    const performerA = await createUser('element-history-community-a');
+    const performerB = await createUser('element-history-community-b');
+    const elementId = await createElement(
+      communityInScope,
+      'element-history-community',
+    );
+    const outOfScopeElementId = await createElement(
+      communityOutOfScope,
+      'element-history-community-out',
+    );
+
+    const { entryId: entryA } = await createSessionWithEntry({
+      communityId: communityInScope,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    const { entryId: entryB } = await createSessionWithEntry({
+      communityId: communityInScope,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    await createSessionWithEntry({
+      communityId: communityOutOfScope,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: outOfScopeElementId,
+      status: 'completed',
+    });
+
+    const rows = await repository.findCompletedEntriesForElementInCommunities(
+      elementId,
+      [communityInScope],
+    );
+
+    expect(rows.map((r) => r.entryId).sort()).toEqual([entryA, entryB].sort());
+  });
+
+  it('communityIds = [] resolves to an empty list — the fail-closed empty-scope case', async () => {
+    const communityId = await createCommunity('element-history-empty-scope');
+    const templateId = await createActiveTemplate(
+      'element-history-empty-scope',
+    );
+    const performerA = await createUser('element-history-empty-scope-a');
+    const elementId = await createElement(
+      communityId,
+      'element-history-empty-scope',
+    );
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+
+    await expect(
+      repository.findCompletedEntriesForElementInCommunities(elementId, []),
+    ).resolves.toEqual([]);
+  });
+
+  it("findCompletedEntriesForElementForCompany returns only the caller's own company's entries", async () => {
+    const communityId = await createCommunity('element-history-company');
+    const templateId = await createActiveTemplate('element-history-company');
+    const companyA = await createCompany('element-history-company-a');
+    const companyB = await createCompany('element-history-company-b');
+    const performerA = await createUser(
+      'element-history-company-performer-a',
+      companyA,
+    );
+    const performerB = await createUser(
+      'element-history-company-performer-b',
+      companyB,
+    );
+    const elementId = await createElement(
+      communityId,
+      'element-history-company',
+    );
+
+    const { entryId: entryA } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: companyA,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: companyB,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+
+    const rows = await repository.findCompletedEntriesForElementForCompany(
+      elementId,
+      companyA,
+    );
+
+    expect(rows.map((r) => r.entryId)).toEqual([entryA]);
+  });
+
+  it('findCompletedEntriesForElementAcrossInstallation returns entries across every performer and company', async () => {
+    const communityId = await createCommunity('element-history-admin');
+    const templateId = await createActiveTemplate('element-history-admin');
+    const companyA = await createCompany('element-history-admin-a');
+    const companyB = await createCompany('element-history-admin-b');
+    const performerA = await createUser(
+      'element-history-admin-performer-a',
+      companyA,
+    );
+    const performerB = await createUser(
+      'element-history-admin-performer-b',
+      companyB,
+    );
+    const elementId = await createElement(communityId, 'element-history-admin');
+
+    const { entryId: entryA } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: companyA,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+    const { entryId: entryB } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerB,
+      performedByCompanyId: companyB,
+      inspectableElementId: elementId,
+      status: 'completed',
+    });
+
+    const rows =
+      await repository.findCompletedEntriesForElementAcrossInstallation(
+        elementId,
+      );
+
+    expect(rows.map((r) => r.entryId).sort()).toEqual([entryA, entryB].sort());
+  });
+
+  // design.md Decision 5 step 4: the application layer derives `reviewed`
+  // as `observations === null` — this integration test proves that
+  // derivation agrees with the domain invariant (`answers.length > 0`) for
+  // both a reviewed and an unreviewed entry, against real Postgres rows.
+  it('reviewed derivation (observations === null) agrees with answers.length > 0 for a reviewed and an unreviewed entry', async () => {
+    const communityId = await createCommunity('element-history-reviewed');
+    const templateId = await createActiveTemplate('element-history-reviewed');
+    const performerA = await createUser('element-history-reviewed-a');
+    const reviewedElementId = await createElement(
+      communityId,
+      'element-history-reviewed',
+    );
+    const unreviewedElementId = await createElement(
+      communityId,
+      'element-history-reviewed-unreviewed',
+    );
+
+    const { entryId: reviewedEntryId } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: reviewedElementId,
+      status: 'completed',
+      reviewed: true,
+    });
+    const { entryId: unreviewedEntryId } = await createSessionWithEntry({
+      communityId,
+      templateId,
+      performedById: performerA,
+      performedByCompanyId: null,
+      inspectableElementId: unreviewedElementId,
+      status: 'completed',
+      reviewed: false,
+    });
+
+    const reviewedRows =
+      await repository.findCompletedEntriesForElementForPerformer(
+        reviewedElementId,
+        performerA,
+      );
+    const unreviewedRows =
+      await repository.findCompletedEntriesForElementForPerformer(
+        unreviewedElementId,
+        performerA,
+      );
+    const reviewedRow = reviewedRows.find((r) => r.entryId === reviewedEntryId);
+    const unreviewedRow = unreviewedRows.find(
+      (r) => r.entryId === unreviewedEntryId,
+    );
+    expect(reviewedRow).toBeDefined();
+    expect(unreviewedRow).toBeDefined();
+
+    const reviewedAnswerCount = await prisma.questionAnswer.count({
+      where: { elementReviewEntryId: reviewedEntryId },
+    });
+    const unreviewedAnswerCount = await prisma.questionAnswer.count({
+      where: { elementReviewEntryId: unreviewedEntryId },
+    });
+
+    expect(reviewedRow!.observations === null).toBe(reviewedAnswerCount > 0);
+    expect(unreviewedRow!.observations === null).toBe(
+      unreviewedAnswerCount > 0,
+    );
+  });
+});
+
+// review-history-per-element/design.md Decision 3, tasks.md 1.2/1.7: the
+// hand-written additive index migration against real Postgres — presence,
+// the pre-existing objects it must not disturb, and a complete DROP INDEX
+// rollback simulated inside a transaction that always rolls back (same
+// pattern as review-session-migration.integration.spec.ts's
+// performedByCompanyId down-migration test).
+describe('ElementReviewEntry_inspectableElementId_idx migration (integration, review-history-per-element)', () => {
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it('the new index, the pre-existing @@unique index, the hand-written CHECK and both hand-written FKs are all intact', async () => {
+    const indexRows = await prisma.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'ElementReviewEntry'
+        AND indexname IN (
+          'ElementReviewEntry_inspectableElementId_idx',
+          'ElementReviewEntry_reviewSessionId_inspectableElementId_key'
+        )
+    `;
+    expect(indexRows.map((r) => r.indexname).sort()).toEqual(
+      [
+        'ElementReviewEntry_inspectableElementId_idx',
+        'ElementReviewEntry_reviewSessionId_inspectableElementId_key',
+      ].sort(),
+    );
+
+    const checkRows = await prisma.$queryRaw<Array<{ conname: string }>>`
+      SELECT conname FROM pg_constraint
+      WHERE conname = 'ElementReviewEntry_observations_not_blank'
+    `;
+    expect(checkRows).toHaveLength(1);
+
+    const fkRows = await prisma.$queryRaw<Array<{ conname: string }>>`
+      SELECT conname FROM pg_constraint
+      WHERE conname IN (
+        'ElementReviewEntry_reviewSessionId_fkey',
+        'ElementReviewEntry_inspectableElementId_fkey'
+      )
+    `;
+    expect(fkRows.map((r) => r.conname).sort()).toEqual(
+      [
+        'ElementReviewEntry_reviewSessionId_fkey',
+        'ElementReviewEntry_inspectableElementId_fkey',
+      ].sort(),
+    );
+  });
+
+  it('DROP INDEX is a complete, independent rollback — pre-migration state simulated inside a transaction that always rolls back', async () => {
+    class RollbackSentinel extends Error {}
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`DROP INDEX "ElementReviewEntry_inspectableElementId_idx"`;
+
+        const droppedRows = await tx.$queryRaw<Array<{ indexname: string }>>`
+          SELECT indexname FROM pg_indexes
+          WHERE tablename = 'ElementReviewEntry'
+            AND indexname = 'ElementReviewEntry_inspectableElementId_idx'
+        `;
+        expect(droppedRows).toHaveLength(0);
+
+        // The pre-existing @@unique index shares no definition with the
+        // dropped one and must survive untouched.
+        const uniqueIndexRows = await tx.$queryRaw<
+          Array<{ indexname: string }>
+        >`
+          SELECT indexname FROM pg_indexes
+          WHERE tablename = 'ElementReviewEntry'
+            AND indexname = 'ElementReviewEntry_reviewSessionId_inspectableElementId_key'
+        `;
+        expect(uniqueIndexRows).toHaveLength(1);
+
+        throw new RollbackSentinel();
+      }),
+    ).rejects.toThrow(RollbackSentinel);
+
+    // The transaction above never committed — the index is exactly as it
+    // was before this test ran, whether the in-transaction assertion
+    // passed or failed.
+    const indexRows = await prisma.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'ElementReviewEntry'
+        AND indexname = 'ElementReviewEntry_inspectableElementId_idx'
+    `;
+    expect(indexRows).toHaveLength(1);
   });
 });
