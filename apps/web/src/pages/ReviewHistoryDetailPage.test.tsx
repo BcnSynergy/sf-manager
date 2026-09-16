@@ -157,6 +157,28 @@ describe('ReviewHistoryDetailPage', () => {
     expect(performerLine.textContent).not.toBe('');
   });
 
+  // review-history-per-element/design.md Decision 7: the second of the
+  // two entry links into ElementReviewHistoryPage — the one that makes the
+  // four non-admin scopes reachable in a browser at all (the other is on
+  // CommunityElementsListPage, SYSTEM_ADMIN-only).
+  it('renders a per-entry element-history link for each entry', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    const link1 = await screen.findByTestId('review-history-detail-entry-history-e1');
+    expect(link1).toHaveAttribute(
+      'href',
+      `/communities/${detail.communityId}/inspectable-elements/e1/history`,
+    );
+
+    const link2 = screen.getByTestId('review-history-detail-entry-history-e2');
+    expect(link2).toHaveAttribute(
+      'href',
+      `/communities/${detail.communityId}/inspectable-elements/e2/history`,
+    );
+  });
+
   it('renders no manager-specific variant and still no mutation control', async () => {
     mockedReadReviewHistory.mockResolvedValue(detail);
 

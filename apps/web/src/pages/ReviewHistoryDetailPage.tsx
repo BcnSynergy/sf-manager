@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { readReviewHistory, type ReviewHistoryDetail } from '../api/review-history';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
@@ -123,6 +123,17 @@ export function ReviewHistoryDetailPage() {
                 <p data-testid={`review-history-detail-entry-code-${entry.inspectableElementId}`}>
                   {entry.elementCode ?? t('reviewHistory.detail.elementCodeUnknown')}
                 </p>
+                {/* review-history-per-element/design.md Decision 7: the
+                    other of the two entry links into
+                    ElementReviewHistoryPage (the sibling lives on
+                    CommunityElementsListPage). This is what makes the four
+                    non-admin scopes reachable in a browser at all. */}
+                <Link
+                  to={`/communities/${detail.communityId}/inspectable-elements/${entry.inspectableElementId}/history`}
+                  data-testid={`review-history-detail-entry-history-${entry.inspectableElementId}`}
+                >
+                  {t('reviewHistory.detail.elementHistoryLink')}
+                </Link>
                 {entry.reviewed ? (
                   <ul>
                     {entry.answers.map((answer) => (
