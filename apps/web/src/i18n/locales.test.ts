@@ -503,6 +503,34 @@ describe('locale key-set parity (en/es/ca)', () => {
     'users.error.managerCapabilitiesNotAllowed',
   ];
 
+  // Existence guard for review-history-per-element (PR 3), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `reviewHistory.elementHistory.*` / `reviewHistory.detail.
+  // elementHistoryLink` / `inspectableElement.list.historyLink` key path
+  // referenced by source in this PR, so a future PR that adds a new call
+  // site without adding its translation fails here rather than silently
+  // rendering the raw key.
+  const REQUIRED_ELEMENT_HISTORY_KEY_PATHS = [
+    // per-row link on CommunityElementsListPage (task 3.4)
+    'inspectableElement.list.historyLink',
+    // per-entry link on ReviewHistoryDetailPage (task 3.5)
+    'reviewHistory.detail.elementHistoryLink',
+    // ElementReviewHistoryPage (task 3.2)
+    'reviewHistory.elementHistory.title',
+    'reviewHistory.elementHistory.loading',
+    'reviewHistory.elementHistory.codeLabel',
+    'reviewHistory.elementHistory.typeLabel',
+    'reviewHistory.elementHistory.locationLabel',
+    'reviewHistory.elementHistory.communityLabel',
+    'reviewHistory.elementHistory.communityUnknown',
+    'reviewHistory.elementHistory.entriesTitle',
+    'reviewHistory.elementHistory.entriesEmpty',
+    'reviewHistory.elementHistory.performerUnknown',
+    'reviewHistory.elementHistory.reviewedLabel',
+    'reviewHistory.elementHistory.unreviewedLabel',
+    'reviewHistory.elementHistory.openLink',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -611,6 +639,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_REVIEW_HISTORY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_ELEMENT_HISTORY_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

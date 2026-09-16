@@ -197,6 +197,7 @@
       "columnActions": "Accions",
       "createLink": "Element inspeccionable nou",
       "printLink": "Imprimeix",
+      "historyLink": "Historial",
       "stateActive": "Actiu",
       "stateDecommissioned": "Donat de baixa"
     },
@@ -460,7 +461,23 @@
       "entriesTitle": "Elements revisats",
       "entriesEmpty": "No s'ha registrat cap element.",
       "elementCodeUnknown": "Element desconegut",
-      "entryUnreviewedLabel": "No revisat:"
+      "entryUnreviewedLabel": "No revisat:",
+      "elementHistoryLink": "Veure historial de l'element"
+    },
+    "elementHistory": {
+      "title": "Historial de revisió de l'element",
+      "loading": "Carregant historial de revisió de l'element...",
+      "codeLabel": "Codi: {{code}}",
+      "typeLabel": "Tipus: {{type}}",
+      "locationLabel": "Ubicació: {{location}}",
+      "communityLabel": "Comunitat: {{community}}",
+      "communityUnknown": "Comunitat desconeguda",
+      "entriesTitle": "Registre de revisions",
+      "entriesEmpty": "Aquest element mai no ha estat revisat.",
+      "performerUnknown": "Realitzador desconegut",
+      "reviewedLabel": "Revisat",
+      "unreviewedLabel": "No revisat:",
+      "openLink": "Veure sessió"
     }
   },
   "health": {

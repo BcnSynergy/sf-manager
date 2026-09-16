@@ -197,6 +197,7 @@
       "columnActions": "Acciones",
       "createLink": "Nuevo elemento inspeccionable",
       "printLink": "Imprimir",
+      "historyLink": "Historial",
       "stateActive": "Activo",
       "stateDecommissioned": "Dado de baja"
     },
@@ -460,7 +461,23 @@
       "entriesTitle": "Elementos revisados",
       "entriesEmpty": "No se ha registrado ningún elemento.",
       "elementCodeUnknown": "Elemento desconocido",
-      "entryUnreviewedLabel": "No revisado:"
+      "entryUnreviewedLabel": "No revisado:",
+      "elementHistoryLink": "Ver historial del elemento"
+    },
+    "elementHistory": {
+      "title": "Historial de revisión del elemento",
+      "loading": "Cargando historial de revisión del elemento...",
+      "codeLabel": "Código: {{code}}",
+      "typeLabel": "Tipo: {{type}}",
+      "locationLabel": "Ubicación: {{location}}",
+      "communityLabel": "Comunidad: {{community}}",
+      "communityUnknown": "Comunidad desconocida",
+      "entriesTitle": "Registro de revisiones",
+      "entriesEmpty": "Este elemento nunca ha sido revisado.",
+      "performerUnknown": "Realizador desconocido",
+      "reviewedLabel": "Revisado",
+      "unreviewedLabel": "No revisado:",
+      "openLink": "Ver sesión"
     }
   },
   "health": {

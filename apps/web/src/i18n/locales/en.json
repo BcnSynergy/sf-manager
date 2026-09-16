@@ -197,6 +197,7 @@
       "columnActions": "Actions",
       "createLink": "New inspectable element",
       "printLink": "Print",
+      "historyLink": "History",
       "stateActive": "Active",
       "stateDecommissioned": "Decommissioned"
     },
@@ -460,7 +461,23 @@
       "entriesTitle": "Reviewed elements",
       "entriesEmpty": "No elements recorded.",
       "elementCodeUnknown": "Unknown element",
-      "entryUnreviewedLabel": "Not reviewed:"
+      "entryUnreviewedLabel": "Not reviewed:",
+      "elementHistoryLink": "View element history"
+    },
+    "elementHistory": {
+      "title": "Element review history",
+      "loading": "Loading element review history...",
+      "codeLabel": "Code: {{code}}",
+      "typeLabel": "Type: {{type}}",
+      "locationLabel": "Location: {{location}}",
+      "communityLabel": "Community: {{community}}",
+      "communityUnknown": "Unknown community",
+      "entriesTitle": "Review record",
+      "entriesEmpty": "This element has never been reviewed.",
+      "performerUnknown": "Unknown performer",
+      "reviewedLabel": "Reviewed",
+      "unreviewedLabel": "Not reviewed:",
+      "openLink": "View session"
     }
   },
   "health": {

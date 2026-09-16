@@ -1,4 +1,4 @@
-import type { AnswerValue } from '@sf-manager/validation';
+import type { AnswerValue, ElementType } from '@sf-manager/validation';
 import { apiFetch } from './client';
 
 // Mirrors apps/api/src/modules/review-session/presentation/
@@ -63,4 +63,42 @@ export function listReviewHistory(): Promise<ReviewHistoryRow[]> {
 
 export function readReviewHistory(sessionId: string): Promise<ReviewHistoryDetail> {
   return apiFetch<ReviewHistoryDetail>(`/review-history/${sessionId}`);
+}
+
+// Mirrors ElementReviewHistoryResponseDto (GET /communities/:communityId/
+// inspectable-elements/:elementId/review-history) — review-history-per-
+// element/design.md Decision 5/7. The only rejection cause this endpoint can
+// produce is INSPECTABLE_ELEMENT_NOT_FOUND (design.md Decision 5's ONE
+// throw site), already mapped by inspectable-element/error-messages.ts's
+// mapApiErrorToMessageKey — this module does not duplicate that mapping.
+export type ElementReviewHistoryHeader = {
+  id: string;
+  code: string;
+  name: string;
+  elementType: ElementType;
+  location: string;
+  communityId: string;
+  communityName: string;
+  deactivatedAt: string | null;
+};
+export type ElementReviewHistoryRow = {
+  reviewSessionId: string;
+  performedById: string;
+  performedByEmail: string;
+  reviewed: boolean;
+  observations: string | null;
+  recordedAt: string;
+};
+export type ElementReviewHistory = {
+  element: ElementReviewHistoryHeader;
+  entries: ElementReviewHistoryRow[];
+};
+
+export function readElementReviewHistory(
+  communityId: string,
+  elementId: string,
+): Promise<ElementReviewHistory> {
+  return apiFetch<ElementReviewHistory>(
+    `/communities/${communityId}/inspectable-elements/${elementId}/review-history`,
+  );
 }
