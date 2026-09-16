@@ -133,6 +133,20 @@ describe('CommunityElementsListPage', () => {
     );
   });
 
+  it('renders a per-row History link to the element review-history route', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+    renderPage();
+
+    const historyLink = await screen.findByTestId(
+      `community-elements-list-history-${elementA.id}`,
+    );
+    expect(historyLink).toHaveAttribute(
+      'href',
+      `/communities/${COMMUNITY_ID}/inspectable-elements/${elementA.id}/history`,
+    );
+  });
+
   it('does not render a list-level print-all control', async () => {
     mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
 

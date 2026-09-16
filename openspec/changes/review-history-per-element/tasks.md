@@ -47,12 +47,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Web UI + Docs (PR 3) — `.../03-web-ui-i18n-docs`
 
-- [ ] 3.1 Add `readElementReviewHistory` to `apps/web/src/api/review-history.ts`
-- [ ] 3.2 Create `ElementReviewHistoryPage.tsx` (+ test): header, rows, loading/empty/error states, links to `/review-history/:sessionId`
-- [ ] 3.3 `App.tsx`: add five-role route + in-file anomaly comment; `ProtectedRoute.test.tsx`: assert 5 roles here + admin-only on sibling routes
-- [ ] 3.4 `CommunityElementsListPage.tsx` (+ test): per-row History link
-- [ ] 3.5 `ReviewHistoryDetailPage.tsx` (+ test): per-entry element-history link
-- [ ] 3.6 `i18n/locales/{en,es,ca}.json`: real translations; run parity test
-- [ ] 3.7 Merge delta specs into `openspec/specs/{review-history,review-history-ui,authorization,review-session-management,inspectable-element-admin-ui}/spec.md`
-- [ ] 3.8 Close FR-008 in `docs/requirements/functional-requirements.md`
-- [ ] 3.9 Browser verification (CLAUDE.md): dev server, admin + technician golden paths + empty/decommissioned states
+- [x] 3.1 Add `readElementReviewHistory` to `apps/web/src/api/review-history.ts`
+- [x] 3.2 Create `ElementReviewHistoryPage.tsx` (+ test): header, rows, loading/empty/error states, links to `/review-history/:sessionId`
+- [x] 3.3 `App.tsx`: add five-role route + in-file anomaly comment; `ProtectedRoute.test.tsx`: assert 5 roles here + admin-only on sibling routes
+- [x] 3.4 `CommunityElementsListPage.tsx` (+ test): per-row History link
+- [x] 3.5 `ReviewHistoryDetailPage.tsx` (+ test): per-entry element-history link
+- [x] 3.6 `i18n/locales/{en,es,ca}.json`: real translations; run parity test
+- [x] 3.7 Merge delta specs into `openspec/specs/{review-history,review-history-ui,authorization}/spec.md` (no delta files exist for review-session-management or inspectable-element-admin-ui — the change's specs/ directory carries only these three; those two names in the original task line were not backed by an actual delta)
+- [x] 3.8 Close FR-008 in `docs/requirements/functional-requirements.md`
+- [x] 3.9 Browser verification (CLAUDE.md): dev server, admin + technician golden paths + empty/decommissioned states — verified in real Chrome via claude-in-chrome against the QA fixtures seeded by the previous batch: admin golden path (both entries, reviewed + unreviewed-with-observation), session-detail → element-history back-link, empty state (never-reviewed element, 200 not 404), decommissioned-element badge with preserved history, technician role-scoping (own entry only, sibling performer's entry excluded), 404 for a technician on an out-of-scope element, and the admin-only entry link from the community elements list

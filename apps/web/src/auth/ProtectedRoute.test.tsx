@@ -317,3 +317,84 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
     expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
   });
 });
+
+// review-history-per-element/design.md Decision 7 + App.tsx's route
+// comment: `/communities/:communityId/inspectable-elements/:elementId/
+// history` uses the IDENTICAL 5-role array as `/review-history*` above —
+// DELIBERATELY, unlike every other route in the `inspectable-elements`
+// family (list, `/new`, `/edit`, `/label`), which stays SYSTEM_ADMIN-only.
+// This block pins BOTH facts the in-file App.tsx comment calls out: the
+// five roles reach this route, and its SYSTEM_ADMIN-only siblings do not
+// widen alongside it.
+describe('ProtectedRoute for the element review-history route (5 allowed roles, admin-only siblings unchanged)', () => {
+  const ELEMENT_HISTORY_ALLOWED_ROLES: Role[] = [
+    'MAINTENANCE_TECHNICIAN',
+    'COMMUNITY_REPRESENTATIVE',
+    'MAINTENANCE_COMPANY_MANAGER',
+    'SYSTEM_ADMIN',
+    'MANAGER',
+  ];
+
+  function renderElementHistoryRoute() {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={ELEMENT_HISTORY_ALLOWED_ROLES}>
+                <div data-testid="protected-content">element-history</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">login</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it.each(ELEMENT_HISTORY_ALLOWED_ROLES)('%s reaches the element history route', (role) => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'user@sf-manager.example', role },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderElementHistoryRoute();
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
+
+  // The anomaly's other half: `/edit` and `/label` (and the element list)
+  // stay SYSTEM_ADMIN-only — a non-admin role that DOES reach the history
+  // route above must still be denied on the admin-only sibling family,
+  // proving the widened access did not "leak" to its neighbours.
+  it('a non-admin role that reaches element history is still blocked from the SYSTEM_ADMIN-only sibling routes (/edit, /label)', () => {
+    mockedUseAuth.mockReturnValue({
+      user: { id: '1', email: 'tech@sf-manager.example', role: 'MAINTENANCE_TECHNICIAN' },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                <div data-testid="protected-content">admin-only-sibling</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">login</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('not-authorized')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+  });
+});
