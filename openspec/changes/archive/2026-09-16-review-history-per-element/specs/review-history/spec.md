@@ -14,6 +14,15 @@
 > the shipped community-scoped element lookup, which is what makes the
 > `:communityId` segment verified rather than decorative. The
 > session-level surface is untouched.
+>
+> **Note (verify W-1): superseded.** The "no schema change ships" claim
+> above and the schema-additivity claim in the "capability column stays
+> the only additive schema change" scenario below were both corrected in
+> the live spec (`openspec/specs/review-history/spec.md`) after
+> `sdd-design` decided to ship one additive index,
+> `@@index([inspectableElementId])` on `ElementReviewEntry` (Decision 3).
+> This archived delta is kept verbatim as the historical record of what
+> was proposed; the live spec is the project's source of truth.
 
 ## ADDED Requirements
 

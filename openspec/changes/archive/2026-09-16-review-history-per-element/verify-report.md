@@ -433,3 +433,306 @@ build command, does not surface it). `eslint --fix` clean on all touched files.
 W-6, S-1, S-2 and S-3 remain unchanged — W-6 is a local-DB-fixture/environment issue, not a
 code defect, and out of scope for a code-hardening pass; S-1/S-2/S-3 were not part of this
 batch's assignment.
+
+---
+
+# Re-verification (fresh pass) — `main` @ `4227204`, 2026-09-16
+
+**Verified at**: `main` @ `4227204` (merge of PR #125, `05-verify-hardening`) — working tree clean
+**Merge base for the change**: `7c7d617`
+**Mode**: full spec-driven verification (proposal + design + tasks + 3 delta specs + apply-progress), Strict TDD
+**Artifact store**: hybrid
+**Verdict**: **PASS WITH WARNINGS** — 0 CRITICAL, 2 WARNING, 4 SUGGESTION. **Archive is unblocked.**
+
+This is an independent re-run against the current tree, not a re-reading of the pass above.
+Every command below was executed in this session; every prior finding was re-checked against
+the actual files rather than trusted from the addenda.
+
+---
+
+## R1. Test, build and lint evidence (all executed this pass)
+
+| Command | Result |
+|---|---|
+| `npm run test --workspace=apps/api` | **PASS** — 111 suites, 909 tests, 65.5 s |
+| `npm run test:e2e --workspace=apps/api` | **PASS** — 10 suites, 349 tests, 16.2 s |
+| `npm run test --workspace=apps/web` | **PASS** — 48 files, 740 tests, 35.6 s |
+| `npm run test:integration --workspace=apps/api` (real Postgres, `prisma migrate deploy` first — "No pending migrations") | **140 PASS / 1 FAIL**, 22 suites, 141 tests — the single failure is W-6, unchanged (see R4) |
+| `npx jest --testRegex=".*\.integration\.spec\.ts$" --testPathIgnorePatterns=/node_modules/ -t "findCompletedEntriesForElement"` | **PASS** — 7/7 (was 6/6 before W-3's new guard; the guard executes and passes) |
+| `npm run lint` | **PASS** — 5/5 turbo tasks, **0 errors**, 4 pre-existing warnings in the untouched `auth.controller.spec.ts`. `eslint --fix` left the tree clean (`git status --porcelain` empty afterwards) |
+| `npm run build` (`prisma generate && nest build` for api; `tsc -b && vite build` for web) | **PASS** — 4/4 turbo tasks |
+
+**Two environmental false alarms encountered and resolved — recorded for honesty, not as findings:**
+
+1. The first `test:e2e` run reported 1 failure (`app.e2e-spec.ts:31`, `GET /health` expecting
+   `{status:'ok', db:'ok'}`). Cause: Docker Desktop was not running, so `sf-manager-postgres-1`
+   was `Exited (0)` and nothing listened on `localhost:5432`. After starting the container the
+   suite is **349/349 green**. `app.e2e-spec.ts` is untouched by this change
+   (`git diff 7c7d617..HEAD -- apps/api/test/app.e2e-spec.ts` is empty).
+2. The first `apps/web` run reported `41 passed (41) / 634 tests` with 7
+   `[vitest-pool]: Failed to start forks worker ... Timeout waiting for worker to respond`
+   errors. Cause: the API jest suite was running concurrently on the same machine. Re-run
+   serially: **48/48 files, 740/740 tests green.** No test-code defect.
+
+---
+
+## R2. Completeness — tasks
+
+24/24 tasks in `tasks.md` are `[x]` and each was re-checked against a file, not against the
+checkbox. Spot evidence re-confirmed on `4227204`:
+
+- **1.1/1.2** migration dir `20260915120000_add_element_review_entry_inspectable_element_index`;
+  index present in the running Postgres.
+- **1.3/1.4/1.5** port `:182-219` (four element-keyed methods, scope in every signature except the
+  documented installation-wide carve-out); adapter's entry-first two-query join; the in-memory fake
+  mirrors all four.
+- **1.6** enumeration guard `prisma-review-session.repository.integration.spec.ts:759-778` lists
+  exactly the 10 shipped + 4 new `find*` names and still `not.toContain('findById')`.
+- **2.1** `review-history-access.service.ts:243-330` — all five branches, `satisfies never` default,
+  technician/company-manager fail-closed on zero entries, representative gated on the **assignment**
+  (so a never-reviewed element in an assigned community is an empty state, not a 404).
+- **2.2** `read-element-review-history.use-case.ts:85-100` — element lookup first, one throw site at `:99`.
+- **2.7** 17 element-history e2e cases covering the five-scope matrix, the 404-vs-empty matrix and
+  every scope guard.
+- **3.3** `App.tsx:192-199` — depth-5 route now consuming the shared `ELEMENT_HISTORY_ALLOWED_ROLES`.
+- **3.5** `ReviewHistoryDetailPage.tsx` — the `entry.elementCode !== null` guard (PR3's CRITICAL fix) present.
+- **3.8** FR-008 closed in `docs/requirements/functional-requirements.md`.
+
+---
+
+## R3. Status of every finding from the original pass
+
+| ID | Original severity | Status now | Evidence re-checked this pass |
+|---|---|---|---|
+| **C-1** | CRITICAL | **CLOSED** | `openspec/specs/review-session-management/spec.md:475` now reads `FR-008 (closed — per-element history shipped in review-history / review-history-ui)` and scopes the row to "**this** capability's own routes, use cases or repository reads"; `:500` renamed *The per-element review history read lives in review-history, not here* with a `(Previously: ...)` note at `:504`. Requirement/scenario counts for that capability are **14 to 14** and **62 to 62** across `7c7d617..4227204` — narrowed in place, nothing deleted. |
+| **W-1** | WARNING | **CLOSED** | `openspec/specs/review-history/spec.md:36-39` now states "the only additive schema object is a single-column index on `ElementReviewEntry.inspectableElementId`"; `:1079-1082` renamed *The capability column and the element-index stay the only additive schema changes*, THEN clause names the index alongside the enum and column. |
+| **W-2** | WARNING | **CLOSED** (one residual, see N-1) | `grep -rn "ELEMENT_HISTORY_ORDER_BY" apps/ --include=*.ts` returns **no match anywhere**. The port's cross-reference at `:186-188` now correctly points at "the use case's own private `elementHistoryOrder` comparator". |
+| **W-3** | WARNING | **CLOSED** | `prisma-review-session.repository.integration.spec.ts:859-891` — a real file-scan guard mirroring the shipped installation-wide one: same `**/testing/**` + `*.spec.ts` exclusions, `toHaveLength(3)` plus a per-suffix assertion for port / Prisma adapter / `ReviewHistoryAccessService`. Not vacuous: it asserts an exact count, so a 4th production caller fails it. **Executed and green** this pass (targeted run 7/7). |
+| **W-4** | WARNING | **CLOSED for the failure mode it named** (residual, see N-3) | `apps/web/src/auth/element-history-route.roles.ts:17` is the single definition; `App.tsx:3` and `ProtectedRoute.test.tsx:5` both import it. `ProtectedRoute.test.tsx:338` pins the array's exact contents and `:365` drives `it.each` from it. Narrowing the shared constant now fails the suite — the exact regression W-4 described. |
+| **W-5** | WARNING | **CLOSED** | `openspec/specs/inspectable-element-admin-ui/spec.md:4-12` Purpose now names "a per-element History entry point into the element's own review-history page, owned and specified by `review-history-ui`". Counts **14 to 14** requirements, **32 to 32** scenarios. |
+| **W-6** | WARNING | **OPEN — reproduced, root cause re-confirmed directly** | See R4. |
+| **S-1** | SUGGESTION | **OPEN** | `ElementReviewHistoryPage.tsx:139` still renders `<span>{entry.recordedAt}</span>` raw. |
+| **S-2** | SUGGESTION | **OPEN** | `ElementReviewHistoryPage.tsx:136-137` still keys rows on `entry.reviewSessionId`; the DTO still exposes no `entryId`. |
+| **S-3** | SUGGESTION | **OPEN** | The 17 element-history e2e titles contain no revoke-then-repeat case, no element-level assignment-deactivation case and no element-level performer-transfer case. Structural arguments unchanged and still sound. |
+
+### Live-spec merge integrity — re-measured, not copied
+
+| Capability | Requirements `7c7d617` to `4227204` | Scenarios `7c7d617` to `4227204` |
+|---|---|---|
+| `review-history` | 14 to 18 | 83 to 115 |
+| `review-history-ui` | 10 to 13 | 51 to 78 |
+| `authorization` | 24 to 26 | 123 to 140 |
+| `review-session-management` | 14 to 14 | 62 to 62 |
+| `inspectable-element-admin-ui` | 14 to 14 | 32 to 32 |
+
+The two capabilities touched by the C-1/W-5 remediation lost **nothing** — both were edited in
+place. No requirement or scenario was dropped anywhere.
+
+### Spec compliance — the two scenarios previously scored PARTIAL
+
+| Requirement / Scenario | Then | Now | Runtime evidence |
+|---|---|---|---|
+| `review-history` — *History Scope Is Carried by the Query...* > *The actor-unscoped reads are reachable only from the admin and granted-manager paths ... no sampling* | PARTIAL (W-3) | **COMPLIANT** | Both file-scan guards execute and pass (targeted 7/7; full integration run 140 pass) |
+| `review-history-ui` — *The Element History Route Is Gated on the Five History Roles...* > *The divergence is documented and gate-tested* | PARTIAL (W-4) | **COMPLIANT** | The scenario requires (a) an explicit comment naming the five roles and the family default — `App.tsx:177-191` plus `element-history-route.roles.ts:3-16`; and (b) a gate test asserting both the five-role allowance and the admin-only sibling — `ProtectedRoute.test.tsx:336-409`, now driven by the same constant `App.tsx` consumes. Web suite green. |
+
+Everything else in the original compliance matrix re-verified as PASS; nothing regressed.
+
+---
+
+## R4. WARNING (2)
+
+### N-1 — the use case comment still advertises the constant W-2 deleted
+
+**File**: `apps/api/src/modules/review-session/application/use-cases/read-element-review-history.use-case.ts:44-48`
+
+    // review-history-per-element/design.md Decision 3: the shared adapter-owned
+    // ordering constant, applied ONCE here after the join — ...
+    function elementHistoryOrder(...)
+
+W-2 remediation deleted `ELEMENT_HISTORY_ORDER_BY` from the adapter and corrected the **port**
+comment, but not this one. `elementHistoryOrder` is a private local comparator; there is no
+"shared adapter-owned ordering constant" left anywhere in the codebase (grep confirms zero
+matches). A reader following this comment searches for a symbol that no longer exists — precisely
+the misleading-comment defect W-2 was raised for, now inverted.
+
+Two smaller inaccuracies in the same comment: the ordering constant is attributed to
+**Decision 2** by `design.md:139-140` and `:481`, not Decision 3; and "applied ONCE here after the
+join" now states the whole truth rather than coordinating with a sibling definition, so the
+emphasis reads as if something else were still involved.
+
+**Severity**: documentation-only, zero runtime effect, no spec violated. Not archive-blocking.
+**Fix**: one comment — name design.md Decision 2, say the comparator is owned privately by this use
+case, and note that the adapter-side constant it originally proposed was removed per verify-report W-2.
+
+### N-2 — the apply-progress artifact carries no TDD Cycle Evidence table
+
+**Artifact**: Engram `sdd/review-history-per-element/apply-progress` (observation #268, revision 5)
+
+Strict TDD Mode is active for this project, and the sdd-verify strict-TDD module treats a missing
+TDD Cycle Evidence table in `apply-progress` as CRITICAL. The surviving revision covers only PR3
+two fix-up commits; the per-task RED/GREEN/TRIANGULATE/SAFETY-NET table for the other 22 tasks is
+not present in any retrievable revision. Root cause is the store, not the phase: Engram `topic_key`
+upserts overwrite, so each apply batch replaced the previous batch record.
+
+**Downgraded to WARNING rather than CRITICAL, deliberately**, because the substance the table
+exists to attest was independently re-established at runtime this pass:
+
+- every task maps to a test file that exists and was executed (R2);
+- all four suites are green with the sole environmental exception W-6;
+- triangulation is real, not nominal — `read-element-review-history.use-case.spec.ts` has 9
+  distinct cases over Decision 5 alone, `review-history-access.service.spec.ts` 77 assertions
+  across the five-role branch table, `review-history.e2e-spec.ts` 17 element-history cases;
+- the assertion-quality audit (R6) found nothing.
+
+Blocking archive on a missing artifact table when the evidence it summarises is directly
+observable would be process theatre. Recorded so the gap stays visible, and so future changes
+consider appending rather than upserting per-phase apply-progress.
+
+### W-6 (carried over) — one integration test still fails from this change own browser fixture
+
+**File**: `apps/api/src/modules/inspectable-element/infrastructure/persistence/inspectable-element-migration.integration.spec.ts:205`
+
+Reproduced exactly: `Expected: 0, Received: 1`. Root cause re-confirmed **directly against the
+database** this pass, not inferred — a `psql` query for every `InspectableElement` row with a
+non-NULL `deactivatedAt` returns exactly **one** row:
+
+    01a0a971-1ce1-7228-8598-5cb5642afdda | 4B7ABV758J | Basement extinguisher (decommissioned) | 2026-09-16 09:00:08.179
+
+That row is task 3.9 decommissioned-element browser-verification fixture. The assertion is
+whole-database, so any legitimately decommissioned element breaks it. The module is untouched by
+this change (`git diff 7c7d617..4227204 -- apps/api/src/modules/inspectable-element/` is empty) and
+the spec file predates it. **Not archive-blocking**: dev-DB hygiene plus a brittle pre-existing
+assertion, not a defect in anything this change shipped. Clearing or reactivating that single row
+restores a 141/141 run.
+
+---
+
+## R5. SUGGESTION (4 new, 3 carried)
+
+### N-3 — W-4 residual: nothing binds the App.tsx route to the shared constant
+
+`ProtectedRoute.test.tsx` now imports `ELEMENT_HISTORY_ALLOWED_ROLES` from the same module
+`App.tsx` imports it from, which closes the failure mode W-4 actually described (someone edits the
+role array; the stale hand-copied duplicate in the test hides it). One weaker path remains:
+replacing `allowedRoles={ELEMENT_HISTORY_ALLOWED_ROLES}` at `App.tsx:195` with an inline
+`allowedRoles={['SYSTEM_ADMIN']}` still fails no test — there is no `App.test.tsx`, and no test file
+references the route table. Genuinely lower-probability than the original (it requires deleting a
+named import whose own module comment says do NOT harmonize it downward), so this is a suggestion,
+not a warning. Closing it would need a route-table test that renders the App router.
+
+Minor, same block: `ProtectedRoute.test.tsx:337` is still titled "App.tsx exports exactly the 5
+roles the anomaly comment promises" — the constant now lives in `element-history-route.roles.ts`.
+
+### N-4 — both call-site guards only run when Postgres is reachable
+
+`prisma-review-session.repository.integration.spec.ts:810` and `:859` are pure filesystem scans —
+they read `.ts` sources and need no database at all — but they sit inside the
+`findCompleted...InCommunities()` describe (`:518-892`), whose `beforeAll` opens a Prisma
+connection, in a file matched only by `test:integration`. On a machine or CI lane without Postgres
+they do not run, so the architectural invariant they protect (no fourth production caller of an
+actor-unscoped read) is silently unenforced exactly where a regression is most likely to slip
+through. Moving both into a plain `*.spec.ts` would put them in the default 111-suite unit run at
+no DB cost. Pre-existing pattern, inherited by the W-3 fix rather than introduced by it.
+
+### N-5 — the archived delta still carries the prose W-1 corrected in the live spec
+
+`openspec/changes/review-history-per-element/specs/review-history/spec.md:11` still says "no schema
+change ships", and `:447-450` still asserts that this change adds none of its own and that the
+`ManagerCapability` enum and the `User.managerCapabilities` column MUST remain the only additive
+schema objects. The live spec was corrected (W-1); the delta was not, and this file is about to be
+archived as the historical record of what shipped. Harmless — the live spec is the project truth
+and `design.md` OQ3/Decision 3 documents the override — but a one-line
+`> Note (verify W-1): superseded ...` above those two spots would stop a future reader from
+reviving the wrong premise.
+
+### N-6 — one merged spec sentence reads as garbled
+
+`openspec/specs/review-history/spec.md:885`: "each MUST be reachable from exactly two, all four in
+the history access resolution". Parsed carefully it is correct — two branches per unscoped read,
+four call sites total, all inside `ReviewHistoryAccessService` — but the comma splice reads as a
+contradiction on first pass. Worth a rewrite next time this requirement is touched.
+
+### S-1 / S-2 / S-3 (carried over, all re-verified unchanged)
+
+Re-checked at the exact lines cited in the original pass; all three still stand as written, all
+three remain non-blocking.
+
+---
+
+## R6. Strict-TDD sections
+
+### Assertion quality
+
+Scanned all ten test files created or modified by this change.
+
+| Check | Result |
+|---|---|
+| Tautologies (`expect(true).toBe(true)`, `expect(1).toBe(1)`) | **0** across `apps/api/src`, `apps/api/test`, `apps/web/src` |
+| Ghost loops (assertions inside a loop over a possibly-empty collection) | **0** — the only `queryAll*` uses are `toHaveLength(0)` negative controls asserting the *absence* of controls, which is the intent, and each sits in a test that also asserts positive rendered content |
+| Assertions with no production-code call | **0** |
+| Smoke-test-only (render + `toBeInTheDocument` with no behavioural assertion) | **0** |
+| Mock-heavy files (mocks > 2x assertions) | **0** — worst ratio is 1 mock : 22 assertions |
+| Type-only assertions used alone | **0** — the 6 `toBeDefined()` in the integration spec and 1 in the e2e spec are each paired with value assertions |
+
+| File | `expect(` count | mocks |
+|---|---|---|
+| `review-history-access.service.spec.ts` | 77 | 0 |
+| `read-element-review-history.use-case.spec.ts` | 14 (across 9 `it`) | 0 |
+| `prisma-review-session.repository.integration.spec.ts` | 64 | 0 |
+| `review-history.e2e-spec.ts` | 343 | 0 |
+| `ElementReviewHistoryPage.test.tsx` | 24 | 1 |
+| `CommunityElementsListPage.test.tsx` | 23 | 1 |
+| `ReviewHistoryDetailPage.test.tsx` | 22 | 1 |
+| `ProtectedRoute.test.tsx` | 27 | 1 |
+| `locales.test.ts` | 35 | 0 |
+
+**Assertion quality**: all assertions verify real behaviour. 0 CRITICAL, 0 WARNING.
+
+### Test layer distribution (this change own tests)
+
+| Layer | Coverage |
+|---|---|
+| Unit (api, jest) | access-service five-role branch table, use-case call-order / throw-site / `reviewed` derivation / ordering tiebreak, in-memory fake incl. the empty-scope fail-closed case |
+| Unit + component (web, vitest + testing-library) | page loading/empty/error states, both entry links, route gate, locale parity |
+| Integration (api, real Postgres) | four element-keyed repository scopes, draft and sibling-element exclusion, index existence and `DROP INDEX` rollback, two call-site guards, `find*` enumeration guard |
+| E2E (api, supertest) | 17 element-history cases — five-scope matrix, 404-vs-empty matrix, 401-before-scope, list-control no-op, four scope guards |
+
+All four layers present and exercised. No layer relies on a tool absent from the project capabilities.
+
+### Quality metrics
+
+**Linter**: 0 errors (4 pre-existing warnings in an untouched file).
+**Type checker / build**: `nest build` + `tsc -b` + `vite build`, 4/4 turbo tasks PASS.
+**Coverage**: not run — no coverage threshold is configured for this project; informational only.
+
+---
+
+## R7. Verdict
+
+**PASS WITH WARNINGS** — 0 CRITICAL, 2 WARNING, 4 SUGGESTION (plus S-1/S-2/S-3 carried).
+**`sdd-archive` is unblocked.**
+
+The original pass single blocker (C-1) is closed in the live spec and verified by direct file
+inspection plus a requirement/scenario recount showing nothing was lost. W-1 through W-5 are all
+genuinely fixed, not merely claimed: the dead export is gone from the entire tree, the new
+call-site guard is a real counting assertion that executes and passes, and the route-gate test is
+now driven by the same constant the route consumes.
+
+**Explicitly on the four items left open:**
+
+- **W-6 — not blocking.** A leftover fixture row in the shared local dev database (verified by
+  direct query: exactly one row, this change own task-3.9 decommissioned element) failing a
+  whole-database assertion in a module whose diff against this change is empty. Nothing this change
+  shipped is at fault. Two independent follow-ups, both outside this change: clear the fixture row,
+  and revisit an assertion that treats a supported domain state as a migration failure.
+- **S-1, S-2, S-3 — not blocking.** S-1 and S-2 are app-wide patterns the change follows rather
+  than breaks (the shipped `ReviewHistoryPage` renders its timestamp raw too, and the
+  `@@unique([reviewSessionId, inspectableElementId])` invariant makes the row key correct). S-3
+  three scenarios are each structurally guaranteed by code whose branch is unit-pinned, with a
+  session-level e2e counterpart; adding the element-level cases is a coverage improvement, not a
+  correctness gap.
+- **N-1, N-2 — not blocking.** N-1 is a stale comment with zero runtime effect. N-2 is a missing
+  artifact table whose content was independently re-established by execution this pass.
+
+Nothing is required before archive. If a tidy-up commit is wanted, the N-1 one-line comment
+correction is the only item with any reader-facing risk.
