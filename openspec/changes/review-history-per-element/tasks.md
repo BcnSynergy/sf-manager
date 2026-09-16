@@ -31,6 +31,7 @@ Chain strategy: stacked-to-main
 - [x] 1.3 Port: add `ElementReviewEntryRow` + 4 `findCompletedEntriesForElement{ForPerformer,InCommunities,ForCompany,AcrossInstallation}` methods to `review-session.repository.port.ts`; extend "no identifier-only read" note
 - [x] 1.4 Adapter: implement all 4 as entry-first two-query joins (Decision 2) + `ELEMENT_HISTORY_ORDER_BY` constant in `prisma-review-session.repository.ts`
 - [x] 1.5 In-memory fake: mirror all 4 methods incl. `communityIds: []` false-predicate case
+- [x] 1.5a Follow-up (fresh-context review, non-blocking WARNING): add dedicated unit-test coverage for the 4 fake methods in `in-memory-review-session.repository.spec.ts` — happy path, `InCommunities` fail-closed empty scope, draft exclusion, sibling-element exclusion (commit `fe03a26`)
 - [x] 1.6 Update `find*` enumeration guard test with the 4 new names; confirm `…AcrossInstallation` call-site regex still excludes the new name
 - [x] 1.7 Integration tests (real Postgres): 2 performers/2 companies/1 element, draft session excluded, sibling-element entry excluded; index-existence + rollback (`DROP INDEX`) test; `reviewed` derivation test — written against real Postgres schema/queries but UNEXECUTED in this environment (no reachable Postgres instance; confirmed pre-existing/environmental, not a code issue — see apply-progress)
 
