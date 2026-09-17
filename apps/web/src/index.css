@@ -121,6 +121,21 @@ code {
   background: #fff;
 }
 
+/* nav-menu/design.md Decision 2/6: with no screen rule at all, React inserts
+   no whitespace between the mapped <NavLink> children and the logout
+   <button>, so every label runs together as one unreadable string. This is
+   the minimum separation needed for the nav to be usable — a functional
+   requirement, not design-system styling.
+   Source order matters: this rule MUST stay BEFORE the @media print block
+   below — both target .app-nav with identical specificity, and CSS breaks
+   a specificity tie by source order, so whichever is declared later wins
+   regardless of the print media query. Appending this after the print
+   block would silently make the nav print. */
+.app-nav {
+  display: flex;
+  gap: 1rem;
+}
+
 /* design.md Decision 7: print rules for the single-element label
    (InspectableElementLabelPage.tsx), scoped to `.label-print` so nothing
    else in the app is affected. `[data-print-hide]` is an allowlist of
@@ -133,6 +148,15 @@ code {
 @media print {
   @page {
     margin: 10mm;
+  }
+
+  /* nav-menu/design.md Decision 6: element-label-printing's shipped
+     requirement "Print Output Suppresses Application Chrome" becomes
+     load-bearing here — the global nav is the first real chrome it has
+     ever had to suppress. GLOBAL, not scoped to .label-print: a nav in ANY
+     printed output is a defect, not just on the label page. */
+  .app-nav {
+    display: none;
   }
 
   .label-print [data-print-hide] {
