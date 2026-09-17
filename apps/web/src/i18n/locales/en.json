@@ -488,6 +488,17 @@
     "reviewSessionsLink": "Go to review sessions",
     "reviewHistoryLink": "Go to review history"
   },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "users": "Users",
+    "communities": "Communities",
+    "maintenanceCompanies": "Maintenance companies",
+    "checklistQuestions": "Checklist questions",
+    "reviewTemplates": "Review templates",
+    "reviewSessions": "Review sessions",
+    "reviewHistory": "Review history"
+  },
   "auth": {
     "loginTitle": "Sign in",
     "emailLabel": "Email",
