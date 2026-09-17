@@ -184,8 +184,9 @@ describe('AppLayout', () => {
 
     // design.md Decision 7 correction: AuthProvider.logout() never rejects —
     // it swallows the error itself — so this exercises the real swallow
-    // behaviour via a real AuthProvider + a rejecting fetch stub, exactly
-    // like HealthPage.test.tsx's now-relocated case.
+    // behaviour via a real AuthProvider + a rejecting fetch stub, the same
+    // pattern HealthPage.test.tsx's equivalent case still uses today (its
+    // removal is scoped to PR3, not this PR).
     it('still clears the session and navigates to /login when the logout request fails', async () => {
       vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
       renderAppLayout();

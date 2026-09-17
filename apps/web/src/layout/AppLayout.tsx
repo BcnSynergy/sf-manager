@@ -14,7 +14,8 @@ export function AppLayout() {
   const { t } = useTranslation();
 
   // spec "Logout Moves Into the Navigation": unchanged behaviour, new home
-  // — the exact two statements removed from HealthPage.tsx (Decision 7).
+  // — HealthPage.tsx still has its own copy today; removing it is scoped to
+  // PR3 (nav-menu/tasks.md Phase 3), not this PR.
   async function handleLogout() {
     await logout();
     navigate('/login');

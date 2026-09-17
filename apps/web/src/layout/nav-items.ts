@@ -3,8 +3,7 @@ import type { Role } from '@sf-manager/validation';
 // nav-menu/design.md Decision 3: extracted to its own module for the same
 // reason apps/web/src/auth/element-history-route.roles.ts is — a component
 // file (AppLayout.tsx) may not also export a plain constant
-// (react-refresh/only-export-components) — and so the test can import the
-// real table instead of a hand-copied duplicate.
+// (react-refresh/only-export-components).
 export type NavItem = {
   readonly to: string;
   readonly labelKey: string;
