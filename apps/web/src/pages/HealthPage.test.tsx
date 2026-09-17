@@ -1,13 +1,16 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { AuthProvider } from '../auth/AuthProvider';
 import { HealthPage } from './HealthPage';
 
-function mockFetch(
-  options: { logoutRejects?: boolean; role?: string } = {},
-) {
+// nav-menu/design.md Decision 7: 12 of the 13 tests this file used to have
+// were removed/relocated to AppLayout.test.tsx (logout success + logout
+// network-failure, and the 10 role-conditional link/enumeration cases,
+// subsumed by AppLayout.test.tsx's role -> items matrix and write-surface
+// guard). Only the health-readout test survives.
+function mockFetch() {
   return vi.fn((url: RequestInfo | URL) => {
     const href = String(url);
     if (href.includes('/auth/me')) {
@@ -16,14 +19,9 @@ function mockFetch(
         json: async () => ({
           id: '1',
           email: 'admin@sf-manager.example',
-          role: options.role ?? 'SYSTEM_ADMIN',
+          role: 'SYSTEM_ADMIN',
         }),
       } as Response);
-    }
-    if (href.includes('/auth/logout')) {
-      return options.logoutRejects
-        ? Promise.reject(new Error('network error'))
-        : Promise.resolve({ ok: true } as Response);
     }
     return Promise.resolve({ ok: true } as Response);
   });
@@ -53,173 +51,5 @@ describe('HealthPage', () => {
     await waitFor(() =>
       expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
     );
-  });
-
-  it('renders a logout control that clears the session on click', async () => {
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-
-    fireEvent.click(screen.getByTestId('logout-button'));
-
-    await waitFor(() => {
-      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/logout'))).toBe(true);
-    });
-
-    await waitFor(() => expect(screen.getByTestId('login-page')).toBeInTheDocument());
-  });
-
-  // review-session-ui spec "Both Non-Admin Roles Have a Reachable Entry
-  // Point": a logged-in MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE
-  // MUST be able to navigate into the review-session flow from here.
-  it('shows a review-sessions entry link for a MAINTENANCE_TECHNICIAN', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_TECHNICIAN' }));
-    renderHealthPage();
-
-    const link = await screen.findByTestId('review-sessions-entry-link');
-    expect(link).toHaveAttribute('href', '/review-sessions');
-  });
-
-  it('shows the identical review-sessions entry link for a COMMUNITY_REPRESENTATIVE', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'COMMUNITY_REPRESENTATIVE' }));
-    renderHealthPage();
-
-    const link = await screen.findByTestId('review-sessions-entry-link');
-    expect(link).toHaveAttribute('href', '/review-sessions');
-  });
-
-  it('does not show a review-sessions entry link for a SYSTEM_ADMIN', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-    expect(screen.queryByTestId('review-sessions-entry-link')).not.toBeInTheDocument();
-  });
-
-  // review-history-company-scope spec "The manager reaches history from the
-  // app's entry page" / design.md Q5 (Decision 10): a MAINTENANCE_COMPANY_MANAGER
-  // gets a control here that navigates directly to /review-history, never
-  // through the /review-sessions write surface.
-  it('shows a review-history entry link for a MAINTENANCE_COMPANY_MANAGER', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
-    renderHealthPage();
-
-    const link = await screen.findByTestId('review-history-entry-link');
-    expect(link).toHaveAttribute('href', '/review-history');
-  });
-
-  it('does not show a review-sessions entry link for a MAINTENANCE_COMPANY_MANAGER', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
-    renderHealthPage();
-
-    await screen.findByTestId('review-history-entry-link');
-    expect(screen.queryByTestId('review-sessions-entry-link')).not.toBeInTheDocument();
-  });
-
-  it('does not show a review-history entry link for a MAINTENANCE_TECHNICIAN or COMMUNITY_REPRESENTATIVE', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_TECHNICIAN' }));
-    renderHealthPage();
-
-    await screen.findByTestId('review-sessions-entry-link');
-    expect(screen.queryByTestId('review-history-entry-link')).not.toBeInTheDocument();
-  });
-
-  // spec "The manager's path never crosses the write surface" +
-  // "No write control is rendered for the manager": enumerate every
-  // navigation control rendered on this page for a signed-in manager —
-  // none navigates to /review-sessions or any session-performing view, and
-  // the only controls present are the history link and logout.
-  it('enumerates every navigation control for a MAINTENANCE_COMPANY_MANAGER — none leads to /review-sessions', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-
-    const links = screen.getAllByRole('link');
-    const hrefs = links.map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['/review-history']);
-    expect(hrefs.some((href) => href?.startsWith('/review-sessions'))).toBe(false);
-
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
-  });
-
-  // review-history-admin-scope spec "The System Admin Reaches the Shipped
-  // History Surface Unchanged": a SYSTEM_ADMIN gets the identical
-  // /review-history entry link the manager gets, and nothing else —
-  // enumerated the same way as the manager's sibling test above (line
-  // 137-153), which stays untouched by this change.
-  it('enumerates every navigation control for a SYSTEM_ADMIN — only the history link and logout', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-
-    const links = screen.getAllByRole('link');
-    const hrefs = links.map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['/review-history']);
-
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
-  });
-
-  // review-history-manager-capability spec: MANAGER joins the same entry-link
-  // set, gated on the ROLE alone — never on the VIEW_ALL_REVIEWS capability,
-  // which this page's /auth/me-derived user object never carries (design.md
-  // Decision 7 "Route gating stays role-only"). An UNGRANTED manager gets the
-  // identical link and reaches the already-shipped empty state — there is no
-  // way for this page to distinguish granted from ungranted, by design.
-  it('shows a review-history entry link for a MANAGER, granted or not', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
-    renderHealthPage();
-
-    const link = await screen.findByTestId('review-history-entry-link');
-    expect(link).toHaveAttribute('href', '/review-history');
-  });
-
-  // Sibling of the granted-manager/admin enumeration tests above (lines
-  // 137-153, 160-175, both unmodified) — a MANAGER (ungranted, since this
-  // page's HealthPage/auth/me shape never carries the capability at all)
-  // sees exactly the history link and logout, nothing that leads toward
-  // /review-sessions.
-  it('enumerates every navigation control for a MANAGER — only the history link and logout, for an ungranted manager too', async () => {
-    vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-
-    const links = screen.getAllByRole('link');
-    const hrefs = links.map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['/review-history']);
-
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAttribute('data-testid', 'logout-button');
-  });
-
-  it('still clears the session and navigates to /login when the logout request fails', async () => {
-    vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
-    renderHealthPage();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('health-status')).toHaveTextContent('All systems operational'),
-    );
-
-    fireEvent.click(screen.getByTestId('logout-button'));
-
-    await waitFor(() => expect(screen.getByTestId('login-page')).toBeInTheDocument());
   });
 });
