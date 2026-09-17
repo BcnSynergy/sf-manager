@@ -369,10 +369,9 @@ describe('locale key-set parity (en/es/ca)', () => {
 
   // Existence guard for review-session (Phase 7), same rationale as
   // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
-  // every `reviewSession.*`/`health.reviewSessionsLink` key path referenced
-  // by source in PR7, so a future PR that adds a new call site without
-  // adding its translation fails here rather than silently rendering the
-  // raw key.
+  // every `reviewSession.*` key path referenced by source in PR7, so a
+  // future PR that adds a new call site without adding its translation
+  // fails here rather than silently rendering the raw key.
   const REQUIRED_REVIEW_SESSION_KEY_PATHS = [
     // entry point (ReviewSessionsPage)
     'reviewSession.entry.title',
@@ -449,8 +448,6 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewSession.error.missingAnswers',
     'reviewSession.error.unreviewedElementsWithoutReason',
     'reviewSession.error.validationFailed',
-    // HealthPage's role-conditional entry link
-    'health.reviewSessionsLink',
   ];
 
   // Existence guard for review-history (review-history change, Phase 5),
@@ -484,8 +481,24 @@ describe('locale key-set parity (en/es/ca)', () => {
     // performer line (review-history-company-scope, Phase 5)
     'reviewHistory.detail.performerLabel',
     'reviewHistory.detail.performerUnknown',
-    // manager entry link on HealthPage (review-history-company-scope, Phase 5)
-    'health.reviewHistoryLink',
+  ];
+
+  // Existence guard for the global nav (nav-menu change, Phase 1/3), same
+  // rationale as REQUIRED_COMMUNITY_KEY_PATHS above — a fixed,
+  // hand-maintained list of every `nav.*` key path referenced by
+  // apps/web/src/layout/AppLayout.tsx, so a future PR that adds a new nav
+  // item without adding its translation fails here rather than silently
+  // rendering the raw key.
+  const REQUIRED_NAV_KEY_PATHS = [
+    'nav.label',
+    'nav.home',
+    'nav.users',
+    'nav.communities',
+    'nav.maintenanceCompanies',
+    'nav.checklistQuestions',
+    'nav.reviewTemplates',
+    'nav.reviewSessions',
+    'nav.reviewHistory',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same
@@ -667,6 +680,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_MANAGER_CAPABILITY_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_NAV_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

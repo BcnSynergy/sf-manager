@@ -13,7 +13,8 @@ type LoadState = 'loading' | 'loaded' | 'error';
 
 // review-history-per-element/design.md Decision 7: a sibling of the shipped
 // depth-5 `/edit` and `/label` routes, but a DELIBERATELY anomalous route
-// gate (five roles, not SYSTEM_ADMIN-only — see App.tsx's route comment).
+// gate (five roles, not SYSTEM_ADMIN-only — see authenticated-routes.tsx's
+// route comment).
 // Element header (code, name, type — through mapElementTypeToLabelKey,
 // NEVER the raw enum — location, decommissioned state, community name) +
 // the chronological record. Distinct loading / empty / error states, every

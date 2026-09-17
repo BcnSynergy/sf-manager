@@ -6,16 +6,14 @@ import { NAV_ITEMS_BY_ROLE } from './nav-items';
 // nav-menu/design.md Decision 2: the one authenticated shell. It owns no
 // state, fetches nothing, and reads exactly two values from useAuth() plus
 // the logout function. Wired into App.tsx's route tree as a pathless
-// <Route element={<AppLayout />}> wrapper in a later PR of this change
-// (nav-menu/tasks.md Phase 3) — this PR ships the component standalone.
+// <Route element={<AppLayout />}> wrapper (nav-menu/tasks.md Phase 3).
 export function AppLayout() {
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   // spec "Logout Moves Into the Navigation": unchanged behaviour, new home
-  // — HealthPage.tsx still has its own copy today; removing it is scoped to
-  // PR3 (nav-menu/tasks.md Phase 3), not this PR.
+  // — HealthPage.tsx's own copy was removed in nav-menu/tasks.md Phase 3.
   async function handleLogout() {
     await logout();
     navigate('/login');

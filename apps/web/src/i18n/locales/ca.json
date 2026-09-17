@@ -484,9 +484,7 @@
     "title": "Estat del sistema",
     "checking": "Comprovant...",
     "ok": "Tot funciona correctament",
-    "error": "Alguna cosa no funciona",
-    "reviewSessionsLink": "Anar a sessions de revisió",
-    "reviewHistoryLink": "Anar a l'historial de revisions"
+    "error": "Alguna cosa no funciona"
   },
   "nav": {
     "label": "Navegació principal",
