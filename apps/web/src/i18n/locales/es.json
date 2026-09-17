@@ -484,9 +484,7 @@
     "title": "Estado del sistema",
     "checking": "Comprobando...",
     "ok": "Todo funciona correctamente",
-    "error": "Algo no está funcionando",
-    "reviewSessionsLink": "Ir a sesiones de revisión",
-    "reviewHistoryLink": "Ir al historial de revisiones"
+    "error": "Algo no está funcionando"
   },
   "nav": {
     "label": "Navegación principal",

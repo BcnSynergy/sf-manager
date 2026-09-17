@@ -484,9 +484,7 @@
     "title": "System status",
     "checking": "Checking...",
     "ok": "All systems operational",
-    "error": "Something is not working",
-    "reviewSessionsLink": "Go to review sessions",
-    "reviewHistoryLink": "Go to review history"
+    "error": "Something is not working"
   },
   "nav": {
     "label": "Main navigation",
