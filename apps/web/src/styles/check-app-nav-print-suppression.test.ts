@@ -141,6 +141,34 @@ describe('checkAppNavPrintSuppression', () => {
     expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
   });
 
+  // code-review finding (second round): APP_NAV_HIDDEN_RULE/APP_NAV_VISIBLE_RULE
+  // only matched a standalone `.app-nav { ... }` selector — a valid CSS
+  // refactor to a grouped selector (e.g. `.app-nav, .drawer { display: none }`)
+  // would false-negative and report the nav as NOT hidden/visible even though
+  // it correctly is. APP_NAV_ANY_RULE already solved this exact problem with
+  // a token-boundary regex; the two rules above must use the same approach.
+  it('recognizes a grouped selector hiding .app-nav inside @media print', () => {
+    const css = `
+      .app-nav { display: flex; gap: 1rem; }
+      @media print {
+        .app-nav, .drawer { display: none; }
+      }
+    `;
+
+    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+  });
+
+  it('recognizes a grouped screen selector making .app-nav visible before @media print', () => {
+    const css = `
+      .app-nav, .toolbar { display: flex; }
+      @media print {
+        .app-nav { display: none; }
+      }
+    `;
+
+    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+  });
+
   // The regression guard the CRITICAL-1 finding actually asked for: run the
   // pure check against the REAL, shipped apps/web/src/index.css, not just
   // synthetic fixtures. This is the assertion that fails the moment a future
