@@ -79,3 +79,33 @@ short-lived dual-mechanism window (design already rejected this).
 - [x] 4.1 Confirm `openspec/changes/nav-menu/specs/app-navigation/spec.md` (new capability) matches the shipped role→items table, gating, print-suppression and logout requirements
 - [x] 4.2 Confirm the 6 delta specs (`review-history-ui`, `review-session-ui`, `review-template-admin-ui`, `community-admin-ui`, `checklist-question-admin-ui`, `element-label-printing`) narrow their "no global nav bar" / entry-point language per proposal.md's Capabilities section
 - [x] 4.3 Run `openspec validate` (or project equivalent) on all 7 spec files
+
+## Verify Remediation (PR 5) — `nav-menu/05-verify-remediation`
+
+Addresses `sdd-verify`'s PASS WITH ISSUES report (1 CRITICAL, 5 WARNING).
+Scope is exactly these 5 items; WARNING-5 (retroactive TDD evidence) and the
+3 SUGGESTIONs are explicitly out of scope for this slice.
+
+- [x] 5.1 CRITICAL-1: write the missing automated CSS-source-order regression
+      test (`apps/web/src/styles/check-app-nav-print-suppression.{ts,test.ts}`)
+      that `tasks.md` 3.13 and the apply-progress artifact both wrongly
+      claimed already existed; asserts the screen `.app-nav` rule precedes
+      `@media print` and nothing re-declares `.app-nav` after it
+- [ ] 5.2 CRITICAL-1: manual browser print-preview check on the label route
+      and one ordinary route — **not done in this batch**: no browser
+      automation tool was available in this execution context; see apply-
+      progress for the explicit note. Follow-up required before archive.
+- [x] 5.3 WARNING-1: add the missing testid-collision regression guard —
+      render `ReviewSessionsPage` inside `AppLayout` and assert
+      `review-history-entry-link` resolves to exactly one node
+      (`apps/web/src/layout/AppLayout.review-sessions-collision.test.tsx`)
+- [x] 5.4 WARNING-2: add the missing reachability-invariant test pairing
+      every `NavItem.to` with its route's `allowedRoles`
+      (`apps/web/src/layout/nav-items.reachability.test.ts`)
+- [x] 5.5 WARNING-3: guard `apps/api/prisma/seed.ts`'s hardcoded technician
+      dev account against production via `shouldSeedDevAccount`
+      (`apps/api/src/shared/seeding/should-seed-dev-account.ts`)
+- [x] 5.6 WARNING-4: correct the stale claims — `design.md`'s File Changes
+      table row for `apps/api/**`/`prisma/**` now names the `seed.ts`
+      changes instead of saying "Untouched"; `sdd/nav-menu/apply-progress`
+      corrected to say PR4 is merged (PR #130)
