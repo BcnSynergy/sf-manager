@@ -91,10 +91,19 @@ Scope is exactly these 5 items; WARNING-5 (retroactive TDD evidence) and the
       that `tasks.md` 3.13 and the apply-progress artifact both wrongly
       claimed already existed; asserts the screen `.app-nav` rule precedes
       `@media print` and nothing re-declares `.app-nav` after it
-- [ ] 5.2 CRITICAL-1: manual browser print-preview check on the label route
-      and one ordinary route — **not done in this batch**: no browser
-      automation tool was available in this execution context; see apply-
-      progress for the explicit note. Follow-up required before archive.
+- [x] 5.2 CRITICAL-1: manual browser print-preview check on the label route
+      — done via `claude-in-chrome` against the running dev app
+      (`/communities/:id/inspectable-elements/:id/label`, SYSTEM_ADMIN),
+      confirmed by the user in the actual OS print-preview dialog: `.app-nav`
+      hidden, `@page { margin: 10mm }` applied. Also confirmed live via the
+      browser's CSSOM (`document.styleSheets`) that the loaded/bundled CSS
+      preserves the same rule order as the source file (screen `.app-nav`
+      rule at index 11, `@media print` block at index 12, not just the
+      static file). Second ordinary-route print check (SUGGESTION-2) not
+      done — the print CSS is a single global rule already verified once,
+      and the native print dialog risks freezing the browser-automation
+      session each time it's invoked (it did once during this check; the
+      user closed it manually), so a second invocation wasn't repeated.
 - [x] 5.3 WARNING-1: add the missing testid-collision regression guard —
       render `ReviewSessionsPage` inside `AppLayout` and assert
       `review-history-entry-link` resolves to exactly one node
