@@ -118,3 +118,23 @@ Scope is exactly these 5 items; WARNING-5 (retroactive TDD evidence) and the
       table row for `apps/api/**`/`prisma/**` now names the `seed.ts`
       changes instead of saying "Untouched"; `sdd/nav-menu/apply-progress`
       corrected to say PR4 is merged (PR #130)
+
+### Second review round (pre-merge fresh-context /code-review high on PR #131)
+
+- [x] 5.7 Fixed grouped-selector false negative in
+      `check-app-nav-print-suppression.ts`'s `APP_NAV_HIDDEN_RULE`/
+      `APP_NAV_VISIBLE_RULE` (same token-boundary approach as
+      `APP_NAV_ANY_RULE`); documented the checker's known single-`@media
+      print`-block limitation
+- [x] 5.8 Wrapped `AppLayout.review-sessions-collision.test.tsx`'s route in
+      `ProtectedRoute` (matches production `App.tsx` wiring) and extracted
+      the shared `/auth/me`+`/auth/logout` fetch stub into
+      `apps/web/src/layout/test-support/mock-auth-fetch.ts`, used by both
+      `AppLayout.test.tsx` and the collision test
+- [x] 5.9 Extracted shared `isProduction` predicate
+      (`apps/api/src/shared/infrastructure/env/is-production.ts`) to
+      de-duplicate the `NODE_ENV === 'production'` check previously inlined
+      independently in both `should-seed-dev-account.ts` and
+      `auth.config.ts`
+- [x] 5.10 Decoupled `nav-items.reachability.test.ts`'s fixture sanity check
+      from the exact current nav-item count (`toBe(17)` -> `toBeGreaterThan(0)`)
