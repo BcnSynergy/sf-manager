@@ -9,9 +9,22 @@ export type PrintSuppressionResult =
   | { readonly ok: false; readonly reason: string };
 
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
+// Only inspects the FIRST `@media print` block in the stylesheet (no `/g`
+// loop) — a KNOWN, ACCEPTED limitation. `apps/web/src/index.css` has exactly
+// one `@media print` block today; if a future edit adds a second one, this
+// checker will silently ignore it. Full multi-block support is out of scope
+// for this single-purpose regression guard (walking-skeleton discipline) —
+// revisit this file if/when a second `@media print` block is introduced.
 const MEDIA_PRINT_START = /@media\s+print\s*\{/;
-const APP_NAV_HIDDEN_RULE = /\.app-nav\s*\{[^}]*display:\s*none[^}]*\}/i;
-const APP_NAV_VISIBLE_RULE = /\.app-nav\s*\{[^}]*display:\s*(?!none)[a-z-]+[^}]*\}/i;
+// Both rules below match `.app-nav` as a selector token (not part of a
+// longer class name like `.app-navbar`) anywhere in a comma/compound
+// selector list that is still open when the next `{` is reached — e.g.
+// `.app-nav, .drawer { display: none }` or `.app-nav.legacy { ... }`, not
+// just a standalone `.app-nav { ... }`. Same token-boundary approach as
+// APP_NAV_ANY_RULE below, applied consistently so a valid grouped-selector
+// CSS refactor doesn't false-negative this check.
+const APP_NAV_HIDDEN_RULE = /\.app-nav(?![\w-])[^{}]*\{[^}]*display:\s*none[^}]*\}/i;
+const APP_NAV_VISIBLE_RULE = /\.app-nav(?![\w-])[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+[^}]*\}/i;
 // Matches `.app-nav` as a selector token (not part of a longer class name
 // like `.app-navbar`) anywhere in a comma/compound selector list that is
 // still open when the next `{` is reached — e.g. `.app-nav, .foo {` or
