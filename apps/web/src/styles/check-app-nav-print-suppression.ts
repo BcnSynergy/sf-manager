@@ -8,12 +8,21 @@ export type PrintSuppressionResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: string };
 
+const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 const MEDIA_PRINT_START = /@media\s+print\s*\{/;
 const APP_NAV_HIDDEN_RULE = /\.app-nav\s*\{[^}]*display:\s*none[^}]*\}/i;
 const APP_NAV_VISIBLE_RULE = /\.app-nav\s*\{[^}]*display:\s*(?!none)[a-z-]+[^}]*\}/i;
-const APP_NAV_ANY_RULE = /\.app-nav\s*\{/;
+// Matches `.app-nav` as a selector token (not part of a longer class name
+// like `.app-navbar`) anywhere in a comma/compound selector list that is
+// still open when the next `{` is reached — e.g. `.app-nav, .foo {` or
+// `.app-nav.legacy {`, not just a standalone `.app-nav {`.
+const APP_NAV_ANY_RULE = /\.app-nav(?![\w-])[^{}]*\{/;
 
-export function checkAppNavPrintSuppression(css: string): PrintSuppressionResult {
+export function checkAppNavPrintSuppression(rawCss: string): PrintSuppressionResult {
+  // Strip comments first so a stray `{`/`}` inside explanatory prose (this
+  // file's own header comment does exactly that) can't desync the
+  // brace-depth scan below or the selector-detection regexes.
+  const css = rawCss.replace(CSS_COMMENT, '');
   const startMatch = MEDIA_PRINT_START.exec(css);
   if (!startMatch) {
     return { ok: false, reason: 'No @media print block found in the stylesheet.' };

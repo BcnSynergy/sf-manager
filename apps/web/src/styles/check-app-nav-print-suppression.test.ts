@@ -94,6 +94,53 @@ describe('checkAppNavPrintSuppression', () => {
     });
   });
 
+  // code-review finding on the guard itself: a comment containing an
+  // unbalanced brace must not desync the brace-depth scan used to find the
+  // end of the @media print block.
+  it('is not confused by a comment containing a stray brace inside @media print', () => {
+    const css = `
+      .app-nav { display: flex; gap: 1rem; }
+      @media print {
+        /* a note with a stray } in it */
+        .app-nav { display: none; }
+      }
+    `;
+
+    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+  });
+
+  // code-review finding on the guard itself: a compound/grouped selector
+  // reintroducing .app-nav after @media print must still be caught — not
+  // just a standalone `.app-nav {` — and `.app-navbar` must NOT false-match.
+  it('reports failure when a grouped selector reintroduces .app-nav after @media print', () => {
+    const css = `
+      .app-nav { display: flex; gap: 1rem; }
+      @media print {
+        .app-nav { display: none; }
+      }
+      .app-nav, .some-other-class { display: flex; }
+    `;
+
+    const result = checkAppNavPrintSuppression(css);
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining('after the @media print block'),
+    });
+  });
+
+  it('does not false-match .app-navbar as a .app-nav rule after @media print', () => {
+    const css = `
+      .app-nav { display: flex; gap: 1rem; }
+      @media print {
+        .app-nav { display: none; }
+      }
+      .app-navbar { display: flex; }
+    `;
+
+    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+  });
+
   // The regression guard the CRITICAL-1 finding actually asked for: run the
   // pure check against the REAL, shipped apps/web/src/index.css, not just
   // synthetic fixtures. This is the assertion that fails the moment a future

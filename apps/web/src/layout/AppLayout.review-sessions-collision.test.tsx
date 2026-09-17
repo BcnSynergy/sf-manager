@@ -62,8 +62,11 @@ describe('AppLayout + ReviewSessionsPage — no testid collision', () => {
     async (role) => {
       renderReviewSessionsInsideLayout(role);
 
-      await screen.findByTestId('nav-root');
-      expect(screen.getByTestId('review-history-entry-link')).toBeInTheDocument();
+      // AuthProvider's /auth/me fetch and ReviewSessionsPage's own
+      // listOwnReviewSessions() load are independent promise chains — nav-root
+      // resolving says nothing about ReviewSessionsPage's load state, so wait
+      // for the actual assertion target instead of a synchronous getByTestId.
+      expect(await screen.findByTestId('review-history-entry-link')).toBeInTheDocument();
     },
   );
 });
