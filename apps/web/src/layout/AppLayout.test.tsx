@@ -6,6 +6,7 @@ import '../i18n';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
 import { AppLayout } from './AppLayout';
+import { mockAuthFetch as mockFetch } from './test-support/mock-auth-fetch';
 
 // nav-menu/design.md Decision 2/7: AppLayout is exercised the same way
 // HealthPage.test.tsx exercised the logout flow it replaces — a REAL
@@ -14,29 +15,10 @@ import { AppLayout } from './AppLayout';
 // finally), so a mocked logout() rejecting would never reach
 // AppLayout.handleLogout at all and would prove nothing about its actual
 // swallow-and-navigate behaviour.
-function mockFetch(options: { role?: string; authFails?: boolean; logoutRejects?: boolean } = {}) {
-  return vi.fn((url: RequestInfo | URL) => {
-    const href = String(url);
-    if (href.includes('/auth/me')) {
-      return options.authFails
-        ? Promise.resolve({ ok: false } as Response)
-        : Promise.resolve({
-            ok: true,
-            json: async () => ({
-              id: '1',
-              email: 'user@sf-manager.example',
-              role: options.role ?? 'SYSTEM_ADMIN',
-            }),
-          } as Response);
-    }
-    if (href.includes('/auth/logout')) {
-      return options.logoutRejects
-        ? Promise.reject(new Error('network error'))
-        : Promise.resolve({ ok: true } as Response);
-    }
-    return Promise.resolve({ ok: true } as Response);
-  });
-}
+//
+// code-review finding (second round): this helper is now shared with
+// AppLayout.review-sessions-collision.test.tsx via
+// ./test-support/mock-auth-fetch — see that module for the full shape.
 
 // One outlet route per path any test below navigates to — mirrors the
 // pathless <Route element={<AppLayout />}> wrapper design.md Decision 1/2
