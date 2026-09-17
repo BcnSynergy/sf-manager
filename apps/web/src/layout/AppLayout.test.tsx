@@ -4,6 +4,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Role } from '@sf-manager/validation';
 import '../i18n';
 import { AuthProvider } from '../auth/AuthProvider';
+import { ProtectedRoute } from '../auth/ProtectedRoute';
 import { AppLayout } from './AppLayout';
 
 // nav-menu/design.md Decision 2/7: AppLayout is exercised the same way
@@ -159,12 +160,37 @@ describe('AppLayout', () => {
     });
   });
 
-  // Deferred until PR3 wires AppLayout into App.tsx's real route table — the
-  // NotAuthorized view only reaches the nav through ProtectedRoute, which
-  // this PR does not touch (nav-menu/tasks.md Phase 1). Design.md's
-  // Decision 1 pins this as structural, not something this PR can exercise
-  // in isolation.
-  it.skip('renders the nav around the NotAuthorized view (PR3 wiring)', () => {});
+  // nav-menu/tasks.md 3.3: unskipped now that App.tsx wires ProtectedRoute
+  // inside the layout route (design.md Decision 1 — NotAuthorized is
+  // ProtectedRoute's own return value, i.e. the layout's <Outlet /> content,
+  // so it inherits the nav "for free"). A wrong-role user rendered through a
+  // real ProtectedRoute inside the layout shows BOTH not-authorized and
+  // nav-root.
+  it('renders the nav around the NotAuthorized view', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/restricted']}>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route
+                path="/restricted"
+                element={
+                  <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+                    <div data-testid="outlet-content">restricted</div>
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+            <Route path="/login" element={<div data-testid="login-page">login</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    await screen.findByTestId('not-authorized');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+  });
 
   describe('logout', () => {
     it('clears the session and navigates to /login on success', async () => {
