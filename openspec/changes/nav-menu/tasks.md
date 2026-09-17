@@ -76,6 +76,6 @@ short-lived dual-mechanism window (design already rejected this).
 
 ## Phase 4: Spec Deltas (PR 4) — `nav-menu/04-spec-deltas`
 
-- [ ] 4.1 Confirm `openspec/changes/nav-menu/specs/app-navigation/spec.md` (new capability) matches the shipped role→items table, gating, print-suppression and logout requirements
-- [ ] 4.2 Confirm the 6 delta specs (`review-history-ui`, `review-session-ui`, `review-template-admin-ui`, `community-admin-ui`, `checklist-question-admin-ui`, `element-label-printing`) narrow their "no global nav bar" / entry-point language per proposal.md's Capabilities section
-- [ ] 4.3 Run `openspec validate` (or project equivalent) on all 7 spec files
+- [x] 4.1 Confirm `openspec/changes/nav-menu/specs/app-navigation/spec.md` (new capability) matches the shipped role→items table, gating, print-suppression and logout requirements
+- [x] 4.2 Confirm the 6 delta specs (`review-history-ui`, `review-session-ui`, `review-template-admin-ui`, `community-admin-ui`, `checklist-question-admin-ui`, `element-label-printing`) narrow their "no global nav bar" / entry-point language per proposal.md's Capabilities section
+- [x] 4.3 Run `openspec validate` (or project equivalent) on all 7 spec files
