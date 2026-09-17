@@ -152,13 +152,14 @@ describe('ProtectedRoute with allowedRoles', () => {
 
 // review-history-admin-scope spec "Role-Gated Route Access for the History
 // Views" (MODIFIED) + review-history-manager-capability design.md
-// Decision 7: the /review-history* routes in App.tsx use this exact 5-role
-// array — MANAGER joins the four shipped roles (gated on the role alone;
-// its actual visibility is a server-side capability check, not a route
-// concern), the /review-sessions* write surface stays untouched. Exercised
-// here against the generic ProtectedRoute mechanism (App.tsx itself has no
-// dedicated route test file, per this repo's existing precedent) rather
-// than booting the full app with real auth.
+// Decision 7: the /review-history* routes in authenticated-routes.tsx use
+// this exact 5-role array — MANAGER joins the four shipped roles (gated on
+// the role alone; its actual visibility is a server-side capability check,
+// not a route concern), the /review-sessions* write surface stays
+// untouched. Exercised here against the generic ProtectedRoute mechanism
+// (App.test.tsx and authenticated-routes.test.ts are the dedicated route
+// test files, nav-menu/tasks.md Phase 2/3) rather than booting the full app
+// with real auth.
 describe('ProtectedRoute with the review-history route family (5 allowed roles)', () => {
   const REVIEW_HISTORY_ALLOWED_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
@@ -319,22 +320,23 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
   });
 });
 
-// review-history-per-element/design.md Decision 7 + App.tsx's route
-// comment: `/communities/:communityId/inspectable-elements/:elementId/
+// review-history-per-element/design.md Decision 7 + authenticated-routes.tsx's
+// route comment: `/communities/:communityId/inspectable-elements/:elementId/
 // history` uses the IDENTICAL 5-role array as `/review-history*` above —
 // DELIBERATELY, unlike every other route in the `inspectable-elements`
 // family (list, `/new`, `/edit`, `/label`), which stays SYSTEM_ADMIN-only.
-// This block pins BOTH facts the in-file App.tsx comment calls out: the
-// five roles reach this route, and its SYSTEM_ADMIN-only siblings do not
-// widen alongside it.
+// This block pins BOTH facts the in-file authenticated-routes.tsx comment
+// calls out: the five roles reach this route, and its SYSTEM_ADMIN-only
+// siblings do not widen alongside it.
 //
 // verify-report.md W-4: `ELEMENT_HISTORY_ALLOWED_ROLES` is imported from
-// `./element-history-route.roles` (the same module App.tsx imports it
-// from, not hand-declared here) so an accidental narrowing of the real
-// route's `allowedRoles` in App.tsx fails this suite via an import-level
-// mismatch, instead of silently passing against a stale local copy.
+// `./element-history-route.roles` (the same module `authenticated-routes.tsx`
+// imports it from, not hand-declared here) so an accidental narrowing of
+// the real route's `allowedRoles` in `authenticated-routes.tsx` fails this
+// suite via an import-level mismatch, instead of silently passing against a
+// stale local copy.
 describe('ProtectedRoute for the element review-history route (5 allowed roles, admin-only siblings unchanged)', () => {
-  it('App.tsx exports exactly the 5 roles the anomaly comment promises', () => {
+  it('the exported roles are exactly the 5 the anomaly comment promises', () => {
     expect(ELEMENT_HISTORY_ALLOWED_ROLES).toEqual<Role[]>([
       'MAINTENANCE_TECHNICIAN',
       'COMMUNITY_REPRESENTATIVE',
