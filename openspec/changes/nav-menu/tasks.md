@@ -51,9 +51,9 @@ short-lived dual-mechanism window (design already rejected this).
 
 ## Phase 2: Route Table Extraction (PR 2) — `nav-menu/02-authenticated-routes-extraction`
 
-- [ ] 2.1 RED: write `apps/web/src/routes/authenticated-routes.test.ts` — import real `AUTHENTICATED_ROUTES`, no `vi.mock`, assert `{ path, allowedRoles, elementType: element.type }` structurally against a literal 28-entry expected list
-- [ ] 2.2 GREEN: create `apps/web/src/routes/authenticated-routes.tsx` — `AuthenticatedRoute` type + `AUTHENTICATED_ROUTES` array, one entry per existing `App.tsx` route, `allowedRoles` arrays and ordering comments moved verbatim (Decision 1); `App.tsx` untouched in this PR
-- [ ] 2.3 REFACTOR: diff each moved `allowedRoles` array against `App.tsx`'s current `<Route>` blocks by eye to confirm byte-identical transcription before PR3 consumes it
+- [x] 2.1 RED: write `apps/web/src/routes/authenticated-routes.test.ts` — import real `AUTHENTICATED_ROUTES`, no `vi.mock`, assert `{ path, allowedRoles, elementType: element.type }` structurally against a literal 28-entry expected list
+- [x] 2.2 GREEN: create `apps/web/src/routes/authenticated-routes.tsx` — `AuthenticatedRoute` type + `AUTHENTICATED_ROUTES` array, one entry per existing `App.tsx` route, `allowedRoles` arrays and ordering comments moved verbatim (Decision 1); `App.tsx` untouched in this PR
+- [x] 2.3 REFACTOR: diff each moved `allowedRoles` array against `App.tsx`'s current `<Route>` blocks by eye to confirm byte-identical transcription before PR3 consumes it
 
 ## Phase 3: Wire AppLayout + HealthPage Cleanup (PR 3) — `nav-menu/03-wire-app-layout-healthpage-cleanup`
 
