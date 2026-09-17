@@ -15,6 +15,7 @@ import {
   type UserRepository,
 } from '../src/modules/users/application/ports/user.repository.port';
 import { User } from '../src/modules/users/domain/user.entity';
+import { shouldSeedDevAccount } from '../src/shared/seeding/should-seed-dev-account';
 
 // design.md File Changes ("apps/api/prisma/seed.ts") — bootstraps a real
 // Nest application context (not a bare script) so this seed goes through
@@ -72,25 +73,36 @@ async function seed() {
     // the smallest non-trivial nav (3 items — Home, Review sessions, Review
     // history, nav-menu/design.md Decision 3), so it's a fast, legible
     // manual check. Fixed, hardcoded credentials (not env-driven, unlike the
-    // admin above) — this is a local/dev-seed-only convenience account, not
-    // a deployment secret.
-    const secondaryPasswordHash = await passwordHasher.hash(
-      'nav-menu-verify-12345',
-    );
-    const secondaryUser = new User({
-      id: idGenerator.generate(),
-      email: 'technician@sf-manager.example',
-      passwordHash: secondaryPasswordHash,
-      role: 'MAINTENANCE_TECHNICIAN',
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    });
-    await userRepository.save(secondaryUser);
+    // admin above) — this is a local/dev-seed-only convenience account.
+    //
+    // nav-menu verify-report WARNING-3: unlike the admin account above,
+    // these credentials are hardcoded and public (visible in this source
+    // file), so this account MUST NOT be created in production —
+    // `shouldSeedDevAccount` mirrors auth.config.ts's own
+    // `NODE_ENV === 'production'` gate.
+    if (shouldSeedDevAccount(process.env.NODE_ENV)) {
+      const secondaryPasswordHash = await passwordHasher.hash(
+        'nav-menu-verify-12345',
+      );
+      const secondaryUser = new User({
+        id: idGenerator.generate(),
+        email: 'technician@sf-manager.example',
+        passwordHash: secondaryPasswordHash,
+        role: 'MAINTENANCE_TECHNICIAN',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      });
+      await userRepository.save(secondaryUser);
 
-    console.log(
-      `Seeded non-admin user: ${secondaryUser.email} (MAINTENANCE_TECHNICIAN)`,
-    );
+      console.log(
+        `Seeded non-admin user: ${secondaryUser.email} (MAINTENANCE_TECHNICIAN)`,
+      );
+    } else {
+      console.log(
+        'Skipping non-admin dev seed account: NODE_ENV is production.',
+      );
+    }
   } finally {
     // Ensures Nest's lifecycle hooks (PrismaService.onModuleDestroy →
     // $disconnect()) run, so the script doesn't hang on exit.
