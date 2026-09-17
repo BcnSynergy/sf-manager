@@ -64,8 +64,33 @@ async function seed() {
     // preserved, so rerunning this script is safe (idempotent).
     await userRepository.save(user);
 
-    // eslint-disable-next-line no-console -- CLI script, not application code
     console.log(`Seeded admin user: ${email}`);
+
+    // nav-menu/tasks.md 3.12: browser-verifying a role-filtered nav needs at
+    // least one non-admin account — this seed previously only ever created
+    // a SYSTEM_ADMIN. MAINTENANCE_TECHNICIAN is picked deliberately: it's
+    // the smallest non-trivial nav (3 items — Home, Review sessions, Review
+    // history, nav-menu/design.md Decision 3), so it's a fast, legible
+    // manual check. Fixed, hardcoded credentials (not env-driven, unlike the
+    // admin above) — this is a local/dev-seed-only convenience account, not
+    // a deployment secret.
+    const secondaryPasswordHash = await passwordHasher.hash(
+      'nav-menu-verify-12345',
+    );
+    const secondaryUser = new User({
+      id: idGenerator.generate(),
+      email: 'technician@sf-manager.example',
+      passwordHash: secondaryPasswordHash,
+      role: 'MAINTENANCE_TECHNICIAN',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    });
+    await userRepository.save(secondaryUser);
+
+    console.log(
+      `Seeded non-admin user: ${secondaryUser.email} (MAINTENANCE_TECHNICIAN)`,
+    );
   } finally {
     // Ensures Nest's lifecycle hooks (PrismaService.onModuleDestroy →
     // $disconnect()) run, so the script doesn't hang on exit.
