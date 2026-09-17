@@ -488,6 +488,17 @@
     "reviewSessionsLink": "Ir a sesiones de revisión",
     "reviewHistoryLink": "Ir al historial de revisiones"
   },
+  "nav": {
+    "label": "Navegación principal",
+    "home": "Inicio",
+    "users": "Usuarios",
+    "communities": "Comunidades",
+    "maintenanceCompanies": "Empresas de mantenimiento",
+    "checklistQuestions": "Preguntas de revisión",
+    "reviewTemplates": "Plantillas de revisión",
+    "reviewSessions": "Sesiones de revisión",
+    "reviewHistory": "Historial de revisiones"
+  },
   "auth": {
     "loginTitle": "Iniciar sesión",
     "emailLabel": "Correo electrónico",

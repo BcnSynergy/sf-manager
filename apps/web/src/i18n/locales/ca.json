@@ -488,6 +488,17 @@
     "reviewSessionsLink": "Anar a sessions de revisió",
     "reviewHistoryLink": "Anar a l'historial de revisions"
   },
+  "nav": {
+    "label": "Navegació principal",
+    "home": "Inici",
+    "users": "Usuaris",
+    "communities": "Comunitats",
+    "maintenanceCompanies": "Empreses de manteniment",
+    "checklistQuestions": "Preguntes de revisió",
+    "reviewTemplates": "Plantilles de revisió",
+    "reviewSessions": "Sessions de revisió",
+    "reviewHistory": "Historial de revisions"
+  },
   "auth": {
     "loginTitle": "Inicia sessió",
     "emailLabel": "Correu electrònic",
