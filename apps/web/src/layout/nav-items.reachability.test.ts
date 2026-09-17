@@ -16,11 +16,12 @@ describe('NAV_ITEMS_BY_ROLE reachability invariant', () => {
 
   // Sanity check on the fixture itself, not the invariant: if this table
   // construction produced zero pairs, every it.each case below would pass
-  // vacuously (a "ghost loop"). 17 = 7 (SYSTEM_ADMIN) + 2 (MANAGER) + 2
-  // (MAINTENANCE_COMPANY_MANAGER) + 3 (MAINTENANCE_TECHNICIAN) + 3
-  // (COMMUNITY_REPRESENTATIVE), per design.md Decision 3's settled counts.
+  // vacuously (a "ghost loop"). Deliberately NOT pinned to the current exact
+  // count (per-role item counts will legitimately change as nav items are
+  // added/removed) — only that the fixture is non-empty enough to exercise
+  // the invariant at all.
   it('produces a non-empty (role, target) fixture to actually exercise', () => {
-    expect(pairs.length).toBe(17);
+    expect(pairs.length).toBeGreaterThan(0);
   });
 
   it.each(pairs)('$role can open the route its nav item ($to) points at', ({ role, to }) => {
