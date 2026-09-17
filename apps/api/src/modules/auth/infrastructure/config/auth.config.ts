@@ -1,3 +1,5 @@
+import { isProduction } from '../../../../shared/infrastructure/env/is-production';
+
 export const ACCESS_TOKEN_COOKIE_NAME = 'sf_access_token';
 export const AUTH_CONFIG = Symbol('AUTH_CONFIG');
 
@@ -59,7 +61,7 @@ export function getAuthConfig(): AuthConfig {
 
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '2h';
   const maxAge = parseDurationMs(jwtExpiresIn);
-  const isProduction = process.env.NODE_ENV === 'production';
+  const production = isProduction(process.env.NODE_ENV);
 
   return {
     jwtSecret,
@@ -69,8 +71,8 @@ export function getAuthConfig(): AuthConfig {
       name: ACCESS_TOKEN_COOKIE_NAME,
       httpOnly: true,
       path: '/',
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure: production,
+      sameSite: production ? 'strict' : 'lax',
       maxAge,
     },
   };

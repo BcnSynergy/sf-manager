@@ -79,3 +79,62 @@ short-lived dual-mechanism window (design already rejected this).
 - [x] 4.1 Confirm `openspec/changes/nav-menu/specs/app-navigation/spec.md` (new capability) matches the shipped role→items table, gating, print-suppression and logout requirements
 - [x] 4.2 Confirm the 6 delta specs (`review-history-ui`, `review-session-ui`, `review-template-admin-ui`, `community-admin-ui`, `checklist-question-admin-ui`, `element-label-printing`) narrow their "no global nav bar" / entry-point language per proposal.md's Capabilities section
 - [x] 4.3 Run `openspec validate` (or project equivalent) on all 7 spec files
+
+## Verify Remediation (PR 5) — `nav-menu/05-verify-remediation`
+
+Addresses `sdd-verify`'s PASS WITH ISSUES report (1 CRITICAL, 5 WARNING).
+Scope is exactly these 5 items; WARNING-5 (retroactive TDD evidence) and the
+3 SUGGESTIONs are explicitly out of scope for this slice.
+
+- [x] 5.1 CRITICAL-1: write the missing automated CSS-source-order regression
+      test (`apps/web/src/styles/check-app-nav-print-suppression.{ts,test.ts}`)
+      that `tasks.md` 3.13 and the apply-progress artifact both wrongly
+      claimed already existed; asserts the screen `.app-nav` rule precedes
+      `@media print` and nothing re-declares `.app-nav` after it
+- [x] 5.2 CRITICAL-1: manual browser print-preview check on the label route
+      — done via `claude-in-chrome` against the running dev app
+      (`/communities/:id/inspectable-elements/:id/label`, SYSTEM_ADMIN),
+      confirmed by the user in the actual OS print-preview dialog: `.app-nav`
+      hidden, `@page { margin: 10mm }` applied. Also confirmed live via the
+      browser's CSSOM (`document.styleSheets`) that the loaded/bundled CSS
+      preserves the same rule order as the source file (screen `.app-nav`
+      rule at index 11, `@media print` block at index 12, not just the
+      static file). Second ordinary-route print check (SUGGESTION-2) not
+      done — the print CSS is a single global rule already verified once,
+      and the native print dialog risks freezing the browser-automation
+      session each time it's invoked (it did once during this check; the
+      user closed it manually), so a second invocation wasn't repeated.
+- [x] 5.3 WARNING-1: add the missing testid-collision regression guard —
+      render `ReviewSessionsPage` inside `AppLayout` and assert
+      `review-history-entry-link` resolves to exactly one node
+      (`apps/web/src/layout/AppLayout.review-sessions-collision.test.tsx`)
+- [x] 5.4 WARNING-2: add the missing reachability-invariant test pairing
+      every `NavItem.to` with its route's `allowedRoles`
+      (`apps/web/src/layout/nav-items.reachability.test.ts`)
+- [x] 5.5 WARNING-3: guard `apps/api/prisma/seed.ts`'s hardcoded technician
+      dev account against production via `shouldSeedDevAccount`
+      (`apps/api/src/shared/seeding/should-seed-dev-account.ts`)
+- [x] 5.6 WARNING-4: correct the stale claims — `design.md`'s File Changes
+      table row for `apps/api/**`/`prisma/**` now names the `seed.ts`
+      changes instead of saying "Untouched"; `sdd/nav-menu/apply-progress`
+      corrected to say PR4 is merged (PR #130)
+
+### Second review round (pre-merge fresh-context /code-review high on PR #131)
+
+- [x] 5.7 Fixed grouped-selector false negative in
+      `check-app-nav-print-suppression.ts`'s `APP_NAV_HIDDEN_RULE`/
+      `APP_NAV_VISIBLE_RULE` (same token-boundary approach as
+      `APP_NAV_ANY_RULE`); documented the checker's known single-`@media
+      print`-block limitation
+- [x] 5.8 Wrapped `AppLayout.review-sessions-collision.test.tsx`'s route in
+      `ProtectedRoute` (matches production `App.tsx` wiring) and extracted
+      the shared `/auth/me`+`/auth/logout` fetch stub into
+      `apps/web/src/layout/test-support/mock-auth-fetch.ts`, used by both
+      `AppLayout.test.tsx` and the collision test
+- [x] 5.9 Extracted shared `isProduction` predicate
+      (`apps/api/src/shared/infrastructure/env/is-production.ts`) to
+      de-duplicate the `NODE_ENV === 'production'` check previously inlined
+      independently in both `should-seed-dev-account.ts` and
+      `auth.config.ts`
+- [x] 5.10 Decoupled `nav-items.reachability.test.ts`'s fixture sanity check
+      from the exact current nav-item count (`toBe(17)` -> `toBeGreaterThan(0)`)
