@@ -7,8 +7,9 @@ list grouped by `elementType` + `frequency` showing each version and
 status, a builder view where a `draft`'s question selection and order
 are edited against the live pool, a read-only view of frozen versions
 rendering **their own snapshotted wording**, and an Activate action
-behind a confirmation that names the version being retired. Reached by
-URL — no global nav bar exists (pre-existing gap, carried forward). No
+behind a confirmation that names the version being retired. Reached from
+the global navigation's Review templates item, offered to `SYSTEM_ADMIN`
+on every authenticated page (`app-navigation`). No
 template duplication or "clone as new draft", no restore of soft-deleted
 drafts, no session/run surface, no search or pagination (proposal Out of
 Scope — minimal per ADR-006).
