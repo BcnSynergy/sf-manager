@@ -6,9 +6,10 @@ The `SYSTEM_ADMIN`-gated web surface for the global question pool:
 route gating, a list grouped/filterable by `elementType` showing each
 question's frequency tags and its verbatim text, create and edit forms,
 confirmed soft-delete, an explicit empty-pool state, and the `ApiError`
-→ localized-message contract for the new error codes. Reached by URL —
-there is no global nav bar and no parent page to hang an entry point
-from (pre-existing gap, carried forward). No question detail page beyond
+→ localized-message contract for the new error codes. Reached from the
+global navigation's Checklist questions item, offered to `SYSTEM_ADMIN`
+on every authenticated page (`app-navigation`); no parent page hangs an
+entry point from within this surface. No question detail page beyond
 edit, no search, no pagination, no restore of soft-deleted questions, no
 audit-log UI (proposal Out of Scope — minimal per ADR-006).
 

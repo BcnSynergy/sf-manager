@@ -9,10 +9,12 @@ soft-delete, the community detail view with both assignment sections
 (assign by pasted `userId`, deactivate, reactivate), and the
 `ApiError` → localized-message contract. Validates the existing
 `community` API against a real consumer (ADR-006 course-correction
-slice, second and final retrofit). No user search/autocomplete,
+slice, second and final retrofit). Reached from the global navigation's
+Communities item, offered to `SYSTEM_ADMIN` on every authenticated page
+(`app-navigation`). No user search/autocomplete,
 cross-community assignment views, community-scoped authorization,
-pagination/filtering/sorting, restore of soft-deleted communities,
-audit-log UI, or a global nav bar (proposal Out of Scope).
+pagination/filtering/sorting, restore of soft-deleted communities, or
+audit-log UI.
 
 ## Requirements
 
