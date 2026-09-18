@@ -11,11 +11,11 @@ answers and observations. **Five** roles reach it —
 each sees is still decided entirely by the server-scoped endpoints owned
 by `review-history` and the scope rule owned by `authorization`. `MANAGER`
 joins on exactly the same terms as the other four: the same pages, the
-same entry-link pattern, no manager variant. The client gate stays
-**role-based**: routes and the entry link are gated on `role === 'MANAGER'`
-alone, never on the `VIEW_ALL_REVIEWS` capability, which the client never
-learns — an ungranted manager therefore reaches the page and sees the
-normal empty state. The admin reaches the same pages with no reduced or
+same global-navigation entry point, no manager variant. The client gate
+stays **role-based**: routes and the navigation item are gated on
+`role === 'MANAGER'` alone, never on the `VIEW_ALL_REVIEWS` capability,
+which the client never learns — an ungranted manager therefore reaches
+the page and sees the normal empty state. The admin reaches the same pages with no reduced or
 alternative variant, and — like the maintenance company manager and the
 manager — **not** through the `/review-sessions` write surface, which it
 must never gain. The field write flow — code entry, answering, completing,
@@ -188,7 +188,7 @@ from the added link.
 
 #### Scenario: All four non-admin roles have a browser path to the feature
 - GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE`, a `MAINTENANCE_COMPANY_MANAGER` and a `MANAGER` holding `VIEW_ALL_REVIEWS`, each with at least one readable session containing an element entry
-- WHEN each navigates from the app's entry page through the history list and into a session's detail view
+- WHEN each navigates via the global navigation's Review history item, reachable from any authenticated page, through the history list and into a session's detail view
 - THEN each MUST be offered a control leading to that entry's element's history page, with no hand-typed URL required
 
 #### Scenario: An entry whose element no longer resolves offers no link
