@@ -457,3 +457,37 @@ model QuestionAnswer {
 
   @@unique([elementReviewEntryId, questionId])
 }
+
+// organization-profile/design.md: the property management company's own
+// corporate data (ADR-012, FR-013), modelled as a SINGLETON — exactly one
+// row per deployment, created and seeded by the migration, never by the
+// application (spec.md "The Profile Row Exists Before Any Request"). No
+// `deletedAt` (ADR-010, ADR-012) — this row is never deletable.
+//
+// design.md Decision 2: all six text fields are plain strings — no Value
+// Objects, mirroring MaintenanceCompany/Community.
+//
+// `logoAssetId` is reserved and permanently null this slice (ADR-012,
+// spec.md "logoAssetId Is Reserved, Unwritable and Absent From the API").
+//
+// `singleton` is a persistence-only sentinel guard (design.md Decision 1),
+// never mapped onto the domain entity or any DTO. `@unique` makes this the
+// Prisma-VISIBLE half of the guard; the CHECK ("singleton") that refuses
+// `false` is hand-written in migration.sql because Prisma's DSL cannot
+// express CHECK constraints and is therefore INVISIBLE to Prisma's
+// migration diffing (precedent: ElementReviewEntry_observations_not_blank).
+// WARNING: do NOT let `prisma migrate dev`/`migrate reset` regenerate the
+// migration or diff this model in a way that could DROP that CHECK. Guarded
+// by organization-profile-migration.integration.spec.ts's pg_constraint
+// assertion.
+model OrganizationProfile {
+  id          String  @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  name        String
+  legalName   String
+  taxId       String
+  address     String
+  phone       String
+  email       String
+  logoAssetId String? // reserved, inert this slice (ADR-012)
+  singleton   Boolean @unique @default(true) // design.md Decision 1 — Prisma-visible half of the guard; the CHECK is hand-written in migration.sql
+}
