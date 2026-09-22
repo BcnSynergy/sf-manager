@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { updateOrganizationProfileSchema } from '@sf-manager/validation';
-import { ApiError } from '../api/client';
 import {
   getOrganizationProfile,
   updateOrganizationProfile,
@@ -73,6 +72,17 @@ function toFieldValues(profile: OrganizationProfile): Record<ProfileFieldKey, st
 // rejected client-side with no network call — clearing a field in the UI
 // cannot blank it in the database (design.md "Two further page-level
 // consequences").
+//
+// Inputs are disabled while `submitting` (unlike MaintenanceCompanyEditPage/
+// UserEditPage, which only disable their submit button). Those pages
+// navigate() away on a successful save, so the form unmounts before a
+// conflicting edit could ever land; this page deliberately stays mounted
+// (Decision 5, "No navigate() after save"), so a successful PATCH response
+// overwrites `values`/`saved` with the server snapshot while still on
+// screen. Without disabling inputs, an admin could type into a DIFFERENT
+// field while the request is in flight and have that edit silently
+// discarded the moment the response resolves — this closes that window
+// instead of trying to merge around it.
 export function OrganizationProfilePage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [values, setValues] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
@@ -148,12 +158,8 @@ export function OrganizationProfilePage() {
       const fieldValues = toFieldValues(updated);
       setValues(fieldValues);
       setSaved(fieldValues);
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof ApiError
-          ? 'Could not save the organization profile. Please try again.'
-          : 'Could not save the organization profile. Please try again.',
-      );
+    } catch {
+      setError('Could not save the organization profile. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -198,6 +204,7 @@ export function OrganizationProfilePage() {
               type={field === 'email' ? 'email' : 'text'}
               value={values[field]}
               onChange={(event) => handleChange(field, event.target.value)}
+              disabled={submitting}
               data-testid={`organization-profile-${toTestIdSegment(field)}`}
             />
           </div>

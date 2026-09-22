@@ -37,7 +37,7 @@ export type AuthenticatedRoute = {
   readonly allowedRoles: Role[] | undefined;
 };
 
-// nav-menu/design.md Decision 1: the 28 authenticated routes are declared
+// nav-menu/design.md Decision 1: the 29 authenticated routes are declared
 // once, here, and App.tsx's <Routes> tree is generated FROM this table by
 // .map() — not hand-copied into a parallel array. Each entry keeps the
 // ordering comment that used to sit above its <Route> in App.tsx, verbatim,

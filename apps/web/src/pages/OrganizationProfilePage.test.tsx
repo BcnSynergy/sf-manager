@@ -206,6 +206,37 @@ describe('OrganizationProfilePage', () => {
     expect(screen.getByTestId('organization-profile-incomplete')).toBeInTheDocument();
   });
 
+  it('disables every field input while a save is in flight, closing the race window for a conflicting edit', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    let resolveUpdate: (value: typeof filledProfile) => void = () => {};
+    mockedUpdateOrganizationProfile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      }),
+    );
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: filledProfile.name },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    // While the PATCH is in flight, the request already captured the typed
+    // name — the input is disabled so there is no window to type a
+    // DIFFERENT value that the eventual setValues(response) would then
+    // silently discard.
+    expect(screen.getByTestId('organization-profile-name')).toBeDisabled();
+    expect(screen.getByTestId('organization-profile-legal-name')).toBeDisabled();
+
+    resolveUpdate({ ...filledProfile, name: filledProfile.name });
+
+    await waitFor(() => expect(screen.getByTestId('organization-profile-name')).toBeEnabled());
+    expect(screen.getByTestId('organization-profile-name')).toHaveValue(filledProfile.name);
+  });
+
   it('renders no navigation and stays on the page after a successful save (no navigate-on-save)', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
     mockedUpdateOrganizationProfile.mockResolvedValue({
