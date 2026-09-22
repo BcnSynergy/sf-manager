@@ -32,7 +32,9 @@ describe('OrganizationProfileMapper', () => {
       expect(profile.phone).toBe(record.phone);
       expect(profile.email).toBe(record.email);
       expect(profile.logoAssetId).toBeNull();
-      expect((profile as unknown as { singleton?: boolean }).singleton).toBeUndefined();
+      expect(
+        (profile as unknown as { singleton?: boolean }).singleton,
+      ).toBeUndefined();
     });
 
     it('maps a blank seeded row, all six text fields empty and logoAssetId null', () => {

@@ -20,9 +20,7 @@ import { OrganizationProfileMapper } from './organization-profile.mapper';
 // unique index on `singleton` makes `{ singleton: true }` a legal, typed
 // `where` with no magic constant in application code.
 @Injectable()
-export class PrismaOrganizationProfileRepository
-  implements OrganizationProfileRepository
-{
+export class PrismaOrganizationProfileRepository implements OrganizationProfileRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // design.md Decision 1: `get()` never resolves `| null`. A missing row is
