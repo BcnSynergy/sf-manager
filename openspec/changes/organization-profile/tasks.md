@@ -64,11 +64,11 @@ Chain strategy: stacked-to-main
 - [x] 3.7 `apps/api/src/app.module.ts` — register the module.
 
 ## Phase 4: E2E (PR 4)
-- [ ] 4.1 `apps/api/test/organization-profile.e2e-spec.ts`: `GET` never 404s across lifecycle states; blank-seed read returns all-empty strings; no `complete`/`incomplete` flag in the response; no `logoAssetId` key in any response.
-- [ ] 4.2 E2E: `PATCH` subset semantics (untouched fields unchanged); trimmed storage; empty body / identical values / unrecognized properties all succeed 200 unchanged.
-- [ ] 4.3 E2E: empty/whitespace/explicit-`null` supplied field -> 400, nothing changed, including the sibling valid field in the same request.
-- [ ] 4.4 E2E: `POST`/`DELETE /organization-profile` and `/organization-profile/:id` do not resolve to a profile operation; supplying `logoAssetId` in a PATCH writes nothing.
-- [ ] 4.5 E2E: 401 unauthenticated on both routes; 403 for each of the 4 non-admin roles on both routes; `ROLE_PERMISSIONS` non-admin rows still `[]`; `ManagerCapability` still declares only `VIEW_ALL_REVIEWS`.
+- [x] 4.1 `apps/api/test/organization-profile.e2e-spec.ts`: `GET` never 404s across lifecycle states; blank-seed read returns all-empty strings; no `complete`/`incomplete` flag in the response; no `logoAssetId` key in any response.
+- [x] 4.2 E2E: `PATCH` subset semantics (untouched fields unchanged); trimmed storage; empty body / identical values / unrecognized properties all succeed 200 unchanged.
+- [x] 4.3 E2E: empty/whitespace/explicit-`null` supplied field -> 400, nothing changed, including the sibling valid field in the same request.
+- [x] 4.4 E2E: `POST`/`DELETE /organization-profile` and `/organization-profile/:id` do not resolve to a profile operation; supplying `logoAssetId` in a PATCH writes nothing.
+- [x] 4.5 E2E: 401 unauthenticated on both routes; 403 for each of the 4 non-admin roles on both routes; `ROLE_PERMISSIONS` non-admin rows still `[]`; `ManagerCapability` still declares only `VIEW_ALL_REVIEWS`.
 
 ## Phase 5: Web Core (PR 5)
 - [ ] 5.1 `apps/web/src/api/organization-profile.ts` — `getOrganizationProfile`, `updateOrganizationProfile`, typed on the shared schema/DTO shape. No mirrored error-code union (design Decision 4).
