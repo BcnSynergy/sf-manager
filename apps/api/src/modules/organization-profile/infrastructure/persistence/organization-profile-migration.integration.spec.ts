@@ -28,77 +28,75 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   });
 
   // spec.md "The Profile Row Exists Before Any Request": the seeded row
-  // must exist with no application request of any kind having been issued.
+  // must exist, blank, with no application request of any kind having been
+  // issued.
   //
-  // Remediation (sdd-verify CRITICAL-1, 2026-09-22): this used to read
-  // whatever the shared dev database currently held and assert it was still
-  // blank — which broke the instant anything (this project's own PR6 browser
-  // verification, in this case) wrote a real value through the app. The
-  // singleton guard (design.md Decision 1) makes it structurally impossible
-  // to INSERT a second, disposable row to test against instead — `singleton
-  // = true` collides with the unique index, `singleton = false` is refused
-  // by the CHECK. So hermeticity here is achieved by treating "blank" as a
-  // state this suite creates and tears down itself, not one it finds lying
-  // around: capture whatever the row currently holds, reset it to the
-  // freshly-migrated shape, assert, then restore the captured values —
-  // leaving the shared dev database exactly as this suite found it either
-  // way, and independent of any other test, browser session or admin.
-  describe('seed state (hermetic — captures and restores the row around each run)', () => {
-    let capturedRow: {
-      name: string;
-      legalName: string;
-      taxId: string;
-      address: string;
-      phone: string;
-      email: string;
-      logoAssetId: string | null;
-    };
+  // Remediation (sdd-verify CRITICAL-1, 2026-09-22, second pass): the first
+  // remediation attempt captured the live row, overwrote it to blank,
+  // asserted, then restored the capture — which is both destructive (an
+  // interrupted run loses the captured values for good, since they only
+  // ever existed in memory) and tautological (the assertion checks a state
+  // the same `beforeEach` just wrote, not what `prisma migrate deploy`
+  // actually seeded). Caught by fresh-context review.
+  //
+  // This suite is read-only against the row's data, permanently. Two
+  // separate invariants, tested two different ways:
+  //   - The six text fields are only EVER blank immediately after a fresh
+  //     migration — this project's own PR6 browser verification (and any
+  //     future admin use) legitimately fills them in, so asserting their
+  //     live values would either be tautological (if we reset them first)
+  //     or flaky (if we don't). What IS permanent, because Postgres bakes it
+  //     into the DDL rather than the row, is the column DEFAULT itself — so
+  //     that is what this suite checks: a structural fact about the
+  //     migration, not the row's current contents.
+  //   - `id`, `singleton` and `logoAssetId`, by contrast, ARE permanent for
+  //     the life of this table: `id` is the hand-picked literal from the
+  //     migration and application code never references it (design.md
+  //     Decision 1); `singleton` never changes (the CHECK requires it);
+  //     `logoAssetId` is permanently unwritable this slice (ADR-012). These
+  //     are safe to assert directly against the live row, read-only, and
+  //     doing so is what actually proves "the seeded row" (this specific
+  //     `id`) is the one and only row, rather than merely that *some* row
+  //     exists.
+  describe('seed state (hermetic — read-only, never writes to the live row)', () => {
+    const SEEDED_ROW_ID = '01997a00-0000-7000-8000-000000000001';
+    const TEXT_COLUMNS = [
+      'name',
+      'legalName',
+      'taxId',
+      'address',
+      'phone',
+      'email',
+    ] as const;
 
-    beforeEach(async () => {
-      const [row] = await prisma.organizationProfile.findMany();
-      capturedRow = {
-        name: row.name,
-        legalName: row.legalName,
-        taxId: row.taxId,
-        address: row.address,
-        phone: row.phone,
-        email: row.email,
-        logoAssetId: row.logoAssetId,
-      };
+    it("every text column defaults to blank per the migration DDL, independent of the row's current contents", async () => {
+      const rows = await prisma.$queryRaw<
+        Array<{ column_name: string; column_default: string | null }>
+      >`
+        SELECT column_name, column_default
+        FROM information_schema.columns
+        WHERE table_name = 'OrganizationProfile'
+          AND column_name = ANY(${TEXT_COLUMNS})
+      `;
 
-      await prisma.organizationProfile.update({
-        where: { singleton: true },
-        data: {
-          name: '',
-          legalName: '',
-          taxId: '',
-          address: '',
-          phone: '',
-          email: '',
-          logoAssetId: null,
-        },
-      });
+      expect(rows).toHaveLength(TEXT_COLUMNS.length);
+      for (const column of TEXT_COLUMNS) {
+        const row = rows.find((r) => r.column_name === column);
+        expect(row?.column_default).toBe("''::text");
+      }
     });
 
-    afterEach(async () => {
-      await prisma.organizationProfile.update({
-        where: { singleton: true },
-        data: capturedRow,
+    it('the seeded row exists at its fixed id, is the singleton, and logoAssetId is still permanently null', async () => {
+      const row = await prisma.organizationProfile.findUnique({
+        where: { id: SEEDED_ROW_ID },
       });
-    });
 
-    it('exactly one row exists with every text field blank and logoAssetId null, in the freshly-migrated shape', async () => {
-      const rows = await prisma.organizationProfile.findMany();
+      expect(row).not.toBeNull();
+      expect(row?.singleton).toBe(true);
+      expect(row?.logoAssetId).toBeNull();
 
-      expect(rows).toHaveLength(1);
-      expect(rows[0].name).toBe('');
-      expect(rows[0].legalName).toBe('');
-      expect(rows[0].taxId).toBe('');
-      expect(rows[0].address).toBe('');
-      expect(rows[0].phone).toBe('');
-      expect(rows[0].email).toBe('');
-      expect(rows[0].logoAssetId).toBeNull();
-      expect(rows[0].singleton).toBe(true);
+      const allRows = await prisma.organizationProfile.findMany();
+      expect(allRows).toHaveLength(1);
     });
   });
 
