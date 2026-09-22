@@ -196,7 +196,8 @@
     "clearedFieldError": "A field that already has a saved value cannot be cleared. Change it instead.",
     "emptySubmitError": "Enter at least one value before saving.",
     "validationError": "Please enter a valid value for each field you changed.",
-    "saveError": "Could not save the organization profile. Please try again."
+    "saveError": "Could not save the organization profile. Please try again.",
+    "saveSuccess": "Organization profile saved."
   },
   "inspectableElement": {
     "list": {

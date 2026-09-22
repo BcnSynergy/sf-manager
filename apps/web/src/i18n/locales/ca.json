@@ -196,7 +196,8 @@
     "clearedFieldError": "Un camp que ja té un valor desat no es pot buidar. Modifica'l en lloc d'això.",
     "emptySubmitError": "Introdueix almenys un valor abans de desar.",
     "validationError": "Introdueix un valor vàlid per a cada camp modificat.",
-    "saveError": "No s'ha pogut desar el perfil de l'organització. Torna-ho a provar."
+    "saveError": "No s'ha pogut desar el perfil de l'organització. Torna-ho a provar.",
+    "saveSuccess": "Perfil de l'organització desat."
   },
   "inspectableElement": {
     "list": {

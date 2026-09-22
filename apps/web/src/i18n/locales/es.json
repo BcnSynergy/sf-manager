@@ -196,7 +196,8 @@
     "clearedFieldError": "Un campo que ya tiene un valor guardado no se puede vaciar. Modifícalo en su lugar.",
     "emptySubmitError": "Introduce al menos un valor antes de guardar.",
     "validationError": "Introduce un valor válido para cada campo modificado.",
-    "saveError": "No se ha podido guardar el perfil de la organización. Inténtalo de nuevo."
+    "saveError": "No se ha podido guardar el perfil de la organización. Inténtalo de nuevo.",
+    "saveSuccess": "Perfil de la organización guardado."
   },
   "inspectableElement": {
     "list": {
