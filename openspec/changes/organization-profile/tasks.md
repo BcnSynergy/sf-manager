@@ -77,12 +77,12 @@ Chain strategy: stacked-to-main
 - [x] 5.4 Component tests (`OrganizationProfilePage.test.tsx`, Vitest + Testing Library): blank profile shows the incomplete banner; banner stays while typing and clears only after a successful save; partial fill sends only non-empty fields; save failure keeps entered values and shows an error; non-admin route access renders `NotAuthorized`, not a redirect.
 
 ## Phase 6: Web Polish + Docs (PR 6)
-- [ ] 6.1 `apps/web/src/layout/nav-items.ts` — `ORGANIZATION_PROFILE` appended last on the `SYSTEM_ADMIN` row; extend `nav-items.reachability.test.ts` for the new item (unrelaxed).
-- [ ] 6.2 `apps/web/src/i18n/locales/{en,es,ca}.json` — real `organizationProfile.*` + `nav.organizationProfile` translations (no placeholders); extend `locales.test.ts` parity guard for the new namespace.
-- [ ] 6.3 `docs/adr/ADR-012-...md` — naming addendum recording `OrganizationProfile` as the implementation name, with the rationale from proposal.md.
-- [ ] 6.4 `docs/requirements/functional-requirements.md` — FR-013 status -> `partial`.
-- [ ] 6.5 Browser verification (`npm run dev`, `claude-in-chrome`, `SYSTEM_ADMIN` session, CLAUDE.md): blank-seed not-completed state visible; fill all six fields, save, reload, values persist and banner clears; non-admin URL access shows `NotAuthorized`; es/ca locale spot-check for the new strings.
-- [ ] 6.6 Full API + web suites, lint, build all pass; `no-restricted-imports` clean; `grep -r PropertyManagementCompany apps/` returns nothing; grep confirms no object-storage client/service/dependency and no `MANAGE_ORGANIZATION_PROFILE` string anywhere in `apps/**`/`packages/**`.
+- [x] 6.1 `apps/web/src/layout/nav-items.ts` — `ORGANIZATION_PROFILE` appended last on the `SYSTEM_ADMIN` row; extend `nav-items.reachability.test.ts` for the new item (unrelaxed).
+- [x] 6.2 `apps/web/src/i18n/locales/{en,es,ca}.json` — real `organizationProfile.*` + `nav.organizationProfile` translations (no placeholders); extend `locales.test.ts` parity guard for the new namespace.
+- [x] 6.3 `docs/adr/ADR-012-...md` — naming addendum recording `OrganizationProfile` as the implementation name, with the rationale from proposal.md.
+- [x] 6.4 `docs/requirements/functional-requirements.md` — FR-013 status -> `partial`.
+- [ ] 6.5 Browser verification (`npm run dev`, `claude-in-chrome`, `SYSTEM_ADMIN` session, CLAUDE.md): blank-seed not-completed state visible; fill all six fields, save, reload, values persist and banner clears; non-admin URL access shows `NotAuthorized`; es/ca locale spot-check for the new strings. **NOT DONE by this apply pass — requires `claude-in-chrome` tooling not available here; left for the orchestrator.**
+- [x] 6.6 (partial, the parts doable without a browser) Full API + web suites, lint, build all pass; `grep -r PropertyManagementCompany apps/` returns nothing; grep confirms no object-storage client/service/dependency and no `MANAGE_ORGANIZATION_PROFILE` string anywhere in `apps/**`/`packages/**`. (`no-restricted-imports` was not separately invoked — covered by the passing `npm run lint`.)
 
 ## Rules Applied
 - Strict TDD: RED/GREEN on all logic-bearing files (entity, use cases, mapper, migration integration spec, authorization spec, shared Zod schema, component tests). Migration SQL, DTOs, module wiring, route registration, i18n JSON and docs are mechanical — no RED/GREEN required.
