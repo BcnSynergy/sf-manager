@@ -71,6 +71,14 @@ import { RolePermissionChecker } from './role-permission.checker';
 // `it.each` block asserting a blanket denial of every reviewSession:*
 // permission) is removed rather than left with an empty array (`jest-each`
 // errors on an empty table, it does not skip).
+//
+// organization-profile PR 2 (design.md Decision 1, authorization/spec.md
+// "Permission Check on Organization Profile Endpoints"): SYSTEM_ADMIN gains
+// exactly `organizationProfile:read` and `organizationProfile:update` —
+// two members, not four, because the resource has no create and no delete
+// verb to guard. The other 4 roles stay [] for both, added to
+// ALL_PERMISSIONS so the exhaustive NON_ADMIN_ROLES matrix below covers
+// them automatically.
 describe('RolePermissionChecker', () => {
   const checker = new RolePermissionChecker();
 
@@ -101,6 +109,8 @@ describe('RolePermissionChecker', () => {
     'reviewTemplate:update',
     'reviewTemplate:delete',
     'reviewTemplate:activate',
+    'organizationProfile:read',
+    'organizationProfile:update',
   ];
 
   const REVIEW_SESSION_PERMISSIONS: Permission[] = [
@@ -140,6 +150,17 @@ describe('RolePermissionChecker', () => {
 
   it.each(ALL_PERMISSIONS)('allows SYSTEM_ADMIN on %s', (permission) => {
     expect(checker.can('SYSTEM_ADMIN', permission)).toBe(true);
+  });
+
+  // authorization/spec.md "Exactly two members are declared and only the
+  // admin holds them": no organizationProfile:create or
+  // organizationProfile:delete exists, and only SYSTEM_ADMIN holds either
+  // of the two that do.
+  it('grants SYSTEM_ADMIN exactly organizationProfile:read and organizationProfile:update', () => {
+    expect(checker.can('SYSTEM_ADMIN', 'organizationProfile:read')).toBe(true);
+    expect(checker.can('SYSTEM_ADMIN', 'organizationProfile:update')).toBe(
+      true,
+    );
   });
 
   // authorization/spec.md "The System Admin Becomes Operational on Review

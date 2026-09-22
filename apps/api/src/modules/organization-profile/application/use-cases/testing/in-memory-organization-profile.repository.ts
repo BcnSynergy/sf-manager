@@ -11,9 +11,7 @@ import {
 // the real schema, so the fake cannot represent one either. Seeded blank in
 // the constructor, mirroring the migration's idempotent blank seed
 // (spec.md "The Profile Row Exists Before Any Request").
-export class InMemoryOrganizationProfileRepository
-  implements OrganizationProfileRepository
-{
+export class InMemoryOrganizationProfileRepository implements OrganizationProfileRepository {
   private profile: OrganizationProfile = new OrganizationProfile({
     id: '01997a00-0000-7000-8000-000000000001',
     name: '',
