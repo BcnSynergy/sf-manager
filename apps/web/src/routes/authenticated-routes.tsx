@@ -17,6 +17,7 @@ import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPag
 import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
+import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
@@ -36,7 +37,7 @@ export type AuthenticatedRoute = {
   readonly allowedRoles: Role[] | undefined;
 };
 
-// nav-menu/design.md Decision 1: the 28 authenticated routes are declared
+// nav-menu/design.md Decision 1: the 29 authenticated routes are declared
 // once, here, and App.tsx's <Routes> tree is generated FROM this table by
 // .map() — not hand-copied into a parallel array. Each entry keeps the
 // ordering comment that used to sit above its <Route> in App.tsx, verbatim,
@@ -287,5 +288,13 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
       'SYSTEM_ADMIN',
       'MANAGER',
     ],
+  },
+  // organization-profile-admin-ui spec "Role-Gated Route Access": a single
+  // static settings route, SYSTEM_ADMIN-only, no sibling dynamic segment to
+  // order against (design.md "File Changes" — no ordering note needed).
+  {
+    path: '/organization-profile',
+    element: <OrganizationProfilePage />,
+    allowedRoles: ['SYSTEM_ADMIN'],
   },
 ];

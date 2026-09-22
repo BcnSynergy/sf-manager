@@ -9,7 +9,7 @@ import { AppRoutes } from './App';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
 
 // nav-menu/design.md Decision 1, "How route gating is verified end to end"
-// step 2: the exhaustive structural-wiring test. Every one of the 28 page
+// step 2: the exhaustive structural-wiring test. Every one of the 29 page
 // components imported (transitively, via authenticated-routes.tsx) by
 // App.tsx is replaced by a static, top-level `vi.mock` call with a literal
 // specifier — Vitest's hoisting only rewrites statically-recognizable
@@ -146,6 +146,11 @@ vi.mock('./pages/ReviewHistoryDetailPage', () => ({
     <div data-testid="page-stub-ReviewHistoryDetailPage">ReviewHistoryDetailPage</div>
   ),
 }));
+vi.mock('./pages/OrganizationProfilePage', () => ({
+  OrganizationProfilePage: () => (
+    <div data-testid="page-stub-OrganizationProfilePage">OrganizationProfilePage</div>
+  ),
+}));
 
 const ALL_ROLES: Role[] = [
   'SYSTEM_ADMIN',
@@ -212,7 +217,7 @@ function expectedMarkerOf(element: ReactElement): string {
 
 describe('AppRoutes structural wiring (exhaustive)', () => {
   // nav-menu/design.md Decision 1, step 2: iterates the real, imported
-  // AUTHENTICATED_ROUTES array (not a hand-typed sample) — 28 entries.
+  // AUTHENTICATED_ROUTES array (not a hand-typed sample) — 29 entries.
   it.each(AUTHENTICATED_ROUTES.map((route) => [route.path, route] as const))(
     '%s renders under AppLayout with its paired component and an allowed role',
     async (path, route) => {
@@ -247,7 +252,7 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
     },
   );
 
-  // The 29th case: /login is declared OUTSIDE AUTHENTICATED_ROUTES and
+  // The 30th case: /login is declared OUTSIDE AUTHENTICATED_ROUTES and
   // outside the AppLayout wrapper entirely — structural, not conditional.
   it('renders /login with no nav', async () => {
     vi.stubGlobal('fetch', mockFetch());

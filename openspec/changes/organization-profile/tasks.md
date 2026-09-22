@@ -71,10 +71,10 @@ Chain strategy: stacked-to-main
 - [x] 4.5 E2E: 401 unauthenticated on both routes; 403 for each of the 4 non-admin roles on both routes; `ROLE_PERMISSIONS` non-admin rows still `[]`; `ManagerCapability` still declares only `VIEW_ALL_REVIEWS`.
 
 ## Phase 5: Web Core (PR 5)
-- [ ] 5.1 `apps/web/src/api/organization-profile.ts` — `getOrganizationProfile`, `updateOrganizationProfile`, typed on the shared schema/DTO shape. No mirrored error-code union (design Decision 4).
-- [ ] 5.2 `apps/web/src/pages/OrganizationProfilePage.tsx` — `loading`/`loaded`/`error` states; six fields prefilled and editable in one page; derived `incomplete` banner computed from the last-saved snapshot, not live inputs, `data-testid="organization-profile-incomplete"` distinct from `-loading`/`-error-state`; payload built from trimmed non-empty values only; no `navigate()` after save.
-- [ ] 5.3 `apps/web/src/routes/authenticated-routes.tsx` — one static route, `allowedRoles: ['SYSTEM_ADMIN']`.
-- [ ] 5.4 Component tests (`OrganizationProfilePage.test.tsx`, Vitest + Testing Library): blank profile shows the incomplete banner; banner stays while typing and clears only after a successful save; partial fill sends only non-empty fields; save failure keeps entered values and shows an error; non-admin route access renders `NotAuthorized`, not a redirect.
+- [x] 5.1 `apps/web/src/api/organization-profile.ts` — `getOrganizationProfile`, `updateOrganizationProfile`, typed on the shared schema/DTO shape. No mirrored error-code union (design Decision 4).
+- [x] 5.2 `apps/web/src/pages/OrganizationProfilePage.tsx` — `loading`/`loaded`/`error` states; six fields prefilled and editable in one page; derived `incomplete` banner computed from the last-saved snapshot, not live inputs, `data-testid="organization-profile-incomplete"` distinct from `-loading`/`-error-state`; payload built from trimmed non-empty values only; no `navigate()` after save.
+- [x] 5.3 `apps/web/src/routes/authenticated-routes.tsx` — one static route, `allowedRoles: ['SYSTEM_ADMIN']`.
+- [x] 5.4 Component tests (`OrganizationProfilePage.test.tsx`, Vitest + Testing Library): blank profile shows the incomplete banner; banner stays while typing and clears only after a successful save; partial fill sends only non-empty fields; save failure keeps entered values and shows an error; non-admin route access renders `NotAuthorized`, not a redirect.
 
 ## Phase 6: Web Polish + Docs (PR 6)
 - [ ] 6.1 `apps/web/src/layout/nav-items.ts` — `ORGANIZATION_PROFILE` appended last on the `SYSTEM_ADMIN` row; extend `nav-items.reachability.test.ts` for the new item (unrelaxed).
