@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import '../i18n';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
 import { ProtectedRoute } from '../auth/ProtectedRoute';

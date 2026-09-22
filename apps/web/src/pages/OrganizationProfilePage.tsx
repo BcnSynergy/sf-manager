@@ -21,18 +21,6 @@ const REQUIRED_FIELDS: ProfileFieldKey[] = [
   'email',
 ];
 
-// i18n keys (organizationProfile.*, en/es/ca) for each field's label —
-// resolved via t() at render time, not stored as literal strings (Phase 6,
-// tasks.md 6.2).
-const FIELD_LABEL_KEYS: Record<ProfileFieldKey, string> = {
-  name: 'organizationProfile.nameLabel',
-  legalName: 'organizationProfile.legalNameLabel',
-  taxId: 'organizationProfile.taxIdLabel',
-  address: 'organizationProfile.addressLabel',
-  phone: 'organizationProfile.phoneLabel',
-  email: 'organizationProfile.emailLabel',
-};
-
 const EMPTY_PROFILE: Record<ProfileFieldKey, string> = {
   name: '',
   legalName: '',
@@ -193,7 +181,7 @@ export function OrganizationProfilePage() {
         {REQUIRED_FIELDS.map((field) => (
           <div key={field}>
             <label htmlFor={`organization-profile-${field}-input`}>
-              {t(FIELD_LABEL_KEYS[field])}
+              {t(`organizationProfile.${field}Label`)}
             </label>
             <input
               id={`organization-profile-${field}-input`}
