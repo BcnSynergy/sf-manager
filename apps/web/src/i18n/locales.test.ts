@@ -499,6 +499,32 @@ describe('locale key-set parity (en/es/ca)', () => {
     'nav.reviewTemplates',
     'nav.reviewSessions',
     'nav.reviewHistory',
+    // organization-profile nav item (Phase 6, tasks.md 6.1/6.2)
+    'nav.organizationProfile',
+  ];
+
+  // Existence guard for organization-profile (Phase 6), same rationale as
+  // REQUIRED_COMMUNITY_KEY_PATHS above — a fixed, hand-maintained list of
+  // every `organizationProfile.*` key path referenced by
+  // OrganizationProfilePage.tsx, so a future PR that adds a new call site
+  // without adding its translation fails here rather than silently
+  // rendering the raw key.
+  const REQUIRED_ORGANIZATION_PROFILE_KEY_PATHS = [
+    'organizationProfile.title',
+    'organizationProfile.loading',
+    'organizationProfile.errorState',
+    'organizationProfile.incomplete',
+    'organizationProfile.nameLabel',
+    'organizationProfile.legalNameLabel',
+    'organizationProfile.taxIdLabel',
+    'organizationProfile.addressLabel',
+    'organizationProfile.phoneLabel',
+    'organizationProfile.emailLabel',
+    'organizationProfile.submitLabel',
+    'organizationProfile.clearedFieldError',
+    'organizationProfile.emptySubmitError',
+    'organizationProfile.validationError',
+    'organizationProfile.saveError',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same
@@ -694,6 +720,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_NAV_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_ORGANIZATION_PROFILE_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

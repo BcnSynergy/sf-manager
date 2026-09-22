@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { updateOrganizationProfileSchema } from '@sf-manager/validation';
 import {
   getOrganizationProfile,
@@ -6,13 +7,6 @@ import {
   type OrganizationProfile,
   type UpdateOrganizationProfilePayload,
 } from '../api/organization-profile';
-
-// i18n note (Phase 6, tasks.md 6.2): every visible string below is a literal
-// English placeholder, NOT an i18n violation being introduced silently —
-// PR5's scope is explicitly web-core-only (tasks.md Phase 5), and Phase 6
-// is the one that replaces these with real `organizationProfile.*` keys
-// across en/es/ca (spec.md "Internationalization Coverage"). Flagged here so
-// the omission is traceable, not discovered at verify time.
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -26,15 +20,6 @@ const REQUIRED_FIELDS: ProfileFieldKey[] = [
   'phone',
   'email',
 ];
-
-const FIELD_LABELS: Record<ProfileFieldKey, string> = {
-  name: 'Name',
-  legalName: 'Legal name',
-  taxId: 'Tax ID',
-  address: 'Address',
-  phone: 'Phone',
-  email: 'Email',
-};
 
 const EMPTY_PROFILE: Record<ProfileFieldKey, string> = {
   name: '',
@@ -84,6 +69,7 @@ function toFieldValues(profile: OrganizationProfile): Record<ProfileFieldKey, st
 // discarded the moment the response resolves — this closes that window
 // instead of trying to merge around it.
 export function OrganizationProfilePage() {
+  const { t } = useTranslation();
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [values, setValues] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
   const [saved, setSaved] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
@@ -137,18 +123,18 @@ export function OrganizationProfilePage() {
     }
 
     if (clearedAnExistingValue) {
-      setError('A field that already has a saved value cannot be cleared. Change it instead.');
+      setError(t('organizationProfile.clearedFieldError'));
       return;
     }
 
     if (Object.keys(payload).length === 0) {
-      setError('Enter at least one value before saving.');
+      setError(t('organizationProfile.emptySubmitError'));
       return;
     }
 
     const result = updateOrganizationProfileSchema.safeParse(payload);
     if (!result.success) {
-      setError('Please enter a valid value for each field you changed.');
+      setError(t('organizationProfile.validationError'));
       return;
     }
 
@@ -159,7 +145,7 @@ export function OrganizationProfilePage() {
       setValues(fieldValues);
       setSaved(fieldValues);
     } catch {
-      setError('Could not save the organization profile. Please try again.');
+      setError(t('organizationProfile.saveError'));
     } finally {
       setSubmitting(false);
     }
@@ -168,8 +154,8 @@ export function OrganizationProfilePage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>Organization Profile</h1>
-        <p data-testid="organization-profile-loading">Loading…</p>
+        <h1>{t('organizationProfile.title')}</h1>
+        <p data-testid="organization-profile-loading">{t('organizationProfile.loading')}</p>
       </main>
     );
   }
@@ -177,28 +163,26 @@ export function OrganizationProfilePage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>Organization Profile</h1>
-        <p data-testid="organization-profile-error-state">
-          Could not load the organization profile. Please try again.
-        </p>
+        <h1>{t('organizationProfile.title')}</h1>
+        <p data-testid="organization-profile-error-state">{t('organizationProfile.errorState')}</p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>Organization Profile</h1>
+      <h1>{t('organizationProfile.title')}</h1>
       {incomplete && (
-        <p data-testid="organization-profile-incomplete">
-          This profile is not completed yet — fill in every field below.
-        </p>
+        <p data-testid="organization-profile-incomplete">{t('organizationProfile.incomplete')}</p>
       )}
       {/* noValidate: validation messages are ours, not the browser's native,
           locale-inconsistent constraint-validation UI. */}
       <form onSubmit={handleSubmit} noValidate>
         {REQUIRED_FIELDS.map((field) => (
           <div key={field}>
-            <label htmlFor={`organization-profile-${field}-input`}>{FIELD_LABELS[field]}</label>
+            <label htmlFor={`organization-profile-${field}-input`}>
+              {t(`organizationProfile.${field}Label`)}
+            </label>
             <input
               id={`organization-profile-${field}-input`}
               type={field === 'email' ? 'email' : 'text'}
@@ -211,7 +195,7 @@ export function OrganizationProfilePage() {
         ))}
         {error && <p data-testid="organization-profile-error">{error}</p>}
         <button type="submit" data-testid="organization-profile-submit" disabled={submitting}>
-          Save
+          {t('organizationProfile.submitLabel')}
         </button>
       </form>
     </main>

@@ -50,6 +50,7 @@ const EXPECTED_ITEM_TESTIDS: Record<Role, string[]> = {
     'nav-link-checklist-questions',
     'nav-link-review-templates',
     'nav-link-review-history',
+    'nav-link-organization-profile',
   ],
   MANAGER: ['nav-link-home', 'nav-link-review-history'],
   MAINTENANCE_COMPANY_MANAGER: ['nav-link-home', 'nav-link-review-history'],

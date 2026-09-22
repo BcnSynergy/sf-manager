@@ -68,3 +68,37 @@ the *reference* lives on the domain entity.
 - **Hardcoded at build/deploy time** (baked into a Docker image) —
   rejected: would require a rebuild/redeploy for the same routine changes,
   worse than a config file even.
+
+## Addendum (2026-09-22): Implementation name is `OrganizationProfile`, not `PropertyManagementCompany`
+
+The `organization-profile` change (FR-013's first slice) implements this
+ADR's entity, singleton behavior, field set, and no-`deletedAt` decision
+exactly as decided above — but under the name **`OrganizationProfile`**
+everywhere in code (Prisma model, domain entity, module
+`organization-profile`, route `/organization-profile`, permissions
+`organizationProfile:read|update`, `OrganizationProfilePage`, i18n
+`organizationProfile.*`), not this ADR's literal `PropertyManagementCompany`.
+This is a naming correction only; none of the decision, rationale, or
+consequences above changes.
+
+Reasons for the rename, settled at proposal time
+(`openspec/changes/organization-profile/proposal.md`, "Naming decision"):
+1. `OrganizationProfile`/`MANAGE_ORGANIZATION_PROFILE` was already this
+   project's vocabulary — ADR-011 has carried
+   `MANAGE_ORGANIZATION_PROFILE` in the `MANAGER` capability set for
+   months, predating this rename.
+2. `/property-management-company` sitting next to `/maintenance-companies`
+   in the same `SYSTEM_ADMIN` nav would have been a real UX hazard — two
+   "company" sections in the nav, only one of which is actually a company
+   catalog. `/organization-profile` reads unambiguously as a
+   settings-about-ourselves screen instead.
+3. This repo's own naming rule derives the module/route/permission from
+   the entity name (e.g. `MaintenanceCompany` → `maintenance-company` →
+   `/maintenance-companies` → `maintenanceCompany:*`), and the change slug
+   is free to differ from the entity name (precedent:
+   `user-management-roles` → module `users`). `OrganizationProfile` follows
+   that rule cleanly; `PropertyManagementCompany` would not have, given
+   points 1-2 above.
+
+A `grep -r "PropertyManagementCompany" apps/` guard (tasks.md 6.6) confirms
+the old name never leaked into the implementation.

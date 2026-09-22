@@ -181,6 +181,23 @@
     },
     "unknown": "Empresa de manteniment desconeguda"
   },
+  "organizationProfile": {
+    "title": "Perfil de l'organització",
+    "loading": "Carregant…",
+    "errorState": "No s'ha pogut carregar el perfil de l'organització. Torna-ho a provar.",
+    "incomplete": "Aquest perfil encara no està complet. Omple tots els camps següents.",
+    "nameLabel": "Nom",
+    "legalNameLabel": "Raó social",
+    "taxIdLabel": "NIF/CIF",
+    "addressLabel": "Adreça",
+    "phoneLabel": "Telèfon",
+    "emailLabel": "Correu electrònic",
+    "submitLabel": "Desa",
+    "clearedFieldError": "Un camp que ja té un valor desat no es pot buidar. Modifica'l en lloc d'això.",
+    "emptySubmitError": "Introdueix almenys un valor abans de desar.",
+    "validationError": "Introdueix un valor vàlid per a cada camp modificat.",
+    "saveError": "No s'ha pogut desar el perfil de l'organització. Torna-ho a provar."
+  },
   "inspectableElement": {
     "list": {
       "title": "Elements inspeccionables",
@@ -495,7 +512,8 @@
     "checklistQuestions": "Preguntes de revisió",
     "reviewTemplates": "Plantilles de revisió",
     "reviewSessions": "Sessions de revisió",
-    "reviewHistory": "Historial de revisions"
+    "reviewHistory": "Historial de revisions",
+    "organizationProfile": "Perfil de l'organització"
   },
   "auth": {
     "loginTitle": "Inicia sessió",

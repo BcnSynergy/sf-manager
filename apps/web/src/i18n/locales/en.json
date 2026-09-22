@@ -181,6 +181,23 @@
     },
     "unknown": "Unknown maintenance company"
   },
+  "organizationProfile": {
+    "title": "Organization profile",
+    "loading": "Loading…",
+    "errorState": "Could not load the organization profile. Please try again.",
+    "incomplete": "This profile is not completed yet — fill in every field below.",
+    "nameLabel": "Name",
+    "legalNameLabel": "Legal name",
+    "taxIdLabel": "Tax ID",
+    "addressLabel": "Address",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "submitLabel": "Save",
+    "clearedFieldError": "A field that already has a saved value cannot be cleared. Change it instead.",
+    "emptySubmitError": "Enter at least one value before saving.",
+    "validationError": "Please enter a valid value for each field you changed.",
+    "saveError": "Could not save the organization profile. Please try again."
+  },
   "inspectableElement": {
     "list": {
       "title": "Inspectable elements",
@@ -495,7 +512,8 @@
     "checklistQuestions": "Checklist questions",
     "reviewTemplates": "Review templates",
     "reviewSessions": "Review sessions",
-    "reviewHistory": "Review history"
+    "reviewHistory": "Review history",
+    "organizationProfile": "Organization profile"
   },
   "auth": {
     "loginTitle": "Sign in",
