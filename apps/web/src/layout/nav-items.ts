@@ -51,6 +51,11 @@ const REVIEW_HISTORY: NavItem = {
   labelKey: 'nav.reviewHistory',
   testId: 'nav-link-review-history',
 };
+const ORGANIZATION_PROFILE: NavItem = {
+  to: '/organization-profile',
+  labelKey: 'nav.organizationProfile',
+  testId: 'nav-link-organization-profile',
+};
 
 // `satisfies Record<Role, …>` is the exhaustiveness guard: a sixth Role
 // member fails the BUILD instead of silently rendering an empty nav. Every
@@ -68,6 +73,7 @@ export const NAV_ITEMS_BY_ROLE = {
     CHECKLIST_QUESTIONS,
     REVIEW_TEMPLATES,
     REVIEW_HISTORY,
+    ORGANIZATION_PROFILE,
   ],
   MANAGER: [HOME, REVIEW_HISTORY],
   MAINTENANCE_COMPANY_MANAGER: [HOME, REVIEW_HISTORY],
