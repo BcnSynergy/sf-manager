@@ -79,24 +79,20 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   });
 
   // design.md Decision 1: a second row is structurally impossible regardless
-  // of which sentinel value is used to insert it.
-  it('a second INSERT fails both with singleton = true and with singleton = false', async () => {
+  // of which sentinel value is used to insert it — `true` collides on the
+  // unique index, `false` is refused by the CHECK.
+  it.each<[string, boolean]>([
+    ['singleton = true (collides on the unique index)', true],
+    ['singleton = false (refused by the CHECK)', false],
+  ])('a second INSERT fails with %s', async (_case, singleton) => {
     await expect(
-      prisma.$executeRaw`
-        INSERT INTO "OrganizationProfile"
+      prisma.$executeRawUnsafe(
+        `INSERT INTO "OrganizationProfile"
           ("id","name","legalName","taxId","address","phone","email","logoAssetId","singleton")
-        VALUES
-          (gen_random_uuid(),'x','x','x','x','x','x',NULL,true)
-      `,
-    ).rejects.toThrow();
-
-    await expect(
-      prisma.$executeRaw`
-        INSERT INTO "OrganizationProfile"
-          ("id","name","legalName","taxId","address","phone","email","logoAssetId","singleton")
-        VALUES
-          (gen_random_uuid(),'x','x','x','x','x','x',NULL,false)
-      `,
+         VALUES
+          (gen_random_uuid(),'x','x','x','x','x','x',NULL,$1)`,
+        singleton,
+      ),
     ).rejects.toThrow();
   });
 
@@ -111,30 +107,35 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   // apply time, ALL hand-written FK constraints were found absent from the
   // running docker-compose Postgres container/volume, even though
   // `_prisma_migrations` shows every migration (including the ones that
-  // hand-write those FKs) as applied. This is reproducible on `main`
-  // independently of this change — `maintenance-company-migration
-  // .integration.spec.ts`'s own FK assertions fail identically against the
-  // same container. It is environment drift in this specific Postgres
-  // volume, not something PR1 caused (OrganizationProfile declares no FK at
-  // all), and is out of this PR's scope to fix. Reported to the
-  // orchestrator as a separate finding.
+  // hand-write those FKs) as applied. It is environment drift in this
+  // specific Postgres volume, not something PR1 caused (OrganizationProfile
+  // declares no FK at all), and is out of this PR's scope to fix. Recorded
+  // for traceability, not just claimed: Engram topic key
+  // `discovery/dev-db-fk-drift`, and openspec/changes/organization-profile/
+  // tasks.md's "Findings (PR 1)" section (full reproduction steps and a
+  // clean-database counter-test).
   it('does not drop the pre-existing hand-written partial unique indexes and CHECK constraints', async () => {
-    const constraintRows = await prisma.$queryRaw<Array<{ conname: string }>>`
-      SELECT conname FROM pg_constraint
-      WHERE conname IN ('ElementReviewEntry_observations_not_blank')
-    `;
+    // Two independent read-only queries against different catalog tables —
+    // neither depends on the other having run or committed anything, so
+    // running them concurrently is safe (unlike the negative-insert cases
+    // above, where each statement's rejection has to be awaited in place).
+    const [constraintRows, indexRows] = await Promise.all([
+      prisma.$queryRaw<Array<{ conname: string }>>`
+        SELECT conname FROM pg_constraint
+        WHERE conname IN ('ElementReviewEntry_observations_not_blank')
+      `,
+      prisma.$queryRaw<Array<{ indexname: string }>>`
+        SELECT indexname FROM pg_indexes
+        WHERE indexname IN (
+          'MaintenanceCompany_taxId_active_key',
+          'ReviewSession_open_draft_key'
+        )
+      `,
+    ]);
 
     expect(constraintRows.map((r) => r.conname).sort()).toEqual(
       ['ElementReviewEntry_observations_not_blank'].sort(),
     );
-
-    const indexRows = await prisma.$queryRaw<Array<{ indexname: string }>>`
-      SELECT indexname FROM pg_indexes
-      WHERE indexname IN (
-        'MaintenanceCompany_taxId_active_key',
-        'ReviewSession_open_draft_key'
-      )
-    `;
 
     expect(indexRows.map((r) => r.indexname).sort()).toEqual(
       [

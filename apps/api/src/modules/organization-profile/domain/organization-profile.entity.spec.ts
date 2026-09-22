@@ -1,4 +1,7 @@
-import { OrganizationProfile } from './organization-profile.entity';
+import {
+  OrganizationProfile,
+  type OrganizationProfileProps,
+} from './organization-profile.entity';
 
 // ADR-013: hand-written domain entity, zero Prisma/framework dependency.
 // design.md Decision 2: all six text fields are plain strings — no Value
@@ -7,46 +10,43 @@ import { OrganizationProfile } from './organization-profile.entity';
 // signal is UI-only, Decision 5), no constructor validation — mirroring
 // MaintenanceCompany/Community/User exactly.
 describe('OrganizationProfile', () => {
-  it('constructs the profile with its identity, six text fields and a null logoAssetId', () => {
-    const profile = new OrganizationProfile({
-      id: '01997a00-0000-7000-8000-000000000001',
-      name: 'Acme Property Management',
-      legalName: 'Acme Property Management SL',
-      taxId: 'B12345678',
-      address: 'Carrer Major 1, Girona',
-      phone: '+34 972 000 000',
-      email: 'contact@acme-pm.example',
-      logoAssetId: null,
-    });
+  it.each<[string, OrganizationProfileProps]>([
+    [
+      'a filled profile',
+      {
+        id: '01997a00-0000-7000-8000-000000000001',
+        name: 'Acme Property Management',
+        legalName: 'Acme Property Management SL',
+        taxId: 'B12345678',
+        address: 'Carrer Major 1, Girona',
+        phone: '+34 972 000 000',
+        email: 'contact@acme-pm.example',
+        logoAssetId: null,
+      },
+    ],
+    [
+      'the blank seeded profile',
+      {
+        id: '01997a00-0000-7000-8000-000000000001',
+        name: '',
+        legalName: '',
+        taxId: '',
+        address: '',
+        phone: '',
+        email: '',
+        logoAssetId: null,
+      },
+    ],
+  ])('constructs %s with every field exposed verbatim', (_case, props) => {
+    const profile = new OrganizationProfile(props);
 
-    expect(profile.id).toBe('01997a00-0000-7000-8000-000000000001');
-    expect(profile.name).toBe('Acme Property Management');
-    expect(profile.legalName).toBe('Acme Property Management SL');
-    expect(profile.taxId).toBe('B12345678');
-    expect(profile.address).toBe('Carrer Major 1, Girona');
-    expect(profile.phone).toBe('+34 972 000 000');
-    expect(profile.email).toBe('contact@acme-pm.example');
-    expect(profile.logoAssetId).toBeNull();
-  });
-
-  it('constructs the blank seeded profile with every text field empty', () => {
-    const profile = new OrganizationProfile({
-      id: '01997a00-0000-7000-8000-000000000001',
-      name: '',
-      legalName: '',
-      taxId: '',
-      address: '',
-      phone: '',
-      email: '',
-      logoAssetId: null,
-    });
-
-    expect(profile.name).toBe('');
-    expect(profile.legalName).toBe('');
-    expect(profile.taxId).toBe('');
-    expect(profile.address).toBe('');
-    expect(profile.phone).toBe('');
-    expect(profile.email).toBe('');
+    expect(profile.id).toBe(props.id);
+    expect(profile.name).toBe(props.name);
+    expect(profile.legalName).toBe(props.legalName);
+    expect(profile.taxId).toBe(props.taxId);
+    expect(profile.address).toBe(props.address);
+    expect(profile.phone).toBe(props.phone);
+    expect(profile.email).toBe(props.email);
     expect(profile.logoAssetId).toBeNull();
   });
 });
