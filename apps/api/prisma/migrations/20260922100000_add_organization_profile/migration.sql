@@ -19,14 +19,17 @@
 -- precedent: ElementReviewEntry_observations_not_blank.
 
 -- CreateTable
+-- The six text columns default to '' (Prisma-visible, schema.prisma) so the
+-- seed INSERT below can name only id/logoAssetId/singleton instead of
+-- repeating the '' literal six times positionally.
 CREATE TABLE "OrganizationProfile" (
     "id"          UUID    NOT NULL,
-    "name"        TEXT    NOT NULL,
-    "legalName"   TEXT    NOT NULL,
-    "taxId"       TEXT    NOT NULL,
-    "address"     TEXT    NOT NULL,
-    "phone"       TEXT    NOT NULL,
-    "email"       TEXT    NOT NULL,
+    "name"        TEXT    NOT NULL DEFAULT '',
+    "legalName"   TEXT    NOT NULL DEFAULT '',
+    "taxId"       TEXT    NOT NULL DEFAULT '',
+    "address"     TEXT    NOT NULL DEFAULT '',
+    "phone"       TEXT    NOT NULL DEFAULT '',
+    "email"       TEXT    NOT NULL DEFAULT '',
     "logoAssetId" TEXT,                                  -- reserved, ADR-012
     "singleton"   BOOLEAN NOT NULL DEFAULT true,         -- design Decision 1
     CONSTRAINT "OrganizationProfile_pkey" PRIMARY KEY ("id")
@@ -47,14 +50,15 @@ ALTER TABLE "OrganizationProfile"
   ADD CONSTRAINT "OrganizationProfile_singleton_true" CHECK ("singleton");
 
 -- Seed the one row, BLANK not NULL (spec.md "The Profile Row Exists Before
--- Any Request"): the row is valid to read and incomplete to look at.
--- Hand-picked v7-shaped literal (version nibble 7, variant bits 10,
--- ADR-009) — fixed forever, never regenerated, and deliberately NOT
--- referenced from application code (design.md Decision 1). Bare ON CONFLICT
--- DO NOTHING covers both the PK and the sentinel index, so re-running the
--- migration is a no-op (spec.md "The seed does not duplicate the row").
-INSERT INTO "OrganizationProfile"
-  ("id","name","legalName","taxId","address","phone","email","logoAssetId","singleton")
-VALUES
-  ('01997a00-0000-7000-8000-000000000001'::uuid,'','','','','','',NULL,true)
+-- Any Request"): the row is valid to read and incomplete to look at. The
+-- six text fields are left unnamed here and fall back to the column
+-- DEFAULT '' above, rather than repeating the '' literal six times
+-- positionally. Hand-picked v7-shaped literal (version nibble 7, variant
+-- bits 10, ADR-009) — fixed forever, never regenerated, and deliberately
+-- NOT referenced from application code (design.md Decision 1). Bare ON
+-- CONFLICT DO NOTHING covers both the PK and the sentinel index, so
+-- re-running the migration is a no-op (spec.md "The seed does not
+-- duplicate the row").
+INSERT INTO "OrganizationProfile" ("id","logoAssetId","singleton")
+VALUES ('01997a00-0000-7000-8000-000000000001'::uuid, NULL, true)
 ON CONFLICT DO NOTHING;

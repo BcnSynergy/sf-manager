@@ -481,13 +481,19 @@ model QuestionAnswer {
 // by organization-profile-migration.integration.spec.ts's pg_constraint
 // assertion.
 model OrganizationProfile {
-  id          String  @id @db.Uuid // UUIDv7 from the app (ADR-009)
-  name        String
-  legalName   String
-  taxId       String
-  address     String
-  phone       String
-  email       String
+  id        String @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  // Column-level `@default("")` (Prisma-visible) is what lets the
+  // migration's seed INSERT name only id/logoAssetId/singleton and fall
+  // back to blank for the six text fields, instead of repeating the ''
+  // literal six times positionally — see migration.sql's seed comment.
+  // Never used at the application layer: writes always go through the
+  // shared Zod schema, which requires non-blank on any supplied field.
+  name        String @default("")
+  legalName   String @default("")
+  taxId       String @default("")
+  address     String @default("")
+  phone       String @default("")
+  email       String @default("")
   logoAssetId String? // reserved, inert this slice (ADR-012)
   singleton   Boolean @unique @default(true) // design.md Decision 1 — Prisma-visible half of the guard; the CHECK is hand-written in migration.sql
 }
