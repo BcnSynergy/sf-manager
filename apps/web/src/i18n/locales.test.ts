@@ -525,6 +525,7 @@ describe('locale key-set parity (en/es/ca)', () => {
     'organizationProfile.emptySubmitError',
     'organizationProfile.validationError',
     'organizationProfile.saveError',
+    'organizationProfile.saveSuccess',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same

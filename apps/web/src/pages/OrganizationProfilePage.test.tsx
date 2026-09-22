@@ -257,6 +257,98 @@ describe('OrganizationProfilePage', () => {
     await waitFor(() => expect(mockedUpdateOrganizationProfile).toHaveBeenCalled());
     expect(screen.getByTestId('organization-profile-name')).toBeInTheDocument();
   });
+
+  // design.md Decision 5: "The page stays put and shows a success
+  // indication." Remediation (sdd-verify WARNING, 2026-09-22) — this was
+  // never implemented; on an already-complete profile a successful save
+  // previously produced zero visible feedback.
+  it('shows a success indication after a successful save, distinct from the incomplete and error banners', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockResolvedValue({
+      ...blankProfile,
+      name: 'Acme Property Management',
+    });
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+    expect(screen.queryByTestId('organization-profile-success')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    expect(await screen.findByTestId('organization-profile-success')).toBeInTheDocument();
+    expect(screen.queryByTestId('organization-profile-error')).not.toBeInTheDocument();
+  });
+
+  // Fresh-context review (2026-09-22): a partial fill on a blank profile
+  // saves successfully (`success` becomes true) while `saved` still has five
+  // blank fields (`incomplete` stays true) — both banners are independently
+  // derived (Decision 5) and legitimately coexist here; this is not a bug,
+  // but it was previously an untested combined state.
+  it('shows both the success indication and the incomplete banner together after a partial-fill save', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockResolvedValue({
+      ...blankProfile,
+      name: 'Acme Property Management',
+    });
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    expect(await screen.findByTestId('organization-profile-success')).toBeInTheDocument();
+    expect(screen.getByTestId('organization-profile-incomplete')).toBeInTheDocument();
+  });
+
+  it('clears the success indication once the admin edits a field again, so it cannot go stale', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockResolvedValue({
+      ...blankProfile,
+      name: 'Acme Property Management',
+    });
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    await screen.findByTestId('organization-profile-success');
+
+    fireEvent.change(screen.getByTestId('organization-profile-legal-name'), {
+      target: { value: 'Acme Property Management S.L.' },
+    });
+
+    expect(screen.queryByTestId('organization-profile-success')).not.toBeInTheDocument();
+  });
+
+  it('does not show the success indication when the save request fails', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(400));
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    expect(await screen.findByTestId('organization-profile-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('organization-profile-success')).not.toBeInTheDocument();
+  });
 });
 
 describe('OrganizationProfilePage route access', () => {

@@ -75,6 +75,15 @@ export function OrganizationProfilePage() {
   const [saved, setSaved] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // design.md Decision 5, "The page stays put and shows a success
+  // indication.": there is no navigate() to serve as an implicit
+  // confirmation (Decision 5, "No navigate() after save"), so on an
+  // already-complete profile — where the incomplete banner is already
+  // absent — a successful save otherwise leaves zero visible feedback.
+  // Cleared on the next edit (handleChange) so it cannot go stale while the
+  // admin keeps working, mirroring how `error` is cleared at the start of
+  // the next submit.
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,11 +113,13 @@ export function OrganizationProfilePage() {
 
   function handleChange(field: ProfileFieldKey, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
+    setSuccess(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setSuccess(false);
 
     const payload: UpdateOrganizationProfilePayload = {};
     let clearedAnExistingValue = false;
@@ -144,6 +155,7 @@ export function OrganizationProfilePage() {
       const fieldValues = toFieldValues(updated);
       setValues(fieldValues);
       setSaved(fieldValues);
+      setSuccess(true);
     } catch {
       setError(t('organizationProfile.saveError'));
     } finally {
@@ -174,6 +186,9 @@ export function OrganizationProfilePage() {
       <h1>{t('organizationProfile.title')}</h1>
       {incomplete && (
         <p data-testid="organization-profile-incomplete">{t('organizationProfile.incomplete')}</p>
+      )}
+      {success && (
+        <p data-testid="organization-profile-success">{t('organizationProfile.saveSuccess')}</p>
       )}
       {/* noValidate: validation messages are ours, not the browser's native,
           locale-inconsistent constraint-validation UI. */}
