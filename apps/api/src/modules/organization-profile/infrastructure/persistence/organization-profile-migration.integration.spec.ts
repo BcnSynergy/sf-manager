@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import { ORGANIZATION_PROFILE_SENTINEL_ID } from '../../domain/organization-profile.fixture';
 
 // Integration test against a real (test) Postgres instance (design.md
 // Testing Strategy), mirroring maintenance-company-migration.integration
@@ -58,8 +59,29 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   //     doing so is what actually proves "the seeded row" (this specific
   //     `id`) is the one and only row, rather than merely that *some* row
   //     exists.
+  //
+  // Known trade-off (fresh-context review, second pass): checking the DDL
+  // DEFAULT instead of the row's live text values means a broken seed
+  // INSERT that supplies a non-blank literal for one of the six columns
+  // (bypassing the DEFAULT) would NOT be caught here. No other test in the
+  // repo reads this row's text fields either. Accepted rather than
+  // reverting to the destructive/tautological pattern above: this project's
+  // integration specs run against one shared, long-lived dev Postgres
+  // instance (not a fresh-per-run database), so there is no hermetic way to
+  // assert a row's *contents* stay pristine once real usage can write to it
+  // — only that the schema *would* seed it blank. The equivalent
+  // maintenance-company-migration.integration.spec.ts / review-session-
+  // migration.integration.spec.ts precedents this file mirrors have the
+  // same shape: structural (constraint/index/column) checks, not live-data
+  // checks, for exactly this reason.
+  //
+  // The `inspectable-element-migration.integration.spec.ts` sibling has the
+  // same live-row-assertion anti-pattern this remediation just fixed here
+  // (`expect(rows.length).toBeGreaterThan(0)` reading mutable shared-DB
+  // state) — out of scope for this PR (organization-profile only, ADR-006).
+  // Tracked at Engram `discovery/non-hermetic-migration-integration-specs`
+  // (id 299), not yet turned into an open task for that module.
   describe('seed state (hermetic — read-only, never writes to the live row)', () => {
-    const SEEDED_ROW_ID = '01997a00-0000-7000-8000-000000000001';
     const TEXT_COLUMNS = [
       'name',
       'legalName',
@@ -86,17 +108,13 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
       }
     });
 
-    it('the seeded row exists at its fixed id, is the singleton, and logoAssetId is still permanently null', async () => {
-      const row = await prisma.organizationProfile.findUnique({
-        where: { id: SEEDED_ROW_ID },
-      });
+    it('the seeded row is the only row, at its fixed id, is the singleton, and logoAssetId is still permanently null', async () => {
+      const rows = await prisma.organizationProfile.findMany();
 
-      expect(row).not.toBeNull();
-      expect(row?.singleton).toBe(true);
-      expect(row?.logoAssetId).toBeNull();
-
-      const allRows = await prisma.organizationProfile.findMany();
-      expect(allRows).toHaveLength(1);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe(ORGANIZATION_PROFILE_SENTINEL_ID);
+      expect(rows[0].singleton).toBe(true);
+      expect(rows[0].logoAssetId).toBeNull();
     });
   });
 
