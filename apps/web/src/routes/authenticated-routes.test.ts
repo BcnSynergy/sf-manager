@@ -16,6 +16,7 @@ import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPag
 import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
+import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
@@ -174,11 +175,16 @@ const EXPECTED_ROUTES: {
     ],
     elementType: ReviewHistoryDetailPage,
   },
+  {
+    path: '/organization-profile',
+    allowedRoles: ['SYSTEM_ADMIN'],
+    elementType: OrganizationProfilePage,
+  },
 ];
 
 describe('AUTHENTICATED_ROUTES', () => {
-  it('has exactly 28 entries', () => {
-    expect(AUTHENTICATED_ROUTES).toHaveLength(28);
+  it('has exactly 29 entries', () => {
+    expect(AUTHENTICATED_ROUTES).toHaveLength(29);
   });
 
   it('matches path, allowedRoles and paired element component exactly, in order', () => {

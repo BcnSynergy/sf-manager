@@ -17,6 +17,7 @@ import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPag
 import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
+import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
@@ -287,5 +288,13 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
       'SYSTEM_ADMIN',
       'MANAGER',
     ],
+  },
+  // organization-profile-admin-ui spec "Role-Gated Route Access": a single
+  // static settings route, SYSTEM_ADMIN-only, no sibling dynamic segment to
+  // order against (design.md "File Changes" — no ordering note needed).
+  {
+    path: '/organization-profile',
+    element: <OrganizationProfilePage />,
+    allowedRoles: ['SYSTEM_ADMIN'],
   },
 ];
