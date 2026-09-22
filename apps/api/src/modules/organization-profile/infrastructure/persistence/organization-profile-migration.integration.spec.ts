@@ -28,20 +28,78 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   });
 
   // spec.md "The Profile Row Exists Before Any Request": the seeded row
-  // must exist with no application request of any kind having been issued —
-  // this suite issues none before this assertion.
-  it('exactly one row exists after migrate deploy, with every text field blank and logoAssetId null', async () => {
-    const rows = await prisma.organizationProfile.findMany();
+  // must exist with no application request of any kind having been issued.
+  //
+  // Remediation (sdd-verify CRITICAL-1, 2026-09-22): this used to read
+  // whatever the shared dev database currently held and assert it was still
+  // blank — which broke the instant anything (this project's own PR6 browser
+  // verification, in this case) wrote a real value through the app. The
+  // singleton guard (design.md Decision 1) makes it structurally impossible
+  // to INSERT a second, disposable row to test against instead — `singleton
+  // = true` collides with the unique index, `singleton = false` is refused
+  // by the CHECK. So hermeticity here is achieved by treating "blank" as a
+  // state this suite creates and tears down itself, not one it finds lying
+  // around: capture whatever the row currently holds, reset it to the
+  // freshly-migrated shape, assert, then restore the captured values —
+  // leaving the shared dev database exactly as this suite found it either
+  // way, and independent of any other test, browser session or admin.
+  describe('seed state (hermetic — captures and restores the row around each run)', () => {
+    let capturedRow: {
+      name: string;
+      legalName: string;
+      taxId: string;
+      address: string;
+      phone: string;
+      email: string;
+      logoAssetId: string | null;
+    };
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0].name).toBe('');
-    expect(rows[0].legalName).toBe('');
-    expect(rows[0].taxId).toBe('');
-    expect(rows[0].address).toBe('');
-    expect(rows[0].phone).toBe('');
-    expect(rows[0].email).toBe('');
-    expect(rows[0].logoAssetId).toBeNull();
-    expect(rows[0].singleton).toBe(true);
+    beforeEach(async () => {
+      const [row] = await prisma.organizationProfile.findMany();
+      capturedRow = {
+        name: row.name,
+        legalName: row.legalName,
+        taxId: row.taxId,
+        address: row.address,
+        phone: row.phone,
+        email: row.email,
+        logoAssetId: row.logoAssetId,
+      };
+
+      await prisma.organizationProfile.update({
+        where: { singleton: true },
+        data: {
+          name: '',
+          legalName: '',
+          taxId: '',
+          address: '',
+          phone: '',
+          email: '',
+          logoAssetId: null,
+        },
+      });
+    });
+
+    afterEach(async () => {
+      await prisma.organizationProfile.update({
+        where: { singleton: true },
+        data: capturedRow,
+      });
+    });
+
+    it('exactly one row exists with every text field blank and logoAssetId null, in the freshly-migrated shape', async () => {
+      const rows = await prisma.organizationProfile.findMany();
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe('');
+      expect(rows[0].legalName).toBe('');
+      expect(rows[0].taxId).toBe('');
+      expect(rows[0].address).toBe('');
+      expect(rows[0].phone).toBe('');
+      expect(rows[0].email).toBe('');
+      expect(rows[0].logoAssetId).toBeNull();
+      expect(rows[0].singleton).toBe(true);
+    });
   });
 
   // design.md Decision 1: the hand-written CHECK is the structural half of
