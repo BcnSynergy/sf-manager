@@ -181,6 +181,23 @@
     },
     "unknown": "Empresa de mantenimiento desconocida"
   },
+  "organizationProfile": {
+    "title": "Perfil de la organización",
+    "loading": "Cargando…",
+    "errorState": "No se ha podido cargar el perfil de la organización. Inténtalo de nuevo.",
+    "incomplete": "Este perfil aún no está completo. Rellena todos los campos siguientes.",
+    "nameLabel": "Nombre",
+    "legalNameLabel": "Razón social",
+    "taxIdLabel": "NIF/CIF",
+    "addressLabel": "Dirección",
+    "phoneLabel": "Teléfono",
+    "emailLabel": "Correo electrónico",
+    "submitLabel": "Guardar",
+    "clearedFieldError": "Un campo que ya tiene un valor guardado no se puede vaciar. Modifícalo en su lugar.",
+    "emptySubmitError": "Introduce al menos un valor antes de guardar.",
+    "validationError": "Introduce un valor válido para cada campo modificado.",
+    "saveError": "No se ha podido guardar el perfil de la organización. Inténtalo de nuevo."
+  },
   "inspectableElement": {
     "list": {
       "title": "Elementos inspeccionables",
@@ -495,7 +512,8 @@
     "checklistQuestions": "Preguntas de revisión",
     "reviewTemplates": "Plantillas de revisión",
     "reviewSessions": "Sesiones de revisión",
-    "reviewHistory": "Historial de revisiones"
+    "reviewHistory": "Historial de revisiones",
+    "organizationProfile": "Perfil de la organización"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
