@@ -1,4 +1,8 @@
 import { OrganizationProfile } from '../../domain/organization-profile.entity';
+import {
+  blankOrganizationProfileProps,
+  ORGANIZATION_PROFILE_SENTINEL_ID,
+} from '../../domain/organization-profile.fixture';
 import { GetOrganizationProfileUseCase } from './get-organization-profile.use-case';
 import { InMemoryOrganizationProfileRepository } from './testing/in-memory-organization-profile.repository';
 
@@ -18,23 +22,14 @@ describe('GetOrganizationProfileUseCase', () => {
     const result = await useCase.execute();
 
     expect(result).toEqual(
-      new OrganizationProfile({
-        id: '01997a00-0000-7000-8000-000000000001',
-        name: '',
-        legalName: '',
-        taxId: '',
-        address: '',
-        phone: '',
-        email: '',
-        logoAssetId: null,
-      }),
+      new OrganizationProfile(blankOrganizationProfileProps),
     );
   });
 
   it('returns the stored profile after it has been filled', async () => {
     organizationProfileRepository.seed(
       new OrganizationProfile({
-        id: '01997a00-0000-7000-8000-000000000001',
+        id: ORGANIZATION_PROFILE_SENTINEL_ID,
         name: 'Acme SL',
         legalName: 'Acme Sociedad Limitada',
         taxId: 'B12345678',

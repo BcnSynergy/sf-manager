@@ -50,6 +50,10 @@ Chain strategy: stacked-to-main
 - [x] 2.5 `shared/application/authorization/permission.ts` — add `organizationProfile:read`, `organizationProfile:update` (two, not four).
 - [x] 2.6 RED/GREEN `role-permission.checker.ts` spec extension — `SYSTEM_ADMIN` gets both; the other 4 roles stay `[]` (extend the existing exhaustive table-driven spec).
 
+### Post-review simplifications (PR 2, applied — fresh-context review, no correctness bugs found)
+- `OrganizationProfileChanges` now derives from `OrganizationProfileProps` (`Partial<Omit<OrganizationProfileProps, 'id' | 'logoAssetId'>>`) instead of hand-declaring the same 6 fields a second time.
+- Extracted `domain/organization-profile.fixture.ts` (`ORGANIZATION_PROFILE_SENTINEL_ID`, `blankOrganizationProfileProps`) as the single source of truth for the migration's sentinel id and blank-profile shape, replacing 4 hand-duplicated copies across `in-memory-organization-profile.repository.ts`, both use-case specs, and `organization-profile.entity.spec.ts`. Placed in `domain/` (not `application/.../testing/`) because the domain-layer entity spec also needs it, and domain must not import from application.
+
 ## Phase 3: Infrastructure + Presentation + Shared Schema (PR 3)
 - [ ] 3.1 RED/GREEN `organization-profile.mapper.ts` — `singleton` never reaches the entity; `logoAssetId` round-trips as `null`.
 - [ ] 3.2 `prisma-organization-profile.repository.ts` — `findUnique`/`update` addressed by `{ singleton: true }`; throws `OrganizationProfileMissingError` on a null read. Not `extends SoftDeletableRepository`.

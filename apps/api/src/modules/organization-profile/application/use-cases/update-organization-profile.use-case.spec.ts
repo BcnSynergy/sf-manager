@@ -1,4 +1,5 @@
 import { OrganizationProfile } from '../../domain/organization-profile.entity';
+import { ORGANIZATION_PROFILE_SENTINEL_ID } from '../../domain/organization-profile.fixture';
 import { UpdateOrganizationProfileUseCase } from './update-organization-profile.use-case';
 import { InMemoryOrganizationProfileRepository } from './testing/in-memory-organization-profile.repository';
 
@@ -19,7 +20,7 @@ describe('UpdateOrganizationProfileUseCase', () => {
   it('updates a subset of fields and leaves the rest unchanged', async () => {
     organizationProfileRepository.seed(
       new OrganizationProfile({
-        id: '01997a00-0000-7000-8000-000000000001',
+        id: ORGANIZATION_PROFILE_SENTINEL_ID,
         name: 'Old Name',
         legalName: 'Old Legal',
         taxId: 'B00000000',

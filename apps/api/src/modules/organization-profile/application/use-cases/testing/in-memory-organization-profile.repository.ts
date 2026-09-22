@@ -1,4 +1,5 @@
 import { OrganizationProfile } from '../../../domain/organization-profile.entity';
+import { blankOrganizationProfileProps } from '../../../domain/organization-profile.fixture';
 import {
   OrganizationProfileChanges,
   OrganizationProfileRepository,
@@ -12,16 +13,9 @@ import {
 // the constructor, mirroring the migration's idempotent blank seed
 // (spec.md "The Profile Row Exists Before Any Request").
 export class InMemoryOrganizationProfileRepository implements OrganizationProfileRepository {
-  private profile: OrganizationProfile = new OrganizationProfile({
-    id: '01997a00-0000-7000-8000-000000000001',
-    name: '',
-    legalName: '',
-    taxId: '',
-    address: '',
-    phone: '',
-    email: '',
-    logoAssetId: null,
-  });
+  private profile: OrganizationProfile = new OrganizationProfile(
+    blankOrganizationProfileProps,
+  );
 
   // Test-only helper to override the seeded state for a given spec.
   seed(profile: OrganizationProfile): void {

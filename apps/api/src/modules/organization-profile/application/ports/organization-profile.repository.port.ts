@@ -1,21 +1,21 @@
-import { OrganizationProfile } from '../../domain/organization-profile.entity';
+import {
+  OrganizationProfile,
+  type OrganizationProfileProps,
+} from '../../domain/organization-profile.entity';
 
 // Port (application layer, ADR-002/013). See design.md Interfaces/Contracts
 // — the concrete adapter is PrismaOrganizationProfileRepository
 // (infrastructure/persistence, PR 3).
 //
-// No `logoAssetId` key in OrganizationProfileChanges: the field is reserved
-// and inert this slice (ADR-012 Consequences), absent from this type, from
-// the Zod schema and from the DTO, so it is unwritable by construction
-// rather than by a rejection rule (design.md Interfaces/Contracts).
-export interface OrganizationProfileChanges {
-  name?: string;
-  legalName?: string;
-  taxId?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-}
+// Derived from OrganizationProfileProps rather than hand-declared, so the
+// six writable fields cannot drift from the entity's own field list. `id`
+// is never writable (no id parameter, design.md Decision 3) and
+// `logoAssetId` is reserved and inert this slice (ADR-012 Consequences) —
+// both omitted, so `logoAssetId` is unwritable by construction rather than
+// by a rejection rule (design.md Interfaces/Contracts).
+export type OrganizationProfileChanges = Partial<
+  Omit<OrganizationProfileProps, 'id' | 'logoAssetId'>
+>;
 
 export interface OrganizationProfileRepository {
   // NOT `| null`. Existence is a deployment guarantee (migration seed) and
