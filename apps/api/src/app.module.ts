@@ -10,6 +10,7 @@ import { InspectableElementModule } from './modules/inspectable-element/inspecta
 import { ChecklistQuestionModule } from './modules/checklist-question/checklist-question.module';
 import { ReviewTemplateModule } from './modules/review-template/review-template.module';
 import { ReviewSessionModule } from './modules/review-session/review-session.module';
+import { OrganizationProfileModule } from './modules/organization-profile/organization-profile.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -37,6 +38,9 @@ import { ReviewSessionModule } from './modules/review-session/review-session.mod
 // importing CommunityModule and ReviewTemplateModule — the first two
 // non-admin roles (MAINTENANCE_TECHNICIAN, COMMUNITY_REPRESENTATIVE)
 // actually reach a live route here.
+// OrganizationProfileModule (organization-profile PR 3) registers the
+// admin-only /organization-profile read/update surface. Imports nothing —
+// no cross-module dependency, no DI cycle risk (design.md Interfaces).
 @Module({
   imports: [
     PrismaModule,
@@ -49,6 +53,7 @@ import { ReviewSessionModule } from './modules/review-session/review-session.mod
     ChecklistQuestionModule,
     ReviewTemplateModule,
     ReviewSessionModule,
+    OrganizationProfileModule,
     HealthModule,
   ],
 })
