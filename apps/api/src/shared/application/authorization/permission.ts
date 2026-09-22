@@ -46,6 +46,13 @@
 // successor (authorization spec "No Standalone Retire Permission"). All
 // five are granted only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
 //
+// organizationProfile:* — organization-profile/authorization spec
+// "Permission Check on Organization Profile Endpoints" (PR 2): governs the
+// two /organization-profile routes. **Two** permissions, not four — the
+// resource has no create and no delete verb to guard (design.md Decision
+// 1, spec.md "The Profile Has No Create and No Delete Surface"). Granted
+// only on the SYSTEM_ADMIN row of ROLE_PERMISSIONS.
+//
 // reviewSession:* — review-session/authorization spec "Technician and
 // Representative Become Operational" (PR 2, design.md Decision 10): governs
 // every /review-scope and /review-sessions route (open, read, resume,
@@ -87,4 +94,6 @@ export type Permission =
   | 'reviewSession:read'
   | 'reviewSession:perform'
   | 'reviewSession:complete'
-  | 'reviewSession:discard';
+  | 'reviewSession:discard'
+  | 'organizationProfile:read'
+  | 'organizationProfile:update';

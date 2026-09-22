@@ -2,6 +2,10 @@ import {
   OrganizationProfile,
   type OrganizationProfileProps,
 } from './organization-profile.entity';
+import {
+  blankOrganizationProfileProps,
+  ORGANIZATION_PROFILE_SENTINEL_ID,
+} from './organization-profile.fixture';
 
 // ADR-013: hand-written domain entity, zero Prisma/framework dependency.
 // design.md Decision 2: all six text fields are plain strings — no Value
@@ -14,7 +18,7 @@ describe('OrganizationProfile', () => {
     [
       'a filled profile',
       {
-        id: '01997a00-0000-7000-8000-000000000001',
+        id: ORGANIZATION_PROFILE_SENTINEL_ID,
         name: 'Acme Property Management',
         legalName: 'Acme Property Management SL',
         taxId: 'B12345678',
@@ -24,19 +28,7 @@ describe('OrganizationProfile', () => {
         logoAssetId: null,
       },
     ],
-    [
-      'the blank seeded profile',
-      {
-        id: '01997a00-0000-7000-8000-000000000001',
-        name: '',
-        legalName: '',
-        taxId: '',
-        address: '',
-        phone: '',
-        email: '',
-        logoAssetId: null,
-      },
-    ],
+    ['the blank seeded profile', blankOrganizationProfileProps],
   ])('constructs %s with every field exposed verbatim', (_case, props) => {
     const profile = new OrganizationProfile(props);
 

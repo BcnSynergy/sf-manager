@@ -43,6 +43,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewTemplate:delete',
     'reviewTemplate:activate',
     'reviewSession:read',
+    // organization-profile PR 2, authorization/spec.md "Permission Check on
+    // Organization Profile Endpoints": exactly two members, not four — no
+    // create/delete verb exists for this singleton resource.
+    'organizationProfile:read',
+    'organizationProfile:update',
   ],
   // review-history-manager-capability/design.md Decision 4, authorization/
   // spec.md "The Manager Becomes Operational…": the role's FIRST permission
