@@ -95,29 +95,44 @@ Each role MUST be offered exactly these items and no others:
 
 | Role | Items |
 |---|---|
-| `SYSTEM_ADMIN` | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history (**7**) |
+| `SYSTEM_ADMIN` | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Organization profile (**8**) |
 | `MAINTENANCE_TECHNICIAN` | Home, Review sessions, Review history (**3**) |
 | `COMMUNITY_REPRESENTATIVE` | Home, Review sessions, Review history (**3**) |
 | `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**) |
 | `MANAGER` | Home, Review history (**2**) |
 
-Every item MUST point at its section's **top-level list route**. No
-`/new`, `/:id`, `/:id/edit` or other sub-route MUST appear in the
-navigation; those stay reachable from their list page as they already
-are.
+Every item MUST point at its section's **top-level route**: the list
+route for a section that manages a collection, and the page itself for
+the organization profile, which manages a singleton and therefore has
+no collection to list. No `/new`, `/:id`, `/:id/edit` or other
+sub-route MUST appear in the navigation; those stay reachable from
+their list page as they already are.
 
 The navigation MUST NOT fetch data, introduce a new context, or hold any
-state beyond what the auth provider already exposes.
+state beyond what the auth provider already exposes. In particular the
+organization profile item MUST be decided by the role alone — the
+navigation MUST NOT read the profile, and MUST NOT vary with whether the
+profile is filled in or blank.
 
 #### Scenario: Each of the five roles sees exactly its own item set
 - GIVEN a signed-in user of each role in turn
 - WHEN the navigation renders for each
 - THEN the rendered items MUST match that role's row of the table above exactly — none missing and none extra
 
-#### Scenario: The admin reaches all seven sections without typing a URL
+#### Scenario: The admin reaches all eight sections without typing a URL
 - GIVEN a signed-in `SYSTEM_ADMIN` on any authenticated page
 - WHEN they use the navigation
-- THEN all seven sections — Home, the five admin sections and Review history — MUST be reachable in one click, with no hand-typed URL required
+- THEN all eight sections — Home, the five admin sections, Review history and Organization profile — MUST be reachable in one click, with no hand-typed URL required
+
+#### Scenario: Only the admin is offered the organization profile
+- GIVEN a signed-in user of each of the five roles in turn
+- WHEN the Organization profile item is looked for in the navigation rendered for each
+- THEN it MUST be present for `SYSTEM_ADMIN` only, and absent for the other four roles
+
+#### Scenario: The organization profile item does not depend on the profile's contents
+- GIVEN a signed-in `SYSTEM_ADMIN`, once with a blank seeded profile and once with every field filled
+- WHEN the navigation renders in each case
+- THEN the identical Organization profile item MUST be offered, and the navigation MUST have issued no request for the profile
 
 #### Scenario: A new role cannot ship with an unmapped navigation
 - GIVEN a sixth member is added to `Role` without a row in the lookup
@@ -127,7 +142,7 @@ state beyond what the auth provider already exposes.
 #### Scenario: No CRUD sub-route is offered
 - GIVEN the navigation rendered for any role
 - WHEN its item targets are enumerated
-- THEN each MUST be a section's top-level list route, and none MUST be a create, detail or edit sub-route
+- THEN each MUST be a section's top-level route, and none MUST be a create, detail or edit sub-route
 
 ### Requirement: Every Navigation Item Targets a Route Its Viewer May Open
 
@@ -145,6 +160,25 @@ for, **every** item's target route MUST be one that route's own
 - GIVEN the navigation's role → items lookup and the application's route declarations
 - WHEN each item's target route is cross-read against that route's `allowedRoles`
 - THEN every item offered to a role MUST appear on a route that admits that role
+
+### Requirement: The Added Item Preserves the Reachability Invariant
+
+The organization profile item MUST satisfy *Every Navigation Item
+Targets a Route Its Viewer May Open* without exception: the route it
+targets MUST admit `SYSTEM_ADMIN` through its own `allowedRoles` gate,
+so activating it MUST never land its viewer on the "not authorized"
+surface. The existing reachability test MUST cover the added item
+rather than being relaxed to accommodate it.
+
+#### Scenario: The new item does not lead its viewer to a denial
+- GIVEN a signed-in `SYSTEM_ADMIN`
+- WHEN they activate the Organization profile item
+- THEN the organization profile page MUST render, and the "not authorized" view MUST NOT appear
+
+#### Scenario: The reachability test covers the new item unrelaxed
+- GIVEN the navigation's role → items lookup, the route declarations and the reachability test after this change
+- WHEN the test runs
+- THEN it MUST pass with the added item included, and MUST NOT have been weakened, skipped or given an exception for it
 
 ### Requirement: The Navigation Offers No Path to the Review-Session Write Surface
 
