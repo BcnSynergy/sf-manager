@@ -291,6 +291,7 @@ export function ReviewSessionDetailPage() {
           open={pendingComplete}
           title={t('reviewSession.detail.completeConfirmTitle')}
           message={t('reviewSession.detail.completeConfirmMessage')}
+          confirmLabel={t('reviewSession.detail.completeLabel')}
           onConfirm={() => void confirmComplete()}
           onCancel={() => setPendingComplete(false)}
         />
