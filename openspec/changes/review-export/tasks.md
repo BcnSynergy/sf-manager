@@ -102,23 +102,23 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 5 — Use case core (~380 lines)
 
-- [ ] 5.1 RED: `read-review-document.use-case.spec.ts` — rejection issues no
+- [x] 5.1 RED: `read-review-document.use-case.spec.ts` — rejection issues no
       template/name/email/profile read — spec: review-document *Inclusive Name
       Lookups Run Only Inside the Scope Gate*, *A rejected read issues no name
       lookup*
-- [ ] 5.2 RED: same spec — lookups use only identifiers from the loaded session
+- [x] 5.2 RED: same spec — lookups use only identifiers from the loaded session
       — spec: *Lookups use only identifiers from the loaded session*
-- [ ] 5.3 RED: same spec — labels, `''` fallbacks, `null` company, signer =
+- [x] 5.3 RED: same spec — labels, `''` fallbacks, `null` company, signer =
       performer, six letterhead keys only — spec: review-document *Read the
       Review Document of One Completed Session*, *A session without an
       attributed company has no company*, *A blank profile does not block the
       document*, *A session completed before this change is signed by its
       performer*, *The document exposes only the letterhead fields*
-- [ ] 5.4 GREEN: create `read-review-document.use-case.ts` — gate first via
+- [x] 5.4 GREEN: create `read-review-document.use-case.ts` — gate first via
       `loadCompletedForActor` (design Decision 1), then `findFrozenWithSnapshot`,
       name-directory batched lookup, `buildHistoryEntries` + enrichment,
       `userDirectory.findEmailsByIds`, `profileReader.get()`
-- [ ] 5.5 Wire `ReadReviewDocumentResult`/`ReviewDocumentEntry` interfaces per
+- [x] 5.5 Wire `ReadReviewDocumentResult`/`ReviewDocumentEntry` interfaces per
       design Interfaces/Contracts
 
 ## PR 6 — Entry and answer ordering (~200 lines)
