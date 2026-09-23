@@ -7,6 +7,7 @@ type ConfirmDialogProps = {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmLabel?: string;
 };
 
 // design.md Decision 4: native <dialog> over window.confirm — the browser
@@ -16,7 +17,18 @@ type ConfirmDialogProps = {
 // consumer: UsersListPage deactivate, PR6). title/message are
 // caller-supplied and already translated, so this component owns no
 // domain-specific copy — only the generic Confirm/Cancel labels.
-export function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+// confirmLabel (review-export, PR1) lets a caller override the confirm
+// button's copy (e.g. "Sign and close") when the generic Confirm label
+// doesn't convey what confirming actually does; it defaults to the
+// existing generic label so every other caller is unaffected.
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmLabel,
+}: ConfirmDialogProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -41,7 +53,7 @@ export function ConfirmDialog({ open, title, message, onConfirm, onCancel }: Con
         {t('common.cancel')}
       </button>
       <button type="button" onClick={onConfirm} data-testid="confirm-dialog-confirm">
-        {t('common.confirm')}
+        {confirmLabel ?? t('common.confirm')}
       </button>
     </dialog>
   );

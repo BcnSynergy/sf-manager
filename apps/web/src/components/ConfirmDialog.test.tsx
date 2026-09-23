@@ -77,4 +77,16 @@ describe('ConfirmDialog', () => {
     expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Confirm');
     expect(screen.getByTestId('confirm-dialog-cancel')).toHaveTextContent('Cancel');
   });
+
+  it('defaults the confirm button label to the generic Confirm copy when confirmLabel is omitted', () => {
+    renderDialog();
+
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Confirm');
+  });
+
+  it('renders the caller-supplied confirmLabel on the confirm button when provided', () => {
+    renderDialog({ confirmLabel: 'Sign and close' });
+
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Sign and close');
+  });
 });
