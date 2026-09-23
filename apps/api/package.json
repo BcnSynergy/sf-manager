@@ -20,7 +20,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "pretest:integration": "npm run build --workspace=@sf-manager/validation",
-    "test:integration": "jest --testRegex=\".*\\.integration\\.spec\\.ts$\" --testPathIgnorePatterns=/node_modules/",
+    "test:integration": "jest --testRegex=\".*\\.integration\\.spec\\.ts$\" --testPathIgnorePatterns=/node_modules/ --runInBand",
     "pretest:e2e": "npm run build --workspace=@sf-manager/validation",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
