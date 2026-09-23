@@ -25,6 +25,7 @@ import {
   buildHistoryEntries,
   type ReadReviewHistoryEntry,
 } from './review-history-entries';
+import { compareDocumentEntries } from './review-document-entry-order';
 
 // design.md Interfaces/Contracts. `ReviewDocumentEntry` only ADDS
 // elementName/elementLocation to the history entry shape — it never
@@ -75,11 +76,11 @@ export interface ReadReviewDocumentResult {
 // LOADED session, never by a caller-supplied identifier other than the
 // session id itself.
 //
-// PR 5 scope only: entries are enriched in the session's OWN order.
-// `compareDocumentEntries` (deterministic code/recordedAt/id ordering) and
-// `answerOrder` (per-question answer ordering) are PR 6 — this use case
-// calls `buildHistoryEntries` exactly as the history read does, with no
-// `answerOrder` argument, so answers stay in their recorded order here.
+// design.md "Entry enrichment and order": entries are sorted by
+// `compareDocumentEntries` (code ascending, code-less last, ties by
+// recordedAt then entry id) and each entry's answers by `answerOrder`
+// (the frozen template's question order) — the history read still calls
+// `buildHistoryEntries` with neither, so its output stays byte-identical.
 @Injectable()
 export class ReadReviewDocumentUseCase {
   constructor(
@@ -122,11 +123,21 @@ export class ReadReviewDocumentUseCase {
       [...elementsById].map(([id, identity]) => [id, identity.code]),
     );
 
-    // PR 5: no sort, no answerOrder — entries stay in the session's given
-    // order (PR 6 adds compareDocumentEntries + answerOrder).
+    // Sort a COPY — `session.entries` is never mutated (design.md "Entry
+    // enrichment and order").
+    const orderedEntries = [...session.entries].sort(
+      compareDocumentEntries(elementsById),
+    );
+    const answerOrder = new Map(
+      template.questions.map((question) => [
+        question.questionId,
+        question.order,
+      ]),
+    );
     const historyEntries = buildHistoryEntries(
-      session.entries,
+      orderedEntries,
       codeByElementId,
+      answerOrder,
     );
     const entries: ReviewDocumentEntry[] = historyEntries.map((entry) => {
       const identity = elementsById.get(entry.inspectableElementId);

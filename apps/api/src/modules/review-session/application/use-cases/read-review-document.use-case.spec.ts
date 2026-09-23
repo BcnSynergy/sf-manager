@@ -34,11 +34,12 @@ function buildTemplate(
 }
 
 // design.md Decision 1: the use case's first call is loadCompletedForActor
-// (the single throw site) — PR 5 tests assert lookups run only after a
-// session is loaded, and only with identifiers carried by that session
-// (spec.md "Inclusive Name Lookups Run Only Inside the Scope Gate"). PR 5
-// keeps entries in the session's own order — compareDocumentEntries and
-// answerOrder are PR 6.
+// (the single throw site) — tests assert lookups run only after a session
+// is loaded, and only with identifiers carried by that session (spec.md
+// "Inclusive Name Lookups Run Only Inside the Scope Gate"). design.md
+// "Entry enrichment and order": entries are sorted by
+// `compareDocumentEntries` and answers by the frozen template's
+// `answerOrder`.
 describe('ReadReviewDocumentUseCase', () => {
   let sessionRepository: InMemoryReviewSessionRepository;
   let scopeChecker: FakeCommunityScopeChecker;
@@ -333,6 +334,108 @@ describe('ReadReviewDocumentUseCase', () => {
     });
 
     expect(result.maintenanceCompanyName).toBe('');
+  });
+
+  // spec.md "Entries and answers are returned in a deterministic order":
+  // element code ascending, code-less last, ties broken by recordedAt then
+  // entry id; each entry's answers ordered by the frozen template's
+  // question order.
+  it('orders entries by element code ascending, code-less last, and answers by the frozen question order', async () => {
+    const template = buildTemplate();
+    templateRepository.seed(template, [
+      { questionId: 'question-2', order: 2, text: 'Is it charged?' },
+      { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
+    ]);
+    nameDirectory.seedElement('element-b', {
+      code: 'EXT-002',
+      name: 'Extinguisher B',
+      location: 'First floor',
+    });
+    nameDirectory.seedElement('element-a', {
+      code: 'EXT-001',
+      name: 'Extinguisher A',
+      location: 'Ground floor',
+    });
+    // 'element-unresolved' is deliberately never seeded — code-less, sorts
+    // last regardless of insertion order below.
+
+    const entryB = ElementReviewEntry.reviewed({
+      id: 'entry-b',
+      reviewSessionId: 'session-1',
+      inspectableElementId: 'element-b',
+      answers: [
+        new QuestionAnswer({
+          id: 'answer-b-2',
+          elementReviewEntryId: 'entry-b',
+          questionId: 'question-2',
+          answer: 'YES',
+        }),
+        new QuestionAnswer({
+          id: 'answer-b-1',
+          elementReviewEntryId: 'entry-b',
+          questionId: 'question-1',
+          answer: 'NO',
+        }),
+      ],
+      recordedAt: new Date('2026-01-02T00:01:00.000Z'),
+    });
+    const entryUnresolved = ElementReviewEntry.unreviewed({
+      id: 'entry-unresolved',
+      reviewSessionId: 'session-1',
+      inspectableElementId: 'element-unresolved',
+      observations: 'Inaccessible',
+      recordedAt: new Date('2026-01-02T00:02:00.000Z'),
+    });
+    const entryA = ElementReviewEntry.reviewed({
+      id: 'entry-a',
+      reviewSessionId: 'session-1',
+      inspectableElementId: 'element-a',
+      answers: [
+        new QuestionAnswer({
+          id: 'answer-a-1',
+          elementReviewEntryId: 'entry-a',
+          questionId: 'question-1',
+          answer: 'YES',
+        }),
+      ],
+      recordedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    // Session entries are given in a deliberately arbitrary order — the
+    // use case must produce a deterministic order regardless of input.
+    const session = new ReviewSession({
+      id: 'session-1',
+      communityId: 'community-1',
+      templateId: template.id,
+      performedById: 'user-1',
+      status: 'completed',
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      completedAt: new Date('2026-01-02T00:00:00.000Z'),
+      entries: [entryUnresolved, entryB, entryA],
+    });
+    const originalEntriesOrder = [...session.entries];
+    sessionRepository.seed(session);
+    scopeChecker.assign('user-1', 'community-1');
+
+    const result = await useCase.execute('session-1', {
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(result.entries.map((entry) => entry.inspectableElementId)).toEqual([
+      'element-a',
+      'element-b',
+      'element-unresolved',
+    ]);
+    const entryBResult = result.entries.find(
+      (entry) => entry.inspectableElementId === 'element-b',
+    );
+    expect(entryBResult?.answers.map((answer) => answer.questionId)).toEqual([
+      'question-1',
+      'question-2',
+    ]);
+    // The use case must sort a COPY — the aggregate's own entries array is
+    // never reordered in place.
+    expect(session.entries).toEqual(originalEntriesOrder);
   });
 
   it('propagates ReviewSessionNotFoundError for an out-of-scope session', async () => {
