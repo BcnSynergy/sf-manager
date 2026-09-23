@@ -131,6 +131,28 @@ describe('ReviewSessionDetailPage', () => {
     expect(mockedDiscardReviewSession).not.toHaveBeenCalled();
   });
 
+  it('labels the completing control Sign and close', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    expect(await screen.findByTestId('review-session-detail-complete')).toHaveTextContent(
+      'Sign and close',
+    );
+  });
+
+  it('warns in the confirmation dialog that the review closes and cannot be modified, and labels its confirm control Sign and close too', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+
+    expect(screen.getByText(/closed/i)).toBeInTheDocument();
+    expect(screen.getByText(/no longer be modified/i)).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Sign and close');
+  });
+
   it('completes the session after confirmation and reloads it as read-only', async () => {
     mockedReadReviewSession.mockResolvedValueOnce(draftSession).mockResolvedValueOnce(completedSession);
     mockedCompleteReviewSession.mockResolvedValue({
