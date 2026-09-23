@@ -72,21 +72,21 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 3 — Reader + name-directory ports, fakes (~280 lines)
 
-- [ ] 3.1 RED: organization-profile module spec asserting `ORGANIZATION_PROFILE_READER`
+- [x] 3.1 RED: organization-profile module spec asserting `ORGANIZATION_PROFILE_READER`
       and `ORGANIZATION_PROFILE_REPOSITORY` resolve to one instance — spec:
       review-document *The Organization Profile Gains One Reader, Not a Wider
       Endpoint*; authorization *The Organization Profile Grants Nothing Beyond
       Itself* (narrowed exception)
-- [ ] 3.2 GREEN: create `organization-profile.reader.port.ts`
+- [x] 3.2 GREEN: create `organization-profile.reader.port.ts`
       (`OrganizationProfileReader { get() }`); `OrganizationProfileRepository extends` it
-- [ ] 3.3 GREEN: `organization-profile.module.ts` binds reader via `useExisting`,
+- [x] 3.3 GREEN: `organization-profile.module.ts` binds reader via `useExisting`,
       exports only the reader — spec: organization-profile-management
       *An Incomplete Profile Blocks Nothing* (narrowed to one consumer)
-- [ ] 3.4 RED: `in-memory-review-document-name-directory.spec.ts` asserting
+- [x] 3.4 RED: `in-memory-review-document-name-directory.spec.ts` asserting
       soft-delete-inclusive community/company lookup and soft-delete- and
       deactivation-inclusive element lookup — spec: review-document
       *Deleted context still labels the document*
-- [ ] 3.5 GREEN: create `review-document-name-directory.port.ts` (not exported)
+- [x] 3.5 GREEN: create `review-document-name-directory.port.ts` (not exported)
       and `testing/in-memory-review-document-name-directory.ts` fake
 
 ## PR 4 — Prisma name directory (~300 lines)
