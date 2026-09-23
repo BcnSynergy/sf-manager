@@ -60,14 +60,14 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 2 — History helper extraction (~280 lines)
 
-- [ ] 2.1 RED: `review-history-entries.spec.ts` asserting `buildHistoryEntries`
+- [x] 2.1 RED: `review-history-entries.spec.ts` asserting `buildHistoryEntries`
       maps entries in the order given, sorts answers only when `answerOrder`
       is passed — design Decision 2
-- [ ] 2.2 GREEN: create `apps/api/.../review-session/application/use-cases/review-history-entries.ts`
+- [x] 2.2 GREEN: create `apps/api/.../review-session/application/use-cases/review-history-entries.ts`
       with `ReadReviewHistoryEntry` moved in, `buildHistoryEntries(entries, codeByElementId, answerOrder?)`
-- [ ] 2.3 GREEN: `read-review-history.use-case.ts` calls the helper, re-exports
+- [x] 2.3 GREEN: `read-review-history.use-case.ts` calls the helper, re-exports
       `ReadReviewHistoryEntry`; no behaviour change
-- [ ] 2.4 Verify `read-review-history.use-case.spec.ts` is green unchanged — spec:
+- [x] 2.4 Verify `read-review-history.use-case.spec.ts` is green unchanged — spec:
       review-document *The history read-back is unchanged*
 
 ## PR 3 — Reader + name-directory ports, fakes (~280 lines)
