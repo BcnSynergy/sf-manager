@@ -2,6 +2,7 @@ import {
   OrganizationProfile,
   type OrganizationProfileProps,
 } from '../../domain/organization-profile.entity';
+import { OrganizationProfileReader } from './organization-profile.reader.port';
 
 // Port (application layer, ADR-002/013). See design.md Interfaces/Contracts
 // — the concrete adapter is PrismaOrganizationProfileRepository
@@ -17,14 +18,15 @@ export type OrganizationProfileChanges = Partial<
   Omit<OrganizationProfileProps, 'id' | 'logoAssetId'>
 >;
 
-export interface OrganizationProfileRepository {
-  // NOT `| null`. Existence is a deployment guarantee (migration seed) and
-  // uniqueness a structural one (design.md Decision 1's CHECK + unique
-  // index), so the absence of the row is an environment defect, not a
-  // runtime condition: the adapter throws OrganizationProfileMissingError.
-  // No findById — there is nothing to address (design.md Interfaces).
-  get(): Promise<OrganizationProfile>;
-
+// Extends OrganizationProfileReader (review-export/design.md Decision 3):
+// `get()` is declared once, on the reader, so the repository and its
+// read-only alias can never drift. NOT `| null`. Existence is a deployment
+// guarantee (migration seed) and uniqueness a structural one (design.md
+// Decision 1's CHECK + unique index), so the absence of the row is an
+// environment defect, not a runtime condition: the adapter throws
+// OrganizationProfileMissingError. No findById — there is nothing to
+// address (design.md Interfaces).
+export interface OrganizationProfileRepository extends OrganizationProfileReader {
   // Single atomic UPDATE addressed by the sentinel unique key; resolves to
   // the authoritative post-state (design.md Decision 3). No id parameter,
   // and no preliminary read.
