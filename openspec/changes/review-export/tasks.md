@@ -123,12 +123,12 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 6 — Entry and answer ordering (~200 lines)
 
-- [ ] 6.1 RED: `review-document-entry-order.spec.ts` — code ascending, code-less
+- [x] 6.1 RED: `review-document-entry-order.spec.ts` — code ascending, code-less
       last, ties by `recordedAt` then entry `id` — spec: review-document
       *Entries and answers are returned in a deterministic order*
-- [ ] 6.2 GREEN: create `review-document-entry-order.ts` exporting
+- [x] 6.2 GREEN: create `review-document-entry-order.ts` exporting
       `compareDocumentEntries(elements)`
-- [ ] 6.3 GREEN: use case sorts a copy of `session.entries` before calling
+- [x] 6.3 GREEN: use case sorts a copy of `session.entries` before calling
       `buildHistoryEntries` with `answerOrder` from the frozen template
 
 ## PR 7 — API wiring + first e2e cases (~360 lines)
