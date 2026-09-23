@@ -46,7 +46,7 @@ export class ReviewDocumentTemplateDto {
   @ApiProperty({ enum: ['EXTINGUISHER'] })
   elementType!: ElementType;
 
-  @ApiProperty({ enum: ['MONTHLY', 'QUARTERLY', 'YEARLY'] })
+  @ApiProperty({ enum: ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL'] })
   frequency!: ReviewFrequency;
 
   @ApiProperty({ type: Number, nullable: true })
