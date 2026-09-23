@@ -33,10 +33,14 @@ export function buildHistoryEntries(
     }));
 
     if (answerOrder) {
+      // An answer whose question is missing from answerOrder sorts LAST
+      // (design.md "Entry enrichment and order") — it is not part of the
+      // frozen template's active question set, so `?? 0` would otherwise
+      // sort it to the front, ahead of every ordered answer.
       answers.sort(
         (a, b) =>
-          (answerOrder.get(a.questionId) ?? 0) -
-          (answerOrder.get(b.questionId) ?? 0),
+          (answerOrder.get(a.questionId) ?? Number.MAX_SAFE_INTEGER) -
+          (answerOrder.get(b.questionId) ?? Number.MAX_SAFE_INTEGER),
       );
     }
 

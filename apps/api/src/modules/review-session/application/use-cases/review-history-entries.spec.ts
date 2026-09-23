@@ -130,6 +130,40 @@ describe('buildHistoryEntries', () => {
     ]);
   });
 
+  // design.md "Entry enrichment and order" (PR 6 nit resolved): an answer
+  // whose question is missing from answerOrder is not in the frozen
+  // template's active question set — it sorts LAST, after every ordered
+  // answer, rather than to the front. Deliberately keys `question-2` out
+  // of answerOrder to exercise the fallback.
+  it('sorts an answer whose question is missing from answerOrder last, not first', () => {
+    const entry = buildReviewedEntry('entry-1', 'element-1', [
+      new QuestionAnswer({
+        id: 'answer-2',
+        elementReviewEntryId: 'entry-1',
+        questionId: 'question-2',
+        answer: 'NO',
+      }),
+      new QuestionAnswer({
+        id: 'answer-1',
+        elementReviewEntryId: 'entry-1',
+        questionId: 'question-1',
+        answer: 'YES',
+      }),
+    ]);
+    const answerOrder = new Map([['question-1', 1]]);
+
+    const result = buildHistoryEntries(
+      [entry],
+      new Map([['element-1', 'EXT-001']]),
+      answerOrder,
+    );
+
+    expect(result[0].answers.map((answer) => answer.questionId)).toEqual([
+      'question-1',
+      'question-2',
+    ]);
+  });
+
   it('maps reviewed and unreviewed flags, observations and recordedAt unchanged', () => {
     const recordedAt = new Date('2026-01-03T00:00:00.000Z');
     const unreviewed = ElementReviewEntry.unreviewed({
