@@ -16,9 +16,11 @@ import { InspectableElementNotFoundError } from '../../inspectable-element/domai
 import { ListReviewHistoryUseCase } from '../application/use-cases/list-review-history.use-case';
 import { ReadReviewHistoryUseCase } from '../application/use-cases/read-review-history.use-case';
 import { ReadElementReviewHistoryUseCase } from '../application/use-cases/read-element-review-history.use-case';
+import { ReadReviewDocumentUseCase } from '../application/use-cases/read-review-document.use-case';
 import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
 import { ElementReviewHistoryResponseDto } from './dto/element-review-history-response.dto';
+import { ReviewDocumentResponseDto } from './dto/review-document-response.dto';
 
 // review-history design.md Decision 4: a SEPARATE controller file from
 // review-session.controller.ts, not an appended route. `review-history/
@@ -39,6 +41,7 @@ export class ReviewHistoryController {
     private readonly listReviewHistoryUseCase: ListReviewHistoryUseCase,
     private readonly readReviewHistoryUseCase: ReadReviewHistoryUseCase,
     private readonly readElementReviewHistoryUseCase: ReadElementReviewHistoryUseCase,
+    private readonly readReviewDocumentUseCase: ReadReviewDocumentUseCase,
   ) {}
 
   @Get('review-history')
@@ -76,6 +79,38 @@ export class ReviewHistoryController {
   ): Promise<ReviewHistoryDetailResponseDto> {
     try {
       return await this.readReviewHistoryUseCase.execute(sessionId, {
+        userId: user.sub,
+        role: user.role,
+      });
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
+  // review-export/design.md Decision 5: same controller, same
+  // `reviewSession:read` gate, same `mapError` — the document is reachable
+  // if and only if the history detail read of the same session is
+  // (spec.md "Document Visibility Is Exactly the Review-History Scope").
+  // `ReadReviewDocumentUseCase`'s single throw site is the same
+  // `loadCompletedForActor` gate the read above uses.
+  @Get('review-history/:sessionId/document')
+  @RequirePermission('reviewSession:read')
+  @ApiOkResponse({ type: ReviewDocumentResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiNotFoundResponse({
+    description:
+      "Unknown session, draft session, another performer's session, " +
+      "another community's session, or a since-deactivated assignment — " +
+      "all indistinguishable, identical to the history detail read's " +
+      '404. Body carries code: REVIEW_SESSION_NOT_FOUND.',
+  })
+  async readDocument(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId') sessionId: string,
+  ): Promise<ReviewDocumentResponseDto> {
+    try {
+      return await this.readReviewDocumentUseCase.execute(sessionId, {
         userId: user.sub,
         role: user.role,
       });

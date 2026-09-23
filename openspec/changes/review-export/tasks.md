@@ -133,23 +133,23 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 7 — API wiring + first e2e cases (~360 lines)
 
-- [ ] 7.1 RED: `review-history.e2e-spec.ts` new `describe` block — technician
+- [x] 7.1 RED: `review-history.e2e-spec.ts` new `describe` block — technician
       reads full document body 200 — spec: review-document *The document
       carries all four parts*, *Each of the five scopes reads an in-scope
       document* (technician case)
-- [ ] 7.2 RED: same block — out-of-scope, nonexistent, draft all `404
+- [x] 7.2 RED: same block — out-of-scope, nonexistent, draft all `404
       REVIEW_SESSION_NOT_FOUND` — spec: *Out-of-scope, nonexistent and draft
       are indistinguishable*
-- [ ] 7.3 GREEN: create `review-document-response.dto.ts` (DTO + entry +
+- [x] 7.3 GREEN: create `review-document-response.dto.ts` (DTO + entry +
       template + letterhead DTOs, reusing `ReviewSessionEntryAnswerDto`/
       `ReviewHistoryQuestionDto`)
-- [ ] 7.4 GREEN: add `GET /review-history/:sessionId/document` to
+- [x] 7.4 GREEN: add `GET /review-history/:sessionId/document` to
       `review-history.controller.ts` — `@RequirePermission('reviewSession:read')`,
       shared `mapError` — spec: review-document *Document Visibility Is
       Exactly the Review-History Scope*
-- [ ] 7.5 GREEN: `review-session.module.ts` — import `OrganizationProfileModule`,
+- [x] 7.5 GREEN: `review-session.module.ts` — import `OrganizationProfileModule`,
       register two providers, no new exports
-- [ ] 7.6 GREEN: `buildApp` e2e harness gains
+- [x] 7.6 GREEN: `buildApp` e2e harness gains
       `REVIEW_DOCUMENT_NAME_DIRECTORY` → `InMemoryReviewDocumentNameDirectory`
       and `ORGANIZATION_PROFILE_REPOSITORY` → `InMemoryOrganizationProfileRepository`
       overrides

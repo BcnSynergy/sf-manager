@@ -36,6 +36,11 @@ import {
   USER_DIRECTORY,
   type UserDirectory,
 } from '../src/modules/review-session/application/ports/user-directory.port';
+import { REVIEW_DOCUMENT_NAME_DIRECTORY } from '../src/modules/review-session/application/ports/review-document-name-directory.port';
+import { InMemoryReviewDocumentNameDirectory } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-document-name-directory';
+import { ORGANIZATION_PROFILE_REPOSITORY } from '../src/modules/organization-profile/application/ports/organization-profile.repository.port';
+import { InMemoryOrganizationProfileRepository } from '../src/modules/organization-profile/application/use-cases/testing/in-memory-organization-profile.repository';
+import { OrganizationProfile } from '../src/modules/organization-profile/domain/organization-profile.entity';
 import { User } from '../src/modules/users/domain/user.entity';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import {
@@ -159,6 +164,12 @@ async function buildSeedUser(input: SeedUserInput): Promise<User> {
 interface BuiltApp {
   app: INestApplication<App>;
   userRepository: InMemoryUserRepository;
+  // review-export/design.md "E2E harness": both overrides `buildApp` gains
+  // for the document route (PR 7) — no other describe block seeds them, so
+  // every existing scenario keeps seeing the blank profile and an empty
+  // name directory (absent id -> null/absent, never a thrown error).
+  nameDirectory: InMemoryReviewDocumentNameDirectory;
+  organizationProfileRepository: InMemoryOrganizationProfileRepository;
 }
 
 async function buildApp(seed: {
@@ -184,6 +195,9 @@ async function buildApp(seed: {
   const elementRepository = new InMemoryInspectableElementRepository();
   const sessionRepository = new InMemoryReviewSessionRepository();
   const tokenDenylist = new InMemoryTokenDenylist();
+  const nameDirectory = new InMemoryReviewDocumentNameDirectory();
+  const organizationProfileRepository =
+    new InMemoryOrganizationProfileRepository();
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -214,6 +228,14 @@ async function buildApp(seed: {
     .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
     .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)
     .useValue(maintenanceCompanyLookup)
+    // review-export/design.md "E2E harness": the document route's two
+    // overrides — the reader token resolves to this same repository
+    // instance through the real module's `useExisting` alias, so it needs
+    // no override of its own (design.md "PR 7's first case proves this").
+    .overrideProvider(REVIEW_DOCUMENT_NAME_DIRECTORY)
+    .useValue(nameDirectory)
+    .overrideProvider(ORGANIZATION_PROFILE_REPOSITORY)
+    .useValue(organizationProfileRepository)
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
@@ -225,7 +247,7 @@ async function buildApp(seed: {
   app.enableCors({ origin: 'http://localhost:5173', credentials: true });
   await app.init();
 
-  return { app, userRepository };
+  return { app, userRepository, nameDirectory, organizationProfileRepository };
 }
 
 type Agent = ReturnType<typeof request.agent>;
@@ -3167,6 +3189,276 @@ describe('Review History (e2e)', () => {
         )
         .send({ name: 'Renamed' })
         .expect(403);
+    });
+  });
+
+  // review-export tasks.md PR 7 (7.1/7.2): the document route's first two
+  // e2e cases — full-body 200 and the uniform 404 — written RED before the
+  // route exists. The scope-matrix characterization (other four scopes,
+  // ungranted MANAGER, 401, parity, blank profile, six keys, profile 403)
+  // is PR 8, not duplicated here (design.md Migration/Rollout).
+  describe('GET /review-history/:sessionId/document', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rhdoc-admin@example.com';
+    const technicianUEmail = 'rhdoc-technician-u@example.com';
+    const technicianWEmail = 'rhdoc-technician-w@example.com';
+
+    let communityC: CommunityBody;
+    let templateId: string;
+    let elementC: ElementBody;
+    let elementUnreviewed: ElementBody;
+    let question: QuestionBody;
+    let sessionByUForC: SessionBody & {
+      startedAt: string;
+      completedAt: string;
+    };
+    let sessionByWForD: SessionBody;
+    let recordedAtC: string;
+    let recordedAtUnreviewed: string;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rhdoc-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technicianU = await buildSeedUser({
+        id: 'rhdoc-technician-u-id',
+        email: technicianUEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+        maintenanceCompanyId: 'rhdoc-company-id',
+      });
+      const technicianW = await buildSeedUser({
+        id: 'rhdoc-technician-w-id',
+        email: technicianWEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      built = await buildApp({ users: [admin, technicianU, technicianW] });
+
+      // design.md Decision 4 / "PR 7's first case proves this": the reader
+      // token resolves to this SAME repository instance through the real
+      // module's `useExisting` alias — no separate reader override exists.
+      built.organizationProfileRepository.seed(
+        new OrganizationProfile({
+          id: '01997a00-0000-7000-8000-000000000001',
+          name: 'Acme Maintenance',
+          legalName: 'Acme Maintenance S.L.',
+          taxId: 'B12345678',
+          address: 'Carrer Major 1, Girona',
+          phone: '+34 972 000 000',
+          email: 'org@example.com',
+          logoAssetId: null,
+        }),
+      );
+      built.nameDirectory.seedMaintenanceCompany(
+        'rhdoc-company-id',
+        'Doc Maintenance Co',
+      );
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      communityC = await createCommunity(adminAgent, 'Document community C');
+      const communityD = await createCommunity(
+        adminAgent,
+        'Document community D',
+      );
+      await assignTechnician(
+        adminAgent,
+        communityC.id,
+        'rhdoc-technician-u-id',
+      );
+      await assignTechnician(
+        adminAgent,
+        communityD.id,
+        'rhdoc-technician-w-id',
+      );
+      built.nameDirectory.seedCommunity(communityC.id, communityC.name);
+      built.nameDirectory.seedCommunity(communityD.id, communityD.name);
+
+      elementC = await createElement(
+        adminAgent,
+        communityC.id,
+        'Document extinguisher C',
+      );
+      elementUnreviewed = await createElement(
+        adminAgent,
+        communityC.id,
+        'Document extinguisher unreviewed',
+      );
+      built.nameDirectory.seedElement(elementC.id, {
+        code: elementC.code,
+        name: 'Document extinguisher C',
+        location: 'Ground floor',
+      });
+      built.nameDirectory.seedElement(elementUnreviewed.id, {
+        code: elementUnreviewed.code,
+        name: 'Document extinguisher unreviewed',
+        location: 'Ground floor',
+      });
+
+      question = await createQuestion(
+        adminAgent,
+        'Is the pressure gauge in range?',
+      );
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Document template',
+        [question.id],
+      );
+      templateId = template.id;
+
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const openedByU = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string; startedAt: string };
+      recordedAtC = (
+        (
+          await technicianUAgent
+            .put(`/review-sessions/${openedByU.id}/entries/${elementC.id}`)
+            .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+            .expect(200)
+        ).body as { recordedAt: string }
+      ).recordedAt;
+      recordedAtUnreviewed = (
+        (
+          await technicianUAgent
+            .put(
+              `/review-sessions/${openedByU.id}/entries/${elementUnreviewed.id}`,
+            )
+            .send({ observations: 'Needs a follow-up inspection' })
+            .expect(200)
+        ).body as { recordedAt: string }
+      ).recordedAt;
+      const completedByU = (
+        await technicianUAgent
+          .post(`/review-sessions/${openedByU.id}/complete`)
+          .expect(200)
+      ).body as { id: string; status: string; completedAt: string };
+      sessionByUForC = {
+        ...completedByU,
+        startedAt: openedByU.startedAt,
+      };
+
+      const technicianWAgent = await loginAgent(built.app, technicianWEmail);
+      const openedByW = (
+        await technicianWAgent
+          .post('/review-sessions')
+          .send({ communityId: communityD.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      sessionByWForD = (
+        await technicianWAgent
+          .post(`/review-sessions/${openedByW.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    // spec.md review-document "The document carries all four parts" — full
+    // exact-body assertion (not toMatchObject) per the letterhead, session
+    // data, deterministic entry order and signer all in one response.
+    it('a technician reads the full document body of their completed session', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(200);
+
+      // design.md "Entry enrichment and order": code ascending — computed
+      // here, not hardcoded, so this assertion survives whatever code
+      // format the community's element counter produces.
+      const reviewedEntry = {
+        inspectableElementId: elementC.id,
+        elementCode: elementC.code,
+        elementName: 'Document extinguisher C',
+        elementLocation: 'Ground floor',
+        reviewed: true,
+        observations: null,
+        answers: [{ questionId: question.id, answer: 'YES' }],
+        recordedAt: recordedAtC,
+      };
+      const unreviewedEntry = {
+        inspectableElementId: elementUnreviewed.id,
+        elementCode: elementUnreviewed.code,
+        elementName: 'Document extinguisher unreviewed',
+        elementLocation: 'Ground floor',
+        reviewed: false,
+        observations: 'Needs a follow-up inspection',
+        answers: [],
+        recordedAt: recordedAtUnreviewed,
+      };
+      const orderedEntries =
+        elementC.code < elementUnreviewed.code
+          ? [reviewedEntry, unreviewedEntry]
+          : [unreviewedEntry, reviewedEntry];
+
+      expect(response.body).toEqual({
+        id: sessionByUForC.id,
+        communityId: communityC.id,
+        communityName: communityC.name,
+        template: {
+          name: 'Document template',
+          elementType: 'EXTINGUISHER',
+          frequency: 'QUARTERLY',
+          version: 1,
+        },
+        maintenanceCompanyName: 'Doc Maintenance Co',
+        performedById: 'rhdoc-technician-u-id',
+        performedByEmail: technicianUEmail,
+        status: 'completed',
+        startedAt: sessionByUForC.startedAt,
+        completedAt: sessionByUForC.completedAt,
+        entries: orderedEntries,
+        questions: [
+          {
+            questionId: question.id,
+            order: 1,
+            text: 'Is the pressure gauge in range?',
+          },
+        ],
+        letterhead: {
+          name: 'Acme Maintenance',
+          legalName: 'Acme Maintenance S.L.',
+          taxId: 'B12345678',
+          address: 'Carrer Major 1, Girona',
+          phone: '+34 972 000 000',
+          email: 'org@example.com',
+        },
+      });
+    });
+
+    // spec.md review-document "Out-of-scope, nonexistent and draft are
+    // indistinguishable" — identical to the history detail's own 404.
+    it('out-of-scope, nonexistent and draft sessions are all 404 REVIEW_SESSION_NOT_FOUND', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const draft = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+
+      const nonexistentResponse = await technicianUAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000/document')
+        .expect(404);
+      const outOfScopeResponse = await technicianUAgent
+        .get(`/review-history/${sessionByWForD.id}/document`)
+        .expect(404);
+      const draftResponse = await technicianUAgent
+        .get(`/review-history/${draft.id}/document`)
+        .expect(404);
+
+      const nonexistentBody = nonexistentResponse.body as ErrorBody;
+      expect(nonexistentBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
+      expect(outOfScopeResponse.body as ErrorBody).toEqual(nonexistentBody);
+      expect(draftResponse.body as ErrorBody).toEqual(nonexistentBody);
+
+      await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
     });
   });
 });

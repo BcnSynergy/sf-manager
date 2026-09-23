@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 import { CommunityModule } from '../community/community.module';
 import { InspectableElementModule } from '../inspectable-element/inspectable-element.module';
+import { OrganizationProfileModule } from '../organization-profile/organization-profile.module';
 import { ReviewTemplateModule } from '../review-template/review-template.module';
 import { UsersModule } from '../users/users.module';
 import { REVIEW_SESSION_REPOSITORY } from './application/ports/review-session.repository.port';
 import { USER_DIRECTORY } from './application/ports/user-directory.port';
+import { REVIEW_DOCUMENT_NAME_DIRECTORY } from './application/ports/review-document-name-directory.port';
 import { PrismaReviewSessionRepository } from './infrastructure/persistence/prisma-review-session.repository';
 import { PrismaUserDirectory } from './infrastructure/persistence/prisma-user-directory';
+import { PrismaReviewDocumentNameDirectory } from './infrastructure/persistence/prisma-review-document-name-directory';
 import { SessionAccessService } from './application/services/session-access.service';
 import { ReviewHistoryAccessService } from './application/services/review-history-access.service';
 import { DiscardReviewSessionUseCase } from './application/use-cases/discard-review-session.use-case';
@@ -16,6 +19,7 @@ import { ListReviewHistoryUseCase } from './application/use-cases/list-review-hi
 import { OpenReviewSessionUseCase } from './application/use-cases/open-review-session.use-case';
 import { ReadReviewHistoryUseCase } from './application/use-cases/read-review-history.use-case';
 import { ReadElementReviewHistoryUseCase } from './application/use-cases/read-element-review-history.use-case';
+import { ReadReviewDocumentUseCase } from './application/use-cases/read-review-document.use-case';
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -43,12 +47,18 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
 // review-history-company-scope/design.md Decision 4: also imports
 // `UsersModule` for `COMPANY_SCOPE_CHECKER` — verified acyclic in design's
 // pre-work (`UsersModule` imports nothing from any module).
+// review-export/design.md Decision 4: gains ONE import,
+// `OrganizationProfileModule` (imports nothing itself, so no cycle) — for
+// `ORGANIZATION_PROFILE_READER`, injected by `ReadReviewDocumentUseCase`.
+// No new export: `REVIEW_DOCUMENT_NAME_DIRECTORY` stays module-local
+// (spec.md "The lookup port is not exported").
 @Module({
   imports: [
     CommunityModule,
     ReviewTemplateModule,
     InspectableElementModule,
     UsersModule,
+    OrganizationProfileModule,
   ],
   controllers: [ReviewSessionController, ReviewHistoryController],
   providers: [
@@ -60,6 +70,13 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     // non-authorizing cross-module read — bound here, not exported (no
     // other module needs it).
     { provide: USER_DIRECTORY, useClass: PrismaUserDirectory },
+    // review-export/design.md Decision 4: module-local, NOT exported
+    // (spec.md "The lookup port is not exported") — bound in PR 4, wired
+    // here in PR 7.
+    {
+      provide: REVIEW_DOCUMENT_NAME_DIRECTORY,
+      useClass: PrismaReviewDocumentNameDirectory,
+    },
     SessionAccessService,
     ReviewHistoryAccessService,
     GetReviewScopeUseCase,
@@ -68,6 +85,7 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ListReviewHistoryUseCase,
     ReadReviewHistoryUseCase,
     ReadElementReviewHistoryUseCase,
+    ReadReviewDocumentUseCase,
     ReadReviewSessionUseCase,
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,
