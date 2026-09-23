@@ -91,13 +91,13 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 ## PR 4 — Prisma name directory (~300 lines)
 
-- [ ] 4.1 RED: `prisma-review-document-name-directory.integration.spec.ts` (real
+- [x] 4.1 RED: `prisma-review-document-name-directory.integration.spec.ts` (real
       Postgres, `test:integration --runInBand`) asserting soft-deleted community
       and company still named, deactivated and soft-deleted elements identified,
       unknown id resolves absent, one batched query — spec: review-document
       *A decommissioned or soft-deleted element still labels its entry*,
       *An element id with no row falls back to the neutral label*
-- [ ] 4.2 GREEN: create `prisma-review-document-name-directory.ts` implementing
+- [x] 4.2 GREEN: create `prisma-review-document-name-directory.ts` implementing
       `ReviewDocumentNameDirectory` (not yet bound in the module)
 
 ## PR 5 — Use case core (~380 lines)
