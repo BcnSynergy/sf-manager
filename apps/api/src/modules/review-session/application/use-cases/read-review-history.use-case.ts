@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AnswerValue } from '../../domain/answer-value';
 import type { ReviewSessionStatus } from '../../domain/review-session-status';
 import {
   INSPECTABLE_ELEMENT_REPOSITORY,
@@ -17,15 +16,14 @@ import {
 } from '../ports/user-directory.port';
 import type { Actor } from '../services/session-access.service';
 import { ReviewHistoryAccessService } from '../services/review-history-access.service';
-
-export interface ReadReviewHistoryEntry {
-  inspectableElementId: string;
-  elementCode: string | null;
-  reviewed: boolean;
-  observations: string | null;
-  answers: Array<{ questionId: string; answer: AnswerValue }>;
-  recordedAt: Date;
-}
+import {
+  buildHistoryEntries,
+  type ReadReviewHistoryEntry,
+} from './review-history-entries';
+// design.md Decision 2: ReadReviewHistoryEntry now lives in
+// review-history-entries.ts (shared with read-review-document); re-exported
+// here so existing importers of this module are unaffected.
+export type { ReadReviewHistoryEntry } from './review-history-entries';
 
 export interface ReadReviewHistoryResult {
   id: string;
@@ -101,17 +99,10 @@ export class ReadReviewHistoryUseCase {
     const performedByEmail =
       emailByPerformerId.get(session.performedById) ?? '';
 
-    const entries: ReadReviewHistoryEntry[] = session.entries.map((entry) => ({
-      inspectableElementId: entry.inspectableElementId,
-      elementCode: codeByElementId.get(entry.inspectableElementId) ?? null,
-      reviewed: entry.answers.length > 0,
-      observations: entry.observations,
-      answers: entry.answers.map((answer) => ({
-        questionId: answer.questionId,
-        answer: answer.answer,
-      })),
-      recordedAt: entry.recordedAt,
-    }));
+    // design.md Decision 2: no answerOrder — history keeps its original
+    // entry and answer order, so this call is byte-identical to the
+    // inline mapping it replaces.
+    const entries = buildHistoryEntries(session.entries, codeByElementId);
 
     // design.md Decision 1: an entry is EXACTLY one of reviewed/unreviewed
     // by construction, so these two counts always sum to entries.length.
