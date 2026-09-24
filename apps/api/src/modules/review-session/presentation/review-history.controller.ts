@@ -1,5 +1,12 @@
-import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
 import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -21,6 +28,29 @@ import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
 import { ElementReviewHistoryResponseDto } from './dto/element-review-history-response.dto';
 import { ReviewDocumentResponseDto } from './dto/review-document-response.dto';
+
+// Tech-debt cleanup: both `:sessionId` routes below validated nothing —
+// any string reached the use case and, against the real Prisma adapter's
+// `@db.Uuid` column, surfaced as an unmapped 500 instead of a clean 400.
+// `ParseUUIDPipe` with no `version` defaults to 'all', which — in this
+// @nestjs/common version — matches ANY hex-hyphen UUID shape regardless of
+// the version nibble, so it accepts this app's UUID v7 ids exactly like
+// every other version; it does not depend on class-validator (ADR-015 only
+// rejects class-validator DTO classes, not this pipe). The exceptionFactory
+// swaps Nest's default `{statusCode, message, error}` shape for this app's
+// `{statusCode, error, message, code}` coded-error convention, so a
+// malformed id is reported the same shape as every other 400 in this
+// codebase.
+function sessionIdPipe(): ParseUUIDPipe {
+  return new ParseUUIDPipe({
+    exceptionFactory: () =>
+      buildCodedError(
+        HttpStatus.BAD_REQUEST,
+        'Malformed session id.',
+        'INVALID_SESSION_ID',
+      ),
+  });
+}
 
 // review-history design.md Decision 4: a SEPARATE controller file from
 // review-session.controller.ts, not an appended route. `review-history/
@@ -67,6 +97,11 @@ export class ReviewHistoryController {
   @ApiOkResponse({ type: ReviewHistoryDetailResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, draft session, another performer's session, " +
@@ -75,7 +110,7 @@ export class ReviewHistoryController {
   })
   async read(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewHistoryDetailResponseDto> {
     try {
       return await this.readReviewHistoryUseCase.execute(sessionId, {
@@ -98,6 +133,11 @@ export class ReviewHistoryController {
   @ApiOkResponse({ type: ReviewDocumentResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID, identical to the history ' +
+      'detail read. Body carries code: INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, draft session, another performer's session, " +
@@ -107,7 +147,7 @@ export class ReviewHistoryController {
   })
   async readDocument(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewDocumentResponseDto> {
     try {
       return await this.readReviewDocumentUseCase.execute(sessionId, {
