@@ -298,6 +298,34 @@ describe('Users (e2e)', () => {
         .expect(404);
     });
 
+    // uuid-path-validation branch: :id is validated as a UUID
+    // (INVALID_USER_ID), on every route that takes it, matching the
+    // :elementId / :communityId pattern (commits dbdc07b, 01c9ac8).
+    it('rejects a malformed id on PATCH /users/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch('/users/not-a-uuid')
+        .send({ email: 'ghost@example.com' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_USER_ID',
+      });
+    });
+
+    it('rejects a malformed id on DELETE /users/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent.delete('/users/not-a-uuid').expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_USER_ID',
+      });
+    });
+
     it('deactivates a user via soft delete (spec: Admin deactivates a user)', async () => {
       const agent = await loginAgent(app, adminEmail);
       const created = await agent
@@ -365,6 +393,19 @@ describe('Users (e2e)', () => {
               ? await req.patch(path).send({ email: 'x@example.com' })
               : await req.delete(path);
 
+      expect(response.status).toBe(401);
+    });
+
+    // uuid-path-validation branch: guards run before param pipes, so an
+    // unauthenticated request with a malformed :id still gets 401, never
+    // the 400 that a would-be INVALID_USER_ID pipe error would produce
+    // for an authenticated caller (mirrors inspectable-element.e2e-spec.ts
+    // commit 01c9ac8).
+    it('anonymous PATCH /users/not-a-uuid -> 401, not 400', async () => {
+      const req = request(app.getHttpServer());
+      const response = await req
+        .patch('/users/not-a-uuid')
+        .send({ email: 'x@example.com' });
       expect(response.status).toBe(401);
     });
 

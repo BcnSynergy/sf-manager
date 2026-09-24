@@ -26,6 +26,7 @@ import {
 import { createUserSchema, updateUserSchema } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { CreateUserUseCase } from '../application/use-cases/create-user.use-case';
 import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.use-case';
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
@@ -163,22 +164,25 @@ export class UsersController {
   @ApiOkResponse({ type: UserResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks user:update.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID (code: INVALID_USER_ID); or the ' +
+      'maintenance-company assignment is invalid (code: ' +
+      'MAINTENANCE_COMPANY_REQUIRED or MAINTENANCE_COMPANY_NOT_ALLOWED), ' +
+      'the referenced company is missing/soft-deleted (code: ' +
+      'MAINTENANCE_COMPANY_NOT_FOUND), or a managerCapabilities grant was ' +
+      'requested for a non-MANAGER resulting role (code: ' +
+      'MANAGER_CAPABILITIES_NOT_ALLOWED).',
+  })
   @ApiNotFoundResponse({ description: 'User not found.' })
   @ApiConflictResponse({
     description:
       'Would leave zero active SYSTEM_ADMIN users (code: LAST_SYSTEM_ADMIN), ' +
       'or a concurrent conflicting update occurred (code: TRANSACTION_CONFLICT).',
   })
-  @ApiBadRequestResponse({
-    description:
-      'Maintenance-company assignment invalid (code: MAINTENANCE_COMPANY_REQUIRED ' +
-      'or MAINTENANCE_COMPANY_NOT_ALLOWED), the referenced company is ' +
-      'missing/soft-deleted (code: MAINTENANCE_COMPANY_NOT_FOUND), or a ' +
-      'managerCapabilities grant was requested for a non-MANAGER resulting ' +
-      'role (code: MANAGER_CAPABILITIES_NOT_ALLOWED).',
-  })
   async update(
-    @Param('id') id: string,
+    @Param('id', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    id: string,
     @Body(new UserCodedZodValidationPipe(updateUserSchema))
     body: UpdateUserRequestDto,
   ): Promise<UserResponseDto> {
@@ -195,13 +199,20 @@ export class UsersController {
   @ApiNoContentResponse({ description: 'User deactivated.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks user:delete.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_USER_ID.',
+  })
   @ApiNotFoundResponse({ description: 'User not found.' })
   @ApiConflictResponse({
     description:
       'Would leave zero active SYSTEM_ADMIN users (code: LAST_SYSTEM_ADMIN), ' +
       'or a concurrent conflicting update occurred (code: TRANSACTION_CONFLICT).',
   })
-  async deactivate(@Param('id') id: string): Promise<void> {
+  async deactivate(
+    @Param('id', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    id: string,
+  ): Promise<void> {
     try {
       await this.deactivateUserUseCase.execute(id);
     } catch (error) {

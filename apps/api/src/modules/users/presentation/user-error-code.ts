@@ -10,6 +10,11 @@
 // (MODIFIED): the three MAINTENANCE_COMPANY_* values are 400s, not 409s —
 // see design.md Decision 5 for why (a request referencing a live-but-wrong
 // company/role pairing, not a state conflict).
+//
+// uuid-path-validation branch: INVALID_USER_ID is the coded 400 for a
+// malformed `:id`, built via the shared uuidParamPipe() factory — same
+// convention as INVALID_ELEMENT_ID / INVALID_COMMUNITY_ID
+// (inspectable-element-error-code.ts).
 export type UserErrorCode =
   | 'EMAIL_ALREADY_IN_USE'
   | 'LAST_SYSTEM_ADMIN'
@@ -20,4 +25,5 @@ export type UserErrorCode =
   // review-history-manager-capability/design.md Decision 6: a PATCH that
   // would leave a non-MANAGER resulting role holding a non-empty
   // managerCapabilities array.
-  | 'MANAGER_CAPABILITIES_NOT_ALLOWED';
+  | 'MANAGER_CAPABILITIES_NOT_ALLOWED'
+  | 'INVALID_USER_ID';
