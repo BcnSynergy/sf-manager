@@ -301,9 +301,9 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
 
 ## PR 14 — Docs and archive (~40 lines + archive)
 
-- [ ] 14.1 Update `docs/architecture/domain-model-inspections.md` — signing is
+- [x] 14.1 Update `docs/architecture/domain-model-inspections.md` — signing is
       completion, no `signed` status
-- [ ] 14.2 Update `docs/requirements/functional-requirements.md` — FR-010
+- [x] 14.2 Update `docs/requirements/functional-requirements.md` — FR-010
       `identified` → `partial` (slice 2 = signer identity pending)
 - [ ] 14.3 Run `sdd-verify` against this change's specs and apply-progress
 - [ ] 14.4 `sdd-archive review-export`
