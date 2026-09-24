@@ -780,13 +780,17 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
+      // uuid-path-validation branch: well-formed UUIDs, not human-readable
+      // placeholders — both are real DELETE/PATCH /users/:id targets below
+      // (see users.e2e-spec.ts for the convention). The admin id above
+      // never reaches /users/:id, so it stays a plain placeholder.
       const rep = await buildSeedUser({
-        id: 'softdel-user-rep-id',
+        id: '00000000-0000-7000-8000-000000000045',
         email: 'softdel-user-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       const tech = await buildSeedUser({
-        id: 'softdel-user-tech-id',
+        id: '00000000-0000-7000-8000-000000000044',
         email: 'softdel-user-tech@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
@@ -806,19 +810,21 @@ describe('Communities (e2e)', () => {
 
       await agent
         .post(`/communities/${communityId}/representatives`)
-        .send({ userId: 'softdel-user-rep-id' })
+        .send({ userId: '00000000-0000-7000-8000-000000000045' })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/representatives/softdel-user-rep-id`,
+          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000045`,
         )
         .expect(204);
 
-      await agent.delete('/users/softdel-user-rep-id').expect(204);
+      await agent
+        .delete('/users/00000000-0000-7000-8000-000000000045')
+        .expect(204);
 
       const reactivateResponse = await agent
         .post(
-          `/communities/${communityId}/representatives/softdel-user-rep-id/reactivate`,
+          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000045/reactivate`,
         )
         .expect(404);
       // spec: "404 and 400 responses on assignment routes are unaffected" —
@@ -833,7 +839,9 @@ describe('Communities (e2e)', () => {
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find((entry) => entry.userId === 'softdel-user-rep-id');
+      ).find(
+        (entry) => entry.userId === '00000000-0000-7000-8000-000000000045',
+      );
       expect(record?.deactivatedAt).not.toBeNull();
     });
 
@@ -842,17 +850,21 @@ describe('Communities (e2e)', () => {
 
       await agent
         .post(`/communities/${communityId}/technicians`)
-        .send({ userId: 'softdel-user-tech-id' })
+        .send({ userId: '00000000-0000-7000-8000-000000000044' })
         .expect(201);
       await agent
-        .delete(`/communities/${communityId}/technicians/softdel-user-tech-id`)
+        .delete(
+          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000044`,
+        )
         .expect(204);
 
-      await agent.delete('/users/softdel-user-tech-id').expect(204);
+      await agent
+        .delete('/users/00000000-0000-7000-8000-000000000044')
+        .expect(204);
 
       const reactivateResponse = await agent
         .post(
-          `/communities/${communityId}/technicians/softdel-user-tech-id/reactivate`,
+          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000044/reactivate`,
         )
         .expect(404);
       expect(reactivateResponse.body).not.toHaveProperty('code');
@@ -865,7 +877,9 @@ describe('Communities (e2e)', () => {
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find((entry) => entry.userId === 'softdel-user-tech-id');
+      ).find(
+        (entry) => entry.userId === '00000000-0000-7000-8000-000000000044',
+      );
       expect(record?.deactivatedAt).not.toBeNull();
     });
   });
@@ -881,13 +895,16 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
+      // uuid-path-validation branch: well-formed UUIDs — both are real
+      // PATCH /users/:id targets below (see users.e2e-spec.ts for the
+      // convention).
       const rep = await buildSeedUser({
-        id: 'reactivate-ineligible-rep-id',
+        id: '00000000-0000-7000-8000-000000000043',
         email: 'reactivate-ineligible-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       const tech = await buildSeedUser({
-        id: 'reactivate-ineligible-tech-id',
+        id: '00000000-0000-7000-8000-000000000042',
         email: 'reactivate-ineligible-tech@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
@@ -913,21 +930,21 @@ describe('Communities (e2e)', () => {
 
       await agent
         .post(`/communities/${communityId}/representatives`)
-        .send({ userId: 'reactivate-ineligible-rep-id' })
+        .send({ userId: '00000000-0000-7000-8000-000000000043' })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/representatives/reactivate-ineligible-rep-id`,
+          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000043`,
         )
         .expect(204);
       await agent
-        .patch('/users/reactivate-ineligible-rep-id')
+        .patch('/users/00000000-0000-7000-8000-000000000043')
         .send({ role: 'MANAGER' })
         .expect(200);
 
       const response = await agent
         .post(
-          `/communities/${communityId}/representatives/reactivate-ineligible-rep-id/reactivate`,
+          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000043/reactivate`,
         )
         .expect(409);
 
@@ -946,21 +963,21 @@ describe('Communities (e2e)', () => {
 
       await agent
         .post(`/communities/${communityId}/technicians`)
-        .send({ userId: 'reactivate-ineligible-tech-id' })
+        .send({ userId: '00000000-0000-7000-8000-000000000042' })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/technicians/reactivate-ineligible-tech-id`,
+          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000042`,
         )
         .expect(204);
       await agent
-        .patch('/users/reactivate-ineligible-tech-id')
+        .patch('/users/00000000-0000-7000-8000-000000000042')
         .send({ role: 'MANAGER' })
         .expect(200);
 
       const response = await agent
         .post(
-          `/communities/${communityId}/technicians/reactivate-ineligible-tech-id/reactivate`,
+          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000042/reactivate`,
         )
         .expect(409);
 
@@ -986,8 +1003,11 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
+      // uuid-path-validation branch: well-formed UUID — a real PATCH
+      // /users/:id target below (see users.e2e-spec.ts for the
+      // convention).
       const rep = await buildSeedUser({
-        id: 'drift-rep-id',
+        id: '00000000-0000-7000-8000-000000000046',
         email: 'drift-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
@@ -1007,11 +1027,11 @@ describe('Communities (e2e)', () => {
 
       await agent
         .post(`/communities/${communityId}/representatives`)
-        .send({ userId: 'drift-rep-id' })
+        .send({ userId: '00000000-0000-7000-8000-000000000046' })
         .expect(201);
 
       await agent
-        .patch('/users/drift-rep-id')
+        .patch('/users/00000000-0000-7000-8000-000000000046')
         .send({ role: 'MANAGER' })
         .expect(200);
 
@@ -1023,7 +1043,9 @@ describe('Communities (e2e)', () => {
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find((entry) => entry.userId === 'drift-rep-id');
+      ).find(
+        (entry) => entry.userId === '00000000-0000-7000-8000-000000000046',
+      );
       expect(record).toBeDefined();
       expect(record?.deactivatedAt).toBeNull();
     });

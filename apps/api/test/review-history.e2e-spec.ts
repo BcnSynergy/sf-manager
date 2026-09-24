@@ -1158,8 +1158,12 @@ describe('Review History (e2e)', () => {
     // being soft-deleted fails the capability closed even with a still-valid
     // JWT.
     it('a soft-deleted granted MANAGER sees nothing, even reusing the same session', async () => {
+      // uuid-path-validation branch: well-formed UUID, not a
+      // human-readable placeholder — this id is a real DELETE
+      // /users/:id target below (see users.e2e-spec.ts for the
+      // convention).
       const softDeletedManager = await buildSeedUser({
-        id: 'rhd-manager-granted-deleted-id',
+        id: '00000000-0000-7000-8000-000000000039',
         email: 'rhd-manager-granted-deleted@example.com',
         role: 'MANAGER',
         managerCapabilities: ['VIEW_ALL_REVIEWS'],
@@ -1172,7 +1176,7 @@ describe('Review History (e2e)', () => {
       const adminAgent = await loginAgent(built.app, adminEmail);
 
       await adminAgent
-        .delete('/users/rhd-manager-granted-deleted-id')
+        .delete('/users/00000000-0000-7000-8000-000000000039')
         .expect(204);
 
       const listResponse = await softDeletedManagerAgent
@@ -1726,8 +1730,12 @@ describe('Review History (e2e)', () => {
         email: technicianNoCompanyEmail,
         role: 'MAINTENANCE_TECHNICIAN',
       });
+      // uuid-path-validation branch: well-formed UUID — a real PATCH
+      // /users/:id target below (see users.e2e-spec.ts for the
+      // convention). technicianNoCompany above never reaches /users/:id,
+      // so it stays a plain placeholder id.
       const technicianTransfer = await buildSeedUser({
-        id: 'rhc-technician-transfer-id',
+        id: '00000000-0000-7000-8000-000000000040',
         email: technicianTransferEmail,
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: COMPANY_X,
@@ -1779,7 +1787,7 @@ describe('Review History (e2e)', () => {
       await assignTechnician(
         adminAgent,
         communityG.id,
-        'rhc-technician-transfer-id',
+        '00000000-0000-7000-8000-000000000040',
       );
       await assignRepresentative(
         adminAgent,
@@ -1864,7 +1872,7 @@ describe('Review History (e2e)', () => {
       // attribution MUST stay with X (authorization/spec.md "Attribution
       // survives the performer's transfer").
       await adminAgent
-        .patch(`/users/rhc-technician-transfer-id`)
+        .patch(`/users/00000000-0000-7000-8000-000000000040`)
         .send({ maintenanceCompanyId: COMPANY_Y })
         .expect(200);
     });
@@ -2185,8 +2193,11 @@ describe('Review History (e2e)', () => {
         email: technicianNoCompanyEmail,
         role: 'MAINTENANCE_TECHNICIAN',
       });
+      // uuid-path-validation branch: well-formed UUID — a real DELETE
+      // /users/:id target below (see users.e2e-spec.ts for the
+      // convention).
       const technicianDeleted = await buildSeedUser({
-        id: 'rha-technician-deleted-id',
+        id: '00000000-0000-7000-8000-000000000041',
         email: technicianDeletedEmail,
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: COMPANY_X,
@@ -2227,7 +2238,7 @@ describe('Review History (e2e)', () => {
       await assignTechnician(
         adminAgent,
         communityX.id,
-        'rha-technician-deleted-id',
+        '00000000-0000-7000-8000-000000000041',
       );
 
       elementX = await createElement(adminAgent, communityX.id, 'Element X');
@@ -2313,7 +2324,9 @@ describe('Review History (e2e)', () => {
       // real company soft-delete through HTTP here; `sessionNoCompany`
       // above stands in for "no attribution", the e2e-reachable half of
       // that row.
-      await adminAgent.delete(`/users/rha-technician-deleted-id`).expect(204);
+      await adminAgent
+        .delete(`/users/00000000-0000-7000-8000-000000000041`)
+        .expect(204);
     });
 
     afterAll(async () => {
