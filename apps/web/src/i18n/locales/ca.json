@@ -501,7 +501,28 @@
   "reviewDocument": {
     "title": "Document de revisió",
     "loading": "Carregant el document de revisió...",
-    "unreachable": "Aquest document no està disponible."
+    "unreachable": "Aquest document no està disponible.",
+    "letterhead": {
+      "incompleteWarning": "El perfil de l'organització està incomplet. Falten algunes dades de la capçalera en aquest document."
+    },
+    "session": {
+      "title": "Dades de la sessió",
+      "communityLabel": "Comunitat",
+      "communityUnknown": "Comunitat desconeguda",
+      "elementTypeLabel": "Tipus d'element",
+      "frequencyLabel": "Freqüència",
+      "templateNameLabel": "Plantilla",
+      "templateVersionLabel": "Versió de la plantilla",
+      "startedAtLabel": "Iniciada",
+      "completedAtLabel": "Completada",
+      "companyLabel": "Empresa de manteniment",
+      "companyUnknown": "Empresa de manteniment desconeguda"
+    },
+    "footer": {
+      "signedByLabel": "Signat per: {{email}}",
+      "emailUnknown": "Signant desconegut",
+      "signedAtLabel": "Signat el: {{date}}"
+    }
   },
   "health": {
     "title": "Estat del sistema",

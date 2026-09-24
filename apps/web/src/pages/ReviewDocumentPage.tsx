@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client';
-import { readReviewDocument, type ReviewDocument } from '../api/review-history';
+import {
+  readReviewDocument,
+  type ReviewDocument,
+  type ReviewDocumentLetterhead,
+} from '../api/review-history';
+import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
+import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
+import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
+import { formatDocumentDate, formatDocumentDateTime } from '../review-session/format-date';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'unreachable' | 'error';
@@ -31,8 +39,138 @@ type LoadState = 'loading' | 'loaded' | 'unreachable' | 'error';
 // mapper for every other status.
 const HTTP_NOT_FOUND = 404;
 
-export function ReviewDocumentPage() {
+// spec: review-document-ui "Document Page Content" / "A Blank or Incomplete
+// Profile Still Prints". The letterhead has no per-field label — it prints
+// like a physical letterhead, not a data table — so only non-blank values
+// render, in a fixed field order.
+const LETTERHEAD_FIELDS: (keyof ReviewDocumentLetterhead)[] = [
+  'name',
+  'legalName',
+  'taxId',
+  'address',
+  'phone',
+  'email',
+];
+
+// name -> name, legalName -> legal-name, taxId -> tax-id (mirrors
+// OrganizationProfilePage.tsx's toTestIdSegment).
+function letterheadTestId(field: keyof ReviewDocumentLetterhead): string {
+  return `review-document-letterhead-${field.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+}
+
+function LetterheadRegion({ letterhead }: { letterhead: ReviewDocumentLetterhead }) {
   const { t } = useTranslation();
+  const incomplete = isProfileIncomplete(letterhead);
+  const filledFields = LETTERHEAD_FIELDS.filter((field) => letterhead[field] !== '');
+
+  return (
+    <section data-testid="review-document-letterhead">
+      {incomplete && (
+        <p data-testid="review-document-letterhead-warning" data-print-hide>
+          {t('reviewDocument.letterhead.incompleteWarning')}
+        </p>
+      )}
+      {filledFields.length > 0 && (
+        <div data-testid="review-document-letterhead-content">
+          {filledFields.map((field) => (
+            <p key={field} data-testid={letterheadTestId(field)}>
+              {letterhead[field]}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// spec: review-document-ui "Document Page Content" (session data row).
+// `communityName`/`maintenanceCompanyName` may separately be the
+// defensive-fallback empty string (an id that resolves no row at all) —
+// distinct from `maintenanceCompanyName === null`, which means no company
+// was recorded and the line is omitted entirely (design.md "Fallbacks and
+// letterhead").
+function SessionDataRegion({ document, locale }: { document: ReviewDocument; locale: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <section data-testid="review-document-session-data">
+      <h2>{t('reviewDocument.session.title')}</h2>
+      <dl>
+        <dt>{t('reviewDocument.session.communityLabel')}</dt>
+        <dd data-testid="review-document-session-community">
+          {document.communityName || t('reviewDocument.session.communityUnknown')}
+        </dd>
+        <dt>{t('reviewDocument.session.elementTypeLabel')}</dt>
+        <dd data-testid="review-document-session-element-type">
+          {t(mapElementTypeToLabelKey(document.template.elementType))}
+        </dd>
+        <dt>{t('reviewDocument.session.frequencyLabel')}</dt>
+        <dd data-testid="review-document-session-frequency">
+          {t(mapReviewFrequencyToLabelKey(document.template.frequency))}
+        </dd>
+        <dt>{t('reviewDocument.session.templateNameLabel')}</dt>
+        <dd data-testid="review-document-session-template-name">{document.template.name}</dd>
+        {document.template.version !== null && (
+          <>
+            <dt>{t('reviewDocument.session.templateVersionLabel')}</dt>
+            <dd data-testid="review-document-session-template-version">
+              {document.template.version}
+            </dd>
+          </>
+        )}
+        <dt>{t('reviewDocument.session.startedAtLabel')}</dt>
+        <dd data-testid="review-document-session-started-at">
+          {formatDocumentDate(new Date(document.startedAt), locale)}
+        </dd>
+        {document.completedAt !== null && (
+          <>
+            <dt>{t('reviewDocument.session.completedAtLabel')}</dt>
+            <dd data-testid="review-document-session-completed-at">
+              {formatDocumentDate(new Date(document.completedAt), locale)}
+            </dd>
+          </>
+        )}
+        {document.maintenanceCompanyName !== null && (
+          <>
+            <dt>{t('reviewDocument.session.companyLabel')}</dt>
+            <dd data-testid="review-document-session-company">
+              {document.maintenanceCompanyName || t('reviewDocument.session.companyUnknown')}
+            </dd>
+          </>
+        )}
+      </dl>
+    </section>
+  );
+}
+
+// spec: review-document-ui "Document Page Content" (signature footer). The
+// signer is always the performer (design.md "Signing is copy, not state") —
+// no separate `signedBy` field exists; `performedByEmail` may be the
+// defensive-fallback empty string, rendered as a placeholder like every
+// other unresolvable-lookup field on this page.
+function SignatureFooter({ document, locale }: { document: ReviewDocument; locale: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <footer data-testid="review-document-signature">
+      <p data-testid="review-document-signed-by">
+        {t('reviewDocument.footer.signedByLabel', {
+          email: document.performedByEmail || t('reviewDocument.footer.emailUnknown'),
+        })}
+      </p>
+      {document.completedAt !== null && (
+        <p data-testid="review-document-signed-at">
+          {t('reviewDocument.footer.signedAtLabel', {
+            date: formatDocumentDateTime(new Date(document.completedAt), locale),
+          })}
+        </p>
+      )}
+    </footer>
+  );
+}
+
+export function ReviewDocumentPage() {
+  const { t, i18n } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -98,13 +236,17 @@ export function ReviewDocumentPage() {
     );
   }
 
-  // Header, record and print regions ship in PR 11/12 — this shell renders
-  // only a stable content anchor for now, keyed off the loaded document so
-  // the fetch result is not discarded.
+  // Header regions (letterhead, session data, signature footer) ship here;
+  // the record and print regions ship in PR 12 — this content anchor keeps
+  // the same testid PR 10 asserted, now carrying real children.
   return (
     <main>
       <h1>{t('reviewDocument.title')}</h1>
-      <div data-testid="review-document-content" data-review-document-id={document.id} />
+      <div data-testid="review-document-content" data-review-document-id={document.id}>
+        <LetterheadRegion letterhead={document.letterhead} />
+        <SessionDataRegion document={document} locale={i18n.language} />
+        <SignatureFooter document={document} locale={i18n.language} />
+      </div>
     </main>
   );
 }

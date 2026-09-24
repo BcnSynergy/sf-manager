@@ -501,7 +501,28 @@
   "reviewDocument": {
     "title": "Documento de revisión",
     "loading": "Cargando el documento de revisión...",
-    "unreachable": "Este documento no está disponible."
+    "unreachable": "Este documento no está disponible.",
+    "letterhead": {
+      "incompleteWarning": "El perfil de la organización está incompleto. Faltan algunos datos de la cabecera en este documento."
+    },
+    "session": {
+      "title": "Datos de la sesión",
+      "communityLabel": "Comunidad",
+      "communityUnknown": "Comunidad desconocida",
+      "elementTypeLabel": "Tipo de elemento",
+      "frequencyLabel": "Frecuencia",
+      "templateNameLabel": "Plantilla",
+      "templateVersionLabel": "Versión de la plantilla",
+      "startedAtLabel": "Iniciada",
+      "completedAtLabel": "Completada",
+      "companyLabel": "Empresa de mantenimiento",
+      "companyUnknown": "Empresa de mantenimiento desconocida"
+    },
+    "footer": {
+      "signedByLabel": "Firmado por: {{email}}",
+      "emailUnknown": "Firmante desconocido",
+      "signedAtLabel": "Firmado el: {{date}}"
+    }
   },
   "health": {
     "title": "Estado del sistema",

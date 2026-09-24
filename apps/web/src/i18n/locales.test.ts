@@ -539,6 +539,22 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewDocument.title',
     'reviewDocument.loading',
     'reviewDocument.unreachable',
+    // Header regions (PR 11): letterhead, session data, signature footer.
+    'reviewDocument.letterhead.incompleteWarning',
+    'reviewDocument.session.title',
+    'reviewDocument.session.communityLabel',
+    'reviewDocument.session.communityUnknown',
+    'reviewDocument.session.elementTypeLabel',
+    'reviewDocument.session.frequencyLabel',
+    'reviewDocument.session.templateNameLabel',
+    'reviewDocument.session.templateVersionLabel',
+    'reviewDocument.session.startedAtLabel',
+    'reviewDocument.session.completedAtLabel',
+    'reviewDocument.session.companyLabel',
+    'reviewDocument.session.companyUnknown',
+    'reviewDocument.footer.signedByLabel',
+    'reviewDocument.footer.emailUnknown',
+    'reviewDocument.footer.signedAtLabel',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same
