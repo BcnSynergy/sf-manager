@@ -11,6 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -26,6 +27,7 @@ import {
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CommunityNotFoundError } from '../../community/domain/errors/community-not-found.error';
 import { ElementCodeGenerationFailedError } from '../domain/errors/element-code-generation-failed.error';
@@ -160,6 +162,10 @@ export class InspectableElementController {
   @ApiForbiddenResponse({
     description: 'Caller lacks inspectableElement:update.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'elementId is not a well-formed UUID. Body carries code: INVALID_ELEMENT_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Community not found (code: COMMUNITY_NOT_FOUND) or element not ' +
@@ -167,7 +173,11 @@ export class InspectableElementController {
   })
   async update(
     @Param('communityId') communityId: string,
-    @Param('elementId') elementId: string,
+    @Param(
+      'elementId',
+      uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
+    )
+    elementId: string,
     @Body(new ZodValidationPipe(updateInspectableElementSchema))
     body: UpdateInspectableElementRequestDto,
   ): Promise<InspectableElementResponseDto> {
@@ -190,6 +200,10 @@ export class InspectableElementController {
   @ApiForbiddenResponse({
     description: 'Caller lacks inspectableElement:delete.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'elementId is not a well-formed UUID. Body carries code: INVALID_ELEMENT_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Community not found (code: COMMUNITY_NOT_FOUND) or element not ' +
@@ -197,7 +211,11 @@ export class InspectableElementController {
   })
   async softDelete(
     @Param('communityId') communityId: string,
-    @Param('elementId') elementId: string,
+    @Param(
+      'elementId',
+      uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
+    )
+    elementId: string,
   ): Promise<void> {
     try {
       await this.softDeleteInspectableElementUseCase.execute({

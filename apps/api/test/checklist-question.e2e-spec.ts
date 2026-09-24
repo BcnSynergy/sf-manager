@@ -281,14 +281,38 @@ describe('Checklist Questions (e2e)', () => {
     it('returns 404 CHECKLIST_QUESTION_NOT_FOUND updating a non-existent question id', async () => {
       const agent = await loginAgent(app, adminEmail);
 
+      // uuid-path-validation branch: a well-formed but nonexistent UUID —
+      // 'does-not-exist' would now be rejected by the :id UUID pipe before
+      // reaching the use case (see the malformed-id case below), so the
+      // "nonexistent but well-formed" case needs its own syntactically
+      // valid id.
       const response = await agent
-        .patch('/checklist-questions/does-not-exist')
+        .patch('/checklist-questions/00000000-0000-7000-8000-000000000000')
         .send({ text: 'Ghost' })
         .expect(404);
 
       expect(response.body).toMatchObject({
         statusCode: 404,
         code: 'CHECKLIST_QUESTION_NOT_FOUND',
+      });
+    });
+
+    // uuid-path-validation branch: :id used to reach the use case
+    // unvalidated — a malformed value fell through to Prisma's @db.Uuid
+    // column on the real adapter (an unmapped 500) or, against this
+    // hermetic suite's in-memory fake, the same CHECKLIST_QUESTION_NOT_FOUND
+    // 404 asserted above.
+    it('rejects a malformed id on PATCH /checklist-questions/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch('/checklist-questions/not-a-uuid')
+        .send({ text: 'Ghost' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_QUESTION_ID',
       });
     });
 
@@ -345,8 +369,10 @@ describe('Checklist Questions (e2e)', () => {
     it('returns 404 CHECKLIST_QUESTION_NOT_FOUND deleting a missing or already soft-deleted question', async () => {
       const agent = await loginAgent(app, adminEmail);
 
+      // uuid-path-validation branch: well-formed but nonexistent, same
+      // rationale as the update case above.
       const missingResponse = await agent
-        .delete('/checklist-questions/does-not-exist')
+        .delete('/checklist-questions/00000000-0000-7000-8000-000000000000')
         .expect(404);
       expect(missingResponse.body).toMatchObject({
         statusCode: 404,
@@ -370,6 +396,24 @@ describe('Checklist Questions (e2e)', () => {
       expect(repeatResponse.body).toMatchObject({
         statusCode: 404,
         code: 'CHECKLIST_QUESTION_NOT_FOUND',
+      });
+    });
+
+    // uuid-path-validation branch: same gap as PATCH above, on DELETE.
+    // Guard-before-pipe ordering is already pinned by the anonymous-401
+    // check below (a fixed non-UUID `questionId` on this exact route
+    // already asserts 401, not 400 — this would flip if guards ran after
+    // the pipe).
+    it('rejects a malformed id on DELETE /checklist-questions/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .delete('/checklist-questions/not-a-uuid')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_QUESTION_ID',
       });
     });
   });

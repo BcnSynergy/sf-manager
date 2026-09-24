@@ -895,8 +895,11 @@ describe('Review Templates (e2e)', () => {
 
     it('GET .../:id on an unknown template returns 404 REVIEW_TEMPLATE_NOT_FOUND', async () => {
       const agent = await loginAgent(app, adminEmail);
+      // uuid-path-validation branch: well-formed but nonexistent — a
+      // non-UUID placeholder would now be rejected by the :id pipe before
+      // reaching the use case (see the malformed-id cases below).
       const response = await agent
-        .get('/review-templates/does-not-exist')
+        .get('/review-templates/00000000-0000-7000-8000-000000000000')
         .expect(404);
       expect(response.body).toMatchObject({
         statusCode: 404,
@@ -907,12 +910,64 @@ describe('Review Templates (e2e)', () => {
     it('PUT .../questions on an unknown template returns 404 REVIEW_TEMPLATE_NOT_FOUND', async () => {
       const agent = await loginAgent(app, adminEmail);
       const response = await agent
-        .put('/review-templates/does-not-exist/questions')
+        .put('/review-templates/00000000-0000-7000-8000-000000000000/questions')
         .send({ questionIds: [] })
         .expect(404);
       expect(response.body).toMatchObject({
         statusCode: 404,
         code: 'REVIEW_TEMPLATE_NOT_FOUND',
+      });
+    });
+
+    // uuid-path-validation branch: every :id route used to reach its use
+    // case unvalidated — a malformed value fell through to Prisma's
+    // @db.Uuid column on the real adapter (unmapped 500) or, against this
+    // hermetic suite's in-memory fake, the same REVIEW_TEMPLATE_NOT_FOUND
+    // 404 asserted above. Guard-before-pipe ordering is already pinned by
+    // the anonymous-401 check on this controller (a fixed non-UUID
+    // `templateId` on every route there already asserts 401, not 400).
+    it('rejects a malformed id on GET /review-templates/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const response = await agent
+        .get('/review-templates/not-a-uuid')
+        .expect(400);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_TEMPLATE_ID',
+      });
+    });
+
+    it('rejects a malformed id on PUT /review-templates/:id/questions with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const response = await agent
+        .put('/review-templates/not-a-uuid/questions')
+        .send({ questionIds: [] })
+        .expect(400);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_TEMPLATE_ID',
+      });
+    });
+
+    it('rejects a malformed id on POST /review-templates/:id/activate with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const response = await agent
+        .post('/review-templates/not-a-uuid/activate')
+        .expect(400);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_TEMPLATE_ID',
+      });
+    });
+
+    it('rejects a malformed id on DELETE /review-templates/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const response = await agent
+        .delete('/review-templates/not-a-uuid')
+        .expect(400);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_TEMPLATE_ID',
       });
     });
 

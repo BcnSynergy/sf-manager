@@ -6,9 +6,13 @@
 // (Phase 2), reused here rather than re-declared (tasks.md 9.5's own note).
 // Mirrored as a literal union in apps/web/src/api/review-template.ts
 // (Phase 10).
+// uuid-path-validation branch: INVALID_TEMPLATE_ID is the coded 400 for a
+// malformed `:id`, built via the shared uuidParamPipe() factory — same
+// convention as INVALID_SESSION_ID (review-session-error-code.ts).
 export type ReviewTemplateErrorCode =
   | 'REVIEW_TEMPLATE_NOT_FOUND'
   | 'REVIEW_TEMPLATE_NOT_EDITABLE'
   | 'REVIEW_TEMPLATE_EMPTY'
   | 'REVIEW_TEMPLATE_DRAFT_EXISTS'
-  | 'REVIEW_TEMPLATE_ACTIVATION_CONFLICT';
+  | 'REVIEW_TEMPLATE_ACTIVATION_CONFLICT'
+  | 'INVALID_TEMPLATE_ID';

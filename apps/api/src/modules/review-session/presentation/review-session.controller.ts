@@ -31,6 +31,7 @@ import type { VerifiedAccessToken } from '../../auth/application/ports/token-iss
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { sessionIdPipe } from './session-id.pipe';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
@@ -299,6 +300,7 @@ export class ReviewSessionController {
   @ApiBadRequestResponse({
     description:
       'sessionId is not a well-formed UUID (code: INVALID_SESSION_ID), ' +
+      'elementId is not a well-formed UUID (code: INVALID_ELEMENT_ID), ' +
       'or the body carries neither/both of answers and observations, an ' +
       'empty answers array, a blank observations reason, or an ' +
       'out-of-range answer value.',
@@ -315,7 +317,11 @@ export class ReviewSessionController {
   async recordEntry(
     @CurrentUser() user: VerifiedAccessToken,
     @Param('sessionId', sessionIdPipe()) sessionId: string,
-    @Param('elementId') elementId: string,
+    @Param(
+      'elementId',
+      uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
+    )
+    elementId: string,
     @Body(new ZodValidationPipe(recordEntryRequestSchema))
     body: RecordEntryRequest,
   ): Promise<RecordEntryResponseDto> {

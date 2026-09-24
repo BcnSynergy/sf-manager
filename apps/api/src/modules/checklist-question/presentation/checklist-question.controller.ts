@@ -11,6 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -26,6 +27,7 @@ import {
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CreateChecklistQuestionUseCase } from '../application/use-cases/create-checklist-question.use-case';
 import { ListChecklistQuestionsUseCase } from '../application/use-cases/list-checklist-questions.use-case';
@@ -131,12 +133,17 @@ export class ChecklistQuestionController {
   @ApiForbiddenResponse({
     description: 'Caller lacks checklistQuestion:update.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_QUESTION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Question not found or soft-deleted. Body carries code: CHECKLIST_QUESTION_NOT_FOUND.',
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', uuidParamPipe('INVALID_QUESTION_ID', 'Malformed question id.'))
+    id: string,
     @Body(new ZodValidationPipe(updateChecklistQuestionSchema))
     body: UpdateChecklistQuestionRequestDto,
   ): Promise<ChecklistQuestionResponseDto> {
@@ -158,13 +165,20 @@ export class ChecklistQuestionController {
   @ApiForbiddenResponse({
     description: 'Caller lacks checklistQuestion:delete.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_QUESTION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Question not found or already soft-deleted. Body carries code: ' +
       'CHECKLIST_QUESTION_NOT_FOUND. Never 409 — soft-delete is never ' +
       'blocked by template references (spec.md).',
   })
-  async softDelete(@Param('id') id: string): Promise<void> {
+  async softDelete(
+    @Param('id', uuidParamPipe('INVALID_QUESTION_ID', 'Malformed question id.'))
+    id: string,
+  ): Promise<void> {
     try {
       await this.softDeleteChecklistQuestionUseCase.execute(id);
     } catch (error) {

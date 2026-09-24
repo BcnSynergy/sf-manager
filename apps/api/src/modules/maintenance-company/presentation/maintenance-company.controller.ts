@@ -11,6 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -27,6 +28,7 @@ import {
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { CreateMaintenanceCompanyUseCase } from '../application/use-cases/create-maintenance-company.use-case';
 import { ListMaintenanceCompaniesUseCase } from '../application/use-cases/list-maintenance-companies.use-case';
@@ -118,13 +120,18 @@ export class MaintenanceCompanyController {
   @ApiForbiddenResponse({
     description: 'Caller lacks maintenanceCompany:update.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMPANY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Maintenance company not found.' })
   @ApiConflictResponse({
     description:
       'taxId already in use by another active company. Body carries code: TAX_ID_ALREADY_IN_USE.',
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', uuidParamPipe('INVALID_COMPANY_ID', 'Malformed company id.'))
+    id: string,
     @Body(new ZodValidationPipe(updateMaintenanceCompanySchema))
     body: UpdateMaintenanceCompanyRequestDto,
   ): Promise<MaintenanceCompanyResponseDto> {
@@ -146,12 +153,19 @@ export class MaintenanceCompanyController {
   @ApiForbiddenResponse({
     description: 'Caller lacks maintenanceCompany:delete.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMPANY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Maintenance company not found.' })
   @ApiConflictResponse({
     description:
       'Company has active users attached. Body carries code: MAINTENANCE_COMPANY_HAS_ACTIVE_USERS.',
   })
-  async softDelete(@Param('id') id: string): Promise<void> {
+  async softDelete(
+    @Param('id', uuidParamPipe('INVALID_COMPANY_ID', 'Malformed company id.'))
+    id: string,
+  ): Promise<void> {
     try {
       await this.softDeleteMaintenanceCompanyUseCase.execute(id);
     } catch (error) {

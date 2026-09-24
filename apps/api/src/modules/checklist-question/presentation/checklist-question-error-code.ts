@@ -8,4 +8,9 @@
 // Mirrored as a literal union in apps/web/src/api/checklist-question.ts
 // (Phase 5); kept as a local copy per the coded-error convention rather
 // than hoisted into @sf-manager/validation.
-export type ChecklistQuestionErrorCode = 'CHECKLIST_QUESTION_NOT_FOUND';
+//
+// uuid-path-validation branch: INVALID_QUESTION_ID is the coded 400 for a
+// malformed `:id`, built via the shared uuidParamPipe() factory — same
+// convention as INVALID_SESSION_ID (review-session-error-code.ts).
+export type ChecklistQuestionErrorCode =
+  'CHECKLIST_QUESTION_NOT_FOUND' | 'INVALID_QUESTION_ID';

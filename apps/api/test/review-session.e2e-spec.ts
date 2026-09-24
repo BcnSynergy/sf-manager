@@ -471,10 +471,12 @@ describe('Review Sessions (e2e)', () => {
   // Tech-debt cleanup follow-up: every `:sessionId` route on this
   // controller let a malformed id fall through to the use case (and, on
   // the real Prisma adapter, to an unmapped 500 against `@db.Uuid`) — no
-  // route validated the param at all. `:code` (resolveElement) and
-  // `:elementId` (recordEntry) are deliberately left untouched here:
-  // element codes/ids are not UUIDs and are out of scope for this pipe.
-  describe('Malformed :sessionId rejection (tech-debt cleanup)', () => {
+  // route validated the param at all. `:code` (resolveElement) is
+  // deliberately left untouched here: an element code is a 10-character
+  // string, not a UUID, and is out of scope for this pipe. `:elementId`
+  // (recordEntry) IS a UUID and is now covered below too
+  // (uuid-path-validation branch).
+  describe('Malformed :sessionId/:elementId rejection (tech-debt cleanup)', () => {
     let built: BuiltApp;
     const adminEmail = 'rs-invalid-id-admin@example.com';
     const technicianEmail = 'rs-invalid-id-technician@example.com';
@@ -575,6 +577,26 @@ describe('Review Sessions (e2e)', () => {
       expect(response.body as ErrorBody).toMatchObject({
         statusCode: 400,
         code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    // uuid-path-validation branch: :elementId on this same route was left
+    // unvalidated by the tech-debt cleanup above (it is an InspectableElement
+    // id, not a session id) — a malformed value reached RecordEntryUseCase
+    // and, against this hermetic suite's in-memory fakes, resolved to the
+    // generic ELEMENT_NOT_FOUND 404 rather than the real Prisma adapter's
+    // unmapped 500 against `@db.Uuid`.
+    it('rejects a malformed elementId on PUT /review-sessions/:sessionId/entries/:elementId with 400, not a 404', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .put(`/review-sessions/${session.id}/entries/not-a-uuid`)
+        .send({ observations: 'irrelevant, should never be read' })
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_ELEMENT_ID',
       });
     });
 
