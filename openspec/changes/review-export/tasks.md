@@ -268,22 +268,36 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
       signing does not auto-open it — spec: *The field flow offers no
       document link*, *Signing does not auto-open the document*
 - [x] 13.4 Add link label key to all three locales
-- [ ] 13.5 Browser-verify (per CLAUDE.md, `npm run dev` + `claude-in-chrome`):
+- [x] 13.5 Browser-verify (per CLAUDE.md, `npm run dev` + `claude-in-chrome`):
       sign-and-close flow, all five roles opening the document, print preview
       with blank and filled profile, uniform 404 for out-of-scope/nonexistent/
       draft, dev-server golden path and edge cases from this spec set
-      - PARTIAL (2026-09-24). Browser-verified: SYSTEM_ADMIN and
-        MAINTENANCE_TECHNICIAN; real sign-and-close as technician (read-only
-        view, no document link, no auto-open); "View document" link reaches
-        the session's document; reviewed and unreviewed-with-reason entries;
-        signing time in Europe/Madrid; filled-profile print preview (real
-        preview, by the user); uniform "not available" for draft, nonexistent
-        and technician out-of-scope sessions.
-      - PENDING: COMMUNITY_REPRESENTATIVE, MAINTENANCE_COMPANY_MANAGER and
-        MANAGER in the browser (covered at API level by PR 8's e2e scope
-        matrix and by route-gate tests only); blank/incomplete-profile print
-        preview (covered by component tests only). Needs dev users and
-        assignments for those roles.
+      - Done 2026-09-24, in two passes.
+      - SYSTEM_ADMIN and MAINTENANCE_TECHNICIAN:
+        - real sign-and-close as the technician: read-only view, no document
+          link, no auto-open
+        - the "View document" link reaches that session's document
+        - reviewed entries and unreviewed-with-reason entries both render
+        - signing time shown in Europe/Madrid
+        - uniform "not available" for draft, nonexistent and out-of-scope
+          sessions
+      - COMMUNITY_REPRESENTATIVE: own community's session opens via the link;
+        another community's session shows "not available".
+      - MAINTENANCE_COMPANY_MANAGER: own company's session opens via the link
+        and shows the company line; a companyless session shows "not
+        available".
+      - MANAGER with VIEW_ALL_REVIEWS: both sessions open. The same MANAGER
+        without the capability gets "not available".
+      - Print preview (real preview, checked by the user):
+        - filled profile: black on white, no nav, heading or Print button
+        - incomplete profile (phone blanked directly in the dev DB): the
+          on-screen warning is shown and is absent from the preview; the
+          letterhead prints five lines
+      - Note: a saved profile field cannot be cleared through the UI
+        (domain rule), so an incomplete profile only exists before first
+        completion.
+      - QA users created directly in the dev DB for this pass:
+        rep@, companymgr@ and manager@sf-manager.example.
 
 ## PR 14 — Docs and archive (~40 lines + archive)
 
