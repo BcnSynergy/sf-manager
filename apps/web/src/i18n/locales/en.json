@@ -501,7 +501,28 @@
   "reviewDocument": {
     "title": "Review document",
     "loading": "Loading the review document...",
-    "unreachable": "This document is not available."
+    "unreachable": "This document is not available.",
+    "letterhead": {
+      "incompleteWarning": "The organization profile is incomplete. Some letterhead fields are missing from this document."
+    },
+    "session": {
+      "title": "Session data",
+      "communityLabel": "Community",
+      "communityUnknown": "Unknown community",
+      "elementTypeLabel": "Element type",
+      "frequencyLabel": "Frequency",
+      "templateNameLabel": "Template",
+      "templateVersionLabel": "Template version",
+      "startedAtLabel": "Started",
+      "completedAtLabel": "Completed",
+      "companyLabel": "Maintenance company",
+      "companyUnknown": "Unknown maintenance company"
+    },
+    "footer": {
+      "signedByLabel": "Signed by: {{email}}",
+      "emailUnknown": "Unknown signer",
+      "signedAtLabel": "Signed on: {{date}}"
+    }
   },
   "health": {
     "title": "System status",
