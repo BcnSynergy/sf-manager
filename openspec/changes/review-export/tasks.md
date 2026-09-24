@@ -236,24 +236,24 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
 
 ## PR 12 — Record and print (~350 lines)
 
-- [ ] 12.1 RED: entries render in server order, deactivated/soft-deleted
+- [x] 12.1 RED: entries render in server order, deactivated/soft-deleted
       element shows real identity, unresolved element shows neutral label,
       zero entries renders no entry and no error — spec: review-document-ui
       *A decommissioned or soft-deleted element renders its real identity*,
       *An element with no resolvable row renders a neutral label*,
       *A completed session with zero entries still renders*, *Entries are
       rendered in the server's deterministic order*
-- [ ] 12.2 GREEN: render record region — no client-side hide/sort/truncate
-- [ ] 12.3 RED: one print control opens `window.print()`; printed output
+- [x] 12.2 GREEN: render record region — no client-side hide/sort/truncate
+- [x] 12.3 RED: one print control opens `window.print()`; printed output
       excludes navigation, print control and warning — spec: *Print Through
       the Browser, Document Only*
-- [ ] 12.4 GREEN: add print control; `.review-document-print` rules in
+- [x] 12.4 GREEN: add print control; `.review-document-print` rules in
       `apps/web/src/index.css` existing `@media print` block
-- [ ] 12.5 RED: page offers no edit/reopen/answer/complete/download/email/share
+- [x] 12.5 RED: page offers no edit/reopen/answer/complete/download/email/share
       control — spec: *The Document Page Offers No Other Action*
-- [ ] 12.6 Verify enum/answer/unreviewed values render through localized
+- [x] 12.6 Verify enum/answer/unreviewed values render through localized
       labels, never raw — spec: *Enum values are never rendered raw*
-- [ ] 12.7 Add remaining `reviewDocument.*` keys (record, print, neutral
+- [x] 12.7 Add remaining `reviewDocument.*` keys (record, print, neutral
       element label) to all three locales and the required-key list
 
 ## PR 13 — "View document" link + browser pass (~100 lines)

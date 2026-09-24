@@ -5,10 +5,12 @@ import { ApiError } from '../api/client';
 import {
   readReviewDocument,
   type ReviewDocument,
+  type ReviewDocumentEntry,
   type ReviewDocumentLetterhead,
 } from '../api/review-history';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
+import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
 import { formatDocumentDate, formatDocumentDateTime } from '../review-session/format-date';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
@@ -169,6 +171,82 @@ function SignatureFooter({ document, locale }: { document: ReviewDocument; local
   );
 }
 
+// spec: review-document-ui "Document Page Content" (record region). The
+// server already returns entries and answers in their final deterministic
+// order (design.md "Entry enrichment and order", PR 6) — this component MUST
+// NOT hide, re-sort or truncate them. A deactivated or soft-deleted element
+// still carries its real `elementCode`/`elementName`/`elementLocation` (the
+// name directory resolves all three together); only an id that resolves no
+// row at all has `elementCode === null`, which is the one signal this page
+// uses to render the neutral label instead — mirrors
+// `ReviewHistoryDetailPage.tsx`'s identical `elementCode ?? ...` fallback.
+function RecordEntry({
+  entry,
+  questionTextById,
+}: {
+  entry: ReviewDocumentEntry;
+  questionTextById: ReadonlyMap<string, string>;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <li
+      data-testid={`review-document-record-entry-${entry.inspectableElementId}`}
+    >
+      <p data-testid={`review-document-record-entry-identity-${entry.inspectableElementId}`}>
+        {entry.elementCode !== null
+          ? `${entry.elementCode} — ${entry.elementName} — ${entry.elementLocation}`
+          : t('reviewDocument.record.elementUnknown')}
+      </p>
+      {entry.reviewed ? (
+        <ul>
+          {entry.answers.map((answer) => (
+            <li key={answer.questionId}>
+              {questionTextById.get(answer.questionId) ?? answer.questionId}:{' '}
+              {t(mapAnswerValueToLabelKey(answer.answer))}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>
+          {t('reviewDocument.record.unreviewedLabel')}{' '}
+          <span
+            data-testid={`review-document-record-entry-reason-${entry.inspectableElementId}`}
+          >
+            {entry.observations ?? ''}
+          </span>
+        </p>
+      )}
+    </li>
+  );
+}
+
+// spec: "A completed session with zero entries still renders" — the record
+// region shows no entry and no error, never an empty-state message: an
+// empty `<ul>` already satisfies "no entry"; adding placeholder copy here
+// would be a claim the spec does not make.
+function RecordRegion({ document }: { document: ReviewDocument }) {
+  const { t } = useTranslation();
+  const questionTextById = new Map(
+    document.questions.map((question) => [question.questionId, question.text]),
+  );
+
+  return (
+    <section data-testid="review-document-record">
+      <h2>{t('reviewDocument.record.title')}</h2>
+      <ul data-testid="review-document-record-entries">
+        {document.entries.map((entry) => (
+          <RecordEntry
+            key={entry.inspectableElementId}
+            entry={entry}
+            questionTextById={questionTextById}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function ReviewDocumentPage() {
   const { t, i18n } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -236,17 +314,32 @@ export function ReviewDocumentPage() {
     );
   }
 
-  // Header regions (letterhead, session data, signature footer) ship here;
-  // the record and print regions ship in PR 12 — this content anchor keeps
-  // the same testid PR 10 asserted, now carrying real children.
+  // `.review-document-print` (index.css, mirrors `.label-print`'s
+  // convention) scopes the print rules that hide every `[data-print-hide]`
+  // element (page heading, incomplete-profile warning, print button) and
+  // force black-on-white colors, so this class only reaches the loaded
+  // state — the loading/unreachable/error states are never printed.
   return (
-    <main>
-      <h1>{t('reviewDocument.title')}</h1>
+    <main className="review-document-print">
+      <h1 data-print-hide>{t('reviewDocument.title')}</h1>
       <div data-testid="review-document-content" data-review-document-id={document.id}>
         <LetterheadRegion letterhead={document.letterhead} />
         <SessionDataRegion document={document} locale={i18n.language} />
+        <RecordRegion document={document} />
         <SignatureFooter document={document} locale={i18n.language} />
       </div>
+      {/* spec: "Print Through the Browser, Document Only" / "The Document
+          Page Offers No Other Action" — the ONLY control besides ordinary
+          navigation, and the only one hidden from the printed output along
+          with the page heading and the incomplete-profile warning. */}
+      <button
+        type="button"
+        data-testid="review-document-print-button"
+        data-print-hide
+        onClick={() => window.print()}
+      >
+        {t('reviewDocument.print.button')}
+      </button>
     </main>
   );
 }

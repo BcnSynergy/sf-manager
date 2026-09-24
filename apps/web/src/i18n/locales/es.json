@@ -518,6 +518,14 @@
       "companyLabel": "Empresa de mantenimiento",
       "companyUnknown": "Empresa de mantenimiento desconocida"
     },
+    "record": {
+      "title": "Registro",
+      "elementUnknown": "Elemento desconocido",
+      "unreviewedLabel": "No revisado:"
+    },
+    "print": {
+      "button": "Imprimir"
+    },
     "footer": {
       "signedByLabel": "Firmado por: {{email}}",
       "emailUnknown": "Firmante desconocido",
