@@ -173,6 +173,78 @@ describe('ReviewSessionDetailPage', () => {
     expect(screen.queryByTestId('review-session-detail-code-input')).not.toBeInTheDocument();
   });
 
+  // review-session-ui spec "The completed session offers no document link"
+  // and review-document-ui spec "The field flow offers no document link" /
+  // "Signing does not auto-open the document" (verify-report W-2): the
+  // reassigned-representative risk this guards is that a completed session
+  // shown on THIS page (the field flow, not review-history) could leak a
+  // route to the document to someone whose access to it may since have been
+  // revoked. Static inspection (ReviewSessionDetailPage.tsx has no Link or
+  // window.print reference at all) confirmed the absence before this test
+  // was written; the test itself was mutation-checked by temporarily adding
+  // a `<a href="/review-history/x/document">View document</a>` and a
+  // `window.print()` call to the completed-notice branch, confirming the new
+  // assertions failed, then reverting — no production code changed.
+  it('offers no document link, print control or window.print call after signing, and stays on the session', async () => {
+    mockedReadReviewSession.mockResolvedValueOnce(draftSession).mockResolvedValueOnce(completedSession);
+    mockedCompleteReviewSession.mockResolvedValue({
+      id: SESSION_ID,
+      status: 'completed',
+      completedAt: '2026-09-08T01:00:00.000Z',
+    });
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByTestId('review-session-detail-completed-notice')).toBeInTheDocument();
+    expect(screen.queryByText('View document')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /view document/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`),
+    ).toBeNull();
+    expect(screen.queryByTestId('review-document-print-button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
+    expect(printSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('review-session-detail-status')).toBeInTheDocument();
+
+    printSpy.mockRestore();
+  });
+
+  // review-document-ui spec "A draft offers no document link either".
+  it('offers no document link or print control for a draft session', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    await screen.findByTestId('review-session-detail-code-input');
+
+    expect(screen.queryByText('View document')).not.toBeInTheDocument();
+    expect(
+      document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`),
+    ).toBeNull();
+    expect(screen.queryByTestId('review-document-print-button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
+  });
+
+  // review-session-ui spec "Cancelling leaves the session a draft".
+  it('sends no completion request and stays a draft when the Sign and close confirmation is cancelled', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+    expect(mockedCompleteReviewSession).not.toHaveBeenCalled();
+    expect(screen.getByTestId('review-session-detail-complete')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-session-detail-completed-notice')).not.toBeInTheDocument();
+  });
+
   it('lists the offending element codes as links on UNREVIEWED_ELEMENTS_WITHOUT_REASON', async () => {
     mockedReadReviewSession.mockResolvedValue(draftSession);
     mockedCompleteReviewSession.mockRejectedValue(
