@@ -48,6 +48,43 @@ const UNIQUE_VIOLATION_SQLSTATE = '23505';
 // real Postgres: 78/80 losing requests in a 40-iteration x 3-concurrent
 // activate() race escaped unmapped before this fix.
 const DEADLOCK_DETECTED_SQLSTATE = '40P01';
+// NOTE: 40003 (statement_completion_unknown: the statement's outcome is unknown,
+// e.g. after a lost connection) is deliberately NOT in this allowlist even
+// though it shares SQLSTATE class 40 ("Transaction Rollback") with 40001
+// and 40P01 above. This repository maps by EXACT SQLSTATE equality, never
+// by class-40 prefix, precisely so a future addition to this list stays a
+// conscious decision instead of silently absorbing every code in the
+// class (see the comment above extractSqlState for the substring-matching
+// bug this exact-match approach replaces).
+
+// Extracts the exact Postgres SQLSTATE from a Prisma P2010 ("Raw query
+// failed") error. Verified against Prisma 7.9.1 + @prisma/adapter-pg
+// source (node_modules/@prisma/adapter-pg/dist/index.js's
+// convertDriverError, and node_modules/@prisma/client/runtime/client.js's
+// P2010-error factory): the message is constructed as EXACTLY
+// "Raw query failed. Code: `${originalCode}`. Message: `${originalMessage}`"
+// where `originalCode` is the raw SQLSTATE from the underlying `pg` driver
+// error. The same value is also attached at
+// `error.meta.driverAdapterError.cause.originalCode`, but `meta` is typed
+// as `Record<string, unknown>` (no public, stable contract for that
+// nested shape), so this repository does not read it — the regex below,
+// anchored to the exact "Code: `XXXXX`." substring the message factory
+// always produces, is the more stable and equally sufficient source.
+//
+// This replaces a prior `error.message.includes('40001' | ... )` free
+// substring search, which could wrongly match a SQLSTATE that merely
+// appears elsewhere in the wrapped Postgres error text — e.g. a
+// constraint or index name containing those digits — even though the
+// error's ACTUAL SQLSTATE was unrelated (see the repository spec's
+// "does NOT map a P2010 whose actual SQLSTATE ... even when the message
+// TEXT contains the digits of ... elsewhere" regression tests).
+const SQLSTATE_IN_MESSAGE = /Code: `([0-9A-Z]{5})`/;
+
+function extractSqlState(
+  error: Prisma.PrismaClientKnownRequestError,
+): string | undefined {
+  return SQLSTATE_IN_MESSAGE.exec(error.message)?.[1];
+}
 
 function isActivationConflict(
   error: unknown,
@@ -61,11 +98,14 @@ function isActivationConflict(
   ) {
     return true;
   }
+  if (error.code !== RAW_QUERY_FAILED) {
+    return false;
+  }
+  const sqlState = extractSqlState(error);
   return (
-    error.code === RAW_QUERY_FAILED &&
-    (error.message.includes(SERIALIZATION_FAILURE_SQLSTATE) ||
-      error.message.includes(UNIQUE_VIOLATION_SQLSTATE) ||
-      error.message.includes(DEADLOCK_DETECTED_SQLSTATE))
+    sqlState === SERIALIZATION_FAILURE_SQLSTATE ||
+    sqlState === UNIQUE_VIOLATION_SQLSTATE ||
+    sqlState === DEADLOCK_DETECTED_SQLSTATE
   );
 }
 
