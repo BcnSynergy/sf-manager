@@ -263,10 +263,47 @@ describe('Maintenance Companies (e2e)', () => {
     it('returns 404 when updating a non-existent company (spec: Update targets a non-existent company)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
+      // uuid-path-validation branch: well-formed but nonexistent — a
+      // non-UUID placeholder would now be rejected by the :id pipe before
+      // reaching the use case (see the malformed-id cases below).
       await agent
-        .patch('/maintenance-companies/does-not-exist')
+        .patch('/maintenance-companies/00000000-0000-7000-8000-000000000000')
         .send({ name: 'Ghost Co' })
         .expect(404);
+    });
+
+    // uuid-path-validation branch: :id used to reach the use case
+    // unvalidated on both routes — a malformed value fell through to
+    // Prisma's @db.Uuid column on the real adapter (unmapped 500) or,
+    // against this hermetic suite's in-memory fake, a plain 404. Guard-
+    // before-pipe ordering is already pinned by the anonymous-401 check on
+    // this controller (a fixed non-UUID `companyId` on PATCH/DELETE already
+    // asserts 401, not 400).
+    it('rejects a malformed id on PATCH /maintenance-companies/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch('/maintenance-companies/not-a-uuid')
+        .send({ name: 'Ghost Co' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMPANY_ID',
+      });
+    });
+
+    it('rejects a malformed id on DELETE /maintenance-companies/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .delete('/maintenance-companies/not-a-uuid')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMPANY_ID',
+      });
     });
 
     it('soft-deletes a maintenance company (spec: Admin soft-deletes a company via delete + soft-deleted companies excluded from the list)', async () => {
