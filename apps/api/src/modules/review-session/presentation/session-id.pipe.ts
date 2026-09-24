@@ -18,9 +18,12 @@ import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 // convention, so a malformed id is reported the same shape as every other
 // 400 in this codebase.
 //
-// Scoped to `:sessionId` only, deliberately: `:code` (element codes,
-// resolveElement) and `:elementId` (recordEntry) are not UUIDs and must
-// stay unvalidated by this pipe.
+// Scoped to `:sessionId` only. `:code` (resolveElement) is a 10-character
+// element code, not a UUID, so it must never go through this pipe.
+// `:elementId` (recordEntry) IS an InspectableElement UUID and still lets a
+// malformed id reach Prisma as a 500. That is a known follow-up, together
+// with the other controllers' `:id` params. It needs its own coded error
+// rather than INVALID_SESSION_ID.
 export function sessionIdPipe(): ParseUUIDPipe {
   return new ParseUUIDPipe({
     exceptionFactory: () =>
