@@ -107,6 +107,20 @@ export function ReviewHistoryDetailPage() {
         })}
       </p>
 
+      {/* review-document-ui spec "Exactly One Entry Link Reaches the
+          Document Page", review-history-ui spec "Read-Only Historical
+          Session View": the single, non-mutating View document link, for
+          every one of the five history roles this page already serves —
+          this view's read is scoped by history, not by performer, so no
+          role branching is needed here (decided 2026-09-23, supersedes
+          proposal question 3). */}
+      <Link
+        to={`/review-history/${sessionId}/document`}
+        data-testid="review-history-detail-document-link"
+      >
+        {t('reviewHistory.detail.documentLink')}
+      </Link>
+
       <section data-testid="review-history-detail-entries">
         <h2>{t('reviewHistory.detail.entriesTitle')}</h2>
         {detail.entries.length === 0 ? (

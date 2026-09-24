@@ -480,7 +480,8 @@
       "entriesEmpty": "No s'ha registrat cap element.",
       "elementCodeUnknown": "Element desconegut",
       "entryUnreviewedLabel": "No revisat:",
-      "elementHistoryLink": "Veure historial de l'element"
+      "elementHistoryLink": "Veure historial de l'element",
+      "documentLink": "Veure document"
     },
     "elementHistory": {
       "title": "Historial de revisió de l'element",

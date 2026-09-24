@@ -481,6 +481,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     // performer line (review-history-company-scope, Phase 5)
     'reviewHistory.detail.performerLabel',
     'reviewHistory.detail.performerUnknown',
+    // View document link (review-export PR 13, task 13.4)
+    'reviewHistory.detail.documentLink',
   ];
 
   // Existence guard for the global nav (nav-menu change, Phase 1/3), same
