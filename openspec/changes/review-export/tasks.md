@@ -216,22 +216,22 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
 
 ## PR 11 — Header regions (~350 lines)
 
-- [ ] 11.1 RED: `ReviewDocumentPage.test.tsx` — letterhead renders only
+- [x] 11.1 RED: `ReviewDocumentPage.test.tsx` — letterhead renders only
       non-blank fields; warning shown iff any field blank, omitted from print
       — spec: review-document-ui *A Blank or Incomplete Profile Still Prints*
-- [ ] 11.2 GREEN: render letterhead region using `isProfileIncomplete`,
+- [x] 11.2 GREEN: render letterhead region using `isProfileIncomplete`,
       `data-print-hide` warning
-- [ ] 11.3 RED: session-data region — community name, localized element type
+- [x] 11.3 RED: session-data region — community name, localized element type
       and frequency, template name/version, dates, company line omitted when
       absent — spec: *Document Page Content* (session data row)
-- [ ] 11.4 GREEN: render session-data region using `mapElementTypeToLabelKey`/
+- [x] 11.4 GREEN: render session-data region using `mapElementTypeToLabelKey`/
       `mapReviewFrequencyToLabelKey`, `format-date.ts`
-- [ ] 11.5 RED: signature footer — "signed by" + email + `completedAt` as
+- [x] 11.5 RED: signature footer — "signed by" + email + `completedAt` as
       date-time — spec: *Document Page Content* (signature footer)
-- [ ] 11.6 GREEN: render signature footer; defensive-fallback empty string
+- [x] 11.6 GREEN: render signature footer; defensive-fallback empty string
       renders localized placeholder, not a blank cell — spec: *A
       defensive-fallback empty value renders a placeholder, not a blank cell*
-- [ ] 11.7 Add corresponding `reviewDocument.*` keys to all three locale files
+- [x] 11.7 Add corresponding `reviewDocument.*` keys to all three locale files
       and `REQUIRED_REVIEW_DOCUMENT_KEY_PATHS`
 
 ## PR 12 — Record and print (~350 lines)
