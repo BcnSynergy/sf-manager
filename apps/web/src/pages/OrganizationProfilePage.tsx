@@ -7,6 +7,7 @@ import {
   type OrganizationProfile,
   type UpdateOrganizationProfilePayload,
 } from '../api/organization-profile';
+import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -109,7 +110,7 @@ export function OrganizationProfilePage() {
     };
   }, []);
 
-  const incomplete = REQUIRED_FIELDS.some((field) => saved[field] === '');
+  const incomplete = isProfileIncomplete(saved);
 
   function handleChange(field: ProfileFieldKey, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
