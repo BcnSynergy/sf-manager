@@ -305,7 +305,10 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
       completion, no `signed` status
 - [x] 14.2 Update `docs/requirements/functional-requirements.md` — FR-010
       `identified` → `partial` (slice 2 = signer identity pending)
-- [ ] 14.3 Run `sdd-verify` against this change's specs and apply-progress
+- [x] 14.3 Run `sdd-verify` against this change's specs and apply-progress
+      (verify-report.md: PASS WITH WARNINGS, 0 CRITICAL. W-2 and W-5 closed
+      in follow-up commits `fc8de37`/`2ec081f`; W-1/W-3/W-4 and all
+      SUGGESTIONs deferred to archive, none CRITICAL)
 - [ ] 14.4 `sdd-archive review-export`
 
 ## Rules Applied
