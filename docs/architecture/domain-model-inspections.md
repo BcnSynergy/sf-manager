@@ -359,6 +359,14 @@ Scoped to a single template per session — mirrors the original
 one-document-per-review-type structure. Covers every active
 `InspectableElement` of that `elementType` in the community.
 
+**Signing is completion, not a separate state (`review-export` PR 1).**
+Completing a session is presented to the user as **Sign and close** — the
+confirmation warns that the review will be closed and can no longer be
+modified. There is no `signed` status and no separate signing step or
+timestamp: the signer is the performer (`performedById`) and the signing
+date is `completedAt`. A session completed before this change is treated
+as signed by its performer at its existing `completedAt` — no backfill.
+
 **Immutable once finalized** ([ADR-010](../adr/ADR-010-soft-delete-strategy.md)):
 a `ReviewSession` with `status != draft`, and its `ElementReviewEntry`/
 `QuestionAnswer` children, cannot be deleted — soft or hard — by any role,

@@ -481,8 +481,6 @@ describe('locale key-set parity (en/es/ca)', () => {
     // performer line (review-history-company-scope, Phase 5)
     'reviewHistory.detail.performerLabel',
     'reviewHistory.detail.performerUnknown',
-    // View document link (review-export PR 13, task 13.4)
-    'reviewHistory.detail.documentLink',
   ];
 
   // Existence guard for the global nav (nav-menu change, Phase 1/3), same
@@ -562,6 +560,12 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewDocument.record.elementUnknown',
     'reviewDocument.record.unreviewedLabel',
     'reviewDocument.print.button',
+    // View document link (review-export PR 13, task 13.4). Sits under
+    // reviewDocument.* (not reviewHistory.*) per review-document-ui spec's
+    // "Internationalization Coverage": "every key this change introduces
+    // MUST be listed in REQUIRED_REVIEW_DOCUMENT_KEY_PATHS" (verify-report
+    // W-5).
+    'reviewHistory.detail.documentLink',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same

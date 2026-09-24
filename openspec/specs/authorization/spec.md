@@ -366,7 +366,16 @@ holding exactly what it held before, with `MANAGER` and
 `MAINTENANCE_COMPANY_MANAGER` still exactly `['reviewSession:read']`.
 Holding `organizationProfile:*` MUST confer nothing on any other
 surface, and no other permission family MUST be widened to reach the
-profile.
+profile, with exactly **one** exception: the review-document read
+(`review-document`, gated by the existing `reviewSession:read`
+permission) MAY return the organization profile's six letterhead
+fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — to
+a caller holding no `organizationProfile:*` permission. That exception
+MUST NOT extend to `id` or `logoAssetId`, MUST NOT add any
+`organizationProfile:*` member to any row of `ROLE_PERMISSIONS`, MUST
+NOT create a new `Permission` member, `ROLE_PERMISSIONS` grant or
+capability, and MUST NOT be reachable other than through the scoped
+review-document read itself.
 
 No `ManagerCapability` member MUST be declared for this slice: in
 particular `MANAGE_ORGANIZATION_PROFILE`, which ADR-011 Decision 2
@@ -393,12 +402,27 @@ equally unaudited today.
 #### Scenario: The admin's other permissions are untouched
 - GIVEN the `SYSTEM_ADMIN` entry before and after this change
 - WHEN they are compared
-- THEN the only difference MUST be the addition of `organizationProfile:read` and `organizationProfile:update`, with no permission removed and none other added
+- THEN the entry MUST be identical, still including `organizationProfile:read` and `organizationProfile:update`, with no permission removed and none added
 
 #### Scenario: No profile edit is audited
 - GIVEN the schema, the domain events and the write paths after this change
 - WHEN they are inspected for an audit trail of profile edits
 - THEN no audit table, audit event or audit write MUST exist
+
+#### Scenario: The one exception is exactly the six letterhead fields
+- GIVEN a `MAINTENANCE_TECHNICIAN` holding no `organizationProfile:*` permission, reading the document of a `completed` session in their scope
+- WHEN the response's letterhead is inspected
+- THEN it MUST carry exactly the six letterhead fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — and MUST NOT carry `id` or `logoAssetId`
+
+#### Scenario: No permission is added to reach the exception
+- GIVEN the `Permission` union and `ROLE_PERMISSIONS` before and after this change
+- WHEN they are compared
+- THEN they MUST be identical, and no `organizationProfile:*` member MUST appear on any non-admin row
+
+#### Scenario: The exception is unreachable outside the scoped read
+- GIVEN a caller holding `reviewSession:read` but not in scope for a given session, or holding `reviewSession:read` with no session context at all
+- WHEN they attempt to reach the organization profile's letterhead fields other than through that session's review-document read
+- THEN no route or use case MUST return them
 
 ### Requirement: Non-Admin Roles Remain Inert After the Checklist Permissions Are Added
 
@@ -731,7 +755,11 @@ The capability MUST widen **nothing else**. It MUST confer no
 administrative permission, no review-session write access, no
 user-management access, and no per-company, per-community or date-bounded
 variant of the read. It MUST affect the review-history read surface and
-nothing else in the system.
+nothing else in the system — which now, by construction, includes the
+review-document read: `review-document` reuses this capability's
+review-history scope resolution without widening it, so a granted
+manager's document visibility is exactly the review-document read
+inheriting this same history scope, not a second grant.
 
 Scope MUST still be evaluated in addition to, never instead of, the
 role/permission check, and authentication MUST still be evaluated before
@@ -774,6 +802,11 @@ alike.
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls any history endpoint
 - THEN the response MUST be 401, and neither the permission check nor the capability resolution MUST execute
+
+#### Scenario: The capability governs the review-document read too, through the same scope
+- GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` and a `completed` session anywhere in the installation
+- WHEN they read that session's document
+- THEN the response MUST be 2xx, granted through the same history scope this capability already establishes, with no separate document-specific grant
 
 ### Requirement: The Capability Is Resolved Fresh Per Request and Fails Closed
 
