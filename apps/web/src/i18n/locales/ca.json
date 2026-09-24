@@ -518,6 +518,14 @@
       "companyLabel": "Empresa de manteniment",
       "companyUnknown": "Empresa de manteniment desconeguda"
     },
+    "record": {
+      "title": "Registre",
+      "elementUnknown": "Element desconegut",
+      "unreviewedLabel": "No revisat:"
+    },
+    "print": {
+      "button": "Imprimeix"
+    },
     "footer": {
       "signedByLabel": "Signat per: {{email}}",
       "emailUnknown": "Signant desconegut",

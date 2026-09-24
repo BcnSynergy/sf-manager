@@ -518,6 +518,14 @@
       "companyLabel": "Maintenance company",
       "companyUnknown": "Unknown maintenance company"
     },
+    "record": {
+      "title": "Record",
+      "elementUnknown": "Unknown element",
+      "unreviewedLabel": "Not reviewed:"
+    },
+    "print": {
+      "button": "Print"
+    },
     "footer": {
       "signedByLabel": "Signed by: {{email}}",
       "emailUnknown": "Unknown signer",

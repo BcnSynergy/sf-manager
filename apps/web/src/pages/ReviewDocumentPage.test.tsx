@@ -260,3 +260,124 @@ describe('signature footer', () => {
     expect(signedBy.textContent).not.toBe('');
   });
 });
+
+// review-document-ui spec "Document Page Content" (record region): every
+// entry in the server's own order, its element's code/name/location (real
+// values even for a deactivated/soft-deleted element), and its answers or
+// recorded reason. `entries`/`answers` ordering is done server-side (PR 6) —
+// this page MUST NOT hide, re-sort or truncate them.
+const recordDocument: reviewHistoryApi.ReviewDocument = {
+  ...document,
+  entries: [
+    {
+      inspectableElementId: 'e1',
+      elementCode: 'AB1',
+      elementName: 'Extinguisher A',
+      elementLocation: 'Floor 1',
+      reviewed: true,
+      observations: null,
+      answers: [{ questionId: 'q1', answer: 'YES' }],
+      recordedAt: '2026-09-01T00:10:00.000Z',
+    },
+    {
+      inspectableElementId: 'e2',
+      elementCode: null,
+      elementName: null,
+      elementLocation: null,
+      reviewed: false,
+      observations: 'Access blocked',
+      answers: [],
+      recordedAt: '2026-09-01T00:20:00.000Z',
+    },
+  ],
+  questions: [{ questionId: 'q1', order: 1, text: 'Is it charged?' }],
+};
+
+describe('record region', () => {
+  it('renders every entry in the server order with its element identity and localized answers', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const entryIds = screen
+      .getAllByTestId(/^review-document-record-entry-/)
+      .filter((element) => element.tagName === 'LI')
+      .map((element) => element.dataset.testid);
+    expect(entryIds).toEqual([
+      'review-document-record-entry-e1',
+      'review-document-record-entry-e2',
+    ]);
+
+    const firstIdentity = screen.getByTestId('review-document-record-entry-identity-e1');
+    expect(firstIdentity).toHaveTextContent('AB1');
+    expect(firstIdentity).toHaveTextContent('Extinguisher A');
+    expect(firstIdentity).toHaveTextContent('Floor 1');
+    expect(screen.getByTestId('review-document-record-entry-e1')).toHaveTextContent(
+      'Is it charged?',
+    );
+  });
+
+  it('renders the real identity for a deactivated or soft-deleted element, not a neutral label', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    expect(screen.getByTestId('review-document-record-entry-identity-e1')).toHaveTextContent(
+      'AB1',
+    );
+  });
+
+  it('renders a neutral label and the recorded reason for an unreviewed entry with no resolvable element', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const identity = screen.getByTestId('review-document-record-entry-identity-e2');
+    expect(identity.textContent).not.toBe('');
+    expect(identity).not.toHaveTextContent('null');
+    expect(screen.getByTestId('review-document-record-entry-reason-e2')).toHaveTextContent(
+      'Access blocked',
+    );
+  });
+
+  it('renders no entry and no error for a completed session with zero entries', async () => {
+    mockedReadReviewDocument.mockResolvedValue({ ...recordDocument, entries: [] });
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    expect(screen.queryAllByTestId(/^review-document-record-entry-/)).toHaveLength(0);
+    expect(screen.queryByTestId('review-document-error')).not.toBeInTheDocument();
+  });
+});
+
+// review-document-ui spec "Print Through the Browser, Document Only" /
+// "The Document Page Offers No Other Action".
+describe('print control', () => {
+  it('opens the browser print dialog through the single print control, marked print-hidden', async () => {
+    mockedReadReviewDocument.mockResolvedValue(document);
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+    const printButton = screen.getByTestId('review-document-print-button');
+    expect(printButton).toHaveAttribute('data-print-hide');
+
+    printButton.click();
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    printSpy.mockRestore();
+  });
+
+  it('offers no control besides print and ordinary navigation', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
+});

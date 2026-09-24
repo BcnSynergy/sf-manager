@@ -182,4 +182,26 @@ code {
     fill: #000;
     shape-rendering: crispEdges;
   }
+
+  /* review-export/design.md "Web surface": the review document page's own
+     print scope, same allowlist/reset convention as `.label-print` above —
+     `[data-print-hide]` hides the page heading, the incomplete-profile
+     warning (index at PR 11) and the print button (PR 12); nothing else on
+     this page is screen-only. review-document-ui spec "Print Through the
+     Browser, Document Only": the printed output MUST contain only the
+     document itself. */
+  .review-document-print [data-print-hide] {
+    display: none;
+  }
+
+  .review-document-print {
+    background: #fff;
+    color: #000;
+    border: none;
+    text-align: left;
+  }
+
+  #root:has(.review-document-print) {
+    border: none;
+  }
 }

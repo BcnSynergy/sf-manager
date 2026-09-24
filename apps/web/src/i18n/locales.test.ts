@@ -555,6 +555,11 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewDocument.footer.signedByLabel',
     'reviewDocument.footer.emailUnknown',
     'reviewDocument.footer.signedAtLabel',
+    // Record and print (PR 12): record region, neutral element label, print control.
+    'reviewDocument.record.title',
+    'reviewDocument.record.elementUnknown',
+    'reviewDocument.record.unreviewedLabel',
+    'reviewDocument.print.button',
   ];
 
   // Existence guard for review-history-manager-capability (PR 4), same
