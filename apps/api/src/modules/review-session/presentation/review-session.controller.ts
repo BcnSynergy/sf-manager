@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
@@ -58,6 +59,29 @@ import { ReviewSessionResponseDto } from './dto/review-session-response.dto';
 import { ReviewSessionDetailResponseDto } from './dto/review-session-detail-response.dto';
 import { ResolveElementResponseDto } from './dto/resolve-element-response.dto';
 import { RecordEntryResponseDto } from './dto/record-entry-response.dto';
+
+// Tech-debt cleanup: every `:sessionId` route below let a malformed id fall
+// through to its use case and, on the real Prisma adapter, to an unmapped
+// 500 against `@db.Uuid` — none of them validated the param at all.
+// `ParseUUIDPipe` with no `version` defaults to 'all', which — in the
+// installed @nestjs/common version — matches ANY hex-hyphen UUID shape
+// regardless of the version nibble, so it accepts this app's UUID v7 ids
+// exactly like every other version; it does not depend on class-validator
+// (ADR-015 only rejects class-validator DTO classes, not this pipe). The
+// exceptionFactory swaps Nest's default `{statusCode, message, error}`
+// shape for this app's `{statusCode, error, message, code}` coded-error
+// convention. Mirrors review-history.controller.ts's own guard, added in
+// the same tech-debt pass.
+function sessionIdPipe(): ParseUUIDPipe {
+  return new ParseUUIDPipe({
+    exceptionFactory: () =>
+      buildCodedError(
+        HttpStatus.BAD_REQUEST,
+        'Malformed session id.',
+        'INVALID_SESSION_ID',
+      ),
+  });
+}
 
 // design.md Decision 10: flat `/review-sessions` API + a separate top-level
 // `/review-scope` path (Express matches in declaration order — a nested
@@ -168,6 +192,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ReviewSessionDetailResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, another performer's session, or a since-" +
@@ -176,7 +205,7 @@ export class ReviewSessionController {
   })
   async read(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewSessionDetailResponseDto> {
     try {
       return await this.readReviewSessionUseCase.execute(sessionId, {
@@ -194,6 +223,11 @@ export class ReviewSessionController {
   @ApiNoContentResponse({ description: 'Draft session discarded.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:discard.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session. Body carries code: ' +
@@ -206,7 +240,7 @@ export class ReviewSessionController {
   })
   async discard(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<void> {
     try {
       await this.discardReviewSessionUseCase.execute(sessionId, {
@@ -223,6 +257,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ResolveElementResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:perform.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session (code: REVIEW_SESSION_NOT_FOUND), ' +
@@ -232,7 +271,7 @@ export class ReviewSessionController {
   })
   async resolveElement(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
     @Param('code') code: string,
   ): Promise<ResolveElementResponseDto> {
     try {
@@ -282,9 +321,10 @@ export class ReviewSessionController {
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:perform.' })
   @ApiBadRequestResponse({
     description:
-      'Body carries neither/both of answers and observations, an empty ' +
-      'answers array, a blank observations reason, or an out-of-range ' +
-      'answer value.',
+      'sessionId is not a well-formed UUID (code: INVALID_SESSION_ID), ' +
+      'or the body carries neither/both of answers and observations, an ' +
+      'empty answers array, a blank observations reason, or an ' +
+      'out-of-range answer value.',
   })
   @ApiNotFoundResponse({
     description:
@@ -297,7 +337,7 @@ export class ReviewSessionController {
   })
   async recordEntry(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
     @Param('elementId') elementId: string,
     @Body(new ZodValidationPipe(recordEntryRequestSchema))
     body: RecordEntryRequest,
@@ -325,6 +365,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ReviewSessionResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:complete.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session. Body carries code: ' +
@@ -338,7 +383,7 @@ export class ReviewSessionController {
   })
   async complete(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<Pick<ReviewSessionResponseDto, 'id' | 'status' | 'completedAt'>> {
     try {
       return await this.completeReviewSessionUseCase.execute(sessionId, {

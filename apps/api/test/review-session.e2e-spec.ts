@@ -345,6 +345,12 @@ async function openSession(
   return response.body as SessionBody;
 }
 
+interface ErrorBody {
+  code?: string;
+  message?: string;
+  statusCode?: number;
+}
+
 describe('Review Sessions (e2e)', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'e2e-test-secret';
@@ -459,6 +465,139 @@ describe('Review Sessions (e2e)', () => {
         .post(`/review-sessions/${session.id}/complete`)
         .expect(200);
       expect((completed.body as { status: string }).status).toBe('completed');
+    });
+  });
+
+  // Tech-debt cleanup follow-up: every `:sessionId` route on this
+  // controller let a malformed id fall through to the use case (and, on
+  // the real Prisma adapter, to an unmapped 500 against `@db.Uuid`) — no
+  // route validated the param at all. `:code` (resolveElement) and
+  // `:elementId` (recordEntry) are deliberately left untouched here:
+  // element codes/ids are not UUIDs and are out of scope for this pipe.
+  describe('Malformed :sessionId rejection (tech-debt cleanup)', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rs-invalid-id-admin@example.com';
+    const technicianEmail = 'rs-invalid-id-technician@example.com';
+    let session: SessionBody;
+    let elementId: string;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rs-invalid-id-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'rs-invalid-id-technician-id',
+        email: technicianEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      built = await buildApp({ users: [admin, technician] });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const community = await createCommunity(
+        adminAgent,
+        'Invalid-id community',
+      );
+      await assignTechnician(
+        adminAgent,
+        community.id,
+        'rs-invalid-id-technician-id',
+      );
+      const element = await createElement(
+        adminAgent,
+        community.id,
+        'Invalid-id extinguisher',
+      );
+      elementId = element.id;
+      const question = await createQuestion(adminAgent, 'Is the seal intact?');
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Invalid-id template',
+        [question.id],
+      );
+
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+      session = await openSession(technicianAgent, community.id, template.id);
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it('rejects a malformed sessionId on GET /review-sessions/:sessionId with 400, not a 500', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .get('/review-sessions/not-a-uuid')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    it('rejects a malformed sessionId on DELETE /review-sessions/:sessionId with 400, not a 500', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .delete('/review-sessions/not-a-uuid')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    it('rejects a malformed sessionId on GET /review-sessions/:sessionId/elements/:code with 400, not a 500', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .get('/review-sessions/not-a-uuid/elements/SOMECODE1')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    it('rejects a malformed sessionId on PUT /review-sessions/:sessionId/entries/:elementId with 400, not a 500', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .put(`/review-sessions/not-a-uuid/entries/${elementId}`)
+        .send({ observations: 'irrelevant, should never be read' })
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    it('rejects a malformed sessionId on POST /review-sessions/:sessionId/complete with 400, not a 500', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .post('/review-sessions/not-a-uuid/complete')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    // A real, well-formed session id is UUID v7 — pins that the pipe added
+    // above keeps accepting it (mirrors the same pin added to
+    // review-history.e2e-spec.ts).
+    it('still accepts a well-formed UUID v7 sessionId', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      await technicianAgent.get(`/review-sessions/${session.id}`).expect(200);
     });
   });
 
