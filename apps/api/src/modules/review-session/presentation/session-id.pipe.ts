@@ -1,5 +1,5 @@
-import { HttpStatus, ParseUUIDPipe } from '@nestjs/common';
-import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { ParseUUIDPipe } from '@nestjs/common';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 
 // Tech-debt cleanup: extracted from review-history.controller.ts and
 // review-session.controller.ts, which had each grown their own identical
@@ -8,29 +8,20 @@ import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 // adapter, to an unmapped 500 against `@db.Uuid`). One shared pipe now
 // backs both.
 //
-// `ParseUUIDPipe` with no `version` defaults to 'all', which — in the
-// installed @nestjs/common version — matches ANY hex-hyphen UUID shape
-// regardless of the version nibble, so it accepts this app's UUID v7 ids
-// exactly like every other version; it does not depend on class-validator
-// (ADR-015 only rejects class-validator DTO classes, not this pipe). The
-// exceptionFactory swaps Nest's default `{statusCode, message, error}`
-// shape for this app's `{statusCode, error, message, code}` coded-error
-// convention, so a malformed id is reported the same shape as every other
-// 400 in this codebase.
+// uuid-path-validation branch: now a thin wrapper over the shared
+// `uuidParamPipe()` factory (shared/presentation/http/uuid-param.pipe.ts),
+// which generalizes this exact mechanism to every other UUID path param in
+// the codebase. This function is kept as its own named export — rather than
+// inlined at each `@Param('sessionId', ...)` call site — because it is
+// still shared by two controller files (review-session.controller.ts and
+// review-history.controller.ts) and its own message/code pair is worth
+// naming once.
 //
 // Scoped to `:sessionId` only. `:code` (resolveElement) is a 10-character
 // element code, not a UUID, so it must never go through this pipe.
-// `:elementId` (recordEntry) IS an InspectableElement UUID and still lets a
-// malformed id reach Prisma as a 500. That is a known follow-up, together
-// with the other controllers' `:id` params. It needs its own coded error
-// rather than INVALID_SESSION_ID.
+// `:elementId` (recordEntry) and the other controllers' `:id`-shaped params
+// now go through `uuidParamPipe()` directly with their own coded error
+// (uuid-path-validation branch).
 export function sessionIdPipe(): ParseUUIDPipe {
-  return new ParseUUIDPipe({
-    exceptionFactory: () =>
-      buildCodedError(
-        HttpStatus.BAD_REQUEST,
-        'Malformed session id.',
-        'INVALID_SESSION_ID',
-      ),
-  });
+  return uuidParamPipe('INVALID_SESSION_ID', 'Malformed session id.');
 }
