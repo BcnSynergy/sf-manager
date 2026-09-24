@@ -195,9 +195,17 @@ describe('Inspectable Elements (e2e)', () => {
     let app: INestApplication<App>;
     let elementRepository: InMemoryInspectableElementRepository;
     const adminEmail = 'ie-crud-admin@example.com';
-    const communityAId = 'ie-crud-community-a';
-    const communityBId = 'ie-crud-community-b';
-    const softDeletedCommunityId = 'ie-crud-community-soft-deleted';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — :communityId is validated as a UUID (INVALID_COMMUNITY_ID)
+    // and these ids are used as real, successful path targets throughout this
+    // block, not just "not found" placeholders.
+    const communityAId = 'aaaaaaaa-0000-7000-8000-000000000001';
+    const communityBId = 'bbbbbbbb-0000-7000-8000-000000000002';
+    const softDeletedCommunityId = 'cccccccc-0000-7000-8000-000000000003';
+    // Well-formed but never seeded — used where the test's point is "this
+    // community does not exist", so it must survive :communityId UUID
+    // validation and still reach the use case as a real 404 lookup.
+    const nonExistentCommunityId = 'dddddddd-0000-7000-8000-000000000004';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -342,7 +350,7 @@ describe('Inspectable Elements (e2e)', () => {
       const createSpy = jest.spyOn(elementRepository, 'create');
 
       const response = await agent
-        .post('/communities/does-not-exist/inspectable-elements')
+        .post(`/communities/${nonExistentCommunityId}/inspectable-elements`)
         .send({
           elementType: 'EXTINGUISHER',
           name: 'Ghost Extinguisher',
@@ -427,7 +435,7 @@ describe('Inspectable Elements (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const unknownResponse = await agent
-        .get('/communities/does-not-exist/inspectable-elements')
+        .get(`/communities/${nonExistentCommunityId}/inspectable-elements`)
         .expect(404);
       expect(unknownResponse.body).toMatchObject({
         statusCode: 404,
@@ -517,11 +525,6 @@ describe('Inspectable Elements (e2e)', () => {
       // uuid-path-validation branch: well-formed but nonexistent — a
       // non-UUID placeholder would now be rejected by the :elementId pipe
       // before reaching the use case (see the malformed-id case below).
-      // :communityId stays unvalidated (deferred — see uuid-param.pipe.ts
-      // usage in this controller and PR notes): many fixtures across this
-      // suite and community.e2e-spec.ts seed communities directly with
-      // human-readable non-UUID ids used as real, successful path targets,
-      // not just "not found" placeholders.
       const response = await agent
         .patch(
           `/communities/${communityAId}/inspectable-elements/00000000-0000-7000-8000-000000000000`,
@@ -716,6 +719,89 @@ describe('Inspectable Elements (e2e)', () => {
       });
     });
 
+    // uuid-path-validation branch: :communityId is now validated the same
+    // way as :elementId, on every route that takes it.
+    it('rejects a malformed communityId on POST .../inspectable-elements with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post('/communities/not-a-uuid/inspectable-elements')
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Ghost Extinguisher',
+          location: 'Nowhere',
+          installedAt: '2026-03-15',
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on GET .../inspectable-elements with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .get('/communities/not-a-uuid/inspectable-elements')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on PATCH .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Malformed Community Patch Extinguisher',
+          location: 'Roof',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+
+      const response = await agent
+        .patch(`/communities/not-a-uuid/inspectable-elements/${elementId}`)
+        .send({ name: 'Ghost' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on DELETE .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Malformed Community Delete Extinguisher',
+          location: 'Roof',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+
+      const response = await agent
+        .delete(`/communities/not-a-uuid/inspectable-elements/${elementId}`)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
     // review-session/design.md Decision 3 + inspectable-element-management
     // spec.md "Element Active State" / "Decommission and Reactivate an
     // Element": full round trip, reusing inspectableElement:update.
@@ -801,7 +887,9 @@ describe('Inspectable Elements (e2e)', () => {
   describe('No uniqueness on name, location, or serialNumber (tasks.md 10.1, spec: No Uniqueness Constraints on Name, Location, or Serial Number)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'ie-unique-admin@example.com';
-    const communityId = 'ie-unique-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — see the CRUD describe block above.
+    const communityId = 'eeeeeeee-0000-7000-8000-000000000005';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -906,7 +994,9 @@ describe('Inspectable Elements (e2e)', () => {
     const mcManagerEmail = 'ie-guard-mc-manager@example.com';
     const technicianEmail = 'ie-guard-technician@example.com';
     const representativeEmail = 'ie-guard-representative@example.com';
-    const communityId = 'ie-guard-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — see the CRUD describe block above.
+    const communityId = 'ffffffff-0000-7000-8000-000000000006';
     const elementId = 'ie-guard-element-id';
 
     beforeAll(async () => {
@@ -986,6 +1076,18 @@ describe('Inspectable Elements (e2e)', () => {
     it.each(routes)('anonymous %s %s -> 401', async (method, path) => {
       const req = request(app.getHttpServer());
       const response = await sendRoute(req, method, path);
+      expect(response.status).toBe(401);
+    });
+
+    // uuid-path-validation branch: guards run before param pipes, so an
+    // unauthenticated request with a malformed :communityId still gets
+    // 401, never the 400 that a would-be INVALID_COMMUNITY_ID pipe error
+    // would produce for an authenticated caller.
+    it('anonymous GET /communities/not-a-uuid/inspectable-elements -> 401, not 400', async () => {
+      const req = request(app.getHttpServer());
+      const response = await req.get(
+        '/communities/not-a-uuid/inspectable-elements',
+      );
       expect(response.status).toBe(401);
     });
 

@@ -91,12 +91,20 @@ export class InspectableElementController {
   @ApiForbiddenResponse({
     description: 'Caller lacks inspectableElement:create.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'communityId is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Community not found or soft-deleted. Body carries code: COMMUNITY_NOT_FOUND.',
   })
   async create(
-    @Param('communityId') communityId: string,
+    @Param(
+      'communityId',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
     // design.md Addendum Decision 10: raw body, deliberately unpiped —
     // ZodValidationPipe strips `code` out of the typed argument below, so
     // this is the only place the key survives to detect its presence.
@@ -122,12 +130,20 @@ export class InspectableElementController {
   @ApiForbiddenResponse({
     description: 'Caller lacks inspectableElement:read.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'communityId is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Community not found or soft-deleted. Body carries code: COMMUNITY_NOT_FOUND.',
   })
   async list(
-    @Param('communityId') communityId: string,
+    @Param(
+      'communityId',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
   ): Promise<InspectableElementResponseDto[]> {
     try {
       return await this.listInspectableElementsByCommunityUseCase.execute(
@@ -164,7 +180,8 @@ export class InspectableElementController {
   })
   @ApiBadRequestResponse({
     description:
-      'elementId is not a well-formed UUID. Body carries code: INVALID_ELEMENT_ID.',
+      'communityId is not a well-formed UUID (code: INVALID_COMMUNITY_ID), ' +
+      'or elementId is not a well-formed UUID (code: INVALID_ELEMENT_ID).',
   })
   @ApiNotFoundResponse({
     description:
@@ -172,7 +189,11 @@ export class InspectableElementController {
       'found (code: INSPECTABLE_ELEMENT_NOT_FOUND).',
   })
   async update(
-    @Param('communityId') communityId: string,
+    @Param(
+      'communityId',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
     @Param(
       'elementId',
       uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
@@ -202,7 +223,8 @@ export class InspectableElementController {
   })
   @ApiBadRequestResponse({
     description:
-      'elementId is not a well-formed UUID. Body carries code: INVALID_ELEMENT_ID.',
+      'communityId is not a well-formed UUID (code: INVALID_COMMUNITY_ID), ' +
+      'or elementId is not a well-formed UUID (code: INVALID_ELEMENT_ID).',
   })
   @ApiNotFoundResponse({
     description:
@@ -210,7 +232,11 @@ export class InspectableElementController {
       'found (code: INSPECTABLE_ELEMENT_NOT_FOUND).',
   })
   async softDelete(
-    @Param('communityId') communityId: string,
+    @Param(
+      'communityId',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
     @Param(
       'elementId',
       uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
