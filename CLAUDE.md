@@ -35,8 +35,9 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
 - Both retrofit slices have landed and been archived (`users-minimal-ui`,
   `community-minimal-ui` — see `openspec/changes/archive/`). "New slice =
   domain + UI together" is now the steady state with no backlog behind
-  it; `review-history` (in progress) is the first slice built under this
-  rule from the start.
+  it. Every slice since `review-history` has been built this way from the
+  start. The most recent is `review-export` (FR-010 slice 1, archived
+  2026-09-24).
 - If a proposal is about to be written for API-only, ask explicitly
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
@@ -66,12 +67,14 @@ and `community` PR chains — do not re-derive or improvise these:
   merge — confirmed explicitly with the user at each step, not assumed.
   This has repeatedly caught real bugs (DI-bootstrap crashes, error
   misclassification, vacuous concurrency tests) that inline review missed.
+- **Size exceptions**: a PR over the 400-line budget is acceptable when the
+  excess is test fixtures, not logic. Report the code vs test split and
+  let the user accept it. Never trim coverage to fit the budget.
 
 ## Verifying UI Changes
 
 Per the general rule to test UI changes in a real browser before calling
-them done: once a PR in an active UI slice (`users-minimal-ui`,
-`community-minimal-ui`, or any later one) touches `apps/web/**`, actually
+them done: once a PR touches `apps/web/**`, actually
 start the dev server (`npm run dev` from the repo root runs both API and
 web via Turborepo; `apps/web` alone via `npm run dev --workspace=apps/web`,
 Vite) and exercise the feature in a browser (`claude-in-chrome` skill) —
@@ -79,4 +82,30 @@ golden path and the edge cases the slice's spec calls out — before
 reporting the task complete. Passing unit/component/E2E tests verify
 correctness, not that the feature actually works end-to-end in the app;
 say so explicitly if a UI change was only test-verified, not
-browser-verified.
+browser-verified. In `review-export` PR 12, the browser pass caught a print
+bug that neither the tests nor the fresh review found. Headings printed
+near-white because `h1`/`h2` set their own `--text-h` color, which a print
+wrapper's forced black does not reach.
+
+Practicalities learned so far:
+
+- **Logging in**: Claude cannot type passwords. The user logs in, and
+  Claude drives the page after that.
+- **Printing**: the native print dialog blocks the Chrome extension. Check
+  print CSS by copying the `@media print` rules into a screen `<style>`
+  via `javascript_tool` and taking a screenshot. When a spec requires real
+  print-preview evidence, ask the user to open the preview.
+- **Dev data is mostly test fixtures**, with UUID-suffixed names and
+  0-question active templates. The web app has no search in the user or
+  community lists yet. Find ids with `psql` via
+  `docker compose exec -T postgres` and hand the user direct URLs.
+  - QA users for each role exist with the seed technician's password:
+    `rep@`, `companymgr@` and `manager@sf-manager.example`.
+  - Change dev-DB rows directly only with the user's OK, and restore them
+    afterwards.
+- **Dev-DB pollution**: never run the full `test:integration` suite as a
+  routine check. It soft-deletes the seeded admin; restore it with
+  `npm exec -w apps/api -- prisma db seed`. Run single integration specs
+  instead.
+- **Locale**: web i18n is hardcoded to `en`, so ES/CA can only be verified
+  by locale tests, not in the browser.
