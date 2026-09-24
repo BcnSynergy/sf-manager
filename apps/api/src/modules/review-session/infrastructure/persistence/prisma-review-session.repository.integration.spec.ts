@@ -817,7 +817,7 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     const candidateFiles = entries
       .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
       .filter((entry) => !entry.name.endsWith('.spec.ts'))
-      .map((entry) => join(entry.parentPath ?? entry.path, entry.name))
+      .map((entry) => join(entry.parentPath, entry.name))
       .filter((filePath) => !filePath.split(sep).includes('testing'));
 
     const methodNamePattern =
@@ -866,7 +866,7 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
     const candidateFiles = entries
       .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
       .filter((entry) => !entry.name.endsWith('.spec.ts'))
-      .map((entry) => join(entry.parentPath ?? entry.path, entry.name))
+      .map((entry) => join(entry.parentPath, entry.name))
       .filter((filePath) => !filePath.split(sep).includes('testing'));
 
     const methodNamePattern =
