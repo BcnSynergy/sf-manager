@@ -3202,8 +3202,18 @@ describe('Review History (e2e)', () => {
     const adminEmail = 'rhdoc-admin@example.com';
     const technicianUEmail = 'rhdoc-technician-u@example.com';
     const technicianWEmail = 'rhdoc-technician-w@example.com';
+    // review-export tasks.md PR 8 (8.1, 8.2, 8.6): the remaining four
+    // review-history scopes plus the ungranted-MANAGER 404 case, added
+    // alongside PR 7's technician/admin fixtures rather than duplicated in
+    // a fresh describe block — spec: review-document *Document Visibility
+    // Is Exactly the Review-History Scope*.
+    const representativeEmail = 'rhdoc-representative@example.com';
+    const companyManagerEmail = 'rhdoc-company-manager@example.com';
+    const grantedManagerEmail = 'rhdoc-manager-granted@example.com';
+    const ungrantedManagerEmail = 'rhdoc-manager@example.com';
 
     let communityC: CommunityBody;
+    let communityD: CommunityBody;
     let templateId: string;
     let elementC: ElementBody;
     let elementUnreviewed: ElementBody;
@@ -3233,7 +3243,39 @@ describe('Review History (e2e)', () => {
         email: technicianWEmail,
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      built = await buildApp({ users: [admin, technicianU, technicianW] });
+      const representative = await buildSeedUser({
+        id: 'rhdoc-representative-id',
+        email: representativeEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const companyManager = await buildSeedUser({
+        id: 'rhdoc-company-manager-id',
+        email: companyManagerEmail,
+        role: 'MAINTENANCE_COMPANY_MANAGER',
+        maintenanceCompanyId: 'rhdoc-company-id',
+      });
+      const grantedManager = await buildSeedUser({
+        id: 'rhdoc-manager-granted-id',
+        email: grantedManagerEmail,
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      const ungrantedManager = await buildSeedUser({
+        id: 'rhdoc-manager-id',
+        email: ungrantedManagerEmail,
+        role: 'MANAGER',
+      });
+      built = await buildApp({
+        users: [
+          admin,
+          technicianU,
+          technicianW,
+          representative,
+          companyManager,
+          grantedManager,
+          ungrantedManager,
+        ],
+      });
 
       // design.md Decision 4 / "PR 7's first case proves this": the reader
       // token resolves to this SAME repository instance through the real
@@ -3257,10 +3299,7 @@ describe('Review History (e2e)', () => {
 
       const adminAgent = await loginAgent(built.app, adminEmail);
       communityC = await createCommunity(adminAgent, 'Document community C');
-      const communityD = await createCommunity(
-        adminAgent,
-        'Document community D',
-      );
+      communityD = await createCommunity(adminAgent, 'Document community D');
       await assignTechnician(
         adminAgent,
         communityC.id,
@@ -3270,6 +3309,14 @@ describe('Review History (e2e)', () => {
         adminAgent,
         communityD.id,
         'rhdoc-technician-w-id',
+      );
+      // tasks.md 8.1/8.6: the representative's own scope for the document
+      // route — assigned to C only, same as the review-history detail
+      // scope it must agree with.
+      await assignRepresentative(
+        adminAgent,
+        communityC.id,
+        'rhdoc-representative-id',
       );
       built.nameDirectory.seedCommunity(communityC.id, communityC.name);
       built.nameDirectory.seedCommunity(communityD.id, communityD.name);
@@ -3459,6 +3506,359 @@ describe('Review History (e2e)', () => {
       expect(draftResponse.body as ErrorBody).toEqual(nonexistentBody);
 
       await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
+    });
+
+    // spec.md review-document "Each of the five scopes reads an in-scope
+    // document" — the remaining four scopes; the technician case is already
+    // covered above. Each reads a session that its own review-history scope
+    // already reaches (review-history spec.md's five-scope matrix), so no
+    // new session fixtures are needed here.
+    it.each([
+      ['representative', () => representativeEmail, () => sessionByUForC.id],
+      ['company manager', () => companyManagerEmail, () => sessionByUForC.id],
+      ['SYSTEM_ADMIN', () => adminEmail, () => sessionByWForD.id],
+      [
+        'MANAGER holding VIEW_ALL_REVIEWS',
+        () => grantedManagerEmail,
+        () => sessionByUForC.id,
+      ],
+    ] as const)(
+      'a %s reads the document of a session in their history scope',
+      async (
+        _label: string,
+        getEmail: () => string,
+        getSessionId: () => string,
+      ) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        await agent
+          .get(`/review-history/${getSessionId()}/document`)
+          .expect(200);
+      },
+    );
+
+    // spec.md review-document "An ungranted manager reads no document" —
+    // fails closed the same way the history detail route already does for
+    // this role (review-history-manager-capability, unit-pinned in
+    // review-history-access.service.spec.ts: the capability gate runs
+    // before any review-session repository read). The e2e layer asserts
+    // only the observable 404 outcome, mirroring the precedent set above
+    // for the same role on the history-detail route (line ~1050).
+    it('an ungranted MANAGER gets 404 REVIEW_SESSION_NOT_FOUND on the document route, never 2xx', async () => {
+      const ungrantedManagerAgent = await loginAgent(
+        built.app,
+        ungrantedManagerEmail,
+      );
+
+      const response = await ungrantedManagerAgent
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(404);
+
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+    });
+
+    // review-history spec.md "The Review Document Read Inherits the
+    // Session-Level History Guards" — no session cookie at all.
+    it('rejects an unauthenticated caller with 401', async () => {
+      await request(built.app.getHttpServer())
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(401);
+    });
+
+    // spec.md review-document "Document and history detail agree for every
+    // caller" — for every caller x session pair below, the two routes must
+    // produce the identical reachability outcome (both 200 or both 404).
+    it.each([
+      [
+        'technician, own session',
+        () => technicianUEmail,
+        () => sessionByUForC.id,
+        200,
+      ],
+      [
+        'representative, in-scope session',
+        () => representativeEmail,
+        () => sessionByUForC.id,
+        200,
+      ],
+      [
+        'representative, out-of-scope session',
+        () => representativeEmail,
+        () => sessionByWForD.id,
+        404,
+      ],
+      [
+        'company manager, in-scope session',
+        () => companyManagerEmail,
+        () => sessionByUForC.id,
+        200,
+      ],
+      [
+        'company manager, out-of-scope session',
+        () => companyManagerEmail,
+        () => sessionByWForD.id,
+        404,
+      ],
+      [
+        'granted MANAGER, any session',
+        () => grantedManagerEmail,
+        () => sessionByWForD.id,
+        200,
+      ],
+      [
+        'ungranted MANAGER, any session',
+        () => ungrantedManagerEmail,
+        () => sessionByUForC.id,
+        404,
+      ],
+    ] as const)(
+      'document and history detail agree for %s',
+      async (
+        _label: string,
+        getEmail: () => string,
+        getSessionId: () => string,
+        expectedStatus: number,
+      ) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        const detailResponse = await agent.get(
+          `/review-history/${getSessionId()}`,
+        );
+        const documentResponse = await agent.get(
+          `/review-history/${getSessionId()}/document`,
+        );
+
+        expect(detailResponse.status).toBe(expectedStatus);
+        expect(documentResponse.status).toBe(expectedStatus);
+      },
+    );
+
+    // spec.md review-document "The document exposes only the letterhead
+    // fields" — exactly the six text keys, never `id`/`logoAssetId`.
+    it('the letterhead carries exactly the six text keys, never id or logoAssetId', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(200);
+
+      const letterhead = (response.body as { letterhead: object }).letterhead;
+      expect(Object.keys(letterhead).sort()).toEqual(
+        ['address', 'email', 'legalName', 'name', 'phone', 'taxId'].sort(),
+      );
+    });
+
+    // spec.md review-document "The profile endpoint stays admin-only" — a
+    // caller who CAN read a document still gets the unchanged 403 on the
+    // admin-only profile endpoint; organization-profile.e2e-spec.ts already
+    // covers this for every non-admin role in isolation, this pins the
+    // specific "can read a document" framing the spec scenario names.
+    it('a technician who can read a document still gets 403 on GET /organization-profile', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      await technicianUAgent.get('/organization-profile').expect(403);
+    });
+
+    // spec.md review-document "A deactivated representative loses the
+    // document" — an isolated representative (not the shared
+    // `representativeEmail` fixture used by the scope-matrix tests above,
+    // so deactivating it here cannot affect those tests).
+    it('a deactivated representative loses the document, 404 REVIEW_SESSION_NOT_FOUND', async () => {
+      const isolatedRepresentative = await buildSeedUser({
+        id: 'rhdoc-representative-deactivate-id',
+        email: 'rhdoc-representative-deactivate@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      built.userRepository.seed(isolatedRepresentative);
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      await assignRepresentative(
+        adminAgent,
+        communityC.id,
+        'rhdoc-representative-deactivate-id',
+      );
+      const representativeAgent = await loginAgent(
+        built.app,
+        'rhdoc-representative-deactivate@example.com',
+      );
+
+      await representativeAgent
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(200);
+
+      await adminAgent
+        .delete(
+          `/communities/${communityC.id}/representatives/rhdoc-representative-deactivate-id`,
+        )
+        .expect(204);
+
+      const response = await representativeAgent
+        .get(`/review-history/${sessionByUForC.id}/document`)
+        .expect(404);
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+    });
+
+    // spec.md review-document "A representative who signed loses the
+    // document after reassignment (accepted for slice 1)" — a representative
+    // who performed and signed her OWN session on C still loses it once her
+    // assignment is deactivated; document visibility is carried entirely by
+    // the review-history scope, never by having performed the session.
+    it('a representative who signed loses the document after her assignment is deactivated', async () => {
+      const isolatedRepresentative = await buildSeedUser({
+        id: 'rhdoc-representative-signer-id',
+        email: 'rhdoc-representative-signer@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      built.userRepository.seed(isolatedRepresentative);
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      // A dedicated, element-free community: completion requires every
+      // active element of the template's type in the community to carry an
+      // entry (design.md Decision 2) — communityC already has two, so
+      // reusing it here would 409. An empty community lets the
+      // representative complete trivially, with zero entries.
+      const communityRepSigner = await createCommunity(
+        adminAgent,
+        'Document representative-signer community',
+      );
+      built.nameDirectory.seedCommunity(
+        communityRepSigner.id,
+        communityRepSigner.name,
+      );
+      await assignRepresentative(
+        adminAgent,
+        communityRepSigner.id,
+        'rhdoc-representative-signer-id',
+      );
+      const representativeAgent = await loginAgent(
+        built.app,
+        'rhdoc-representative-signer@example.com',
+      );
+
+      const opened = (
+        await representativeAgent
+          .post('/review-sessions')
+          .send({ communityId: communityRepSigner.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      const completed = (
+        await representativeAgent
+          .post(`/review-sessions/${opened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
+      await representativeAgent
+        .get(`/review-history/${completed.id}/document`)
+        .expect(200);
+
+      await adminAgent
+        .delete(
+          `/communities/${communityRepSigner.id}/representatives/rhdoc-representative-signer-id`,
+        )
+        .expect(204);
+
+      const response = await representativeAgent
+        .get(`/review-history/${completed.id}/document`)
+        .expect(404);
+      expect((response.body as ErrorBody).code).toBe(
+        'REVIEW_SESSION_NOT_FOUND',
+      );
+    });
+  });
+
+  // review-export tasks.md PR 8 (8.7): a dedicated, unseeded org-profile
+  // fixture — the shared `built` above always seeds a filled profile, so the
+  // blank-profile scenario needs its own isolated app instance.
+  describe('GET /review-history/:sessionId/document — blank organization profile', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rhdocblank-admin@example.com';
+    const technicianEmail = 'rhdocblank-technician@example.com';
+
+    let sessionId: string;
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'rhdocblank-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: 'rhdocblank-technician-id',
+        email: technicianEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      built = await buildApp({ users: [admin, technician] });
+      // Deliberately no organizationProfileRepository.seed(...) call — the
+      // fake starts blank (InMemoryOrganizationProfileRepository's own
+      // constructor default), mirroring "the organization profile has
+      // never been edited".
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const community = await createCommunity(
+        adminAgent,
+        'Document blank-profile community',
+      );
+      await assignTechnician(
+        adminAgent,
+        community.id,
+        'rhdocblank-technician-id',
+      );
+      built.nameDirectory.seedCommunity(community.id, community.name);
+
+      const question = await createQuestion(
+        adminAgent,
+        'Is the extinguisher accessible?',
+      );
+      const template = await createActiveTemplate(
+        adminAgent,
+        'Document blank-profile template',
+        [question.id],
+      );
+
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+      const opened = (
+        await technicianAgent
+          .post('/review-sessions')
+          .send({ communityId: community.id, templateId: template.id })
+          .expect(201)
+      ).body as { id: string };
+      const completed = (
+        await technicianAgent
+          .post(`/review-sessions/${opened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+      sessionId = completed.id;
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    // spec.md review-document "A blank profile does not block the document"
+    it('returns 200 with all six letterhead fields as empty strings and no completeness flag', async () => {
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const response = await technicianAgent
+        .get(`/review-history/${sessionId}/document`)
+        .expect(200);
+
+      const letterhead = (
+        response.body as {
+          letterhead: Record<string, unknown>;
+        }
+      ).letterhead;
+      expect(letterhead).toEqual({
+        name: '',
+        legalName: '',
+        taxId: '',
+        address: '',
+        phone: '',
+        email: '',
+      });
+      expect(letterhead).not.toHaveProperty('complete');
+      expect(letterhead).not.toHaveProperty('incomplete');
     });
   });
 });
