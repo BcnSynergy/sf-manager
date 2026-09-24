@@ -1000,6 +1000,26 @@ describe('Review History (e2e)', () => {
         .expect(200);
     });
 
+    // Guard-before-pipe ordering (tech-debt cleanup follow-up): guards run
+    // before parameter pipes in Nest's request lifecycle, so an
+    // unauthenticated caller must be rejected at 401 before the malformed
+    // id is ever inspected — never a 400.
+    it('rejects an unauthenticated caller with a malformed sessionId as 401, not 400', async () => {
+      await request(built.app.getHttpServer())
+        .get('/review-history/not-a-uuid')
+        .expect(401);
+    });
+
+    // The `reviewSession:read` half of this guard-ordering check (an
+    // authenticated caller lacking the route's permission must get 403,
+    // not 400) is skipped deliberately: role-permission.checker.ts's
+    // ROLE_PERMISSIONS table grants `reviewSession:read` to EVERY Role
+    // unconditionally (SYSTEM_ADMIN, MANAGER, MAINTENANCE_COMPANY_MANAGER,
+    // MAINTENANCE_TECHNICIAN, COMMUNITY_REPRESENTATIVE) — there is no role
+    // that could reach this route and be refused by PermissionsGuard, so a
+    // 403 case is unreachable here. If a future role is added without this
+    // permission, add the case then.
+
     it("does not disclose another technician's completed session", async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
