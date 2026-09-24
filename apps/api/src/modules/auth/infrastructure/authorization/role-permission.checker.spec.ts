@@ -258,4 +258,51 @@ describe('RolePermissionChecker', () => {
       ),
     ).toBe(false);
   });
+
+  // review-export tasks.md 8.10, spec.md review-document "No permission is
+  // added": a pinning test for the FULL Permission union (this file's
+  // ALL_PERMISSIONS plus the review-session family kept separate above) and
+  // every ROLE_PERMISSIONS row, so review-export's read-only document route
+  // is caught immediately if it ever adds a Permission member or widens a
+  // ROLE_PERMISSIONS row instead of reusing the existing
+  // `reviewSession:read` gate.
+  describe('review-export: no permission is added (tasks.md 8.10)', () => {
+    const FULL_PERMISSION_SET: Permission[] = [
+      ...ALL_PERMISSIONS,
+      ...REVIEW_SESSION_PERMISSIONS,
+    ];
+
+    it('the Permission union has exactly 33 members total, none of them organizationProfile:* beyond the two already shipped', () => {
+      expect(FULL_PERMISSION_SET).toHaveLength(33);
+      expect(
+        FULL_PERMISSION_SET.filter((permission) =>
+          permission.startsWith('organizationProfile:'),
+        ),
+      ).toEqual(['organizationProfile:read', 'organizationProfile:update']);
+    });
+
+    it('ROLE_PERMISSIONS grants each role exactly its previously-shipped set, unchanged by review-export', () => {
+      const expectedByRole: Record<Role, Permission[]> = {
+        SYSTEM_ADMIN: FULL_PERMISSION_SET.filter(
+          (permission) =>
+            !REVIEW_SESSION_WRITE_PERMISSIONS.includes(permission),
+        ),
+        MANAGER: ['reviewSession:read'],
+        MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read'],
+        MAINTENANCE_TECHNICIAN: REVIEW_SESSION_PERMISSIONS,
+        COMMUNITY_REPRESENTATIVE: REVIEW_SESSION_PERMISSIONS,
+      };
+
+      for (const [role, expectedPermissions] of Object.entries(
+        expectedByRole,
+      ) as [Role, Permission[]][]) {
+        const actualPermissions = FULL_PERMISSION_SET.filter((permission) =>
+          checker.can(role, permission),
+        );
+        expect(actualPermissions.sort()).toEqual(
+          [...expectedPermissions].sort(),
+        );
+      }
+    });
+  });
 });
