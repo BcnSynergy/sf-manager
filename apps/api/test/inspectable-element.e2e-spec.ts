@@ -514,9 +514,17 @@ describe('Inspectable Elements (e2e)', () => {
     it('returns 404 INSPECTABLE_ELEMENT_NOT_FOUND updating a non-existent element id (spec: Update targets a non-existent element id)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
+      // uuid-path-validation branch: well-formed but nonexistent — a
+      // non-UUID placeholder would now be rejected by the :elementId pipe
+      // before reaching the use case (see the malformed-id case below).
+      // :communityId stays unvalidated (deferred — see uuid-param.pipe.ts
+      // usage in this controller and PR notes): many fixtures across this
+      // suite and community.e2e-spec.ts seed communities directly with
+      // human-readable non-UUID ids used as real, successful path targets,
+      // not just "not found" placeholders.
       const response = await agent
         .patch(
-          `/communities/${communityAId}/inspectable-elements/does-not-exist`,
+          `/communities/${communityAId}/inspectable-elements/00000000-0000-7000-8000-000000000000`,
         )
         .send({ name: 'Ghost' })
         .expect(404);
@@ -524,6 +532,20 @@ describe('Inspectable Elements (e2e)', () => {
       expect(response.body).toMatchObject({
         statusCode: 404,
         code: 'INSPECTABLE_ELEMENT_NOT_FOUND',
+      });
+    });
+
+    it('rejects a malformed elementId on PATCH .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch(`/communities/${communityAId}/inspectable-elements/not-a-uuid`)
+        .send({ name: 'Ghost' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_ELEMENT_ID',
       });
     });
 
@@ -638,9 +660,11 @@ describe('Inspectable Elements (e2e)', () => {
     it('returns 404 INSPECTABLE_ELEMENT_NOT_FOUND deleting a missing or already soft-deleted element (spec: Delete targets an element that is missing, soft-deleted, or in a different community)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
+      // uuid-path-validation branch: well-formed but nonexistent, same
+      // rationale as the PATCH case above.
       const missingResponse = await agent
         .delete(
-          `/communities/${communityAId}/inspectable-elements/does-not-exist`,
+          `/communities/${communityAId}/inspectable-elements/00000000-0000-7000-8000-000000000000`,
         )
         .expect(404);
       expect(missingResponse.body).toMatchObject({
@@ -672,6 +696,23 @@ describe('Inspectable Elements (e2e)', () => {
       expect(repeatResponse.body).toMatchObject({
         statusCode: 404,
         code: 'INSPECTABLE_ELEMENT_NOT_FOUND',
+      });
+    });
+
+    // uuid-path-validation branch: same gap as PATCH above, on DELETE.
+    // Guard-before-pipe ordering is already pinned by the anonymous-401
+    // check on this controller (a fixed non-UUID `elementId` on PATCH/
+    // DELETE already asserts 401, not 400).
+    it('rejects a malformed elementId on DELETE .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .delete(`/communities/${communityAId}/inspectable-elements/not-a-uuid`)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_ELEMENT_ID',
       });
     });
 
