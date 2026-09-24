@@ -195,9 +195,17 @@ describe('Inspectable Elements (e2e)', () => {
     let app: INestApplication<App>;
     let elementRepository: InMemoryInspectableElementRepository;
     const adminEmail = 'ie-crud-admin@example.com';
-    const communityAId = 'ie-crud-community-a';
-    const communityBId = 'ie-crud-community-b';
-    const softDeletedCommunityId = 'ie-crud-community-soft-deleted';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — :communityId is validated as a UUID (INVALID_COMMUNITY_ID)
+    // and these ids are used as real, successful path targets throughout this
+    // block, not just "not found" placeholders.
+    const communityAId = 'aaaaaaaa-0000-7000-8000-000000000001';
+    const communityBId = 'bbbbbbbb-0000-7000-8000-000000000002';
+    const softDeletedCommunityId = 'cccccccc-0000-7000-8000-000000000003';
+    // Well-formed but never seeded — used where the test's point is "this
+    // community does not exist", so it must survive :communityId UUID
+    // validation and still reach the use case as a real 404 lookup.
+    const nonExistentCommunityId = 'dddddddd-0000-7000-8000-000000000004';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -342,7 +350,7 @@ describe('Inspectable Elements (e2e)', () => {
       const createSpy = jest.spyOn(elementRepository, 'create');
 
       const response = await agent
-        .post('/communities/does-not-exist/inspectable-elements')
+        .post(`/communities/${nonExistentCommunityId}/inspectable-elements`)
         .send({
           elementType: 'EXTINGUISHER',
           name: 'Ghost Extinguisher',
@@ -427,7 +435,7 @@ describe('Inspectable Elements (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const unknownResponse = await agent
-        .get('/communities/does-not-exist/inspectable-elements')
+        .get(`/communities/${nonExistentCommunityId}/inspectable-elements`)
         .expect(404);
       expect(unknownResponse.body).toMatchObject({
         statusCode: 404,
@@ -801,7 +809,9 @@ describe('Inspectable Elements (e2e)', () => {
   describe('No uniqueness on name, location, or serialNumber (tasks.md 10.1, spec: No Uniqueness Constraints on Name, Location, or Serial Number)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'ie-unique-admin@example.com';
-    const communityId = 'ie-unique-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — see the CRUD describe block above.
+    const communityId = 'eeeeeeee-0000-7000-8000-000000000005';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -906,7 +916,9 @@ describe('Inspectable Elements (e2e)', () => {
     const mcManagerEmail = 'ie-guard-mc-manager@example.com';
     const technicianEmail = 'ie-guard-technician@example.com';
     const representativeEmail = 'ie-guard-representative@example.com';
-    const communityId = 'ie-guard-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — see the CRUD describe block above.
+    const communityId = 'ffffffff-0000-7000-8000-000000000006';
     const elementId = 'ie-guard-element-id';
 
     beforeAll(async () => {
