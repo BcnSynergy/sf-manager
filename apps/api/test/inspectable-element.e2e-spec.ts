@@ -525,11 +525,6 @@ describe('Inspectable Elements (e2e)', () => {
       // uuid-path-validation branch: well-formed but nonexistent — a
       // non-UUID placeholder would now be rejected by the :elementId pipe
       // before reaching the use case (see the malformed-id case below).
-      // :communityId stays unvalidated (deferred — see uuid-param.pipe.ts
-      // usage in this controller and PR notes): many fixtures across this
-      // suite and community.e2e-spec.ts seed communities directly with
-      // human-readable non-UUID ids used as real, successful path targets,
-      // not just "not found" placeholders.
       const response = await agent
         .patch(
           `/communities/${communityAId}/inspectable-elements/00000000-0000-7000-8000-000000000000`,
@@ -721,6 +716,89 @@ describe('Inspectable Elements (e2e)', () => {
       expect(response.body).toMatchObject({
         statusCode: 400,
         code: 'INVALID_ELEMENT_ID',
+      });
+    });
+
+    // uuid-path-validation branch: :communityId is now validated the same
+    // way as :elementId, on every route that takes it.
+    it('rejects a malformed communityId on POST .../inspectable-elements with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .post('/communities/not-a-uuid/inspectable-elements')
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Ghost Extinguisher',
+          location: 'Nowhere',
+          installedAt: '2026-03-15',
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on GET .../inspectable-elements with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .get('/communities/not-a-uuid/inspectable-elements')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on PATCH .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Malformed Community Patch Extinguisher',
+          location: 'Roof',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+
+      const response = await agent
+        .patch(`/communities/not-a-uuid/inspectable-elements/${elementId}`)
+        .send({ name: 'Ghost' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed communityId on DELETE .../inspectable-elements/:elementId with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const created = await agent
+        .post(`/communities/${communityAId}/inspectable-elements`)
+        .send({
+          elementType: 'EXTINGUISHER',
+          name: 'Malformed Community Delete Extinguisher',
+          location: 'Roof',
+          installedAt: '2026-03-15',
+        })
+        .expect(201);
+      const elementId = (created.body as ElementResponseBody).id;
+
+      const response = await agent
+        .delete(`/communities/not-a-uuid/inspectable-elements/${elementId}`)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
       });
     });
 
@@ -998,6 +1076,18 @@ describe('Inspectable Elements (e2e)', () => {
     it.each(routes)('anonymous %s %s -> 401', async (method, path) => {
       const req = request(app.getHttpServer());
       const response = await sendRoute(req, method, path);
+      expect(response.status).toBe(401);
+    });
+
+    // uuid-path-validation branch: guards run before param pipes, so an
+    // unauthenticated request with a malformed :communityId still gets
+    // 401, never the 400 that a would-be INVALID_COMMUNITY_ID pipe error
+    // would produce for an authenticated caller.
+    it('anonymous GET /communities/not-a-uuid/inspectable-elements -> 401, not 400', async () => {
+      const req = request(app.getHttpServer());
+      const response = await req.get(
+        '/communities/not-a-uuid/inspectable-elements',
+      );
       expect(response.status).toBe(401);
     });
 
