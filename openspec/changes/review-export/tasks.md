@@ -158,29 +158,29 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 
 Not test-first: this PR is the test suite that locks behaviour PR 7 already ships.
 
-- [ ] 8.1 Representative, company manager, `SYSTEM_ADMIN`, `MANAGER` holding
+- [x] 8.1 Representative, company manager, `SYSTEM_ADMIN`, `MANAGER` holding
       `VIEW_ALL_REVIEWS` each read their in-scope document 200 — spec:
       review-document *Each of the five scopes reads an in-scope document*
       (remaining four)
-- [ ] 8.2 Ungranted `MANAGER` gets 404, no repository read issued — spec:
+- [x] 8.2 Ungranted `MANAGER` gets 404, no repository read issued — spec:
       *An ungranted manager reads no document*
-- [ ] 8.3 Deactivated representative loses the document 404 — spec:
+- [x] 8.3 Deactivated representative loses the document 404 — spec:
       *A deactivated representative loses the document*
-- [ ] 8.4 Representative who signed then was unassigned gets 404 — spec:
+- [x] 8.4 Representative who signed then was unassigned gets 404 — spec:
       *A representative who signed loses the document after reassignment
       (accepted for slice 1)*
-- [ ] 8.5 Unauthenticated request 401 — spec: review-history
+- [x] 8.5 Unauthenticated request 401 — spec: review-history
       *The Review Document Read Inherits the Session-Level History Guards*
-- [ ] 8.6 Document/history-detail parity for every caller — spec:
+- [x] 8.6 Document/history-detail parity for every caller — spec:
       *Document and history detail agree for every caller*
-- [ ] 8.7 Blank profile 200, all six letterhead fields empty string, no
+- [x] 8.7 Blank profile 200, all six letterhead fields empty string, no
       completeness flag — spec: *A blank profile does not block the document*
-- [ ] 8.8 Document exposes exactly six letterhead keys, no `id`/`logoAssetId`
+- [x] 8.8 Document exposes exactly six letterhead keys, no `id`/`logoAssetId`
       — spec: *The document exposes only the letterhead fields*
-- [ ] 8.9 `GET /organization-profile` still 403 for every non-admin role —
+- [x] 8.9 `GET /organization-profile` still 403 for every non-admin role —
       spec: *The profile endpoint stays admin-only*; authorization
       *The Organization Profile Grants Nothing Beyond Itself*
-- [ ] 8.10 Assert `Permission` union and `ROLE_PERMISSIONS` unchanged — spec:
+- [x] 8.10 Assert `Permission` union and `ROLE_PERMISSIONS` unchanged — spec:
       *No permission is added*
 
 ## PR 9 — Web helpers (~200 lines)
