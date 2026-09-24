@@ -137,24 +137,42 @@ describe('InspectableElement schema (migration integration guard)', () => {
   });
 
   // label-printing spec "Pre-Existing Elements Are Backfilled With Codes":
-  // every row that existed before this migration (this DB holds
-  // representative rows, not an empty table) must end up with a
+  // every row that existed before this migration must end up with a
   // well-formed, distinct code — proving the backfill actually ran, not
   // just that the column exists.
-  it('every existing row has a well-formed code and all codes are distinct', async () => {
-    const rows = await prisma.$queryRaw<Array<{ code: string }>>`
-      SELECT "code" FROM "InspectableElement"
-    `;
-
-    expect(rows.length).toBeGreaterThan(0);
-
-    const codes = rows.map((r) => r.code);
-    for (const code of codes) {
-      expect(code).toMatch(/^[2-9A-HJKMNP-Z]{10}$/);
-    }
-
-    expect(new Set(codes).size).toBe(codes.length);
-  });
+  //
+  // Made hermetic (tech-debt cleanup, mirroring organization-profile-
+  // migration.integration.spec.ts's remediation): this used to read
+  // `SELECT "code" FROM "InspectableElement"` and assert on the LIVE row
+  // set — `rows.length` depends on how many elements happen to exist in
+  // this shared, long-lived dev Postgres instance at test time (zero after
+  // a cleanup), which is dev-usage state, not a migration guarantee.
+  //
+  // The two structural facts the migration SQL actually establishes are
+  // both already asserted elsewhere in this file, and together they ARE
+  // the full original guarantee:
+  //   - "the code column is character varying(10) and NOT NULL" (above):
+  //     `ALTER TABLE ... ALTER COLUMN "code" SET NOT NULL` is the LAST
+  //     statement of this migration and fails the whole migration closed
+  //     if the per-row backfill loop missed any row — so this migration
+  //     having applied at all (which every other test here already
+  //     depends on) is itself the proof every pre-existing row got a code.
+  //   - "the InspectableElement_code_key unique index is present" (above):
+  //     the migration creates this UNIQUE index BEFORE running the
+  //     backfill loop specifically so uniqueness is DB-enforced during
+  //     backfill (the loop retries on `unique_violation`) — the index
+  //     existing today, on a table that has taken writes since, is
+  //     already proof no duplicate was ever able to land.
+  //
+  // Known trade-off (same shape as organization-profile's): the exact
+  // character-set backfill produces (`[2-9A-HJKMNP-Z]{10}`, excluding
+  // easily-confused glyphs) is not DB-enforced by any CHECK constraint —
+  // VARCHAR(10) bounds length, not charset — so it cannot be verified
+  // hermetically against live, mutable data. The runtime generator draws
+  // from the same alphabet and is covered by
+  // random-element-code.generator.spec.ts; the one-time SQL backfill loop
+  // above is not independently unit-tested, and that gap is accepted here
+  // rather than reintroduced as a live-data read.
 
   // label-printing/design.md Decision 4a + tasks.md 3.10: the PR1
   // transitional bridge (temp_bridge_random_inspectable_element_code() as a
@@ -184,24 +202,32 @@ describe('InspectableElement schema (migration integration guard)', () => {
 
   // review-session/design.md Decision 3 + inspectable-element-management
   // spec.md "Pre-Existing Elements Are Active After the Migration": a plain
-  // nullable ADD COLUMN needs no backfill — every row that existed before
-  // this migration ends up NULL, i.e. active, by construction.
-  it('the deactivatedAt column is nullable', async () => {
-    const rows = await prisma.$queryRaw<Array<{ is_nullable: string }>>`
-      SELECT is_nullable FROM information_schema.columns
+  // nullable ADD COLUMN with no DEFAULT needs no explicit backfill — this
+  // is a Postgres-level guarantee of ADD COLUMN semantics, not app logic:
+  // every row that existed before this migration ends up NULL, i.e.
+  // active, by construction. Both structural facts that make that true are
+  // asserted here — nullable, and no default — so this migration having
+  // applied at all is itself the proof every pre-existing row is NULL.
+  //
+  // Made hermetic (tech-debt cleanup): a sibling test used to additionally
+  // run `SELECT COUNT(*) ... WHERE "deactivatedAt" IS NOT NULL` and assert
+  // zero — but ordinary post-migration dev use (deactivating an element
+  // through the app, exercised by e.g. review-history's e2e suite against
+  // this same shared dev DB) legitimately sets `deactivatedAt` on rows
+  // going forward. That is expected, current-state data, not a migration
+  // defect, so asserting on it made this suite go red after normal dev
+  // use. Removed rather than reworded — the DDL check below already proves
+  // everything the migration itself guarantees.
+  it('the deactivatedAt column is nullable with no DEFAULT', async () => {
+    const rows = await prisma.$queryRaw<
+      Array<{ is_nullable: string; column_default: string | null }>
+    >`
+      SELECT is_nullable, column_default FROM information_schema.columns
       WHERE table_name = 'InspectableElement' AND column_name = 'deactivatedAt'
     `;
 
     expect(rows).toHaveLength(1);
     expect(rows[0].is_nullable).toBe('YES');
-  });
-
-  it('no row is left with a non-NULL deactivatedAt after the migration (no row is left indeterminate)', async () => {
-    const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT COUNT(*) AS count FROM "InspectableElement"
-      WHERE "deactivatedAt" IS NOT NULL
-    `;
-
-    expect(Number(rows[0].count)).toBe(0);
+    expect(rows[0].column_default).toBeNull();
   });
 });
