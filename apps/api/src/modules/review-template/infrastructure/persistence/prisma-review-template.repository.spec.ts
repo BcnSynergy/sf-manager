@@ -376,6 +376,107 @@ describe('PrismaReviewTemplateRepository.activate()', () => {
     );
   });
 
+  // Regression guard for the substring-matching bug this exact-match fix
+  // replaces: the actual SQLSTATE here (23503, a foreign-key violation) is
+  // NOT a conflict code, but the wrapped Postgres error TEXT happens to
+  // contain the digits of a conflict SQLSTATE (23505) — e.g. because the
+  // detail names a constraint or index whose identifier embeds it. A
+  // free `message.includes('23505')` search would wrongly map this to
+  // TransactionConflictError; exact-match extraction of the `Code:` field
+  // must not.
+  it('does NOT map a P2010 whose actual SQLSTATE (23503) is not a conflict code even when the message TEXT contains the digits of 23505 elsewhere', async () => {
+    const original = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Code: `23503`. Message: `insert or update on table violates foreign key constraint "fk_23505_backup_lineage"`',
+      { code: 'P2010', clientVersion: 'test' },
+    );
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(original),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toBe(
+      original,
+    );
+  });
+
+  // Same regression guard, for the 40001 conflict code: the actual
+  // SQLSTATE (22P02, invalid text representation) is not a conflict code,
+  // but the error detail happens to quote a value that contains "40001".
+  it('does NOT map a P2010 whose actual SQLSTATE (22P02) is not a conflict code even when the message TEXT contains the digits of 40001 elsewhere', async () => {
+    const original = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Code: `22P02`. Message: `invalid input syntax for type uuid: "40001-not-a-real-id"`',
+      { code: 'P2010', clientVersion: 'test' },
+    );
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(original),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toBe(
+      original,
+    );
+  });
+
+  // Documents the deliberate no-prefix-matching decision: 40003
+  // (statement_completion_unknown, e.g. after a lost connection mid-statement)
+  // is in the same SQLSTATE class 40 ("Transaction Rollback") as
+  // 40001/40P01, but it means the statement's outcome is UNKNOWN — not "safe
+  // to treat as a normal retryable conflict". It must not be mapped just
+  // because it shares the "40" class prefix with the allowlisted codes.
+  it('does NOT map a P2010 with SQLSTATE 40003 (statement_completion_unknown) — same class-40 family as 40001/40P01 but deliberately not allowlisted', async () => {
+    const original = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Code: `40003`. Message: `cannot commit transaction on a connection with results pending`',
+      { code: 'P2010', clientVersion: 'test' },
+    );
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(original),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toBe(
+      original,
+    );
+  });
+
+  // Confirms the extraction deliberately reads ONLY error.message, not
+  // error.meta. Empirically (Prisma 7.9.1 + @prisma/adapter-pg,
+  // node_modules/@prisma/client/runtime/client.js's P2010 factory), the
+  // real driver also attaches `meta.driverAdapterError.cause.originalCode`
+  // carrying the same SQLSTATE — but `meta` is typed as
+  // `Record<string, unknown>` with no public contract for that shape, so
+  // this repository does not read it. A populated, even conflicting, meta
+  // must not change the outcome derived from the message's `Code:` field.
+  it('ignores a populated error.meta and extracts the SQLSTATE from error.message only', async () => {
+    const original = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Code: `23503`. Message: `foreign key violation`',
+      {
+        code: 'P2010',
+        clientVersion: 'test',
+        meta: {
+          driverAdapterError: {
+            cause: { originalCode: '40001', originalMessage: 'ignored' },
+          },
+        },
+      },
+    );
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(original),
+    };
+    const repository = new PrismaReviewTemplateRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(repository.activate(TEMPLATE_ID, ROW_IDS)).rejects.toBe(
+      original,
+    );
+  });
+
   it('binds templateId and rowIds into the snapshot INSERT...SELECT statement', async () => {
     const tx = makeTxMock({
       $queryRaw: jest
