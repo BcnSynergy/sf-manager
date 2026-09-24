@@ -3241,6 +3241,42 @@ describe('Review History (e2e)', () => {
         .send({ name: 'Renamed' })
         .expect(403);
     });
+
+    // uuid-path-validation branch: this route's :communityId and :elementId
+    // used to reach ReadElementReviewHistoryUseCase unvalidated — a
+    // malformed value fell through to Prisma's `@db.Uuid` columns on the
+    // real adapter (an unmapped 500) or, against this hermetic suite's
+    // in-memory fakes, resolved to the same uniform
+    // INSPECTABLE_ELEMENT_NOT_FOUND 404 the "unknown element" case above
+    // asserts. Both params are now validated before the use case runs.
+    // Unauthenticated + malformed guard-ordering is already pinned for
+    // `:sessionId` on this controller (line ~1007) — it is the same guard
+    // stack for every route here, so it is not re-pinned per param.
+    it('rejects a malformed communityId with 400, not the uniform 404', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const response = await adminAgent
+        .get(elementHistoryPath('not-a-uuid', elementShared.id))
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_COMMUNITY_ID',
+      });
+    });
+
+    it('rejects a malformed elementId with 400, not the uniform 404', async () => {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const response = await adminAgent
+        .get(elementHistoryPath(communityC.id, 'not-a-uuid'))
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_ELEMENT_ID',
+      });
+    });
   });
 
   // review-export tasks.md PR 7 (7.1/7.2): the document route's first two

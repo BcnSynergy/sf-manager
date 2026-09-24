@@ -11,6 +11,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import type { VerifiedAccessToken } from '../../auth/application/ports/token-issuer.port';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { sessionIdPipe } from './session-id.pipe';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
@@ -144,6 +145,11 @@ export class ReviewHistoryController {
   @ApiOkResponse({ type: ElementReviewHistoryResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'communityId is not a well-formed UUID (code: INVALID_COMMUNITY_ID), ' +
+      'or elementId is not a well-formed UUID (code: INVALID_ELEMENT_ID).',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown element, soft-deleted element, wrong community, or an ' +
@@ -152,8 +158,16 @@ export class ReviewHistoryController {
   })
   async readElementHistory(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('communityId') communityId: string,
-    @Param('elementId') elementId: string,
+    @Param(
+      'communityId',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
+    @Param(
+      'elementId',
+      uuidParamPipe('INVALID_ELEMENT_ID', 'Malformed element id.'),
+    )
+    elementId: string,
   ): Promise<ElementReviewHistoryResponseDto> {
     try {
       return await this.readElementReviewHistoryUseCase.execute(
