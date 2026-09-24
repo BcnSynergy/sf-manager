@@ -11,8 +11,15 @@
 // gains a third 409 cause, COMMUNITY_HAS_ACTIVE_ELEMENTS, when the atomic
 // delete guard refuses. Mirrored in apps/web/src/api/community.ts (tasks.md
 // 3.12).
+// uuid-path-validation branch: INVALID_COMMUNITY_ID and INVALID_USER_ID
+// are the coded 400s for a malformed `:id` / `:userId`, both built via the
+// shared uuidParamPipe() factory — same convention as INVALID_ELEMENT_ID
+// (inspectable-element-error-code.ts) and INVALID_USER_ID
+// (user-error-code.ts).
 export type CommunityErrorCode =
   | 'ASSIGNMENT_ALREADY_EXISTS'
   | 'INELIGIBLE_ROLE'
   | 'TRANSACTION_CONFLICT'
-  | 'COMMUNITY_HAS_ACTIVE_ELEMENTS';
+  | 'COMMUNITY_HAS_ACTIVE_ELEMENTS'
+  | 'INVALID_COMMUNITY_ID'
+  | 'INVALID_USER_ID';

@@ -12,6 +12,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -30,6 +31,7 @@ import {
 } from '@sf-manager/validation';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { UserNotFoundError } from '../../users/domain/errors/user-not-found.error';
 import { AddRepresentativeUseCase } from '../application/use-cases/add-representative.use-case';
@@ -147,9 +149,17 @@ export class CommunityController {
   @ApiOkResponse({ type: CommunityResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:update.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Community not found.' })
   async update(
-    @Param('id') id: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    id: string,
     @Body(new ZodValidationPipe(updateCommunitySchema))
     body: UpdateCommunityRequestDto,
   ): Promise<CommunityResponseDto> {
@@ -166,12 +176,22 @@ export class CommunityController {
   @ApiNoContentResponse({ description: 'Community soft-deleted.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:delete.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Community not found.' })
   @ApiConflictResponse({
     description:
       'Community has active inspectable elements attached. Body carries code: COMMUNITY_HAS_ACTIVE_ELEMENTS.',
   })
-  async softDelete(@Param('id') id: string): Promise<void> {
+  async softDelete(
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    id: string,
+  ): Promise<void> {
     try {
       await this.softDeleteCommunityUseCase.execute(id);
     } catch (error) {
@@ -188,8 +208,16 @@ export class CommunityController {
   @ApiOkResponse({ type: RepresentativeListItemDto, isArray: true })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   async listRepresentatives(
-    @Param('id') communityId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
   ): Promise<RepresentativeListItemDto[]> {
     const records =
       await this.communityRepresentativeRepository.listByCommunity(communityId);
@@ -215,6 +243,10 @@ export class CommunityController {
   @ApiCreatedResponse({ type: RepresentativeResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Community or user not found.' })
   @ApiConflictResponse({
     description:
@@ -223,7 +255,11 @@ export class CommunityController {
       'change occurred (code: TRANSACTION_CONFLICT).',
   })
   async addRepresentative(
-    @Param('id') communityId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
     @Body(new ZodValidationPipe(addRepresentativeSchema))
     body: AddRepresentativeRequestDto,
   ): Promise<RepresentativeResponseDto> {
@@ -245,10 +281,20 @@ export class CommunityController {
   @ApiNoContentResponse({ description: 'Representative deactivated.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID (code: INVALID_COMMUNITY_ID), or ' +
+      'userId is not a well-formed UUID (code: INVALID_USER_ID).',
+  })
   @ApiNotFoundResponse({ description: 'Assignment not found.' })
   async deactivateRepresentative(
-    @Param('id') communityId: string,
-    @Param('userId') userId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
+    @Param('userId', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    userId: string,
   ): Promise<void> {
     try {
       await this.deactivateRepresentativeUseCase.execute({
@@ -270,6 +316,11 @@ export class CommunityController {
   @ApiOkResponse({ type: RepresentativeResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID (code: INVALID_COMMUNITY_ID), or ' +
+      'userId is not a well-formed UUID (code: INVALID_USER_ID).',
+  })
   @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
   @ApiConflictResponse({
     description:
@@ -277,8 +328,13 @@ export class CommunityController {
       'conflicting change occurred (code: TRANSACTION_CONFLICT).',
   })
   async reactivateRepresentative(
-    @Param('id') communityId: string,
-    @Param('userId') userId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
+    @Param('userId', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    userId: string,
   ): Promise<RepresentativeResponseDto> {
     try {
       return await this.reactivateRepresentativeUseCase.execute({
@@ -298,8 +354,16 @@ export class CommunityController {
   @ApiOkResponse({ type: TechnicianListItemDto, isArray: true })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   async listTechnicians(
-    @Param('id') communityId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
   ): Promise<TechnicianListItemDto[]> {
     const records =
       await this.communityTechnicianRepository.listByCommunity(communityId);
@@ -325,6 +389,10 @@ export class CommunityController {
   @ApiCreatedResponse({ type: TechnicianResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_COMMUNITY_ID.',
+  })
   @ApiNotFoundResponse({ description: 'Community or user not found.' })
   @ApiConflictResponse({
     description:
@@ -332,7 +400,11 @@ export class CommunityController {
       'user is not eligible (code: INELIGIBLE_ROLE).',
   })
   async addTechnician(
-    @Param('id') communityId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
     @Body(new ZodValidationPipe(addTechnicianSchema))
     body: AddTechnicianRequestDto,
   ): Promise<TechnicianResponseDto> {
@@ -355,10 +427,20 @@ export class CommunityController {
   @ApiNoContentResponse({ description: 'Technician deactivated.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID (code: INVALID_COMMUNITY_ID), or ' +
+      'userId is not a well-formed UUID (code: INVALID_USER_ID).',
+  })
   @ApiNotFoundResponse({ description: 'Assignment not found.' })
   async deactivateTechnician(
-    @Param('id') communityId: string,
-    @Param('userId') userId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
+    @Param('userId', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    userId: string,
   ): Promise<void> {
     try {
       await this.deactivateTechnicianUseCase.execute({
@@ -380,13 +462,23 @@ export class CommunityController {
   @ApiOkResponse({ type: TechnicianResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks community:assign.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID (code: INVALID_COMMUNITY_ID), or ' +
+      'userId is not a well-formed UUID (code: INVALID_USER_ID).',
+  })
   @ApiNotFoundResponse({ description: 'Assignment or user not found.' })
   @ApiConflictResponse({
     description: 'The user is not eligible (code: INELIGIBLE_ROLE).',
   })
   async reactivateTechnician(
-    @Param('id') communityId: string,
-    @Param('userId') userId: string,
+    @Param(
+      'id',
+      uuidParamPipe('INVALID_COMMUNITY_ID', 'Malformed community id.'),
+    )
+    communityId: string,
+    @Param('userId', uuidParamPipe('INVALID_USER_ID', 'Malformed user id.'))
+    userId: string,
   ): Promise<TechnicianResponseDto> {
     try {
       return await this.reactivateTechnicianUseCase.execute({

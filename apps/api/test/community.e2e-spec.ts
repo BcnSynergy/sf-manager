@@ -1499,4 +1499,193 @@ describe('Communities (e2e)', () => {
       expect(communityAfterDelete).toBeNull();
     });
   });
+
+  // uuid-path-validation branch: :id and :userId are validated as UUIDs
+  // (INVALID_COMMUNITY_ID / INVALID_USER_ID) on every route of
+  // CommunityController that takes them, matching the :elementId /
+  // :communityId pattern already wired on InspectableElementController
+  // (commits dbdc07b, 01c9ac8) and on UsersController's :id (commit
+  // 01ef0ae).
+  describe('UUID path param validation on :id and :userId', () => {
+    let app: INestApplication<App>;
+    const adminEmail = 'uuidval-admin@example.com';
+    // uuid-path-validation branch: well-formed UUIDs — a real, seeded
+    // community with active representative/technician assignments, used
+    // as the VALID half of each malformed-id case below (so only the
+    // param under test is malformed).
+    const UUIDVAL_COMMUNITY_ID = '00000000-0000-7000-8000-000000000065';
+    const UUIDVAL_REP_USER_ID = '00000000-0000-7000-8000-000000000066';
+    const UUIDVAL_TECH_USER_ID = '00000000-0000-7000-8000-000000000067';
+    const MALFORMED_ID = 'not-a-uuid';
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: 'uuidval-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const rep = await buildSeedUser({
+        id: UUIDVAL_REP_USER_ID,
+        email: 'uuidval-rep@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      const tech = await buildSeedUser({
+        id: UUIDVAL_TECH_USER_ID,
+        email: 'uuidval-tech@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const community = buildCommunity({ id: UUIDVAL_COMMUNITY_ID });
+      const repAssignment = buildRepresentative({
+        id: 'uuidval-rep-assignment-id',
+        communityId: UUIDVAL_COMMUNITY_ID,
+        userId: UUIDVAL_REP_USER_ID,
+      });
+      const techAssignment = buildTechnician({
+        id: 'uuidval-tech-assignment-id',
+        communityId: UUIDVAL_COMMUNITY_ID,
+        userId: UUIDVAL_TECH_USER_ID,
+      });
+      ({ app } = await buildApp({
+        users: [admin, rep, tech],
+        communities: [community],
+        representatives: [repAssignment],
+        technicians: [techAssignment],
+      }));
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    function sendRequest(
+      agent: ReturnType<typeof request>,
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+      path: string,
+      body?: Record<string, unknown>,
+    ) {
+      switch (method) {
+        case 'GET':
+          return agent.get(path);
+        case 'POST':
+          return agent.post(path).send(body ?? {});
+        case 'PATCH':
+          return agent.patch(path).send(body ?? {});
+        case 'DELETE':
+          return agent.delete(path);
+      }
+    }
+
+    // Every route on CommunityController that takes :id, with a
+    // malformed :id and an otherwise-valid :userId (where the route has
+    // one) — isolates the :id pipe as the only invalid param.
+    const communityIdRoutes = [
+      ['PATCH', `/communities/${MALFORMED_ID}`, { name: 'Ghost' }],
+      ['DELETE', `/communities/${MALFORMED_ID}`, undefined],
+      ['GET', `/communities/${MALFORMED_ID}/representatives`, undefined],
+      [
+        'POST',
+        `/communities/${MALFORMED_ID}/representatives`,
+        { userId: UUIDVAL_REP_USER_ID },
+      ],
+      [
+        'DELETE',
+        `/communities/${MALFORMED_ID}/representatives/${UUIDVAL_REP_USER_ID}`,
+        undefined,
+      ],
+      [
+        'POST',
+        `/communities/${MALFORMED_ID}/representatives/${UUIDVAL_REP_USER_ID}/reactivate`,
+        undefined,
+      ],
+      ['GET', `/communities/${MALFORMED_ID}/technicians`, undefined],
+      [
+        'POST',
+        `/communities/${MALFORMED_ID}/technicians`,
+        { userId: UUIDVAL_TECH_USER_ID },
+      ],
+      [
+        'DELETE',
+        `/communities/${MALFORMED_ID}/technicians/${UUIDVAL_TECH_USER_ID}`,
+        undefined,
+      ],
+      [
+        'POST',
+        `/communities/${MALFORMED_ID}/technicians/${UUIDVAL_TECH_USER_ID}/reactivate`,
+        undefined,
+      ],
+    ] as const;
+
+    it.each(communityIdRoutes)(
+      'rejects a malformed :id on %s %s with 400 INVALID_COMMUNITY_ID, not a 404',
+      async (method, path, body) => {
+        const agent = await loginAgent(app, adminEmail);
+
+        const response = await sendRequest(
+          agent,
+          method,
+          path,
+          body as Record<string, unknown> | undefined,
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body).toMatchObject({
+          statusCode: 400,
+          code: 'INVALID_COMMUNITY_ID',
+        });
+      },
+    );
+
+    // Every route on CommunityController that takes :userId, with a
+    // well-formed :id and a malformed :userId — isolates the :userId
+    // pipe as the only invalid param.
+    const userIdRoutes = [
+      [
+        'DELETE',
+        `/communities/${UUIDVAL_COMMUNITY_ID}/representatives/${MALFORMED_ID}`,
+      ],
+      [
+        'POST',
+        `/communities/${UUIDVAL_COMMUNITY_ID}/representatives/${MALFORMED_ID}/reactivate`,
+      ],
+      [
+        'DELETE',
+        `/communities/${UUIDVAL_COMMUNITY_ID}/technicians/${MALFORMED_ID}`,
+      ],
+      [
+        'POST',
+        `/communities/${UUIDVAL_COMMUNITY_ID}/technicians/${MALFORMED_ID}/reactivate`,
+      ],
+    ] as const;
+
+    it.each(userIdRoutes)(
+      'rejects a malformed :userId on %s %s with 400 INVALID_USER_ID, not a 404',
+      async (method, path) => {
+        const agent = await loginAgent(app, adminEmail);
+
+        const response = await sendRequest(agent, method, path);
+
+        expect(response.status).toBe(400);
+        expect(response.body).toMatchObject({
+          statusCode: 400,
+          code: 'INVALID_USER_ID',
+        });
+      },
+    );
+
+    // uuid-path-validation branch: guards run before param pipes, so an
+    // unauthenticated request with a malformed :id or :userId still gets
+    // 401, never the 400 that a would-be INVALID_COMMUNITY_ID /
+    // INVALID_USER_ID pipe error would produce for an authenticated
+    // caller (mirrors inspectable-element.e2e-spec.ts commit 01c9ac8 and
+    // users.e2e-spec.ts commit 01ef0ae).
+    it('anonymous DELETE /communities/not-a-uuid/representatives/not-a-uuid -> 401, not 400', async () => {
+      const req = request(app.getHttpServer());
+
+      const response = await req.delete(
+        `/communities/${MALFORMED_ID}/representatives/${MALFORMED_ID}`,
+      );
+
+      expect(response.status).toBe(401);
+    });
+  });
 });
