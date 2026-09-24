@@ -31,6 +31,7 @@ import type { VerifiedAccessToken } from '../../auth/application/ports/token-iss
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
+import { sessionIdPipe } from './session-id.pipe';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { AnswersDoNotMatchTemplateError } from '../domain/errors/answers-do-not-match-template.error';
@@ -168,6 +169,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ReviewSessionDetailResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, another performer's session, or a since-" +
@@ -176,7 +182,7 @@ export class ReviewSessionController {
   })
   async read(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewSessionDetailResponseDto> {
     try {
       return await this.readReviewSessionUseCase.execute(sessionId, {
@@ -194,6 +200,11 @@ export class ReviewSessionController {
   @ApiNoContentResponse({ description: 'Draft session discarded.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:discard.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session. Body carries code: ' +
@@ -206,7 +217,7 @@ export class ReviewSessionController {
   })
   async discard(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<void> {
     try {
       await this.discardReviewSessionUseCase.execute(sessionId, {
@@ -223,6 +234,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ResolveElementResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:perform.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session (code: REVIEW_SESSION_NOT_FOUND), ' +
@@ -232,7 +248,7 @@ export class ReviewSessionController {
   })
   async resolveElement(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
     @Param('code') code: string,
   ): Promise<ResolveElementResponseDto> {
     try {
@@ -282,9 +298,10 @@ export class ReviewSessionController {
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:perform.' })
   @ApiBadRequestResponse({
     description:
-      'Body carries neither/both of answers and observations, an empty ' +
-      'answers array, a blank observations reason, or an out-of-range ' +
-      'answer value.',
+      'sessionId is not a well-formed UUID (code: INVALID_SESSION_ID), ' +
+      'or the body carries neither/both of answers and observations, an ' +
+      'empty answers array, a blank observations reason, or an ' +
+      'out-of-range answer value.',
   })
   @ApiNotFoundResponse({
     description:
@@ -297,7 +314,7 @@ export class ReviewSessionController {
   })
   async recordEntry(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
     @Param('elementId') elementId: string,
     @Body(new ZodValidationPipe(recordEntryRequestSchema))
     body: RecordEntryRequest,
@@ -325,6 +342,11 @@ export class ReviewSessionController {
   @ApiOkResponse({ type: ReviewSessionResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:complete.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Unknown/foreign/out-of-scope session. Body carries code: ' +
@@ -338,7 +360,7 @@ export class ReviewSessionController {
   })
   async complete(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<Pick<ReviewSessionResponseDto, 'id' | 'status' | 'completedAt'>> {
     try {
       return await this.completeReviewSessionUseCase.execute(sessionId, {

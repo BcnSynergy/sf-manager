@@ -1,5 +1,6 @@
 import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -10,6 +11,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import type { VerifiedAccessToken } from '../../auth/application/ports/token-issuer.port';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { sessionIdPipe } from './session-id.pipe';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
@@ -67,6 +69,11 @@ export class ReviewHistoryController {
   @ApiOkResponse({ type: ReviewHistoryDetailResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: ' +
+      'INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, draft session, another performer's session, " +
@@ -75,7 +82,7 @@ export class ReviewHistoryController {
   })
   async read(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewHistoryDetailResponseDto> {
     try {
       return await this.readReviewHistoryUseCase.execute(sessionId, {
@@ -98,6 +105,11 @@ export class ReviewHistoryController {
   @ApiOkResponse({ type: ReviewDocumentResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID, identical to the history ' +
+      'detail read. Body carries code: INVALID_SESSION_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       "Unknown session, draft session, another performer's session, " +
@@ -107,7 +119,7 @@ export class ReviewHistoryController {
   })
   async readDocument(
     @CurrentUser() user: VerifiedAccessToken,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
   ): Promise<ReviewDocumentResponseDto> {
     try {
       return await this.readReviewDocumentUseCase.execute(sessionId, {

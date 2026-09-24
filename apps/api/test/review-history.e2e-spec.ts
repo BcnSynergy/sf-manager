@@ -969,6 +969,57 @@ describe('Review History (e2e)', () => {
       expect(nonexistentBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
     });
 
+    // Tech-debt cleanup: a malformed :sessionId (not a UUID at all) must be
+    // rejected as 400, not fall through to Prisma's `@db.Uuid` cast and
+    // surface as an unmapped 500. A well-formed-but-unknown id stays a 404
+    // (asserted above) — this test is only about syntactically invalid ids.
+    it('rejects a malformed (non-UUID) sessionId with 400, not a 500', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get('/review-history/not-a-uuid')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
+    });
+
+    // A real, well-formed session id is UUID v7 (e.g.
+    // `01a0d293-5cc2-73e9-bf01-48182f5251bb`) — the pipe added above must
+    // keep accepting it. Every other test in this describe block already
+    // exercises real v7 ids end to end, but this one pins the guard
+    // explicitly so a future stricter UUID-version pipe can't silently
+    // regress it.
+    it('still accepts a well-formed UUID v7 sessionId', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      await technicianUAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+    });
+
+    // Guard-before-pipe ordering (tech-debt cleanup follow-up): guards run
+    // before parameter pipes in Nest's request lifecycle, so an
+    // unauthenticated caller must be rejected at 401 before the malformed
+    // id is ever inspected — never a 400.
+    it('rejects an unauthenticated caller with a malformed sessionId as 401, not 400', async () => {
+      await request(built.app.getHttpServer())
+        .get('/review-history/not-a-uuid')
+        .expect(401);
+    });
+
+    // The `reviewSession:read` half of this guard-ordering check (an
+    // authenticated caller lacking the route's permission must get 403,
+    // not 400) is skipped deliberately: role-permission.checker.ts's
+    // ROLE_PERMISSIONS table grants `reviewSession:read` to EVERY Role
+    // unconditionally (SYSTEM_ADMIN, MANAGER, MAINTENANCE_COMPANY_MANAGER,
+    // MAINTENANCE_TECHNICIAN, COMMUNITY_REPRESENTATIVE) — there is no role
+    // that could reach this route and be refused by PermissionsGuard, so a
+    // 403 case is unreachable here. If a future role is added without this
+    // permission, add the case then.
+
     it("does not disclose another technician's completed session", async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
@@ -3506,6 +3557,22 @@ describe('Review History (e2e)', () => {
       expect(draftResponse.body as ErrorBody).toEqual(nonexistentBody);
 
       await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
+    });
+
+    // Tech-debt cleanup: parity with the history detail route's malformed-id
+    // guard — same route param, same pipe, must reject the same way rather
+    // than falling through to Prisma's `@db.Uuid` cast.
+    it('rejects a malformed (non-UUID) sessionId with 400, not a 500', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get('/review-history/not-a-uuid/document')
+        .expect(400);
+
+      expect(response.body as ErrorBody).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_SESSION_ID',
+      });
     });
 
     // spec.md review-document "Each of the five scopes reads an in-scope
