@@ -272,6 +272,18 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
       sign-and-close flow, all five roles opening the document, print preview
       with blank and filled profile, uniform 404 for out-of-scope/nonexistent/
       draft, dev-server golden path and edge cases from this spec set
+      - PARTIAL (2026-09-24). Browser-verified: SYSTEM_ADMIN and
+        MAINTENANCE_TECHNICIAN; real sign-and-close as technician (read-only
+        view, no document link, no auto-open); "View document" link reaches
+        the session's document; reviewed and unreviewed-with-reason entries;
+        signing time in Europe/Madrid; filled-profile print preview (real
+        preview, by the user); uniform "not available" for draft, nonexistent
+        and technician out-of-scope sessions.
+      - PENDING: COMMUNITY_REPRESENTATIVE, MAINTENANCE_COMPANY_MANAGER and
+        MANAGER in the browser (covered at API level by PR 8's e2e scope
+        matrix and by route-gate tests only); blank/incomplete-profile print
+        preview (covered by component tests only). Needs dev users and
+        assignments for those roles.
 
 ## PR 14 — Docs and archive (~40 lines + archive)
 
