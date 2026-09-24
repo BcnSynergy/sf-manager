@@ -198,19 +198,19 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
 
 ## PR 10 — Page shell (~300 lines)
 
-- [ ] 10.1 GREEN: `apps/web/src/api/review-history.ts` — add `ReviewDocument`
+- [x] 10.1 GREEN: `apps/web/src/api/review-history.ts` — add `ReviewDocument`
       type and `readReviewDocument` client
-- [ ] 10.2 RED: `authenticated-routes.test.tsx` — route restricted to the five
+- [x] 10.2 RED: `authenticated-routes.test.tsx` — route restricted to the five
       history roles, unauthenticated redirected to `/login` — spec:
       review-document-ui *The Document Page Is Gated on the Five History Roles*
-- [ ] 10.3 GREEN: add route to `authenticated-routes.tsx`
-- [ ] 10.4 RED: `ReviewDocumentPage.test.tsx` — loading indicator while in
+- [x] 10.3 GREEN: add route to `authenticated-routes.tsx`
+- [x] 10.4 RED: `ReviewDocumentPage.test.tsx` — loading indicator while in
       flight; uniform message for nonexistent/out-of-scope/draft 404, not
       folded with network/5xx — spec: *Loading and Unreachable States*
-- [ ] 10.5 GREEN: create `apps/web/src/pages/ReviewDocumentPage.tsx` — client
+- [x] 10.5 GREEN: create `apps/web/src/pages/ReviewDocumentPage.tsx` — client
       fetch, loading state, `mapApiErrorToMessageKey` for network/5xx, uniform
       404 message otherwise (page still URL-only until PR 13)
-- [ ] 10.6 Add `reviewDocument.*` loading/unreachable keys to
+- [x] 10.6 Add `reviewDocument.*` loading/unreachable keys to
       `apps/web/src/i18n/locales/{en,es,ca}.json` and `REQUIRED_REVIEW_DOCUMENT_KEY_PATHS`
       in `locales.test.ts`
 

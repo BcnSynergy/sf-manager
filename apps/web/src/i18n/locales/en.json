@@ -498,6 +498,11 @@
       "openLink": "View session"
     }
   },
+  "reviewDocument": {
+    "title": "Review document",
+    "loading": "Loading the review document...",
+    "unreachable": "This document is not available."
+  },
   "health": {
     "title": "System status",
     "checking": "Checking...",

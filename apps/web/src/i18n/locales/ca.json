@@ -498,6 +498,11 @@
       "openLink": "Veure sessió"
     }
   },
+  "reviewDocument": {
+    "title": "Document de revisió",
+    "loading": "Carregant el document de revisió...",
+    "unreachable": "Aquest document no està disponible."
+  },
   "health": {
     "title": "Estat del sistema",
     "checking": "Comprovant...",
