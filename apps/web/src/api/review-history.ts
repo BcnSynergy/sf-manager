@@ -1,4 +1,4 @@
-import type { AnswerValue, ElementType } from '@sf-manager/validation';
+import type { AnswerValue, ElementType, ReviewFrequency } from '@sf-manager/validation';
 import { apiFetch } from './client';
 
 // Mirrors apps/api/src/modules/review-session/presentation/
@@ -101,4 +101,64 @@ export function readElementReviewHistory(
   return apiFetch<ElementReviewHistory>(
     `/communities/${communityId}/inspectable-elements/${elementId}/review-history`,
   );
+}
+
+// Mirrors ReviewDocumentResponseDto (GET /review-history/:sessionId/document)
+// — review-export/design.md Interfaces/Contracts. This is the document's OWN
+// entry, template and letterhead shape, never `ReviewHistoryDetailEntryDto`
+// (design.md Decision 2): `elementName`/`elementLocation` are additions this
+// endpoint carries that the history detail does not. `elementCode`,
+// `elementName` and `elementLocation` are each `null` only when the element
+// id resolves no row at all — a deactivated or soft-deleted element still
+// carries its real values. `maintenanceCompanyName` is `null` only when no
+// company was recorded for the session; `communityName`,
+// `maintenanceCompanyName` and `performedByEmail` may separately be `''`,
+// the defensive-fallback for an id that resolves no row (review-document
+// spec's "A defensive-fallback empty value renders a placeholder, not a
+// blank cell") — the page renders a placeholder for that case, never the
+// company-absent state.
+export type ReviewDocumentTemplate = {
+  name: string;
+  elementType: ElementType;
+  frequency: ReviewFrequency;
+  version: number | null;
+};
+export type ReviewDocumentEntry = {
+  inspectableElementId: string;
+  elementCode: string | null;
+  elementName: string | null;
+  elementLocation: string | null;
+  reviewed: boolean;
+  observations: string | null;
+  answers: ReviewHistoryEntryAnswer[];
+  recordedAt: string;
+};
+// spec.md "The document exposes only the letterhead fields" — exactly the
+// six text fields, never `id`/`logoAssetId`.
+export type ReviewDocumentLetterhead = {
+  name: string;
+  legalName: string;
+  taxId: string;
+  address: string;
+  phone: string;
+  email: string;
+};
+export type ReviewDocument = {
+  id: string;
+  communityId: string;
+  communityName: string;
+  template: ReviewDocumentTemplate;
+  maintenanceCompanyName: string | null;
+  performedById: string;
+  performedByEmail: string;
+  status: 'completed';
+  startedAt: string;
+  completedAt: string | null;
+  entries: ReviewDocumentEntry[];
+  questions: ReviewHistoryQuestion[];
+  letterhead: ReviewDocumentLetterhead;
+};
+
+export function readReviewDocument(sessionId: string): Promise<ReviewDocument> {
+  return apiFetch<ReviewDocument>(`/review-history/${sessionId}/document`);
 }
