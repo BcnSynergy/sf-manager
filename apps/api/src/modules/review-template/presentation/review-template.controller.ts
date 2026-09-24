@@ -10,6 +10,7 @@ import {
   Put,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -27,6 +28,7 @@ import {
 import { ChecklistQuestionNotFoundError } from '../../checklist-question/domain/errors/checklist-question-not-found.error';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { ActivateReviewTemplateUseCase } from '../application/use-cases/activate-review-template.use-case';
 import { CreateDraftReviewTemplateUseCase } from '../application/use-cases/create-draft-review-template.use-case';
@@ -44,6 +46,15 @@ import type { SetReviewTemplateQuestionsRequestDto } from './dto/set-review-temp
 import { ActivateReviewTemplateResponseDto } from './dto/activate-review-template-response.dto';
 import { ReviewTemplateListItemResponseDto } from './dto/review-template-list-item-response.dto';
 import { ReviewTemplateResponseDto } from './dto/review-template-response.dto';
+
+// uuid-path-validation branch: local wrapper over the shared
+// uuidParamPipe() factory, reused by all four `:id` routes below — mirrors
+// review-session/presentation/session-id.pipe.ts's sessionIdPipe(), scoped
+// to this controller's own file since nothing outside it needs `:id`
+// validated the same way.
+function templateIdPipe(): ReturnType<typeof uuidParamPipe> {
+  return uuidParamPipe('INVALID_TEMPLATE_ID', 'Malformed template id.');
+}
 
 // design.md Decision 8: flat routes, no community parent — global admin
 // surface (spec.md "Create Draft Template" / "List and Read Templates").
@@ -115,12 +126,18 @@ export class ReviewTemplateController {
   @ApiOkResponse({ type: ReviewTemplateResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewTemplate:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_TEMPLATE_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Template not found or soft-deleted. Body carries code: ' +
       'REVIEW_TEMPLATE_NOT_FOUND.',
   })
-  async read(@Param('id') id: string): Promise<ReviewTemplateResponseDto> {
+  async read(
+    @Param('id', templateIdPipe()) id: string,
+  ): Promise<ReviewTemplateResponseDto> {
     try {
       return await this.readReviewTemplateUseCase.execute(id);
     } catch (error) {
@@ -144,6 +161,10 @@ export class ReviewTemplateController {
   @ApiOkResponse({ type: ReviewTemplateResponseDto })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewTemplate:update.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_TEMPLATE_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Template not found (code: REVIEW_TEMPLATE_NOT_FOUND) or a ' +
@@ -156,7 +177,7 @@ export class ReviewTemplateController {
       'REVIEW_TEMPLATE_NOT_EDITABLE.',
   })
   async setQuestions(
-    @Param('id') id: string,
+    @Param('id', templateIdPipe()) id: string,
     @Body(new ZodValidationPipe(setReviewTemplateQuestionsSchema))
     body: SetReviewTemplateQuestionsRequestDto,
   ): Promise<ReviewTemplateResponseDto> {
@@ -182,6 +203,10 @@ export class ReviewTemplateController {
   @ApiForbiddenResponse({
     description: 'Caller lacks reviewTemplate:activate.',
   })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_TEMPLATE_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Template not found. Body carries code: REVIEW_TEMPLATE_NOT_FOUND.',
@@ -193,7 +218,7 @@ export class ReviewTemplateController {
       'race (code: REVIEW_TEMPLATE_ACTIVATION_CONFLICT).',
   })
   async activate(
-    @Param('id') id: string,
+    @Param('id', templateIdPipe()) id: string,
   ): Promise<ActivateReviewTemplateResponseDto> {
     try {
       return await this.activateReviewTemplateUseCase.execute(id);
@@ -211,6 +236,10 @@ export class ReviewTemplateController {
   @ApiNoContentResponse({ description: 'Draft template soft-deleted.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewTemplate:delete.' })
+  @ApiBadRequestResponse({
+    description:
+      'id is not a well-formed UUID. Body carries code: INVALID_TEMPLATE_ID.',
+  })
   @ApiNotFoundResponse({
     description:
       'Template not found or already soft-deleted. Body carries code: ' +
@@ -221,7 +250,7 @@ export class ReviewTemplateController {
       'Template is not a draft — frozen versions are undeletable. Body ' +
       'carries code: REVIEW_TEMPLATE_NOT_EDITABLE.',
   })
-  async softDelete(@Param('id') id: string): Promise<void> {
+  async softDelete(@Param('id', templateIdPipe()) id: string): Promise<void> {
     try {
       await this.softDeleteDraftReviewTemplateUseCase.execute(id);
     } catch (error) {
