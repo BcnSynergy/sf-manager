@@ -155,6 +155,15 @@ async function loginAgent(
   return agent;
 }
 
+// uuid-path-validation branch: every user id seeded in this file is a
+// well-formed UUID (00000000-0000-7000-8000-000000000NNN), not a
+// human-readable placeholder like the old 'guard-admin-id' — :id is
+// validated as a UUID (INVALID_USER_ID) below, and most of these ids are
+// used as real, successful /users/:id path targets throughout this file,
+// not just "not found" placeholders. The one deliberate exception is the
+// "update targets a non-existent user" case, which uses a well-formed but
+// never-seeded UUID so its 404 assertion still exercises a real "not
+// found" lookup.
 describe('Users (e2e)', () => {
   beforeAll(() => {
     // getAuthConfig() (auth.config.ts) runs at module-compile time once
@@ -167,7 +176,7 @@ describe('Users (e2e)', () => {
 
   describe('Admin CRUD happy paths + validation (tasks.md 8.3)', () => {
     let app: INestApplication<App>;
-    const adminId = 'admin-crud-id';
+    const adminId = '00000000-0000-7000-8000-000000000032';
     const adminEmail = 'crud-admin@example.com';
     const existingEmail = 'existing@example.com';
 
@@ -178,7 +187,7 @@ describe('Users (e2e)', () => {
         role: 'SYSTEM_ADMIN',
       });
       const existing = await buildSeedUser({
-        id: 'existing-id',
+        id: '00000000-0000-7000-8000-000000000035',
         email: existingEmail,
         role: 'MANAGER',
       });
@@ -270,12 +279,12 @@ describe('Users (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .patch(`/users/${'existing-id'}`)
+        .patch(`/users/${'00000000-0000-7000-8000-000000000035'}`)
         .send({ email: 'renamed@example.com' })
         .expect(200);
 
       expect(response.body).toMatchObject({
-        id: 'existing-id',
+        id: '00000000-0000-7000-8000-000000000035',
         email: 'renamed@example.com',
       });
     });
@@ -284,9 +293,37 @@ describe('Users (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .patch('/users/does-not-exist')
+        .patch('/users/00000000-0000-7000-8000-000000000031')
         .send({ email: 'ghost@example.com' })
         .expect(404);
+    });
+
+    // uuid-path-validation branch: :id is validated as a UUID
+    // (INVALID_USER_ID), on every route that takes it, matching the
+    // :elementId / :communityId pattern (commits dbdc07b, 01c9ac8).
+    it('rejects a malformed id on PATCH /users/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .patch('/users/not-a-uuid')
+        .send({ email: 'ghost@example.com' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_USER_ID',
+      });
+    });
+
+    it('rejects a malformed id on DELETE /users/:id with 400, not a 404', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent.delete('/users/not-a-uuid').expect(400);
+
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_USER_ID',
+      });
     });
 
     it('deactivates a user via soft delete (spec: Admin deactivates a user)', async () => {
@@ -314,17 +351,17 @@ describe('Users (e2e)', () => {
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'guard-admin-id',
+        id: '00000000-0000-7000-8000-000000000028',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
       const nonAdmin = await buildSeedUser({
-        id: 'guard-manager-id',
+        id: '00000000-0000-7000-8000-000000000024',
         email: nonAdminEmail,
         role: 'MANAGER',
       });
       const target = await buildSeedUser({
-        id: 'guard-target-id',
+        id: '00000000-0000-7000-8000-000000000025',
         email: 'guard-target@example.com',
         role: 'MANAGER',
       });
@@ -341,8 +378,8 @@ describe('Users (e2e)', () => {
     it.each([
       ['POST', '/users'],
       ['GET', '/users'],
-      ['PATCH', `/users/guard-target-id`],
-      ['DELETE', `/users/guard-target-id`],
+      ['PATCH', `/users/00000000-0000-7000-8000-000000000025`],
+      ['DELETE', `/users/00000000-0000-7000-8000-000000000025`],
     ] as const)('anonymous %s %s -> 401', async (method, path) => {
       const req = request(app.getHttpServer());
       const response =
@@ -356,6 +393,19 @@ describe('Users (e2e)', () => {
               ? await req.patch(path).send({ email: 'x@example.com' })
               : await req.delete(path);
 
+      expect(response.status).toBe(401);
+    });
+
+    // uuid-path-validation branch: guards run before param pipes, so an
+    // unauthenticated request with a malformed :id still gets 401, never
+    // the 400 that a would-be INVALID_USER_ID pipe error would produce
+    // for an authenticated caller (mirrors inspectable-element.e2e-spec.ts
+    // commit 01c9ac8).
+    it('anonymous PATCH /users/not-a-uuid -> 401, not 400', async () => {
+      const req = request(app.getHttpServer());
+      const response = await req
+        .patch('/users/not-a-uuid')
+        .send({ email: 'x@example.com' });
       expect(response.status).toBe(401);
     });
 
@@ -400,7 +450,7 @@ describe('Users (e2e)', () => {
   describe('Last-Admin Lockout (tasks.md 8.5, spec: Last-Admin Lockout)', () => {
     it('rejects deactivating the sole active SYSTEM_ADMIN, state unchanged', async () => {
       const soleAdmin = await buildSeedUser({
-        id: 'sole-admin-id',
+        id: '00000000-0000-7000-8000-000000000033',
         email: 'sole-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
@@ -435,7 +485,7 @@ describe('Users (e2e)', () => {
 
     it('rejects demoting the sole active SYSTEM_ADMIN away from that role, role unchanged', async () => {
       const soleAdmin = await buildSeedUser({
-        id: 'sole-admin-demote-id',
+        id: '00000000-0000-7000-8000-000000000008',
         email: 'sole-admin-demote@example.com',
         role: 'SYSTEM_ADMIN',
       });
@@ -470,12 +520,12 @@ describe('Users (e2e)', () => {
 
     it('allows deactivating one of two active SYSTEM_ADMIN users (spec: others remain is allowed)', async () => {
       const admin1 = await buildSeedUser({
-        id: 'two-admin-1',
+        id: '00000000-0000-7000-8000-000000000036',
         email: 'two-admin-1@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const admin2 = await buildSeedUser({
-        id: 'two-admin-2',
+        id: '00000000-0000-7000-8000-000000000037',
         email: 'two-admin-2@example.com',
         role: 'SYSTEM_ADMIN',
       });
@@ -504,12 +554,12 @@ describe('Users (e2e)', () => {
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'softdelete-admin-id',
+        id: '00000000-0000-7000-8000-000000000014',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
       const target = await buildSeedUser({
-        id: 'softdelete-target-id',
+        id: '00000000-0000-7000-8000-000000000009',
         email: 'softdelete-target@example.com',
         role: 'MANAGER',
       });
@@ -526,16 +576,18 @@ describe('Users (e2e)', () => {
       const beforeDelete = await agent.get('/users').expect(200);
       expect(
         (beforeDelete.body as Array<{ id: string }>).some(
-          (user) => user.id === 'softdelete-target-id',
+          (user) => user.id === '00000000-0000-7000-8000-000000000009',
         ),
       ).toBe(true);
 
-      await agent.delete('/users/softdelete-target-id').expect(204);
+      await agent
+        .delete('/users/00000000-0000-7000-8000-000000000009')
+        .expect(204);
 
       const afterDelete = await agent.get('/users').expect(200);
       expect(
         (afterDelete.body as Array<{ id: string }>).some(
-          (user) => user.id === 'softdelete-target-id',
+          (user) => user.id === '00000000-0000-7000-8000-000000000009',
         ),
       ).toBe(false);
     });
@@ -550,12 +602,12 @@ describe('Users (e2e)', () => {
   describe('Maintenance-role update inherits company (maintenance-company design.md Decision 5)', () => {
     it('PATCH role between two maintenance roles without maintenanceCompanyId in the body succeeds, company inherited', async () => {
       const admin = await buildSeedUser({
-        id: 'maint-admin-id',
+        id: '00000000-0000-7000-8000-000000000029',
         email: 'maint-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const technician = await buildSeedUser({
-        id: 'maint-technician-id',
+        id: '00000000-0000-7000-8000-000000000015',
         email: 'maint-technician@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: 'company-1',
@@ -617,17 +669,17 @@ describe('Users (e2e)', () => {
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'shapes-admin-id',
+        id: '00000000-0000-7000-8000-000000000026',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
       const manager = await buildSeedUser({
-        id: 'shapes-manager-id',
+        id: '00000000-0000-7000-8000-000000000021',
         email: 'shapes-manager@example.com',
         role: 'MANAGER',
       });
       const technician = await buildSeedUser({
-        id: 'shapes-technician-id',
+        id: '00000000-0000-7000-8000-000000000010',
         email: 'shapes-technician@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: LIVE_COMPANY,
@@ -716,9 +768,11 @@ describe('Users (e2e)', () => {
     it('PATCH changing role to a maintenance role without maintenanceCompanyId is rejected with code MAINTENANCE_COMPANY_REQUIRED, no field changed (spec: Missing company when changing role to a maintenance role rejected)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const before = await userRepository.findById('shapes-manager-id');
+      const before = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       const response = await agent
-        .patch('/users/shapes-manager-id')
+        .patch('/users/00000000-0000-7000-8000-000000000021')
         .send({ role: 'MAINTENANCE_COMPANY_MANAGER' })
         .expect(400);
 
@@ -727,16 +781,20 @@ describe('Users (e2e)', () => {
         error: 'Bad Request',
         code: 'MAINTENANCE_COMPANY_REQUIRED',
       });
-      const after = await userRepository.findById('shapes-manager-id');
+      const after = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       expect(after).toEqual(before);
     });
 
     it('PATCH with role present (non-maintenance) and maintenanceCompanyId present in the same body is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED, no field changed (spec: Company id rejected when changing role to a non-maintenance role)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const before = await userRepository.findById('shapes-manager-id');
+      const before = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       const response = await agent
-        .patch('/users/shapes-manager-id')
+        .patch('/users/00000000-0000-7000-8000-000000000021')
         .send({ role: 'MANAGER', maintenanceCompanyId: LIVE_COMPANY })
         .expect(400);
 
@@ -745,16 +803,20 @@ describe('Users (e2e)', () => {
         error: 'Bad Request',
         code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
       });
-      const after = await userRepository.findById('shapes-manager-id');
+      const after = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       expect(after).toEqual(before);
     });
 
     it('PATCH supplying only a maintenanceCompanyId for an existing non-maintenance user is rejected with code MAINTENANCE_COMPANY_NOT_ALLOWED, no field changed (spec: Update User conditional requirement)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const before = await userRepository.findById('shapes-manager-id');
+      const before = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       const response = await agent
-        .patch('/users/shapes-manager-id')
+        .patch('/users/00000000-0000-7000-8000-000000000021')
         .send({ maintenanceCompanyId: LIVE_COMPANY })
         .expect(400);
 
@@ -763,16 +825,20 @@ describe('Users (e2e)', () => {
         error: 'Bad Request',
         code: 'MAINTENANCE_COMPANY_NOT_ALLOWED',
       });
-      const after = await userRepository.findById('shapes-manager-id');
+      const after = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000021',
+      );
       expect(after).toEqual(before);
     });
 
     it('PATCH supplying an unknown/soft-deleted maintenanceCompanyId for an existing maintenance-role user is rejected with code MAINTENANCE_COMPANY_NOT_FOUND, no field changed (spec: shape 3 via update)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      const before = await userRepository.findById('shapes-technician-id');
+      const before = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000010',
+      );
       const response = await agent
-        .patch('/users/shapes-technician-id')
+        .patch('/users/00000000-0000-7000-8000-000000000010')
         .send({ maintenanceCompanyId: 'dead-company-id-2' })
         .expect(400);
 
@@ -781,7 +847,9 @@ describe('Users (e2e)', () => {
         error: 'Bad Request',
         code: 'MAINTENANCE_COMPANY_NOT_FOUND',
       });
-      const after = await userRepository.findById('shapes-technician-id');
+      const after = await userRepository.findById(
+        '00000000-0000-7000-8000-000000000010',
+      );
       expect(after).toEqual(before);
     });
   });
@@ -795,12 +863,12 @@ describe('Users (e2e)', () => {
   describe('Reassignment and demotion (design.md Decision 5, spec.md Update User) — tasks.md 13.2', () => {
     it('PATCH reassigning a maintenance-role user to a different live company reflects immediately on GET', async () => {
       const admin = await buildSeedUser({
-        id: 'reassign-admin-id',
+        id: '00000000-0000-7000-8000-000000000022',
         email: 'reassign-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const technician = await buildSeedUser({
-        id: 'reassign-technician-id',
+        id: '00000000-0000-7000-8000-000000000004',
         email: 'reassign-technician@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: 'reassign-company-a',
@@ -834,12 +902,12 @@ describe('Users (e2e)', () => {
 
     it('PATCH demoting a maintenance-role user away from a maintenance role leaves maintenanceCompanyId untouched (spec: Role change away from a maintenance role leaves maintenanceCompanyId untouched)', async () => {
       const admin = await buildSeedUser({
-        id: 'demote-admin-id',
+        id: '00000000-0000-7000-8000-000000000027',
         email: 'demote-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const technician = await buildSeedUser({
-        id: 'demote-technician-id',
+        id: '00000000-0000-7000-8000-000000000011',
         email: 'demote-technician@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: 'demote-company-a',
@@ -880,12 +948,12 @@ describe('Users (e2e)', () => {
   describe('Manager capability grant/revoke (design.md Decision 5/6) — tasks.md 3.18', () => {
     it('grants VIEW_ALL_REVIEWS to a MANAGER and revokes it via an explicit empty array, both reflected immediately on GET', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-admin-id',
+        id: '00000000-0000-7000-8000-000000000034',
         email: 'cap-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const manager = await buildSeedUser({
-        id: 'cap-manager-id',
+        id: '00000000-0000-7000-8000-000000000030',
         email: 'cap-manager@example.com',
         role: 'MANAGER',
       });
@@ -938,12 +1006,12 @@ describe('Users (e2e)', () => {
 
     it('leaves the capability unchanged when a PATCH omits the field entirely', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-noop-admin-id',
+        id: '00000000-0000-7000-8000-000000000023',
         email: 'cap-noop-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const manager = await buildSeedUser({
-        id: 'cap-noop-manager-id',
+        id: '00000000-0000-7000-8000-000000000016',
         email: 'cap-noop-manager@example.com',
         role: 'MANAGER',
         managerCapabilities: ['VIEW_ALL_REVIEWS'],
@@ -969,12 +1037,12 @@ describe('Users (e2e)', () => {
 
     it('clears the capability server-side on a bare role change away from MANAGER, with no field in the payload', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-clear-admin-id',
+        id: '00000000-0000-7000-8000-000000000020',
         email: 'cap-clear-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const manager = await buildSeedUser({
-        id: 'cap-clear-manager-id',
+        id: '00000000-0000-7000-8000-000000000012',
         email: 'cap-clear-manager@example.com',
         role: 'MANAGER',
         managerCapabilities: ['VIEW_ALL_REVIEWS'],
@@ -1007,12 +1075,12 @@ describe('Users (e2e)', () => {
 
     it('rejects a managerCapabilities grant for a non-MANAGER resulting role with 400 MANAGER_CAPABILITIES_NOT_ALLOWED, leaving the user unchanged', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-reject-admin-id',
+        id: '00000000-0000-7000-8000-000000000017',
         email: 'cap-reject-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const otherAdmin = await buildSeedUser({
-        id: 'cap-reject-other-admin-id',
+        id: '00000000-0000-7000-8000-000000000002',
         email: 'cap-reject-other-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
@@ -1044,12 +1112,12 @@ describe('Users (e2e)', () => {
     // request ever reaches UpdateUserUseCase.
     it('rejects a managerCapabilities grant on the SAME payload that changes role to a non-MANAGER role, with the schema-level 400', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-schema-admin-id',
+        id: '00000000-0000-7000-8000-000000000018',
         email: 'cap-schema-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const manager = await buildSeedUser({
-        id: 'cap-schema-manager-id',
+        id: '00000000-0000-7000-8000-000000000006',
         email: 'cap-schema-manager@example.com',
         role: 'MANAGER',
       });
@@ -1075,7 +1143,7 @@ describe('Users (e2e)', () => {
 
     it('a newly created MANAGER holds an empty capability list, and POST /users rejects the field', async () => {
       const admin = await buildSeedUser({
-        id: 'cap-create-admin-id',
+        id: '00000000-0000-7000-8000-000000000019',
         email: 'cap-create-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
@@ -1119,12 +1187,12 @@ describe('Users (e2e)', () => {
   describe('Grandfathered companyless maintenance-role user (spec.md OQ2) — tasks.md 13.3', () => {
     let app: INestApplication<App>;
     const adminEmail = 'grandfathered-admin@example.com';
-    const grandfatheredId = 'grandfathered-technician-id';
+    const grandfatheredId = '00000000-0000-7000-8000-000000000001';
     const LIVE_COMPANY = 'grandfathered-live-company';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'grandfathered-admin-id',
+        id: '00000000-0000-7000-8000-000000000005',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
@@ -1223,18 +1291,18 @@ describe('Users (e2e)', () => {
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'permissions-admin-id',
+        id: '00000000-0000-7000-8000-000000000013',
         email: 'permissions-admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
       const technician = await buildSeedUser({
-        id: 'permissions-technician-id',
+        id: '00000000-0000-7000-8000-000000000003',
         email: technicianEmail,
         role: 'MAINTENANCE_TECHNICIAN',
         maintenanceCompanyId: 'permissions-company',
       });
       const target = await buildSeedUser({
-        id: 'permissions-target-id',
+        id: '00000000-0000-7000-8000-000000000007',
         email: 'permissions-target@example.com',
         role: 'MANAGER',
       });
@@ -1252,8 +1320,8 @@ describe('Users (e2e)', () => {
     it.each([
       ['POST', '/users'],
       ['GET', '/users'],
-      ['PATCH', `/users/permissions-target-id`],
-      ['DELETE', `/users/permissions-target-id`],
+      ['PATCH', `/users/00000000-0000-7000-8000-000000000007`],
+      ['DELETE', `/users/00000000-0000-7000-8000-000000000007`],
     ] as const)(
       'MAINTENANCE_TECHNICIAN caller (own maintenanceCompanyId set) -> 403 on %s %s',
       async (method, path) => {
@@ -1296,7 +1364,7 @@ describe('Users (e2e)', () => {
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
-        id: 'me-admin-id',
+        id: '00000000-0000-7000-8000-000000000038',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
@@ -1313,7 +1381,7 @@ describe('Users (e2e)', () => {
       const response = await agent.get('/auth/me').expect(200);
 
       expect(response.body).toEqual({
-        id: 'me-admin-id',
+        id: '00000000-0000-7000-8000-000000000038',
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
