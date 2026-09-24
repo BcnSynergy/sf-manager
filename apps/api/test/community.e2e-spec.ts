@@ -271,6 +271,14 @@ describe('Communities (e2e)', () => {
   describe('Community CRUD happy paths (tasks.md 11.1)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'crud-admin@example.com';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // this id is used as a real, successful path target below.
+    const EXISTING_COMMUNITY_ID = '00000000-0000-7000-8000-000000000047';
+    // Well-formed but never seeded — used where the test's point is "this
+    // community does not exist", so it must survive :id UUID validation
+    // and still reach the use case as a real 404 lookup.
+    const NONEXISTENT_COMMUNITY_ID = '00000000-0000-7000-8000-000000000048';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -278,7 +286,7 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
-      const existing = buildCommunity({ id: 'existing-community-id' });
+      const existing = buildCommunity({ id: EXISTING_COMMUNITY_ID });
       ({ app } = await buildApp({ users: [admin], communities: [existing] }));
     });
 
@@ -319,7 +327,7 @@ describe('Communities (e2e)', () => {
       expect(Array.isArray(response.body)).toBe(true);
       expect(
         (response.body as Array<{ id: string }>).some(
-          (community) => community.id === 'existing-community-id',
+          (community) => community.id === EXISTING_COMMUNITY_ID,
         ),
       ).toBe(true);
     });
@@ -328,12 +336,12 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .patch('/communities/existing-community-id')
+        .patch(`/communities/${EXISTING_COMMUNITY_ID}`)
         .send({ name: 'Renamed Community', locale: 'es' })
         .expect(200);
 
       expect(response.body).toMatchObject({
-        id: 'existing-community-id',
+        id: EXISTING_COMMUNITY_ID,
         name: 'Renamed Community',
         locale: 'es',
       });
@@ -343,7 +351,7 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .patch('/communities/does-not-exist')
+        .patch(`/communities/${NONEXISTENT_COMMUNITY_ID}`)
         .send({ name: 'Ghost' })
         .expect(404);
     });
@@ -371,6 +379,17 @@ describe('Communities (e2e)', () => {
   describe('Soft-delete cascade to representative (tasks.md 11.2, community-management + community-assignments specs)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'cascade-admin@example.com';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // these ids are used as real path targets below (DELETE/GET
+    // /communities/:id...). The rep user ids below never reach :userId in
+    // this block (no representative-assignment DELETE/reactivate call), so
+    // they stay plain placeholders.
+    const CASCADE_COMMUNITY_SOLE_ID = '00000000-0000-7000-8000-000000000049';
+    const CASCADE_COMMUNITY_MULTI_C1_ID =
+      '00000000-0000-7000-8000-000000000050';
+    const CASCADE_COMMUNITY_MULTI_C2_ID =
+      '00000000-0000-7000-8000-000000000051';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -389,12 +408,12 @@ describe('Communities (e2e)', () => {
         role: 'COMMUNITY_REPRESENTATIVE',
       });
 
-      const communitySole = buildCommunity({ id: 'cascade-community-sole' });
+      const communitySole = buildCommunity({ id: CASCADE_COMMUNITY_SOLE_ID });
       const communityMultiC1 = buildCommunity({
-        id: 'cascade-community-multi-c1',
+        id: CASCADE_COMMUNITY_MULTI_C1_ID,
       });
       const communityMultiC2 = buildCommunity({
-        id: 'cascade-community-multi-c2',
+        id: CASCADE_COMMUNITY_MULTI_C2_ID,
       });
 
       const soleAssignment = buildRepresentative({
@@ -427,10 +446,12 @@ describe('Communities (e2e)', () => {
     it('deactivates the sole-community active representative on community soft-delete', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      await agent.delete('/communities/cascade-community-sole').expect(204);
+      await agent
+        .delete(`/communities/${CASCADE_COMMUNITY_SOLE_ID}`)
+        .expect(204);
 
       const representatives = await agent
-        .get('/communities/cascade-community-sole/representatives')
+        .get(`/communities/${CASCADE_COMMUNITY_SOLE_ID}/representatives`)
         .expect(200);
 
       const record = (
@@ -445,10 +466,12 @@ describe('Communities (e2e)', () => {
     it('leaves an active-elsewhere representative unchanged on community soft-delete', async () => {
       const agent = await loginAgent(app, adminEmail);
 
-      await agent.delete('/communities/cascade-community-multi-c1').expect(204);
+      await agent
+        .delete(`/communities/${CASCADE_COMMUNITY_MULTI_C1_ID}`)
+        .expect(204);
 
       const representativesC1 = await agent
-        .get('/communities/cascade-community-multi-c1/representatives')
+        .get(`/communities/${CASCADE_COMMUNITY_MULTI_C1_ID}/representatives`)
         .expect(200);
       const recordC1 = (
         representativesC1.body as Array<{
@@ -459,7 +482,7 @@ describe('Communities (e2e)', () => {
       expect(recordC1?.deactivatedAt).toBeNull();
 
       const representativesC2 = await agent
-        .get('/communities/cascade-community-multi-c2/representatives')
+        .get(`/communities/${CASCADE_COMMUNITY_MULTI_C2_ID}/representatives`)
         .expect(200);
       const recordC2 = (
         representativesC2.body as Array<{
@@ -474,7 +497,12 @@ describe('Communities (e2e)', () => {
   describe('Eligibility rejection on add (tasks.md 11.3, community-assignments spec: Ineligible role rejected)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'eligibility-admin@example.com';
-    const communityId = 'eligibility-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // this id is used as a real path target below. The wrong-role user id
+    // never reaches :userId in this block (body-only), so it stays a plain
+    // placeholder.
+    const ELIGIBILITY_COMMUNITY_ID = '00000000-0000-7000-8000-000000000052';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -487,7 +515,7 @@ describe('Communities (e2e)', () => {
         email: 'eligibility-wrong-role@example.com',
         role: 'MANAGER',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({ id: ELIGIBILITY_COMMUNITY_ID });
       ({ app } = await buildApp({
         users: [admin, wrongRoleUser],
         communities: [community],
@@ -502,7 +530,7 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId}/representatives`)
+        .post(`/communities/${ELIGIBILITY_COMMUNITY_ID}/representatives`)
         .send({ userId: 'eligibility-wrong-role-id' })
         .expect(409);
 
@@ -518,7 +546,7 @@ describe('Communities (e2e)', () => {
       );
 
       const representatives = await agent
-        .get(`/communities/${communityId}/representatives`)
+        .get(`/communities/${ELIGIBILITY_COMMUNITY_ID}/representatives`)
         .expect(200);
       expect(
         (representatives.body as Array<{ userId: string }>).some(
@@ -531,7 +559,7 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId}/technicians`)
+        .post(`/communities/${ELIGIBILITY_COMMUNITY_ID}/technicians`)
         .send({ userId: 'eligibility-wrong-role-id' })
         .expect(409);
 
@@ -545,7 +573,7 @@ describe('Communities (e2e)', () => {
       );
 
       const technicians = await agent
-        .get(`/communities/${communityId}/technicians`)
+        .get(`/communities/${ELIGIBILITY_COMMUNITY_ID}/technicians`)
         .expect(200);
       expect(
         (technicians.body as Array<{ userId: string }>).some(
@@ -558,7 +586,7 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId}/representatives`)
+        .post(`/communities/${ELIGIBILITY_COMMUNITY_ID}/representatives`)
         .send({})
         .expect(400);
 
@@ -569,7 +597,12 @@ describe('Communities (e2e)', () => {
   describe('Already-assigned 409 on repeat assignment (tasks.md 1.4, spec: Already-assigned 409 is distinguishable from ineligible-role 409)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'already-assigned-admin@example.com';
-    const communityId = 'already-assigned-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — see the CRUD describe block above. The rep/tech user
+    // ids below never reach :userId in this block (body-only), so they
+    // stay plain placeholders.
+    const ALREADY_ASSIGNED_COMMUNITY_ID =
+      '00000000-0000-7000-8000-000000000053';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -587,7 +620,7 @@ describe('Communities (e2e)', () => {
         email: 'already-assigned-tech@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({ id: ALREADY_ASSIGNED_COMMUNITY_ID });
       ({ app } = await buildApp({
         users: [admin, rep, tech],
         communities: [community],
@@ -602,12 +635,12 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/representatives`)
+        .post(`/communities/${ALREADY_ASSIGNED_COMMUNITY_ID}/representatives`)
         .send({ userId: 'already-assigned-rep-id' })
         .expect(201);
 
       const response = await agent
-        .post(`/communities/${communityId}/representatives`)
+        .post(`/communities/${ALREADY_ASSIGNED_COMMUNITY_ID}/representatives`)
         .send({ userId: 'already-assigned-rep-id' })
         .expect(409);
 
@@ -625,12 +658,12 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/technicians`)
+        .post(`/communities/${ALREADY_ASSIGNED_COMMUNITY_ID}/technicians`)
         .send({ userId: 'already-assigned-tech-id' })
         .expect(201);
 
       const response = await agent
-        .post(`/communities/${communityId}/technicians`)
+        .post(`/communities/${ALREADY_ASSIGNED_COMMUNITY_ID}/technicians`)
         .send({ userId: 'already-assigned-tech-id' })
         .expect(409);
 
@@ -648,8 +681,15 @@ describe('Communities (e2e)', () => {
   describe('Exclusivity swap, reactivation, and multi-community warning (tasks.md 11.4)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'exclusivity-admin@example.com';
-    const communityId1 = 'exclusivity-community-1';
-    const communityId2 = 'exclusivity-community-2';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — see the CRUD describe block above.
+    const EXCLUSIVITY_COMMUNITY_1_ID = '00000000-0000-7000-8000-000000000054';
+    const EXCLUSIVITY_COMMUNITY_2_ID = '00000000-0000-7000-8000-000000000055';
+    // repA's id is a real :userId path target below (the reactivate
+    // route), so it must also be a well-formed UUID; repB's id never
+    // reaches :userId in this block (body-only), so it stays a plain
+    // placeholder.
+    const EXCLUSIVITY_REP_A_USER_ID = '00000000-0000-7000-8000-000000000056';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -658,7 +698,7 @@ describe('Communities (e2e)', () => {
         role: 'SYSTEM_ADMIN',
       });
       const repA = await buildSeedUser({
-        id: 'exclusivity-rep-a-id',
+        id: EXCLUSIVITY_REP_A_USER_ID,
         email: 'exclusivity-rep-a@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
@@ -667,8 +707,8 @@ describe('Communities (e2e)', () => {
         email: 'exclusivity-rep-b@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
-      const community1 = buildCommunity({ id: communityId1 });
-      const community2 = buildCommunity({ id: communityId2 });
+      const community1 = buildCommunity({ id: EXCLUSIVITY_COMMUNITY_1_ID });
+      const community2 = buildCommunity({ id: EXCLUSIVITY_COMMUNITY_2_ID });
       ({ app } = await buildApp({
         users: [admin, repA, repB],
         communities: [community1, community2],
@@ -683,8 +723,8 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId1}/representatives`)
-        .send({ userId: 'exclusivity-rep-a-id' })
+        .post(`/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives`)
+        .send({ userId: EXCLUSIVITY_REP_A_USER_ID })
         .expect(201);
 
       expect(response.body).not.toHaveProperty('warning');
@@ -694,13 +734,13 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId1}/representatives`)
+        .post(`/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives`)
         .send({ userId: 'exclusivity-rep-b-id' })
         .expect(201);
       expect(response.body).not.toHaveProperty('warning');
 
       const representatives = await agent
-        .get(`/communities/${communityId1}/representatives`)
+        .get(`/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives`)
         .expect(200);
       const records = representatives.body as Array<{
         userId: string;
@@ -710,7 +750,7 @@ describe('Communities (e2e)', () => {
       expect(active).toHaveLength(1);
       expect(active[0]?.userId).toBe('exclusivity-rep-b-id');
       const repARecord = records.find(
-        (entry) => entry.userId === 'exclusivity-rep-a-id',
+        (entry) => entry.userId === EXCLUSIVITY_REP_A_USER_ID,
       );
       expect(repARecord?.deactivatedAt).not.toBeNull();
     });
@@ -720,13 +760,13 @@ describe('Communities (e2e)', () => {
 
       const response = await agent
         .post(
-          `/communities/${communityId1}/representatives/exclusivity-rep-a-id/reactivate`,
+          `/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives/${EXCLUSIVITY_REP_A_USER_ID}/reactivate`,
         )
         .expect(200);
       expect(response.body).not.toHaveProperty('warning');
 
       const representatives = await agent
-        .get(`/communities/${communityId1}/representatives`)
+        .get(`/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives`)
         .expect(200);
       const records = representatives.body as Array<{
         userId: string;
@@ -734,15 +774,15 @@ describe('Communities (e2e)', () => {
       }>;
       const active = records.filter((entry) => entry.deactivatedAt === null);
       expect(active).toHaveLength(1);
-      expect(active[0]?.userId).toBe('exclusivity-rep-a-id');
+      expect(active[0]?.userId).toBe(EXCLUSIVITY_REP_A_USER_ID);
     });
 
     it('activating an already-active-elsewhere representative succeeds with a warning (spec: Activating a representative already active elsewhere succeeds with a warning)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId2}/representatives`)
-        .send({ userId: 'exclusivity-rep-a-id' })
+        .post(`/communities/${EXCLUSIVITY_COMMUNITY_2_ID}/representatives`)
+        .send({ userId: EXCLUSIVITY_REP_A_USER_ID })
         .expect(201);
 
       expect(response.body).toMatchObject({
@@ -753,7 +793,7 @@ describe('Communities (e2e)', () => {
       });
 
       const community1Reps = await agent
-        .get(`/communities/${communityId1}/representatives`)
+        .get(`/communities/${EXCLUSIVITY_COMMUNITY_1_ID}/representatives`)
         .expect(200);
       const activeInC1 = (
         community1Reps.body as Array<{
@@ -762,7 +802,7 @@ describe('Communities (e2e)', () => {
         }>
       ).find(
         (entry) =>
-          entry.userId === 'exclusivity-rep-a-id' &&
+          entry.userId === EXCLUSIVITY_REP_A_USER_ID &&
           entry.deactivatedAt === null,
       );
       expect(activeInC1).toBeDefined();
@@ -772,7 +812,17 @@ describe('Communities (e2e)', () => {
   describe('Reactivation rejected for a soft-deleted user (tasks.md 11.5, spec: Reactivation rejected for a soft-deleted user)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'softdel-user-admin@example.com';
-    const communityId = 'softdel-user-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // this id is used as a real path target below.
+    const SOFTDEL_USER_COMMUNITY_ID = '00000000-0000-7000-8000-000000000057';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — both are real DELETE/PATCH /users/:id AND
+    // .../representatives|technicians/:userId targets below (see
+    // users.e2e-spec.ts for the convention). The admin id above never
+    // reaches /users/:id, so it stays a plain placeholder.
+    const SOFTDEL_USER_REP_USER_ID = '00000000-0000-7000-8000-000000000045';
+    const SOFTDEL_USER_TECH_USER_ID = '00000000-0000-7000-8000-000000000044';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -780,21 +830,17 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
-      // uuid-path-validation branch: well-formed UUIDs, not human-readable
-      // placeholders — both are real DELETE/PATCH /users/:id targets below
-      // (see users.e2e-spec.ts for the convention). The admin id above
-      // never reaches /users/:id, so it stays a plain placeholder.
       const rep = await buildSeedUser({
-        id: '00000000-0000-7000-8000-000000000045',
+        id: SOFTDEL_USER_REP_USER_ID,
         email: 'softdel-user-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       const tech = await buildSeedUser({
-        id: '00000000-0000-7000-8000-000000000044',
+        id: SOFTDEL_USER_TECH_USER_ID,
         email: 'softdel-user-tech@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({ id: SOFTDEL_USER_COMMUNITY_ID });
       ({ app } = await buildApp({
         users: [admin, rep, tech],
         communities: [community],
@@ -809,22 +855,20 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/representatives`)
-        .send({ userId: '00000000-0000-7000-8000-000000000045' })
+        .post(`/communities/${SOFTDEL_USER_COMMUNITY_ID}/representatives`)
+        .send({ userId: SOFTDEL_USER_REP_USER_ID })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000045`,
+          `/communities/${SOFTDEL_USER_COMMUNITY_ID}/representatives/${SOFTDEL_USER_REP_USER_ID}`,
         )
         .expect(204);
 
-      await agent
-        .delete('/users/00000000-0000-7000-8000-000000000045')
-        .expect(204);
+      await agent.delete(`/users/${SOFTDEL_USER_REP_USER_ID}`).expect(204);
 
       const reactivateResponse = await agent
         .post(
-          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000045/reactivate`,
+          `/communities/${SOFTDEL_USER_COMMUNITY_ID}/representatives/${SOFTDEL_USER_REP_USER_ID}/reactivate`,
         )
         .expect(404);
       // spec: "404 and 400 responses on assignment routes are unaffected" —
@@ -832,16 +876,14 @@ describe('Communities (e2e)', () => {
       expect(reactivateResponse.body).not.toHaveProperty('code');
 
       const representatives = await agent
-        .get(`/communities/${communityId}/representatives`)
+        .get(`/communities/${SOFTDEL_USER_COMMUNITY_ID}/representatives`)
         .expect(200);
       const record = (
         representatives.body as Array<{
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find(
-        (entry) => entry.userId === '00000000-0000-7000-8000-000000000045',
-      );
+      ).find((entry) => entry.userId === SOFTDEL_USER_REP_USER_ID);
       expect(record?.deactivatedAt).not.toBeNull();
     });
 
@@ -849,37 +891,33 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/technicians`)
-        .send({ userId: '00000000-0000-7000-8000-000000000044' })
+        .post(`/communities/${SOFTDEL_USER_COMMUNITY_ID}/technicians`)
+        .send({ userId: SOFTDEL_USER_TECH_USER_ID })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000044`,
+          `/communities/${SOFTDEL_USER_COMMUNITY_ID}/technicians/${SOFTDEL_USER_TECH_USER_ID}`,
         )
         .expect(204);
 
-      await agent
-        .delete('/users/00000000-0000-7000-8000-000000000044')
-        .expect(204);
+      await agent.delete(`/users/${SOFTDEL_USER_TECH_USER_ID}`).expect(204);
 
       const reactivateResponse = await agent
         .post(
-          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000044/reactivate`,
+          `/communities/${SOFTDEL_USER_COMMUNITY_ID}/technicians/${SOFTDEL_USER_TECH_USER_ID}/reactivate`,
         )
         .expect(404);
       expect(reactivateResponse.body).not.toHaveProperty('code');
 
       const technicians = await agent
-        .get(`/communities/${communityId}/technicians`)
+        .get(`/communities/${SOFTDEL_USER_COMMUNITY_ID}/technicians`)
         .expect(200);
       const record = (
         technicians.body as Array<{
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find(
-        (entry) => entry.userId === '00000000-0000-7000-8000-000000000044',
-      );
+      ).find((entry) => entry.userId === SOFTDEL_USER_TECH_USER_ID);
       expect(record?.deactivatedAt).not.toBeNull();
     });
   });
@@ -887,7 +925,15 @@ describe('Communities (e2e)', () => {
   describe('Ineligible-role 409 on reactivate (tasks.md 1.5 checkpoint, design.md Open Question 1)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'reactivate-ineligible-admin@example.com';
-    const communityId = 'reactivate-ineligible-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // this id is used as a real path target below.
+    const REACTIVATE_INELIGIBLE_COMMUNITY_ID =
+      '00000000-0000-7000-8000-000000000058';
+    const REACTIVATE_INELIGIBLE_REP_USER_ID =
+      '00000000-0000-7000-8000-000000000043';
+    const REACTIVATE_INELIGIBLE_TECH_USER_ID =
+      '00000000-0000-7000-8000-000000000042';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -896,19 +942,21 @@ describe('Communities (e2e)', () => {
         role: 'SYSTEM_ADMIN',
       });
       // uuid-path-validation branch: well-formed UUIDs — both are real
-      // PATCH /users/:id targets below (see users.e2e-spec.ts for the
-      // convention).
+      // PATCH /users/:id AND .../representatives|technicians/:userId
+      // targets below (see users.e2e-spec.ts for the convention).
       const rep = await buildSeedUser({
-        id: '00000000-0000-7000-8000-000000000043',
+        id: REACTIVATE_INELIGIBLE_REP_USER_ID,
         email: 'reactivate-ineligible-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       const tech = await buildSeedUser({
-        id: '00000000-0000-7000-8000-000000000042',
+        id: REACTIVATE_INELIGIBLE_TECH_USER_ID,
         email: 'reactivate-ineligible-tech@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({
+        id: REACTIVATE_INELIGIBLE_COMMUNITY_ID,
+      });
       ({ app } = await buildApp({
         users: [admin, rep, tech],
         communities: [community],
@@ -929,22 +977,24 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/representatives`)
-        .send({ userId: '00000000-0000-7000-8000-000000000043' })
+        .post(
+          `/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/representatives`,
+        )
+        .send({ userId: REACTIVATE_INELIGIBLE_REP_USER_ID })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000043`,
+          `/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/representatives/${REACTIVATE_INELIGIBLE_REP_USER_ID}`,
         )
         .expect(204);
       await agent
-        .patch('/users/00000000-0000-7000-8000-000000000043')
+        .patch(`/users/${REACTIVATE_INELIGIBLE_REP_USER_ID}`)
         .send({ role: 'MANAGER' })
         .expect(200);
 
       const response = await agent
         .post(
-          `/communities/${communityId}/representatives/00000000-0000-7000-8000-000000000043/reactivate`,
+          `/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/representatives/${REACTIVATE_INELIGIBLE_REP_USER_ID}/reactivate`,
         )
         .expect(409);
 
@@ -962,22 +1012,22 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/technicians`)
-        .send({ userId: '00000000-0000-7000-8000-000000000042' })
+        .post(`/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/technicians`)
+        .send({ userId: REACTIVATE_INELIGIBLE_TECH_USER_ID })
         .expect(201);
       await agent
         .delete(
-          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000042`,
+          `/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/technicians/${REACTIVATE_INELIGIBLE_TECH_USER_ID}`,
         )
         .expect(204);
       await agent
-        .patch('/users/00000000-0000-7000-8000-000000000042')
+        .patch(`/users/${REACTIVATE_INELIGIBLE_TECH_USER_ID}`)
         .send({ role: 'MANAGER' })
         .expect(200);
 
       const response = await agent
         .post(
-          `/communities/${communityId}/technicians/00000000-0000-7000-8000-000000000042/reactivate`,
+          `/communities/${REACTIVATE_INELIGIBLE_COMMUNITY_ID}/technicians/${REACTIVATE_INELIGIBLE_TECH_USER_ID}/reactivate`,
         )
         .expect(409);
 
@@ -995,7 +1045,14 @@ describe('Communities (e2e)', () => {
   describe("Accepted eligibility drift (tasks.md 11.6, spec: Changing an actively-assigned user's role leaves the assignment untouched)", () => {
     let app: INestApplication<App>;
     const adminEmail = 'drift-admin@example.com';
-    const communityId = 'drift-community-id';
+    // uuid-path-validation branch: well-formed UUID, not a human-readable
+    // placeholder — :id is validated as a UUID (INVALID_COMMUNITY_ID) and
+    // this id is used as a real path target below.
+    const DRIFT_COMMUNITY_ID = '00000000-0000-7000-8000-000000000059';
+    // uuid-path-validation branch: well-formed UUID — a real PATCH
+    // /users/:id AND .../representatives/:userId target below (see
+    // users.e2e-spec.ts for the convention).
+    const DRIFT_REP_USER_ID = '00000000-0000-7000-8000-000000000046';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -1003,15 +1060,12 @@ describe('Communities (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
-      // uuid-path-validation branch: well-formed UUID — a real PATCH
-      // /users/:id target below (see users.e2e-spec.ts for the
-      // convention).
       const rep = await buildSeedUser({
-        id: '00000000-0000-7000-8000-000000000046',
+        id: DRIFT_REP_USER_ID,
         email: 'drift-rep@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({ id: DRIFT_COMMUNITY_ID });
       ({ app } = await buildApp({
         users: [admin, rep],
         communities: [community],
@@ -1026,26 +1080,24 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       await agent
-        .post(`/communities/${communityId}/representatives`)
-        .send({ userId: '00000000-0000-7000-8000-000000000046' })
+        .post(`/communities/${DRIFT_COMMUNITY_ID}/representatives`)
+        .send({ userId: DRIFT_REP_USER_ID })
         .expect(201);
 
       await agent
-        .patch('/users/00000000-0000-7000-8000-000000000046')
+        .patch(`/users/${DRIFT_REP_USER_ID}`)
         .send({ role: 'MANAGER' })
         .expect(200);
 
       const representatives = await agent
-        .get(`/communities/${communityId}/representatives`)
+        .get(`/communities/${DRIFT_COMMUNITY_ID}/representatives`)
         .expect(200);
       const record = (
         representatives.body as Array<{
           userId: string;
           deactivatedAt: string | null;
         }>
-      ).find(
-        (entry) => entry.userId === '00000000-0000-7000-8000-000000000046',
-      );
+      ).find((entry) => entry.userId === DRIFT_REP_USER_ID);
       expect(record).toBeDefined();
       expect(record?.deactivatedAt).toBeNull();
     });
@@ -1055,9 +1107,13 @@ describe('Communities (e2e)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'guard-admin@example.com';
     const nonAdminEmail = 'guard-manager@example.com';
-    const communityId = 'guard-community-id';
-    const repUserId = 'guard-rep-target-id';
-    const techUserId = 'guard-tech-target-id';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — :id/:userId are validated as UUIDs
+    // (INVALID_COMMUNITY_ID/INVALID_USER_ID) and these ids are used as real
+    // path targets in the `routes` table below.
+    const GUARD_COMMUNITY_ID = '00000000-0000-7000-8000-000000000060';
+    const GUARD_REP_USER_ID = '00000000-0000-7000-8000-000000000061';
+    const GUARD_TECH_USER_ID = '00000000-0000-7000-8000-000000000062';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -1071,25 +1127,25 @@ describe('Communities (e2e)', () => {
         role: 'MANAGER',
       });
       const repUser = await buildSeedUser({
-        id: repUserId,
+        id: GUARD_REP_USER_ID,
         email: 'guard-rep-target@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       const techUser = await buildSeedUser({
-        id: techUserId,
+        id: GUARD_TECH_USER_ID,
         email: 'guard-tech-target@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      const community = buildCommunity({ id: communityId });
+      const community = buildCommunity({ id: GUARD_COMMUNITY_ID });
       const repAssignment = buildRepresentative({
         id: 'guard-rep-assignment-id',
-        communityId,
-        userId: repUserId,
+        communityId: GUARD_COMMUNITY_ID,
+        userId: GUARD_REP_USER_ID,
       });
       const techAssignment = buildTechnician({
         id: 'guard-tech-assignment-id',
-        communityId,
-        userId: techUserId,
+        communityId: GUARD_COMMUNITY_ID,
+        userId: GUARD_TECH_USER_ID,
       });
       ({ app } = await buildApp({
         users: [admin, nonAdmin, repUser, techUser],
@@ -1106,21 +1162,27 @@ describe('Communities (e2e)', () => {
     const routes = [
       ['POST', '/communities'],
       ['GET', '/communities'],
-      ['PATCH', `/communities/${communityId}`],
-      ['DELETE', `/communities/${communityId}`],
-      ['GET', `/communities/${communityId}/representatives`],
-      ['POST', `/communities/${communityId}/representatives`],
-      ['DELETE', `/communities/${communityId}/representatives/${repUserId}`],
+      ['PATCH', `/communities/${GUARD_COMMUNITY_ID}`],
+      ['DELETE', `/communities/${GUARD_COMMUNITY_ID}`],
+      ['GET', `/communities/${GUARD_COMMUNITY_ID}/representatives`],
+      ['POST', `/communities/${GUARD_COMMUNITY_ID}/representatives`],
       [
-        'POST',
-        `/communities/${communityId}/representatives/${repUserId}/reactivate`,
+        'DELETE',
+        `/communities/${GUARD_COMMUNITY_ID}/representatives/${GUARD_REP_USER_ID}`,
       ],
-      ['GET', `/communities/${communityId}/technicians`],
-      ['POST', `/communities/${communityId}/technicians`],
-      ['DELETE', `/communities/${communityId}/technicians/${techUserId}`],
       [
         'POST',
-        `/communities/${communityId}/technicians/${techUserId}/reactivate`,
+        `/communities/${GUARD_COMMUNITY_ID}/representatives/${GUARD_REP_USER_ID}/reactivate`,
+      ],
+      ['GET', `/communities/${GUARD_COMMUNITY_ID}/technicians`],
+      ['POST', `/communities/${GUARD_COMMUNITY_ID}/technicians`],
+      [
+        'DELETE',
+        `/communities/${GUARD_COMMUNITY_ID}/technicians/${GUARD_TECH_USER_ID}`,
+      ],
+      [
+        'POST',
+        `/communities/${GUARD_COMMUNITY_ID}/technicians/${GUARD_TECH_USER_ID}/reactivate`,
       ],
     ] as const;
 
@@ -1171,8 +1233,12 @@ describe('Communities (e2e)', () => {
   describe('Multiple technicians, no exclusivity (tasks.md 11.8)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'multi-tech-admin@example.com';
-    const communityId1 = 'multi-tech-community-1';
-    const communityId2 = 'multi-tech-community-2';
+    // uuid-path-validation branch: well-formed UUIDs, not human-readable
+    // placeholders — see the CRUD describe block above. The technician
+    // user ids below never reach :userId in this block (body-only, no
+    // DELETE/reactivate call), so they stay plain placeholders.
+    const MULTI_TECH_COMMUNITY_1_ID = '00000000-0000-7000-8000-000000000063';
+    const MULTI_TECH_COMMUNITY_2_ID = '00000000-0000-7000-8000-000000000064';
 
     beforeAll(async () => {
       const admin = await buildSeedUser({
@@ -1190,8 +1256,8 @@ describe('Communities (e2e)', () => {
         email: 'multi-tech-b@example.com',
         role: 'MAINTENANCE_TECHNICIAN',
       });
-      const community1 = buildCommunity({ id: communityId1 });
-      const community2 = buildCommunity({ id: communityId2 });
+      const community1 = buildCommunity({ id: MULTI_TECH_COMMUNITY_1_ID });
+      const community2 = buildCommunity({ id: MULTI_TECH_COMMUNITY_2_ID });
       ({ app } = await buildApp({
         users: [admin, techA, techB],
         communities: [community1, community2],
@@ -1206,19 +1272,19 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const responseA = await agent
-        .post(`/communities/${communityId1}/technicians`)
+        .post(`/communities/${MULTI_TECH_COMMUNITY_1_ID}/technicians`)
         .send({ userId: 'multi-tech-a-id' })
         .expect(201);
       expect(responseA.body).not.toHaveProperty('warning');
 
       const responseB = await agent
-        .post(`/communities/${communityId1}/technicians`)
+        .post(`/communities/${MULTI_TECH_COMMUNITY_1_ID}/technicians`)
         .send({ userId: 'multi-tech-b-id' })
         .expect(201);
       expect(responseB.body).not.toHaveProperty('warning');
 
       const technicians = await agent
-        .get(`/communities/${communityId1}/technicians`)
+        .get(`/communities/${MULTI_TECH_COMMUNITY_1_ID}/technicians`)
         .expect(200);
       const active = (
         technicians.body as Array<{
@@ -1235,13 +1301,13 @@ describe('Communities (e2e)', () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent
-        .post(`/communities/${communityId2}/technicians`)
+        .post(`/communities/${MULTI_TECH_COMMUNITY_2_ID}/technicians`)
         .send({ userId: 'multi-tech-a-id' })
         .expect(201);
       expect(response.body).not.toHaveProperty('warning');
 
       const techniciansC1 = await agent
-        .get(`/communities/${communityId1}/technicians`)
+        .get(`/communities/${MULTI_TECH_COMMUNITY_1_ID}/technicians`)
         .expect(200);
       const activeC1 = (
         techniciansC1.body as Array<{
@@ -1252,7 +1318,7 @@ describe('Communities (e2e)', () => {
       expect(activeC1?.deactivatedAt).toBeNull();
 
       const techniciansC2 = await agent
-        .get(`/communities/${communityId2}/technicians`)
+        .get(`/communities/${MULTI_TECH_COMMUNITY_2_ID}/technicians`)
         .expect(200);
       const activeC2 = (
         techniciansC2.body as Array<{

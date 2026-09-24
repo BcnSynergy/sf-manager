@@ -1411,8 +1411,14 @@ describe('Review History (e2e)', () => {
         email: adminEmail,
         role: 'SYSTEM_ADMIN',
       });
+      // uuid-path-validation branch: well-formed UUIDs, not human-readable
+      // placeholders — both are real DELETE/POST(reactivate)
+      // /communities/:id/(technicians|representatives)/:userId targets
+      // below, on CommunityController (see community.e2e-spec.ts for the
+      // convention). rhr-technician-mate-id never reaches :userId in this
+      // block (body-only), so it stays a plain placeholder.
       const technician = await buildSeedUser({
-        id: 'rhr-technician-id',
+        id: '00000000-0000-7000-8000-000000000100',
         email: technicianEmail,
         role: 'MAINTENANCE_TECHNICIAN',
       });
@@ -1422,7 +1428,7 @@ describe('Review History (e2e)', () => {
         role: 'MAINTENANCE_TECHNICIAN',
       });
       const representative = await buildSeedUser({
-        id: 'rhr-representative-id',
+        id: '00000000-0000-7000-8000-000000000101',
         email: representativeEmail,
         role: 'COMMUNITY_REPRESENTATIVE',
       });
@@ -1435,7 +1441,11 @@ describe('Review History (e2e)', () => {
         adminAgent,
         'Retroactive revocation community',
       );
-      await assignTechnician(adminAgent, community.id, 'rhr-technician-id');
+      await assignTechnician(
+        adminAgent,
+        community.id,
+        '00000000-0000-7000-8000-000000000100',
+      );
       await assignTechnician(
         adminAgent,
         community.id,
@@ -1444,7 +1454,7 @@ describe('Review History (e2e)', () => {
       await assignRepresentative(
         adminAgent,
         community.id,
-        'rhr-representative-id',
+        '00000000-0000-7000-8000-000000000101',
       );
 
       element = await createElement(
@@ -1530,7 +1540,9 @@ describe('Review History (e2e)', () => {
       );
 
       await adminAgent
-        .delete(`/communities/${community.id}/technicians/rhr-technician-id`)
+        .delete(
+          `/communities/${community.id}/technicians/00000000-0000-7000-8000-000000000100`,
+        )
         .expect(204);
 
       // The very next request, no grace period: own work is UNCHANGED —
@@ -1554,7 +1566,7 @@ describe('Review History (e2e)', () => {
 
       await adminAgent
         .post(
-          `/communities/${community.id}/technicians/rhr-technician-id/reactivate`,
+          `/communities/${community.id}/technicians/00000000-0000-7000-8000-000000000100/reactivate`,
         )
         .expect(200);
 
@@ -1603,7 +1615,7 @@ describe('Review History (e2e)', () => {
 
       await adminAgent
         .delete(
-          `/communities/${community.id}/representatives/rhr-representative-id`,
+          `/communities/${community.id}/representatives/00000000-0000-7000-8000-000000000101`,
         )
         .expect(204);
 
@@ -1622,7 +1634,7 @@ describe('Review History (e2e)', () => {
 
       await adminAgent
         .post(
-          `/communities/${community.id}/representatives/rhr-representative-id/reactivate`,
+          `/communities/${community.id}/representatives/00000000-0000-7000-8000-000000000101/reactivate`,
         )
         .expect(200);
 
@@ -3782,8 +3794,13 @@ describe('Review History (e2e)', () => {
     // `representativeEmail` fixture used by the scope-matrix tests above,
     // so deactivating it here cannot affect those tests).
     it('a deactivated representative loses the document, 404 REVIEW_SESSION_NOT_FOUND', async () => {
+      // uuid-path-validation branch: well-formed UUID, not a
+      // human-readable placeholder — a real DELETE
+      // /communities/:id/representatives/:userId target below, on
+      // CommunityController (see community.e2e-spec.ts for the
+      // convention).
       const isolatedRepresentative = await buildSeedUser({
-        id: 'rhdoc-representative-deactivate-id',
+        id: '00000000-0000-7000-8000-000000000102',
         email: 'rhdoc-representative-deactivate@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
@@ -3792,7 +3809,7 @@ describe('Review History (e2e)', () => {
       await assignRepresentative(
         adminAgent,
         communityC.id,
-        'rhdoc-representative-deactivate-id',
+        '00000000-0000-7000-8000-000000000102',
       );
       const representativeAgent = await loginAgent(
         built.app,
@@ -3805,7 +3822,7 @@ describe('Review History (e2e)', () => {
 
       await adminAgent
         .delete(
-          `/communities/${communityC.id}/representatives/rhdoc-representative-deactivate-id`,
+          `/communities/${communityC.id}/representatives/00000000-0000-7000-8000-000000000102`,
         )
         .expect(204);
 
@@ -3823,8 +3840,12 @@ describe('Review History (e2e)', () => {
     // assignment is deactivated; document visibility is carried entirely by
     // the review-history scope, never by having performed the session.
     it('a representative who signed loses the document after her assignment is deactivated', async () => {
+      // uuid-path-validation branch: well-formed UUID — a real DELETE
+      // /communities/:id/representatives/:userId target below, on
+      // CommunityController (see community.e2e-spec.ts for the
+      // convention).
       const isolatedRepresentative = await buildSeedUser({
-        id: 'rhdoc-representative-signer-id',
+        id: '00000000-0000-7000-8000-000000000103',
         email: 'rhdoc-representative-signer@example.com',
         role: 'COMMUNITY_REPRESENTATIVE',
       });
@@ -3846,7 +3867,7 @@ describe('Review History (e2e)', () => {
       await assignRepresentative(
         adminAgent,
         communityRepSigner.id,
-        'rhdoc-representative-signer-id',
+        '00000000-0000-7000-8000-000000000103',
       );
       const representativeAgent = await loginAgent(
         built.app,
@@ -3871,7 +3892,7 @@ describe('Review History (e2e)', () => {
 
       await adminAgent
         .delete(
-          `/communities/${communityRepSigner.id}/representatives/rhdoc-representative-signer-id`,
+          `/communities/${communityRepSigner.id}/representatives/00000000-0000-7000-8000-000000000103`,
         )
         .expect(204);
 
