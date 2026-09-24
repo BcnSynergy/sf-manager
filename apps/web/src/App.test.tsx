@@ -146,6 +146,9 @@ vi.mock('./pages/ReviewHistoryDetailPage', () => ({
     <div data-testid="page-stub-ReviewHistoryDetailPage">ReviewHistoryDetailPage</div>
   ),
 }));
+vi.mock('./pages/ReviewDocumentPage', () => ({
+  ReviewDocumentPage: () => <div data-testid="page-stub-ReviewDocumentPage">ReviewDocumentPage</div>,
+}));
 vi.mock('./pages/OrganizationProfilePage', () => ({
   OrganizationProfilePage: () => (
     <div data-testid="page-stub-OrganizationProfilePage">OrganizationProfilePage</div>

@@ -498,6 +498,11 @@
       "openLink": "Ver sesión"
     }
   },
+  "reviewDocument": {
+    "title": "Documento de revisión",
+    "loading": "Cargando el documento de revisión...",
+    "unreachable": "Este documento no está disponible."
+  },
   "health": {
     "title": "Estado del sistema",
     "checking": "Comprobando...",

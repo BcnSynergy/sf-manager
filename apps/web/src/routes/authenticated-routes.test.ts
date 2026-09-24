@@ -17,6 +17,7 @@ import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListP
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
 import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
+import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
@@ -175,6 +176,21 @@ const EXPECTED_ROUTES: {
     ],
     elementType: ReviewHistoryDetailPage,
   },
+  // review-document-ui spec "The Document Page Is Gated on the Five History
+  // Roles": identical 5-role gate as `/review-history` and
+  // `/review-history/:sessionId` above — the MANAGER gate is the role
+  // alone, never VIEW_ALL_REVIEWS, which the client never learns.
+  {
+    path: '/review-history/:sessionId/document',
+    allowedRoles: [
+      'MAINTENANCE_TECHNICIAN',
+      'COMMUNITY_REPRESENTATIVE',
+      'MAINTENANCE_COMPANY_MANAGER',
+      'SYSTEM_ADMIN',
+      'MANAGER',
+    ],
+    elementType: ReviewDocumentPage,
+  },
   {
     path: '/organization-profile',
     allowedRoles: ['SYSTEM_ADMIN'],
@@ -183,8 +199,8 @@ const EXPECTED_ROUTES: {
 ];
 
 describe('AUTHENTICATED_ROUTES', () => {
-  it('has exactly 29 entries', () => {
-    expect(AUTHENTICATED_ROUTES).toHaveLength(29);
+  it('has exactly 30 entries', () => {
+    expect(AUTHENTICATED_ROUTES).toHaveLength(30);
   });
 
   it('matches path, allowedRoles and paired element component exactly, in order', () => {

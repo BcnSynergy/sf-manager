@@ -528,6 +528,19 @@ describe('locale key-set parity (en/es/ca)', () => {
     'organizationProfile.saveSuccess',
   ];
 
+  // Existence guard for review-export's web page shell (PR 10), same
+  // rationale as REQUIRED_COMMUNITY_KEY_PATHS above — a fixed,
+  // hand-maintained list of every `reviewDocument.*` key path referenced by
+  // ReviewDocumentPage.tsx, so a future PR that adds a new call site
+  // without adding its translation fails here rather than silently
+  // rendering the raw key. Grows in PR 11-13 with the letterhead,
+  // session-data, record, print and "View document" link keys.
+  const REQUIRED_REVIEW_DOCUMENT_KEY_PATHS = [
+    'reviewDocument.title',
+    'reviewDocument.loading',
+    'reviewDocument.unreachable',
+  ];
+
   // Existence guard for review-history-manager-capability (PR 4), same
   // rationale as REQUIRED_COMMUNITY_KEY_PATHS above — a fixed,
   // hand-maintained list of every `users.edit.capabilities*` /
@@ -735,6 +748,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_ORGANIZATION_PROFILE_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_REVIEW_DOCUMENT_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

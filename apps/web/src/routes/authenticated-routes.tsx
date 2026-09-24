@@ -18,6 +18,7 @@ import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListP
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
 import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
+import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
@@ -281,6 +282,23 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   {
     path: '/review-history/:sessionId',
     element: <ReviewHistoryDetailPage />,
+    allowedRoles: [
+      'MAINTENANCE_TECHNICIAN',
+      'COMMUNITY_REPRESENTATIVE',
+      'MAINTENANCE_COMPANY_MANAGER',
+      'SYSTEM_ADMIN',
+      'MANAGER',
+    ],
+  },
+  // review-document-ui spec "The Document Page Is Gated on the Five History
+  // Roles": identical 5-role gate as the two routes above — the MANAGER
+  // gate is the role alone, never VIEW_ALL_REVIEWS, which the client never
+  // learns. Reached, until PR 13, only by a hand-typed URL (design.md
+  // "Web surface": the one "View document" link on
+  // ReviewHistoryDetailPage ships separately).
+  {
+    path: '/review-history/:sessionId/document',
+    element: <ReviewDocumentPage />,
     allowedRoles: [
       'MAINTENANCE_TECHNICIAN',
       'COMMUNITY_REPRESENTATIVE',
