@@ -174,3 +174,27 @@ None of the three deferred follow-ups (ParseUUIDPipe, dev-DB pollution, stale re
 
 ### Verdict
 **PASS WITH WARNINGS.** 0 CRITICAL, 5 WARNING, 7 SUGGESTION. All suites, lint and type-check/build are green, and every spec requirement is implemented. No warning blocks sdd-archive. W-1 (restore the TDD evidence table) and W-2 (field-flow regression tests) are cheap and are recommended before or alongside archive.
+
+## Addendum: W-1 resolution (TDD evidence table)
+
+Reconstructed after verify, from PR bodies, git history and the apply
+reports of this chain. Evidence that was not retained is stated as such, not
+re-created.
+
+| PR | TDD evidence |
+|---|---|
+| 1–6 (#143–#148) | Not retained. Tests exist and pass, and each PR had a fresh-context review. RED/GREEN counts were reported per batch but lost when apply-progress was compacted, and the PR bodies do not carry them. |
+| 7 (#149) | Separate RED commit `2492aa2` before `3badcc6`. The new e2e cases failed with 404 (unmatched route) before wiring. |
+| 8 (#150) | Characterization by design (not test-first). |
+| 9 (#151) | RED: module not found (0/5 and 0/3 ran). GREEN: 5/5 and 3/3. |
+| 10 (#152) | RED: missing page import. GREEN: 6/6. |
+| 11 (#153) | RED: 7 failing against the PR 10 shell. GREEN: full suite 924/924. |
+| 12 (#154) | RED: 5 failing. GREEN: 21/21. The order and `h1` print-hide tests are characterization. |
+| 13 (#155) | RED: 2/15. GREEN: 15/15. |
+| 14 (W-2 follow-up) | Regression tests over correct code. Each was mutation-checked: behaviour broken locally, test failed, change reverted. |
+
+## Addendum: follow-ups applied before archive
+
+- W-2: 3 field-flow regression tests (`fc8de37`).
+- W-5: `reviewHistory.detail.documentLink` moved to `REQUIRED_REVIEW_DOCUMENT_KEY_PATHS` (`2ec081f`).
+- W-3 and W-4, and S-1 to S-7: accepted as-is and carried as follow-ups.
