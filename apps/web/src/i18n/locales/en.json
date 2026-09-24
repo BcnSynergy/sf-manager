@@ -479,6 +479,7 @@
       "entriesTitle": "Reviewed elements",
       "entriesEmpty": "No elements recorded.",
       "elementCodeUnknown": "Unknown element",
+      "questionTextUnknown": "Unknown question",
       "entryUnreviewedLabel": "Not reviewed:",
       "elementHistoryLink": "View element history",
       "documentLink": "View document"
@@ -522,6 +523,7 @@
     "record": {
       "title": "Record",
       "elementUnknown": "Unknown element",
+      "questionTextUnknown": "Unknown question",
       "unreviewedLabel": "Not reviewed:"
     },
     "print": {

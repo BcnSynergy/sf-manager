@@ -479,6 +479,7 @@
       "entriesTitle": "Elementos revisados",
       "entriesEmpty": "No se ha registrado ningún elemento.",
       "elementCodeUnknown": "Elemento desconocido",
+      "questionTextUnknown": "Pregunta desconocida",
       "entryUnreviewedLabel": "No revisado:",
       "elementHistoryLink": "Ver historial del elemento",
       "documentLink": "Ver documento"
@@ -522,6 +523,7 @@
     "record": {
       "title": "Registro",
       "elementUnknown": "Elemento desconocido",
+      "questionTextUnknown": "Pregunta desconocida",
       "unreviewedLabel": "No revisado:"
     },
     "print": {

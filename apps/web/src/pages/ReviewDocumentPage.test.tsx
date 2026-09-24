@@ -383,6 +383,36 @@ describe('record region', () => {
     expect(screen.queryAllByTestId(/^review-document-record-entry-/)).toHaveLength(0);
     expect(screen.queryByTestId('review-document-error')).not.toBeInTheDocument();
   });
+
+  // review-export verify-report S-4: `questionTextById.get(...) ?? answer.questionId`
+  // fell back to the RAW question id (a UUID) when the snapshot has no matching
+  // question. Mirrors the "no raw identifier shown to users" rule already applied
+  // to `elementCode` above — a localized neutral label replaces the id instead.
+  it('renders a localized label, not the raw question id, for an answer with no matching question snapshot', async () => {
+    mockedReadReviewDocument.mockResolvedValue({
+      ...document,
+      entries: [
+        {
+          inspectableElementId: 'e-orphan',
+          elementCode: 'AA1',
+          elementName: 'Extinguisher A',
+          elementLocation: 'Floor 1',
+          reviewed: true,
+          observations: null,
+          answers: [{ questionId: 'q-missing', answer: 'YES' }],
+          recordedAt: '2026-09-01T00:10:00.000Z',
+        },
+      ],
+      questions: [],
+    });
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const entry = screen.getByTestId('review-document-record-entry-e-orphan');
+    expect(entry).toHaveTextContent('Unknown question');
+    expect(entry).not.toHaveTextContent('q-missing');
+  });
 });
 
 // review-document-ui spec "Print Through the Browser, Document Only" /

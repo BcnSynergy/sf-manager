@@ -159,8 +159,9 @@ export function ReviewHistoryDetailPage() {
                   <ul>
                     {entry.answers.map((answer) => (
                       <li key={answer.questionId}>
-                        {questionTextById.get(answer.questionId) ?? answer.questionId}:{' '}
-                        {t(mapAnswerValueToLabelKey(answer.answer))}
+                        {questionTextById.get(answer.questionId) ??
+                          t('reviewHistory.detail.questionTextUnknown')}
+                        : {t(mapAnswerValueToLabelKey(answer.answer))}
                       </li>
                     ))}
                   </ul>

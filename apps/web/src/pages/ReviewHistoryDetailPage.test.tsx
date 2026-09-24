@@ -121,6 +121,33 @@ describe('ReviewHistoryDetailPage', () => {
     expect(codeCell.textContent).not.toBe('null');
   });
 
+  // review-history verify-report S-1: `questionTextById.get(...) ?? answer.questionId`
+  // fell back to the RAW question id (a UUID) when the snapshot has no matching
+  // question. Mirrors the "no raw identifier shown to users" rule already applied
+  // to `elementCode` above — a localized neutral label replaces the id instead.
+  it('renders a localized label, not the raw question id, for an answer with no matching question snapshot', async () => {
+    mockedReadReviewHistory.mockResolvedValue({
+      ...detail,
+      entries: [
+        {
+          inspectableElementId: 'e-orphan',
+          elementCode: 'AB3456789C',
+          reviewed: true,
+          observations: null,
+          answers: [{ questionId: 'q-missing', answer: 'YES' as const }],
+          recordedAt: '2026-09-01T00:30:00.000Z',
+        },
+      ],
+      questions: [],
+    });
+
+    renderPage();
+
+    const entry = await screen.findByTestId('review-history-detail-entry-e-orphan');
+    expect(entry).toHaveTextContent('Unknown question');
+    expect(entry).not.toHaveTextContent('q-missing');
+  });
+
   it('renders no mutation control of any kind — this is a read-only history view', async () => {
     mockedReadReviewHistory.mockResolvedValue(detail);
 

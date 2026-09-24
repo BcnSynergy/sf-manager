@@ -477,6 +477,7 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewHistory.detail.entriesTitle',
     'reviewHistory.detail.entriesEmpty',
     'reviewHistory.detail.elementCodeUnknown',
+    'reviewHistory.detail.questionTextUnknown',
     'reviewHistory.detail.entryUnreviewedLabel',
     // performer line (review-history-company-scope, Phase 5)
     'reviewHistory.detail.performerLabel',
@@ -558,6 +559,7 @@ describe('locale key-set parity (en/es/ca)', () => {
     // Record and print (PR 12): record region, neutral element label, print control.
     'reviewDocument.record.title',
     'reviewDocument.record.elementUnknown',
+    'reviewDocument.record.questionTextUnknown',
     'reviewDocument.record.unreviewedLabel',
     'reviewDocument.print.button',
     // View document link (review-export PR 13, task 13.4). Sits under
