@@ -201,6 +201,23 @@ code {
     text-align: left;
   }
 
+  /* PR 12 review fix: `h1`/`h2` (line ~70 above) set their own
+     `color: var(--text-h)`, which does NOT inherit the `color: #000` the
+     rule above forces on `.review-document-print` — in dark mode
+     `--text-h` is #f3f4f6, so "Session data"/"Record" printed near-white
+     on white. `dt`/`dd`/`p`/`li` carry no color rule of their own (checked
+     above in this file), so they already inherit the forced #000 fine; only
+     the two heading-color rules and `code`/`.counter` (unused on this page,
+     forced here anyway for robustness) needed an explicit override. CSS
+     itself is not unit-testable — verified by print-preview browser check,
+     not a Vitest assertion. */
+  .review-document-print h1,
+  .review-document-print h2,
+  .review-document-print code,
+  .review-document-print .counter {
+    color: #000;
+  }
+
   #root:has(.review-document-print) {
     border: none;
   }
