@@ -185,15 +185,15 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
 
 ## PR 9 — Web helpers (~200 lines)
 
-- [ ] 9.1 RED: `format-date.test.ts` — identical output across runtime time
+- [x] 9.1 RED: `format-date.test.ts` — identical output across runtime time
       zones, in `en`/`es`/`ca`, across a DST boundary — spec: review-document-ui
       *Dates render in a fixed time zone regardless of the viewer's own*
-- [ ] 9.2 GREEN: create `apps/web/src/review-session/format-date.ts`
+- [x] 9.2 GREEN: create `apps/web/src/review-session/format-date.ts`
       (`Intl.DateTimeFormat`, fixed `Europe/Madrid`, date and date-time `HH:mm`)
       — spec: *The signing date shows both date and time*
-- [ ] 9.3 RED: `is-profile-incomplete.test.ts` — true when any of the six
+- [x] 9.3 RED: `is-profile-incomplete.test.ts` — true when any of the six
       fields is blank
-- [ ] 9.4 GREEN: create `apps/web/src/organization-profile/is-profile-incomplete.ts`;
+- [x] 9.4 GREEN: create `apps/web/src/organization-profile/is-profile-incomplete.ts`;
       update `OrganizationProfilePage.tsx` to use it, behaviour-preserving
 
 ## PR 10 — Page shell (~300 lines)
