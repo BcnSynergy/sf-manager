@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
@@ -32,6 +31,7 @@ import type { VerifiedAccessToken } from '../../auth/application/ports/token-iss
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
+import { sessionIdPipe } from './session-id.pipe';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { AnswersDoNotMatchTemplateError } from '../domain/errors/answers-do-not-match-template.error';
@@ -59,29 +59,6 @@ import { ReviewSessionResponseDto } from './dto/review-session-response.dto';
 import { ReviewSessionDetailResponseDto } from './dto/review-session-detail-response.dto';
 import { ResolveElementResponseDto } from './dto/resolve-element-response.dto';
 import { RecordEntryResponseDto } from './dto/record-entry-response.dto';
-
-// Tech-debt cleanup: every `:sessionId` route below let a malformed id fall
-// through to its use case and, on the real Prisma adapter, to an unmapped
-// 500 against `@db.Uuid` — none of them validated the param at all.
-// `ParseUUIDPipe` with no `version` defaults to 'all', which — in the
-// installed @nestjs/common version — matches ANY hex-hyphen UUID shape
-// regardless of the version nibble, so it accepts this app's UUID v7 ids
-// exactly like every other version; it does not depend on class-validator
-// (ADR-015 only rejects class-validator DTO classes, not this pipe). The
-// exceptionFactory swaps Nest's default `{statusCode, message, error}`
-// shape for this app's `{statusCode, error, message, code}` coded-error
-// convention. Mirrors review-history.controller.ts's own guard, added in
-// the same tech-debt pass.
-function sessionIdPipe(): ParseUUIDPipe {
-  return new ParseUUIDPipe({
-    exceptionFactory: () =>
-      buildCodedError(
-        HttpStatus.BAD_REQUEST,
-        'Malformed session id.',
-        'INVALID_SESSION_ID',
-      ),
-  });
-}
 
 // design.md Decision 10: flat `/review-sessions` API + a separate top-level
 // `/review-scope` path (Express matches in declaration order — a nested

@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
@@ -17,6 +11,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import type { VerifiedAccessToken } from '../../auth/application/ports/token-issuer.port';
 import { RequirePermission } from '../../../shared/presentation/decorators/require-permission.decorator';
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
+import { sessionIdPipe } from './session-id.pipe';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
@@ -28,29 +23,6 @@ import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
 import { ElementReviewHistoryResponseDto } from './dto/element-review-history-response.dto';
 import { ReviewDocumentResponseDto } from './dto/review-document-response.dto';
-
-// Tech-debt cleanup: both `:sessionId` routes below validated nothing —
-// any string reached the use case and, against the real Prisma adapter's
-// `@db.Uuid` column, surfaced as an unmapped 500 instead of a clean 400.
-// `ParseUUIDPipe` with no `version` defaults to 'all', which — in this
-// @nestjs/common version — matches ANY hex-hyphen UUID shape regardless of
-// the version nibble, so it accepts this app's UUID v7 ids exactly like
-// every other version; it does not depend on class-validator (ADR-015 only
-// rejects class-validator DTO classes, not this pipe). The exceptionFactory
-// swaps Nest's default `{statusCode, message, error}` shape for this app's
-// `{statusCode, error, message, code}` coded-error convention, so a
-// malformed id is reported the same shape as every other 400 in this
-// codebase.
-function sessionIdPipe(): ParseUUIDPipe {
-  return new ParseUUIDPipe({
-    exceptionFactory: () =>
-      buildCodedError(
-        HttpStatus.BAD_REQUEST,
-        'Malformed session id.',
-        'INVALID_SESSION_ID',
-      ),
-  });
-}
 
 // review-history design.md Decision 4: a SEPARATE controller file from
 // review-session.controller.ts, not an appended route. `review-history/
