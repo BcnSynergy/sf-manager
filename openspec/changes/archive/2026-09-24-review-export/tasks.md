@@ -52,7 +52,8 @@ suite locking behaviour PR 7 already ships, so it has no separate RED/GREEN spli
 - [x] 1.4 RED: extend `ReviewSessionDetailPage.test.tsx` asserting the complete
       button reads "Sign and close" and the dialog warns the review closes and
       cannot be modified — spec: review-session-ui *Complete a Session and
-      Explain Its Gaps*; review-session-management *Completion Is the Signing Act*
+      Explain Its Gaps*; review-session-management *Completion Is the Signing
+      Act*
 - [x] 1.5 GREEN: update `apps/web/src/pages/ReviewSessionDetailPage.tsx` label
       and dialog copy only — no document link (design Decision 6)
 - [x] 1.6 Update `apps/web/src/i18n/locales/{en,es,ca}.json` `reviewSession.detail.complete*`
@@ -309,7 +310,7 @@ Not test-first: this PR is the test suite that locks behaviour PR 7 already ship
       (verify-report.md: PASS WITH WARNINGS, 0 CRITICAL. W-2 and W-5 closed
       in follow-up commits `fc8de37`/`2ec081f`; W-1/W-3/W-4 and all
       SUGGESTIONs deferred to archive, none CRITICAL)
-- [ ] 14.4 `sdd-archive review-export`
+- [x] 14.4 `sdd-archive review-export`
 
 ## Rules Applied
 

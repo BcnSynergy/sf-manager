@@ -198,3 +198,12 @@ re-created.
 - W-2: 3 field-flow regression tests (`fc8de37`).
 - W-5: `reviewHistory.detail.documentLink` moved to `REQUIRED_REVIEW_DOCUMENT_KEY_PATHS` (`2ec081f`).
 - W-3 and W-4, and S-1 to S-7: accepted as-is and carried as follow-ups.
+
+## Addendum: archive-time S-3 resolution
+
+The archive agent (2026-09-24) checked the merged `review-session-ui`
+base spec after applying the delta. No leftover "Complete session"
+wording was found: the delta's *Complete a Session and Explain Its
+Gaps* requirement fully replaces the completing control's label and
+copy with **Sign and close** throughout, including every scenario
+title and body. S-3 is resolved with no further edit needed.

@@ -39,10 +39,14 @@ sees is still decided entirely by the server-scoped endpoint owned by
 `review-history`.
 
 Out of scope: pagination, date-range filters, sorting and search
-controls; editing, annotating or deleting a completed session; signing,
-export, scheduling, overdue indicators, analytics and notifications;
-offline capability of any kind; any second per-element view, widget or
-cross-element rollup beyond the one page named above.
+controls; editing, annotating or deleting a completed session; signing
+and any export, print, download or send control on this surface — the
+printable review document is owned by `review-document-ui`, and this
+surface's only link to it is the single **View document** link on the
+read-only historical session view; scheduling, overdue indicators,
+analytics and notifications; offline capability of any kind; any
+second per-element view, widget or cross-element rollup beyond the one
+page named above.
 
 ## Requirements
 
@@ -174,7 +178,9 @@ all, rather than offering one that leads to a rejection.
 Neither link MUST alter its host page otherwise: the element list's
 existing columns and actions, and the session detail view's existing
 rendering of entries, answers and observations, MUST be unchanged apart
-from the added link.
+from the added link — and, on the session detail view only, apart from
+the single **View document** link this change adds
+(*Read-Only Historical Session View*).
 
 #### Scenario: The element list row reaches that element's history
 - GIVEN a `SYSTEM_ADMIN` viewing community C's element list containing element E
@@ -204,7 +210,7 @@ from the added link.
 #### Scenario: The host pages are otherwise unchanged
 - GIVEN the community element list and the read-only session detail view before and after this change
 - WHEN each is compared
-- THEN the only difference MUST be the added per-row link — no column removed or reordered, no existing action changed, and no rendering of entries, answers or observations altered
+- THEN the only differences MUST be the added per-row element-history link and, on the session detail view only, the single **View document** link — no column removed or reordered, no existing action changed, and no rendering of entries, answers or observations altered
 
 ### Requirement: The Element History Route Is Gated on the Five History Roles Despite Its Admin-Only URL Family
 
@@ -648,8 +654,14 @@ element entry with its answers and its observations, including elements
 left unreviewed with their reason — and MUST offer **no** mutating
 control. Specifically, no control MUST offer to edit, reopen, answer,
 record, mark unreviewed, enter an element `code`, complete, discard,
-sign, export or delete. The view MUST be reachable for a session the
-caller did not perform whenever the server returns it.
+sign, export, print or delete. The view MUST be reachable for a session
+the caller did not perform whenever the server returns it.
+
+The view MUST offer exactly **one** non-mutating **View document** link,
+leading to that session's document page (`review-document-ui`), for
+every one of the five history roles. That link MUST be the view's only
+addition: its existing rendering of entries, answers and observations,
+and its per-entry element-history links, MUST be unchanged.
 
 #### Scenario: The recorded record is rendered in full
 - GIVEN a completed session with answered elements and one element marked unreviewed with a reason
@@ -659,7 +671,7 @@ caller did not perform whenever the server returns it.
 #### Scenario: No mutating control renders
 - GIVEN the read-only view of a completed session
 - WHEN its controls are enumerated
-- THEN none MUST offer edit, reopen, answer, record, mark-unreviewed, code entry, complete, discard, sign, export or delete
+- THEN none MUST offer edit, reopen, answer, record, mark-unreviewed, code entry, complete, discard, sign, export, print or delete
 
 #### Scenario: An entry whose element no longer resolves still renders
 - GIVEN a completed session one of whose inspectable elements was decommissioned or soft-deleted after completion
@@ -670,6 +682,16 @@ caller did not perform whenever the server returns it.
 - GIVEN a `COMMUNITY_REPRESENTATIVE` whose history list includes a technician-performed session
 - WHEN they open it
 - THEN its full recorded record MUST be shown, identically to the performer's view and still with no mutating control
+
+#### Scenario: The view offers one View document link
+- GIVEN any of the five history roles on the read-only view of a completed session
+- WHEN its controls are enumerated
+- THEN exactly one **View document** link MUST be offered, and it MUST lead to that session's document page
+
+#### Scenario: The link changes nothing else on the view
+- GIVEN the read-only session view before and after this change
+- WHEN both are compared
+- THEN the only difference MUST be the added **View document** link
 
 ### Requirement: An Unreachable Session Gets One Uniform Message
 
@@ -740,9 +762,12 @@ The history surface MUST stay a single unfiltered list, a read-only
 session detail view, **and one unfiltered per-element record** — for
 every role that reaches it. It MUST NOT add pagination, infinite scroll,
 a date-range filter, a sort control or a search box **on any of the
-three**; and MUST NOT add signing, export, scheduling, due-date or
-overdue indicators, compliance dashboards, per-community or
-per-technician statistics, attachments or notifications. The
+three**; and MUST NOT add signing, export, print, download or send
+controls, scheduling, due-date or overdue indicators, compliance
+dashboards, per-community or per-technician statistics, attachments or
+notifications. The one exception is the single **View document** link
+on the read-only session view (*Read-Only Historical Session View*),
+which is navigation, not an export control. The
 installation-wide list is explicitly included — reachable by **two**
 roles, a `SYSTEM_ADMIN` unconditionally and a granted `MANAGER` — and it
 is by far the largest list in the app; so is a long-lived element's own
@@ -804,4 +829,4 @@ aggregation.)
 #### Scenario: No adjacent capability surfaces
 - GIVEN every view of the review-history surface, the element history page included
 - WHEN its controls are enumerated
-- THEN none MUST offer signing, export, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications
+- THEN none MUST offer signing, export, print, download, send, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications — the session detail view's single **View document** link being the only document-related control, and the list and element history page offering none
