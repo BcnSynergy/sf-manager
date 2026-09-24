@@ -480,7 +480,8 @@
       "entriesEmpty": "No se ha registrado ningún elemento.",
       "elementCodeUnknown": "Elemento desconocido",
       "entryUnreviewedLabel": "No revisado:",
-      "elementHistoryLink": "Ver historial del elemento"
+      "elementHistoryLink": "Ver historial del elemento",
+      "documentLink": "Ver documento"
     },
     "elementHistory": {
       "title": "Historial de revisión del elemento",

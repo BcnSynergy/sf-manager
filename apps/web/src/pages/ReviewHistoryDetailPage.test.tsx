@@ -199,4 +199,36 @@ describe('ReviewHistoryDetailPage', () => {
     expect(document.querySelector('form')).not.toBeInTheDocument();
     expect(document.querySelector('input')).not.toBeInTheDocument();
   });
+
+  // review-document-ui spec "Exactly One Entry Link Reaches the Document
+  // Page", review-history-ui spec "The view offers one View document link":
+  // this is the single link into the document page, offered for every one
+  // of the five history roles (this page's API read is already scoped by
+  // history for all five — no role-specific branching needed here).
+  it('renders exactly one View document link leading to this session\'s document page', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    await screen.findByTestId('review-history-detail-performer');
+
+    const links = screen.getAllByTestId('review-history-detail-document-link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', `/review-history/${SESSION_ID}/document`);
+  });
+
+  // review-history-ui spec "The link changes nothing else on the view":
+  // the View document link must be the only addition — every other
+  // rendering (entries, answers, observations, element-history links,
+  // no mutating control) already asserted by the tests above stays as-is.
+  it('changes nothing else: entries and element-history links still render alongside the new link', async () => {
+    mockedReadReviewHistory.mockResolvedValue(detail);
+
+    renderPage();
+
+    expect(await screen.findByTestId('review-history-detail-entry-e1')).toBeInTheDocument();
+    expect(screen.getByTestId('review-history-detail-entry-history-e1')).toBeInTheDocument();
+    expect(screen.getByTestId('review-history-detail-document-link')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
 });
