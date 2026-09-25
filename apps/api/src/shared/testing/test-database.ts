@@ -1,5 +1,3 @@
-import { randomBytes } from 'node:crypto';
-
 // hermetic-integration-tests design.md Decision 2 / Decision 4: every real-DB
 // test run owns a uniquely named database, `sf_manager_test_<8-char base36
 // timestamp>_<6-char random hex>`. The timestamp is embedded in the name so
@@ -22,8 +20,23 @@ const RUN_DATABASE_NAME_PATTERN =
 const PLAUSIBLE_EPOCH_FLOOR_MS = Date.UTC(2026, 0, 1);
 
 export function generateRunDatabaseName(now: number = Date.now()): string {
+  // Lazily required rather than statically imported at module top-level:
+  // `test/test-database/refuse-integration-spec.setup.ts` (the unit-config
+  // tripwire, design.md Decision 3) imports `isIntegrationSpecPath` from
+  // this same module in every unit test file's `setupFilesAfterEnv`, before
+  // that test file's own body runs. A static top-level `import { randomBytes
+  // } from 'node:crypto'` would bind the real implementation into this
+  // module's closure at that point — before test-database.spec.ts's own
+  // `jest.mock('node:crypto', ...)` (hoisted to the top of that file, but
+  // only in that file) ever registers, since Jest module caching is by
+  // resolved path within the shared per-test-file registry, not by import
+  // order across files. Deferring the require into the function body means
+  // it only resolves 'node:crypto' when this function actually runs, by
+  // which point the mock (if any) is already registered.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
+  const nodeCrypto = require('node:crypto') as typeof import('node:crypto');
   const timestamp = Math.trunc(now).toString(36).padStart(8, '0');
-  const random = randomBytes(3).toString('hex');
+  const random = nodeCrypto.randomBytes(3).toString('hex');
   return `${TEST_DATABASE_PREFIX}${timestamp}_${random}`;
 }
 
@@ -63,7 +76,10 @@ function extractDatabaseName(url: string): string | null {
 // An unparseable URL (e.g. an unencoded `#`, `/` or space inside the
 // password) must never be echoed verbatim into an error message — that
 // would leak the raw password. Fall back to a fixed placeholder instead.
-function redactPassword(url: string): string {
+// Exported so `test/test-database/global-setup.ts`'s migrate error handling
+// (thin glue) can redact the run URL/password out of a `prisma migrate
+// deploy` child-process failure message without re-implementing this logic.
+export function redactPassword(url: string): string {
   const parsed = parseUrl(url);
   if (!parsed) {
     return '<unparseable URL>';

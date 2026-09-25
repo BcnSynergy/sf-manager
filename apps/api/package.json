@@ -20,7 +20,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "pretest:integration": "npm run build --workspace=@sf-manager/validation",
-    "test:integration": "jest --testRegex=\".*\\.integration\\.spec\\.ts$\" --testPathIgnorePatterns=/node_modules/ --runInBand",
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand",
     "pretest:e2e": "npm run build --workspace=@sf-manager/validation",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
@@ -53,12 +53,15 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.0.0",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.11.0",
     "jest": "^30.0.0",
+    "jest-environment-node": "^30.5.2",
+    "pg": "^8.23.0",
     "prettier": "^3.4.2",
     "prisma": "^7.9.1",
     "source-map-support": "^0.5.21",
@@ -81,6 +84,9 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "\\.integration\\.spec\\.ts$"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/../test/test-database/refuse-integration-spec.setup.ts"
     ],
     "transformIgnorePatterns": [
       "/node_modules/(?!@sf-manager/)"
