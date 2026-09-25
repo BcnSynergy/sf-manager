@@ -282,9 +282,14 @@ describe('prepareTestDatabase — migrate failure', () => {
       }),
     });
 
-    await expect(prepareTestDatabase(ports)).rejects.toThrow(
-      'migration failed',
-    );
+    let caught: Error | undefined;
+    try {
+      await prepareTestDatabase(ports);
+    } catch (error) {
+      caught = error as Error;
+    }
+
+    expect(caught).toBe(migrateError);
     expect(ports.dropDatabase).toHaveBeenCalledTimes(1);
     const [, droppedName, options] = (ports.dropDatabase as jest.Mock).mock
       .calls[0] as [string, string, { force?: boolean } | undefined];
@@ -292,8 +297,8 @@ describe('prepareTestDatabase — migrate failure', () => {
     expect(options).toEqual({ force: true });
   });
 
-  it('surfaces the drop failure too when the cleanup drop itself also fails', async () => {
-    const migrateError = new Error('migration failed');
+  it('surfaces both the original migrate error and the secondary drop failure when the cleanup drop itself also fails', async () => {
+    const migrateError = new Error('P3009 boom');
     const dropError = new Error('drop also failed');
     const ports = createFakePorts({
       migrate: jest.fn(() => {
@@ -302,16 +307,17 @@ describe('prepareTestDatabase — migrate failure', () => {
       dropDatabase: jest.fn(() => Promise.reject(dropError)),
     });
 
+    let caught: (Error & { dropError?: unknown }) | undefined;
     try {
       await prepareTestDatabase(ports);
-      fail('expected prepareTestDatabase to reject');
     } catch (error) {
-      const message = String((error as Error).message);
-      expect(message.toLowerCase()).toContain('migration failed');
-      expect(
-        (error as Error).cause ??
-          (error as Error & { dropError?: unknown }).dropError,
-      ).toBeDefined();
+      caught = error as Error & { dropError?: unknown };
     }
+
+    expect(caught).toBeDefined();
+    expect(caught?.message).toContain('P3009 boom');
+    expect(caught?.message).toContain('drop also failed');
+    expect(caught?.cause).toBe(migrateError);
+    expect(caught?.dropError).toBe(dropError);
   });
 });

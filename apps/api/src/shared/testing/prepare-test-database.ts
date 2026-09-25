@@ -83,8 +83,9 @@ export async function prepareTestDatabase(
       await ports.dropDatabase(maintenanceUrl, runName, { force: true });
     } catch (dropError) {
       const combined = new Error(
-        `Migration failed for run database "${runName}", and the ` +
-          `subsequent cleanup drop also failed: ${(dropError as Error).message}`,
+        `Migration failed for run database "${runName}" ` +
+          `(${(migrateError as Error).message}), and the subsequent ` +
+          `cleanup drop also failed: ${(dropError as Error).message}`,
         { cause: migrateError },
       );
       (combined as Error & { dropError?: unknown }).dropError = dropError;
