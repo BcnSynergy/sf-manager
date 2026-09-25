@@ -9,6 +9,7 @@
     "dist",
     "**/*spec.ts",
     "prisma.config.ts",
-    "prisma"
+    "prisma",
+    "src/shared/testing"
   ]
 }
