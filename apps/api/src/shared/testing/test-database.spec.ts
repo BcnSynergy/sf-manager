@@ -1,3 +1,13 @@
+import * as crypto from 'node:crypto';
+
+// `node:crypto`'s exports are non-configurable, so `jest.spyOn` cannot
+// redefine `randomBytes` directly — replace the module with a partial mock
+// that wraps the real implementation, keeping every other export intact.
+jest.mock('node:crypto', () => {
+  const actual = jest.requireActual<typeof crypto>('node:crypto');
+  return { ...actual, randomBytes: jest.fn(actual.randomBytes) };
+});
+
 import {
   TEST_DATABASE_PREFIX,
   STALE_RUN_DATABASE_AGE_MS,
@@ -32,15 +42,21 @@ describe('generateRunDatabaseName / isRunDatabaseName', () => {
     expect(Buffer.byteLength(name, 'utf8')).toBeLessThanOrEqual(63);
   });
 
-  it('never collides within the same millisecond (random component)', () => {
+  it('produces different names for two calls in the same millisecond (random component)', () => {
     const now = Date.UTC(2026, 8, 25);
-    const names = new Set(
-      Array.from({ length: 50 }, () => generateRunDatabaseName(now)),
-    );
-    expect(names.size).toBe(50);
+    const randomBytesMock = crypto.randomBytes as unknown as jest.Mock;
+    randomBytesMock.mockReturnValueOnce(Buffer.from('aaaaaa', 'hex'));
+    randomBytesMock.mockReturnValueOnce(Buffer.from('bbbbbb', 'hex'));
+
+    const first = generateRunDatabaseName(now);
+    const second = generateRunDatabaseName(now);
+
+    expect(first).not.toBe(second);
+    expect(first.endsWith('_aaaaaa')).toBe(true);
+    expect(second.endsWith('_bbbbbb')).toBe(true);
   });
 
-  it('accepts the bare dev database name as not a run name', () => {
+  it('rejects the bare dev database name "sfmanager" as not a run name', () => {
     expect(isRunDatabaseName('sfmanager')).toBe(false);
   });
 
@@ -166,19 +182,37 @@ describe('deriveTestDatabaseUrl / toMaintenanceUrl / assertTestDatabaseUrl', () 
     ).toThrow();
   });
 
-  it('assertTestDatabaseUrl rejects undefined with no password in the message', () => {
+  it('assertTestDatabaseUrl rejects an undefined URL', () => {
     expect(() => assertTestDatabaseUrl(undefined)).toThrow();
   });
 
   it('assertTestDatabaseUrl never leaks the password in its error message', () => {
+    let caught: Error | undefined;
     try {
       assertTestDatabaseUrl(
         'postgresql://user:super-secret@localhost:5432/sfmanager',
       );
-      throw new Error('expected assertTestDatabaseUrl to throw');
     } catch (error) {
-      expect(String((error as Error).message)).not.toContain('super-secret');
+      caught = error as Error;
     }
+    expect(caught).toBeDefined();
+    expect(String(caught?.message)).not.toContain('super-secret');
+  });
+
+  it('assertTestDatabaseUrl never leaks an unparseable password in its error message', () => {
+    // An unencoded "#" starts a URL fragment and an unencoded "@" inside the
+    // password confuses the authority parser, making `new URL()` throw —
+    // the redaction path must still never echo the raw password back.
+    const unparseable = 'postgresql://user:pa#ss@localhost:5432/sfmanager';
+    let caught: Error | undefined;
+    try {
+      assertTestDatabaseUrl(unparseable);
+    } catch (error) {
+      caught = error as Error;
+    }
+    expect(caught).toBeDefined();
+    expect(String(caught?.message)).not.toContain('pa#ss');
+    expect(String(caught?.message)).not.toContain('ss@');
   });
 });
 
@@ -222,6 +256,38 @@ describe('assertWorkerDatabase', () => {
 
   it('throws when SF_TEST_RUN_DATABASE is missing', () => {
     expect(() => assertWorkerDatabase({ DATABASE_URL: runUrl })).toThrow();
+  });
+
+  it('never leaks the password from a parseable DATABASE_URL in its error message', () => {
+    const mismatchedUrl =
+      'postgresql://user:super-secret@localhost:5432/sfmanager';
+    let caught: Error | undefined;
+    try {
+      assertWorkerDatabase({
+        DATABASE_URL: mismatchedUrl,
+        SF_TEST_RUN_DATABASE: runName,
+      });
+    } catch (error) {
+      caught = error as Error;
+    }
+    expect(caught).toBeDefined();
+    expect(String(caught?.message)).not.toContain('super-secret');
+  });
+
+  it('never leaks the password from an unparseable DATABASE_URL in its error message', () => {
+    const unparseableUrl = 'postgresql://user:pa#ss@localhost:5432/sfmanager';
+    let caught: Error | undefined;
+    try {
+      assertWorkerDatabase({
+        DATABASE_URL: unparseableUrl,
+        SF_TEST_RUN_DATABASE: runName,
+      });
+    } catch (error) {
+      caught = error as Error;
+    }
+    expect(caught).toBeDefined();
+    expect(String(caught?.message)).not.toContain('pa#ss');
+    expect(String(caught?.message)).not.toContain('ss@');
   });
 });
 
@@ -287,8 +353,8 @@ describe('planStaleSweep', () => {
     expect(planStaleSweep([name], currentRunName, now)).toContain(name);
   });
 
-  it('keeps a name with an unparseable timestamp', () => {
-    const name = 'sf_manager_test_zzzzzzzz_ffffff';
+  it('keeps a valid-shape name whose embedded timestamp is below the plausible-epoch floor', () => {
+    const name = 'sf_manager_test_00000001_ffffff';
     expect(planStaleSweep([name], currentRunName, now)).not.toContain(name);
   });
 

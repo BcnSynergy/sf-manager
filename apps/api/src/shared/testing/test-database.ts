@@ -60,10 +60,13 @@ function extractDatabaseName(url: string): string | null {
   return name.length > 0 ? name : null;
 }
 
+// An unparseable URL (e.g. an unencoded `#`, `/` or space inside the
+// password) must never be echoed verbatim into an error message — that
+// would leak the raw password. Fall back to a fixed placeholder instead.
 function redactPassword(url: string): string {
   const parsed = parseUrl(url);
   if (!parsed) {
-    return url;
+    return '<unparseable URL>';
   }
   if (parsed.password) {
     parsed.password = '***';
