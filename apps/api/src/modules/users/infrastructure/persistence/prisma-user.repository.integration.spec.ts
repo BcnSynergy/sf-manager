@@ -9,14 +9,14 @@ import { PrismaUserRepository } from './prisma-user.repository';
 
 const idGenerator = new UuidV7IdGenerator();
 
-// Integration test against a real (test) Postgres 18 instance (design.md
-// Testing Strategy). Assumes the database DATABASE_URL points at is already
-// migrated via the actual migration from PR 1
-// (20260821202334_add_user_and_revoked_token) — no dedicated test-database
-// mechanism exists yet in this repo (single docker-compose Postgres
-// instance + DATABASE_URL), so this suite reuses the same connection the
-// app itself uses, exactly like `prisma migrate deploy` assumes an
-// already-provisioned target database.
+// Integration test against a real Postgres 18 instance. Since
+// hermetic-integration-tests, `npm run test:integration` runs this against a
+// fresh, uniquely named, per-run database (`sf_manager_test_<id>`), created
+// and fully migrated by the harness (`globalSetup`) before any spec runs —
+// not the shared dev database. Live-data checks are possible now that each
+// run is hermetic, but this suite still only asserts against rows it
+// creates itself, which was already the right pattern for a repository
+// test.
 describe('PrismaUserRepository (integration)', () => {
   let prisma: PrismaService;
   let repository: PrismaUserRepository;
