@@ -62,14 +62,14 @@ PR1 as one size-exception PR, or split into 1a/1b.
 - [x] 1.26 Commit the untracked `openspec/changes/hermetic-integration-tests/` folder in this PR
 - [x] 1.27 Verify: `npm test -w apps/api` green; `npm run build -w apps/api` excludes `src/shared/testing` from `dist`
 
-## PR 2: FK Fixture Fixes (discovery-driven)
+## PR 2: FK Fixture Fixes (discovery-driven) — COMPLETE, no fixes needed
 
-- [ ] 2.1 Manually create a scratch Postgres DB (`createdb` or `psql -c "CREATE DATABASE sf_manager_test_scratch"` against the docker-compose Postgres), run `prisma migrate deploy` against it — never against `sfmanager`
-- [ ] 2.2 Run the full integration suite against the scratch DB using PR 3's harness code from the working tree (or a manual `DATABASE_URL` pointed at the scratch DB), list every failing spec and the FK it violates. Check migrations: `20260825120000_add_community_and_assignments`, `20260827091950_add_maintenance_company`, `20260901094525_add_inspectable_element`, `20260903072531_add_review_template`, `20260907090000_add_review_session`, `20260909090000_add_review_session_performed_by_company`
-- [ ] 2.3 If the failing-spec count is large, STOP and escalate to the user before continuing
-- [ ] 2.4 Fix each FK-violating fixture so the constraint holds (no skip/disable)
-- [ ] 2.5 Verify: re-run the discovery suite against the scratch DB — zero FK violations
-- [ ] 2.6 Drop the scratch DB; commit only fixture corrections (no harness files)
+- [x] 2.1 Manually create a scratch Postgres DB (`createdb` or `psql -c "CREATE DATABASE sf_manager_test_scratch"` against the docker-compose Postgres), run `prisma migrate deploy` against it — never against `sfmanager`
+- [x] 2.2 Run the full integration suite against the scratch DB using PR 3's harness code from the working tree (or a manual `DATABASE_URL` pointed at the scratch DB), list every failing spec and the FK it violates. Check migrations: `20260825120000_add_community_and_assignments`, `20260827091950_add_maintenance_company`, `20260901094525_add_inspectable_element`, `20260903072531_add_review_template`, `20260907090000_add_review_session`, `20260909090000_add_review_session_performed_by_company` — result: 24/24 suites, 157/157 tests passed on the first run against the fresh scratch DB; zero failures of any kind (no FK violations, no missing-seed failures)
+- [x] 2.3 If the failing-spec count is large, STOP and escalate to the user before continuing — N/A, zero failures
+- [x] 2.4 Fix each FK-violating fixture so the constraint holds (no skip/disable) — N/A, no violating fixtures found; all 24 integration specs already create their own parent rows and hold up against a truly empty, freshly migrated DB
+- [x] 2.5 Verify: re-run the discovery suite against the scratch DB — zero FK violations — satisfied by the single clean discovery run (2.2); no second run performed against the same scratch DB to avoid unique-constraint noise from residual fixture rows, which would test data-pollution, not FK correctness
+- [x] 2.6 Drop the scratch DB; commit only fixture corrections (no harness files) — scratch DB dropped; no fixture files changed, so no commit was needed for this PR
 
 ## PR 3: Harness Switch + Docs
 
