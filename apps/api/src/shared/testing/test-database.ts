@@ -95,17 +95,20 @@ export function deriveTestDatabaseUrl(
   runName: string,
 ): string {
   if (!baseUrl) {
-    throw new Error('Cannot derive test database URL: base URL is missing.');
+    throw new Error(
+      `Cannot derive test database URL for run database "${runName}": base URL is missing.`,
+    );
   }
   const parsed = parseUrl(baseUrl);
   if (!parsed) {
     throw new Error(
-      'Cannot derive test database URL: base URL is not a valid URL.',
+      `Cannot derive test database URL for run database "${runName}": base URL is not a valid URL.`,
     );
   }
   if (parsed.protocol !== 'postgres:' && parsed.protocol !== 'postgresql:') {
     throw new Error(
-      `Cannot derive test database URL: expected a postgres(ql) URL, got "${parsed.protocol}".`,
+      `Cannot derive test database URL for run database "${runName}": ` +
+        `expected a postgres(ql) URL, got "${parsed.protocol}".`,
     );
   }
   parsed.pathname = `/${runName}`;
@@ -122,17 +125,23 @@ export function toMaintenanceUrl(url: string): string {
 }
 
 // design.md Decision 3: the guard that keeps a real-DB run away from the dev
-// database `sfmanager`. Message redacts the password so it is safe to log.
+// database `sfmanager`. Message redacts the password so it is safe to log,
+// and always names the expected run-database pattern (W3 follow-up) so an
+// abort raised during global setup — before any spec runs — still tells the
+// operator what database name was expected.
 export function assertTestDatabaseUrl(url: string | undefined): void {
+  const expectedPattern = `${TEST_DATABASE_PREFIX}<id>`;
   if (!url) {
     throw new Error(
-      'Test database URL is missing; refusing to run against an unknown database.',
+      `Test database URL is missing; expected a run database matching "${expectedPattern}".`,
     );
   }
   const name = extractDatabaseName(url);
   if (!name || !isRunDatabaseName(name)) {
+    const actual = name ? `"${name}"` : 'no database name';
     throw new Error(
-      `Refusing to run against non-test database "${redactPassword(url)}".`,
+      `Refusing to run: expected a run database matching "${expectedPattern}", ` +
+        `got ${actual} (from "${redactPassword(url)}").`,
     );
   }
 }

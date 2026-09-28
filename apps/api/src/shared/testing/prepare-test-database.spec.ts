@@ -58,12 +58,14 @@ function createFakePorts(
 }
 
 describe('prepareTestDatabase — guard-first ordering', () => {
-  it('does not call any port when a dotenv override trigger is set', async () => {
+  it('does not call any port when a dotenv override trigger is set, naming the expected run database pattern', async () => {
     const ports = createFakePorts({
       env: { DOTENV_CONFIG_OVERRIDE: 'false' },
     });
 
-    await expect(prepareTestDatabase(ports)).rejects.toThrow();
+    await expect(prepareTestDatabase(ports)).rejects.toThrow(
+      'sf_manager_test_<id>',
+    );
 
     expect(ports.listDatabases).not.toHaveBeenCalled();
     expect(ports.dropDatabase).not.toHaveBeenCalled();
@@ -71,14 +73,16 @@ describe('prepareTestDatabase — guard-first ordering', () => {
     expect(ports.migrate).not.toHaveBeenCalled();
   });
 
-  it('does not call any port when the generated run name is malformed', async () => {
+  it('does not call any port when the generated run name is malformed, naming the expected run database pattern', async () => {
     // A `now` value above 36^8 ms makes generateRunDatabaseName emit a
     // 9-character timestamp instead of 8, failing the generated-name-shape
     // guard (assertTestDatabaseUrl) before any port call.
     const malformedNow = Math.pow(36, 8) + 1;
     const ports = createFakePorts({ now: () => malformedNow });
 
-    await expect(prepareTestDatabase(ports)).rejects.toThrow();
+    await expect(prepareTestDatabase(ports)).rejects.toThrow(
+      'sf_manager_test_<id>',
+    );
 
     expect(ports.listDatabases).not.toHaveBeenCalled();
     expect(ports.dropDatabase).not.toHaveBeenCalled();

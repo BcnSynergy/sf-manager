@@ -128,21 +128,21 @@ describe('deriveTestDatabaseUrl / toMaintenanceUrl / assertTestDatabaseUrl', () 
     expect(twice).toBe(once);
   });
 
-  it('throws when the base URL is missing', () => {
-    expect(() => deriveTestDatabaseUrl(undefined, runName)).toThrow();
+  it('throws when the base URL is missing, naming the expected run database', () => {
+    expect(() => deriveTestDatabaseUrl(undefined, runName)).toThrow(runName);
   });
 
-  it('throws when the base URL is garbage', () => {
-    expect(() => deriveTestDatabaseUrl('not a url', runName)).toThrow();
+  it('throws when the base URL is garbage, naming the expected run database', () => {
+    expect(() => deriveTestDatabaseUrl('not a url', runName)).toThrow(runName);
   });
 
-  it('throws when the base URL is a mysql: URL', () => {
+  it('throws when the base URL is a mysql: URL, naming the expected run database', () => {
     expect(() =>
       deriveTestDatabaseUrl(
         'mysql://user:pass@localhost:3306/sfmanager',
         runName,
       ),
-    ).toThrow();
+    ).toThrow(runName);
   });
 
   it('toMaintenanceUrl swaps the database path to /postgres and keeps the query string', () => {
@@ -162,28 +162,41 @@ describe('deriveTestDatabaseUrl / toMaintenanceUrl / assertTestDatabaseUrl', () 
     ).not.toThrow();
   });
 
-  it('assertTestDatabaseUrl rejects the dev database name "sfmanager"', () => {
+  it('assertTestDatabaseUrl rejects the dev database name "sfmanager", naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/sfmanager'),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/sfmanager'),
+    ).toThrow('"sfmanager"');
   });
 
-  it('assertTestDatabaseUrl rejects the bare "sf_manager_test" name', () => {
+  it('assertTestDatabaseUrl rejects the bare "sf_manager_test" name, naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl(
         'postgresql://user:pass@localhost:5432/sf_manager_test',
       ),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl(
+        'postgresql://user:pass@localhost:5432/sf_manager_test',
+      ),
+    ).toThrow('"sf_manager_test"');
   });
 
-  it('assertTestDatabaseUrl rejects other, unrelated names', () => {
+  it('assertTestDatabaseUrl rejects other, unrelated names, naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/other'),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/other'),
+    ).toThrow('"other"');
   });
 
-  it('assertTestDatabaseUrl rejects an undefined URL', () => {
-    expect(() => assertTestDatabaseUrl(undefined)).toThrow();
+  it('assertTestDatabaseUrl rejects an undefined URL, naming the expected pattern', () => {
+    expect(() => assertTestDatabaseUrl(undefined)).toThrow(
+      'sf_manager_test_<id>',
+    );
   });
 
   it('assertTestDatabaseUrl never leaks the password in its error message', () => {
