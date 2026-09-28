@@ -100,12 +100,18 @@ Practicalities learned so far:
   community lists yet. Find ids with `psql` via
   `docker compose exec -T postgres` and hand the user direct URLs.
   - QA users for each role exist with the seed technician's password:
-    `rep@`, `companymgr@` and `manager@sf-manager.example`.
+    `rep@`, `companymgr@` and `manager@sf-manager.example`. After the
+    one-time dev reset (see `README.md`), these QA users are gone until
+    `dev-seed-data` (not yet implemented) recreates them — only the seeded
+    admin comes back automatically via `prisma db seed`.
   - Change dev-DB rows directly only with the user's OK, and restore them
     afterwards.
-- **Dev-DB pollution**: never run the full `test:integration` suite as a
-  routine check. It soft-deletes the seeded admin; restore it with
-  `npm exec -w apps/api -- prisma db seed`. Run single integration specs
-  instead.
+- **Dev-DB pollution**: since `hermetic-integration-tests`, each
+  `npm run test:integration` run gets its own freshly created, uniquely
+  named database — it never reads or writes `sfmanager`. Running the full
+  integration suite, including concurrently in multiple terminals, is safe
+  and routine; it does not soft-delete the seeded admin or touch dev data
+  in any way. If `sfmanager` itself ever needs resetting (e.g. after manual
+  row edits for QA), see the one-time dev reset procedure in `README.md`.
 - **Locale**: web i18n is hardcoded to `en`, so ES/CA can only be verified
   by locale tests, not in the browser.

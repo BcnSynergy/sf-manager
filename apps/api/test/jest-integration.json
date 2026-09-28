@@ -1,0 +1,27 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "roots": ["<rootDir>/src", "<rootDir>/test"],
+  "testEnvironment": "<rootDir>/test/test-database/test-database.environment.ts",
+  "testRegex": ".*\\.integration\\.spec\\.ts$",
+  "testPathIgnorePatterns": ["/node_modules/"],
+  "globalSetup": "<rootDir>/test/test-database/global-setup.ts",
+  "globalTeardown": "<rootDir>/test/test-database/global-teardown.ts",
+  "transformIgnorePatterns": ["/node_modules/(?!@sf-manager/)"],
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": {
+          "module": "commonjs",
+          "moduleResolution": "node",
+          "resolvePackageJsonExports": false,
+          "ignoreDeprecations": "6.0"
+        }
+      }
+    ]
+  }
+}

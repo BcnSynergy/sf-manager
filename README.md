@@ -67,7 +67,39 @@ business features yet, just the toolchain wired end-to-end.
 
 - `npm run build` — build all apps/packages (Turborepo).
 - `npm run lint` — lint everything, including the ADR-013 Prisma-boundary rule.
-- `npm run test` — run every package's test suite.
+- `npm run test` — run every package's test suite (unit only; needs no database).
+- `npm run test:integration -w apps/api` — run the API's real-database
+  integration suite (`src/**/*.integration.spec.ts` plus
+  `test/app.integration.spec.ts`). Each run gets its own freshly created and
+  migrated database, named `sf_manager_test_<8-char timestamp>_<6-char
+  random>` (the timestamp is embedded so stale runs can be aged out), on the
+  docker-compose Postgres instance — never the dev database `sfmanager`. A
+  run's database is dropped when it finishes; a database from a run that
+  crashed before teardown is swept and dropped automatically by the next
+  run once it is older than 24 hours. Runs are isolated from each other, so
+  it's safe to run `test:integration` concurrently (e.g. in two terminals)
+  or as a routine full-suite check — nothing here touches `sfmanager`.
+- `npm run test:e2e -w apps/api` — the remaining `*.e2e-spec.ts` suite
+  (stubbed dependencies, no database).
+
+### One-time dev database reset
+
+If the dev database (`sfmanager`) ever needs resetting to a clean seeded
+state (for example after manually editing rows for a QA/demo session), run
+once, from `apps/api`:
+
+```
+npm exec -w apps/api -- prisma migrate reset
+npm exec -w apps/api -- prisma db seed
+```
+
+`prisma migrate reset` prompts before dropping and recreating `sfmanager`
+(no `--force` is used here, deliberately, so it always asks); the reset
+also restores the migration-defined foreign keys the dev volume may be
+missing if it predates them. `prisma db seed` is idempotent, so it is safe
+to run again even if the reset already seeded on its own. This reset is
+manual and destructive to `sfmanager` — it is never run by
+`test:integration` or any other automated command.
 
 ## Structure
 

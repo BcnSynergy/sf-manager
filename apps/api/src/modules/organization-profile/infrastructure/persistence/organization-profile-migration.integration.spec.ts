@@ -65,15 +65,20 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   // INSERT that supplies a non-blank literal for one of the six columns
   // (bypassing the DEFAULT) would NOT be caught here. No other test in the
   // repo reads this row's text fields either. Accepted rather than
-  // reverting to the destructive/tautological pattern above: this project's
-  // integration specs run against one shared, long-lived dev Postgres
-  // instance (not a fresh-per-run database), so there is no hermetic way to
-  // assert a row's *contents* stay pristine once real usage can write to it
-  // — only that the schema *would* seed it blank. The equivalent
+  // reverting to the destructive/tautological pattern above: this
+  // structural-only check stays even though, since
+  // hermetic-integration-tests, each `test:integration` run now gets its
+  // own fresh, uniquely named, per-run database — a live-data check (e.g.
+  // asserting the row's actual text values immediately after migrate) would
+  // now be hermetically safe, since nothing else can have written to this
+  // run's row yet. Deferred rather than added here, to keep this PR to its
+  // stated scope (harness switch only, ADR-006); a future PR may add a
+  // live-data assertion once the run database's just-migrated state is
+  // established as a reusable pattern across specs. The equivalent
   // maintenance-company-migration.integration.spec.ts / review-session-
   // migration.integration.spec.ts precedents this file mirrors have the
   // same shape: structural (constraint/index/column) checks, not live-data
-  // checks, for exactly this reason.
+  // checks, for the same historical reason — not yet revisited either.
   //
   // The `inspectable-element-migration.integration.spec.ts` sibling has the
   // same live-row-assertion anti-pattern this remediation just fixed here
