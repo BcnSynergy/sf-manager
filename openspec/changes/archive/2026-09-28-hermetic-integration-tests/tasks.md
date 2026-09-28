@@ -1,42 +1,40 @@
 # Tasks: Hermetic Integration Tests
 
-## STATUS: ALL PRs COMPLETE. PR 1 merged to main (PR #166, `5edeae6`). PR 2
-COMPLETE (6/6 tasks, zero fixture fixes needed, docs-only commit `16c9552`
-on `hermetic-integration-tests/02-fk-fixture-fixes`). PR 3 COMPLETE (19/19
-tasks) on `hermetic-integration-tests/03-harness-switch`, base = PR 2's
-branch/commit. Full evidence in sdd/hermetic-integration-tests/apply-progress.
+## STATUS: ALL PRs COMPLETE AND MERGED. PR 1 merged to main as PR #166
+(merge commit `5edeae6`). PR 2 COMPLETE (6/6 tasks, zero fixture fixes
+needed, docs-only commit `16c9552`, folded into PR #167). PR 3 COMPLETE
+(19/19 tasks), merged to main as PR #167 (merge commit `c833086`,
+2026-09-28). Full evidence in sdd/hermetic-integration-tests/apply-progress.
 
 ## Review Workload Forecast
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | PR1 ~580 (code ~210 / test ~370); PR2 TBD after discovery; PR3 ~290 (code ~190 / test ~100) |
-| 400-line budget risk | High (PR1 only) |
+| Actual changed lines | PR1 ~1883 (code ~314 / test ~748 / openspec docs ~821), shipped under size:exception; PR2: 14 lines, docs-only, no exception needed; PR3: 836 lines total (~271 code / ~165 tests / ~130 docs / ~270 package-lock.json), shipped under size:exception, user-accepted |
+| 400-line budget risk | High — PR1 and PR3 both exceeded budget; both shipped under user-accepted size exceptions |
 | Chained PRs recommended | Yes |
 | Suggested split | PR 1 → PR 2 → PR 3, stacked-to-main |
 | Delivery strategy | ask-on-risk |
 | Chain strategy | stacked-to-main |
 
-Decision needed before apply: Yes
+Decision needed before apply: Yes (resolved)
 Chained PRs recommended: Yes
 Chain strategy: stacked-to-main
 400-line budget risk: High
 
-PR1 is ~580 lines total, over budget, but growth is code + its own unit
-tests for pure functions (size-exception convention). PR1 **code alone**
-is ~210 lines — past the ~200-line code-only mark. **A 1a/1b split is
-advisable**: PR 1a = `test-database.ts` pure functions + specs (~120
-code / ~230 test); PR 1b = `prepare-test-database.ts` orchestration +
-specs (~90 code / ~140 test). Ask the user before apply: proceed with
-PR1 as one size-exception PR, or split into 1a/1b.
+PR1 shipped as one size-exception PR (~1883 lines, mostly test coverage for
+pure functions). PR2 shipped as a 14-line docs-only commit — no exception
+needed. PR3 shipped at 836 total lines (271 code / 165 tests / 130 docs /
+270 package-lock.json) under a user-accepted size exception; the package-lock
+delta is dependency-lockfile noise, not reviewable logic.
 
 ### Suggested Work Units
 
 | Unit | Goal | Likely PR | Notes |
 |------|------|-----------|-------|
-| 1(a/b) | Pure harness modules (`test-database.ts`, `prepare-test-database.ts`) + unit specs + tsconfig.build exclusion | PR 1 (or 1a/1b) | Base: main. Includes committing the untracked `openspec/changes/hermetic-integration-tests/` folder |
-| 2 | FK-violating fixture fixes, found by local discovery run | PR 2 | Base: PR 1's merge point. Size TBD |
-| 3 | Harness switch: globalSetup/Teardown, environment, jest-integration.json, package.json wiring, app rename, docs | PR 3 | Base: PR 2's merge point |
+| 1(a/b) | Pure harness modules (`test-database.ts`, `prepare-test-database.ts`) + unit specs + tsconfig.build exclusion | PR 1 | DONE — merged to main as PR #166 (`5edeae6`) |
+| 2 | FK-violating fixture fixes, found by local discovery run | PR 2 | DONE — zero violations found, docs-only commit `16c9552`, folded into PR #167 |
+| 3 | Harness switch: globalSetup/Teardown, environment, jest-integration.json, package.json wiring, app rename, docs | PR 3 | DONE — merged to main as PR #167 (`c833086`, 2026-09-28) |
 
 ## PR 1: Pure Harness Modules (`src/shared/testing`)
 
