@@ -24,6 +24,7 @@ import {
   isObjectInUseError,
   isDatabaseMissingError,
   planTeardownDrop,
+  planTeardown,
   stripUtf8Bom,
   redactMigrateOutput,
 } from './test-database';
@@ -419,6 +420,52 @@ describe('planTeardownDrop', () => {
 
   it('returns null for a name that fails isRunDatabaseName', () => {
     expect(planTeardownDrop('sfmanager')).toBeNull();
+  });
+});
+
+describe('planTeardown', () => {
+  const runName = 'sf_manager_test_mug72800_9fbc21';
+  const runUrl = `postgresql://user:pass@localhost:5432/${runName}?schema=public`;
+
+  it('returns the validated drop plan and maintenance URL for a valid run', () => {
+    expect(planTeardown(runName, runUrl)).toEqual({
+      plan: { name: runName },
+      maintenanceUrl:
+        'postgresql://user:pass@localhost:5432/postgres?schema=public',
+    });
+  });
+
+  it('takes the drop target from the run name, never from the URL path', () => {
+    const devUrl = 'postgresql://user:pass@localhost:5432/sfmanager';
+
+    expect(planTeardown(runName, devUrl)).toEqual({
+      plan: { name: runName },
+      maintenanceUrl: 'postgresql://user:pass@localhost:5432/postgres',
+    });
+  });
+
+  it('rejects an invalid run name before checking DATABASE_URL', () => {
+    expect(() => planTeardown('sfmanager', undefined)).toThrow(
+      'Refusing to drop database "sfmanager"',
+    );
+  });
+
+  it('throws when no run name was recorded by global setup', () => {
+    expect(() => planTeardown(undefined, runUrl)).toThrow(
+      'no run database name was recorded by global setup',
+    );
+  });
+
+  it('throws when the run name fails the run-database name check', () => {
+    expect(() => planTeardown('sfmanager', runUrl)).toThrow(
+      'Refusing to drop database "sfmanager": it does not pass the run-database name check',
+    );
+  });
+
+  it('throws when DATABASE_URL is missing in this process', () => {
+    expect(() => planTeardown(runName, undefined)).toThrow(
+      `Cannot tear down database "${runName}": DATABASE_URL is not set in this process`,
+    );
   });
 });
 

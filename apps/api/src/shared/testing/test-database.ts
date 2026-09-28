@@ -259,6 +259,42 @@ export function planTeardownDrop(runName: string): { name: string } | null {
   return isRunDatabaseName(runName) ? { name: runName } : null;
 }
 
+// design.md Decision 12: global-teardown.ts's full decision — was a run
+// name recorded by global setup, does it pass the run-database name check,
+// and is a maintenance-database URL derivable from this process's
+// DATABASE_URL — as one pure function, so the previously untested `if
+// (!runUrl) throw` branch (and its siblings) can be unit-tested without a
+// real DB. The DROP target is always `plan.name`, sourced only from the
+// runName this validated via `planTeardownDrop`; `runUrl` is never
+// inspected for a database name, only converted to a maintenance URL via
+// `toMaintenanceUrl()` — the connection target and the drop target come
+// from two different, independently-validated inputs.
+export function planTeardown(
+  runName: string | undefined,
+  runUrl: string | undefined,
+): { plan: { name: string }; maintenanceUrl: string } {
+  if (!runName) {
+    throw new Error(
+      'Cannot tear down the test database: no run database name was ' +
+        'recorded by global setup.',
+    );
+  }
+  const plan = planTeardownDrop(runName);
+  if (!plan) {
+    throw new Error(
+      `Refusing to drop database "${runName}": it does not pass the ` +
+        'run-database name check.',
+    );
+  }
+  if (!runUrl) {
+    throw new Error(
+      `Cannot tear down database "${plan.name}": DATABASE_URL is not set ` +
+        'in this process.',
+    );
+  }
+  return { plan, maintenanceUrl: toMaintenanceUrl(runUrl) };
+}
+
 export function stripUtf8Bom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
