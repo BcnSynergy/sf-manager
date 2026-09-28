@@ -273,4 +273,4 @@ undone, and that is accepted.
 - [x] The fresh test database enforces the hand-written FKs that the dev volume lacks (E9). Resolved 2026-09-24: fix violating fixtures inside this change as harness fallout; escalate to the user before continuing if the count turns out large.
 - [x] A unique per-run database instead of a fixed `sf_manager_test`, with no advisory lock. Resolved 2026-09-25: user approved (Decision 4, Decision 10).
 - [x] `app.e2e-spec.ts` moved under the integration run instead of `jest-e2e.json` gaining `globalSetup`. Resolved 2026-09-25: user approved (Decision 8).
-- [ ] Refresh the stale "shared dev DB" comments (`prisma-user.repository.integration.spec.ts:13-17`, `organization-profile-migration.integration.spec.ts:63-76`) in PR 3, or defer them?
+- [x] Refresh the stale "shared dev DB" comments (`prisma-user.repository.integration.spec.ts:13-17`, `organization-profile-migration.integration.spec.ts:63-76`) in PR 3, or defer them? Resolved by task 3.19: comment-only text updated to reflect the per-run isolated database; assertions and structural-only strategy unchanged (user-approved).
