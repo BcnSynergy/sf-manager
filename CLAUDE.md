@@ -95,17 +95,25 @@ Practicalities learned so far:
   print CSS by copying the `@media print` rules into a screen `<style>`
   via `javascript_tool` and taking a screenshot. When a spec requires real
   print-preview evidence, ask the user to open the preview.
-- **Dev data is mostly test fixtures**, with UUID-suffixed names and
-  0-question active templates. The web app has no search in the user or
-  community lists yet. Find ids with `psql` via
-  `docker compose exec -T postgres` and hand the user direct URLs.
-  - QA users for each role exist with the seed technician's password:
-    `rep@`, `companymgr@` and `manager@sf-manager.example`. After the
-    one-time dev reset (see `README.md`), these QA users are gone until
-    `dev-seed-data` (not yet implemented) recreates them — only the seeded
-    admin comes back automatically via `prisma db seed`.
+- **Dev data is nearly empty**: the one-time dev reset (see `README.md`)
+  ran on 2026-09-28. It holds only the seeded admin
+  (`admin@sfmanager.local`) and technician
+  (`technician@sf-manager.example`), plus the default organization profile
+  row inserted by its migration. There are no communities, templates or
+  review sessions.
+  - QA users for the other roles (`rep@`, `companymgr@`,
+    `manager@sf-manager.example`) are gone. They stay gone until
+    `dev-seed-data` (not yet implemented) recreates them. Until then, create
+    whatever a browser check needs through the web app as the admin.
+  - The web app has no search in the user or community lists yet. Find ids
+    with `psql` via `docker compose exec -T postgres` and hand the user
+    direct URLs.
   - Change dev-DB rows directly only with the user's OK, and restore them
     afterwards.
+  - Prisma refuses `migrate reset` when an AI agent runs it. It needs
+    `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set to the exact text of
+    the user's consent. That consent must be given after Prisma's warning,
+    so ask the user again once the command refuses.
 - **Dev-DB pollution**: since `hermetic-integration-tests`, each
   `npm run test:integration` run gets its own freshly created, uniquely
   named database — it never reads or writes `sfmanager`. Running the full
