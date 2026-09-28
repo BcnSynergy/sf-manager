@@ -86,7 +86,7 @@ business features yet, just the toolchain wired end-to-end.
 
 If the dev database (`sfmanager`) ever needs resetting to a clean seeded
 state (for example after manually editing rows for a QA/demo session), run
-once, from `apps/api`:
+once, from the repository root:
 
 ```
 npm exec -w apps/api -- prisma migrate reset
@@ -97,7 +97,10 @@ npm exec -w apps/api -- prisma db seed
 (no `--force` is used here, deliberately, so it always asks); the reset
 also restores the migration-defined foreign keys the dev volume may be
 missing if it predates them. `prisma db seed` is idempotent, so it is safe
-to run again even if the reset already seeded on its own. This reset is
+to run again even if the reset already seeded on its own. Afterwards the
+database holds only the seeded admin and technician
+(`technician@sf-manager.example`), plus the default organization profile
+row that its migration inserts. Every other row is gone. This reset is
 manual and destructive to `sfmanager` — it is never run by
 `test:integration` or any other automated command.
 
