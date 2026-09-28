@@ -110,10 +110,11 @@ Practicalities learned so far:
     direct URLs.
   - Change dev-DB rows directly only with the user's OK, and restore them
     afterwards.
-  - Prisma refuses `migrate reset` when an AI agent runs it. It needs
+  - Get the user's explicit OK before attempting `migrate reset` at all.
+    Prisma then refuses it when an AI agent runs it, and needs
     `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set to the exact text of
-    the user's consent. That consent must be given after Prisma's warning,
-    so ask the user again once the command refuses.
+    a consent given after its warning. When it refuses, show the user the
+    warning and ask again, then rerun with their reply as the value.
 - **Dev-DB pollution**: since `hermetic-integration-tests`, each
   `npm run test:integration` run gets its own freshly created, uniquely
   named database — it never reads or writes `sfmanager`. Running the full
