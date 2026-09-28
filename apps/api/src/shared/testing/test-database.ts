@@ -90,6 +90,32 @@ export function redactPassword(url: string): string {
   return parsed.toString();
 }
 
+// design.md Decision 6: redacts a run URL's password out of arbitrary text
+// (e.g. a `prisma migrate deploy` child process's stdout/stderr), which may
+// echo the connection string back either verbatim, as its percent-encoded
+// form (as it appears in the URL), or decoded (as some CLI error messages
+// do). Moved here from test/test-database/global-setup.ts (originally
+// thin, untested glue) so the decoded-form redaction added for the
+// password-redaction follow-up can be unit-tested without a live process.
+export function redactMigrateOutput(output: string, testUrl: string): string {
+  let redacted = output.split(testUrl).join(redactPassword(testUrl));
+  const parsed = parseUrl(testUrl);
+  const encodedPassword = parsed?.password;
+  if (encodedPassword) {
+    redacted = redacted.split(encodedPassword).join('***');
+    try {
+      const decodedPassword = decodeURIComponent(encodedPassword);
+      if (decodedPassword && decodedPassword !== encodedPassword) {
+        redacted = redacted.split(decodedPassword).join('***');
+      }
+    } catch {
+      // Malformed percent-encoding (e.g. a stray "%") — the encoded-form
+      // redaction above already applies; nothing further to decode.
+    }
+  }
+  return redacted;
+}
+
 export function deriveTestDatabaseUrl(
   baseUrl: string | undefined,
   runName: string,

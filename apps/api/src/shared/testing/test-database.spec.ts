@@ -25,6 +25,7 @@ import {
   isDatabaseMissingError,
   planTeardownDrop,
   stripUtf8Bom,
+  redactMigrateOutput,
 } from './test-database';
 
 // hermetic-integration-tests design.md Decision 2: run name is
@@ -428,6 +429,41 @@ describe('stripUtf8Bom', () => {
 
   it('leaves BOM-free text unchanged', () => {
     expect(stripUtf8Bom('DATABASE_URL=x')).toBe('DATABASE_URL=x');
+  });
+});
+
+describe('redactMigrateOutput', () => {
+  const runName = 'sf_manager_test_mug72800_9fbc21';
+  // Requires percent-encoding when placed in a URL: '@', ':', '/' and '%'
+  // are all reserved or escape-significant characters.
+  const rawPassword = 'p@ss:w/rd%';
+  const encodedPassword = encodeURIComponent(rawPassword);
+  const testUrl = `postgresql://user:${encodedPassword}@localhost:5432/${runName}`;
+
+  it('redacts the whole test URL when it appears verbatim in the output', () => {
+    const output = `error: connection to ${testUrl} failed`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(testUrl);
+    expect(redacted).not.toContain(encodedPassword);
+  });
+
+  it('redacts the percent-encoded password when it appears on its own', () => {
+    const output = `password mismatch, tried "${encodedPassword}"`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(encodedPassword);
+  });
+
+  it('redacts the decoded password when a tool echoes it back decoded', () => {
+    const output = `password authentication failed for password "${rawPassword}"`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(rawPassword);
+  });
+
+  it('does not throw when the URL carries a malformed percent-encoding', () => {
+    const malformedUrl = `postgresql://user:ab%zzcd@localhost:5432/${runName}`;
+    expect(() =>
+      redactMigrateOutput('some output', malformedUrl),
+    ).not.toThrow();
   });
 });
 
