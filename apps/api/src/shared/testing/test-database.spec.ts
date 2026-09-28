@@ -435,6 +435,21 @@ describe('planTeardown', () => {
     });
   });
 
+  it('takes the drop target from the run name, never from the URL path', () => {
+    const devUrl = 'postgresql://user:pass@localhost:5432/sfmanager';
+
+    expect(planTeardown(runName, devUrl)).toEqual({
+      plan: { name: runName },
+      maintenanceUrl: 'postgresql://user:pass@localhost:5432/postgres',
+    });
+  });
+
+  it('rejects an invalid run name before checking DATABASE_URL', () => {
+    expect(() => planTeardown('sfmanager', undefined)).toThrow(
+      'Refusing to drop database "sfmanager"',
+    );
+  });
+
   it('throws when no run name was recorded by global setup', () => {
     expect(() => planTeardown(undefined, runUrl)).toThrow(
       'no run database name was recorded by global setup',
