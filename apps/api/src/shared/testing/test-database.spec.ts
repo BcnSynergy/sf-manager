@@ -24,6 +24,7 @@ import {
   isObjectInUseError,
   isDatabaseMissingError,
   planTeardownDrop,
+  planTeardown,
   stripUtf8Bom,
   redactMigrateOutput,
 } from './test-database';
@@ -419,6 +420,37 @@ describe('planTeardownDrop', () => {
 
   it('returns null for a name that fails isRunDatabaseName', () => {
     expect(planTeardownDrop('sfmanager')).toBeNull();
+  });
+});
+
+describe('planTeardown', () => {
+  const runName = 'sf_manager_test_mug72800_9fbc21';
+  const runUrl = `postgresql://user:pass@localhost:5432/${runName}?schema=public`;
+
+  it('returns the validated drop plan and maintenance URL for a valid run', () => {
+    expect(planTeardown(runName, runUrl)).toEqual({
+      plan: { name: runName },
+      maintenanceUrl:
+        'postgresql://user:pass@localhost:5432/postgres?schema=public',
+    });
+  });
+
+  it('throws when no run name was recorded by global setup', () => {
+    expect(() => planTeardown(undefined, runUrl)).toThrow(
+      'no run database name was recorded by global setup',
+    );
+  });
+
+  it('throws when the run name fails the run-database name check', () => {
+    expect(() => planTeardown('sfmanager', runUrl)).toThrow(
+      'Refusing to drop database "sfmanager": it does not pass the run-database name check',
+    );
+  });
+
+  it('throws when DATABASE_URL is missing in this process', () => {
+    expect(() => planTeardown(runName, undefined)).toThrow(
+      `Cannot tear down database "${runName}": DATABASE_URL is not set in this process`,
+    );
   });
 });
 
