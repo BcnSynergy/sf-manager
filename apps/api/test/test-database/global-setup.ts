@@ -5,7 +5,7 @@ import {
   prepareTestDatabase,
   TestDatabasePorts,
 } from '../../src/shared/testing/prepare-test-database';
-import { redactPassword } from '../../src/shared/testing/test-database';
+import { redactMigrateOutput } from '../../src/shared/testing/test-database';
 import { readBaseDatabaseUrl } from './read-base-database-url';
 
 const API_ROOT = resolve(__dirname, '../..');
@@ -21,26 +21,6 @@ async function withMaintenanceClient<T>(
   } finally {
     await client.end();
   }
-}
-
-// design.md Decision 6: passes the run URL via the child's `env`, never via
-// argv, so it never appears in a process listing. On failure, the raw
-// stdout/stderr from the CLI can otherwise echo the connection string back
-// (e.g. Prisma's own connection-error messages) — redact the run URL and its
-// password out of the thrown message before it can reach a log.
-function redactMigrateOutput(output: string, testUrl: string): string {
-  let redacted = output.split(testUrl).join(redactPassword(testUrl));
-  try {
-    const { password } = new URL(testUrl);
-    if (password) {
-      redacted = redacted.split(password).join('***');
-    }
-  } catch {
-    // testUrl already passed assertTestDatabaseUrl by the time migrate()
-    // runs, so this should be unreachable; fall through with the
-    // whole-URL redaction already applied above.
-  }
-  return redacted;
 }
 
 const ports: TestDatabasePorts = {

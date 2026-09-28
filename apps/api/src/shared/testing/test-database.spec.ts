@@ -25,6 +25,7 @@ import {
   isDatabaseMissingError,
   planTeardownDrop,
   stripUtf8Bom,
+  redactMigrateOutput,
 } from './test-database';
 
 // hermetic-integration-tests design.md Decision 2: run name is
@@ -128,21 +129,21 @@ describe('deriveTestDatabaseUrl / toMaintenanceUrl / assertTestDatabaseUrl', () 
     expect(twice).toBe(once);
   });
 
-  it('throws when the base URL is missing', () => {
-    expect(() => deriveTestDatabaseUrl(undefined, runName)).toThrow();
+  it('throws when the base URL is missing, naming the expected run database', () => {
+    expect(() => deriveTestDatabaseUrl(undefined, runName)).toThrow(runName);
   });
 
-  it('throws when the base URL is garbage', () => {
-    expect(() => deriveTestDatabaseUrl('not a url', runName)).toThrow();
+  it('throws when the base URL is garbage, naming the expected run database', () => {
+    expect(() => deriveTestDatabaseUrl('not a url', runName)).toThrow(runName);
   });
 
-  it('throws when the base URL is a mysql: URL', () => {
+  it('throws when the base URL is a mysql: URL, naming the expected run database', () => {
     expect(() =>
       deriveTestDatabaseUrl(
         'mysql://user:pass@localhost:3306/sfmanager',
         runName,
       ),
-    ).toThrow();
+    ).toThrow(runName);
   });
 
   it('toMaintenanceUrl swaps the database path to /postgres and keeps the query string', () => {
@@ -162,28 +163,41 @@ describe('deriveTestDatabaseUrl / toMaintenanceUrl / assertTestDatabaseUrl', () 
     ).not.toThrow();
   });
 
-  it('assertTestDatabaseUrl rejects the dev database name "sfmanager"', () => {
+  it('assertTestDatabaseUrl rejects the dev database name "sfmanager", naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/sfmanager'),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/sfmanager'),
+    ).toThrow('"sfmanager"');
   });
 
-  it('assertTestDatabaseUrl rejects the bare "sf_manager_test" name', () => {
+  it('assertTestDatabaseUrl rejects the bare "sf_manager_test" name, naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl(
         'postgresql://user:pass@localhost:5432/sf_manager_test',
       ),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl(
+        'postgresql://user:pass@localhost:5432/sf_manager_test',
+      ),
+    ).toThrow('"sf_manager_test"');
   });
 
-  it('assertTestDatabaseUrl rejects other, unrelated names', () => {
+  it('assertTestDatabaseUrl rejects other, unrelated names, naming the expected pattern and the actual name', () => {
     expect(() =>
       assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/other'),
-    ).toThrow();
+    ).toThrow('sf_manager_test_<id>');
+    expect(() =>
+      assertTestDatabaseUrl('postgresql://user:pass@localhost:5432/other'),
+    ).toThrow('"other"');
   });
 
-  it('assertTestDatabaseUrl rejects an undefined URL', () => {
-    expect(() => assertTestDatabaseUrl(undefined)).toThrow();
+  it('assertTestDatabaseUrl rejects an undefined URL, naming the expected pattern', () => {
+    expect(() => assertTestDatabaseUrl(undefined)).toThrow(
+      'sf_manager_test_<id>',
+    );
   });
 
   it('assertTestDatabaseUrl never leaks the password in its error message', () => {
@@ -415,6 +429,41 @@ describe('stripUtf8Bom', () => {
 
   it('leaves BOM-free text unchanged', () => {
     expect(stripUtf8Bom('DATABASE_URL=x')).toBe('DATABASE_URL=x');
+  });
+});
+
+describe('redactMigrateOutput', () => {
+  const runName = 'sf_manager_test_mug72800_9fbc21';
+  // Requires percent-encoding when placed in a URL: '@', ':', '/' and '%'
+  // are all reserved or escape-significant characters.
+  const rawPassword = 'p@ss:w/rd%';
+  const encodedPassword = encodeURIComponent(rawPassword);
+  const testUrl = `postgresql://user:${encodedPassword}@localhost:5432/${runName}`;
+
+  it('redacts the whole test URL when it appears verbatim in the output', () => {
+    const output = `error: connection to ${testUrl} failed`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(testUrl);
+    expect(redacted).not.toContain(encodedPassword);
+  });
+
+  it('redacts the percent-encoded password when it appears on its own', () => {
+    const output = `password mismatch, tried "${encodedPassword}"`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(encodedPassword);
+  });
+
+  it('redacts the decoded password when a tool echoes it back decoded', () => {
+    const output = `password authentication failed for password "${rawPassword}"`;
+    const redacted = redactMigrateOutput(output, testUrl);
+    expect(redacted).not.toContain(rawPassword);
+  });
+
+  it('does not throw when the URL carries a malformed percent-encoding', () => {
+    const malformedUrl = `postgresql://user:ab%zzcd@localhost:5432/${runName}`;
+    expect(() =>
+      redactMigrateOutput('some output', malformedUrl),
+    ).not.toThrow();
   });
 });
 

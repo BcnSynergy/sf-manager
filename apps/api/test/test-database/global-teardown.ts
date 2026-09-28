@@ -1,10 +1,8 @@
 import { Client } from 'pg';
 import {
-  deriveTestDatabaseUrl,
   planTeardownDrop,
   toMaintenanceUrl,
 } from '../../src/shared/testing/test-database';
-import { readBaseDatabaseUrl } from './read-base-database-url';
 
 // hermetic-integration-tests design.md Decision 12: reads the run name from
 // `globalThis` (set by global-setup.ts in the same parent process), not
@@ -31,7 +29,22 @@ export default async function globalTeardown(): Promise<void> {
     );
   }
 
-  const runUrl = deriveTestDatabaseUrl(readBaseDatabaseUrl(), plan.name);
+  // global-setup.ts already overwrote process.env.DATABASE_URL with the run
+  // database's own URL in this same parent process (Jest runs globalSetup
+  // and globalTeardown in the parent, never in a worker), so it is reused
+  // directly here rather than re-derived from `readBaseDatabaseUrl()` — by
+  // teardown time that helper no longer returns the "base" URL at all, only
+  // the (already-derived) run URL, making a second `deriveTestDatabaseUrl`
+  // call a misleading no-op. `toMaintenanceUrl()` only needs this URL's
+  // host/port/credentials; the database actually dropped below is always
+  // `plan.name`, never whatever path this URL carries.
+  const runUrl = process.env.DATABASE_URL;
+  if (!runUrl) {
+    throw new Error(
+      `Cannot tear down database "${plan.name}": DATABASE_URL is not set ` +
+        'in this process.',
+    );
+  }
   const maintenanceUrl = toMaintenanceUrl(runUrl);
 
   const client = new Client({ connectionString: maintenanceUrl });

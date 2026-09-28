@@ -90,22 +90,51 @@ export function redactPassword(url: string): string {
   return parsed.toString();
 }
 
+// design.md Decision 6: redacts a run URL's password out of arbitrary text
+// (e.g. a `prisma migrate deploy` child process's stdout/stderr), which may
+// echo the connection string back either verbatim, as its percent-encoded
+// form (as it appears in the URL), or decoded (as some CLI error messages
+// do). Moved here from test/test-database/global-setup.ts (originally
+// thin, untested glue) so the decoded-form redaction added for the
+// password-redaction follow-up can be unit-tested without a live process.
+export function redactMigrateOutput(output: string, testUrl: string): string {
+  let redacted = output.split(testUrl).join(redactPassword(testUrl));
+  const parsed = parseUrl(testUrl);
+  const encodedPassword = parsed?.password;
+  if (encodedPassword) {
+    redacted = redacted.split(encodedPassword).join('***');
+    try {
+      const decodedPassword = decodeURIComponent(encodedPassword);
+      if (decodedPassword && decodedPassword !== encodedPassword) {
+        redacted = redacted.split(decodedPassword).join('***');
+      }
+    } catch {
+      // Malformed percent-encoding (e.g. a stray "%") — the encoded-form
+      // redaction above already applies; nothing further to decode.
+    }
+  }
+  return redacted;
+}
+
 export function deriveTestDatabaseUrl(
   baseUrl: string | undefined,
   runName: string,
 ): string {
   if (!baseUrl) {
-    throw new Error('Cannot derive test database URL: base URL is missing.');
+    throw new Error(
+      `Cannot derive test database URL for run database "${runName}": base URL is missing.`,
+    );
   }
   const parsed = parseUrl(baseUrl);
   if (!parsed) {
     throw new Error(
-      'Cannot derive test database URL: base URL is not a valid URL.',
+      `Cannot derive test database URL for run database "${runName}": base URL is not a valid URL.`,
     );
   }
   if (parsed.protocol !== 'postgres:' && parsed.protocol !== 'postgresql:') {
     throw new Error(
-      `Cannot derive test database URL: expected a postgres(ql) URL, got "${parsed.protocol}".`,
+      `Cannot derive test database URL for run database "${runName}": ` +
+        `expected a postgres(ql) URL, got "${parsed.protocol}".`,
     );
   }
   parsed.pathname = `/${runName}`;
@@ -122,17 +151,23 @@ export function toMaintenanceUrl(url: string): string {
 }
 
 // design.md Decision 3: the guard that keeps a real-DB run away from the dev
-// database `sfmanager`. Message redacts the password so it is safe to log.
+// database `sfmanager`. Message redacts the password so it is safe to log,
+// and always names the expected run-database pattern (W3 follow-up) so an
+// abort raised during global setup — before any spec runs — still tells the
+// operator what database name was expected.
 export function assertTestDatabaseUrl(url: string | undefined): void {
+  const expectedPattern = `${TEST_DATABASE_PREFIX}<id>`;
   if (!url) {
     throw new Error(
-      'Test database URL is missing; refusing to run against an unknown database.',
+      `Test database URL is missing; expected a run database matching "${expectedPattern}".`,
     );
   }
   const name = extractDatabaseName(url);
   if (!name || !isRunDatabaseName(name)) {
+    const actual = name ? `"${name}"` : 'no database name';
     throw new Error(
-      `Refusing to run against non-test database "${redactPassword(url)}".`,
+      `Refusing to run: expected a run database matching "${expectedPattern}", ` +
+        `got ${actual} (from "${redactPassword(url)}").`,
     );
   }
 }

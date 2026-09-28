@@ -7,6 +7,7 @@ import {
   isObjectInUseError,
   isRunDatabaseName,
   planStaleSweep,
+  TEST_DATABASE_PREFIX,
   toMaintenanceUrl,
 } from './test-database';
 
@@ -43,8 +44,12 @@ export async function prepareTestDatabase(
 ): Promise<{ runName: string; testUrl: string }> {
   const overrideTrigger = findDotenvOverride(ports.env, ports.argv);
   if (overrideTrigger) {
+    // No run name has been generated yet at this point (W3 follow-up), so
+    // the abort names the expected run-database pattern instead.
     throw new Error(
-      `Refusing to prepare a test database: dotenv override trigger "${overrideTrigger}" is set.`,
+      `Refusing to prepare a test database (expected a new run database ` +
+        `matching "${TEST_DATABASE_PREFIX}<id>"): dotenv override trigger ` +
+        `"${overrideTrigger}" is set.`,
     );
   }
 
