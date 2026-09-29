@@ -165,6 +165,7 @@ seeded rows stay until the next `migrate reset`.
 
 - [ ] The local `apps/api/.env` is untracked. Apply adds `NODE_ENV=development` to it only with the user's OK; otherwise the user adds it.
 - [ ] The user must run `migrate reset` and then `db seed` once after PR 1 (an explicit PR 1 acceptance step), because the existing technician row has drifted (Decision 11).
+- [ ] If QA edits a seeded question so it no longer lists MONTHLY while a Dev Seed draft template is unfinished, `finish-draft` throws an uncaught domain error from `setTemplateQuestions` and the seed aborts. The window is narrow (a draft only exists after a crash between create and activate). Not handled.
 
 ## Accepted Limitations
 

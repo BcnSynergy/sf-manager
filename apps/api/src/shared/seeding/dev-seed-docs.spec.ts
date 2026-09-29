@@ -46,4 +46,13 @@ describe('dev seed documentation', () => {
   it('README tells the developer to set NODE_ENV=development', () => {
     expect(readFileSync(README, 'utf8')).toContain('NODE_ENV=development');
   });
+  it('README describes the seeded communities and the reset then seed flow', () => {
+    const readme = readFileSync(README, 'utf8');
+
+    for (const community of DEV_DATASET.communities) {
+      expect(readme).toContain(community.name);
+    }
+    expect(readme).toContain(DEV_DATASET.template.name);
+    expect(readme).toMatch(/migrate reset[\s\S]*db seed/);
+  });
 });

@@ -95,16 +95,20 @@ Practicalities learned so far:
   print CSS by copying the `@media print` rules into a screen `<style>`
   via `javascript_tool` and taking a screenshot. When a spec requires real
   print-preview evidence, ask the user to open the preview.
-- **Dev data is nearly empty**: the one-time dev reset (see `README.md`)
-  ran on 2026-09-28. It holds only the seeded admin
-  (`admin@sfmanager.local`) and technician
-  (`technician@sf-manager.example`), plus the default organization profile
-  row inserted by its migration. There are no communities, templates or
-  review sessions.
-  - QA users for the other roles (`rep@`, `companymgr@`,
-    `manager@sf-manager.example`) are gone. They stay gone until
-    `dev-seed-data` (not yet implemented) recreates them. Until then, create
-    whatever a browser check needs through the web app as the admin.
+- **Dev data is seeded, not empty**: `prisma migrate reset` then
+  `prisma db seed` (see `README.md`) yields the admin
+  (`admin@sfmanager.local`) plus the `dev-seed-data` dataset, but only when
+  `NODE_ENV=development` is set in `apps/api/.env`; otherwise only the admin
+  and the default organization profile row exist. The dataset:
+  - Users (all with the public password `sf-manager-dev-1`):
+    `technician@`, `technician2@`, `companymgr@`, `rep@`, `manager@`
+    (`VIEW_ALL_REVIEWS`) and `manager-nocap@sf-manager.example`.
+  - Two companies (`Dev Seed Fire Safety A`/`B`), two communities (`Dev Seed
+    Residences North`/`South`, two extinguishers each), one active
+    EXTINGUISHER x MONTHLY template, three completed sessions and one draft.
+  - Rows named `Dev Seed ...` are seeded; anything else is QA data. The seed
+    is additive and never repairs a drifted row: after hand edits, reset
+    again.
   - The web app has no search in the user or community lists yet. Find ids
     with `psql` via `docker compose exec -T postgres` and hand the user
     direct URLs.

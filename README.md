@@ -74,6 +74,14 @@ business features yet, just the toolchain wired end-to-end.
    | `manager@sf-manager.example` | Manager with `VIEW_ALL_REVIEWS` |
    | `manager-nocap@sf-manager.example` | Manager without capabilities |
 
+   Besides the accounts, the same seed creates two maintenance companies, two
+   communities (`Dev Seed Residences North` and `Dev Seed Residences South`,
+   two extinguishers each), the assignments for those accounts, three
+   extinguisher questions, an active `Dev Seed Extinguisher Monthly Check`
+   template, three completed review sessions and one draft session (recorded
+   by `rep@`, 1 of 2 elements). It also overwrites the organization profile.
+   Session timestamps are the moment of the run; nothing is backdated.
+
    The seed is additive and idempotent: rerunning it creates nothing that
    already exists. If an account already exists with a different role or
    company, the seed warns and leaves it alone; run `prisma migrate reset`
@@ -123,9 +131,10 @@ npm exec -w apps/api -- prisma db seed
 also restores the migration-defined foreign keys the dev volume may be
 missing if it predates them. `prisma db seed` is idempotent, so it is safe
 to run again even if the reset already seeded on its own. Afterwards the
-database holds only the seeded admin and technician
-(`technician@sf-manager.example`), plus the default organization profile
-row that its migration inserts. Every other row is gone. This reset is
+database holds the seeded admin and, when `NODE_ENV=development` is set in
+`apps/api/.env`, the dev dataset described above (accounts, companies,
+communities, template and sessions). Without `NODE_ENV=development` only the
+admin and the migration's default organization profile row exist. This reset is
 manual and destructive to `sfmanager` — it is never run by
 `test:integration` or any other automated command.
 
