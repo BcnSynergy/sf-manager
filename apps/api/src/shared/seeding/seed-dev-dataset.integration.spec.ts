@@ -1,8 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  CHECKLIST_QUESTION_REPOSITORY,
+  type ChecklistQuestionRepository,
+} from '../../modules/checklist-question/application/ports/checklist-question.repository.port';
+import {
+  COMMUNITY_REPOSITORY,
+  type CommunityRepository,
+} from '../../modules/community/application/ports/community.repository.port';
+import {
+  COMMUNITY_REPRESENTATIVE_REPOSITORY,
+  type CommunityRepresentativeRepository,
+} from '../../modules/community/application/ports/community-representative.repository.port';
+import {
+  COMMUNITY_TECHNICIAN_REPOSITORY,
+  type CommunityTechnicianRepository,
+} from '../../modules/community/application/ports/community-technician.repository.port';
+import {
+  INSPECTABLE_ELEMENT_REPOSITORY,
+  type InspectableElementRepository,
+} from '../../modules/inspectable-element/application/ports/inspectable-element.repository.port';
+import {
   MAINTENANCE_COMPANY_REPOSITORY,
   type MaintenanceCompanyRepository,
 } from '../../modules/maintenance-company/application/ports/maintenance-company.repository.port';
+import {
+  ORGANIZATION_PROFILE_REPOSITORY,
+  type OrganizationProfileRepository,
+} from '../../modules/organization-profile/application/ports/organization-profile.repository.port';
+import {
+  REVIEW_TEMPLATE_REPOSITORY,
+  type ReviewTemplateRepository,
+} from '../../modules/review-template/application/ports/review-template.repository.port';
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -10,6 +38,7 @@ import {
 import { CreateUserUseCase } from '../../modules/users/application/use-cases/create-user.use-case';
 import { AppModule } from '../../app.module';
 import { DEV_DATASET, type DevDataset } from './dev-dataset';
+import { planTemplate } from './dev-seed-plan';
 import { resolveDevSeedDeps, seedDevDataset } from './seed-dev-dataset';
 
 // dev-seed-data design.md "Testing Strategy": the integration spec calls
@@ -24,10 +53,31 @@ jest.setTimeout(60_000);
 
 // Emails and tax ids stay canonical (lower-case email, upper-case tax id) so
 // the derived dataset still matches its natural keys after the schemas'
-// normalization.
+// normalization. The organization profile and the template lineage are global,
+// so they are not suffixed; the tests below branch on the lineage kind.
 function buildDataset(suffix: string): DevDataset {
   const upper = suffix.toUpperCase();
+  const community = (name: string) => `${name} ${suffix}`;
   return {
+    ...DEV_DATASET,
+    communities: DEV_DATASET.communities.map((c) => ({
+      ...c,
+      name: community(c.name),
+    })),
+    assignments: DEV_DATASET.assignments.map((a) => ({
+      ...a,
+      communityName: community(a.communityName),
+      userEmail: a.userEmail.replace('@', `-${suffix}@`),
+    })),
+    elements: DEV_DATASET.elements.map((e) => ({
+      ...e,
+      communityName: community(e.communityName),
+      name: `${e.name} ${suffix}`,
+    })),
+    questions: DEV_DATASET.questions.map((q) => ({
+      ...q,
+      text: `${q.text} ${suffix}`,
+    })),
     password: DEV_DATASET.password,
     companies: DEV_DATASET.companies.map((company) => ({
       ...company,
@@ -48,6 +98,23 @@ describe('seedDevDataset (integration)', () => {
   let moduleRef: TestingModule;
   let userRepository: UserRepository;
   let companyRepository: MaintenanceCompanyRepository;
+  let communityRepository: CommunityRepository;
+  let representativeRepository: CommunityRepresentativeRepository;
+  let technicianRepository: CommunityTechnicianRepository;
+  let elementRepository: InspectableElementRepository;
+  let questionRepository: ChecklistQuestionRepository;
+  let templateRepository: ReviewTemplateRepository;
+  let profileRepository: OrganizationProfileRepository;
+  // The template outcome is asserted on the FIRST seed run of this file, made
+  // in beforeAll before any other seeding: later runs always see the template
+  // this one activated (or a leftover), so they cannot prove the create path.
+  let templateRun: {
+    kind: Awaited<ReturnType<typeof seedDevDataset>>;
+    initialKind: Awaited<ReturnType<typeof seedDevDataset>>;
+    before: { id: string; status: string }[];
+    logs: string[];
+    data: DevDataset;
+  };
   let logs: string[];
   const log = (line: string) => logs.push(line);
 
@@ -65,6 +132,37 @@ describe('seedDevDataset (integration)', () => {
     companyRepository = moduleRef.get<MaintenanceCompanyRepository>(
       MAINTENANCE_COMPANY_REPOSITORY,
     );
+    communityRepository =
+      moduleRef.get<CommunityRepository>(COMMUNITY_REPOSITORY);
+    representativeRepository = moduleRef.get<CommunityRepresentativeRepository>(
+      COMMUNITY_REPRESENTATIVE_REPOSITORY,
+    );
+    technicianRepository = moduleRef.get<CommunityTechnicianRepository>(
+      COMMUNITY_TECHNICIAN_REPOSITORY,
+    );
+    elementRepository = moduleRef.get<InspectableElementRepository>(
+      INSPECTABLE_ELEMENT_REPOSITORY,
+    );
+    questionRepository = moduleRef.get<ChecklistQuestionRepository>(
+      CHECKLIST_QUESTION_REPOSITORY,
+    );
+    templateRepository = moduleRef.get<ReviewTemplateRepository>(
+      REVIEW_TEMPLATE_REPOSITORY,
+    );
+    profileRepository = moduleRef.get<OrganizationProfileRepository>(
+      ORGANIZATION_PROFILE_REPOSITORY,
+    );
+
+    const data = buildDataset('i9');
+    const runLogs: string[] = [];
+    const initialKind = await lineageKind();
+    const before = await lineage();
+    const kind = await seedDevDataset(
+      resolveDevSeedDeps(moduleRef),
+      data,
+      (line) => runLogs.push(line),
+    );
+    templateRun = { kind, initialKind, before, logs: runLogs, data };
   });
 
   beforeEach(() => {
@@ -88,6 +186,185 @@ describe('seedDevDataset (integration)', () => {
     );
     return found.filter((u) => u !== null);
   }
+
+  async function seededCommunities(data: DevDataset) {
+    const names = new Set(data.communities.map((c) => c.name));
+    return (await communityRepository.findAll()).filter((c) =>
+      names.has(c.name),
+    );
+  }
+
+  // Everything the catalog steps wrote, keyed by id.
+  async function catalogSnapshot(data: DevDataset) {
+    const communities = await seededCommunities(data);
+    const elements = (
+      await Promise.all(
+        communities.map((c) => elementRepository.findAllByCommunity(c.id)),
+      )
+    ).flat();
+    const assignments = (
+      await Promise.all(
+        communities.flatMap((c) => [
+          representativeRepository.listByCommunity(c.id),
+          technicianRepository.listByCommunity(c.id),
+        ]),
+      )
+    ).flat();
+    const texts = new Set(data.questions.map((q) => q.text));
+    const questions = (await questionRepository.findAll()).filter((q) =>
+      texts.has(q.text),
+    );
+    return {
+      communities: communities.map((c) => c.id).sort(),
+      elements: elements.map((e) => e.id).sort(),
+      assignments: assignments.map((a) => a.id).sort(),
+      questions: questions.map((q) => q.id).sort(),
+    };
+  }
+
+  async function lineage() {
+    return (await templateRepository.findAll()).filter(
+      (t) => t.elementType === 'EXTINGUISHER' && t.frequency === 'MONTHLY',
+    );
+  }
+
+  async function lineageKind() {
+    const templates = await lineage();
+    const active = templates.find((t) => t.status === 'active');
+    const snapshot = active
+      ? await templateRepository.findFrozenWithSnapshot(active.id)
+      : null;
+    return planTemplate(
+      templates,
+      active ? (snapshot?.questions.length ?? 0) : null,
+    ).kind;
+  }
+
+  it('seeds the catalog: communities, assignments, elements and questions', async () => {
+    const data = buildDataset('f6');
+
+    await seedDevDataset(resolveDevSeedDeps(moduleRef), data, log);
+
+    const communities = await seededCommunities(data);
+    expect(communities.map((c) => c.name).sort()).toEqual(
+      data.communities.map((c) => c.name).sort(),
+    );
+    const idOf = (name: string) => communities.find((c) => c.name === name)!.id;
+    const users = await seededUsers(data);
+    const userId = (email: string) => users.find((u) => u.email === email)!.id;
+    for (const a of data.assignments) {
+      const repository =
+        a.as === 'REPRESENTATIVE'
+          ? representativeRepository
+          : technicianRepository;
+      const record = await repository.findByCommunityAndUser(
+        idOf(a.communityName),
+        userId(a.userEmail),
+      );
+      expect(record?.deactivatedAt).toBeNull();
+    }
+    for (const c of data.communities) {
+      const names = (await elementRepository.findAllByCommunity(idOf(c.name)))
+        .map((e) => e.name)
+        .sort();
+      expect(names).toEqual(
+        data.elements
+          .filter((e) => e.communityName === c.name)
+          .map((e) => e.name)
+          .sort(),
+      );
+    }
+    expect((await catalogSnapshot(data)).questions).toHaveLength(
+      data.questions.length,
+    );
+  });
+
+  it('overwrites the organization profile with the seeded values', async () => {
+    const data = buildDataset('g7');
+    await profileRepository.update({
+      name: 'Changed by QA',
+      legalName: 'Changed by QA',
+      taxId: 'X0000000X',
+      address: 'Elsewhere',
+      phone: '0',
+      email: 'qa@example.test',
+    });
+
+    await seedDevDataset(resolveDevSeedDeps(moduleRef), data, log);
+
+    expect(await profileRepository.get()).toMatchObject(data.profile);
+  });
+
+  it('a second run leaves the catalog unchanged and only logs skips', async () => {
+    const data = buildDataset('h8');
+    const deps = resolveDevSeedDeps(moduleRef);
+
+    await seedDevDataset(deps, data, log);
+    const afterFirst = await catalogSnapshot(data);
+    const lineageAfterFirst = await lineage();
+
+    logs = [];
+    await seedDevDataset(deps, data, log);
+
+    expect(afterFirst.assignments).toHaveLength(data.assignments.length);
+    expect(afterFirst.elements).toHaveLength(data.elements.length);
+    expect(await catalogSnapshot(data)).toEqual(afterFirst);
+    expect((await lineage()).map((t) => t.id).sort()).toEqual(
+      lineageAfterFirst.map((t) => t.id).sort(),
+    );
+    // Equal ids alone would also hold if a regressed lookup made a create
+    // throw and the seed swallowed it, so pin the logs. Template skips are
+    // WARN lines by design and depend on what other specs left in the lineage.
+    expect(
+      logs.filter(
+        (l) => /^WARN/.test(l) && !/^WARN: (draft|active template) /.test(l),
+      ),
+    ).toEqual([]);
+    expect(logs.filter((l) => /^Seeded /.test(l))).toEqual([]);
+    for (const c of data.communities) {
+      expect(logs).toContain(`Community ${c.name} already exists, skipping.`);
+    }
+    for (const e of data.elements) {
+      expect(logs).toContain(`Element ${e.name} already exists, skipping.`);
+    }
+    for (const q of data.questions) {
+      expect(logs).toContain(`Question "${q.text}" already exists, skipping.`);
+    }
+    expect(
+      logs.filter((l) => /^Assignment .* already exists, skipping\.$/.test(l)),
+    ).toHaveLength(data.assignments.length);
+  });
+
+  it('follows the template lineage plan on the first run without touching foreign rows', async () => {
+    const { kind, initialKind, before, logs: runLogs, data } = templateRun;
+    const after = await lineage();
+    const seeded = runLogs.filter((l) => /^Seeded template: /.test(l));
+    expect(kind).toBe(initialKind);
+
+    if (initialKind === 'create' || initialKind === 'finish-draft') {
+      const active = after.find((t) => t.status === 'active')!;
+      const snapshot = await templateRepository.findFrozenWithSnapshot(
+        active.id,
+      );
+      expect(snapshot!.questions.map((q) => q.text).sort()).toEqual(
+        data.questions.map((q) => q.text).sort(),
+      );
+      expect(seeded).toEqual([`Seeded template: ${data.template.name}`]);
+      return;
+    }
+    // Nothing in the lineage changed: same rows, same statuses.
+    const shape = (rows: typeof before) =>
+      rows.map((t) => `${t.id}:${t.status}`).sort();
+    expect(shape(after)).toEqual(shape(before));
+    expect(seeded).toEqual([]);
+    expect(runLogs).toContainEqual(
+      expect.stringMatching(
+        initialKind === 'use-active'
+          ? /^Active template .* exists, using it.$/
+          : /^WARN: (draft|active template) /,
+      ),
+    );
+  });
 
   it('seeds both companies and all six users with the right roles and companies', async () => {
     const data = buildDataset('a1');
@@ -188,6 +465,23 @@ describe('seedDevDataset (integration)', () => {
     expect(untouched?.role).toBe('COMMUNITY_REPRESENTATIVE');
     expect(untouched?.maintenanceCompanyId).toBeNull();
     expect(await seededUsers(data)).toHaveLength(data.users.length);
+    // A blocked user gets no assignment; the rest of the catalog is seeded.
+    for (const community of await seededCommunities(data)) {
+      expect(
+        await technicianRepository.findByCommunityAndUser(
+          community.id,
+          untouched!.id,
+        ),
+      ).toBeNull();
+    }
+    expect(logs).toContainEqual(
+      expect.stringMatching(
+        new RegExp(`WARN.*${technician.email}.*assignment`),
+      ),
+    );
+    expect((await catalogSnapshot(data)).elements).toHaveLength(
+      data.elements.length,
+    );
   });
 
   it('warns about a soft-deleted seeded email, skips it and seeds the rest', async () => {
@@ -207,5 +501,13 @@ describe('seedDevDataset (integration)', () => {
     );
     expect(await userRepository.findByEmail(rep.email)).toBeNull();
     expect(await seededUsers(data)).toHaveLength(data.users.length - 1);
+    // Without its representative the community keeps none, but is still seeded.
+    const communities = await seededCommunities(data);
+    expect(communities).toHaveLength(data.communities.length);
+    for (const community of communities) {
+      expect(
+        await representativeRepository.findActiveByCommunity(community.id),
+      ).toBeNull();
+    }
   });
 });

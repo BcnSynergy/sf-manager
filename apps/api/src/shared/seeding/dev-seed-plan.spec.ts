@@ -1,6 +1,10 @@
 import { User } from '../../modules/users/domain/user.entity';
 import type { DevUser } from './dev-dataset';
-import { describeUserDrift, findByNaturalKey } from './dev-seed-plan';
+import {
+  describeUserDrift,
+  findByNaturalKey,
+  planTemplate,
+} from './dev-seed-plan';
 
 describe('findByNaturalKey', () => {
   const rows = [
@@ -104,5 +108,69 @@ describe('describeUserDrift', () => {
     expect(
       describeUserDrift(userWith('COMMUNITY_REPRESENTATIVE', 'c1'), rep, null),
     ).toBe('company is c1, expected none');
+  });
+});
+
+describe('planTemplate', () => {
+  const foreign = (
+    status: 'draft' | 'active' | 'retired',
+    id = 't-foreign',
+  ) => ({
+    id,
+    status,
+    name: 'Someone elses template',
+  });
+  const seeded = (status: 'draft' | 'active' | 'retired', id = 't-seed') => ({
+    id,
+    status,
+    name: 'Dev Seed Extinguisher Monthly Check',
+  });
+
+  it('creates a new template for an empty lineage', () => {
+    expect(planTemplate([], null)).toEqual({ kind: 'create' });
+  });
+
+  it('creates a new template when the lineage only holds retired versions', () => {
+    expect(planTemplate([foreign('retired')], null)).toEqual({
+      kind: 'create',
+    });
+  });
+
+  it('uses an active template that has questions in its snapshot', () => {
+    expect(planTemplate([seeded('active', 't-1')], 3)).toEqual({
+      kind: 'use-active',
+      id: 't-1',
+    });
+    expect(planTemplate([foreign('active', 't-2')], 1)).toEqual({
+      kind: 'use-active',
+      id: 't-2',
+    });
+  });
+
+  it('prefers the active template over a draft', () => {
+    expect(
+      planTemplate([foreign('draft'), seeded('active', 't-1')], 2),
+    ).toEqual({ kind: 'use-active', id: 't-1' });
+  });
+
+  it('flags an active template with an empty snapshot as unusable', () => {
+    expect(planTemplate([foreign('active', 't-3')], 0)).toEqual({
+      kind: 'skip-unusable-active',
+      id: 't-3',
+    });
+  });
+
+  it('finishes a draft that carries the seed marker', () => {
+    expect(planTemplate([seeded('draft', 't-4')], null)).toEqual({
+      kind: 'finish-draft',
+      id: 't-4',
+    });
+  });
+
+  it('leaves a draft without the marker alone', () => {
+    expect(planTemplate([foreign('draft', 't-5')], null)).toEqual({
+      kind: 'skip-foreign-draft',
+      id: 't-5',
+    });
   });
 });

@@ -4,6 +4,7 @@ import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-
 import type { ManagerCapability } from '../../modules/users/domain/manager-capability';
 import { User } from '../../modules/users/domain/user.entity';
 import { MaintenanceCompany } from '../../modules/maintenance-company/domain/maintenance-company.entity';
+import { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
 import { DEV_DATASET } from './dev-dataset';
 import {
   runDevSeed,
@@ -15,9 +16,30 @@ const NOW = new Date('2026-01-01T00:00:00Z');
 const TECHNICIAN = 'technician@sf-manager.example';
 const MANAGER = 'manager@sf-manager.example';
 
+type Input<K extends keyof DevSeedDeps> = DevSeedDeps[K] extends {
+  execute(input: infer I): unknown;
+}
+  ? I
+  : never;
+
 interface World {
   companies: MaintenanceCompany[];
   users: User[];
+  communities: { id: string; name: string }[];
+  // 'communityId|userId' keys, whatever the assignment state.
+  assignments: Set<string>;
+  elements: { communityId: string; name: string }[];
+  questions: { id: string; elementType: string; text: string }[];
+  templates: ReviewTemplate[];
+  // Frozen snapshot size per template id; defaults to 3.
+  snapshotSizes: Map<string, number>;
+  profileUpdates: Input<'updateProfile'>[];
+  addedRepresentatives: Input<'addRepresentative'>[];
+  addedTechnicians: Input<'addTechnician'>[];
+  createdElements: Input<'createElement'>[];
+  createdDrafts: Input<'createDraftTemplate'>[];
+  templateQuestionSets: Input<'setTemplateQuestions'>[];
+  activated: string[];
   createdCompanies: Parameters<DevSeedDeps['createCompany']['execute']>[0][];
   createdUsers: Parameters<DevSeedDeps['createUser']['execute']>[0][];
   updates: Parameters<DevSeedDeps['updateUser']['execute']>[0][];
@@ -29,11 +51,32 @@ interface World {
 // In-memory fake of the seed's ports and use cases. `create*` mutate the
 // same lists the lookups read, like the real adapters do.
 function buildWorld(
-  seed: { companies?: MaintenanceCompany[]; users?: User[] } = {},
+  seed: {
+    companies?: MaintenanceCompany[];
+    users?: User[];
+    communities?: World['communities'];
+    assignments?: string[];
+    elements?: World['elements'];
+    questions?: World['questions'];
+    templates?: ReviewTemplate[];
+  } = {},
 ): World {
   const world = {
     companies: [...(seed.companies ?? [])],
     users: [...(seed.users ?? [])],
+    communities: [...(seed.communities ?? [])],
+    assignments: new Set(seed.assignments ?? []),
+    elements: [...(seed.elements ?? [])],
+    questions: [...(seed.questions ?? [])],
+    templates: [...(seed.templates ?? [])],
+    snapshotSizes: new Map<string, number>(),
+    profileUpdates: [],
+    addedRepresentatives: [],
+    addedTechnicians: [],
+    createdElements: [],
+    createdDrafts: [],
+    templateQuestionSets: [],
+    activated: [],
     createdCompanies: [],
     createdUsers: [],
     updates: [],
@@ -82,6 +125,85 @@ function buildWorld(
     updateUser: {
       execute: async (input) => {
         world.updates.push(input);
+        return {};
+      },
+    },
+    updateProfile: {
+      execute: async (changes) => {
+        world.profileUpdates.push(changes);
+      },
+    },
+    communityRepository: {
+      findAll: async () => [...world.communities] as never,
+    },
+    createCommunity: {
+      execute: async (input) => {
+        const id = `community-${world.communities.length + 1}`;
+        world.communities.push({ id, name: input.name });
+        return { id };
+      },
+    },
+    representativeRepository: {
+      findByCommunityAndUser: async (communityId, userId) =>
+        world.assignments.has(`${communityId}|${userId}`)
+          ? ({} as never)
+          : null,
+    },
+    technicianRepository: {
+      findByCommunityAndUser: async (communityId, userId) =>
+        world.assignments.has(`${communityId}|${userId}`)
+          ? ({} as never)
+          : null,
+    },
+    addRepresentative: {
+      execute: async (input) => {
+        world.addedRepresentatives.push(input);
+      },
+    },
+    addTechnician: {
+      execute: async (input) => {
+        world.addedTechnicians.push(input);
+      },
+    },
+    elementRepository: {
+      findAllByCommunity: async (communityId) =>
+        world.elements.filter((e) => e.communityId === communityId) as never,
+    },
+    createElement: {
+      execute: async (input) => {
+        world.createdElements.push(input);
+      },
+    },
+    questionRepository: { findAll: async () => [...world.questions] as never },
+    createQuestion: {
+      execute: async (input) => {
+        const id = `question-${world.questions.length + 1}`;
+        world.questions.push({ id, ...input });
+        return { id };
+      },
+    },
+    templateRepository: {
+      findAll: async () => [...world.templates],
+      findFrozenWithSnapshot: async (id) =>
+        ({
+          id,
+          questions: Array.from({ length: world.snapshotSizes.get(id) ?? 3 }),
+        }) as never,
+    },
+    createDraftTemplate: {
+      execute: async (input) => {
+        world.createdDrafts.push(input);
+        return { id: 'draft-new' };
+      },
+    },
+    setTemplateQuestions: {
+      execute: async (input) => {
+        world.templateQuestionSets.push(input);
+      },
+    },
+    activateTemplate: {
+      execute: async (id) => {
+        world.activated.push(id);
         return {};
       },
     },
@@ -309,6 +431,323 @@ describe('seedDevDataset', () => {
         (u) => u.email === 'manager-nocap@sf-manager.example',
       )!;
       expect(world.updates.map((u) => u.id)).not.toContain(noCap.id);
+    });
+  });
+});
+
+const NORTH = 'Dev Seed Residences North';
+const SOUTH = 'Dev Seed Residences South';
+const REP = 'rep@sf-manager.example';
+const TECHNICIAN_2 = 'technician2@sf-manager.example';
+
+function template(
+  status: 'draft' | 'active',
+  name: string,
+  id: string,
+): ReviewTemplate {
+  return new ReviewTemplate({
+    id,
+    elementType: 'EXTINGUISHER',
+    frequency: 'MONTHLY',
+    name,
+    version: status === 'draft' ? null : 1,
+    status,
+    draftQuestionIds: [],
+    createdAt: NOW,
+    deletedAt: null,
+  });
+}
+
+describe('seedDevDataset catalog', () => {
+  const idOf = (world: World, name: string) =>
+    world.communities.find((c) => c.name === name)!.id;
+  const userId = (world: World, email: string) =>
+    world.users.find((u) => u.email === email)!.id;
+
+  it('overwrites the organization profile on every run', async () => {
+    const world = fullyExistingWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(world.profileUpdates).toEqual([
+      DEV_DATASET.profile,
+      DEV_DATASET.profile,
+    ]);
+  });
+
+  describe('communities', () => {
+    it('creates both communities on an empty database', async () => {
+      const world = buildWorld();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.communities.map((c) => c.name)).toEqual([NORTH, SOUTH]);
+    });
+
+    it('skips a community that already exists by name', async () => {
+      const world = buildWorld({
+        communities: [{ id: 'c-north', name: NORTH }],
+      });
+      const log = jest.fn();
+
+      await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(world.communities.map((c) => c.name)).toEqual([NORTH, SOUTH]);
+      expect(log).toHaveBeenCalledWith(
+        `Community ${NORTH} already exists, skipping.`,
+      );
+    });
+  });
+
+  describe('assignments', () => {
+    it('assigns the representative and technicians by resolved ids', async () => {
+      const world = buildWorld();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.addedRepresentatives).toEqual([
+        {
+          communityId: idOf(world, NORTH),
+          userId: userId(world, REP),
+        },
+      ]);
+      expect(world.addedTechnicians).toEqual([
+        {
+          communityId: idOf(world, NORTH),
+          userId: userId(world, TECHNICIAN),
+        },
+        {
+          communityId: idOf(world, SOUTH),
+          userId: userId(world, TECHNICIAN),
+        },
+        {
+          communityId: idOf(world, SOUTH),
+          userId: userId(world, TECHNICIAN_2),
+        },
+      ]);
+    });
+
+    it('never re-adds an existing assignment, whatever its state', async () => {
+      const world = fullyExistingWorld();
+      world.communities = [
+        { id: 'c-north', name: NORTH },
+        { id: 'c-south', name: SOUTH },
+      ];
+      world.assignments = new Set([
+        `c-north|existing-${REP}`,
+        `c-north|existing-${TECHNICIAN}`,
+      ]);
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.addedRepresentatives).toEqual([]);
+      expect(world.addedTechnicians).toEqual([
+        { communityId: 'c-south', userId: `existing-${TECHNICIAN}` },
+        { communityId: 'c-south', userId: `existing-${TECHNICIAN_2}` },
+      ]);
+    });
+
+    it('skips every assignment of a drifted user and logs it', async () => {
+      const world = buildWorld({
+        companies: existingCompanies(),
+        users: [existingUser(TECHNICIAN, { maintenanceCompanyId: null })],
+      });
+      const log = jest.fn();
+
+      await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(world.addedTechnicians.map((a) => a.userId)).toEqual([
+        userId(world, TECHNICIAN_2),
+      ]);
+      expect(log).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(`WARN.*${TECHNICIAN}.*assignment.*skipp`),
+        ),
+      );
+      // The rest of the catalog still ran.
+      expect(world.addedRepresentatives).toHaveLength(1);
+      expect(world.activated).toHaveLength(1);
+    });
+
+    it('skips every assignment of a user whose email is held by a soft-deleted row', async () => {
+      const world = buildWorld();
+      world.createUserFails.set(REP, new EmailAlreadyInUseError());
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.addedRepresentatives).toEqual([]);
+      expect(world.addedTechnicians).toHaveLength(3);
+    });
+  });
+
+  describe('elements', () => {
+    it('creates every element under its community, resolved by name', async () => {
+      const world = buildWorld();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(
+        world.createdElements.map((e) => [e.communityId, e.name]).sort(),
+      ).toEqual(
+        DEV_DATASET.elements
+          .map((e) => [idOf(world, e.communityName), e.name])
+          .sort(),
+      );
+      expect(world.createdElements[0]).toMatchObject({
+        elementType: 'EXTINGUISHER',
+        installedAt: '2024-01-15',
+      });
+    });
+
+    it('skips an element that already exists in its community', async () => {
+      const first = DEV_DATASET.elements.find(
+        (e) => e.communityName === NORTH,
+      )!;
+      const world = buildWorld({
+        communities: [{ id: 'c-north', name: NORTH }],
+        elements: [{ communityId: 'c-north', name: first.name }],
+      });
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.createdElements.map((e) => e.name)).not.toContain(
+        first.name,
+      );
+      expect(world.createdElements).toHaveLength(
+        DEV_DATASET.elements.length - 1,
+      );
+    });
+  });
+
+  describe('questions', () => {
+    it('creates every question once', async () => {
+      const world = buildWorld();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.questions.map((q) => q.text)).toEqual(
+        DEV_DATASET.questions.map((q) => q.text),
+      );
+    });
+
+    it('skips a question that already exists by element type and text', async () => {
+      const world = buildWorld({
+        questions: [
+          {
+            id: 'q-existing',
+            elementType: 'EXTINGUISHER',
+            text: DEV_DATASET.questions[0].text,
+          },
+        ],
+      });
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(world.questions).toHaveLength(DEV_DATASET.questions.length);
+    });
+  });
+
+  describe('template', () => {
+    it('creates a draft, sets the seeded questions in order and activates it', async () => {
+      const world = buildWorld();
+
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('create');
+
+      expect(world.createdDrafts).toEqual([DEV_DATASET.template]);
+      expect(world.templateQuestionSets).toEqual([
+        {
+          templateId: 'draft-new',
+          questionIds: world.questions.map((q) => q.id),
+        },
+      ]);
+      expect(world.activated).toEqual(['draft-new']);
+    });
+
+    it('resolves the seeded question ids even when a question already existed', async () => {
+      const world = buildWorld({
+        questions: [
+          {
+            id: 'q-existing',
+            elementType: 'EXTINGUISHER',
+            text: DEV_DATASET.questions[1].text,
+          },
+        ],
+      });
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      const [{ questionIds }] = world.templateQuestionSets;
+      expect(questionIds).toHaveLength(DEV_DATASET.questions.length);
+      expect(questionIds[1]).toBe('q-existing');
+    });
+
+    it('finishes a seeded draft without creating another', async () => {
+      const world = buildWorld({
+        templates: [template('draft', DEV_DATASET.template.name, 'draft-seed')],
+      });
+
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('finish-draft');
+
+      expect(world.createdDrafts).toEqual([]);
+      expect(world.templateQuestionSets.map((s) => s.templateId)).toEqual([
+        'draft-seed',
+      ]);
+      expect(world.activated).toEqual(['draft-seed']);
+    });
+
+    it('uses a usable active template and writes nothing', async () => {
+      const world = buildWorld({
+        templates: [template('active', 'Other name', 'active-1')],
+      });
+
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('use-active');
+
+      expect(world.createdDrafts).toEqual([]);
+      expect(world.templateQuestionSets).toEqual([]);
+      expect(world.activated).toEqual([]);
+    });
+
+    it('leaves a foreign draft untouched and warns', async () => {
+      const world = buildWorld({
+        templates: [template('draft', 'Not a seed name', 'draft-foreign')],
+      });
+      const log = jest.fn();
+
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(kind).toBe('skip-foreign-draft');
+
+      expect(world.createdDrafts).toEqual([]);
+      expect(world.templateQuestionSets).toEqual([]);
+      expect(world.activated).toEqual([]);
+      expect(log).toHaveBeenCalledWith(
+        expect.stringMatching(/WARN.*draft-foreign.*not a seed draft/),
+      );
+    });
+
+    it('leaves an active template without questions untouched and warns', async () => {
+      const world = buildWorld({
+        templates: [template('active', 'Empty one', 'active-empty')],
+      });
+      world.snapshotSizes.set('active-empty', 0);
+      const log = jest.fn();
+
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(kind).toBe('skip-unusable-active');
+
+      expect(world.createdDrafts).toEqual([]);
+      expect(world.activated).toEqual([]);
+      expect(log).toHaveBeenCalledWith(
+        expect.stringMatching(/WARN.*active-empty.*no questions/),
+      );
     });
   });
 });
