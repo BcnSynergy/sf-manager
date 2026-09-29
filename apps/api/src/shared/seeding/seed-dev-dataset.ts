@@ -19,6 +19,7 @@ import {
   type UpdateUserInput,
 } from '../../modules/users/application/use-cases/update-user.use-case';
 import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-already-in-use.error';
+import type { User } from '../../modules/users/domain/user.entity';
 import type { ManagerCapability } from '../../modules/users/domain/manager-capability';
 import type { DevDataset, DevUser } from './dev-dataset';
 import { describeUserDrift, findByNaturalKey } from './dev-seed-plan';
@@ -29,9 +30,7 @@ type Log = (line: string) => void;
 const RESET_HINT =
   'Run `prisma migrate reset` then `prisma db seed` to fix it.';
 
-// Everything the seed needs, as the narrowest structural types it uses, so
-// unit specs can pass in-memory fakes (dev-seed-data design.md Decision 1).
-// Real use cases and repository ports are resolved by `resolveDevSeedDeps`.
+// Narrowest structural types the seed uses, so unit specs can pass fakes.
 export interface DevSeedDeps {
   companyRepository: Pick<MaintenanceCompanyRepository, 'findAll'>;
   userRepository: Pick<UserRepository, 'findByEmail'>;
@@ -64,10 +63,7 @@ export function resolveDevSeedDeps(ctx: {
   };
 }
 
-// Gate first, then the dataset. A closed gate touches no dependency and only
-// logs, naming the target database host so an operator can spot a wrong
-// target (design.md Decision 3). The admin is seeded by prisma/seed.ts
-// before this runs, in every environment.
+// A closed gate touches no dependency and only logs the target database host.
 export async function runDevSeed(
   nodeEnv: string | undefined,
   databaseHost: string,
@@ -88,8 +84,7 @@ export async function runDevSeed(
   return 'seeded';
 }
 
-// Additive and idempotent: each entity is looked up by natural key and the
-// application use case runs only for what is missing (design.md Decision 4).
+// Additive and idempotent: use cases run only for what is missing.
 export async function seedDevDataset(
   deps: DevSeedDeps,
   data: DevDataset,
@@ -122,8 +117,6 @@ async function seedCompanies(
   return idByTaxId;
 }
 
-// Returns nothing yet: later slices need the set of blocked users to skip
-// their assignments and sessions (design.md Decision 4).
 async function seedUsers(
   deps: DevSeedDeps,
   data: DevDataset,
@@ -144,14 +137,10 @@ async function seedUsers(
   }
 }
 
-interface ResolvedUser {
-  id: string;
-  managerCapabilities: readonly ManagerCapability[];
-}
+type ResolvedUser = Pick<User, 'id' | 'managerCapabilities'>;
 
-// Returns the user's id and current capabilities, or null when the user is
-// blocked (design.md Decisions 4 and 11): a drifted row is never repaired,
-// and a seeded email held by a soft-deleted row cannot be created.
+// Null when blocked: a drifted row is never repaired, and a soft-deleted
+// row holding the email blocks creation.
 async function resolveUser(
   deps: DevSeedDeps,
   data: DevDataset,
@@ -183,7 +172,7 @@ async function resolveUser(
   } catch (error) {
     if (error instanceof EmailAlreadyInUseError) {
       log(
-        `WARN: email ${user.email} is held by a soft-deleted user, so it cannot be seeded. ${RESET_HINT}`,
+        `WARN: email ${user.email} is already in use (likely by a soft-deleted user), so it cannot be seeded. ${RESET_HINT}`,
       );
       return null;
     }
@@ -191,8 +180,7 @@ async function resolveUser(
   }
 }
 
-// design.md Decision 9: idempotent by check. Only the missing capabilities
-// are written, through UpdateUser.
+// Only the missing capabilities are written, through UpdateUser.
 async function grantCapabilities(
   deps: DevSeedDeps,
   user: DevUser,
