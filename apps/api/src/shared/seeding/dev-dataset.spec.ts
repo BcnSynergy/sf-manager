@@ -1,9 +1,17 @@
 import {
+  createChecklistQuestionSchema,
+  createCommunitySchema,
+  createInspectableElementSchema,
   createMaintenanceCompanySchema,
   createUserSchema,
   passwordSchema,
+  updateOrganizationProfileSchema,
 } from '@sf-manager/validation';
-import { DEV_DATASET, DEV_SEED_PASSWORD } from './dev-dataset';
+import {
+  DEV_DATASET,
+  DEV_SEED_MARKER,
+  DEV_SEED_PASSWORD,
+} from './dev-dataset';
 
 // dev-seed-data design.md Decision 10: use cases trust input the HTTP pipe
 // already canonicalized, so every dataset literal must survive the shared
@@ -81,4 +89,96 @@ describe('DEV_DATASET', () => {
       expect(createUserSchema.parse(input)).toEqual(input);
     },
   );
+
+  it('seeds two communities, four elements and three questions', () => {
+    expect(DEV_DATASET.communities).toHaveLength(2);
+    expect(DEV_DATASET.elements).toHaveLength(4);
+    expect(DEV_DATASET.questions).toHaveLength(3);
+  });
+
+  it.each(DEV_DATASET.communities.map((community) => [community.name, community]))(
+    'community %s is canonical through createCommunitySchema',
+    (_name, community) => {
+      expect(createCommunitySchema.parse(community)).toEqual(community);
+    },
+  );
+
+  it.each(DEV_DATASET.elements.map((element) => [element.name, element]))(
+    'element %s is canonical through createInspectableElementSchema',
+    (_name, { communityName: _communityName, ...element }) => {
+      expect(createInspectableElementSchema.parse(element)).toEqual(element);
+    },
+  );
+
+  it.each(DEV_DATASET.questions.map((question) => [question.text, question]))(
+    'question %s is canonical through createChecklistQuestionSchema',
+    (_text, question) => {
+      expect(createChecklistQuestionSchema.parse(question)).toEqual(question);
+    },
+  );
+
+  it('profile is canonical through updateOrganizationProfileSchema and fully filled', () => {
+    expect(updateOrganizationProfileSchema.parse(DEV_DATASET.profile)).toEqual(
+      DEV_DATASET.profile,
+    );
+    expect(Object.keys(DEV_DATASET.profile).sort()).toEqual([
+      'address',
+      'email',
+      'legalName',
+      'name',
+      'phone',
+      'taxId',
+    ]);
+  });
+
+  it('carries the Dev Seed marker on every seeded name so the rows are recognizable', () => {
+    const names = [
+      ...DEV_DATASET.communities.map((c) => c.name),
+      ...DEV_DATASET.elements.map((e) => e.name),
+      DEV_DATASET.template.name,
+    ];
+
+    for (const name of names) {
+      expect(name).toContain(DEV_SEED_MARKER);
+    }
+  });
+
+  it('resolves every assignment and element to a seeded community and user', () => {
+    const communities = DEV_DATASET.communities.map((c) => c.name);
+    const emails = DEV_DATASET.users.map((u) => u.email);
+
+    for (const assignment of DEV_DATASET.assignments) {
+      expect(communities).toContain(assignment.communityName);
+      expect(emails).toContain(assignment.userEmail);
+    }
+    for (const element of DEV_DATASET.elements) {
+      expect(communities).toContain(element.communityName);
+    }
+  });
+
+  it('makes the assignments asymmetric across the two communities', () => {
+    const summary = DEV_DATASET.assignments.map(
+      (a) => `${a.as}:${a.userEmail}:${a.communityName}`,
+    );
+
+    expect(summary.sort()).toEqual(
+      [
+        'REPRESENTATIVE:rep@sf-manager.example:Dev Seed Residences North',
+        'TECHNICIAN:technician@sf-manager.example:Dev Seed Residences North',
+        'TECHNICIAN:technician@sf-manager.example:Dev Seed Residences South',
+        'TECHNICIAN:technician2@sf-manager.example:Dev Seed Residences South',
+      ].sort(),
+    );
+  });
+
+  it('targets the EXTINGUISHER x MONTHLY lineage with questions suited to it', () => {
+    expect(DEV_DATASET.template).toMatchObject({
+      elementType: 'EXTINGUISHER',
+      frequency: 'MONTHLY',
+    });
+    for (const question of DEV_DATASET.questions) {
+      expect(question.elementType).toBe('EXTINGUISHER');
+      expect(question.frequencies).toContain('MONTHLY');
+    }
+  });
 });
