@@ -59,6 +59,7 @@ import {
   describeUserDrift,
   findByNaturalKey,
   planTemplate,
+  type TemplatePlan,
 } from './dev-seed-plan';
 import { shouldSeedDevData } from './should-seed-dev-data';
 
@@ -127,50 +128,34 @@ export function resolveDevSeedDeps(ctx: {
       MAINTENANCE_COMPANY_REPOSITORY,
     ),
     userRepository: ctx.get<UserRepository>(USER_REPOSITORY),
-    createCompany: ctx.get<CreateMaintenanceCompanyUseCase>(
-      CreateMaintenanceCompanyUseCase,
-    ),
-    createUser: ctx.get<CreateUserUseCase>(CreateUserUseCase),
-    updateUser: ctx.get<UpdateUserUseCase>(UpdateUserUseCase),
-    updateProfile: ctx.get<UpdateOrganizationProfileUseCase>(
-      UpdateOrganizationProfileUseCase,
-    ),
+    createCompany: ctx.get(CreateMaintenanceCompanyUseCase),
+    createUser: ctx.get(CreateUserUseCase),
+    updateUser: ctx.get(UpdateUserUseCase),
+    updateProfile: ctx.get(UpdateOrganizationProfileUseCase),
     communityRepository: ctx.get<CommunityRepository>(COMMUNITY_REPOSITORY),
-    createCommunity: ctx.get<CreateCommunityUseCase>(CreateCommunityUseCase),
+    createCommunity: ctx.get(CreateCommunityUseCase),
     representativeRepository: ctx.get<CommunityRepresentativeRepository>(
       COMMUNITY_REPRESENTATIVE_REPOSITORY,
     ),
     technicianRepository: ctx.get<CommunityTechnicianRepository>(
       COMMUNITY_TECHNICIAN_REPOSITORY,
     ),
-    addRepresentative: ctx.get<AddRepresentativeUseCase>(
-      AddRepresentativeUseCase,
-    ),
-    addTechnician: ctx.get<AddTechnicianUseCase>(AddTechnicianUseCase),
+    addRepresentative: ctx.get(AddRepresentativeUseCase),
+    addTechnician: ctx.get(AddTechnicianUseCase),
     elementRepository: ctx.get<InspectableElementRepository>(
       INSPECTABLE_ELEMENT_REPOSITORY,
     ),
-    createElement: ctx.get<CreateInspectableElementUseCase>(
-      CreateInspectableElementUseCase,
-    ),
+    createElement: ctx.get(CreateInspectableElementUseCase),
     questionRepository: ctx.get<ChecklistQuestionRepository>(
       CHECKLIST_QUESTION_REPOSITORY,
     ),
-    createQuestion: ctx.get<CreateChecklistQuestionUseCase>(
-      CreateChecklistQuestionUseCase,
-    ),
+    createQuestion: ctx.get(CreateChecklistQuestionUseCase),
     templateRepository: ctx.get<ReviewTemplateRepository>(
       REVIEW_TEMPLATE_REPOSITORY,
     ),
-    createDraftTemplate: ctx.get<CreateDraftReviewTemplateUseCase>(
-      CreateDraftReviewTemplateUseCase,
-    ),
-    setTemplateQuestions: ctx.get<SetReviewTemplateQuestionsUseCase>(
-      SetReviewTemplateQuestionsUseCase,
-    ),
-    activateTemplate: ctx.get<ActivateReviewTemplateUseCase>(
-      ActivateReviewTemplateUseCase,
-    ),
+    createDraftTemplate: ctx.get(CreateDraftReviewTemplateUseCase),
+    setTemplateQuestions: ctx.get(SetReviewTemplateQuestionsUseCase),
+    activateTemplate: ctx.get(ActivateReviewTemplateUseCase),
   };
 }
 
@@ -200,7 +185,7 @@ export async function seedDevDataset(
   deps: DevSeedDeps,
   data: DevDataset,
   log: Log,
-): Promise<void> {
+): Promise<TemplatePlan['kind']> {
   await deps.updateProfile.execute(data.profile);
   log('Set the organization profile.');
 
@@ -210,7 +195,7 @@ export async function seedDevDataset(
   await seedAssignments(deps, data, communityIdByName, userIdByEmail, log);
   await seedElements(deps, data, communityIdByName, log);
   const questionIds = await seedQuestions(deps, data, log);
-  await seedTemplate(deps, data, questionIds, log);
+  return seedTemplate(deps, data, questionIds, log);
 }
 
 async function seedCompanies(
@@ -416,6 +401,7 @@ async function seedQuestions(
   log: Log,
 ): Promise<string[]> {
   const existing = await deps.questionRepository.findAll();
+  // Natural key ignores frequencies on purpose: dataset texts are unique.
   const keyOf = (q: { elementType: string; text: string }) =>
     `${q.elementType}|${q.text}`;
   const ids: string[] = [];
@@ -435,12 +421,20 @@ async function seedQuestions(
   return ids;
 }
 
+const SKIP_WARNINGS = {
+  'skip-foreign-draft': (id: string) =>
+    `WARN: draft ${id} is not a seed draft, leaving it untouched.`,
+  'skip-unusable-active': (id: string) =>
+    `WARN: active template ${id} has no questions, leaving it untouched.`,
+};
+
+// Returns the plan kind so callers can tell a usable template from a skip.
 async function seedTemplate(
   deps: DevSeedDeps,
   data: DevDataset,
   questionIds: string[],
   log: Log,
-): Promise<void> {
+): Promise<TemplatePlan['kind']> {
   const { elementType, frequency } = data.template;
   const lineage = (await deps.templateRepository.findAll()).filter(
     (t) => t.elementType === elementType && t.frequency === frequency,
@@ -454,27 +448,18 @@ async function seedTemplate(
     active ? (snapshot?.questions.length ?? 0) : null,
   );
 
-  switch (plan.kind) {
-    case 'use-active':
-      log(`Active template ${plan.id} exists, using it.`);
-      return;
-    case 'skip-foreign-draft':
-      log(`WARN: draft ${plan.id} is not a seed draft, leaving it untouched.`);
-      return;
-    case 'skip-unusable-active':
-      log(
-        `WARN: active template ${plan.id} has no questions, leaving it untouched.`,
-      );
-      return;
-    case 'finish-draft':
-    case 'create': {
-      const id =
-        plan.kind === 'create'
-          ? (await deps.createDraftTemplate.execute(data.template)).id
-          : plan.id;
-      await deps.setTemplateQuestions.execute({ templateId: id, questionIds });
-      await deps.activateTemplate.execute(id);
-      log(`Seeded template: ${data.template.name}`);
-    }
+  if (plan.kind === 'use-active') {
+    log(`Active template ${plan.id} exists, using it.`);
+  } else if (plan.kind === 'create' || plan.kind === 'finish-draft') {
+    const id =
+      plan.kind === 'create'
+        ? (await deps.createDraftTemplate.execute(data.template)).id
+        : plan.id;
+    await deps.setTemplateQuestions.execute({ templateId: id, questionIds });
+    await deps.activateTemplate.execute(id);
+    log(`Seeded template: ${data.template.name}`);
+  } else {
+    log(SKIP_WARNINGS[plan.kind](plan.id));
   }
+  return plan.kind;
 }

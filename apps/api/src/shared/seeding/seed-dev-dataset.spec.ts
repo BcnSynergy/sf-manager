@@ -652,7 +652,9 @@ describe('seedDevDataset catalog', () => {
     it('creates a draft, sets the seeded questions in order and activates it', async () => {
       const world = buildWorld();
 
-      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('create');
 
       expect(world.createdDrafts).toEqual([DEV_DATASET.template]);
       expect(world.templateQuestionSets).toEqual([
@@ -687,7 +689,9 @@ describe('seedDevDataset catalog', () => {
         templates: [template('draft', DEV_DATASET.template.name, 'draft-seed')],
       });
 
-      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('finish-draft');
 
       expect(world.createdDrafts).toEqual([]);
       expect(world.templateQuestionSets.map((s) => s.templateId)).toEqual([
@@ -701,7 +705,9 @@ describe('seedDevDataset catalog', () => {
         templates: [template('active', 'Other name', 'active-1')],
       });
 
-      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(kind).toBe('use-active');
 
       expect(world.createdDrafts).toEqual([]);
       expect(world.templateQuestionSets).toEqual([]);
@@ -714,7 +720,9 @@ describe('seedDevDataset catalog', () => {
       });
       const log = jest.fn();
 
-      await seedDevDataset(world.deps, DEV_DATASET, log);
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(kind).toBe('skip-foreign-draft');
 
       expect(world.createdDrafts).toEqual([]);
       expect(world.templateQuestionSets).toEqual([]);
@@ -731,7 +739,9 @@ describe('seedDevDataset catalog', () => {
       world.snapshotSizes.set('active-empty', 0);
       const log = jest.fn();
 
-      await seedDevDataset(world.deps, DEV_DATASET, log);
+      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(kind).toBe('skip-unusable-active');
 
       expect(world.createdDrafts).toEqual([]);
       expect(world.activated).toEqual([]);
