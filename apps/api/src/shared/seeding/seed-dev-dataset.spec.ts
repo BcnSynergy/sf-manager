@@ -1000,6 +1000,27 @@ describe('seedDevDataset sessions', () => {
     expect(world.completedIds).toEqual([first.id]);
   });
 
+  it('warns and skips resuming a draft whose own template has no questions', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    const first = world.sessions[0];
+    first.status = 'draft';
+    first.templateId = 'empty-template';
+    first.elementIds = first.elementIds.slice(0, 1);
+    world.snapshotSizes.set('empty-template', 0);
+    world.recorded.length = 0;
+    world.completedIds.length = 0;
+    const log = jest.fn();
+
+    await seedDevDataset(world.deps, DEV_DATASET, log);
+
+    const warns = linesOf(log).filter((l) => l.startsWith('WARN: skipped'));
+    expect(warns).toHaveLength(1);
+    expect(warns[0]).toContain('ActiveTemplateNotFoundError');
+    expect(world.recorded).toEqual([]);
+    expect(world.completedIds).toEqual([]);
+  });
+
   it('heals a session that crashed right after opening', async () => {
     const world = buildWorld();
     await seedDevDataset(world.deps, DEV_DATASET, jest.fn());

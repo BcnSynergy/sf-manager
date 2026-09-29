@@ -178,7 +178,8 @@ export const DEV_DATASET: DevDataset = {
     elementType: 'EXTINGUISHER',
     frequency: 'MONTHLY',
     name: 'Dev Seed Extinguisher Monthly Check',
-  }, // S1-S3 completed plus one partial draft. The S2 pair adds a NO answer and
+  },
+  // S1-S3 completed plus one partial draft. The S2 pair adds a NO answer and
   // an unreviewed element for variety.
   sessions: [
     {

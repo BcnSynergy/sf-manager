@@ -653,7 +653,8 @@ async function playSession(
 
   const snapshot =
     await deps.templateRepository.findFrozenWithSnapshot(templateId);
-  if (!snapshot) {
+  // An empty snapshot would fail later with an unexpected MissingAnswersError.
+  if (!snapshot || snapshot.questions.length === 0) {
     throw new ActiveTemplateNotFoundError();
   }
   const questionIds = snapshot.questions.map((q) => q.questionId);
