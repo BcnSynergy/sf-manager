@@ -758,6 +758,7 @@ describe('seedDevDataset (integration)', () => {
         blockedByTemplate(kind) ||
         (await lineage()).some((t) => t.status === 'draft')
       ) {
+        console.warn(`n14 skipped: lineage kind ${kind} or a leftover draft.`);
         return;
       }
       const { actor, communityId } = await actors(data);

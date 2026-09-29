@@ -106,9 +106,10 @@ Practicalities learned so far:
   - Two companies (`Dev Seed Fire Safety A`/`B`), two communities (`Dev Seed
     Residences North`/`South`, two extinguishers each), one active
     EXTINGUISHER x MONTHLY template, three completed sessions and one draft.
-  - Rows named `Dev Seed ...` are seeded; anything else is QA data. The seed
-    is additive and never repairs a drifted row: after hand edits, reset
-    again.
+  - Seeded rows are named `Dev Seed ...`, and seeded users have
+    `@sf-manager.example` emails; anything else is QA data. Every run
+    overwrites the organization profile. Otherwise the seed is additive and
+    never repairs a drifted row: after hand edits, reset again.
   - The web app has no search in the user or community lists yet. Find ids
     with `psql` via `docker compose exec -T postgres` and hand the user
     direct URLs.
