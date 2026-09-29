@@ -138,6 +138,7 @@ describe('seedDevDataset (integration)', () => {
     const companiesAfterFirst = await seededCompanies(data);
     const usersAfterFirst = await seededUsers(data);
 
+    logs = [];
     await seedDevDataset(deps, data, log);
     const companiesAfterSecond = await seededCompanies(data);
     const usersAfterSecond = await seededUsers(data);
@@ -150,6 +151,18 @@ describe('seedDevDataset (integration)', () => {
     expect(usersAfterSecond.map((u) => u.id).sort()).toEqual(
       usersAfterFirst.map((u) => u.id).sort(),
     );
+    // Ids and counts alone would also hold if a regressed lookup made
+    // createUser throw and the seed swallowed it as a WARN, so pin the logs.
+    expect(logs.filter((l) => /^WARN/.test(l))).toEqual([]);
+    expect(logs.filter((l) => /^Seeded /.test(l))).toEqual([]);
+    for (const company of data.companies) {
+      expect(logs).toContain(
+        `Company ${company.name} already exists, skipping.`,
+      );
+    }
+    for (const user of data.users) {
+      expect(logs).toContain(`User ${user.email} already exists, skipping.`);
+    }
   });
 
   it('warns about a drifted user, leaves its row untouched and seeds the rest', async () => {
