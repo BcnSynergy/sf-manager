@@ -1,3 +1,12 @@
+import { InspectableElementNotFoundError } from '../../modules/inspectable-element/domain/errors/inspectable-element-not-found.error';
+import { ActiveTemplateNotFoundError } from '../../modules/review-session/domain/errors/active-template-not-found.error';
+import { AnswersDoNotMatchTemplateError } from '../../modules/review-session/domain/errors/answers-do-not-match-template.error';
+import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
+import { OpenDraftAlreadyExistsError } from '../../modules/review-session/domain/errors/open-draft-already-exists.error';
+import { ReviewSessionNotEditableError } from '../../modules/review-session/domain/errors/review-session-not-editable.error';
+import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
+import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
+import type { ReviewSession } from '../../modules/review-session/domain/review-session.entity';
 import type { User } from '../../modules/users/domain/user.entity';
 import type { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
 import { DEV_SEED_MARKER, type DevUser } from './dev-dataset';
@@ -64,4 +73,41 @@ export function planTemplate(
   return draft.name.includes(DEV_SEED_MARKER)
     ? { kind: 'finish-draft', id: draft.id }
     : { kind: 'skip-foreign-draft', id: draft.id };
+}
+
+const EXPECTED_SESSION_ERRORS = [
+  ReviewSessionNotFoundError,
+  CommunityNotInScopeError,
+  ActiveTemplateNotFoundError,
+  InspectableElementNotFoundError,
+  AnswersDoNotMatchTemplateError,
+  ReviewSessionNotEditableError,
+  UnreviewedElementsWithoutReasonError,
+  OpenDraftAlreadyExistsError,
+];
+
+// design.md Decision 12: the domain errors a QA change can raise from the
+// session use cases. Anything else is a real bug and must propagate.
+export function isExpectedSessionError(error: unknown): boolean {
+  return EXPECTED_SESSION_ERRORS.some(
+    (ErrorClass) => error instanceof ErrorClass,
+  );
+}
+
+export type SessionPlan =
+  { kind: 'skip' } | { kind: 'resume'; sessionId: string } | { kind: 'open' };
+
+// design.md Decision 6: keyed on (performer, community) only. A completed
+// session wins (a draft plan QA already finished is not reopened), then a
+// draft is resumed, else a new one is opened.
+export function planSession(
+  communityId: string,
+  completedOfPerformer: readonly Pick<ReviewSession, 'communityId'>[],
+  draftsOfPerformer: readonly Pick<ReviewSession, 'id' | 'communityId'>[],
+): SessionPlan {
+  if (completedOfPerformer.some((s) => s.communityId === communityId)) {
+    return { kind: 'skip' };
+  }
+  const draft = draftsOfPerformer.find((s) => s.communityId === communityId);
+  return draft ? { kind: 'resume', sessionId: draft.id } : { kind: 'open' };
 }

@@ -36,6 +36,19 @@ import {
   type UserRepository,
 } from '../../modules/users/application/ports/user.repository.port';
 import { CreateUserUseCase } from '../../modules/users/application/use-cases/create-user.use-case';
+import { DeactivateTechnicianUseCase } from '../../modules/community/application/use-cases/deactivate-technician.use-case';
+import {
+  REVIEW_SESSION_REPOSITORY,
+  type ReviewSessionRepository,
+} from '../../modules/review-session/application/ports/review-session.repository.port';
+import type { Actor } from '../../modules/review-session/application/services/session-access.service';
+import { CompleteReviewSessionUseCase } from '../../modules/review-session/application/use-cases/complete-review-session.use-case';
+import { ListReviewHistoryUseCase } from '../../modules/review-session/application/use-cases/list-review-history.use-case';
+import { OpenReviewSessionUseCase } from '../../modules/review-session/application/use-cases/open-review-session.use-case';
+import { RecordEntryUseCase } from '../../modules/review-session/application/use-cases/record-entry.use-case';
+import { ActivateReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/activate-review-template.use-case';
+import { CreateDraftReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/create-draft-review-template.use-case';
+import { SetReviewTemplateQuestionsUseCase } from '../../modules/review-template/application/use-cases/set-review-template-questions.use-case';
 import { AppModule } from '../../app.module';
 import { DEV_DATASET, type DevDataset } from './dev-dataset';
 import { planTemplate } from './dev-seed-plan';
@@ -78,6 +91,15 @@ function buildDataset(suffix: string): DevDataset {
       ...q,
       text: `${q.text} ${suffix}`,
     })),
+    sessions: DEV_DATASET.sessions.map((s) => ({
+      ...s,
+      performerEmail: s.performerEmail.replace('@', `-${suffix}@`),
+      communityName: community(s.communityName),
+      entries: s.entries.map((e) => ({
+        ...e,
+        elementName: `${e.elementName} ${suffix}`,
+      })),
+    })),
     password: DEV_DATASET.password,
     companies: DEV_DATASET.companies.map((company) => ({
       ...company,
@@ -105,6 +127,7 @@ describe('seedDevDataset (integration)', () => {
   let questionRepository: ChecklistQuestionRepository;
   let templateRepository: ReviewTemplateRepository;
   let profileRepository: OrganizationProfileRepository;
+  let sessionRepository: ReviewSessionRepository;
   // The template outcome is asserted on the FIRST seed run of this file, made
   // in beforeAll before any other seeding: later runs always see the template
   // this one activated (or a leftover), so they cannot prove the create path.
@@ -151,6 +174,9 @@ describe('seedDevDataset (integration)', () => {
     );
     profileRepository = moduleRef.get<OrganizationProfileRepository>(
       ORGANIZATION_PROFILE_REPOSITORY,
+    );
+    sessionRepository = moduleRef.get<ReviewSessionRepository>(
+      REVIEW_SESSION_REPOSITORY,
     );
 
     const data = buildDataset('i9');
@@ -317,7 +343,9 @@ describe('seedDevDataset (integration)', () => {
     // WARN lines by design and depend on what other specs left in the lineage.
     expect(
       logs.filter(
-        (l) => /^WARN/.test(l) && !/^WARN: (draft|active template) /.test(l),
+        (l) =>
+          /^WARN/.test(l) &&
+          !/^WARN: ((draft|active template) |no usable template \()/.test(l),
       ),
     ).toEqual([]);
     expect(logs.filter((l) => /^Seeded /.test(l))).toEqual([]);
@@ -509,5 +537,314 @@ describe('seedDevDataset (integration)', () => {
         await representativeRepository.findActiveByCommunity(community.id),
       ).toBeNull();
     }
+  });
+  describe('sessions', () => {
+    const label = (s: { performerEmail: string; communityName: string }) =>
+      `${s.performerEmail}|${s.communityName}`;
+    const admin: Actor = { userId: 'seed-admin', role: 'SYSTEM_ADMIN' };
+
+    async function actors(data: DevDataset) {
+      const users = await seededUsers(data);
+      const communities = await seededCommunities(data);
+      return {
+        actor: (email: string): Actor => {
+          const user = users.find((u) => u.email === email)!;
+          return { userId: user.id, role: user.role };
+        },
+        communityId: (name: string) =>
+          communities.find((c) => c.name === name)!.id,
+      };
+    }
+
+    // A skipped template kind blocks every new session: assert that opposite
+    // outcome and let the caller stop.
+    function blockedByTemplate(kind: string) {
+      if (!kind.startsWith('skip-')) {
+        return false;
+      }
+      expect(logs).toContainEqual(
+        expect.stringContaining(`no usable template (${kind})`),
+      );
+      return true;
+    }
+
+    async function historyOf(actor: Actor, data: DevDataset) {
+      const emails = new Set(data.users.map((u) => u.email));
+      const rows = await moduleRef.get(ListReviewHistoryUseCase).execute(actor);
+      return {
+        rows,
+        seeded: rows.filter((r) => emails.has(r.performedByEmail)),
+      };
+    }
+
+    const labelsOf = (
+      rows: { performedByEmail: string; communityName: string }[],
+    ) => rows.map((r) => `${r.performedByEmail}|${r.communityName}`).sort();
+
+    it('scopes the seeded history per role and never backdates', async () => {
+      const data = buildDataset('j10');
+      const startedAfter = new Date();
+
+      const kind = await seedDevDataset(
+        resolveDevSeedDeps(moduleRef),
+        data,
+        log,
+      );
+
+      if (blockedByTemplate(kind)) {
+        expect((await historyOf(admin, data)).seeded).toEqual([]);
+        return;
+      }
+      const { actor } = await actors(data);
+      const [s1, s2, s3] = data.sessions.map(label);
+      const email = (prefix: string) =>
+        data.users.find((u) => u.email.startsWith(`${prefix}-`))!.email;
+      const seededFor = async (prefix: string) =>
+        labelsOf((await historyOf(actor(email(prefix)), data)).seeded);
+
+      expect(await seededFor('technician')).toEqual([s1, s2].sort());
+      expect(await seededFor('companymgr')).toEqual([s1, s2].sort());
+      expect(await seededFor('rep')).toEqual([s1]);
+      expect(await seededFor('technician2')).toEqual([s3]);
+      const adminList = await historyOf(admin, data);
+      expect(labelsOf(adminList.seeded)).toEqual([s1, s2, s3].sort());
+      const managerList = await historyOf(actor(email('manager')), data);
+      expect(managerList.rows.map((r) => r.id).sort()).toEqual(
+        adminList.rows.map((r) => r.id).sort(),
+      );
+      expect(
+        (await historyOf(actor(email('manager-nocap')), data)).rows,
+      ).toEqual([]);
+      for (const row of adminList.seeded) {
+        expect(row.startedAt.getTime()).toBeGreaterThanOrEqual(
+          startedAfter.getTime(),
+        );
+        expect(row.completedAt.getTime()).toBeGreaterThanOrEqual(
+          startedAfter.getTime(),
+        );
+      }
+    });
+
+    it('heals a session that crashed right after opening, without a second draft', async () => {
+      const data = buildDataset('k11');
+      const deps = resolveDevSeedDeps(moduleRef);
+      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
+      if (blockedByTemplate(kind)) {
+        return;
+      }
+      const { actor, communityId } = await actors(data);
+      const [s1] = data.sessions;
+      const performer = actor(s1.performerEmail);
+      const active = (await lineage()).find((t) => t.status === 'active')!;
+      const opened = await moduleRef.get(OpenReviewSessionUseCase).execute({
+        communityId: communityId(s1.communityName),
+        templateId: active.id,
+        performedById: performer.userId,
+        role: performer.role,
+      });
+      logs = [];
+
+      await seedDevDataset(deps, data, log);
+
+      const completed = await sessionRepository.findCompletedForPerformer(
+        performer.userId,
+      );
+      expect(
+        completed
+          .filter((s) => s.communityId === communityId(s1.communityName))
+          .map((s) => s.id),
+      ).toEqual([opened.id]);
+      const healed = await sessionRepository.findByIdForPerformer(
+        opened.id,
+        performer.userId,
+      );
+      expect(healed!.entries).toHaveLength(s1.entries.length);
+      expect(
+        await sessionRepository.findDraftsByPerformer(performer.userId),
+      ).toEqual([]);
+      expect(logs.filter((l) => /^WARN/.test(l))).toEqual([]);
+    });
+
+    it('does not reopen a seeded draft that QA completed', async () => {
+      const data = buildDataset('m13');
+      const deps = resolveDevSeedDeps(moduleRef);
+      const kind = await seedDevDataset(deps, data, log);
+      if (blockedByTemplate(kind)) {
+        return;
+      }
+      const { actor, communityId } = await actors(data);
+      const draftPlan = data.sessions.find((s) => !s.complete)!;
+      const rep = actor(draftPlan.performerEmail);
+      const [draft] = await sessionRepository.findDraftsByPerformer(rep.userId);
+      const missing = (
+        await elementRepository.findAllByCommunity(
+          communityId(draftPlan.communityName),
+        )
+      ).find((e) => e.name !== draftPlan.entries[0].elementName)!;
+      await moduleRef
+        .get(RecordEntryUseCase)
+        .execute(
+          draft.id,
+          missing.id,
+          { kind: 'unreviewed', observations: 'Checked by QA.' },
+          rep,
+        );
+      await moduleRef.get(CompleteReviewSessionUseCase).execute(draft.id, rep);
+      logs = [];
+
+      await seedDevDataset(deps, data, log);
+
+      expect(await sessionRepository.findDraftsByPerformer(rep.userId)).toEqual(
+        [],
+      );
+      expect(
+        (await sessionRepository.findCompletedForPerformer(rep.userId)).map(
+          (s) => s.id,
+        ),
+      ).toEqual([draft.id]);
+      expect(logs.filter((l) => /^(Seeded|WARN)/.test(l))).toEqual([]);
+    });
+
+    it('keeps a QA-edited entry on rerun', async () => {
+      const data = buildDataset('p16');
+      const deps = resolveDevSeedDeps(moduleRef);
+      const kind = await seedDevDataset(deps, data, log);
+      if (blockedByTemplate(kind)) {
+        return;
+      }
+      const { actor, communityId } = await actors(data);
+      const draftPlan = data.sessions.find((s) => !s.complete)!;
+      const rep = actor(draftPlan.performerEmail);
+      const [draft] = await sessionRepository.findDraftsByPerformer(rep.userId);
+      const element = (
+        await elementRepository.findAllByCommunity(
+          communityId(draftPlan.communityName),
+        )
+      ).find((e) => e.name === draftPlan.entries[0].elementName)!;
+      const snapshot = await templateRepository.findFrozenWithSnapshot(
+        draft.templateId,
+      );
+      await moduleRef.get(RecordEntryUseCase).execute(
+        draft.id,
+        element.id,
+        {
+          kind: 'reviewed',
+          answers: snapshot!.questions.map((q) => ({
+            questionId: q.questionId,
+            value: 'NO' as const,
+          })),
+        },
+        rep,
+      );
+
+      await seedDevDataset(deps, data, log);
+
+      const after = await sessionRepository.findByIdForPerformer(
+        draft.id,
+        rep.userId,
+      );
+      expect(after!.entries).toHaveLength(1);
+      expect(after!.entries[0].answers.map((a) => a.answer)).toEqual(
+        Array(snapshot!.questions.length).fill('NO'),
+      );
+    });
+
+    it('resumes against its own template after a newer version, with no second draft', async () => {
+      const data = buildDataset('n14');
+      const deps = resolveDevSeedDeps(moduleRef);
+      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
+      // A lineage that already holds a draft cannot take a new version.
+      if (
+        blockedByTemplate(kind) ||
+        (await lineage()).some((t) => t.status === 'draft')
+      ) {
+        console.warn(`n14 skipped: lineage kind ${kind} or a leftover draft.`);
+        return;
+      }
+      const { actor, communityId } = await actors(data);
+      const [s1] = data.sessions;
+      const performer = actor(s1.performerEmail);
+      const old = (await lineage()).find((t) => t.status === 'active')!;
+      const oldCount = (await templateRepository.findFrozenWithSnapshot(
+        old.id,
+      ))!.questions.length;
+      const opened = await moduleRef.get(OpenReviewSessionUseCase).execute({
+        communityId: communityId(s1.communityName),
+        templateId: old.id,
+        performedById: performer.userId,
+        role: performer.role,
+      });
+      // One question only: answers built from the new version would not match
+      // the session's own template.
+      const seededTexts = new Set(data.questions.map((q) => q.text));
+      const [firstQuestion] = (await questionRepository.findAll()).filter((q) =>
+        seededTexts.has(q.text),
+      );
+      const { id: draftId } = await moduleRef
+        .get(CreateDraftReviewTemplateUseCase)
+        .execute(data.template);
+      await moduleRef.get(SetReviewTemplateQuestionsUseCase).execute({
+        templateId: draftId,
+        questionIds: [firstQuestion.id],
+      });
+      await moduleRef.get(ActivateReviewTemplateUseCase).execute(draftId);
+
+      await seedDevDataset(deps, data, log);
+
+      const sessions = (
+        await sessionRepository.findCompletedForPerformer(performer.userId)
+      ).filter((s) => s.communityId === communityId(s1.communityName));
+      expect(sessions.map((s) => [s.id, s.templateId])).toEqual([
+        [opened.id, old.id],
+      ]);
+      const done = await sessionRepository.findByIdForPerformer(
+        opened.id,
+        performer.userId,
+      );
+      expect(done!.entries).toHaveLength(s1.entries.length);
+      const reviewed = done!.entries.filter((e) => e.answers.length > 0);
+      expect(reviewed.length).toBeGreaterThan(0);
+      for (const entry of reviewed) {
+        expect(entry.answers).toHaveLength(oldCount);
+      }
+      expect(
+        await sessionRepository.findDraftsByPerformer(performer.userId),
+      ).toEqual([]);
+    });
+
+    it('skips a session whose assignment QA deactivated, with a warning', async () => {
+      const data = buildDataset('q17');
+      const deps = resolveDevSeedDeps(moduleRef);
+      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
+      if (blockedByTemplate(kind)) {
+        return;
+      }
+      const { actor, communityId } = await actors(data);
+      const s3 = data.sessions[2];
+      const technician2 = actor(s3.performerEmail);
+      await moduleRef.get(DeactivateTechnicianUseCase).execute({
+        communityId: communityId(s3.communityName),
+        userId: technician2.userId,
+      });
+      logs = [];
+
+      await seedDevDataset(deps, data, log);
+
+      expect(logs).toContainEqual(
+        expect.stringMatching(
+          new RegExp(
+            `^WARN: skipped open session of ${s3.performerEmail} in ${s3.communityName}: CommunityNotInScopeError`,
+          ),
+        ),
+      );
+      expect(
+        await sessionRepository.findCompletedForPerformer(technician2.userId),
+      ).toEqual([]);
+      // The rest of the run went on.
+      const { seeded } = await historyOf(admin, data);
+      expect(labelsOf(seeded)).toEqual(
+        [data.sessions[0], data.sessions[1]].map(label).sort(),
+      );
+    });
   });
 });

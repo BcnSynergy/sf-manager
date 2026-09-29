@@ -39,6 +39,23 @@ import {
 import { ActivateReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/activate-review-template.use-case';
 import { CreateDraftReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/create-draft-review-template.use-case';
 import { SetReviewTemplateQuestionsUseCase } from '../../modules/review-template/application/use-cases/set-review-template-questions.use-case';
+import { InspectableElementNotFoundError } from '../../modules/inspectable-element/domain/errors/inspectable-element-not-found.error';
+import {
+  REVIEW_SESSION_REPOSITORY,
+  type ReviewSessionRepository,
+} from '../../modules/review-session/application/ports/review-session.repository.port';
+import type { Actor } from '../../modules/review-session/application/services/session-access.service';
+import { CompleteReviewSessionUseCase } from '../../modules/review-session/application/use-cases/complete-review-session.use-case';
+import {
+  OpenReviewSessionUseCase,
+  type OpenReviewSessionInput,
+} from '../../modules/review-session/application/use-cases/open-review-session.use-case';
+import {
+  RecordEntryUseCase,
+  type RecordEntryInput,
+} from '../../modules/review-session/application/use-cases/record-entry.use-case';
+import { ActiveTemplateNotFoundError } from '../../modules/review-session/domain/errors/active-template-not-found.error';
+import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -54,11 +71,19 @@ import {
 import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-already-in-use.error';
 import type { User } from '../../modules/users/domain/user.entity';
 import type { ManagerCapability } from '../../modules/users/domain/manager-capability';
-import type { DevDataset, DevUser } from './dev-dataset';
+import type {
+  DevDataset,
+  DevSession,
+  DevSessionEntry,
+  DevUser,
+} from './dev-dataset';
 import {
   describeUserDrift,
   findByNaturalKey,
+  isExpectedSessionError,
+  planSession,
   planTemplate,
+  type SessionPlan,
   type TemplatePlan,
 } from './dev-seed-plan';
 import { shouldSeedDevData } from './should-seed-dev-data';
@@ -99,7 +124,10 @@ export interface DevSeedDeps {
   >;
   addRepresentative: UseCase<InputOf<AddRepresentativeUseCase>>;
   addTechnician: UseCase<InputOf<AddTechnicianUseCase>>;
-  elementRepository: Pick<InspectableElementRepository, 'findAllByCommunity'>;
+  elementRepository: Pick<
+    InspectableElementRepository,
+    'findAllByCommunity' | 'findActiveByCommunityAndType'
+  >;
   createElement: UseCase<InputOf<CreateInspectableElementUseCase>>;
   questionRepository: Pick<ChecklistQuestionRepository, 'findAll'>;
   createQuestion: UseCase<
@@ -116,6 +144,24 @@ export interface DevSeedDeps {
   >;
   setTemplateQuestions: UseCase<InputOf<SetReviewTemplateQuestionsUseCase>>;
   activateTemplate: UseCase<string>;
+  sessionRepository: Pick<
+    ReviewSessionRepository,
+    | 'findDraftsByPerformer'
+    | 'findCompletedForPerformer'
+    | 'findByIdForPerformer'
+  >;
+  openSession: UseCase<OpenReviewSessionInput, { id: string }>;
+  recordEntry: {
+    execute(
+      sessionId: string,
+      elementId: string,
+      input: RecordEntryInput,
+      actor: Actor,
+    ): Promise<unknown>;
+  };
+  completeSession: {
+    execute(sessionId: string, actor: Actor): Promise<unknown>;
+  };
 }
 
 // Works with any Nest context: `INestApplicationContext` (prisma/seed.ts) and
@@ -156,6 +202,12 @@ export function resolveDevSeedDeps(ctx: {
     createDraftTemplate: ctx.get(CreateDraftReviewTemplateUseCase),
     setTemplateQuestions: ctx.get(SetReviewTemplateQuestionsUseCase),
     activateTemplate: ctx.get(ActivateReviewTemplateUseCase),
+    sessionRepository: ctx.get<ReviewSessionRepository>(
+      REVIEW_SESSION_REPOSITORY,
+    ),
+    openSession: ctx.get(OpenReviewSessionUseCase),
+    recordEntry: ctx.get(RecordEntryUseCase),
+    completeSession: ctx.get(CompleteReviewSessionUseCase),
   };
 }
 
@@ -195,7 +247,16 @@ export async function seedDevDataset(
   await seedAssignments(deps, data, communityIdByName, userIdByEmail, log);
   await seedElements(deps, data, communityIdByName, log);
   const questionIds = await seedQuestions(deps, data, log);
-  return seedTemplate(deps, data, questionIds, log);
+  const templateKind = await seedTemplate(deps, data, questionIds, log);
+  await seedSessions(
+    deps,
+    data,
+    communityIdByName,
+    userIdByEmail,
+    templateKind,
+    log,
+  );
+  return templateKind;
 }
 
 async function seedCompanies(
@@ -462,4 +523,191 @@ async function seedTemplate(
     log(SKIP_WARNINGS[plan.kind](plan.id));
   }
   return plan.kind;
+}
+
+// A domain error from a session (QA changed its preconditions) skips it with
+// a warning; anything else is a bug and propagates.
+export async function runSessionGuarded(
+  label: string,
+  log: Log,
+  run: () => Promise<void>,
+): Promise<void> {
+  try {
+    await run();
+  } catch (error) {
+    if (!isExpectedSessionError(error)) {
+      throw error;
+    }
+    const { name, message } = error as Error;
+    log(`WARN: skipped ${label}: ${name}: ${message}`);
+  }
+}
+
+async function seedSessions(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  communityIdByName: Map<string, string>,
+  userIdByEmail: Map<string, string>,
+  templateKind: TemplatePlan['kind'],
+  log: Log,
+): Promise<void> {
+  for (const session of data.sessions) {
+    const { performerEmail, communityName } = session;
+    const where = `${performerEmail} in ${communityName}`;
+    const performerId = userIdByEmail.get(performerEmail);
+    if (performerId === undefined) {
+      log(
+        `WARN: user ${performerEmail} is blocked, so its session in ${communityName} is skipped.`,
+      );
+      continue;
+    }
+    const communityId = requireId(communityIdByName, communityName);
+    const plan = planSession(
+      communityId,
+      await deps.sessionRepository.findCompletedForPerformer(performerId),
+      await deps.sessionRepository.findDraftsByPerformer(performerId),
+    );
+
+    if (plan.kind === 'skip') {
+      log(`Session of ${where} already exists, skipping.`);
+      continue;
+    }
+    // Only a new session needs the template; a resumed draft has its own.
+    if (plan.kind === 'open' && templateKind.startsWith('skip-')) {
+      log(
+        `WARN: no usable template (${templateKind}), so the new session of ${where} is skipped.`,
+      );
+      continue;
+    }
+    const role = data.users.find((u) => u.email === performerEmail)!.role;
+    await runSessionGuarded(
+      `${plan.kind} session of ${where}`,
+      log,
+      async () => {
+        const changed = await playSession(
+          deps,
+          data,
+          session,
+          plan,
+          communityId,
+          { userId: performerId, role },
+        );
+        log(
+          changed
+            ? `Seeded session: ${where}`
+            : `Session of ${where} already exists, skipping.`,
+        );
+      },
+    );
+  }
+}
+
+// Records the planned entries the session lacks, then completes it when the
+// plan says so. Existing entries (including QA edits) are never rewritten.
+// Returns whether anything was written.
+async function playSession(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  session: DevSession,
+  plan: Exclude<SessionPlan, { kind: 'skip' }>,
+  communityId: string,
+  actor: Actor,
+): Promise<boolean> {
+  let sessionId: string;
+  let templateId: string;
+  const covered = new Set<string>();
+  let changed = plan.kind === 'open';
+
+  if (plan.kind === 'open') {
+    const { elementType, frequency } = data.template;
+    const active = (await deps.templateRepository.findAll()).find(
+      (t) =>
+        t.status === 'active' &&
+        t.elementType === elementType &&
+        t.frequency === frequency,
+    );
+    if (!active) {
+      throw new ActiveTemplateNotFoundError();
+    }
+    templateId = active.id;
+    sessionId = (
+      await deps.openSession.execute({
+        communityId,
+        templateId,
+        performedById: actor.userId,
+        role: actor.role,
+      })
+    ).id;
+  } else {
+    const draft = await deps.sessionRepository.findByIdForPerformer(
+      plan.sessionId,
+      actor.userId,
+    );
+    if (!draft) {
+      throw new ReviewSessionNotFoundError();
+    }
+    sessionId = draft.id;
+    templateId = draft.templateId;
+    draft.entries.forEach((e) => covered.add(e.inspectableElementId));
+  }
+
+  const snapshot =
+    await deps.templateRepository.findFrozenWithSnapshot(templateId);
+  // An empty snapshot would fail later with an unexpected MissingAnswersError.
+  if (!snapshot || snapshot.questions.length === 0) {
+    throw new ActiveTemplateNotFoundError();
+  }
+  const questionIds = snapshot.questions.map((q) => q.questionId);
+  const record = async (elementId: string, input: RecordEntryInput) => {
+    await deps.recordEntry.execute(sessionId, elementId, input, actor);
+    covered.add(elementId);
+    changed = true;
+  };
+
+  const elements = await deps.elementRepository.findAllByCommunity(communityId);
+  for (const entry of session.entries) {
+    const element = findByNaturalKey(
+      elements,
+      (e) => e.name,
+      entry.elementName,
+    );
+    if (!element) {
+      throw new InspectableElementNotFoundError();
+    }
+    if (!covered.has(element.id)) {
+      await record(element.id, toEntryInput(entry.outcome, questionIds));
+    }
+  }
+
+  if (!session.complete) {
+    return changed;
+  }
+  // Complete rejects uncovered active elements, e.g. one QA added.
+  const active = await deps.elementRepository.findActiveByCommunityAndType(
+    communityId,
+    snapshot.elementType,
+  );
+  for (const element of active) {
+    if (!covered.has(element.id)) {
+      await record(element.id, toEntryInput('YES', questionIds));
+    }
+  }
+  await deps.completeSession.execute(sessionId, actor);
+  return true;
+}
+
+function toEntryInput(
+  outcome: DevSessionEntry['outcome'],
+  questionIds: string[],
+): RecordEntryInput {
+  if (outcome === 'UNREVIEWED') {
+    return { kind: 'unreviewed', observations: 'Not reviewed: no access.' };
+  }
+  return {
+    kind: 'reviewed',
+    answers: questionIds.map((questionId, i) => ({
+      questionId,
+      value: outcome === 'NO' && i === 0 ? 'NO' : 'YES',
+    })),
+  };
 }

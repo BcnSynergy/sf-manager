@@ -181,4 +181,63 @@ describe('DEV_DATASET', () => {
       expect(question.frequencies).toContain('MONTHLY');
     }
   });
+  describe('sessions', () => {
+    const sessions = DEV_DATASET.sessions;
+
+    it('plans three completed sessions and one partial draft', () => {
+      expect(
+        sessions.map(
+          (s) => `${s.performerEmail}|${s.communityName}|${s.complete}`,
+        ),
+      ).toEqual([
+        'technician@sf-manager.example|Dev Seed Residences North|true',
+        'technician@sf-manager.example|Dev Seed Residences South|true',
+        'technician2@sf-manager.example|Dev Seed Residences South|true',
+        'rep@sf-manager.example|Dev Seed Residences North|false',
+      ]);
+      const draft = sessions.find((s) => !s.complete)!;
+      const inCommunity = DEV_DATASET.elements.filter(
+        (e) => e.communityName === draft.communityName,
+      );
+      expect(draft.entries).toHaveLength(1);
+      expect(inCommunity).toHaveLength(2);
+    });
+
+    it('never plans two sessions for the same performer and community', () => {
+      const pairs = sessions.map(
+        (s) => `${s.performerEmail}|${s.communityName}`,
+      );
+
+      expect(new Set(pairs).size).toBe(pairs.length);
+    });
+
+    it('performs each session as a user assigned to its community, on its elements', () => {
+      for (const session of sessions) {
+        expect(DEV_DATASET.assignments).toContainEqual(
+          expect.objectContaining({
+            userEmail: session.performerEmail,
+            communityName: session.communityName,
+          }),
+        );
+        expect(session.entries.length).toBeGreaterThan(0);
+        for (const entry of session.entries) {
+          expect(DEV_DATASET.elements).toContainEqual(
+            expect.objectContaining({
+              communityName: session.communityName,
+              name: entry.elementName,
+            }),
+          );
+        }
+      }
+    });
+
+    it('gives the technician South session one NO answer and one unreviewed element', () => {
+      const south = sessions[1];
+
+      expect(south.entries.map((e) => e.outcome).sort()).toEqual([
+        'NO',
+        'UNREVIEWED',
+      ]);
+    });
+  });
 });

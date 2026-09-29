@@ -49,6 +49,19 @@ export interface DevTemplate {
   name: string;
 }
 
+export interface DevSessionEntry {
+  elementName: string;
+  outcome: 'YES' | 'NO' | 'UNREVIEWED';
+}
+
+export interface DevSession {
+  performerEmail: string;
+  communityName: string;
+  // false leaves the session as a draft.
+  complete: boolean;
+  entries: DevSessionEntry[];
+}
+
 export interface DevDataset {
   password: string;
   profile: UpdateOrganizationProfileRequest;
@@ -59,6 +72,7 @@ export interface DevDataset {
   elements: DevElement[];
   questions: CreateChecklistQuestionRequest[];
   template: DevTemplate;
+  sessions: DevSession[];
 }
 
 const COMPANY_A_TAX_ID = 'B99000001';
@@ -68,6 +82,10 @@ const TECHNICIAN_2 = 'technician2@sf-manager.example';
 const REP = 'rep@sf-manager.example';
 const NORTH = 'Dev Seed Residences North';
 const SOUTH = 'Dev Seed Residences South';
+const NORTH_LOBBY = 'Dev Seed Extinguisher North Lobby';
+const NORTH_GARAGE = 'Dev Seed Extinguisher North Garage';
+const SOUTH_LOBBY = 'Dev Seed Extinguisher South Lobby';
+const SOUTH_GARAGE = 'Dev Seed Extinguisher South Garage';
 
 // design.md "Dataset" table. Every name carries the `Dev Seed` marker so the
 // rows are recognizable and never clash with other data. The SYSTEM_ADMIN is
@@ -161,4 +179,41 @@ export const DEV_DATASET: DevDataset = {
     frequency: 'MONTHLY',
     name: 'Dev Seed Extinguisher Monthly Check',
   },
+  // S1-S3 completed plus one partial draft. The S2 pair adds a NO answer and
+  // an unreviewed element for variety.
+  sessions: [
+    {
+      performerEmail: TECHNICIAN,
+      communityName: NORTH,
+      complete: true,
+      entries: [
+        { elementName: NORTH_LOBBY, outcome: 'YES' },
+        { elementName: NORTH_GARAGE, outcome: 'YES' },
+      ],
+    },
+    {
+      performerEmail: TECHNICIAN,
+      communityName: SOUTH,
+      complete: true,
+      entries: [
+        { elementName: SOUTH_LOBBY, outcome: 'NO' },
+        { elementName: SOUTH_GARAGE, outcome: 'UNREVIEWED' },
+      ],
+    },
+    {
+      performerEmail: TECHNICIAN_2,
+      communityName: SOUTH,
+      complete: true,
+      entries: [
+        { elementName: SOUTH_LOBBY, outcome: 'YES' },
+        { elementName: SOUTH_GARAGE, outcome: 'YES' },
+      ],
+    },
+    {
+      performerEmail: REP,
+      communityName: NORTH,
+      complete: false,
+      entries: [{ elementName: NORTH_LOBBY, outcome: 'YES' }],
+    },
+  ],
 };
