@@ -24,9 +24,7 @@ export function describeUserDrift(
   const differences: string[] = [];
 
   if (existing.role !== desired.role) {
-    differences.push(
-      `role is ${existing.role}, expected ${desired.role}`,
-    );
+    differences.push(`role is ${existing.role}, expected ${desired.role}`);
   }
   if (existing.maintenanceCompanyId !== desiredCompanyId) {
     differences.push(

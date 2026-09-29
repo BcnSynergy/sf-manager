@@ -28,19 +28,19 @@ Each PR: fresh-context review before push and merge. Integration specs must not 
 
 ## PR 1
 
-- [ ] 1.1 RED: `apps/api/src/shared/seeding/should-seed-dev-data.spec.ts` (rename of the account spec). Only `'development'` is true; `undefined`, `test`, `staging`, `production`, `''`, `Development` are false.
-- [ ] 1.2 GREEN: rename to `should-seed-dev-data.ts`, exact-match allow-list. REFACTOR: drop `isProduction` use.
-- [ ] 1.3 RED then GREEN: `describe-database-host{.spec,}.ts`. Host and port only, no `user:pass@`, `'unknown'` on unset or malformed.
-- [ ] 1.4 RED: `dev-dataset.spec.ts`. `DEV_SEED_PASSWORD` accepted by `passwordSchema`; companies and users parse unchanged through `createMaintenanceCompanySchema` / `createUserSchema`.
-- [ ] 1.5 GREEN: `dev-dataset.ts` with the password, 2 companies and 6 users (the design's Dataset table).
-- [ ] 1.6 RED then GREEN: `dev-seed-plan{.spec,}.ts` with `findByNaturalKey` and `describeUserDrift`.
-- [ ] 1.7 RED: `seed-dev-dataset.spec.ts` with fake deps. Skip if exists, blocked user on drift, `EmailAlreadyInUseError` warns and blocks, `VIEW_ALL_REVIEWS` grant by check. `runDevSeed`: closed gate calls no use case and logs the skip line with the host; open gate logs the start line with the host.
-- [ ] 1.8 GREEN: `seed-dev-dataset.ts` with `resolveDevSeedDeps`, `seedDevDataset` (companies, users, grant) and `runDevSeed`.
-- [ ] 1.9 Wire `apps/api/prisma/seed.ts`: remove the technician block, call `runDevSeed`. Add `src/shared/seeding` to `apps/api/tsconfig.build.json` exclude.
-- [ ] 1.10 Create tracked `apps/api/.env.example` (`NODE_ENV=development` plus existing keys with placeholders). Do NOT read or write `apps/api/.env`.
-- [ ] 1.11 RED then GREEN: static-file spec. `.env.example` has `NODE_ENV=development`; README has each account email and the password. Then update README (env setup, accounts, password).
-- [ ] 1.12 RED then GREEN: `seed-dev-dataset.integration.spec.ts` (AppModule, 60 s timeout, `buildDataset`). Run twice: counts by seeded key are equal. Drift and soft-deleted email cases.
-- [ ] 1.13 REFACTOR, run `npm test` and `npm run test:integration`. Manual: user does reset then seed (acceptance).
+- [x] 1.1 RED: `apps/api/src/shared/seeding/should-seed-dev-data.spec.ts` (rename of the account spec). Only `'development'` is true; `undefined`, `test`, `staging`, `production`, `''`, `Development` are false.
+- [x] 1.2 GREEN: rename to `should-seed-dev-data.ts`, exact-match allow-list. REFACTOR: drop `isProduction` use.
+- [x] 1.3 RED then GREEN: `describe-database-host{.spec,}.ts`. Host and port only, no `user:pass@`, `'unknown'` on unset or malformed.
+- [x] 1.4 RED: `dev-dataset.spec.ts`. `DEV_SEED_PASSWORD` accepted by `passwordSchema`; companies and users parse unchanged through `createMaintenanceCompanySchema` / `createUserSchema`.
+- [x] 1.5 GREEN: `dev-dataset.ts` with the password, 2 companies and 6 users (the design's Dataset table).
+- [x] 1.6 RED then GREEN: `dev-seed-plan{.spec,}.ts` with `findByNaturalKey` and `describeUserDrift`.
+- [x] 1.7 RED: `seed-dev-dataset.spec.ts` with fake deps. Skip if exists, blocked user on drift, `EmailAlreadyInUseError` warns and blocks, `VIEW_ALL_REVIEWS` grant by check. `runDevSeed`: closed gate calls no use case and logs the skip line with the host; open gate logs the start line with the host.
+- [x] 1.8 GREEN: `seed-dev-dataset.ts` with `resolveDevSeedDeps`, `seedDevDataset` (companies, users, grant) and `runDevSeed`.
+- [x] 1.9 Wire `apps/api/prisma/seed.ts`: remove the technician block, call `runDevSeed`. Add `src/shared/seeding` to `apps/api/tsconfig.build.json` exclude.
+- [x] 1.10 Create tracked `apps/api/.env.example` (`NODE_ENV=development` plus existing keys with placeholders). Do NOT read or write `apps/api/.env`.
+- [x] 1.11 RED then GREEN: static-file spec. `.env.example` has `NODE_ENV=development`; README has each account email and the password. Then update README (env setup, accounts, password).
+- [x] 1.12 RED then GREEN: `seed-dev-dataset.integration.spec.ts` (AppModule, 60 s timeout, `buildDataset`). Run twice: counts by seeded key are equal. Drift and soft-deleted email cases.
+- [x] 1.13 REFACTOR, run `npm test` and `npm run test:integration`. Manual: user does reset then seed (acceptance).
 
 ## PR 2
 

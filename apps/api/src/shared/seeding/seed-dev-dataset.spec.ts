@@ -1,3 +1,5 @@
+// In-memory fakes implement async ports without awaiting anything.
+/* eslint-disable @typescript-eslint/require-await */
 import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-already-in-use.error';
 import type { ManagerCapability } from '../../modules/users/domain/manager-capability';
 import { User } from '../../modules/users/domain/user.entity';
@@ -163,7 +165,9 @@ describe('seedDevDataset', () => {
     expect(byEmail('technician2@sf-manager.example').maintenanceCompanyId).toBe(
       idByTaxId.get('B99000002'),
     );
-    expect(byEmail('rep@sf-manager.example').maintenanceCompanyId).toBeUndefined();
+    expect(
+      byEmail('rep@sf-manager.example').maintenanceCompanyId,
+    ).toBeUndefined();
   });
 
   it('skips companies and users that already exist and creates nothing', async () => {
@@ -336,7 +340,7 @@ describe('runDevSeed', () => {
 
       expect(outcome).toBe('skipped');
       expect(log).toHaveBeenCalledTimes(1);
-      const line = log.mock.calls[0][0] as string;
+      const [[line]] = log.mock.calls as [[string]];
       expect(line).toContain('Skipping dev seed data');
       expect(line).toContain(expectedFragment);
       expect(line).toContain('NODE_ENV=development');
@@ -357,7 +361,7 @@ describe('runDevSeed', () => {
     );
 
     expect(outcome).toBe('seeded');
-    expect(log.mock.calls[0][0]).toBe(
+    expect((log.mock.calls as [[string]])[0][0]).toBe(
       'Seeding dev data. Target database host: localhost:5432.',
     );
     expect(world.users).toHaveLength(DEV_DATASET.users.length);

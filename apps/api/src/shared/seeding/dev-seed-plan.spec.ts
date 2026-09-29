@@ -20,7 +20,9 @@ describe('findByNaturalKey', () => {
   });
 
   it('returns undefined for an empty list', () => {
-    expect(findByNaturalKey([], (r: { key: string }) => r.key, 'B1')).toBeUndefined();
+    expect(
+      findByNaturalKey([], (r: { key: string }) => r.key, 'B1'),
+    ).toBeUndefined();
   });
 });
 
@@ -50,32 +52,42 @@ describe('describeUserDrift', () => {
 
   it('returns null when role and company match', () => {
     expect(
-      describeUserDrift(userWith('MAINTENANCE_TECHNICIAN', 'c1'), desired, 'c1'),
+      describeUserDrift(
+        userWith('MAINTENANCE_TECHNICIAN', 'c1'),
+        desired,
+        'c1',
+      ),
     ).toBeNull();
   });
 
   it('describes a different role', () => {
-    expect(
-      describeUserDrift(userWith('MANAGER', 'c1'), desired, 'c1'),
-    ).toBe('role is MANAGER, expected MAINTENANCE_TECHNICIAN');
+    expect(describeUserDrift(userWith('MANAGER', 'c1'), desired, 'c1')).toBe(
+      'role is MANAGER, expected MAINTENANCE_TECHNICIAN',
+    );
   });
 
   it('describes a different company', () => {
     expect(
-      describeUserDrift(userWith('MAINTENANCE_TECHNICIAN', 'c9'), desired, 'c1'),
+      describeUserDrift(
+        userWith('MAINTENANCE_TECHNICIAN', 'c9'),
+        desired,
+        'c1',
+      ),
     ).toBe('company is c9, expected c1');
   });
 
   it('describes a missing company (the legacy dev technician has none)', () => {
     expect(
-      describeUserDrift(userWith('MAINTENANCE_TECHNICIAN', null), desired, 'c1'),
+      describeUserDrift(
+        userWith('MAINTENANCE_TECHNICIAN', null),
+        desired,
+        'c1',
+      ),
     ).toBe('company is none, expected c1');
   });
 
   it('describes both differences together', () => {
-    expect(
-      describeUserDrift(userWith('MANAGER', null), desired, 'c1'),
-    ).toBe(
+    expect(describeUserDrift(userWith('MANAGER', null), desired, 'c1')).toBe(
       'role is MANAGER, expected MAINTENANCE_TECHNICIAN; company is none, expected c1',
     );
   });

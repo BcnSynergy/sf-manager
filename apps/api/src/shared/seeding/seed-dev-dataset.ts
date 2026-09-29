@@ -26,7 +26,8 @@ import { shouldSeedDevData } from './should-seed-dev-data';
 
 type Log = (line: string) => void;
 
-const RESET_HINT = 'Run `prisma migrate reset` then `prisma db seed` to fix it.';
+const RESET_HINT =
+  'Run `prisma migrate reset` then `prisma db seed` to fix it.';
 
 // Everything the seed needs, as the narrowest structural types it uses, so
 // unit specs can pass in-memory fakes (dev-seed-data design.md Decision 1).
@@ -199,7 +200,9 @@ async function grantCapabilities(
   log: Log,
 ): Promise<void> {
   const wanted = user.managerCapabilities ?? [];
-  const missing = wanted.filter((c) => !resolved.managerCapabilities.includes(c));
+  const missing = wanted.filter(
+    (c) => !resolved.managerCapabilities.includes(c),
+  );
   if (missing.length === 0) {
     return;
   }

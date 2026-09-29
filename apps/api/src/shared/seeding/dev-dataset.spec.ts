@@ -63,23 +63,22 @@ describe('DEV_DATASET', () => {
       expect(taxIds).toContain(user.companyTaxId);
     }
     // technician2@ belongs to the other company (scope asymmetry).
-    expect(
-      new Set(maintenance.map((u) => u.companyTaxId)).size,
-    ).toBe(2);
+    expect(new Set(maintenance.map((u) => u.companyTaxId)).size).toBe(2);
   });
 
-  it.each(
-    DEV_DATASET.users.map((user) => [user.email, user]),
-  )('user %s is canonical through createUserSchema', (_email, user) => {
-    const input = {
-      email: user.email,
-      password: DEV_DATASET.password,
-      role: user.role,
-      ...(user.companyTaxId !== undefined && {
-        maintenanceCompanyId: 'company-id-placeholder',
-      }),
-    };
+  it.each(DEV_DATASET.users.map((user) => [user.email, user]))(
+    'user %s is canonical through createUserSchema',
+    (_email, user) => {
+      const input = {
+        email: user.email,
+        password: DEV_DATASET.password,
+        role: user.role,
+        ...(user.companyTaxId !== undefined && {
+          maintenanceCompanyId: 'company-id-placeholder',
+        }),
+      };
 
-    expect(createUserSchema.parse(input)).toEqual(input);
-  });
+      expect(createUserSchema.parse(input)).toEqual(input);
+    },
+  );
 });
