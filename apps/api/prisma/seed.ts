@@ -15,7 +15,7 @@ import {
   type UserRepository,
 } from '../src/modules/users/application/ports/user.repository.port';
 import { User } from '../src/modules/users/domain/user.entity';
-import { shouldSeedDevAccount } from '../src/shared/seeding/should-seed-dev-account';
+import { shouldSeedDevData } from '../src/shared/seeding/should-seed-dev-data';
 
 // design.md File Changes ("apps/api/prisma/seed.ts") — bootstraps a real
 // Nest application context (not a bare script) so this seed goes through
@@ -78,9 +78,9 @@ async function seed() {
     // nav-menu verify-report WARNING-3: unlike the admin account above,
     // these credentials are hardcoded and public (visible in this source
     // file), so this account MUST NOT be created in production —
-    // `shouldSeedDevAccount` mirrors auth.config.ts's own
+    // `shouldSeedDevData` mirrors auth.config.ts's own
     // `NODE_ENV === 'production'` gate.
-    if (shouldSeedDevAccount(process.env.NODE_ENV)) {
+    if (shouldSeedDevData(process.env.NODE_ENV)) {
       const secondaryPasswordHash = await passwordHasher.hash(
         'nav-menu-verify-12345',
       );
