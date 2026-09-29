@@ -1,4 +1,29 @@
 import {
+  CHECKLIST_QUESTION_REPOSITORY,
+  type ChecklistQuestionRepository,
+} from '../../modules/checklist-question/application/ports/checklist-question.repository.port';
+import { CreateChecklistQuestionUseCase } from '../../modules/checklist-question/application/use-cases/create-checklist-question.use-case';
+import {
+  COMMUNITY_REPOSITORY,
+  type CommunityRepository,
+} from '../../modules/community/application/ports/community.repository.port';
+import {
+  COMMUNITY_REPRESENTATIVE_REPOSITORY,
+  type CommunityRepresentativeRepository,
+} from '../../modules/community/application/ports/community-representative.repository.port';
+import {
+  COMMUNITY_TECHNICIAN_REPOSITORY,
+  type CommunityTechnicianRepository,
+} from '../../modules/community/application/ports/community-technician.repository.port';
+import { AddRepresentativeUseCase } from '../../modules/community/application/use-cases/add-representative.use-case';
+import { AddTechnicianUseCase } from '../../modules/community/application/use-cases/add-technician.use-case';
+import { CreateCommunityUseCase } from '../../modules/community/application/use-cases/create-community.use-case';
+import {
+  INSPECTABLE_ELEMENT_REPOSITORY,
+  type InspectableElementRepository,
+} from '../../modules/inspectable-element/application/ports/inspectable-element.repository.port';
+import { CreateInspectableElementUseCase } from '../../modules/inspectable-element/application/use-cases/create-inspectable-element.use-case';
+import {
   MAINTENANCE_COMPANY_REPOSITORY,
   type MaintenanceCompanyRepository,
 } from '../../modules/maintenance-company/application/ports/maintenance-company.repository.port';
@@ -6,6 +31,14 @@ import {
   CreateMaintenanceCompanyUseCase,
   type CreateMaintenanceCompanyInput,
 } from '../../modules/maintenance-company/application/use-cases/create-maintenance-company.use-case';
+import { UpdateOrganizationProfileUseCase } from '../../modules/organization-profile/application/use-cases/update-organization-profile.use-case';
+import {
+  REVIEW_TEMPLATE_REPOSITORY,
+  type ReviewTemplateRepository,
+} from '../../modules/review-template/application/ports/review-template.repository.port';
+import { ActivateReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/activate-review-template.use-case';
+import { CreateDraftReviewTemplateUseCase } from '../../modules/review-template/application/use-cases/create-draft-review-template.use-case';
+import { SetReviewTemplateQuestionsUseCase } from '../../modules/review-template/application/use-cases/set-review-template-questions.use-case';
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -22,13 +55,22 @@ import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-
 import type { User } from '../../modules/users/domain/user.entity';
 import type { ManagerCapability } from '../../modules/users/domain/manager-capability';
 import type { DevDataset, DevUser } from './dev-dataset';
-import { describeUserDrift, findByNaturalKey } from './dev-seed-plan';
+import {
+  describeUserDrift,
+  findByNaturalKey,
+  planTemplate,
+} from './dev-seed-plan';
 import { shouldSeedDevData } from './should-seed-dev-data';
 
 type Log = (line: string) => void;
 
 const RESET_HINT =
   'Run `prisma migrate reset` then `prisma db seed` to fix it.';
+
+type UseCase<I, R = unknown> = { execute(input: I): Promise<R> };
+type InputOf<U extends { execute(input: never): unknown }> = Parameters<
+  U['execute']
+>[0];
 
 // Narrowest structural types the seed uses, so unit specs can pass fakes.
 export interface DevSeedDeps {
@@ -43,6 +85,36 @@ export interface DevSeedDeps {
     ): Promise<{ id: string; managerCapabilities: ManagerCapability[] }>;
   };
   updateUser: { execute(input: UpdateUserInput): Promise<unknown> };
+  updateProfile: UseCase<InputOf<UpdateOrganizationProfileUseCase>>;
+  communityRepository: Pick<CommunityRepository, 'findAll'>;
+  createCommunity: UseCase<InputOf<CreateCommunityUseCase>, { id: string }>;
+  representativeRepository: Pick<
+    CommunityRepresentativeRepository,
+    'findByCommunityAndUser'
+  >;
+  technicianRepository: Pick<
+    CommunityTechnicianRepository,
+    'findByCommunityAndUser'
+  >;
+  addRepresentative: UseCase<InputOf<AddRepresentativeUseCase>>;
+  addTechnician: UseCase<InputOf<AddTechnicianUseCase>>;
+  elementRepository: Pick<InspectableElementRepository, 'findAllByCommunity'>;
+  createElement: UseCase<InputOf<CreateInspectableElementUseCase>>;
+  questionRepository: Pick<ChecklistQuestionRepository, 'findAll'>;
+  createQuestion: UseCase<
+    InputOf<CreateChecklistQuestionUseCase>,
+    { id: string }
+  >;
+  templateRepository: Pick<
+    ReviewTemplateRepository,
+    'findAll' | 'findFrozenWithSnapshot'
+  >;
+  createDraftTemplate: UseCase<
+    InputOf<CreateDraftReviewTemplateUseCase>,
+    { id: string }
+  >;
+  setTemplateQuestions: UseCase<InputOf<SetReviewTemplateQuestionsUseCase>>;
+  activateTemplate: UseCase<string>;
 }
 
 // Works with any Nest context: `INestApplicationContext` (prisma/seed.ts) and
@@ -60,6 +132,45 @@ export function resolveDevSeedDeps(ctx: {
     ),
     createUser: ctx.get<CreateUserUseCase>(CreateUserUseCase),
     updateUser: ctx.get<UpdateUserUseCase>(UpdateUserUseCase),
+    updateProfile: ctx.get<UpdateOrganizationProfileUseCase>(
+      UpdateOrganizationProfileUseCase,
+    ),
+    communityRepository: ctx.get<CommunityRepository>(COMMUNITY_REPOSITORY),
+    createCommunity: ctx.get<CreateCommunityUseCase>(CreateCommunityUseCase),
+    representativeRepository: ctx.get<CommunityRepresentativeRepository>(
+      COMMUNITY_REPRESENTATIVE_REPOSITORY,
+    ),
+    technicianRepository: ctx.get<CommunityTechnicianRepository>(
+      COMMUNITY_TECHNICIAN_REPOSITORY,
+    ),
+    addRepresentative: ctx.get<AddRepresentativeUseCase>(
+      AddRepresentativeUseCase,
+    ),
+    addTechnician: ctx.get<AddTechnicianUseCase>(AddTechnicianUseCase),
+    elementRepository: ctx.get<InspectableElementRepository>(
+      INSPECTABLE_ELEMENT_REPOSITORY,
+    ),
+    createElement: ctx.get<CreateInspectableElementUseCase>(
+      CreateInspectableElementUseCase,
+    ),
+    questionRepository: ctx.get<ChecklistQuestionRepository>(
+      CHECKLIST_QUESTION_REPOSITORY,
+    ),
+    createQuestion: ctx.get<CreateChecklistQuestionUseCase>(
+      CreateChecklistQuestionUseCase,
+    ),
+    templateRepository: ctx.get<ReviewTemplateRepository>(
+      REVIEW_TEMPLATE_REPOSITORY,
+    ),
+    createDraftTemplate: ctx.get<CreateDraftReviewTemplateUseCase>(
+      CreateDraftReviewTemplateUseCase,
+    ),
+    setTemplateQuestions: ctx.get<SetReviewTemplateQuestionsUseCase>(
+      SetReviewTemplateQuestionsUseCase,
+    ),
+    activateTemplate: ctx.get<ActivateReviewTemplateUseCase>(
+      ActivateReviewTemplateUseCase,
+    ),
   };
 }
 
@@ -90,8 +201,16 @@ export async function seedDevDataset(
   data: DevDataset,
   log: Log,
 ): Promise<void> {
+  await deps.updateProfile.execute(data.profile);
+  log('Set the organization profile.');
+
   const companyIdByTaxId = await seedCompanies(deps, data, log);
-  await seedUsers(deps, data, companyIdByTaxId, log);
+  const userIdByEmail = await seedUsers(deps, data, companyIdByTaxId, log);
+  const communityIdByName = await seedCommunities(deps, data, log);
+  await seedAssignments(deps, data, communityIdByName, userIdByEmail, log);
+  await seedElements(deps, data, communityIdByName, log);
+  const questionIds = await seedQuestions(deps, data, log);
+  await seedTemplate(deps, data, questionIds, log);
 }
 
 async function seedCompanies(
@@ -122,7 +241,10 @@ async function seedUsers(
   data: DevDataset,
   companyIdByTaxId: Map<string, string>,
   log: Log,
-): Promise<void> {
+): Promise<Map<string, string>> {
+  // Usable users only: a blocked one (drifted, or email held) is left out.
+  const idByEmail = new Map<string, string>();
+
   for (const user of data.users) {
     const companyId =
       user.companyTaxId === undefined
@@ -134,7 +256,10 @@ async function seedUsers(
       continue; // blocked: drifted or soft-deleted email
     }
     await grantCapabilities(deps, user, resolved, log);
+    idByEmail.set(user.email, resolved.id);
   }
+
+  return idByEmail;
 }
 
 type ResolvedUser = Pick<User, 'id' | 'managerCapabilities'>;
@@ -199,4 +324,157 @@ async function grantCapabilities(
     managerCapabilities: [...resolved.managerCapabilities, ...missing],
   });
   log(`Granted ${missing.join(', ')} to ${user.email}`);
+}
+
+async function seedCommunities(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  log: Log,
+): Promise<Map<string, string>> {
+  const existing = await deps.communityRepository.findAll();
+  const idByName = new Map<string, string>();
+
+  for (const community of data.communities) {
+    const found = findByNaturalKey(existing, (c) => c.name, community.name);
+    if (found) {
+      log(`Community ${community.name} already exists, skipping.`);
+      idByName.set(community.name, found.id);
+      continue;
+    }
+    const created = await deps.createCommunity.execute(community);
+    log(`Seeded community: ${community.name}`);
+    idByName.set(community.name, created.id);
+  }
+
+  return idByName;
+}
+
+function requireId(idByName: Map<string, string>, name: string): string {
+  const id = idByName.get(name);
+  if (id === undefined) {
+    throw new Error(`Dev dataset references unknown community "${name}".`);
+  }
+  return id;
+}
+
+// An existing assignment is never reactivated or modified, whatever its state.
+async function seedAssignments(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  communityIdByName: Map<string, string>,
+  userIdByEmail: Map<string, string>,
+  log: Log,
+): Promise<void> {
+  for (const assignment of data.assignments) {
+    const userId = userIdByEmail.get(assignment.userEmail);
+    if (userId === undefined) {
+      log(
+        `WARN: user ${assignment.userEmail} is blocked, so its assignment to ${assignment.communityName} is skipped.`,
+      );
+      continue;
+    }
+    const communityId = requireId(communityIdByName, assignment.communityName);
+    const isRepresentative = assignment.as === 'REPRESENTATIVE';
+    const repository = isRepresentative
+      ? deps.representativeRepository
+      : deps.technicianRepository;
+    const label = `${assignment.as.toLowerCase()} ${assignment.userEmail} of ${assignment.communityName}`;
+
+    if (await repository.findByCommunityAndUser(communityId, userId)) {
+      log(`Assignment ${label} already exists, skipping.`);
+      continue;
+    }
+    const add = isRepresentative ? deps.addRepresentative : deps.addTechnician;
+    await add.execute({ communityId, userId });
+    log(`Seeded assignment: ${label}`);
+  }
+}
+
+async function seedElements(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  communityIdByName: Map<string, string>,
+  log: Log,
+): Promise<void> {
+  for (const { communityName, ...element } of data.elements) {
+    const communityId = requireId(communityIdByName, communityName);
+    const existing =
+      await deps.elementRepository.findAllByCommunity(communityId);
+    if (findByNaturalKey(existing, (e) => e.name, element.name)) {
+      log(`Element ${element.name} already exists, skipping.`);
+      continue;
+    }
+    await deps.createElement.execute({ ...element, communityId });
+    log(`Seeded element: ${element.name}`);
+  }
+}
+
+// Ids come back in dataset order, whether created now or already present.
+async function seedQuestions(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  log: Log,
+): Promise<string[]> {
+  const existing = await deps.questionRepository.findAll();
+  const keyOf = (q: { elementType: string; text: string }) =>
+    `${q.elementType}|${q.text}`;
+  const ids: string[] = [];
+
+  for (const question of data.questions) {
+    const found = findByNaturalKey(existing, keyOf, keyOf(question));
+    if (found) {
+      log(`Question "${question.text}" already exists, skipping.`);
+      ids.push(found.id);
+      continue;
+    }
+    const created = await deps.createQuestion.execute(question);
+    log(`Seeded question: ${question.text}`);
+    ids.push(created.id);
+  }
+
+  return ids;
+}
+
+async function seedTemplate(
+  deps: DevSeedDeps,
+  data: DevDataset,
+  questionIds: string[],
+  log: Log,
+): Promise<void> {
+  const { elementType, frequency } = data.template;
+  const lineage = (await deps.templateRepository.findAll()).filter(
+    (t) => t.elementType === elementType && t.frequency === frequency,
+  );
+  const active = lineage.find((t) => t.status === 'active');
+  const snapshot = active
+    ? await deps.templateRepository.findFrozenWithSnapshot(active.id)
+    : null;
+  const plan = planTemplate(
+    lineage,
+    active ? (snapshot?.questions.length ?? 0) : null,
+  );
+
+  switch (plan.kind) {
+    case 'use-active':
+      log(`Active template ${plan.id} exists, using it.`);
+      return;
+    case 'skip-foreign-draft':
+      log(`WARN: draft ${plan.id} is not a seed draft, leaving it untouched.`);
+      return;
+    case 'skip-unusable-active':
+      log(
+        `WARN: active template ${plan.id} has no questions, leaving it untouched.`,
+      );
+      return;
+    case 'finish-draft':
+    case 'create': {
+      const id =
+        plan.kind === 'create'
+          ? (await deps.createDraftTemplate.execute(data.template)).id
+          : plan.id;
+      await deps.setTemplateQuestions.execute({ templateId: id, questionIds });
+      await deps.activateTemplate.execute(id);
+      log(`Seeded template: ${data.template.name}`);
+    }
+  }
 }

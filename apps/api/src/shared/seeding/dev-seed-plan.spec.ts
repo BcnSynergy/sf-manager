@@ -112,7 +112,10 @@ describe('describeUserDrift', () => {
 });
 
 describe('planTemplate', () => {
-  const foreign = (status: 'draft' | 'active' | 'retired', id = 't-foreign') => ({
+  const foreign = (
+    status: 'draft' | 'active' | 'retired',
+    id = 't-foreign',
+  ) => ({
     id,
     status,
     name: 'Someone elses template',

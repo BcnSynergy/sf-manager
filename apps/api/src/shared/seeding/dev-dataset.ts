@@ -117,7 +117,8 @@ export const DEV_DATASET: DevDataset = {
       managerCapabilities: ['VIEW_ALL_REVIEWS'],
     },
     { email: 'manager-nocap@sf-manager.example', role: 'MANAGER' },
-  ],  communities: [
+  ],
+  communities: [
     {
       name: 'Dev Seed Residences North',
       address: '1 North Street, Barcelona',

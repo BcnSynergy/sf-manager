@@ -7,11 +7,7 @@ import {
   passwordSchema,
   updateOrganizationProfileSchema,
 } from '@sf-manager/validation';
-import {
-  DEV_DATASET,
-  DEV_SEED_MARKER,
-  DEV_SEED_PASSWORD,
-} from './dev-dataset';
+import { DEV_DATASET, DEV_SEED_MARKER, DEV_SEED_PASSWORD } from './dev-dataset';
 
 // dev-seed-data design.md Decision 10: use cases trust input the HTTP pipe
 // already canonicalized, so every dataset literal must survive the shared
@@ -96,7 +92,9 @@ describe('DEV_DATASET', () => {
     expect(DEV_DATASET.questions).toHaveLength(3);
   });
 
-  it.each(DEV_DATASET.communities.map((community) => [community.name, community]))(
+  it.each(
+    DEV_DATASET.communities.map((community) => [community.name, community]),
+  )(
     'community %s is canonical through createCommunitySchema',
     (_name, community) => {
       expect(createCommunitySchema.parse(community)).toEqual(community);
@@ -105,8 +103,10 @@ describe('DEV_DATASET', () => {
 
   it.each(DEV_DATASET.elements.map((element) => [element.name, element]))(
     'element %s is canonical through createInspectableElementSchema',
-    (_name, { communityName: _communityName, ...element }) => {
-      expect(createInspectableElementSchema.parse(element)).toEqual(element);
+    (_name, element) => {
+      const { communityName, ...request } = element;
+      expect(communityName).toBeTruthy();
+      expect(createInspectableElementSchema.parse(request)).toEqual(request);
     },
   );
 
