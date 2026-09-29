@@ -15,7 +15,12 @@ import {
   type UserRepository,
 } from '../src/modules/users/application/ports/user.repository.port';
 import { User } from '../src/modules/users/domain/user.entity';
-import { shouldSeedDevData } from '../src/shared/seeding/should-seed-dev-data';
+import { DEV_DATASET } from '../src/shared/seeding/dev-dataset';
+import { describeDatabaseHost } from '../src/shared/seeding/describe-database-host';
+import {
+  resolveDevSeedDeps,
+  runDevSeed,
+} from '../src/shared/seeding/seed-dev-dataset';
 
 // design.md File Changes ("apps/api/prisma/seed.ts") — bootstraps a real
 // Nest application context (not a bare script) so this seed goes through
@@ -67,42 +72,18 @@ async function seed() {
 
     console.log(`Seeded admin user: ${email}`);
 
-    // nav-menu/tasks.md 3.12: browser-verifying a role-filtered nav needs at
-    // least one non-admin account — this seed previously only ever created
-    // a SYSTEM_ADMIN. MAINTENANCE_TECHNICIAN is picked deliberately: it's
-    // the smallest non-trivial nav (3 items — Home, Review sessions, Review
-    // history, nav-menu/design.md Decision 3), so it's a fast, legible
-    // manual check. Fixed, hardcoded credentials (not env-driven, unlike the
-    // admin above) — this is a local/dev-seed-only convenience account.
-    //
-    // nav-menu verify-report WARNING-3: unlike the admin account above,
-    // these credentials are hardcoded and public (visible in this source
-    // file), so this account MUST NOT be created in production —
-    // `shouldSeedDevData` mirrors auth.config.ts's own
-    // `NODE_ENV === 'production'` gate.
-    if (shouldSeedDevData(process.env.NODE_ENV)) {
-      const secondaryPasswordHash = await passwordHasher.hash(
-        'nav-menu-verify-12345',
-      );
-      const secondaryUser = new User({
-        id: idGenerator.generate(),
-        email: 'technician@sf-manager.example',
-        passwordHash: secondaryPasswordHash,
-        role: 'MAINTENANCE_TECHNICIAN',
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      });
-      await userRepository.save(secondaryUser);
-
-      console.log(
-        `Seeded non-admin user: ${secondaryUser.email} (MAINTENANCE_TECHNICIAN)`,
-      );
-    } else {
-      console.log(
-        'Skipping non-admin dev seed account: NODE_ENV is production.',
-      );
-    }
+    // dev-seed-data: the technician moved out of this file. Under the
+    // NODE_ENV=development allow-list, runDevSeed seeds the dev dataset
+    // (companies, users, ...) through the real use cases; otherwise it only
+    // logs a skip that names the target database host. The admin above is
+    // seeded in every environment.
+    await runDevSeed(
+      process.env.NODE_ENV,
+      describeDatabaseHost(process.env.DATABASE_URL),
+      resolveDevSeedDeps(app),
+      DEV_DATASET,
+      console.log,
+    );
   } finally {
     // Ensures Nest's lifecycle hooks (PrismaService.onModuleDestroy →
     // $disconnect()) run, so the script doesn't hang on exit.
