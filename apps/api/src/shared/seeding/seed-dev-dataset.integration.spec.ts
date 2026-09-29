@@ -105,6 +105,16 @@ describe('seedDevDataset (integration)', () => {
   let questionRepository: ChecklistQuestionRepository;
   let templateRepository: ReviewTemplateRepository;
   let profileRepository: OrganizationProfileRepository;
+  // The template outcome is asserted on the FIRST seed run of this file, made
+  // in beforeAll before any other seeding: later runs always see the template
+  // this one activated (or a leftover), so they cannot prove the create path.
+  let templateRun: {
+    kind: Awaited<ReturnType<typeof seedDevDataset>>;
+    initialKind: Awaited<ReturnType<typeof seedDevDataset>>;
+    before: { id: string; status: string }[];
+    logs: string[];
+    data: DevDataset;
+  };
   let logs: string[];
   const log = (line: string) => logs.push(line);
 
@@ -142,6 +152,17 @@ describe('seedDevDataset (integration)', () => {
     profileRepository = moduleRef.get<OrganizationProfileRepository>(
       ORGANIZATION_PROFILE_REPOSITORY,
     );
+
+    const data = buildDataset('i9');
+    const runLogs: string[] = [];
+    const initialKind = await lineageKind();
+    const before = await lineage();
+    const kind = await seedDevDataset(
+      resolveDevSeedDeps(moduleRef),
+      data,
+      (line) => runLogs.push(line),
+    );
+    templateRun = { kind, initialKind, before, logs: runLogs, data };
   });
 
   beforeEach(() => {
@@ -295,7 +316,9 @@ describe('seedDevDataset (integration)', () => {
     // throw and the seed swallowed it, so pin the logs. Template skips are
     // WARN lines by design and depend on what other specs left in the lineage.
     expect(
-      logs.filter((l) => /^WARN/.test(l) && !/template|draft/.test(l)),
+      logs.filter(
+        (l) => /^WARN/.test(l) && !/^WARN: (draft|active template) /.test(l),
+      ),
     ).toEqual([]);
     expect(logs.filter((l) => /^Seeded /.test(l))).toEqual([]);
     for (const c of data.communities) {
@@ -312,15 +335,13 @@ describe('seedDevDataset (integration)', () => {
     ).toHaveLength(data.assignments.length);
   });
 
-  it('follows the template lineage plan without touching foreign rows', async () => {
-    const data = buildDataset('i9');
-    const kind = await lineageKind();
-    const before = await lineage();
-
-    await seedDevDataset(resolveDevSeedDeps(moduleRef), data, log);
-
+  it('follows the template lineage plan on the first run without touching foreign rows', async () => {
+    const { kind, initialKind, before, logs: runLogs, data } = templateRun;
     const after = await lineage();
-    if (kind === 'create' || kind === 'finish-draft') {
+    const seeded = runLogs.filter((l) => /^Seeded template: /.test(l));
+    expect(kind).toBe(initialKind);
+
+    if (initialKind === 'create' || initialKind === 'finish-draft') {
       const active = after.find((t) => t.status === 'active')!;
       const snapshot = await templateRepository.findFrozenWithSnapshot(
         active.id,
@@ -328,16 +349,18 @@ describe('seedDevDataset (integration)', () => {
       expect(snapshot!.questions.map((q) => q.text).sort()).toEqual(
         data.questions.map((q) => q.text).sort(),
       );
+      expect(seeded).toEqual([`Seeded template: ${data.template.name}`]);
       return;
     }
     // Nothing in the lineage changed: same rows, same statuses.
     const shape = (rows: typeof before) =>
       rows.map((t) => `${t.id}:${t.status}`).sort();
     expect(shape(after)).toEqual(shape(before));
-    expect(logs).toContainEqual(
+    expect(seeded).toEqual([]);
+    expect(runLogs).toContainEqual(
       expect.stringMatching(
-        kind === 'use-active'
-          ? /^Active template .* exists, using it\.$/
+        initialKind === 'use-active'
+          ? /^Active template .* exists, using it.$/
           : /^WARN: (draft|active template) /,
       ),
     );
