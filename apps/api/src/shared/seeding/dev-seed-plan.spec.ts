@@ -1,8 +1,18 @@
+import { InspectableElementNotFoundError } from '../../modules/inspectable-element/domain/errors/inspectable-element-not-found.error';
+import { ActiveTemplateNotFoundError } from '../../modules/review-session/domain/errors/active-template-not-found.error';
+import { AnswersDoNotMatchTemplateError } from '../../modules/review-session/domain/errors/answers-do-not-match-template.error';
+import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
+import { OpenDraftAlreadyExistsError } from '../../modules/review-session/domain/errors/open-draft-already-exists.error';
+import { ReviewSessionNotEditableError } from '../../modules/review-session/domain/errors/review-session-not-editable.error';
+import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
+import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
 import { User } from '../../modules/users/domain/user.entity';
 import type { DevUser } from './dev-dataset';
 import {
   describeUserDrift,
   findByNaturalKey,
+  isExpectedSessionError,
+  planSession,
   planTemplate,
 } from './dev-seed-plan';
 
@@ -172,5 +182,61 @@ describe('planTemplate', () => {
       kind: 'skip-foreign-draft',
       id: 't-5',
     });
+  });
+});
+
+describe('isExpectedSessionError', () => {
+  it.each([
+    ReviewSessionNotFoundError,
+    CommunityNotInScopeError,
+    ActiveTemplateNotFoundError,
+    InspectableElementNotFoundError,
+    AnswersDoNotMatchTemplateError,
+    ReviewSessionNotEditableError,
+    UnreviewedElementsWithoutReasonError,
+    OpenDraftAlreadyExistsError,
+  ])('is true for %p', (ErrorClass) => {
+    expect(isExpectedSessionError(new ErrorClass())).toBe(true);
+  });
+
+  it('is false for a generic Error and for a non-error value', () => {
+    expect(isExpectedSessionError(new Error('boom'))).toBe(false);
+    expect(isExpectedSessionError('boom')).toBe(false);
+  });
+});
+
+describe('planSession', () => {
+  it('skips when a completed session exists in the community', () => {
+    expect(
+      planSession(
+        'c1',
+        [{ communityId: 'c1' }],
+        [{ id: 's', communityId: 'c1' }],
+      ),
+    ).toEqual({ kind: 'skip' });
+  });
+
+  it('resumes the draft of the community when none is completed', () => {
+    expect(
+      planSession(
+        'c1',
+        [{ communityId: 'c2' }],
+        [{ id: 's1', communityId: 'c1' }],
+      ),
+    ).toEqual({ kind: 'resume', sessionId: 's1' });
+  });
+
+  it('opens when the performer has no session in the community', () => {
+    expect(
+      planSession(
+        'c1',
+        [{ communityId: 'c2' }],
+        [{ id: 's2', communityId: 'c2' }],
+      ),
+    ).toEqual({ kind: 'open' });
+  });
+
+  it('opens for a performer without any session', () => {
+    expect(planSession('c1', [], [])).toEqual({ kind: 'open' });
   });
 });
