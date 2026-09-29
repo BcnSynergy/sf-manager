@@ -44,12 +44,12 @@ Each PR: fresh-context review before push and merge. Integration specs must not 
 
 ## PR 2
 
-- [ ] 2.1 RED: extend dataset spec. Communities, elements, questions and profile literals are canonical through the shared schemas.
-- [ ] 2.2 RED: `planTemplate` unit spec, all 5 kinds (`use-active`, `finish-draft`, `create`, `skip-foreign-draft`, `skip-unusable-active`).
-- [ ] 2.3 GREEN: `planTemplate` in `dev-seed-plan.ts`. Dataset gains communities, assignments, elements, questions and profile.
-- [ ] 2.4 RED then GREEN: orchestrator steps profile, communities, assignments (blocked users skipped), elements, questions, template. Foreign drafts are untouched.
-- [ ] 2.5 Integration: second run has equal counts; the profile is overwritten; assignments and elements match. Template assertions branch on the `planTemplate` kind.
-- [ ] 2.6 REFACTOR, run all suites.
+- [x] 2.1 RED: extend dataset spec. Communities, elements, questions and profile literals are canonical through the shared schemas.
+- [x] 2.2 RED: `planTemplate` unit spec, all 5 kinds (`use-active`, `finish-draft`, `create`, `skip-foreign-draft`, `skip-unusable-active`).
+- [x] 2.3 GREEN: `planTemplate` in `dev-seed-plan.ts`. Dataset gains communities, assignments, elements, questions and profile.
+- [x] 2.4 RED then GREEN: orchestrator steps profile, communities, assignments (blocked users skipped), elements, questions, template. Foreign drafts are untouched.
+- [x] 2.5 Integration: second run has equal counts; the profile is overwritten; assignments and elements match. Template assertions branch on the `planTemplate` kind.
+- [x] 2.6 REFACTOR, run all suites.
 
 ## PR 3
 
