@@ -18,7 +18,13 @@ business features yet, just the toolchain wired end-to-end.
    DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"
    JWT_SECRET="<a long random string>"
    CORS_ORIGIN="http://localhost:5173"
+   NODE_ENV=development
    ```
+   `apps/api/.env.example` lists every variable the API reads; copy it as a
+   starting point. `NODE_ENV=development` is what lets `prisma db seed`
+   create the dev accounts below: with it unset (or any other value) the
+   seed creates only the admin and logs that it skipped the rest, naming the
+   target database host.
    On Windows PowerShell, avoid `Out-File -Encoding utf8` — it adds a BOM
    that breaks Prisma's env parsing (`DATABASE_URL` silently "not found").
    Use `-Encoding utf8NoBOM` (PowerShell 7+), or:
@@ -37,6 +43,7 @@ business features yet, just the toolchain wired end-to-end.
    | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
    | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
+   | `NODE_ENV` | For dev seed data | — | Must be exactly `development` for `prisma db seed` to create the dev accounts. |
 3. Start Postgres:
    ```
    docker compose up -d
@@ -53,6 +60,24 @@ business features yet, just the toolchain wired end-to-end.
    `npm exec`. `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` must be set in
    `apps/api/.env` before running the seed step — that's the admin account
    you'll log in with.
+
+   With `NODE_ENV=development` the seed also creates the dev accounts below.
+   Every one of them shares one public, dev-only password:
+   `sf-manager-dev-1`.
+
+   | Account | Role |
+   |---------|------|
+   | `technician@sf-manager.example` | Maintenance technician (Dev Seed Fire Safety A) |
+   | `technician2@sf-manager.example` | Maintenance technician (Dev Seed Fire Safety B) |
+   | `companymgr@sf-manager.example` | Maintenance company manager (Dev Seed Fire Safety A) |
+   | `rep@sf-manager.example` | Community representative |
+   | `manager@sf-manager.example` | Manager with `VIEW_ALL_REVIEWS` |
+   | `manager-nocap@sf-manager.example` | Manager without capabilities |
+
+   The seed is additive and idempotent: rerunning it creates nothing that
+   already exists. If an account already exists with a different role or
+   company, the seed warns and leaves it alone; run `prisma migrate reset`
+   then `prisma db seed` (see below) to get a clean one.
 5. Run everything:
    ```
    npm run dev
