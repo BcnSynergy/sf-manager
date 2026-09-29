@@ -59,4 +59,4 @@ Each PR: fresh-context review before push and merge. Integration specs must not 
 - [x] 3.4 GREEN: `runSessionGuarded` and session orchestration in `seed-dev-dataset.ts` (open, record by element name, complete, resume).
 - [x] 3.5 Integration: `ListReviewHistory` scopes per role (`manager@` equals the admin's list, `manager-nocap@` empty); heal after a crash; the completed draft is not reopened; a new template version opens no second draft; a QA edit survives; a deactivated assignment is skipped with a warning; no backdating. Branch on the lineage kind.
 - [x] 3.6 Docs: README reset section (`migrate reset` then `db seed`). `CLAUDE.md` "Dev data is nearly empty" bullet becomes the seeded dataset.
-- [ ] 3.7 REFACTOR, run all suites (done). Manual browser check per role (PENDING: run by the orchestrator, not by apply).
+- [x] 3.7 REFACTOR, run all suites. Manual browser check per role: done 2026-09-29, all 6 seeded users match the scope table; rep@ resumes its draft at 1 of 2.
