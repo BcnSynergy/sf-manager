@@ -186,17 +186,19 @@ describe('planTemplate', () => {
 });
 
 describe('isExpectedSessionError', () => {
-  it.each([
-    ReviewSessionNotFoundError,
-    CommunityNotInScopeError,
-    ActiveTemplateNotFoundError,
-    InspectableElementNotFoundError,
-    AnswersDoNotMatchTemplateError,
-    ReviewSessionNotEditableError,
-    UnreviewedElementsWithoutReasonError,
-    OpenDraftAlreadyExistsError,
-  ])('is true for %p', (ErrorClass) => {
-    expect(isExpectedSessionError(new ErrorClass())).toBe(true);
+  it.each(
+    [
+      new ReviewSessionNotFoundError(),
+      new CommunityNotInScopeError(),
+      new ActiveTemplateNotFoundError(),
+      new InspectableElementNotFoundError(),
+      new AnswersDoNotMatchTemplateError(),
+      new ReviewSessionNotEditableError(),
+      new UnreviewedElementsWithoutReasonError(['E1']),
+      new OpenDraftAlreadyExistsError(),
+    ].map((error) => [error.name, error] as const),
+  )('is true for %s', (_name, error) => {
+    expect(isExpectedSessionError(error)).toBe(true);
   });
 
   it('is false for a generic Error and for a non-error value', () => {

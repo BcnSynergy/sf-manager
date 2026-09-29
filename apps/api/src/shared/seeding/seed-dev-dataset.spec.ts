@@ -5,9 +5,11 @@ import type { ManagerCapability } from '../../modules/users/domain/manager-capab
 import { User } from '../../modules/users/domain/user.entity';
 import { MaintenanceCompany } from '../../modules/maintenance-company/domain/maintenance-company.entity';
 import { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
+import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
 import { DEV_DATASET } from './dev-dataset';
 import {
   runDevSeed,
+  runSessionGuarded,
   seedDevDataset,
   type DevSeedDeps,
 } from './seed-dev-dataset';
@@ -28,7 +30,7 @@ interface World {
   communities: { id: string; name: string }[];
   // 'communityId|userId' keys, whatever the assignment state.
   assignments: Set<string>;
-  elements: { communityId: string; name: string }[];
+  elements: { id: string; communityId: string; name: string }[];
   questions: { id: string; elementType: string; text: string }[];
   templates: ReviewTemplate[];
   // Frozen snapshot size per template id; defaults to 3.
@@ -45,7 +47,27 @@ interface World {
   updates: Parameters<DevSeedDeps['updateUser']['execute']>[0][];
   // Emails whose create call throws the given error.
   createUserFails: Map<string, Error>;
+  sessions: FakeSession[];
+  recorded: {
+    sessionId: string;
+    elementId: string;
+    input: Parameters<DevSeedDeps['recordEntry']['execute']>[2];
+    actor: Parameters<DevSeedDeps['recordEntry']['execute']>[3];
+  }[];
+  opened: Parameters<DevSeedDeps['openSession']['execute']>[0][];
+  completedIds: string[];
+  // Performer ids whose open call throws the given error.
+  openFails: Map<string, Error>;
   deps: DevSeedDeps;
+}
+
+interface FakeSession {
+  id: string;
+  performedById: string;
+  communityId: string;
+  templateId: string;
+  status: 'draft' | 'completed';
+  elementIds: string[];
 }
 
 // In-memory fake of the seed's ports and use cases. `create*` mutate the
@@ -59,6 +81,7 @@ function buildWorld(
     elements?: World['elements'];
     questions?: World['questions'];
     templates?: ReviewTemplate[];
+    sessions?: FakeSession[];
   } = {},
 ): World {
   const world = {
@@ -69,6 +92,7 @@ function buildWorld(
     elements: [...(seed.elements ?? [])],
     questions: [...(seed.questions ?? [])],
     templates: [...(seed.templates ?? [])],
+    sessions: [...(seed.sessions ?? [])],
     snapshotSizes: new Map<string, number>(),
     profileUpdates: [],
     addedRepresentatives: [],
@@ -81,6 +105,10 @@ function buildWorld(
     createdUsers: [],
     updates: [],
     createUserFails: new Map<string, Error>(),
+    recorded: [],
+    opened: [],
+    completedIds: [],
+    openFails: new Map<string, Error>(),
   } as unknown as World;
 
   world.deps = {
@@ -158,20 +186,29 @@ function buildWorld(
     addRepresentative: {
       execute: async (input) => {
         world.addedRepresentatives.push(input);
+        world.assignments.add(`${input.communityId}|${input.userId}`);
       },
     },
     addTechnician: {
       execute: async (input) => {
         world.addedTechnicians.push(input);
+        world.assignments.add(`${input.communityId}|${input.userId}`);
       },
     },
     elementRepository: {
       findAllByCommunity: async (communityId) =>
         world.elements.filter((e) => e.communityId === communityId) as never,
+      findActiveByCommunityAndType: async (communityId) =>
+        world.elements.filter((e) => e.communityId === communityId) as never,
     },
     createElement: {
       execute: async (input) => {
         world.createdElements.push(input);
+        world.elements.push({
+          id: `element-${world.elements.length + 1}`,
+          communityId: input.communityId,
+          name: input.name,
+        });
       },
     },
     questionRepository: { findAll: async () => [...world.questions] as never },
@@ -187,7 +224,10 @@ function buildWorld(
       findFrozenWithSnapshot: async (id) =>
         ({
           id,
-          questions: Array.from({ length: world.snapshotSizes.get(id) ?? 3 }),
+          questions: Array.from(
+            { length: world.snapshotSizes.get(id) ?? 3 },
+            (_, i) => ({ questionId: `${id}-q${i}` }),
+          ),
         }) as never,
     },
     createDraftTemplate: {
@@ -204,7 +244,61 @@ function buildWorld(
     activateTemplate: {
       execute: async (id) => {
         world.activated.push(id);
+        world.templates = [
+          ...world.templates.filter((t) => t.id !== id),
+          template('active', DEV_DATASET.template.name, id),
+        ];
         return {};
+      },
+    },
+    sessionRepository: {
+      findDraftsByPerformer: async (userId) =>
+        world.sessions.filter(
+          (x) => x.performedById === userId && x.status === 'draft',
+        ) as never,
+      findCompletedForPerformer: async (userId) =>
+        world.sessions.filter(
+          (x) => x.performedById === userId && x.status === 'completed',
+        ) as never,
+      findByIdForPerformer: async (id) => {
+        const found = world.sessions.find((x) => x.id === id);
+        return (found && {
+          ...found,
+          entries: found.elementIds.map((e) => ({ inspectableElementId: e })),
+        }) as never;
+      },
+    },
+    openSession: {
+      execute: async (input) => {
+        const failure = world.openFails.get(input.performedById);
+        if (failure) {
+          throw failure;
+        }
+        world.opened.push(input);
+        const id = `session-${world.sessions.length + 1}`;
+        world.sessions.push({
+          id,
+          performedById: input.performedById,
+          communityId: input.communityId,
+          templateId: input.templateId,
+          status: 'draft',
+          elementIds: [],
+        });
+        return { id };
+      },
+    },
+    recordEntry: {
+      execute: async (sessionId, elementId, input, actor) => {
+        world.recorded.push({ sessionId, elementId, input, actor });
+        world.sessions
+          .find((x) => x.id === sessionId)!
+          .elementIds.push(elementId);
+      },
+    },
+    completeSession: {
+      execute: async (sessionId) => {
+        world.completedIds.push(sessionId);
+        world.sessions.find((x) => x.id === sessionId)!.status = 'completed';
       },
     },
   };
@@ -606,7 +700,7 @@ describe('seedDevDataset catalog', () => {
       )!;
       const world = buildWorld({
         communities: [{ id: 'c-north', name: NORTH }],
-        elements: [{ communityId: 'c-north', name: first.name }],
+        elements: [{ id: 'e-first', communityId: 'c-north', name: first.name }],
       });
 
       await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
@@ -747,6 +841,298 @@ describe('seedDevDataset catalog', () => {
       expect(world.activated).toEqual([]);
       expect(log).toHaveBeenCalledWith(
         expect.stringMatching(/WARN.*active-empty.*no questions/),
+      );
+    });
+  });
+});
+
+describe('runSessionGuarded', () => {
+  it('logs a warning naming the label and the error, then returns', async () => {
+    const log = jest.fn();
+
+    await runSessionGuarded('open session of a in B', log, async () => {
+      throw new CommunityNotInScopeError();
+    });
+
+    expect(log).toHaveBeenCalledTimes(1);
+    const [[line]] = log.mock.calls as [[string]];
+    expect(line).toMatch(/^WARN: skipped open session of a in B: /);
+    expect(line).toContain('CommunityNotInScopeError');
+  });
+
+  it('propagates an error that is not an expected domain error', async () => {
+    await expect(
+      runSessionGuarded('x', jest.fn(), async () => {
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+  });
+});
+
+describe('seedDevDataset sessions', () => {
+  const TECHNICIAN = 'technician@sf-manager.example';
+  const idOfUser = (world: World, email: string) =>
+    world.users.find((u) => u.email === email)!.id;
+  const idOfCommunity = (world: World, name: string) =>
+    world.communities.find((c) => c.name === name)!.id;
+  const elementName = (world: World, id: string) =>
+    world.elements.find((e) => e.id === id)!.name;
+  const recordedFor = (world: World, sessionId: string) =>
+    world.recorded.filter((r) => r.sessionId === sessionId);
+  const linesOf = (log: jest.Mock) =>
+    (log.mock.calls as [string][]).map(([line]) => line);
+
+  it('opens, records and completes the three planned sessions and leaves the draft open', async () => {
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(
+      world.opened.map((o) => [o.performedById, o.communityId, o.role]),
+    ).toEqual([
+      [
+        idOfUser(world, TECHNICIAN),
+        idOfCommunity(world, NORTH),
+        'MAINTENANCE_TECHNICIAN',
+      ],
+      [
+        idOfUser(world, TECHNICIAN),
+        idOfCommunity(world, SOUTH),
+        'MAINTENANCE_TECHNICIAN',
+      ],
+      [
+        idOfUser(world, TECHNICIAN_2),
+        idOfCommunity(world, SOUTH),
+        'MAINTENANCE_TECHNICIAN',
+      ],
+      [
+        idOfUser(world, REP),
+        idOfCommunity(world, NORTH),
+        'COMMUNITY_REPRESENTATIVE',
+      ],
+    ]);
+    expect(world.opened.every((o) => o.templateId === 'draft-new')).toBe(true);
+    expect(world.sessions.map((x) => [x.status, x.elementIds.length])).toEqual([
+      ['completed', 2],
+      ['completed', 2],
+      ['completed', 2],
+      ['draft', 1],
+    ]);
+    expect(world.completedIds).toEqual(['session-1', 'session-2', 'session-3']);
+  });
+
+  it('records the planned outcomes by element name as the performer', async () => {
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    const south = recordedFor(world, 'session-2');
+    expect(south.map((r) => elementName(world, r.elementId))).toEqual([
+      'Dev Seed Extinguisher South Lobby',
+      'Dev Seed Extinguisher South Garage',
+    ]);
+    expect(south[0].actor).toEqual({
+      userId: idOfUser(world, TECHNICIAN),
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+    expect(south[0].input).toEqual({
+      kind: 'reviewed',
+      answers: [
+        { questionId: 'draft-new-q0', value: 'NO' },
+        { questionId: 'draft-new-q1', value: 'YES' },
+        { questionId: 'draft-new-q2', value: 'YES' },
+      ],
+    });
+    expect(south[1].input).toMatchObject({ kind: 'unreviewed' });
+    expect(recordedFor(world, 'session-1').map((r) => r.input)).toEqual(
+      Array(2).fill({
+        kind: 'reviewed',
+        answers: [0, 1, 2].map((i) => ({
+          questionId: `draft-new-q${i}`,
+          value: 'YES',
+        })),
+      }),
+    );
+  });
+
+  it('a second run changes nothing and logs no seeded line and no warning', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    const opened = world.opened.length;
+    const recorded = world.recorded.length;
+    const log = jest.fn();
+
+    await seedDevDataset(world.deps, DEV_DATASET, log);
+
+    expect(world.opened).toHaveLength(opened);
+    expect(world.recorded).toHaveLength(recorded);
+    expect(world.completedIds).toHaveLength(3);
+    const lines = linesOf(log);
+    expect(lines.filter((l) => l.startsWith('Seeded'))).toEqual([]);
+    expect(lines.filter((l) => l.startsWith('WARN'))).toEqual([]);
+    expect(lines).toContain(
+      `Session of ${TECHNICIAN} in ${NORTH} already exists, skipping.`,
+    );
+  });
+
+  it('resumes a draft with its own template and records only the missing entries', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    // Rewind session 1: bound to an older template, Lobby already recorded
+    // (as if QA had edited it), Garage missing.
+    const first = world.sessions[0];
+    first.status = 'draft';
+    first.templateId = 'old-template';
+    first.elementIds = first.elementIds.slice(0, 1);
+    world.recorded.length = 0;
+    world.opened.length = 0;
+    world.completedIds.length = 0;
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(world.opened).toEqual([]);
+    expect(world.recorded.map((r) => elementName(world, r.elementId))).toEqual([
+      'Dev Seed Extinguisher North Garage',
+    ]);
+    expect(world.recorded[0].input).toMatchObject({
+      answers: [{ questionId: 'old-template-q0' }, {}, {}],
+    });
+    expect(world.completedIds).toEqual([first.id]);
+  });
+
+  it('heals a session that crashed right after opening', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    const second = world.sessions[1];
+    second.status = 'draft';
+    second.elementIds = [];
+    world.recorded.length = 0;
+    world.completedIds.length = 0;
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(recordedFor(world, second.id)).toHaveLength(2);
+    expect(world.completedIds).toEqual([second.id]);
+    expect(world.sessions).toHaveLength(4);
+  });
+
+  it('covers an element QA added so a completed session can be completed', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    world.elements.push({
+      id: 'qa-extra',
+      communityId: idOfCommunity(world, NORTH),
+      name: 'QA extinguisher',
+    });
+    const first = world.sessions[0];
+    first.status = 'draft';
+    world.recorded.length = 0;
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(world.recorded.map((r) => r.elementId)).toEqual(['qa-extra']);
+    expect(world.recorded[0].input).toMatchObject({ kind: 'reviewed' });
+    expect(world.completedIds).toContain(first.id);
+  });
+
+  it('never completes the draft plan or covers extra elements for it', async () => {
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    const draft = world.sessions[3];
+    expect(draft.status).toBe('draft');
+    expect(world.completedIds).not.toContain(draft.id);
+    expect(
+      recordedFor(world, draft.id).map((r) => elementName(world, r.elementId)),
+    ).toEqual(['Dev Seed Extinguisher North Lobby']);
+  });
+
+  it('warns and skips a failing session while the others still run', async () => {
+    const world = buildWorld();
+    // Ids exist only once users are created: fail the technician's opens.
+    const create = world.deps.createUser.execute;
+    world.deps.createUser.execute = async (input) => {
+      const created = await create(input);
+      if (input.email === TECHNICIAN) {
+        world.openFails.set(created.id, new CommunityNotInScopeError());
+      }
+      return created;
+    };
+    const log = jest.fn();
+
+    await seedDevDataset(world.deps, DEV_DATASET, log);
+
+    const warns = linesOf(log).filter((l) =>
+      l.startsWith('WARN: skipped open session'),
+    );
+    expect(warns).toHaveLength(2);
+    expect(warns[0]).toContain(TECHNICIAN);
+    expect(warns[0]).toContain(NORTH);
+    expect(warns[0]).toContain('CommunityNotInScopeError');
+    expect(world.sessions.map((x) => x.performedById)).toEqual([
+      idOfUser(world, TECHNICIAN_2),
+      idOfUser(world, REP),
+    ]);
+  });
+
+  it('propagates a non-domain error from a session', async () => {
+    const world = buildWorld();
+    world.deps.openSession.execute = async () => {
+      throw new Error('boom');
+    };
+
+    await expect(
+      seedDevDataset(world.deps, DEV_DATASET, jest.fn()),
+    ).rejects.toThrow('boom');
+  });
+
+  it('skips every session of a blocked performer and logs it', async () => {
+    const world = buildWorld({
+      companies: existingCompanies(),
+      users: [existingUser(TECHNICIAN, { maintenanceCompanyId: null })],
+    });
+    const log = jest.fn();
+
+    await seedDevDataset(world.deps, DEV_DATASET, log);
+
+    expect(world.sessions.map((x) => x.performedById)).not.toContain(
+      `existing-${TECHNICIAN}`,
+    );
+    expect(world.sessions).toHaveLength(2);
+    expect(linesOf(log)).toContainEqual(
+      expect.stringMatching(
+        new RegExp(`^WARN: user ${TECHNICIAN} is blocked, so its .*session`),
+      ),
+    );
+  });
+
+  describe.each([
+    ['skip-foreign-draft', () => template('draft', 'Not a seed name', 't-f')],
+    ['skip-unusable-active', () => template('active', 'Empty one', 't-e')],
+  ])('with a %s template', (kind, build) => {
+    it('opens no new session but still resumes an existing draft', async () => {
+      const world = buildWorld({ templates: [build()] });
+      world.snapshotSizes.set('t-e', 0);
+      // First pass seeds the users and finds nothing to open.
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      expect(world.opened).toEqual([]);
+      world.sessions.push({
+        id: 'legacy-draft',
+        performedById: idOfUser(world, REP),
+        communityId: idOfCommunity(world, NORTH),
+        templateId: 'old-template',
+        status: 'draft',
+        elementIds: [],
+      });
+      const log = jest.fn();
+
+      await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(world.opened).toEqual([]);
+      expect(recordedFor(world, 'legacy-draft')).toHaveLength(1);
+      expect(linesOf(log)).toContainEqual(
+        expect.stringContaining(`no usable template (${kind})`),
       );
     });
   });
