@@ -81,6 +81,7 @@ import {
   describeUserDrift,
   findByNaturalKey,
   isExpectedSessionError,
+  isExpectedTemplateError,
   planSession,
   planTemplate,
   type SessionPlan,
@@ -237,7 +238,7 @@ export async function seedDevDataset(
   deps: DevSeedDeps,
   data: DevDataset,
   log: Log,
-): Promise<TemplatePlan['kind']> {
+): Promise<TemplateOutcome> {
   await deps.updateProfile.execute(data.profile);
   log('Set the organization profile.');
 
@@ -489,13 +490,16 @@ const SKIP_WARNINGS = {
     `WARN: active template ${id} has no questions, leaving it untouched.`,
 };
 
-// Returns the plan kind so callers can tell a usable template from a skip.
+// The plan kinds, plus the skip a finish-draft attempt can end in at run time.
+type TemplateOutcome = TemplatePlan['kind'] | 'skip-unfinishable-draft';
+
+// Returns the outcome kind so callers can tell a usable template from a skip.
 async function seedTemplate(
   deps: DevSeedDeps,
   data: DevDataset,
   questionIds: string[],
   log: Log,
-): Promise<TemplatePlan['kind']> {
+): Promise<TemplateOutcome> {
   const { elementType, frequency } = data.template;
   const lineage = (await deps.templateRepository.findAll()).filter(
     (t) => t.elementType === elementType && t.frequency === frequency,
@@ -511,18 +515,37 @@ async function seedTemplate(
 
   if (plan.kind === 'use-active') {
     log(`Active template ${plan.id} exists, using it.`);
-  } else if (plan.kind === 'create' || plan.kind === 'finish-draft') {
-    const id =
-      plan.kind === 'create'
-        ? (await deps.createDraftTemplate.execute(data.template)).id
-        : plan.id;
-    await deps.setTemplateQuestions.execute({ templateId: id, questionIds });
-    await deps.activateTemplate.execute(id);
+  } else if (plan.kind === 'finish-draft') {
+    try {
+      await fillAndActivate(deps, plan.id, questionIds);
+    } catch (error) {
+      if (!isExpectedTemplateError(error)) {
+        throw error;
+      }
+      const { name, message } = error as Error;
+      log(
+        `WARN: draft ${plan.id} cannot be finished (${name}: ${message}), leaving it untouched.`,
+      );
+      return 'skip-unfinishable-draft';
+    }
+    log(`Seeded template: ${data.template.name}`);
+  } else if (plan.kind === 'create') {
+    const { id } = await deps.createDraftTemplate.execute(data.template);
+    await fillAndActivate(deps, id, questionIds);
     log(`Seeded template: ${data.template.name}`);
   } else {
     log(SKIP_WARNINGS[plan.kind](plan.id));
   }
   return plan.kind;
+}
+
+async function fillAndActivate(
+  deps: DevSeedDeps,
+  templateId: string,
+  questionIds: string[],
+): Promise<void> {
+  await deps.setTemplateQuestions.execute({ templateId, questionIds });
+  await deps.activateTemplate.execute(templateId);
 }
 
 // A domain error from a session (QA changed its preconditions) skips it with
@@ -548,7 +571,7 @@ async function seedSessions(
   data: DevDataset,
   communityIdByName: Map<string, string>,
   userIdByEmail: Map<string, string>,
-  templateKind: TemplatePlan['kind'],
+  templateKind: TemplateOutcome,
   log: Log,
 ): Promise<void> {
   for (const session of data.sessions) {
