@@ -42,7 +42,7 @@ All 12 decisions match the code: files under src/shared/seeding as designed; see
 | GREEN confirmed | OK | 1177/1177 unit pass now |
 | Triangulation | OK | e.g. planTemplate 5 kinds, planSession multi-case, gate 6+ inputs |
 
-Layer distribution (test-case counts by `it(` occurrences): unit ~100 across 6 files, integration 16 in 1 file (`seed-dev-dataset.integration.spec.ts`), static-file checks in dev-seed-docs.spec (6).
+Layer distribution (test-case counts by `it(` occurrences): unit ~100 across 6 files, integration 15 in 1 file (`seed-dev-dataset.integration.spec.ts`), static-file checks in dev-seed-docs.spec (6).
 Coverage: not run (informational).
 Assertion quality: no tautologies; loops in dev-dataset.spec iterate non-empty constants; integration loops (lines 618, 807) are guarded by non-empty assertions (labelsOf equality, `reviewed.length > 0`). 0 CRITICAL, 0 WARNING.
 
@@ -55,7 +55,7 @@ WARNING
 3. Known open limitation (design Open Questions): `finish-draft` throws an uncaught domain error if QA edits a seeded question while a Dev Seed draft template is unfinished. Documented, accepted.
 
 SUGGESTION
-1. Unit count drifted to 1177 vs 1176 in apply-progress; update on archive for accuracy.
+1. Unit count drifted to 1177 vs 1176 in apply-progress; applied in archive (see archive-report.md).
 2. Consider a coverage run on the seeding dir at a future point (not required).
 
 ## Verdict
