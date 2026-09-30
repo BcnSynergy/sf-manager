@@ -5,6 +5,8 @@ import type { ManagerCapability } from '../../modules/users/domain/manager-capab
 import { User } from '../../modules/users/domain/user.entity';
 import { MaintenanceCompany } from '../../modules/maintenance-company/domain/maintenance-company.entity';
 import { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
+import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
+import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
 import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
 import { DEV_DATASET } from './dev-dataset';
 import {
@@ -58,6 +60,9 @@ interface World {
   completedIds: string[];
   // Performer ids whose open call throws the given error.
   openFails: Map<string, Error>;
+  // Errors the template use cases throw, when set.
+  setQuestionsFails: Error | null;
+  activateFails: Error | null;
   deps: DevSeedDeps;
 }
 
@@ -109,6 +114,8 @@ function buildWorld(
     opened: [],
     completedIds: [],
     openFails: new Map<string, Error>(),
+    setQuestionsFails: null as Error | null,
+    activateFails: null as Error | null,
   } as unknown as World;
 
   world.deps = {
@@ -238,11 +245,17 @@ function buildWorld(
     },
     setTemplateQuestions: {
       execute: async (input) => {
+        if (world.setQuestionsFails) {
+          throw world.setQuestionsFails;
+        }
         world.templateQuestionSets.push(input);
       },
     },
     activateTemplate: {
       execute: async (id) => {
+        if (world.activateFails) {
+          throw world.activateFails;
+        }
         world.activated.push(id);
         world.templates = [
           ...world.templates.filter((t) => t.id !== id),
@@ -826,6 +839,54 @@ describe('seedDevDataset catalog', () => {
       );
     });
 
+    describe('finishing a seed draft', () => {
+      const seedDraft = () =>
+        template('draft', DEV_DATASET.template.name, 'draft-seed');
+
+      it.each([
+        [
+          'setTemplateQuestions',
+          (w: World) => {
+            w.setQuestionsFails = new ChecklistQuestionNotFoundError();
+          },
+          /WARN.*draft-seed.*ChecklistQuestionNotFoundError/,
+        ],
+        [
+          'activateTemplate',
+          (w: World) => {
+            w.activateFails = new ReviewTemplateEmptyError();
+          },
+          /WARN.*draft-seed.*ReviewTemplateEmptyError/,
+        ],
+      ])(
+        'skips with a warning when %s throws an expected error',
+        async (_name, fail, warning) => {
+          const world = buildWorld({ templates: [seedDraft()] });
+          fail(world);
+          const log = jest.fn();
+
+          const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+          expect(kind).toBe('skip-unfinishable-draft');
+          expect(world.createdDrafts).toEqual([]);
+          expect(world.activated).toEqual([]);
+          expect(world.templates.map((t) => t.status)).toEqual(['draft']);
+          expect((log.mock.calls as [string][]).map(([l]) => l)).toContainEqual(
+            expect.stringMatching(warning),
+          );
+        },
+      );
+
+      it('propagates an error that is not an expected domain error', async () => {
+        const world = buildWorld({ templates: [seedDraft()] });
+        world.activateFails = new Error('database is down');
+
+        await expect(
+          seedDevDataset(world.deps, DEV_DATASET, jest.fn()),
+        ).rejects.toThrow('database is down');
+      });
+    });
+
     it('leaves an active template without questions untouched and warns', async () => {
       const world = buildWorld({
         templates: [template('active', 'Empty one', 'active-empty')],
@@ -1131,10 +1192,17 @@ describe('seedDevDataset sessions', () => {
   describe.each([
     ['skip-foreign-draft', () => template('draft', 'Not a seed name', 't-f')],
     ['skip-unusable-active', () => template('active', 'Empty one', 't-e')],
+    [
+      'skip-unfinishable-draft',
+      () => template('draft', DEV_DATASET.template.name, 't-u'),
+    ],
   ])('with a %s template', (kind, build) => {
     it('opens no new session but still resumes an existing draft', async () => {
       const world = buildWorld({ templates: [build()] });
       world.snapshotSizes.set('t-e', 0);
+      if (kind === 'skip-unfinishable-draft') {
+        world.activateFails = new ReviewTemplateEmptyError();
+      }
       // First pass seeds the users and finds nothing to open.
       await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
       expect(world.opened).toEqual([]);

@@ -188,3 +188,16 @@ templates that it does not own.
 - AND every new session that would open against it is skipped with a logged reason
 - AND seeded drafts bound to a still-valid older version are still resumed
 - AND the run does not abort
+
+#### Scenario: Seed draft that cannot be finished blocks only new sessions
+
+- GIVEN a seed draft for EXTINGUISHER x MONTHLY with no active template
+- AND setting its questions or activating it fails with an expected template domain error (for example, its questions were removed or it was activated concurrently)
+- WHEN the seed runs
+- THEN a warning names the draft and the error
+- AND the draft stays a draft and is not activated
+- AND every new session that would open against the lineage is skipped with a logged reason
+- AND seeded drafts bound to a still-valid older version are still resumed
+- AND the run does not abort
+- AND a later run, once the cause is gone, finishes and activates the draft
+- AND any other error still aborts the run

@@ -1,3 +1,4 @@
+import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
 import { InspectableElementNotFoundError } from '../../modules/inspectable-element/domain/errors/inspectable-element-not-found.error';
 import { ActiveTemplateNotFoundError } from '../../modules/review-session/domain/errors/active-template-not-found.error';
 import { AnswersDoNotMatchTemplateError } from '../../modules/review-session/domain/errors/answers-do-not-match-template.error';
@@ -8,6 +9,10 @@ import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/
 import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
 import type { ReviewSession } from '../../modules/review-session/domain/review-session.entity';
 import type { User } from '../../modules/users/domain/user.entity';
+import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
+import { ReviewTemplateNotEditableError } from '../../modules/review-template/domain/errors/review-template-not-editable.error';
+import { ReviewTemplateNotFoundError } from '../../modules/review-template/domain/errors/review-template-not-found.error';
+import { TransactionConflictError } from '../../modules/review-template/domain/errors/transaction-conflict.error';
 import type { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
 import { DEV_SEED_MARKER, type DevUser } from './dev-dataset';
 
@@ -90,6 +95,23 @@ const EXPECTED_SESSION_ERRORS = [
 // session use cases. Anything else is a real bug and must propagate.
 export function isExpectedSessionError(error: unknown): boolean {
   return EXPECTED_SESSION_ERRORS.some(
+    (ErrorClass) => error instanceof ErrorClass,
+  );
+}
+
+const EXPECTED_TEMPLATE_ERRORS = [
+  ReviewTemplateNotFoundError,
+  ReviewTemplateNotEditableError,
+  ReviewTemplateEmptyError,
+  ChecklistQuestionNotFoundError,
+  TransactionConflictError,
+];
+
+// The domain errors SetQuestions or Activate can raise while finishing a seed
+// draft whose state changed under the seed (a question removed, the draft
+// frozen or deleted, a concurrent activation). Anything else is a bug.
+export function isExpectedTemplateError(error: unknown): boolean {
+  return EXPECTED_TEMPLATE_ERRORS.some(
     (ErrorClass) => error instanceof ErrorClass,
   );
 }

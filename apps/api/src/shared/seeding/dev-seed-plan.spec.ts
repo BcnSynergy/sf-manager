@@ -6,12 +6,18 @@ import { OpenDraftAlreadyExistsError } from '../../modules/review-session/domain
 import { ReviewSessionNotEditableError } from '../../modules/review-session/domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
 import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
+import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
+import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
+import { ReviewTemplateNotEditableError } from '../../modules/review-template/domain/errors/review-template-not-editable.error';
+import { ReviewTemplateNotFoundError } from '../../modules/review-template/domain/errors/review-template-not-found.error';
+import { TransactionConflictError } from '../../modules/review-template/domain/errors/transaction-conflict.error';
 import { User } from '../../modules/users/domain/user.entity';
 import type { DevUser } from './dev-dataset';
 import {
   describeUserDrift,
   findByNaturalKey,
   isExpectedSessionError,
+  isExpectedTemplateError,
   planSession,
   planTemplate,
 } from './dev-seed-plan';
@@ -204,6 +210,28 @@ describe('isExpectedSessionError', () => {
   it('is false for a generic Error and for a non-error value', () => {
     expect(isExpectedSessionError(new Error('boom'))).toBe(false);
     expect(isExpectedSessionError('boom')).toBe(false);
+  });
+});
+
+describe('isExpectedTemplateError', () => {
+  it.each(
+    [
+      new ReviewTemplateNotFoundError(),
+      new ReviewTemplateNotEditableError(),
+      new ReviewTemplateEmptyError(),
+      new ChecklistQuestionNotFoundError(),
+      new TransactionConflictError(),
+    ].map((error) => [error.name, error] as const),
+  )('is true for %s', (_name, error) => {
+    expect(isExpectedTemplateError(error)).toBe(true);
+  });
+
+  it('is false for a generic Error and for a session error', () => {
+    expect(isExpectedTemplateError(new Error('boom'))).toBe(false);
+    expect(isExpectedTemplateError(new ReviewSessionNotFoundError())).toBe(
+      false,
+    );
+    expect(isExpectedTemplateError('boom')).toBe(false);
   });
 });
 
