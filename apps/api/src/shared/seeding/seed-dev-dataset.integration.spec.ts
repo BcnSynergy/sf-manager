@@ -778,21 +778,19 @@ describe('seedDevDataset (integration)', () => {
     });
 
     it('resumes against its own template after a newer version, with no second draft', async () => {
-      const data = buildDataset('n14');
+      // Own lineage, emptied first: the scenario never depends on leftovers.
+      const data = buildDataset('n14', 'ANNUAL');
       const deps = resolveDevSeedDeps(moduleRef);
+      await resetLineage('ANNUAL');
       const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
-      // A lineage that already holds a draft cannot take a new version.
-      if (
-        blockedByTemplate(kind) ||
-        (await lineage()).some((t) => t.status === 'draft')
-      ) {
-        console.warn(`n14 skipped: lineage kind ${kind} or a leftover draft.`);
-        return;
-      }
+      expect(kind).toBe('create');
+      const fresh = await lineage('ANNUAL');
+      expect(fresh.filter((t) => t.status === 'active')).toHaveLength(1);
+      expect(fresh.filter((t) => t.status === 'draft')).toEqual([]);
       const { actor, communityId } = await actors(data);
       const [s1] = data.sessions;
       const performer = actor(s1.performerEmail);
-      const old = (await lineage()).find((t) => t.status === 'active')!;
+      const old = (await lineage('ANNUAL')).find((t) => t.status === 'active')!;
       const oldCount = (await templateRepository.findFrozenWithSnapshot(
         old.id,
       ))!.questions.length;
