@@ -524,7 +524,7 @@ async function seedTemplate(
       }
       const { name, message } = error as Error;
       log(
-        `WARN: draft ${plan.id} cannot be finished (${name}: ${message}), leaving it untouched.`,
+        `WARN: draft ${plan.id} cannot be finished (${name}: ${message}), leaving it as a draft.`,
       );
       return 'skip-unfinishable-draft';
     }

@@ -195,7 +195,7 @@ templates that it does not own.
 - AND setting its questions or activating it fails with an expected template domain error (for example, its questions were removed or it was activated concurrently)
 - WHEN the seed runs
 - THEN a warning names the draft and the error
-- AND the draft is left as it is
+- AND the draft stays a draft and is not activated
 - AND every new session that would open against the lineage is skipped with a logged reason
 - AND seeded drafts bound to a still-valid older version are still resumed
 - AND the run does not abort
