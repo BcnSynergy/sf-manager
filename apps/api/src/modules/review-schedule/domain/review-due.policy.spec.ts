@@ -99,19 +99,13 @@ const NEVER_REVIEWED: ReviewDueEvaluation = {
 
 describe('evaluateReviewDue', () => {
   describe('NEVER_REVIEWED Is Exclusive and Makes No Overdue Claim', () => {
-    it('No covering session ever', () => {
+    // Both scenarios reach the policy as the same empty coverage: sessions
+    // with MONTHLY/SEMIANNUAL frequency never enter a `PairCoverage`.
+    it.each([
+      'No covering session ever',
+      'Element type without a usable template',
+    ])('%s', () => {
       expect(evaluate([])).toEqual(NEVER_REVIEWED);
-    });
-
-    it('Element type without a usable template (only MONTHLY/SEMIANNUAL sessions reach the policy as empty coverage)', () => {
-      const emptyCoverage: PairCoverage = {
-        lastBeforeSinceAt: null,
-        lastAnnualAt: null,
-        recentCoveringAt: [],
-      };
-      expect(evaluateReviewDue(emptyCoverage, new Date(NOW))).toEqual(
-        NEVER_REVIEWED,
-      );
     });
 
     it.each([
@@ -212,6 +206,18 @@ describe('evaluateReviewDue', () => {
         };
         expect(evaluateReviewDue(coverage, new Date(NOW))).toEqual(
           dueQuarter(2026, 4, '2026-12-31'),
+        );
+      });
+
+      it('a session on 31 Dec inside the window is earlier history for a previous quarter in the next year', () => {
+        // now is in Q2 2027, so since is 2026-12-31T00:00Z and the session is
+        // a recent date, but it belongs to Q4 2026, before the previous
+        // quarter (Q1 2027): the year comparison must cross the boundary.
+        const sessions = [quarterly('2026-12-31')];
+        const now = '2027-05-10T10:00:00Z';
+        expect(coverageOf(sessions, now).lastBeforeSinceAt).toBeNull();
+        expect(evaluate(sessions, now)).toEqual(
+          overdueQuarter(2027, 1, '2027-03-31'),
         );
       });
 

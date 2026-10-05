@@ -14,6 +14,10 @@ import {
 // Coverage facts for one pair, folded by the reader from completed sessions
 // whose frozen template frequency is QUARTERLY or ANNUAL. Declared here (not in
 // the reader port) so the domain never imports from `application/`.
+// Invariant the reader must uphold: an ANNUAL session counted in
+// `lastAnnualAt` is also a covering session, so it also appears in
+// `lastBeforeSinceAt` or `recentCoveringAt`. A non-null `lastAnnualAt` with no
+// covering session is not a valid input (the policy reports NEVER_REVIEWED).
 export interface PairCoverage {
   // Latest covering `completedAt` before the coverage window; non-null means a
   // covering session older than the window exists.
