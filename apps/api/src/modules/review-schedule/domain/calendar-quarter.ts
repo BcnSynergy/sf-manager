@@ -29,6 +29,8 @@ export function madridDate(instant: Date): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
+// Expects a Madrid-local `YYYY-MM-DD` string (as `madridDate` returns); the
+// input is not validated.
 export function quarterOf(date: string): Quarter {
   const year = Number(date.slice(0, 4));
   const month = Number(date.slice(5, 7));
@@ -51,6 +53,7 @@ export function quarterEnd(quarter: Quarter): string {
 }
 
 // A 29 February anniversary falls on 28 February of the following year.
+// Expects a Madrid-local `YYYY-MM-DD` string; the input is not validated.
 export function addTwelveMonths(date: string): string {
   const year = Number(date.slice(0, 4)) + 1;
   const monthDay = date.slice(5);

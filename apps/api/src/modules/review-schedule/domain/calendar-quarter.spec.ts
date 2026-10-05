@@ -133,6 +133,8 @@ describe('coverageWindowStart', () => {
       // its first day, at most 2 hours before UTC midnight of that day.
       const firstDayUtc = Date.UTC(previous.year, (previous.number - 1) * 3, 1);
       expect(windowStart).toBeLessThanOrEqual(firstDayUtc - 2 * hour);
+      // ...and not unreasonably early: Decision 6 sets it one day before.
+      expect(windowStart).toBeGreaterThanOrEqual(firstDayUtc - 2 * 24 * hour);
     }
   });
 });
