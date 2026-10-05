@@ -285,6 +285,9 @@ describe('GET /review-schedule through the real Prisma reader (integration)', ()
 
   it('writes nothing: row counts are identical before and after reads', async () => {
     const agent = await login(emailOf.admin);
+    // Global table counts are only reliable because `test:integration` runs
+    // `--runInBand` (apps/api/package.json); scoping counts to own rows would
+    // hide writes elsewhere.
     const before = await rowCounts();
 
     await agent.get('/review-schedule').expect(200);

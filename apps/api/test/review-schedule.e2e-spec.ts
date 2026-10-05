@@ -406,6 +406,37 @@ describe('Review Schedule (e2e)', () => {
     });
   });
 
+  describe('Scope fails closed — soft-deleted manager', () => {
+    // The same session/JWT is reused across the soft-delete: the capability
+    // check resolves via `findById`, which excludes soft-deleted rows, so the
+    // account fails closed even with a still-valid cookie.
+    it('a soft-deleted granted MANAGER gets 200 [] and the reader is never called', async () => {
+      // A well-formed UUID: it is a real DELETE /users/:id target below.
+      const deletedId = '00000000-0000-7000-8000-000000000049';
+      const deletedEmail = 'rs-manager-granted-deleted@example.com';
+      built.userRepository.seed(
+        await buildSeedUser({
+          id: deletedId,
+          email: deletedEmail,
+          role: 'MANAGER',
+          managerCapabilities: ['VIEW_ALL_REVIEWS'],
+        }),
+      );
+      const managerAgent = await loginAgent(built.app, deletedEmail);
+      const adminAgent = await loginAgent(built.app, emails.admin);
+      expect(
+        idsOf((await managerAgent.get('/review-schedule').expect(200)).body),
+      ).toHaveLength(3);
+      built.reader.calls.length = 0;
+
+      await adminAgent.delete(`/users/${deletedId}`).expect(204);
+
+      const response = await managerAgent.get('/review-schedule').expect(200);
+      expect(response.body).toEqual([]);
+      expect(built.reader.calls).toEqual([]);
+    });
+  });
+
   describe('Authentication precedes authorization', () => {
     it('answers 401 without a session and resolves no capability or schedule data', async () => {
       const checker = built.moduleRef.get<{
