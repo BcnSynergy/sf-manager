@@ -126,6 +126,38 @@ describe('RolePermissionChecker', () => {
       (permission) => permission !== 'reviewSession:read',
     );
 
+  // review-schedule PR 5 (authorization/spec.md "Permission and Scope Check
+  // on the Review Schedule Endpoint"): one new read-only permission, held by
+  // exactly four roles. The company manager is deliberately NOT one of them.
+  const REVIEW_SCHEDULE_PERMISSION: Permission = 'reviewSchedule:read';
+
+  const REVIEW_SCHEDULE_ROLES: Role[] = [
+    'SYSTEM_ADMIN',
+    'MANAGER',
+    'MAINTENANCE_TECHNICIAN',
+    'COMMUNITY_REPRESENTATIVE',
+  ];
+
+  const ALL_ROLES: Role[] = [
+    'SYSTEM_ADMIN',
+    'MANAGER',
+    'MAINTENANCE_COMPANY_MANAGER',
+    'MAINTENANCE_TECHNICIAN',
+    'COMMUNITY_REPRESENTATIVE',
+  ];
+
+  // Every permission the checker knows, including both review families.
+  const EVERY_PERMISSION: Permission[] = [
+    ...ALL_PERMISSIONS,
+    ...REVIEW_SESSION_PERMISSIONS,
+    REVIEW_SCHEDULE_PERMISSION,
+  ];
+
+  const heldBy = (role: Role): Permission[] =>
+    EVERY_PERMISSION.filter((permission) =>
+      checker.can(role, permission),
+    ).sort();
+
   // The two roles activated on the review-session surface only.
   const REVIEW_SESSION_ROLES: Role[] = [
     'MAINTENANCE_TECHNICIAN',
@@ -192,8 +224,14 @@ describe('RolePermissionChecker', () => {
   // authorization/spec.md "The Manager Becomes Operational…" — the manager
   // holds exactly one permission, identical shape to
   // MAINTENANCE_COMPANY_MANAGER below.
-  it('grants MANAGER exactly reviewSession:read', () => {
-    expect(checker.can(MANAGER_ROLE, 'reviewSession:read')).toBe(true);
+  // Modified by review-schedule ("The manager gains exactly two
+  // permissions"): reviewSession:read plus reviewSchedule:read, nothing else
+  // from the whole Permission union.
+  it('grants MANAGER exactly reviewSession:read and reviewSchedule:read', () => {
+    expect(heldBy(MANAGER_ROLE)).toEqual([
+      'reviewSchedule:read',
+      'reviewSession:read',
+    ]);
   });
 
   // "The manager gains no write member of the review-session family": no
@@ -209,6 +247,43 @@ describe('RolePermissionChecker', () => {
   // Operational" — the manager holds exactly one permission.
   it('grants MAINTENANCE_COMPANY_MANAGER exactly reviewSession:read', () => {
     expect(checker.can(COMPANY_MANAGER_ROLE, 'reviewSession:read')).toBe(true);
+    expect(heldBy(COMPANY_MANAGER_ROLE)).toEqual(['reviewSession:read']);
+  });
+
+  // review-schedule "The company manager holds no schedule permission".
+  it('denies MAINTENANCE_COMPANY_MANAGER on reviewSchedule:read', () => {
+    expect(checker.can(COMPANY_MANAGER_ROLE, REVIEW_SCHEDULE_PERMISSION)).toBe(
+      false,
+    );
+  });
+
+  // review-schedule "The permission is granted to exactly four roles".
+  it.each(REVIEW_SCHEDULE_ROLES)('allows %s on reviewSchedule:read', (role) => {
+    expect(checker.can(role, REVIEW_SCHEDULE_PERMISSION)).toBe(true);
+  });
+
+  it('holds reviewSchedule:read in exactly the four granted roles and no other', () => {
+    expect(
+      ALL_ROLES.filter((role) => checker.can(role, REVIEW_SCHEDULE_PERMISSION)),
+    ).toEqual(REVIEW_SCHEDULE_ROLES);
+  });
+
+  // The schedule endpoint confers no write access: each granted role's set
+  // is the pre-existing one plus reviewSchedule:read, nothing more.
+  it('adds only reviewSchedule:read to the technician, representative and admin rows', () => {
+    const performerSet = [
+      ...REVIEW_SESSION_PERMISSIONS,
+      REVIEW_SCHEDULE_PERMISSION,
+    ].sort();
+    expect(heldBy('MAINTENANCE_TECHNICIAN')).toEqual(performerSet);
+    expect(heldBy('COMMUNITY_REPRESENTATIVE')).toEqual(performerSet);
+    expect(heldBy('SYSTEM_ADMIN')).toEqual(
+      [
+        ...ALL_PERMISSIONS,
+        'reviewSession:read',
+        REVIEW_SCHEDULE_PERMISSION,
+      ].sort(),
+    );
   });
 
   // "The manager gains no write member of the review-session family": no
@@ -267,13 +342,12 @@ describe('RolePermissionChecker', () => {
   // ROLE_PERMISSIONS row instead of reusing the existing
   // `reviewSession:read` gate.
   describe('review-export: no permission is added (tasks.md 8.10)', () => {
-    const FULL_PERMISSION_SET: Permission[] = [
-      ...ALL_PERMISSIONS,
-      ...REVIEW_SESSION_PERMISSIONS,
-    ];
+    // Modified by review-schedule: the union grew by exactly one member,
+    // reviewSchedule:read (authorization delta, "unchanged" clauses restated).
+    const FULL_PERMISSION_SET: Permission[] = EVERY_PERMISSION;
 
-    it('the Permission union has exactly 33 members total, none of them organizationProfile:* beyond the two already shipped', () => {
-      expect(FULL_PERMISSION_SET).toHaveLength(33);
+    it('the Permission union has exactly 34 members total (33 plus reviewSchedule:read), none of them organizationProfile:* beyond the two already shipped', () => {
+      expect(FULL_PERMISSION_SET).toHaveLength(34);
       expect(
         FULL_PERMISSION_SET.filter((permission) =>
           permission.startsWith('organizationProfile:'),
@@ -281,16 +355,22 @@ describe('RolePermissionChecker', () => {
       ).toEqual(['organizationProfile:read', 'organizationProfile:update']);
     });
 
-    it('ROLE_PERMISSIONS grants each role exactly its previously-shipped set, unchanged by review-export', () => {
+    it('ROLE_PERMISSIONS grants each role exactly its previously-shipped set plus reviewSchedule:read where granted', () => {
       const expectedByRole: Record<Role, Permission[]> = {
         SYSTEM_ADMIN: FULL_PERMISSION_SET.filter(
           (permission) =>
             !REVIEW_SESSION_WRITE_PERMISSIONS.includes(permission),
         ),
-        MANAGER: ['reviewSession:read'],
+        MANAGER: ['reviewSession:read', REVIEW_SCHEDULE_PERMISSION],
         MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read'],
-        MAINTENANCE_TECHNICIAN: REVIEW_SESSION_PERMISSIONS,
-        COMMUNITY_REPRESENTATIVE: REVIEW_SESSION_PERMISSIONS,
+        MAINTENANCE_TECHNICIAN: [
+          ...REVIEW_SESSION_PERMISSIONS,
+          REVIEW_SCHEDULE_PERMISSION,
+        ],
+        COMMUNITY_REPRESENTATIVE: [
+          ...REVIEW_SESSION_PERMISSIONS,
+          REVIEW_SCHEDULE_PERMISSION,
+        ],
       };
 
       for (const [role, expectedPermissions] of Object.entries(

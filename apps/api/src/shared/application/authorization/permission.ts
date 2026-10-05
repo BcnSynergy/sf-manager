@@ -63,6 +63,15 @@
 // none. Holding one of these grants nothing without also passing the
 // resource-scope check (an active community assignment) — see
 // `CommunityScopeChecker`.
+//
+// reviewSchedule:read — review-schedule/authorization spec "Permission and
+// Scope Check on the Review Schedule Endpoint" (PR 5, design.md Decision 1):
+// governs the read-only GET /review-schedule route. One permission, granted
+// to SYSTEM_ADMIN, MANAGER, MAINTENANCE_TECHNICIAN and
+// COMMUNITY_REPRESENTATIVE, and deliberately NOT to
+// MAINTENANCE_COMPANY_MANAGER (who holds reviewSession:read) so the guard
+// itself returns the 403. Which pairs a caller sees is decided by the use
+// case, never by this table.
 export type Permission =
   | 'user:create'
   | 'user:read'
@@ -95,5 +104,6 @@ export type Permission =
   | 'reviewSession:perform'
   | 'reviewSession:complete'
   | 'reviewSession:discard'
+  | 'reviewSchedule:read'
   | 'organizationProfile:read'
   | 'organizationProfile:update';

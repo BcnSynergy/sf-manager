@@ -179,3 +179,45 @@ export function evaluateReviewDue(
     evaluateAnnual(coverage, today, current),
   );
 }
+
+// The fields the list order depends on. Structural, so the use case's row
+// model satisfies it without the domain knowing about rows or DTOs.
+export interface ScheduleSortKey {
+  status: ScheduleStatus;
+  communityName: string;
+  elementType: string;
+  communityId: string;
+}
+
+// Worst first. Distinct from SEVERITY above: that ranks which obligation
+// drives a pair, this ranks the list (NEVER_REVIEWED sits between OVERDUE and
+// UPCOMING, as the spec orders it).
+const LIST_RANK: Record<ScheduleStatus, number> = {
+  OVERDUE: 0,
+  NEVER_REVIEWED: 1,
+  UPCOMING: 2,
+  UP_TO_DATE: 3,
+};
+
+// One fixed-locale collator (design Decision 8): case- and accent-insensitive
+// and independent of the server's default locale, so the order is identical
+// across environments. Module-level because constructing one is costly.
+const NAME_COLLATOR = new Intl.Collator('es', { sensitivity: 'base' });
+
+// Total order for the schedule: status rank, then community name (collated),
+// then element type, then community id as the deterministic tie-break.
+export function compareScheduleRows(
+  a: ScheduleSortKey,
+  b: ScheduleSortKey,
+): number {
+  return (
+    LIST_RANK[a.status] - LIST_RANK[b.status] ||
+    NAME_COLLATOR.compare(a.communityName, b.communityName) ||
+    compareOrdinal(a.elementType, b.elementType) ||
+    compareOrdinal(a.communityId, b.communityId)
+  );
+}
+
+function compareOrdinal(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}

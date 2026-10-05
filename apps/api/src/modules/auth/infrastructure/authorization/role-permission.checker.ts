@@ -43,6 +43,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewTemplate:delete',
     'reviewTemplate:activate',
     'reviewSession:read',
+    // review-schedule PR 5: read-only; the admin's scope is every pair.
+    'reviewSchedule:read',
     // organization-profile PR 2, authorization/spec.md "Permission Check on
     // Organization Profile Endpoints": exactly two members, not four — no
     // create/delete verb exists for this singleton resource.
@@ -58,7 +60,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   // (application/authorization), never by this table. No
   // `user:grantCapability` permission exists — granting reuses the
   // existing `user:update` gate on `PATCH /users/:id`.
-  MANAGER: ['reviewSession:read'],
+  //
+  // review-schedule PR 5 (authorization delta): gains exactly
+  // `reviewSchedule:read`. The role is admitted whether or not it holds
+  // VIEW_ALL_REVIEWS; the use case returns an empty list without it.
+  MANAGER: ['reviewSession:read', 'reviewSchedule:read'],
   // review-history-company-scope/design.md Decision 11 point 3;
   // authorization/spec.md "The Maintenance Company Manager Becomes
   // Operational" / "The Company Association Itself Confers No Permission":
@@ -66,6 +72,9 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   // complete/discard, and no other permission family. Holding this grants
   // NOTHING on its own: which sessions it reaches is decided by
   // CompanyScopeChecker (application/authorization), never by this table.
+  // Deliberately NOT given `reviewSchedule:read` (review-schedule E2/E8): the
+  // schedule is installation-wide or assignment-based, neither of which this
+  // role has.
   MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read'],
   // review-session/authorization spec "Technician and Representative Become
   // Operational" (design.md Decision 10): the first time either role maps
@@ -79,6 +88,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewSession:perform',
     'reviewSession:complete',
     'reviewSession:discard',
+    'reviewSchedule:read',
   ],
   COMMUNITY_REPRESENTATIVE: [
     'reviewSession:create',
@@ -86,6 +96,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reviewSession:perform',
     'reviewSession:complete',
     'reviewSession:discard',
+    'reviewSchedule:read',
   ],
 };
 

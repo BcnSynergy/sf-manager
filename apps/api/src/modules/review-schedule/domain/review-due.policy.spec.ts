@@ -1,8 +1,11 @@
 import { coverageWindowStart } from './calendar-quarter';
 import {
+  compareScheduleRows,
   evaluateReviewDue,
   type PairCoverage,
   type ReviewDueEvaluation,
+  type ScheduleSortKey,
+  type ScheduleStatus,
 } from './review-due.policy';
 
 // review-schedule spec: NEVER_REVIEWED Is Exclusive, The Quarterly Obligation,
@@ -431,5 +434,93 @@ describe('evaluateReviewDue', () => {
     const snapshot = JSON.stringify(coverage);
     evaluateReviewDue(coverage, new Date(NOW));
     expect(JSON.stringify(coverage)).toBe(snapshot);
+  });
+});
+
+// review-schedule spec "Every Pair in Scope Is Listed, Worst First": status
+// order, order within a group, and the fixed-locale collation of names.
+describe('compareScheduleRows', () => {
+  const row = (
+    status: ScheduleStatus,
+    communityName: string,
+    communityId = 'c-1',
+    elementType = 'EXTINGUISHER',
+  ): ScheduleSortKey => ({ status, communityName, communityId, elementType });
+
+  const sorted = (rows: ScheduleSortKey[]): ScheduleSortKey[] =>
+    [...rows].sort(compareScheduleRows);
+
+  it('Status order', () => {
+    const result = sorted([
+      row('UP_TO_DATE', 'A'),
+      row('UPCOMING', 'A'),
+      row('NEVER_REVIEWED', 'A'),
+      row('OVERDUE', 'A'),
+    ]);
+    expect(result.map((r) => r.status)).toEqual([
+      'OVERDUE',
+      'NEVER_REVIEWED',
+      'UPCOMING',
+      'UP_TO_DATE',
+    ]);
+  });
+
+  it('status outranks community name', () => {
+    const result = sorted([row('UP_TO_DATE', 'Alpha'), row('OVERDUE', 'Zeta')]);
+    expect(result.map((r) => r.communityName)).toEqual(['Zeta', 'Alpha']);
+  });
+
+  it('Order within a group: community name, then element type, then community id', () => {
+    const result = sorted([
+      row('UPCOMING', 'Beta', 'c-2', 'B_TYPE'),
+      row('UPCOMING', 'Beta', 'c-1', 'B_TYPE'),
+      row('UPCOMING', 'Beta', 'c-9', 'A_TYPE'),
+      row('UPCOMING', 'Alpha', 'c-5', 'B_TYPE'),
+    ]);
+    expect(
+      result.map((r) => [r.communityName, r.elementType, r.communityId]),
+    ).toEqual([
+      ['Alpha', 'B_TYPE', 'c-5'],
+      ['Beta', 'A_TYPE', 'c-9'],
+      ['Beta', 'B_TYPE', 'c-1'],
+      ['Beta', 'B_TYPE', 'c-2'],
+    ]);
+  });
+
+  it('Community names are collated, not compared by code point', () => {
+    const result = sorted([
+      row('UPCOMING', 'Zeta', 'c-1'),
+      row('UPCOMING', 'alpha', 'c-2'),
+      row('UPCOMING', 'Àgora', 'c-3'),
+    ]);
+    expect(result.map((r) => r.communityName)).toEqual([
+      'Àgora',
+      'alpha',
+      'Zeta',
+    ]);
+  });
+
+  it('names that differ only by case or accent are ordered by element type, then community id', () => {
+    const result = sorted([
+      row('UPCOMING', 'ágora', 'c-2', 'A_TYPE'),
+      row('UPCOMING', 'agora', 'c-1', 'B_TYPE'),
+      row('UPCOMING', 'AGORA', 'c-1', 'A_TYPE'),
+    ]);
+    expect(
+      result.map((r) => [r.communityName, r.elementType, r.communityId]),
+    ).toEqual([
+      ['AGORA', 'A_TYPE', 'c-1'],
+      ['ágora', 'A_TYPE', 'c-2'],
+      ['agora', 'B_TYPE', 'c-1'],
+    ]);
+  });
+
+  it('is deterministic regardless of input order', () => {
+    const rows = [
+      row('UPCOMING', 'Beta', 'c-2'),
+      row('OVERDUE', 'alpha', 'c-1'),
+      row('UPCOMING', 'Beta', 'c-1'),
+    ];
+    expect(sorted(rows)).toEqual(sorted([...rows].reverse()));
   });
 });
