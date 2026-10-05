@@ -102,10 +102,10 @@ Start: PR 3 merged. Finish: `listPairs` works against Postgres with six queries;
 - [x] 4.2 Create `application/ports/review-schedule.reader.port.ts`: `ScheduleScope`, `SchedulePair`, `ReviewScheduleReader`, `REVIEW_SCHEDULE_READER`; imports `PairCoverage` from the domain (types only, no behaviour)
 - [x] 4.3 RED `application/testing/in-memory-review-schedule.reader.spec.ts`: scope filtering (`all`, `communities`), returns seeded pairs — supports review-schedule use case tests
 - [x] 4.4 GREEN `application/testing/in-memory-review-schedule.reader.ts`
-- [ ] 4.5 RED `infrastructure/persistence/prisma-review-schedule.reader.integration.spec.ts` (own run-unique communities/elements/users, retired templates with high `version`, direct session inserts, cleanup in `afterAll`): one live element → one pair; only deactivated/deleted elements → none; soft-deleted community → none; per-element-type pairs; DRAFT, MONTHLY, SEMIANNUAL ignored; retired-version session counted; other users' sessions count; window bound; `q4` pre-window existence and latest date; `q5` ANNUAL-only maximum — *A Pair Exists Only…* (4), *What Covers a Quarter* (QUARTERLY, ANNUAL, MONTHLY/SEMIANNUAL, draft, other users, replaced version)
-- [ ] 4.6 RED same spec: constant-count test with `$extends` counter, 2 vs 20 communities, both equal to 6 — *Constant lookup count*
-- [ ] 4.7 GREEN `prisma-review-schedule.reader.ts` (exports `ReviewSchedulePrisma`, `@Inject(PrismaService)`, six typed queries q1-q6, fold by `(communityId, elementType)`)
-- [ ] 4.8 REFACTOR; verify `npm run test --workspace=apps/api -- review-schedule` and `npm run test:integration --workspace=apps/api -- prisma-review-schedule`; lint
+- [x] 4.5 RED `infrastructure/persistence/prisma-review-schedule.reader.integration.spec.ts` (own run-unique communities/elements/users, retired templates with high `version`, direct session inserts, cleanup in `afterAll`): one live element → one pair; only deactivated/deleted elements → none; soft-deleted community → none; per-element-type pairs; DRAFT, MONTHLY, SEMIANNUAL ignored; retired-version session counted; other users' sessions count; window bound; `q4` pre-window existence and latest date; `q5` ANNUAL-only maximum — *A Pair Exists Only…* (4), *What Covers a Quarter* (QUARTERLY, ANNUAL, MONTHLY/SEMIANNUAL, draft, other users, replaced version)
+- [x] 4.6 RED same spec: constant-count test with `$extends` counter, 2 vs 20 communities, both equal to 6 — *Constant lookup count*
+- [x] 4.7 GREEN `prisma-review-schedule.reader.ts` (exports `ReviewSchedulePrisma`, `@Inject(PrismaService)`, six typed queries q1-q6, fold by `(communityId, elementType)`)
+- [x] 4.8 REFACTOR; verify `npm run test --workspace=apps/api -- review-schedule` and `npm run test:integration --workspace=apps/api -- prisma-review-schedule`; lint
 
 ## PR 5 — Permission, sort, use case (~310 lines)
 
