@@ -77,9 +77,11 @@ business features yet, just the toolchain wired end-to-end.
    Besides the accounts, the same seed creates two maintenance companies, two
    communities (`Dev Seed Residences North` and `Dev Seed Residences South`,
    two extinguishers each), the assignments for those accounts, three
-   extinguisher questions, an active `Dev Seed Extinguisher Monthly Check`
-   template, three completed review sessions and one draft session (recorded
-   by `rep@`, 1 of 2 elements). It also overwrites the organization profile.
+   extinguisher questions, an active `Dev Seed Extinguisher Quarterly Check`
+   template and an active `Dev Seed Extinguisher Annual Check` template, four
+   completed review sessions (three Quarterly, one Annual, the Annual one in
+   North) and one draft session (recorded by `rep@`, 1 of 2 elements). It also
+   overwrites the organization profile.
    Session timestamps are the moment of the run; nothing is backdated.
 
    The seed is additive and idempotent: rerunning it creates nothing that

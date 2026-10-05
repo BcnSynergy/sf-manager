@@ -8,13 +8,16 @@ import { ReviewTemplate } from '../../modules/review-template/domain/review-temp
 import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
 import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
 import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
-import { DEV_DATASET } from './dev-dataset';
+import type { ReviewFrequency } from '@sf-manager/validation';
+import { DEV_DATASET, type SeededFrequency } from './dev-dataset';
 import {
   runDevSeed,
   runSessionGuarded,
   seedDevDataset,
   type DevSeedDeps,
 } from './seed-dev-dataset';
+
+type Seeded = SeededFrequency;
 
 const NOW = new Date('2026-01-01T00:00:00Z');
 const TECHNICIAN = 'technician@sf-manager.example';
@@ -60,9 +63,9 @@ interface World {
   completedIds: string[];
   // Performer ids whose open call throws the given error.
   openFails: Map<string, Error>;
-  // Errors the template use cases throw, when set.
-  setQuestionsFails: Error | null;
-  activateFails: Error | null;
+  // Errors the template use cases throw, by template id.
+  setQuestionsFails: Map<string, Error>;
+  activateFails: Map<string, Error>;
   deps: DevSeedDeps;
 }
 
@@ -114,8 +117,8 @@ function buildWorld(
     opened: [],
     completedIds: [],
     openFails: new Map<string, Error>(),
-    setQuestionsFails: null as Error | null,
-    activateFails: null as Error | null,
+    setQuestionsFails: new Map<string, Error>(),
+    activateFails: new Map<string, Error>(),
   } as unknown as World;
 
   world.deps = {
@@ -240,26 +243,33 @@ function buildWorld(
     createDraftTemplate: {
       execute: async (input) => {
         world.createdDrafts.push(input);
-        return { id: 'draft-new' };
+        const id = `draft-${input.frequency.toLowerCase()}`;
+        world.templates.push(
+          template('draft', input.name, id, input.frequency),
+        );
+        return { id };
       },
     },
     setTemplateQuestions: {
       execute: async (input) => {
-        if (world.setQuestionsFails) {
-          throw world.setQuestionsFails;
+        const failure = world.setQuestionsFails.get(input.templateId);
+        if (failure) {
+          throw failure;
         }
         world.templateQuestionSets.push(input);
       },
     },
     activateTemplate: {
       execute: async (id) => {
-        if (world.activateFails) {
-          throw world.activateFails;
+        const failure = world.activateFails.get(id);
+        if (failure) {
+          throw failure;
         }
         world.activated.push(id);
+        const draft = world.templates.find((t) => t.id === id)!;
         world.templates = [
           ...world.templates.filter((t) => t.id !== id),
-          template('active', DEV_DATASET.template.name, id),
+          template('active', draft.name, id, draft.frequency),
         ];
         return {};
       },
@@ -546,16 +556,18 @@ const NORTH = 'Dev Seed Residences North';
 const SOUTH = 'Dev Seed Residences South';
 const REP = 'rep@sf-manager.example';
 const TECHNICIAN_2 = 'technician2@sf-manager.example';
+const [QUARTERLY_TEMPLATE, ANNUAL_TEMPLATE] = DEV_DATASET.templates;
 
 function template(
-  status: 'draft' | 'active',
+  status: 'draft' | 'active' | 'retired',
   name: string,
   id: string,
+  frequency: ReviewFrequency = 'QUARTERLY',
 ): ReviewTemplate {
   return new ReviewTemplate({
     id,
     elementType: 'EXTINGUISHER',
-    frequency: 'MONTHLY',
+    frequency,
     name,
     version: status === 'draft' ? null : 1,
     status,
@@ -674,7 +686,7 @@ describe('seedDevDataset catalog', () => {
       );
       // The rest of the catalog still ran.
       expect(world.addedRepresentatives).toHaveLength(1);
-      expect(world.activated).toHaveLength(1);
+      expect(world.activated).toHaveLength(2);
     });
 
     it('skips every assignment of a user whose email is held by a soft-deleted row', async () => {
@@ -755,22 +767,25 @@ describe('seedDevDataset catalog', () => {
     });
   });
 
-  describe('template', () => {
-    it('creates a draft, sets the seeded questions in order and activates it', async () => {
+  describe('templates', () => {
+    it('creates a draft per frequency, sets the seeded questions in order and activates each', async () => {
       const world = buildWorld();
 
-      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const outcomes = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
 
-      expect(kind).toBe('create');
-
-      expect(world.createdDrafts).toEqual([DEV_DATASET.template]);
+      expect(outcomes).toEqual({ QUARTERLY: 'create', ANNUAL: 'create' });
+      expect(world.createdDrafts).toEqual(DEV_DATASET.templates);
       expect(world.templateQuestionSets).toEqual([
         {
-          templateId: 'draft-new',
+          templateId: 'draft-quarterly',
+          questionIds: world.questions.map((q) => q.id),
+        },
+        {
+          templateId: 'draft-annual',
           questionIds: world.questions.map((q) => q.id),
         },
       ]);
-      expect(world.activated).toEqual(['draft-new']);
+      expect(world.activated).toEqual(['draft-quarterly', 'draft-annual']);
     });
 
     it('resolves the seeded question ids even when a question already existed', async () => {
@@ -786,36 +801,58 @@ describe('seedDevDataset catalog', () => {
 
       await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
 
-      const [{ questionIds }] = world.templateQuestionSets;
-      expect(questionIds).toHaveLength(DEV_DATASET.questions.length);
-      expect(questionIds[1]).toBe('q-existing');
+      expect(world.templateQuestionSets).toHaveLength(2);
+      for (const { questionIds } of world.templateQuestionSets) {
+        expect(questionIds).toHaveLength(DEV_DATASET.questions.length);
+        expect(questionIds[1]).toBe('q-existing');
+      }
     });
 
-    it('finishes a seeded draft without creating another', async () => {
+    it('finishes a seeded draft without creating another for its lineage', async () => {
       const world = buildWorld({
-        templates: [template('draft', DEV_DATASET.template.name, 'draft-seed')],
+        templates: [template('draft', QUARTERLY_TEMPLATE.name, 'draft-seed')],
       });
 
-      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const outcomes = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
 
-      expect(kind).toBe('finish-draft');
-
-      expect(world.createdDrafts).toEqual([]);
+      expect(outcomes).toEqual({
+        QUARTERLY: 'finish-draft',
+        ANNUAL: 'create',
+      });
+      expect(world.createdDrafts).toEqual([ANNUAL_TEMPLATE]);
       expect(world.templateQuestionSets.map((s) => s.templateId)).toEqual([
         'draft-seed',
+        'draft-annual',
       ]);
-      expect(world.activated).toEqual(['draft-seed']);
+      expect(world.activated).toEqual(['draft-seed', 'draft-annual']);
     });
 
-    it('uses a usable active template and writes nothing', async () => {
+    it('uses a usable active template and writes nothing for its lineage', async () => {
       const world = buildWorld({
         templates: [template('active', 'Other name', 'active-1')],
       });
 
-      const kind = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      const outcomes = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
 
-      expect(kind).toBe('use-active');
+      expect(outcomes).toEqual({ QUARTERLY: 'use-active', ANNUAL: 'create' });
+      expect(world.createdDrafts).toEqual([ANNUAL_TEMPLATE]);
+      expect(world.activated).toEqual(['draft-annual']);
+    });
 
+    it('uses both usable active templates and writes no template at all', async () => {
+      const world = buildWorld({
+        templates: [
+          template('active', 'Other quarterly', 'active-q'),
+          template('active', 'Other annual', 'active-a', 'ANNUAL'),
+        ],
+      });
+
+      const outcomes = await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(outcomes).toEqual({
+        QUARTERLY: 'use-active',
+        ANNUAL: 'use-active',
+      });
       expect(world.createdDrafts).toEqual([]);
       expect(world.templateQuestionSets).toEqual([]);
       expect(world.activated).toEqual([]);
@@ -827,35 +864,39 @@ describe('seedDevDataset catalog', () => {
       });
       const log = jest.fn();
 
-      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+      const outcomes = await seedDevDataset(world.deps, DEV_DATASET, log);
 
-      expect(kind).toBe('skip-foreign-draft');
-
-      expect(world.createdDrafts).toEqual([]);
-      expect(world.templateQuestionSets).toEqual([]);
-      expect(world.activated).toEqual([]);
+      expect(outcomes.QUARTERLY).toBe('skip-foreign-draft');
+      expect(world.createdDrafts).toEqual([ANNUAL_TEMPLATE]);
+      expect(world.activated).toEqual(['draft-annual']);
       expect(log).toHaveBeenCalledWith(
         expect.stringMatching(/WARN.*draft-foreign.*not a seed draft/),
       );
     });
 
     describe('finishing a seed draft', () => {
-      const seedDraft = () =>
-        template('draft', DEV_DATASET.template.name, 'draft-seed');
+      const seedDraft = (frequency: Seeded = 'QUARTERLY') =>
+        template(
+          'draft',
+          DEV_DATASET.templates.find((t) => t.frequency === frequency)!.name,
+          'draft-seed',
+          frequency,
+        );
 
       it.each([
         [
           'setTemplateQuestions',
-          (w: World) => {
-            w.setQuestionsFails = new ChecklistQuestionNotFoundError();
-          },
+          (w: World) =>
+            w.setQuestionsFails.set(
+              'draft-seed',
+              new ChecklistQuestionNotFoundError(),
+            ),
           /WARN.*draft-seed.*ChecklistQuestionNotFoundError/,
         ],
         [
           'activateTemplate',
-          (w: World) => {
-            w.activateFails = new ReviewTemplateEmptyError();
-          },
+          (w: World) =>
+            w.activateFails.set('draft-seed', new ReviewTemplateEmptyError()),
           /WARN.*draft-seed.*ReviewTemplateEmptyError/,
         ],
       ])(
@@ -865,21 +906,45 @@ describe('seedDevDataset catalog', () => {
           fail(world);
           const log = jest.fn();
 
-          const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+          const outcomes = await seedDevDataset(world.deps, DEV_DATASET, log);
 
-          expect(kind).toBe('skip-unfinishable-draft');
-          expect(world.createdDrafts).toEqual([]);
-          expect(world.activated).toEqual([]);
-          expect(world.templates.map((t) => t.status)).toEqual(['draft']);
+          expect(outcomes.QUARTERLY).toBe('skip-unfinishable-draft');
+          expect(world.createdDrafts).toEqual([ANNUAL_TEMPLATE]);
+          expect(world.activated).toEqual(['draft-annual']);
+          expect(world.templates.map((t) => [t.frequency, t.status])).toEqual([
+            ['QUARTERLY', 'draft'],
+            ['ANNUAL', 'active'],
+          ]);
           expect((log.mock.calls as [string][]).map(([l]) => l)).toContainEqual(
             expect.stringMatching(warning),
           );
         },
       );
 
+      it('an unfinishable ANNUAL draft blocks only the ANNUAL lineage', async () => {
+        const world = buildWorld({ templates: [seedDraft('ANNUAL')] });
+        world.activateFails.set('draft-seed', new ReviewTemplateEmptyError());
+
+        const outcomes = await seedDevDataset(
+          world.deps,
+          DEV_DATASET,
+          jest.fn(),
+        );
+
+        expect(outcomes).toEqual({
+          QUARTERLY: 'create',
+          ANNUAL: 'skip-unfinishable-draft',
+        });
+        expect(world.activated).toEqual(['draft-quarterly']);
+        expect(world.templates.map((t) => [t.frequency, t.status])).toEqual([
+          ['ANNUAL', 'draft'],
+          ['QUARTERLY', 'active'],
+        ]);
+      });
+
       it('propagates an error that is not an expected domain error', async () => {
         const world = buildWorld({ templates: [seedDraft()] });
-        world.activateFails = new Error('database is down');
+        world.activateFails.set('draft-seed', new Error('database is down'));
 
         await expect(
           seedDevDataset(world.deps, DEV_DATASET, jest.fn()),
@@ -887,22 +952,46 @@ describe('seedDevDataset catalog', () => {
       });
     });
 
-    it('leaves an active template without questions untouched and warns', async () => {
-      const world = buildWorld({
-        templates: [template('active', 'Empty one', 'active-empty')],
+    describe('an active template without questions', () => {
+      it('leaves a QUARTERLY one untouched and warns, creating the ANNUAL one', async () => {
+        const world = buildWorld({
+          templates: [template('active', 'Empty one', 'active-empty')],
+        });
+        world.snapshotSizes.set('active-empty', 0);
+        const log = jest.fn();
+
+        const outcomes = await seedDevDataset(world.deps, DEV_DATASET, log);
+
+        expect(outcomes).toEqual({
+          QUARTERLY: 'skip-unusable-active',
+          ANNUAL: 'create',
+        });
+        expect(world.createdDrafts).toEqual([ANNUAL_TEMPLATE]);
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(/WARN.*active-empty.*no questions/),
+        );
       });
-      world.snapshotSizes.set('active-empty', 0);
-      const log = jest.fn();
 
-      const kind = await seedDevDataset(world.deps, DEV_DATASET, log);
+      it('leaves an ANNUAL one untouched and warns, creating the QUARTERLY one', async () => {
+        const world = buildWorld({
+          templates: [
+            template('active', 'Empty annual', 'active-empty', 'ANNUAL'),
+          ],
+        });
+        world.snapshotSizes.set('active-empty', 0);
+        const log = jest.fn();
 
-      expect(kind).toBe('skip-unusable-active');
+        const outcomes = await seedDevDataset(world.deps, DEV_DATASET, log);
 
-      expect(world.createdDrafts).toEqual([]);
-      expect(world.activated).toEqual([]);
-      expect(log).toHaveBeenCalledWith(
-        expect.stringMatching(/WARN.*active-empty.*no questions/),
-      );
+        expect(outcomes).toEqual({
+          QUARTERLY: 'create',
+          ANNUAL: 'skip-unusable-active',
+        });
+        expect(world.createdDrafts).toEqual([QUARTERLY_TEMPLATE]);
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(/WARN.*active-empty.*no questions/),
+        );
+      });
     });
   });
 });
@@ -943,7 +1032,7 @@ describe('seedDevDataset sessions', () => {
   const linesOf = (log: jest.Mock) =>
     (log.mock.calls as [string][]).map(([line]) => line);
 
-  it('opens, records and completes the three planned sessions and leaves the draft open', async () => {
+  it('opens, records and completes the four planned sessions and leaves the draft open', async () => {
     const world = buildWorld();
 
     await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
@@ -967,19 +1056,36 @@ describe('seedDevDataset sessions', () => {
         'MAINTENANCE_TECHNICIAN',
       ],
       [
+        idOfUser(world, TECHNICIAN),
+        idOfCommunity(world, NORTH),
+        'MAINTENANCE_TECHNICIAN',
+      ],
+      [
         idOfUser(world, REP),
         idOfCommunity(world, NORTH),
         'COMMUNITY_REPRESENTATIVE',
       ],
     ]);
-    expect(world.opened.every((o) => o.templateId === 'draft-new')).toBe(true);
+    expect(world.opened.map((o) => o.templateId)).toEqual([
+      'draft-quarterly',
+      'draft-quarterly',
+      'draft-quarterly',
+      'draft-annual',
+      'draft-quarterly',
+    ]);
     expect(world.sessions.map((x) => [x.status, x.elementIds.length])).toEqual([
+      ['completed', 2],
       ['completed', 2],
       ['completed', 2],
       ['completed', 2],
       ['draft', 1],
     ]);
-    expect(world.completedIds).toEqual(['session-1', 'session-2', 'session-3']);
+    expect(world.completedIds).toEqual([
+      'session-1',
+      'session-2',
+      'session-3',
+      'session-4',
+    ]);
   });
 
   it('records the planned outcomes by element name as the performer', async () => {
@@ -999,9 +1105,9 @@ describe('seedDevDataset sessions', () => {
     expect(south[0].input).toEqual({
       kind: 'reviewed',
       answers: [
-        { questionId: 'draft-new-q0', value: 'NO' },
-        { questionId: 'draft-new-q1', value: 'YES' },
-        { questionId: 'draft-new-q2', value: 'YES' },
+        { questionId: 'draft-quarterly-q0', value: 'NO' },
+        { questionId: 'draft-quarterly-q1', value: 'YES' },
+        { questionId: 'draft-quarterly-q2', value: 'YES' },
       ],
     });
     expect(south[1].input).toMatchObject({ kind: 'unreviewed' });
@@ -1009,11 +1115,34 @@ describe('seedDevDataset sessions', () => {
       Array(2).fill({
         kind: 'reviewed',
         answers: [0, 1, 2].map((i) => ({
-          questionId: `draft-new-q${i}`,
+          questionId: `draft-quarterly-q${i}`,
           value: 'YES',
         })),
       }),
     );
+  });
+
+  it('answers the ANNUAL session against the ANNUAL template snapshot', async () => {
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    const annual = recordedFor(world, 'session-4');
+    expect(annual.map((r) => elementName(world, r.elementId))).toEqual([
+      'Dev Seed Extinguisher North Lobby',
+      'Dev Seed Extinguisher North Garage',
+    ]);
+    expect(annual[0].actor).toEqual({
+      userId: idOfUser(world, TECHNICIAN),
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+    expect(annual[0].input).toEqual({
+      kind: 'reviewed',
+      answers: [0, 1, 2].map((i) => ({
+        questionId: `draft-annual-q${i}`,
+        value: 'YES',
+      })),
+    });
   });
 
   it('a second run changes nothing and logs no seeded line and no warning', async () => {
@@ -1027,7 +1156,7 @@ describe('seedDevDataset sessions', () => {
 
     expect(world.opened).toHaveLength(opened);
     expect(world.recorded).toHaveLength(recorded);
-    expect(world.completedIds).toHaveLength(3);
+    expect(world.completedIds).toHaveLength(4);
     const lines = linesOf(log);
     expect(lines.filter((l) => l.startsWith('Seeded'))).toEqual([]);
     expect(lines.filter((l) => l.startsWith('WARN'))).toEqual([]);
@@ -1044,6 +1173,7 @@ describe('seedDevDataset sessions', () => {
     const first = world.sessions[0];
     first.status = 'draft';
     first.templateId = 'old-template';
+    world.templates.push(template('retired', 'Old', 'old-template'));
     first.elementIds = first.elementIds.slice(0, 1);
     world.recorded.length = 0;
     world.opened.length = 0;
@@ -1067,6 +1197,7 @@ describe('seedDevDataset sessions', () => {
     const first = world.sessions[0];
     first.status = 'draft';
     first.templateId = 'empty-template';
+    world.templates.push(template('retired', 'Empty', 'empty-template'));
     first.elementIds = first.elementIds.slice(0, 1);
     world.snapshotSizes.set('empty-template', 0);
     world.recorded.length = 0;
@@ -1095,7 +1226,7 @@ describe('seedDevDataset sessions', () => {
 
     expect(recordedFor(world, second.id)).toHaveLength(2);
     expect(world.completedIds).toEqual([second.id]);
-    expect(world.sessions).toHaveLength(4);
+    expect(world.sessions).toHaveLength(5);
   });
 
   it('covers an element QA added so a completed session can be completed', async () => {
@@ -1122,7 +1253,7 @@ describe('seedDevDataset sessions', () => {
 
     await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
 
-    const draft = world.sessions[3];
+    const draft = world.sessions[4];
     expect(draft.status).toBe('draft');
     expect(world.completedIds).not.toContain(draft.id);
     expect(
@@ -1148,7 +1279,7 @@ describe('seedDevDataset sessions', () => {
     const warns = linesOf(log).filter((l) =>
       l.startsWith('WARN: skipped open session'),
     );
-    expect(warns).toHaveLength(2);
+    expect(warns).toHaveLength(3);
     expect(warns[0]).toContain(TECHNICIAN);
     expect(warns[0]).toContain(NORTH);
     expect(warns[0]).toContain('CommunityNotInScopeError');
@@ -1156,6 +1287,20 @@ describe('seedDevDataset sessions', () => {
       idOfUser(world, TECHNICIAN_2),
       idOfUser(world, REP),
     ]);
+  });
+
+  it('fails with a clear error when a session frequency has no seeded template', async () => {
+    const world = buildWorld();
+    const quarterlyOnly = {
+      ...DEV_DATASET,
+      templates: DEV_DATASET.templates.filter(
+        (t) => t.frequency === 'QUARTERLY',
+      ),
+    };
+
+    await expect(
+      seedDevDataset(world.deps, quarterlyOnly, jest.fn()),
+    ).rejects.toThrow(/Dev dataset has no ANNUAL template for the session/);
   });
 
   it('propagates a non-domain error from a session', async () => {
@@ -1194,18 +1339,20 @@ describe('seedDevDataset sessions', () => {
     ['skip-unusable-active', () => template('active', 'Empty one', 't-e')],
     [
       'skip-unfinishable-draft',
-      () => template('draft', DEV_DATASET.template.name, 't-u'),
+      () => template('draft', QUARTERLY_TEMPLATE.name, 't-u'),
     ],
-  ])('with a %s template', (kind, build) => {
-    it('opens no new session but still resumes an existing draft', async () => {
-      const world = buildWorld({ templates: [build()] });
+  ])('with a QUARTERLY %s template', (kind, build) => {
+    it('opens no new QUARTERLY session but still resumes an existing draft and opens the ANNUAL one', async () => {
+      const world = buildWorld({
+        templates: [build(), template('retired', 'Old', 'old-template')],
+      });
       world.snapshotSizes.set('t-e', 0);
       if (kind === 'skip-unfinishable-draft') {
-        world.activateFails = new ReviewTemplateEmptyError();
+        world.activateFails.set('t-u', new ReviewTemplateEmptyError());
       }
-      // First pass seeds the users and finds nothing to open.
+      // First pass seeds the users: only the ANNUAL lineage is usable.
       await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
-      expect(world.opened).toEqual([]);
+      expect(world.opened.map((o) => o.templateId)).toEqual(['draft-annual']);
       world.sessions.push({
         id: 'legacy-draft',
         performedById: idOfUser(world, REP),
@@ -1218,11 +1365,107 @@ describe('seedDevDataset sessions', () => {
 
       await seedDevDataset(world.deps, DEV_DATASET, log);
 
-      expect(world.opened).toEqual([]);
+      expect(world.opened.map((o) => o.templateId)).toEqual(['draft-annual']);
       expect(recordedFor(world, 'legacy-draft')).toHaveLength(1);
       expect(linesOf(log)).toContainEqual(
         expect.stringContaining(`no usable template (${kind})`),
       );
+    });
+  });
+
+  describe.each([
+    [
+      'skip-foreign-draft',
+      () => template('draft', 'Not a seed name', 't-f', 'ANNUAL'),
+    ],
+    [
+      'skip-unusable-active',
+      () => template('active', 'Empty one', 't-e', 'ANNUAL'),
+    ],
+    [
+      'skip-unfinishable-draft',
+      () => template('draft', ANNUAL_TEMPLATE.name, 't-u', 'ANNUAL'),
+    ],
+  ])('with an ANNUAL %s template', (kind, build) => {
+    it('skips only the ANNUAL session and still seeds the QUARTERLY ones', async () => {
+      const world = buildWorld({ templates: [build()] });
+      world.snapshotSizes.set('t-e', 0);
+      if (kind === 'skip-unfinishable-draft') {
+        world.activateFails.set('t-u', new ReviewTemplateEmptyError());
+      }
+      const log = jest.fn();
+
+      await seedDevDataset(world.deps, DEV_DATASET, log);
+
+      expect(world.opened.map((o) => o.templateId)).toEqual([
+        'draft-quarterly',
+        'draft-quarterly',
+        'draft-quarterly',
+        'draft-quarterly',
+      ]);
+      expect(world.completedIds).toHaveLength(3);
+      expect(linesOf(log)).toContainEqual(
+        expect.stringContaining(
+          `no usable template (${kind}), so the new session of ${TECHNICIAN} in ${NORTH} is skipped`,
+        ),
+      );
+    });
+  });
+
+  describe('one session per performer, community and frequency', () => {
+    // technician@ already completed a QUARTERLY session in North against a
+    // template version that has since been replaced by a newer active one.
+    const withReplacedQuarterlyVersion = () => {
+      const world = fullyExistingWorld();
+      world.communities = [
+        { id: 'c-north', name: NORTH },
+        { id: 'c-south', name: SOUTH },
+      ];
+      world.templates = [
+        template('retired', 'Old quarterly', 'old-template'),
+        template('active', 'New quarterly', 'new-template'),
+      ];
+      world.sessions.push({
+        id: 'earlier-quarterly',
+        performedById: `existing-${TECHNICIAN}`,
+        communityId: 'c-north',
+        templateId: 'old-template',
+        status: 'completed',
+        elementIds: [],
+      });
+      return world;
+    };
+    const openedFor = (world: World) =>
+      world.opened
+        .filter(
+          (o) =>
+            o.performedById === `existing-${TECHNICIAN}` &&
+            o.communityId === 'c-north',
+        )
+        .map((o) => o.templateId);
+
+    it('opens the ANNUAL session next to the completed QUARTERLY one instead of skipping it as a duplicate', async () => {
+      const world = withReplacedQuarterlyVersion();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(openedFor(world)).toEqual(['draft-annual']);
+    });
+
+    it('matches the replaced-version session by its frozen template frequency and opens no second QUARTERLY session', async () => {
+      const world = withReplacedQuarterlyVersion();
+
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+      await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+      expect(openedFor(world)).toEqual(['draft-annual']);
+      expect(
+        world.sessions.filter(
+          (x) =>
+            x.performedById === `existing-${TECHNICIAN}` &&
+            x.communityId === 'c-north',
+        ),
+      ).toHaveLength(2);
     });
   });
 });

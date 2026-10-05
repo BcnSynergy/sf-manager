@@ -75,7 +75,9 @@ import type {
   DevDataset,
   DevSession,
   DevSessionEntry,
+  DevTemplate,
   DevUser,
+  SeededFrequency,
 } from './dev-dataset';
 import {
   describeUserDrift,
@@ -233,12 +235,14 @@ export async function runDevSeed(
   return 'seeded';
 }
 
-// Additive and idempotent: use cases run only for what is missing.
+// Additive and idempotent: use cases run only for what is missing. Returns
+// the outcome of each template lineage, which blocks only the new sessions of
+// its own frequency.
 export async function seedDevDataset(
   deps: DevSeedDeps,
   data: DevDataset,
   log: Log,
-): Promise<TemplateOutcome> {
+): Promise<Record<SeededFrequency, TemplateOutcome>> {
   await deps.updateProfile.execute(data.profile);
   log('Set the organization profile.');
 
@@ -248,16 +252,29 @@ export async function seedDevDataset(
   await seedAssignments(deps, data, communityIdByName, userIdByEmail, log);
   await seedElements(deps, data, communityIdByName, log);
   const questionIds = await seedQuestions(deps, data, log);
-  const templateKind = await seedTemplate(deps, data, questionIds, log);
+  const outcomeByFrequency = new Map<SeededFrequency, TemplateOutcome>();
+  for (const template of data.templates) {
+    outcomeByFrequency.set(
+      template.frequency,
+      await seedTemplate(deps, template, questionIds, log),
+    );
+  }
+  const outcomeOf = (frequency: SeededFrequency): TemplateOutcome => {
+    const outcome = outcomeByFrequency.get(frequency);
+    if (outcome === undefined) {
+      throw new Error(`Dev dataset has no ${frequency} template.`);
+    }
+    return outcome;
+  };
   await seedSessions(
     deps,
     data,
     communityIdByName,
     userIdByEmail,
-    templateKind,
+    outcomeOf,
     log,
   );
-  return templateKind;
+  return { QUARTERLY: outcomeOf('QUARTERLY'), ANNUAL: outcomeOf('ANNUAL') };
 }
 
 async function seedCompanies(
@@ -496,11 +513,11 @@ type TemplateOutcome = TemplatePlan['kind'] | 'skip-unfinishable-draft';
 // Returns the outcome kind so callers can tell a usable template from a skip.
 async function seedTemplate(
   deps: DevSeedDeps,
-  data: DevDataset,
+  desired: DevTemplate,
   questionIds: string[],
   log: Log,
 ): Promise<TemplateOutcome> {
-  const { elementType, frequency } = data.template;
+  const { elementType, frequency } = desired;
   const lineage = (await deps.templateRepository.findAll()).filter(
     (t) => t.elementType === elementType && t.frequency === frequency,
   );
@@ -528,11 +545,11 @@ async function seedTemplate(
       );
       return 'skip-unfinishable-draft';
     }
-    log(`Seeded template: ${data.template.name}`);
+    log(`Seeded template: ${desired.name}`);
   } else if (plan.kind === 'create') {
-    const { id } = await deps.createDraftTemplate.execute(data.template);
+    const { id } = await deps.createDraftTemplate.execute(desired);
     await fillAndActivate(deps, id, questionIds);
-    log(`Seeded template: ${data.template.name}`);
+    log(`Seeded template: ${desired.name}`);
   } else {
     log(SKIP_WARNINGS[plan.kind](plan.id));
   }
@@ -571,9 +588,14 @@ async function seedSessions(
   data: DevDataset,
   communityIdByName: Map<string, string>,
   userIdByEmail: Map<string, string>,
-  templateKind: TemplateOutcome,
+  outcomeOf: (frequency: SeededFrequency) => TemplateOutcome,
   log: Log,
 ): Promise<void> {
+  // Template versions never change while sessions are seeded, so the lineage
+  // is read once: it maps each session's frozen template to its frequency.
+  const frequencyByTemplateId = new Map(
+    (await deps.templateRepository.findAll()).map((t) => [t.id, t.frequency]),
+  );
   for (const session of data.sessions) {
     const { performerEmail, communityName } = session;
     const where = `${performerEmail} in ${communityName}`;
@@ -587,8 +609,10 @@ async function seedSessions(
     const communityId = requireId(communityIdByName, communityName);
     const plan = planSession(
       communityId,
+      session.frequency,
       await deps.sessionRepository.findCompletedForPerformer(performerId),
       await deps.sessionRepository.findDraftsByPerformer(performerId),
+      frequencyByTemplateId,
     );
 
     if (plan.kind === 'skip') {
@@ -596,6 +620,9 @@ async function seedSessions(
       continue;
     }
     // Only a new session needs the template; a resumed draft has its own.
+    // Resolved first: a session without a template fails with a clear error.
+    const template = templateOf(data, session);
+    const templateKind = outcomeOf(template.frequency);
     if (plan.kind === 'open' && templateKind.startsWith('skip-')) {
       log(
         `WARN: no usable template (${templateKind}), so the new session of ${where} is skipped.`,
@@ -609,7 +636,7 @@ async function seedSessions(
       async () => {
         const changed = await playSession(
           deps,
-          data,
+          template,
           session,
           plan,
           communityId,
@@ -625,12 +652,26 @@ async function seedSessions(
   }
 }
 
+// The dataset template a session is performed against: the one of its own
+// frequency, never a shared one.
+function templateOf(data: DevDataset, session: DevSession): DevTemplate {
+  const template = data.templates.find(
+    (t) => t.frequency === session.frequency,
+  );
+  if (template === undefined) {
+    throw new Error(
+      `Dev dataset has no ${session.frequency} template for the session of "${session.performerEmail}" in "${session.communityName}".`,
+    );
+  }
+  return template;
+}
+
 // Records the planned entries the session lacks, then completes it when the
 // plan says so. Existing entries (including QA edits) are never rewritten.
 // Returns whether anything was written.
 async function playSession(
   deps: DevSeedDeps,
-  data: DevDataset,
+  desired: DevTemplate,
   session: DevSession,
   plan: Exclude<SessionPlan, { kind: 'skip' }>,
   communityId: string,
@@ -642,7 +683,7 @@ async function playSession(
   let changed = plan.kind === 'open';
 
   if (plan.kind === 'open') {
-    const { elementType, frequency } = data.template;
+    const { elementType, frequency } = desired;
     const active = (await deps.templateRepository.findAll()).find(
       (t) =>
         t.status === 'active' &&

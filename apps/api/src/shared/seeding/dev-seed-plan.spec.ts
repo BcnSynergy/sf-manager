@@ -139,7 +139,7 @@ describe('planTemplate', () => {
   const seeded = (status: 'draft' | 'active' | 'retired', id = 't-seed') => ({
     id,
     status,
-    name: 'Dev Seed Extinguisher Monthly Check',
+    name: 'Dev Seed Extinguisher Quarterly Check',
   });
 
   it('creates a new template for an empty lineage', () => {
@@ -236,37 +236,95 @@ describe('isExpectedTemplateError', () => {
 });
 
 describe('planSession', () => {
-  it('skips when a completed session exists in the community', () => {
+  // The frequency of a session is the one of the template it was frozen
+  // against, resolved from the template lineage (design.md Decision 11).
+  const frequencies = new Map<string, 'QUARTERLY' | 'ANNUAL'>([
+    ['t-q', 'QUARTERLY'],
+    ['t-q-old', 'QUARTERLY'],
+    ['t-a', 'ANNUAL'],
+  ]);
+
+  it('skips when a completed session of the same frequency exists in the community', () => {
     expect(
       planSession(
         'c1',
-        [{ communityId: 'c1' }],
-        [{ id: 's', communityId: 'c1' }],
+        'QUARTERLY',
+        [{ communityId: 'c1', templateId: 't-q' }],
+        [{ id: 's', communityId: 'c1', templateId: 't-q' }],
+        frequencies,
       ),
     ).toEqual({ kind: 'skip' });
   });
 
-  it('resumes the draft of the community when none is completed', () => {
+  it('opens an ANNUAL session next to a completed QUARTERLY one in the same community', () => {
     expect(
       planSession(
         'c1',
-        [{ communityId: 'c2' }],
-        [{ id: 's1', communityId: 'c1' }],
+        'ANNUAL',
+        [{ communityId: 'c1', templateId: 't-q' }],
+        [],
+        frequencies,
+      ),
+    ).toEqual({ kind: 'open' });
+  });
+
+  it('skips the ANNUAL plan once a completed ANNUAL session exists', () => {
+    expect(
+      planSession(
+        'c1',
+        'ANNUAL',
+        [
+          { communityId: 'c1', templateId: 't-q' },
+          { communityId: 'c1', templateId: 't-a' },
+        ],
+        [],
+        frequencies,
+      ),
+    ).toEqual({ kind: 'skip' });
+  });
+
+  it('matches a session bound to an older template version by its frequency', () => {
+    expect(
+      planSession(
+        'c1',
+        'QUARTERLY',
+        [{ communityId: 'c1', templateId: 't-q-old' }],
+        [],
+        frequencies,
+      ),
+    ).toEqual({ kind: 'skip' });
+  });
+
+  it('resumes the draft of the community and frequency when none is completed', () => {
+    expect(
+      planSession(
+        'c1',
+        'QUARTERLY',
+        [{ communityId: 'c2', templateId: 't-q' }],
+        [
+          { id: 's-annual', communityId: 'c1', templateId: 't-a' },
+          { id: 's1', communityId: 'c1', templateId: 't-q-old' },
+        ],
+        frequencies,
       ),
     ).toEqual({ kind: 'resume', sessionId: 's1' });
   });
 
-  it('opens when the performer has no session in the community', () => {
+  it('opens when the performer has no session in the community and frequency', () => {
     expect(
       planSession(
         'c1',
-        [{ communityId: 'c2' }],
-        [{ id: 's2', communityId: 'c2' }],
+        'QUARTERLY',
+        [{ communityId: 'c2', templateId: 't-q' }],
+        [{ id: 's2', communityId: 'c2', templateId: 't-q' }],
+        frequencies,
       ),
     ).toEqual({ kind: 'open' });
   });
 
   it('opens for a performer without any session', () => {
-    expect(planSession('c1', [], [])).toEqual({ kind: 'open' });
+    expect(planSession('c1', 'QUARTERLY', [], [], frequencies)).toEqual({
+      kind: 'open',
+    });
   });
 });
