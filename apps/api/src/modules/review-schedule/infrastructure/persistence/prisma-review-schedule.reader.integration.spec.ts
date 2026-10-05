@@ -13,6 +13,12 @@ const idGenerator = new UuidV7IdGenerator();
 
 type Frequency = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL';
 
+interface RecordedOperation {
+  model: string;
+  operation: string;
+  where: Record<string, unknown>;
+}
+
 // The coverage window starts here in every test (a stand-in for
 // `coverageWindowStart(now)`; the adapter applies no quarter logic).
 const SINCE = new Date('2026-06-30T00:00:00.000Z');
@@ -635,6 +641,35 @@ describe('PrismaReviewScheduleReader (integration)', () => {
     });
   });
 
+  // Records every Prisma client operation of one `listPairs` call through a
+  // client extension (E9: the repo has no other counting mechanism). The
+  // extended client is passed with no cast: the constructor takes the
+  // structural `ReviewSchedulePrisma`.
+  const recordOperations = async (
+    scope: ScheduleScope,
+  ): Promise<{ operations: RecordedOperation[]; pairs: SchedulePair[] }> => {
+    const operations: RecordedOperation[] = [];
+    const recording = prisma.$extends({
+      query: {
+        $allOperations: ({ model, operation, args, query }) => {
+          operations.push({
+            model: String(model),
+            operation,
+            where: (args as { where?: Record<string, unknown> }).where ?? {},
+          });
+          return query(args);
+        },
+      },
+    });
+
+    const pairs = await new PrismaReviewScheduleReader(recording).listPairs(
+      scope,
+      SINCE,
+    );
+
+    return { operations, pairs };
+  };
+
   describe('constant lookup count', () => {
     const seedCommunities = async (count: number): Promise<string[]> => {
       const user = await createUser();
@@ -659,34 +694,78 @@ describe('PrismaReviewScheduleReader (integration)', () => {
       return ids;
     };
 
-    // Counts every Prisma client operation of one `listPairs` call through a
-    // client extension (E9: the repo has no other counting mechanism). The
-    // extended client is passed with no cast: the constructor takes the
-    // structural `ReviewSchedulePrisma`.
-    const countOperations = async (ids: string[]): Promise<number> => {
-      let count = 0;
-      const counted = prisma.$extends({
-        query: {
-          $allOperations: ({ args, query }) => {
-            count += 1;
-            return query(args);
-          },
-        },
-      });
-      const countingReader = new PrismaReviewScheduleReader(counted);
-
-      const pairs = await countingReader.listPairs(scopeOf(...ids), SINCE);
-
-      expect(pairs).toHaveLength(ids.length);
-      return count;
-    };
-
     it('issues the same six operations for 2 and for 20 communities', async () => {
-      const few = await countOperations(await seedCommunities(2));
-      const many = await countOperations(await seedCommunities(20));
+      const fewIds = await seedCommunities(2);
+      const few = await recordOperations(scopeOf(...fewIds));
+      const manyIds = await seedCommunities(20);
+      const many = await recordOperations(scopeOf(...manyIds));
 
-      expect(few).toBe(6);
-      expect(many).toBe(few);
+      // Every seeded community yields a pair, so a per-pair lookup would show.
+      expect(few.pairs).toHaveLength(fewIds.length);
+      expect(many.pairs).toHaveLength(manyIds.length);
+      expect(few.operations).toHaveLength(6);
+      expect(many.operations).toHaveLength(few.operations.length);
     }, 60_000);
+  });
+
+  // The fold discards out-of-scope rows, so no result-based test can notice a
+  // query that dropped its scope filter: assert on the arguments instead.
+  describe('scope on every query', () => {
+    const whereOf = (
+      operations: RecordedOperation[],
+      model: string,
+    ): Record<string, unknown>[] =>
+      operations
+        .filter((operation) => operation.model === model)
+        .map((operation) => operation.where);
+
+    it('restricts communities, live elements and every session query to the scoped ids', async () => {
+      const ids = [randomUUID(), randomUUID()];
+
+      const { operations } = await recordOperations(scopeOf(...ids));
+
+      expect(operations.map((op) => `${op.model}.${op.operation}`)).toEqual([
+        'Community.findMany',
+        'InspectableElement.groupBy',
+        'ReviewTemplate.findMany',
+        'ReviewSession.groupBy',
+        'ReviewSession.groupBy',
+        'ReviewSession.findMany',
+      ]);
+      // q1
+      expect(whereOf(operations, 'Community')[0]).toMatchObject({
+        id: { in: ids },
+      });
+      // q2
+      expect(whereOf(operations, 'InspectableElement')[0]).toMatchObject({
+        communityId: { in: ids },
+      });
+      // q4, q5, q6
+      const sessionWheres = whereOf(operations, 'ReviewSession');
+      expect(sessionWheres).toHaveLength(3);
+      for (const where of sessionWheres) {
+        expect(where).toMatchObject({ communityId: { in: ids } });
+      }
+    });
+
+    it('leaves the template lookup (q3) unscoped by community', async () => {
+      const { operations } = await recordOperations(scopeOf(randomUUID()));
+
+      const [templateWhere] = whereOf(operations, 'ReviewTemplate');
+      expect(templateWhere).not.toHaveProperty('communityId');
+      expect(templateWhere).not.toHaveProperty('id');
+    });
+
+    it('adds no community restriction in the all scope', async () => {
+      const { operations } = await recordOperations({ kind: 'all' });
+
+      expect(whereOf(operations, 'Community')[0].id).toBeUndefined();
+      expect(
+        whereOf(operations, 'InspectableElement')[0].communityId,
+      ).toBeUndefined();
+      for (const where of whereOf(operations, 'ReviewSession')) {
+        expect(where.communityId).toBeUndefined();
+      }
+    });
   });
 });

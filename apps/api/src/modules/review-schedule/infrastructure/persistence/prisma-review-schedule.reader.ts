@@ -18,10 +18,9 @@ import type { PairCoverage } from '../../domain/review-due.policy';
 // `PrismaService` and its extended clients, with no cast and no import of the
 // generated client (ADR-013).
 //
-// Hand-written on purpose: `Pick<PrismaService, ...>` is rejected for a
-// `$extends` client (spike 4.1). The `@Inject(PrismaService)` binding below is
-// only type-checked by constructing `new PrismaReviewScheduleReader(prisma)`
-// (the integration spec), so a future `useClass` binding is not compile-checked.
+// The `@Inject(PrismaService)` binding below is only type-checked by
+// constructing `new PrismaReviewScheduleReader(prisma)` (the integration
+// spec), so a future `useClass` binding is not compile-checked.
 type CoveringFrequency = 'QUARTERLY' | 'ANNUAL';
 type IdFilter = { in: string[] } | undefined;
 
