@@ -59,18 +59,18 @@ Strict TDD: every GREEN task is preceded by its RED task. Verification commands:
 
 Start: main. Finish: seed creates both lineages and four completed sessions; all seeding specs green. Rollback: revert PR.
 
-- [ ] 1.1 Commit planning artifacts under `openspec/changes/review-schedule/` (proposal, specs, design, tasks)
-- [ ] 1.2 RED `dev-dataset.spec.ts`: `templates` holds QUARTERLY and ANNUAL, no `MONTHLY` tag, questions tagged `['QUARTERLY','ANNUAL']`, S1–S3 + `rep@` draft QUARTERLY, S4 `technician@`/North/ANNUAL, 4 completed + 1 draft; rewrite test at 174-181 — dev-seed-data *Dev Dataset Contents* (Dataset shape, Templates are QUARTERLY and ANNUAL, Four completed sessions)
-- [ ] 1.3 RED `dev-seed-plan.spec.ts`: session key `(performer, community, frequency)`; per-lineage template outcome blocks only its frequency; S4 plan; `seeded()` name follows new templates — *A performer and community may hold one session per frequency*, *The session key includes the frequency*
-- [ ] 1.4 RED `seed-dev-dataset.spec.ts`: `template(frequency)` helper, record return `Record<SeededFrequency, TemplateOutcome>`, `createdDrafts` for both templates, unusable ANNUAL blocks only ANNUAL, unusable QUARTERLY blocks only QUARTERLY, unfinishable draft per lineage — *An unusable ANNUAL template blocks only ANNUAL sessions*, *Foreign or unusable template…*, *Seed draft that cannot be finished…*
-- [ ] 1.5 RED `seed-dev-dataset.integration.spec.ts` per design Test isolation: `buildDataset` keeps both templates; `lineage`/`lineageKind` take required `SeededFrequency`; per-frequency first-run assertions; `n14`/`u21` reset both lineages; second run keeps 4 completed, one ANNUAL template and one ANNUAL session; replaced-version session matched by frozen-template frequency — *Second run adds no second annual template or session*, *Partial data completed*, *New template version does not open a second draft*
-- [ ] 1.6 GREEN `dev-dataset.ts`: `SeededFrequency`, `templates: DevTemplate[]`, `DevSession.frequency`, S4, question tags (Decision 11)
-- [ ] 1.7 GREEN `dev-seed-plan.ts`: widened key and per-lineage planning
-- [ ] 1.8 GREEN `seed-dev-dataset.ts`: per-template `seedTemplate`, record return, `playSession` uses the session's own template (reads at 503, 531, 533, 535, 645)
-- [ ] 1.9 REFACTOR: re-run the `MONTHLY`/`Monthly` grep (E13) over `apps/api/src/shared/seeding` and `README.md`; remove leftovers; fix `dev-seed-docs.spec.ts` line 55 loop only after 1.10
-- [ ] 1.10 RED `dev-seed-docs.spec.ts`: README must name every template in `DEV_DATASET.templates`
-- [ ] 1.11 GREEN `README.md` line 80 and `CLAUDE.md` seed bullet: Quarterly and Annual templates, four completed sessions, one draft
-- [ ] 1.12 Verify: `npm run test --workspace=apps/api -- shared/seeding` and `npm run test:integration --workspace=apps/api -- seed-dev-dataset`; lint
+- [x] 1.1 Commit planning artifacts under `openspec/changes/review-schedule/` (proposal, specs, design, tasks)
+- [x] 1.2 RED `dev-dataset.spec.ts`: `templates` holds QUARTERLY and ANNUAL, no `MONTHLY` tag, questions tagged `['QUARTERLY','ANNUAL']`, S1–S3 + `rep@` draft QUARTERLY, S4 `technician@`/North/ANNUAL, 4 completed + 1 draft; rewrite test at 174-181 — dev-seed-data *Dev Dataset Contents* (Dataset shape, Templates are QUARTERLY and ANNUAL, Four completed sessions)
+- [x] 1.3 RED `dev-seed-plan.spec.ts`: session key `(performer, community, frequency)`; per-lineage template outcome blocks only its frequency; S4 plan; `seeded()` name follows new templates — *A performer and community may hold one session per frequency*, *The session key includes the frequency*
+- [x] 1.4 RED `seed-dev-dataset.spec.ts`: `template(frequency)` helper, record return `Record<SeededFrequency, TemplateOutcome>`, `createdDrafts` for both templates, unusable ANNUAL blocks only ANNUAL, unusable QUARTERLY blocks only QUARTERLY, unfinishable draft per lineage — *An unusable ANNUAL template blocks only ANNUAL sessions*, *Foreign or unusable template…*, *Seed draft that cannot be finished…*
+- [x] 1.5 RED `seed-dev-dataset.integration.spec.ts` per design Test isolation: `buildDataset` keeps both templates; `lineage`/`lineageKind` take required `SeededFrequency`; per-frequency first-run assertions; `n14`/`u21` reset both lineages; second run keeps 4 completed, one ANNUAL template and one ANNUAL session; replaced-version session matched by frozen-template frequency — *Second run adds no second annual template or session*, *Partial data completed*, *New template version does not open a second draft*
+- [x] 1.6 GREEN `dev-dataset.ts`: `SeededFrequency`, `templates: DevTemplate[]`, `DevSession.frequency`, S4, question tags (Decision 11)
+- [x] 1.7 GREEN `dev-seed-plan.ts`: widened key and per-lineage planning
+- [x] 1.8 GREEN `seed-dev-dataset.ts`: per-template `seedTemplate`, record return, `playSession` uses the session's own template (reads at 503, 531, 533, 535, 645)
+- [x] 1.9 REFACTOR: re-run the `MONTHLY`/`Monthly` grep (E13) over `apps/api/src/shared/seeding` and `README.md`; remove leftovers; fix `dev-seed-docs.spec.ts` line 55 loop only after 1.10
+- [x] 1.10 RED `dev-seed-docs.spec.ts`: README must name every template in `DEV_DATASET.templates`
+- [x] 1.11 GREEN `README.md` line 80 and `CLAUDE.md` seed bullet: Quarterly and Annual templates, four completed sessions, one draft
+- [x] 1.12 Verify: `npm run test --workspace=apps/api -- shared/seeding` and `npm run test:integration --workspace=apps/api -- seed-dev-dataset`; lint
 - [ ] 1.13 Manual acceptance (needs the user's explicit OK, then Prisma consent per CLAUDE.md): `migrate reset` + `db seed` with `NODE_ENV=development`; confirm via `psql` two templates, four completed sessions (one ANNUAL, North), one draft; rerun seed, counts unchanged — *Dataset shape*, *Second run*
 
 ## PR 2 — Clock and Madrid calendar helpers (~300 lines)
