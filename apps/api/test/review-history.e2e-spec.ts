@@ -2551,7 +2551,7 @@ describe('Review History (e2e)', () => {
   // match, still excluding the DTO, the controller, the response type and
   // ROLE_PERMISSIONS (which grants a plain string permission, not a
   // capability, and is asserted separately by role-permission.checker.spec.ts).
-  describe('The manager-capability mechanism exists only in the files this PR and PR 1 added', () => {
+  describe('The manager-capability mechanism exists only in the allowlisted files', () => {
     // Exactly the production (non-spec) files PR 1/4 and PR 2/4 added or
     // modified to declare/reference
     // ManagerCapability/managerCapabilities/VIEW_ALL_REVIEWS (design.md File
@@ -2653,7 +2653,7 @@ describe('Review History (e2e)', () => {
       return offendingFiles.sort();
     };
 
-    it('is declared/referenced in exactly the persistence-layer files this PR added, and nowhere else', () => {
+    it('is declared/referenced in exactly the allowlisted files, and nowhere else', () => {
       const declaringFiles = findDeclaringFiles();
 
       expect(declaringFiles).toEqual([...ALLOWED_FILES].sort());
