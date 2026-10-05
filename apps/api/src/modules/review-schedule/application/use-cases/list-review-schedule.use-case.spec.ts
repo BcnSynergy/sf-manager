@@ -197,9 +197,12 @@ describe('ListReviewScheduleUseCase', () => {
     });
 
     it('Technician scope is assignment-based', async () => {
-      // T is assigned to A and performed nothing there. T performed a session
-      // in B without an active assignment: the use case never looks at
-      // performers, so B stays out.
+      // Spec: Scope Follows the Caller's Role, technician scenario. Scope is
+      // purely assignment-based: T is assigned to A and performed a session in
+      // community B without an active assignment there. B has schedule data in
+      // the reader (a pair) but the use case never looks at performers, so B
+      // stays out of the result.
+      h.reader.seed(pair('c-perf-b', 'Performed-in B', UPCOMING));
       h.communityScope.assign('tech-1', 'c-a');
 
       const result = await h.useCase.execute({
@@ -207,6 +210,8 @@ describe('ListReviewScheduleUseCase', () => {
         role: 'MAINTENANCE_TECHNICIAN',
       });
 
+      expect(ids(result)).toContain('c-a');
+      expect(ids(result)).not.toContain('c-perf-b');
       expect(ids(result)).toEqual(['c-a']);
       expect(h.reader.calls[0].scope).toEqual({
         kind: 'communities',
@@ -227,10 +232,12 @@ describe('ListReviewScheduleUseCase', () => {
     });
 
     it.each<Role>(['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'])(
-      'Deactivated assignment removes scope: a %s with no active assignment sees nothing and no data is read',
+      'a %s with no active assignment sees an empty list and the reader is not called',
       async (role) => {
-        // An assignment that was deactivated is simply absent from
-        // listAssignedCommunityIds; the fake holds none for this user.
+        // Deactivation itself is filtered in the community-scope adapter
+        // (findActiveByUser); it is tested in
+        // assignment-community-scope.checker.spec.ts. Here the fake simply
+        // holds no assignment for this user.
         const result = await h.useCase.execute({ userId: 'user-9', role });
 
         expect(result).toEqual([]);
@@ -397,6 +404,26 @@ describe('ListReviewScheduleUseCase', () => {
       const byId = new Map(result.map((row) => [row.communityId, row]));
       expect(byId.get('c-1')?.lastCoveringSessionDate).toBe('2026-11-14');
       expect(byId.get('c-2')?.lastCoveringSessionDate).toBe('2026-11-15');
+    });
+
+    it('formats the date in Europe/Madrid during CEST (UTC+2), across midnight', async () => {
+      // 22:30 UTC on 14 Jul is 00:30 on 15 Jul in Madrid; 21:30 UTC is 23:30
+      // on 14 Jul.
+      const covering = (at: string): PairCoverage => ({
+        lastBeforeSinceAt: null,
+        lastAnnualAt: null,
+        recentCoveringAt: [date(at)],
+      });
+      h.reader.seed(
+        pair('c-1', 'First', covering('2026-07-14T22:30:00Z')),
+        pair('c-2', 'Second', covering('2026-07-14T21:30:00Z')),
+      );
+
+      const result = await h.useCase.execute(admin);
+
+      const byId = new Map(result.map((row) => [row.communityId, row]));
+      expect(byId.get('c-1')?.lastCoveringSessionDate).toBe('2026-07-15');
+      expect(byId.get('c-2')?.lastCoveringSessionDate).toBe('2026-07-14');
     });
 
     it('uses the latest of the in-window sessions, whatever their order', async () => {
