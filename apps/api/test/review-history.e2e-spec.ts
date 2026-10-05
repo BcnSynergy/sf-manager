@@ -2583,6 +2583,12 @@ describe('Review History (e2e)', () => {
       'modules/users/application/use-cases/list-users.use-case.ts',
       'modules/users/presentation/dto/user-response.dto.ts',
       'modules/users/presentation/users.controller.ts',
+      // Later changes that legitimately read the capability: the dev seed
+      // (`dev-seed-data`) grants VIEW_ALL_REVIEWS to its seeded manager, and
+      // the review schedule (`review-schedule` PR 5) scopes a manager by it.
+      'shared/seeding/dev-dataset.ts',
+      'shared/seeding/seed-dev-dataset.ts',
+      'modules/review-schedule/application/use-cases/list-review-schedule.use-case.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     // The unit/integration specs PR 1/4, PR 2/4 and PR 3/4 added or
@@ -2603,6 +2609,10 @@ describe('Review History (e2e)', () => {
       'modules/users/application/use-cases/create-user.use-case.spec.ts',
       'modules/users/application/use-cases/list-users.use-case.spec.ts',
       'modules/users/presentation/users.controller.spec.ts',
+      // The dev seed's specs (see the production list above).
+      'shared/seeding/dev-dataset.spec.ts',
+      'shared/seeding/seed-dev-dataset.spec.ts',
+      'shared/seeding/seed-dev-dataset.integration.spec.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     const ALLOWED_FILES = [
