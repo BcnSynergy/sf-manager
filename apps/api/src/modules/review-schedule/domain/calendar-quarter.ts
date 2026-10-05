@@ -46,10 +46,15 @@ export function previousQuarter(quarter: Quarter): Quarter {
     : { year: quarter.year, number: (quarter.number - 1) as Quarter['number'] };
 }
 
+const QUARTER_END_MONTH_DAY: Record<Quarter['number'], string> = {
+  1: '03-31',
+  2: '06-30',
+  3: '09-30',
+  4: '12-31',
+};
+
 export function quarterEnd(quarter: Quarter): string {
-  const month = quarter.number * 3;
-  const lastDay = month === 3 || month === 12 ? 31 : 30;
-  return `${quarter.year}-${String(month).padStart(2, '0')}-${lastDay}`;
+  return `${quarter.year}-${QUARTER_END_MONTH_DAY[quarter.number]}`;
 }
 
 // A 29 February anniversary falls on 28 February of the following year.

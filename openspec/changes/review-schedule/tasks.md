@@ -87,12 +87,12 @@ Start: PR 1 merged. Finish: pure helpers and a bound-less Clock port exist. Roll
 
 Start: PR 2 merged. Finish: `evaluateReviewDue` covers every branch. Rollback: revert PR.
 
-- [ ] 3.1 RED `domain/review-due.policy.spec.ts` NEVER_REVIEWED: no coverage → NEVER_REVIEWED, no deadline/quarter; any covering session removes it; MONTHLY-only pair modelled as empty coverage — *NEVER_REVIEWED Is Exclusive…* (3 scenarios)
-- [ ] 3.2 RED quarterly table: the four Decision 5 rows incl. "prev missed, cur covered → UP_TO_DATE"; first session in prev / current quarter; earlier gaps not judged; year boundary (today 10 Jan 2027 → OVERDUE Q4 2026 deadline 31 Dec) — *The Quarterly Obligation* (7 scenarios)
-- [ ] 3.3 RED annual table: deadline passed, inside quarter, later than quarter, deadline today (UPCOMING) vs day after (OVERDUE), 29 Feb, 31 Dec 2025 vs 1 Jan 2026, QUARTERLY/older ANNUAL do not move deadline, no annual on record, QUARTERLY-only element type stays UPCOMING — *The Annual Obligation* (9 scenarios)
-- [ ] 3.4 RED combined: worse status wins; both OVERDUE with quarterly earlier and with annual earlier; equal status earlier deadline drives; equal deadline → quarterly; UP_TO_DATE carries no deadline; status changes with time alone (same coverage, `now` 15 Nov 2026 vs 2 Jan 2027) — *One Combined Status per Pair*, *Status changes with time alone*
-- [ ] 3.5 GREEN create `domain/review-due.policy.ts`: `PairCoverage` (see deviation), types, `evaluateReviewDue(coverage, now)`, using PR 2 helpers
-- [ ] 3.6 REFACTOR: split quarterly/annual evaluators into private functions; verify `npm run test --workspace=apps/api -- review-due.policy`; lint
+- [x] 3.1 RED `domain/review-due.policy.spec.ts` NEVER_REVIEWED: no coverage → NEVER_REVIEWED, no deadline/quarter; any covering session removes it; MONTHLY-only pair modelled as empty coverage — *NEVER_REVIEWED Is Exclusive…* (3 scenarios)
+- [x] 3.2 RED quarterly table: the four Decision 5 rows incl. "prev missed, cur covered → UP_TO_DATE"; first session in prev / current quarter; earlier gaps not judged; year boundary (today 10 Jan 2027 → OVERDUE Q4 2026 deadline 31 Dec) — *The Quarterly Obligation* (7 scenarios)
+- [x] 3.3 RED annual table: deadline passed, inside quarter, later than quarter, deadline today (UPCOMING) vs day after (OVERDUE), 29 Feb, 31 Dec 2025 vs 1 Jan 2026, QUARTERLY/older ANNUAL do not move deadline, no annual on record, QUARTERLY-only element type stays UPCOMING — *The Annual Obligation* (9 scenarios)
+- [x] 3.4 RED combined: worse status wins; both OVERDUE with quarterly earlier and with annual earlier; equal status earlier deadline drives; equal deadline → quarterly; UP_TO_DATE carries no deadline; status changes with time alone (same coverage, `now` 15 Nov 2026 vs 2 Jan 2027) — *One Combined Status per Pair*, *Status changes with time alone*
+- [x] 3.5 GREEN create `domain/review-due.policy.ts`: `PairCoverage` (see deviation), types, `evaluateReviewDue(coverage, now)`, using PR 2 helpers
+- [x] 3.6 REFACTOR: split quarterly/annual evaluators into private functions; verify `npm run test --workspace=apps/api -- review-due.policy`; lint
 
 ## PR 4 — Reader port, fake, Prisma adapter (unbound) (~380 lines)
 
