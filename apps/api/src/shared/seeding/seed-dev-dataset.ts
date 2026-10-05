@@ -252,24 +252,29 @@ export async function seedDevDataset(
   await seedAssignments(deps, data, communityIdByName, userIdByEmail, log);
   await seedElements(deps, data, communityIdByName, log);
   const questionIds = await seedQuestions(deps, data, log);
-  const outcomes = {} as Record<SeededFrequency, TemplateOutcome>;
+  const outcomeByFrequency = new Map<SeededFrequency, TemplateOutcome>();
   for (const template of data.templates) {
-    outcomes[template.frequency] = await seedTemplate(
-      deps,
-      template,
-      questionIds,
-      log,
+    outcomeByFrequency.set(
+      template.frequency,
+      await seedTemplate(deps, template, questionIds, log),
     );
   }
+  const outcomeOf = (frequency: SeededFrequency): TemplateOutcome => {
+    const outcome = outcomeByFrequency.get(frequency);
+    if (outcome === undefined) {
+      throw new Error(`Dev dataset has no ${frequency} template.`);
+    }
+    return outcome;
+  };
   await seedSessions(
     deps,
     data,
     communityIdByName,
     userIdByEmail,
-    outcomes,
+    outcomeOf,
     log,
   );
-  return outcomes;
+  return { QUARTERLY: outcomeOf('QUARTERLY'), ANNUAL: outcomeOf('ANNUAL') };
 }
 
 async function seedCompanies(
@@ -583,7 +588,7 @@ async function seedSessions(
   data: DevDataset,
   communityIdByName: Map<string, string>,
   userIdByEmail: Map<string, string>,
-  outcomes: Record<SeededFrequency, TemplateOutcome>,
+  outcomeOf: (frequency: SeededFrequency) => TemplateOutcome,
   log: Log,
 ): Promise<void> {
   // Template versions never change while sessions are seeded, so the lineage
@@ -615,7 +620,9 @@ async function seedSessions(
       continue;
     }
     // Only a new session needs the template; a resumed draft has its own.
-    const templateKind = outcomes[session.frequency];
+    // Resolved first: a session without a template fails with a clear error.
+    const template = templateOf(data, session);
+    const templateKind = outcomeOf(template.frequency);
     if (plan.kind === 'open' && templateKind.startsWith('skip-')) {
       log(
         `WARN: no usable template (${templateKind}), so the new session of ${where} is skipped.`,
@@ -629,7 +636,7 @@ async function seedSessions(
       async () => {
         const changed = await playSession(
           deps,
-          templateOf(data, session),
+          template,
           session,
           plan,
           communityId,

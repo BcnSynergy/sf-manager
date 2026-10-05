@@ -8,6 +8,7 @@ import { ReviewTemplate } from '../../modules/review-template/domain/review-temp
 import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
 import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
 import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
+import type { ReviewFrequency } from '@sf-manager/validation';
 import { DEV_DATASET, type SeededFrequency } from './dev-dataset';
 import {
   runDevSeed,
@@ -244,7 +245,7 @@ function buildWorld(
         world.createdDrafts.push(input);
         const id = `draft-${input.frequency.toLowerCase()}`;
         world.templates.push(
-          template('draft', input.name, id, input.frequency as Seeded),
+          template('draft', input.name, id, input.frequency),
         );
         return { id };
       },
@@ -268,7 +269,7 @@ function buildWorld(
         const draft = world.templates.find((t) => t.id === id)!;
         world.templates = [
           ...world.templates.filter((t) => t.id !== id),
-          template('active', draft.name, id, draft.frequency as Seeded),
+          template('active', draft.name, id, draft.frequency),
         ];
         return {};
       },
@@ -561,7 +562,7 @@ function template(
   status: 'draft' | 'active' | 'retired',
   name: string,
   id: string,
-  frequency: Seeded = 'QUARTERLY',
+  frequency: ReviewFrequency = 'QUARTERLY',
 ): ReviewTemplate {
   return new ReviewTemplate({
     id,
@@ -1286,6 +1287,20 @@ describe('seedDevDataset sessions', () => {
       idOfUser(world, TECHNICIAN_2),
       idOfUser(world, REP),
     ]);
+  });
+
+  it('fails with a clear error when a session frequency has no seeded template', async () => {
+    const world = buildWorld();
+    const quarterlyOnly = {
+      ...DEV_DATASET,
+      templates: DEV_DATASET.templates.filter(
+        (t) => t.frequency === 'QUARTERLY',
+      ),
+    };
+
+    await expect(
+      seedDevDataset(world.deps, quarterlyOnly, jest.fn()),
+    ).rejects.toThrow(/Dev dataset has no ANNUAL template for the session/);
   });
 
   it('propagates a non-domain error from a session', async () => {

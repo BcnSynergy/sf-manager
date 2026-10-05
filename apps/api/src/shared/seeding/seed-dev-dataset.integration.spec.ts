@@ -293,6 +293,14 @@ describe('seedDevDataset (integration)', () => {
     });
   }
 
+  // Scenarios that assert seeded sessions need both lineages usable, so they
+  // never depend on what other spec files left behind.
+  async function resetLineages() {
+    for (const frequency of FREQUENCIES) {
+      await resetLineage(frequency);
+    }
+  }
+
   async function lineageKind(frequency: SeededFrequency) {
     const templates = await lineage(frequency);
     const active = templates.find((t) => t.status === 'active');
@@ -617,23 +625,6 @@ describe('seedDevDataset (integration)', () => {
       };
     }
 
-    // A skipped template kind blocks the new sessions of its own frequency:
-    // assert that opposite outcome per blocked lineage and let the caller
-    // stop, as the assertions below need both lineages usable.
-    function blockedByTemplate(
-      outcomes: Awaited<ReturnType<typeof seedDevDataset>>,
-    ) {
-      const blocked = Object.values(outcomes).filter((kind) =>
-        kind.startsWith('skip-'),
-      );
-      for (const kind of blocked) {
-        expect(logs).toContainEqual(
-          expect.stringContaining(`no usable template (${kind})`),
-        );
-      }
-      return blocked.length > 0;
-    }
-
     async function historyOf(actor: Actor, data: DevDataset) {
       const emails = new Set(data.users.map((u) => u.email));
       const rows = await moduleRef.get(ListReviewHistoryUseCase).execute(actor);
@@ -651,15 +642,10 @@ describe('seedDevDataset (integration)', () => {
       const data = buildDataset('j10');
       const startedAfter = new Date();
 
-      const outcomes = await seedDevDataset(
-        resolveDevSeedDeps(moduleRef),
-        data,
-        log,
-      );
+      await resetLineages();
 
-      if (blockedByTemplate(outcomes)) {
-        return;
-      }
+      await seedDevDataset(resolveDevSeedDeps(moduleRef), data, log);
+
       const { actor } = await actors(data);
       const [s1, s2, s3, s4] = data.sessions.map(label);
       const email = (prefix: string) =>
@@ -694,14 +680,8 @@ describe('seedDevDataset (integration)', () => {
     it('heals a session that crashed right after opening, without a second draft', async () => {
       const data = buildDataset('k11');
       const deps = resolveDevSeedDeps(moduleRef);
-      const outcomes = await seedDevDataset(
-        deps,
-        { ...data, sessions: [] },
-        log,
-      );
-      if (blockedByTemplate(outcomes)) {
-        return;
-      }
+      await resetLineages();
+      await seedDevDataset(deps, { ...data, sessions: [] }, log);
       const { actor, communityId } = await actors(data);
       const [s1] = data.sessions;
       const performer = actor(s1.performerEmail);
@@ -745,10 +725,8 @@ describe('seedDevDataset (integration)', () => {
     it('does not reopen a seeded draft that QA completed', async () => {
       const data = buildDataset('m13');
       const deps = resolveDevSeedDeps(moduleRef);
-      const outcomes = await seedDevDataset(deps, data, log);
-      if (blockedByTemplate(outcomes)) {
-        return;
-      }
+      await resetLineages();
+      await seedDevDataset(deps, data, log);
       const { actor, communityId } = await actors(data);
       const draftPlan = data.sessions.find((s) => !s.complete)!;
       const rep = actor(draftPlan.performerEmail);
@@ -785,10 +763,8 @@ describe('seedDevDataset (integration)', () => {
     it('keeps a QA-edited entry on rerun', async () => {
       const data = buildDataset('p16');
       const deps = resolveDevSeedDeps(moduleRef);
-      const outcomes = await seedDevDataset(deps, data, log);
-      if (blockedByTemplate(outcomes)) {
-        return;
-      }
+      await resetLineages();
+      await seedDevDataset(deps, data, log);
       const { actor, communityId } = await actors(data);
       const draftPlan = data.sessions.find((s) => !s.complete)!;
       const rep = actor(draftPlan.performerEmail);
@@ -830,8 +806,7 @@ describe('seedDevDataset (integration)', () => {
       // Own lineages, emptied first: the scenario never depends on leftovers.
       const data = buildDataset('n14');
       const deps = resolveDevSeedDeps(moduleRef);
-      await resetLineage('QUARTERLY');
-      await resetLineage('ANNUAL');
+      await resetLineages();
       const outcomes = await seedDevDataset(
         deps,
         { ...data, sessions: [] },
@@ -865,9 +840,15 @@ describe('seedDevDataset (integration)', () => {
       const [firstQuestion] = (await questionRepository.findAll()).filter((q) =>
         seededTexts.has(q.text),
       );
+      const quarterlyTemplate = data.templates.find(
+        (t) => t.frequency === 'QUARTERLY',
+      );
+      if (quarterlyTemplate === undefined) {
+        throw new Error('Dev dataset has no QUARTERLY template.');
+      }
       const { id: draftId } = await moduleRef
         .get(CreateDraftReviewTemplateUseCase)
-        .execute(data.templates[0]);
+        .execute(quarterlyTemplate);
       await moduleRef.get(SetReviewTemplateQuestionsUseCase).execute({
         templateId: draftId,
         questionIds: [firstQuestion.id],
@@ -907,8 +888,7 @@ describe('seedDevDataset (integration)', () => {
     it('a second run keeps four completed sessions, one ANNUAL template and one ANNUAL session', async () => {
       const data = buildDataset('r18');
       const deps = resolveDevSeedDeps(moduleRef);
-      await resetLineage('QUARTERLY');
-      await resetLineage('ANNUAL');
+      await resetLineages();
 
       await seedDevDataset(deps, data, log);
       logs = [];
@@ -945,8 +925,7 @@ describe('seedDevDataset (integration)', () => {
     it('skips an ANNUAL seed draft it cannot finish with a warning, blocks only ANNUAL, and finishes it on a later run', async () => {
       const data = buildDataset('u21');
       const deps = resolveDevSeedDeps(moduleRef);
-      await resetLineage('QUARTERLY');
-      await resetLineage('ANNUAL');
+      await resetLineages();
       const { id: draftId } = await moduleRef
         .get(CreateDraftReviewTemplateUseCase)
         .execute(data.templates.find((t) => t.frequency === 'ANNUAL')!);
@@ -1018,14 +997,8 @@ describe('seedDevDataset (integration)', () => {
     it('skips a session whose assignment QA deactivated, with a warning', async () => {
       const data = buildDataset('q17');
       const deps = resolveDevSeedDeps(moduleRef);
-      const outcomes = await seedDevDataset(
-        deps,
-        { ...data, sessions: [] },
-        log,
-      );
-      if (blockedByTemplate(outcomes)) {
-        return;
-      }
+      await resetLineages();
+      await seedDevDataset(deps, { ...data, sessions: [] }, log);
       const { actor, communityId } = await actors(data);
       const s3 = data.sessions[2];
       const technician2 = actor(s3.performerEmail);
