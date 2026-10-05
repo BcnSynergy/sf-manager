@@ -18,10 +18,13 @@ type Frequency = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL';
 const SINCE = new Date('2026-06-30T00:00:00.000Z');
 
 // Integration test against a real Postgres instance (design.md Testing
-// Strategy, Test isolation). It never touches the seeded or shared template
-// lineages: every template it inserts is `retired` with a run-unique high
-// `version`, so neither the (elementType, frequency, version) unique index nor
-// the one-active-per-lineage partial index can be hit. Reads are scoped to the
+// Strategy, Test isolation). Every template it inserts is `retired` with a
+// run-unique high `version`, so neither the (elementType, frequency, version)
+// unique index nor the one-active-per-lineage partial index can be hit. The one
+// exception is `withActiveTemplate`: EXTINGUISHER is the only element type, so
+// every covering lineage is shared, and the test that needs an ACTIVE version
+// swaps it in for the duration of one test and restores the previous active
+// row in a `finally` (the suite runs in band). Reads are scoped to the
 // communities the test itself created. Everything inserted is deleted in
 // `afterAll`.
 describe('PrismaReviewScheduleReader (integration)', () => {
@@ -117,6 +120,46 @@ describe('PrismaReviewScheduleReader (integration)', () => {
     });
     templateIds.push(id);
     return id;
+  };
+
+  // Runs `body` with a run-unique ACTIVE template in the lineage, temporarily
+  // retiring whichever version other specs left active, and restores that
+  // state afterwards. Sessions are written against ACTIVE versions in real use.
+  const withActiveTemplate = async (
+    frequency: Frequency,
+    body: (templateId: string) => Promise<void>,
+  ): Promise<void> => {
+    const lineage = { elementType: 'EXTINGUISHER' as const, frequency };
+    const previouslyActive = await prisma.reviewTemplate.findMany({
+      where: { ...lineage, status: 'active' },
+      select: { id: true },
+    });
+    const previousIds = previouslyActive.map((template) => template.id);
+    const id = idGenerator.generate();
+    try {
+      await prisma.reviewTemplate.updateMany({
+        where: { id: { in: previousIds } },
+        data: { status: 'retired' },
+      });
+      await prisma.reviewTemplate.create({
+        data: {
+          id,
+          ...lineage,
+          name: `Schedule Reader active ${frequency} ${randomUUID()}`,
+          version: 1_000_000_000 + Math.floor(Math.random() * 1_000_000_000),
+          status: 'active',
+        },
+      });
+      templateIds.push(id);
+      await body(id);
+    } finally {
+      await prisma.reviewSession.deleteMany({ where: { templateId: id } });
+      await prisma.reviewTemplate.deleteMany({ where: { id } });
+      await prisma.reviewTemplate.updateMany({
+        where: { id: { in: previousIds } },
+        data: { status: 'active' },
+      });
+    }
   };
 
   const createSession = async (
@@ -553,6 +596,28 @@ describe('PrismaReviewScheduleReader (integration)', () => {
       expect(pair.coverage.lastAnnualAt).toEqual(
         new Date('2025-09-01T10:00:00.000Z'),
       );
+    });
+
+    it('counts a session frozen against an ACTIVE ANNUAL template version', async () => {
+      const community = await liveCommunity();
+      const user = await createUser();
+
+      await withActiveTemplate('ANNUAL', async (activeTemplateId) => {
+        await createSession(
+          community.id,
+          activeTemplateId,
+          user,
+          '2026-08-10T10:00:00.000Z',
+        );
+
+        const pair = await readPair(community.id);
+
+        expect(times(pair.coverage)).toEqual({
+          lastBeforeSinceAt: null,
+          lastAnnualAt: '2026-08-10T10:00:00.000Z',
+          recentCoveringAt: ['2026-08-10T10:00:00.000Z'],
+        });
+      });
     });
 
     it('ignores an ANNUAL draft', async () => {
