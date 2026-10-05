@@ -119,22 +119,36 @@ describe('coverageWindowStart', () => {
   });
 
   it('never excludes a Madrid date inside the previous quarter', () => {
-    // Walk every Madrid midnight and noon of two years: whichever quarter
-    // `now` falls in, any instant whose Madrid date is inside the previous
-    // quarter must be at or after the window start.
+    // Step through two years in 6-hour increments: whichever quarter `now`
+    // falls in, the earliest instant whose Madrid date lies inside the
+    // previous quarter must be at or after the window start.
     const start = Date.UTC(2025, 0, 1);
     const end = Date.UTC(2027, 0, 1);
     const hour = 3_600_000;
+    const earliestByQuarter = new Map<string, number>();
+    const earliestInstantOf = (quarter: Quarter): number => {
+      const key = `${quarter.year}-Q${quarter.number}`;
+      const cached = earliestByQuarter.get(key);
+      if (cached !== undefined) return cached;
+      // Scan hourly from three days before the quarter's first UTC day until
+      // the Madrid date reaches the quarter, instead of restating the formula.
+      const firstDayUtc = Date.UTC(quarter.year, (quarter.number - 1) * 3, 1);
+      let instant = firstDayUtc - 3 * 24 * hour;
+      const rank = (value: Quarter): number => value.year * 10 + value.number;
+      while (rank(quarterOf(madridDate(new Date(instant)))) < rank(quarter)) {
+        instant += hour;
+      }
+      earliestByQuarter.set(key, instant);
+      return instant;
+    };
     for (let now = start; now < end; now += 6 * hour) {
       const nowDate = new Date(now);
       const previous = previousQuarter(quarterOf(madridDate(nowDate)));
       const windowStart = coverageWindowStart(nowDate).getTime();
-      // The earliest instant of the previous quarter is Madrid midnight on
-      // its first day, at most 2 hours before UTC midnight of that day.
-      const firstDayUtc = Date.UTC(previous.year, (previous.number - 1) * 3, 1);
-      expect(windowStart).toBeLessThanOrEqual(firstDayUtc - 2 * hour);
+      const earliest = earliestInstantOf(previous);
+      expect(windowStart).toBeLessThanOrEqual(earliest);
       // ...and not unreasonably early: Decision 6 sets it one day before.
-      expect(windowStart).toBeGreaterThanOrEqual(firstDayUtc - 2 * 24 * hour);
+      expect(windowStart).toBeGreaterThanOrEqual(earliest - 2 * 24 * hour);
     }
   });
 });
