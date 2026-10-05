@@ -29,17 +29,29 @@ export interface PairCoverage {
   recentCoveringAt: readonly Date[];
 }
 
-export type ScheduleStatus =
-  'OVERDUE' | 'NEVER_REVIEWED' | 'UPCOMING' | 'UP_TO_DATE';
+// Single source of truth for the status and reason-code vocabularies: the
+// types below derive from these, and the presentation layer reuses them for
+// its OpenAPI enums so a new member cannot leave the documentation stale.
+export const SCHEDULE_STATUSES = [
+  'OVERDUE',
+  'NEVER_REVIEWED',
+  'UPCOMING',
+  'UP_TO_DATE',
+] as const;
 
-export type ScheduleReasonCode =
-  | 'NEVER_REVIEWED'
-  | 'QUARTER_MISSED'
-  | 'QUARTER_DUE'
-  | 'ANNUAL_OVERDUE'
-  | 'ANNUAL_DUE'
-  | 'ANNUAL_NOT_ON_RECORD'
-  | 'UP_TO_DATE';
+export type ScheduleStatus = (typeof SCHEDULE_STATUSES)[number];
+
+export const SCHEDULE_REASON_CODES = [
+  'NEVER_REVIEWED',
+  'QUARTER_MISSED',
+  'QUARTER_DUE',
+  'ANNUAL_OVERDUE',
+  'ANNUAL_DUE',
+  'ANNUAL_NOT_ON_RECORD',
+  'UP_TO_DATE',
+] as const;
+
+export type ScheduleReasonCode = (typeof SCHEDULE_REASON_CODES)[number];
 
 export interface ReviewDueEvaluation {
   status: ScheduleStatus;
