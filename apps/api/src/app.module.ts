@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './shared/infrastructure/persistence/prisma.module';
 import { IdGeneratorModule } from './shared/infrastructure/id/id-generator.module';
+import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -11,6 +12,7 @@ import { ChecklistQuestionModule } from './modules/checklist-question/checklist-
 import { ReviewTemplateModule } from './modules/review-template/review-template.module';
 import { ReviewSessionModule } from './modules/review-session/review-session.module';
 import { OrganizationProfileModule } from './modules/organization-profile/organization-profile.module';
+import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -41,10 +43,15 @@ import { OrganizationProfileModule } from './modules/organization-profile/organi
 // OrganizationProfileModule (organization-profile PR 3) registers the
 // admin-only /organization-profile read/update surface. Imports nothing —
 // no cross-module dependency, no DI cycle risk (design.md Interfaces).
+// ClockModule (review-schedule PR 2) is @Global() like IdGeneratorModule, so
+// every module can inject CLOCK. ReviewScheduleModule (review-schedule PR 6)
+// registers the read-only GET /review-schedule surface, importing
+// CommunityModule and UsersModule for the two scope checkers.
 @Module({
   imports: [
     PrismaModule,
     IdGeneratorModule,
+    ClockModule,
     UsersModule,
     AuthModule,
     CommunityModule,
@@ -54,6 +61,7 @@ import { OrganizationProfileModule } from './modules/organization-profile/organi
     ReviewTemplateModule,
     ReviewSessionModule,
     OrganizationProfileModule,
+    ReviewScheduleModule,
     HealthModule,
   ],
 })
