@@ -20,7 +20,7 @@ Decision needed: accept `size:exception` for PR 1 and PR 6 (see table), or ask f
 
 | PR | Scope | Code | Test | Total | Over 400? |
 |---|---|---|---|---|---|
-| 1 | Seed (Decision 11), README, CLAUDE.md, planning artifacts | ~120 | ~300 | ~420 | Yes, by ~20: excess is test fixtures and spec rewrites |
+| 1 | Seed (Decision 11), README, CLAUDE.md, planning artifacts | ~148 | ~921 | ~1,081 | Yes: excess is test code (real figures: ~148 code / 12 docs / ~921 test, size:exception accepted) |
 | 2 | `Clock`, `ClockModule`, `FixedClock`, `calendar-quarter.ts` | ~110 | ~190 | ~300 | No |
 | 3 | `review-due.policy.ts` (`evaluateReviewDue`) | ~130 | ~250 | ~380 | No (near limit) |
 | 4 | Reader port, fake, Prisma adapter, integration spec | ~150 | ~230 | ~380 | No (near limit) |
@@ -77,11 +77,11 @@ Start: main. Finish: seed creates both lineages and four completed sessions; all
 
 Start: PR 1 merged. Finish: pure helpers and a bound-less Clock port exist. Rollback: revert PR.
 
-- [ ] 2.1 RED `domain/calendar-quarter.spec.ts` (table-driven): `madridDate` at 22:30/23:30 UTC on 30 Sep, 31 Dec in both DST offsets; `quarterOf`, `previousQuarter` across year boundary, `quarterEnd`; `addTwelveMonths` 29 Feb → 28 Feb; `coverageWindowStart` each side of both DST changes and across the year boundary, plus the invariant that every Madrid date inside the previous quarter is at or after it — review-schedule *Quarter edges are judged in Europe/Madrid*, *A 29 February anniversary…*; design Decisions 5, 6
-- [ ] 2.2 GREEN create `apps/api/src/modules/review-schedule/domain/calendar-quarter.ts` using `Intl.DateTimeFormat(...).formatToParts`
-- [ ] 2.3 RED specs for `SystemClock` (returns a current `Date`) and `FixedClock` (returns the fixed instant, can be advanced) — design Decision 4
-- [ ] 2.4 GREEN create `shared/application/ports/clock.port.ts` (`Clock`, `CLOCK`), `shared/infrastructure/clock/{system-clock,clock.module}.ts` (`@Global`, mirrors `IdGeneratorModule`), `shared/testing/fixed-clock.ts`
-- [ ] 2.5 REFACTOR names and comments; verify `npm run test --workspace=apps/api -- review-schedule shared/infrastructure/clock`; lint
+- [x] 2.1 RED `domain/calendar-quarter.spec.ts` (table-driven): `madridDate` at 22:30/23:30 UTC on 30 Sep, 31 Dec in both DST offsets; `quarterOf`, `previousQuarter` across year boundary, `quarterEnd`; `addTwelveMonths` 29 Feb → 28 Feb; `coverageWindowStart` each side of both DST changes and across the year boundary, plus the invariant that every Madrid date inside the previous quarter is at or after it — review-schedule *Quarter edges are judged in Europe/Madrid*, *A 29 February anniversary…*; design Decisions 5, 6
+- [x] 2.2 GREEN create `apps/api/src/modules/review-schedule/domain/calendar-quarter.ts` using `Intl.DateTimeFormat(...).formatToParts`
+- [x] 2.3 RED specs for `SystemClock` (returns a current `Date`) and `FixedClock` (returns the fixed instant, can be advanced) — design Decision 4
+- [x] 2.4 GREEN create `shared/application/ports/clock.port.ts` (`Clock`, `CLOCK`), `shared/infrastructure/clock/{system-clock,clock.module}.ts` (`@Global`, mirrors `IdGeneratorModule`), `shared/testing/fixed-clock.ts`
+- [x] 2.5 REFACTOR names and comments; verify `npm run test --workspace=apps/api -- review-schedule shared/infrastructure/clock`; lint
 
 ## PR 3 — Due policy (~380 lines)
 
