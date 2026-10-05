@@ -105,7 +105,9 @@ Practicalities learned so far:
     (`VIEW_ALL_REVIEWS`) and `manager-nocap@sf-manager.example`.
   - Two companies (`Dev Seed Fire Safety A`/`B`), two communities (`Dev Seed
     Residences North`/`South`, two extinguishers each), one active
-    EXTINGUISHER x MONTHLY template, three completed sessions and one draft.
+    EXTINGUISHER x QUARTERLY template and one active EXTINGUISHER x ANNUAL
+    template, four completed sessions (three QUARTERLY, one ANNUAL in North)
+    and one draft.
   - Seeded rows are named `Dev Seed ...`, and seeded users have
     `@sf-manager.example` emails; anything else is QA data. Every run
     overwrites the organization profile. Otherwise the seed is additive and

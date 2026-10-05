@@ -52,7 +52,9 @@ describe('dev seed documentation', () => {
     for (const community of DEV_DATASET.communities) {
       expect(readme).toContain(community.name);
     }
-    expect(readme).toContain(DEV_DATASET.template.name);
+    for (const template of DEV_DATASET.templates) {
+      expect(readme).toContain(template.name);
+    }
     expect(readme).toMatch(/migrate reset[\s\S]*db seed/);
   });
 });
