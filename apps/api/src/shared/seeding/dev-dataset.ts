@@ -43,9 +43,14 @@ export type DevElement = CreateInspectableElementRequest & {
   communityName: string;
 };
 
+// The frequencies the dataset seeds. The full `ReviewFrequency` would force
+// every per-frequency record to carry MONTHLY and SEMIANNUAL keys that are
+// never seeded (review-schedule design.md Decision 11).
+export type SeededFrequency = Extract<ReviewFrequency, 'QUARTERLY' | 'ANNUAL'>;
+
 export interface DevTemplate {
   elementType: ElementType;
-  frequency: ReviewFrequency;
+  frequency: SeededFrequency;
   name: string;
 }
 
@@ -57,6 +62,8 @@ export interface DevSessionEntry {
 export interface DevSession {
   performerEmail: string;
   communityName: string;
+  // The lineage of the template the session is performed against.
+  frequency: SeededFrequency;
   // false leaves the session as a draft.
   complete: boolean;
   entries: DevSessionEntry[];
@@ -71,7 +78,7 @@ export interface DevDataset {
   assignments: DevAssignment[];
   elements: DevElement[];
   questions: CreateChecklistQuestionRequest[];
-  template: DevTemplate;
+  templates: DevTemplate[];
   sessions: DevSession[];
 }
 
@@ -171,20 +178,29 @@ export const DEV_DATASET: DevDataset = {
     'Is the safety seal intact?',
   ].map((text) => ({
     elementType: 'EXTINGUISHER' as const,
-    frequencies: ['MONTHLY' as const],
+    frequencies: ['QUARTERLY' as const, 'ANNUAL' as const],
     text,
   })),
-  template: {
-    elementType: 'EXTINGUISHER',
-    frequency: 'MONTHLY',
-    name: 'Dev Seed Extinguisher Monthly Check',
-  },
-  // S1-S3 completed plus one partial draft. The S2 pair adds a NO answer and
-  // an unreviewed element for variety.
+  templates: [
+    {
+      elementType: 'EXTINGUISHER',
+      frequency: 'QUARTERLY',
+      name: 'Dev Seed Extinguisher Quarterly Check',
+    },
+    {
+      elementType: 'EXTINGUISHER',
+      frequency: 'ANNUAL',
+      name: 'Dev Seed Extinguisher Annual Check',
+    },
+  ],
+  // S1-S4 completed plus one partial draft. The S2 pair adds a NO answer and
+  // an unreviewed element for variety. S4 is the only ANNUAL session: it
+  // covers North's annual obligation and leaves South's open.
   sessions: [
     {
       performerEmail: TECHNICIAN,
       communityName: NORTH,
+      frequency: 'QUARTERLY',
       complete: true,
       entries: [
         { elementName: NORTH_LOBBY, outcome: 'YES' },
@@ -194,6 +210,7 @@ export const DEV_DATASET: DevDataset = {
     {
       performerEmail: TECHNICIAN,
       communityName: SOUTH,
+      frequency: 'QUARTERLY',
       complete: true,
       entries: [
         { elementName: SOUTH_LOBBY, outcome: 'NO' },
@@ -203,6 +220,7 @@ export const DEV_DATASET: DevDataset = {
     {
       performerEmail: TECHNICIAN_2,
       communityName: SOUTH,
+      frequency: 'QUARTERLY',
       complete: true,
       entries: [
         { elementName: SOUTH_LOBBY, outcome: 'YES' },
@@ -210,8 +228,19 @@ export const DEV_DATASET: DevDataset = {
       ],
     },
     {
+      performerEmail: TECHNICIAN,
+      communityName: NORTH,
+      frequency: 'ANNUAL',
+      complete: true,
+      entries: [
+        { elementName: NORTH_LOBBY, outcome: 'YES' },
+        { elementName: NORTH_GARAGE, outcome: 'YES' },
+      ],
+    },
+    {
       performerEmail: REP,
       communityName: NORTH,
+      frequency: 'QUARTERLY',
       complete: false,
       entries: [{ elementName: NORTH_LOBBY, outcome: 'YES' }],
     },

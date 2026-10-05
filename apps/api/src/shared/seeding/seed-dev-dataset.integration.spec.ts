@@ -51,8 +51,11 @@ import { CreateDraftReviewTemplateUseCase } from '../../modules/review-template/
 import { SetReviewTemplateQuestionsUseCase } from '../../modules/review-template/application/use-cases/set-review-template-questions.use-case';
 import { AppModule } from '../../app.module';
 import { PrismaService } from '../infrastructure/persistence/prisma.service';
-import type { ReviewFrequency } from '../../modules/checklist-question/domain/review-frequency';
-import { DEV_DATASET, type DevDataset } from './dev-dataset';
+import {
+  DEV_DATASET,
+  type DevDataset,
+  type SeededFrequency,
+} from './dev-dataset';
 import { planTemplate } from './dev-seed-plan';
 import { resolveDevSeedDeps, seedDevDataset } from './seed-dev-dataset';
 
@@ -68,19 +71,18 @@ jest.setTimeout(60_000);
 
 // Emails and tax ids stay canonical (lower-case email, upper-case tax id) so
 // the derived dataset still matches its natural keys after the schemas'
-// normalization. The organization profile and the template lineage are global,
-// so they are not suffixed; the tests below branch on the lineage kind.
-// `frequency` moves the template and its questions to another lineage, for
-// a scenario that must own its lineage (see `resetLineage`).
-function buildDataset(
-  suffix: string,
-  frequency: ReviewFrequency = DEV_DATASET.template.frequency,
-): DevDataset {
+// normalization. The organization profile and the two template lineages
+// (QUARTERLY and ANNUAL) are global, so they are not suffixed; the tests
+// below branch on each lineage kind. The dataset keeps both templates and
+// tags its questions for both, so a scenario that must own its lineages calls
+// `resetLineage` for each frequency before seeding.
+const FREQUENCIES: SeededFrequency[] = ['QUARTERLY', 'ANNUAL'];
+
+function buildDataset(suffix: string): DevDataset {
   const upper = suffix.toUpperCase();
   const community = (name: string) => `${name} ${suffix}`;
   return {
     ...DEV_DATASET,
-    template: { ...DEV_DATASET.template, frequency },
     communities: DEV_DATASET.communities.map((c) => ({
       ...c,
       name: community(c.name),
@@ -97,7 +99,6 @@ function buildDataset(
     })),
     questions: DEV_DATASET.questions.map((q) => ({
       ...q,
-      frequencies: [frequency],
       text: `${q.text} ${suffix}`,
     })),
     sessions: DEV_DATASET.sessions.map((s) => ({
@@ -137,13 +138,17 @@ describe('seedDevDataset (integration)', () => {
   let templateRepository: ReviewTemplateRepository;
   let profileRepository: OrganizationProfileRepository;
   let sessionRepository: ReviewSessionRepository;
-  // The template outcome is asserted on the FIRST seed run of this file, made
-  // in beforeAll before any other seeding: later runs always see the template
-  // this one activated (or a leftover), so they cannot prove the create path.
+  // The template outcomes are asserted on the FIRST seed run of this file,
+  // made in beforeAll before any other seeding: later runs always see the
+  // templates this one activated (or leftovers), so they cannot prove the
+  // create path. One outcome per lineage.
   let templateRun: {
-    kind: Awaited<ReturnType<typeof seedDevDataset>>;
-    initialKind: Awaited<ReturnType<typeof seedDevDataset>>;
-    before: { id: string; status: string }[];
+    outcomes: Awaited<ReturnType<typeof seedDevDataset>>;
+    initialKind: Record<
+      SeededFrequency,
+      Awaited<ReturnType<typeof lineageKind>>
+    >;
+    before: Record<SeededFrequency, { id: string; status: string }[]>;
     logs: string[];
     data: DevDataset;
   };
@@ -190,14 +195,20 @@ describe('seedDevDataset (integration)', () => {
 
     const data = buildDataset('i9');
     const runLogs: string[] = [];
-    const initialKind = await lineageKind();
-    const before = await lineage();
-    const kind = await seedDevDataset(
+    const initialKind = {
+      QUARTERLY: await lineageKind('QUARTERLY'),
+      ANNUAL: await lineageKind('ANNUAL'),
+    };
+    const before = {
+      QUARTERLY: await lineage('QUARTERLY'),
+      ANNUAL: await lineage('ANNUAL'),
+    };
+    const outcomes = await seedDevDataset(
       resolveDevSeedDeps(moduleRef),
       data,
       (line) => runLogs.push(line),
     );
-    templateRun = { kind, initialKind, before, logs: runLogs, data };
+    templateRun = { outcomes, initialKind, before, logs: runLogs, data };
   });
 
   beforeEach(() => {
@@ -257,7 +268,7 @@ describe('seedDevDataset (integration)', () => {
     };
   }
 
-  async function lineage(frequency: ReviewFrequency = 'MONTHLY') {
+  async function lineage(frequency: SeededFrequency) {
     return (await templateRepository.findAll()).filter(
       (t) => t.elementType === 'EXTINGUISHER' && t.frequency === frequency,
     );
@@ -270,7 +281,7 @@ describe('seedDevDataset (integration)', () => {
   // because the suite runs in band (`--runInBand`) and those files reset
   // the lineages they use. This is setup, so it is the one place the spec
   // uses PrismaService: no use case retires an active template.
-  async function resetLineage(frequency: ReviewFrequency) {
+  async function resetLineage(frequency: SeededFrequency) {
     const prisma = moduleRef.get(PrismaService);
     const where = { elementType: 'EXTINGUISHER' as const, frequency };
     await prisma.reviewTemplate.deleteMany({
@@ -282,7 +293,7 @@ describe('seedDevDataset (integration)', () => {
     });
   }
 
-  async function lineageKind(frequency: ReviewFrequency = 'MONTHLY') {
+  async function lineageKind(frequency: SeededFrequency) {
     const templates = await lineage(frequency);
     const active = templates.find((t) => t.status === 'active');
     const snapshot = active
@@ -355,7 +366,7 @@ describe('seedDevDataset (integration)', () => {
 
     await seedDevDataset(deps, data, log);
     const afterFirst = await catalogSnapshot(data);
-    const lineageAfterFirst = await lineage();
+    const lineagesAfterFirst = await Promise.all(FREQUENCIES.map(lineage));
 
     logs = [];
     await seedDevDataset(deps, data, log);
@@ -363,8 +374,16 @@ describe('seedDevDataset (integration)', () => {
     expect(afterFirst.assignments).toHaveLength(data.assignments.length);
     expect(afterFirst.elements).toHaveLength(data.elements.length);
     expect(await catalogSnapshot(data)).toEqual(afterFirst);
-    expect((await lineage()).map((t) => t.id).sort()).toEqual(
-      lineageAfterFirst.map((t) => t.id).sort(),
+    expect(
+      (await Promise.all(FREQUENCIES.map(lineage)))
+        .flat()
+        .map((t) => t.id)
+        .sort(),
+    ).toEqual(
+      lineagesAfterFirst
+        .flat()
+        .map((t) => t.id)
+        .sort(),
     );
     // Equal ids alone would also hold if a regressed lookup made a create
     // throw and the seed swallowed it, so pin the logs. Template skips are
@@ -391,36 +410,50 @@ describe('seedDevDataset (integration)', () => {
     ).toHaveLength(data.assignments.length);
   });
 
-  it('follows the template lineage plan on the first run without touching foreign rows', async () => {
-    const { kind, initialKind, before, logs: runLogs, data } = templateRun;
-    const after = await lineage();
-    const seeded = runLogs.filter((l) => /^Seeded template: /.test(l));
-    expect(kind).toBe(initialKind);
+  it.each(FREQUENCIES)(
+    'follows the %s lineage plan on the first run without touching foreign rows',
+    async (frequency) => {
+      const {
+        outcomes,
+        initialKind,
+        before,
+        logs: runLogs,
+        data,
+      } = templateRun;
+      const kind = outcomes[frequency];
+      const startKind = initialKind[frequency];
+      const templateName = data.templates.find(
+        (t) => t.frequency === frequency,
+      )!.name;
+      const after = await lineage(frequency);
+      const seeded = runLogs.filter((l) => /^Seeded template: /.test(l));
+      expect(kind).toBe(startKind);
 
-    if (initialKind === 'create' || initialKind === 'finish-draft') {
-      const active = after.find((t) => t.status === 'active')!;
-      const snapshot = await templateRepository.findFrozenWithSnapshot(
-        active.id,
+      if (startKind === 'create' || startKind === 'finish-draft') {
+        const active = after.find((t) => t.status === 'active')!;
+        const snapshot = await templateRepository.findFrozenWithSnapshot(
+          active.id,
+        );
+        expect(snapshot!.questions.map((q) => q.text).sort()).toEqual(
+          data.questions.map((q) => q.text).sort(),
+        );
+        expect(seeded).toContain(`Seeded template: ${templateName}`);
+        return;
+      }
+      // Nothing in the lineage changed: same rows, same statuses.
+      const shape = (rows: { id: string; status: string }[]) =>
+        rows.map((t) => `${t.id}:${t.status}`).sort();
+      expect(shape(after)).toEqual(shape(before[frequency]));
+      expect(seeded).not.toContain(`Seeded template: ${templateName}`);
+      expect(runLogs).toContainEqual(
+        expect.stringMatching(
+          startKind === 'use-active'
+            ? /^Active template .* exists, using it.$/
+            : /^WARN: (draft|active template) /,
+        ),
       );
-      expect(snapshot!.questions.map((q) => q.text).sort()).toEqual(
-        data.questions.map((q) => q.text).sort(),
-      );
-      expect(seeded).toEqual([`Seeded template: ${data.template.name}`]);
-      return;
-    }
-    // Nothing in the lineage changed: same rows, same statuses.
-    const shape = (rows: typeof before) =>
-      rows.map((t) => `${t.id}:${t.status}`).sort();
-    expect(shape(after)).toEqual(shape(before));
-    expect(seeded).toEqual([]);
-    expect(runLogs).toContainEqual(
-      expect.stringMatching(
-        initialKind === 'use-active'
-          ? /^Active template .* exists, using it.$/
-          : /^WARN: (draft|active template) /,
-      ),
-    );
-  });
+    },
+  );
 
   it('seeds both companies and all six users with the right roles and companies', async () => {
     const data = buildDataset('a1');
@@ -584,16 +617,21 @@ describe('seedDevDataset (integration)', () => {
       };
     }
 
-    // A skipped template kind blocks every new session: assert that opposite
-    // outcome and let the caller stop.
-    function blockedByTemplate(kind: string) {
-      if (!kind.startsWith('skip-')) {
-        return false;
-      }
-      expect(logs).toContainEqual(
-        expect.stringContaining(`no usable template (${kind})`),
+    // A skipped template kind blocks the new sessions of its own frequency:
+    // assert that opposite outcome per blocked lineage and let the caller
+    // stop, as the assertions below need both lineages usable.
+    function blockedByTemplate(
+      outcomes: Awaited<ReturnType<typeof seedDevDataset>>,
+    ) {
+      const blocked = Object.values(outcomes).filter((kind) =>
+        kind.startsWith('skip-'),
       );
-      return true;
+      for (const kind of blocked) {
+        expect(logs).toContainEqual(
+          expect.stringContaining(`no usable template (${kind})`),
+        );
+      }
+      return blocked.length > 0;
     }
 
     async function historyOf(actor: Actor, data: DevDataset) {
@@ -613,29 +651,29 @@ describe('seedDevDataset (integration)', () => {
       const data = buildDataset('j10');
       const startedAfter = new Date();
 
-      const kind = await seedDevDataset(
+      const outcomes = await seedDevDataset(
         resolveDevSeedDeps(moduleRef),
         data,
         log,
       );
 
-      if (blockedByTemplate(kind)) {
-        expect((await historyOf(admin, data)).seeded).toEqual([]);
+      if (blockedByTemplate(outcomes)) {
         return;
       }
       const { actor } = await actors(data);
-      const [s1, s2, s3] = data.sessions.map(label);
+      const [s1, s2, s3, s4] = data.sessions.map(label);
       const email = (prefix: string) =>
         data.users.find((u) => u.email.startsWith(`${prefix}-`))!.email;
       const seededFor = async (prefix: string) =>
         labelsOf((await historyOf(actor(email(prefix)), data)).seeded);
 
-      expect(await seededFor('technician')).toEqual([s1, s2].sort());
-      expect(await seededFor('companymgr')).toEqual([s1, s2].sort());
-      expect(await seededFor('rep')).toEqual([s1]);
+      // s1 and s4 are the QUARTERLY and the ANNUAL session of the same pair.
+      expect(await seededFor('technician')).toEqual([s1, s2, s4].sort());
+      expect(await seededFor('companymgr')).toEqual([s1, s2, s4].sort());
+      expect(await seededFor('rep')).toEqual([s1, s4].sort());
       expect(await seededFor('technician2')).toEqual([s3]);
       const adminList = await historyOf(admin, data);
-      expect(labelsOf(adminList.seeded)).toEqual([s1, s2, s3].sort());
+      expect(labelsOf(adminList.seeded)).toEqual([s1, s2, s3, s4].sort());
       const managerList = await historyOf(actor(email('manager')), data);
       expect(managerList.rows.map((r) => r.id).sort()).toEqual(
         adminList.rows.map((r) => r.id).sort(),
@@ -656,14 +694,20 @@ describe('seedDevDataset (integration)', () => {
     it('heals a session that crashed right after opening, without a second draft', async () => {
       const data = buildDataset('k11');
       const deps = resolveDevSeedDeps(moduleRef);
-      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
-      if (blockedByTemplate(kind)) {
+      const outcomes = await seedDevDataset(
+        deps,
+        { ...data, sessions: [] },
+        log,
+      );
+      if (blockedByTemplate(outcomes)) {
         return;
       }
       const { actor, communityId } = await actors(data);
       const [s1] = data.sessions;
       const performer = actor(s1.performerEmail);
-      const active = (await lineage()).find((t) => t.status === 'active')!;
+      const active = (await lineage('QUARTERLY')).find(
+        (t) => t.status === 'active',
+      )!;
       const opened = await moduleRef.get(OpenReviewSessionUseCase).execute({
         communityId: communityId(s1.communityName),
         templateId: active.id,
@@ -677,9 +721,14 @@ describe('seedDevDataset (integration)', () => {
       const completed = await sessionRepository.findCompletedForPerformer(
         performer.userId,
       );
+      // The ANNUAL session of the same pair is a different key.
       expect(
         completed
-          .filter((s) => s.communityId === communityId(s1.communityName))
+          .filter(
+            (s) =>
+              s.communityId === communityId(s1.communityName) &&
+              s.templateId === active.id,
+          )
           .map((s) => s.id),
       ).toEqual([opened.id]);
       const healed = await sessionRepository.findByIdForPerformer(
@@ -696,8 +745,8 @@ describe('seedDevDataset (integration)', () => {
     it('does not reopen a seeded draft that QA completed', async () => {
       const data = buildDataset('m13');
       const deps = resolveDevSeedDeps(moduleRef);
-      const kind = await seedDevDataset(deps, data, log);
-      if (blockedByTemplate(kind)) {
+      const outcomes = await seedDevDataset(deps, data, log);
+      if (blockedByTemplate(outcomes)) {
         return;
       }
       const { actor, communityId } = await actors(data);
@@ -736,8 +785,8 @@ describe('seedDevDataset (integration)', () => {
     it('keeps a QA-edited entry on rerun', async () => {
       const data = buildDataset('p16');
       const deps = resolveDevSeedDeps(moduleRef);
-      const kind = await seedDevDataset(deps, data, log);
-      if (blockedByTemplate(kind)) {
+      const outcomes = await seedDevDataset(deps, data, log);
+      if (blockedByTemplate(outcomes)) {
         return;
       }
       const { actor, communityId } = await actors(data);
@@ -778,19 +827,29 @@ describe('seedDevDataset (integration)', () => {
     });
 
     it('resumes against its own template after a newer version, with no second draft', async () => {
-      // Own lineage, emptied first: the scenario never depends on leftovers.
-      const data = buildDataset('n14', 'ANNUAL');
+      // Own lineages, emptied first: the scenario never depends on leftovers.
+      const data = buildDataset('n14');
       const deps = resolveDevSeedDeps(moduleRef);
+      await resetLineage('QUARTERLY');
       await resetLineage('ANNUAL');
-      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
-      expect(kind).toBe('create');
-      const fresh = await lineage('ANNUAL');
-      expect(fresh.filter((t) => t.status === 'active')).toHaveLength(1);
-      expect(fresh.filter((t) => t.status === 'draft')).toEqual([]);
+      const outcomes = await seedDevDataset(
+        deps,
+        { ...data, sessions: [] },
+        log,
+      );
+      expect(outcomes).toEqual({ QUARTERLY: 'create', ANNUAL: 'create' });
+      for (const frequency of FREQUENCIES) {
+        const fresh = await lineage(frequency);
+        expect(fresh.filter((t) => t.status === 'active')).toHaveLength(1);
+        expect(fresh.filter((t) => t.status === 'draft')).toEqual([]);
+      }
       const { actor, communityId } = await actors(data);
       const [s1] = data.sessions;
+      expect(s1.frequency).toBe('QUARTERLY');
       const performer = actor(s1.performerEmail);
-      const old = (await lineage('ANNUAL')).find((t) => t.status === 'active')!;
+      const old = (await lineage('QUARTERLY')).find(
+        (t) => t.status === 'active',
+      )!;
       const oldCount = (await templateRepository.findFrozenWithSnapshot(
         old.id,
       ))!.questions.length;
@@ -808,7 +867,7 @@ describe('seedDevDataset (integration)', () => {
       );
       const { id: draftId } = await moduleRef
         .get(CreateDraftReviewTemplateUseCase)
-        .execute(data.template);
+        .execute(data.templates[0]);
       await moduleRef.get(SetReviewTemplateQuestionsUseCase).execute({
         templateId: draftId,
         questionIds: [firstQuestion.id],
@@ -817,9 +876,16 @@ describe('seedDevDataset (integration)', () => {
 
       await seedDevDataset(deps, data, log);
 
+      const quarterlyIds = new Set(
+        (await lineage('QUARTERLY')).map((t) => t.id),
+      );
       const sessions = (
         await sessionRepository.findCompletedForPerformer(performer.userId)
-      ).filter((s) => s.communityId === communityId(s1.communityName));
+      ).filter(
+        (s) =>
+          s.communityId === communityId(s1.communityName) &&
+          quarterlyIds.has(s.templateId),
+      );
       expect(sessions.map((s) => [s.id, s.templateId])).toEqual([
         [opened.id, old.id],
       ]);
@@ -838,16 +904,56 @@ describe('seedDevDataset (integration)', () => {
       ).toEqual([]);
     });
 
-    it('skips a seed draft it cannot finish with a warning and finishes it on a later run', async () => {
-      const data = buildDataset('u21', 'ANNUAL');
+    it('a second run keeps four completed sessions, one ANNUAL template and one ANNUAL session', async () => {
+      const data = buildDataset('r18');
       const deps = resolveDevSeedDeps(moduleRef);
+      await resetLineage('QUARTERLY');
+      await resetLineage('ANNUAL');
+
+      await seedDevDataset(deps, data, log);
+      logs = [];
+      await seedDevDataset(deps, data, log);
+
+      const annual = await lineage('ANNUAL');
+      expect(annual.filter((t) => t.status === 'active')).toHaveLength(1);
+      expect(annual.filter((t) => t.status === 'draft')).toEqual([]);
+      const annualIds = new Set(annual.map((t) => t.id));
+      const { actor, communityId } = await actors(data);
+      const performers = [
+        ...new Set(data.sessions.map((s) => s.performerEmail)),
+      ].map(actor);
+      const completed = (
+        await Promise.all(
+          performers.map((p) =>
+            sessionRepository.findCompletedForPerformer(p.userId),
+          ),
+        )
+      ).flat();
+      expect(completed).toHaveLength(4);
+      const annualSessions = completed.filter((s) =>
+        annualIds.has(s.templateId),
+      );
+      expect(annualSessions).toHaveLength(1);
+      expect(annualSessions[0].communityId).toBe(
+        communityId(
+          data.sessions.find((s) => s.frequency === 'ANNUAL')!.communityName,
+        ),
+      );
+      expect(logs.filter((l) => /^(Seeded|WARN)/.test(l))).toEqual([]);
+    });
+
+    it('skips an ANNUAL seed draft it cannot finish with a warning, blocks only ANNUAL, and finishes it on a later run', async () => {
+      const data = buildDataset('u21');
+      const deps = resolveDevSeedDeps(moduleRef);
+      await resetLineage('QUARTERLY');
       await resetLineage('ANNUAL');
       const { id: draftId } = await moduleRef
         .get(CreateDraftReviewTemplateUseCase)
-        .execute(data.template);
+        .execute(data.templates.find((t) => t.frequency === 'ANNUAL')!);
       // QA removes every seeded question after the draft got its selection and
       // before activation: the real Activate then throws
-      // ReviewTemplateEmptyError from the repository.
+      // ReviewTemplateEmptyError from the repository. Only the seed draft is
+      // raced; the QUARTERLY template is created and activated before it.
       const setQuestions = deps.setTemplateQuestions;
       const racy = {
         ...deps,
@@ -857,6 +963,9 @@ describe('seedDevDataset (integration)', () => {
             questionIds: string[];
           }) => {
             await setQuestions.execute(input);
+            if (input.templateId !== draftId) {
+              return;
+            }
             await Promise.all(
               input.questionIds.map((id) =>
                 questionRepository.softDeleteById(id),
@@ -866,9 +975,12 @@ describe('seedDevDataset (integration)', () => {
         },
       };
 
-      const kind = await seedDevDataset(racy, data, log);
+      const outcomes = await seedDevDataset(racy, data, log);
 
-      expect(kind).toBe('skip-unfinishable-draft');
+      expect(outcomes).toEqual({
+        QUARTERLY: 'create',
+        ANNUAL: 'skip-unfinishable-draft',
+      });
       expect(logs).toContainEqual(
         expect.stringContaining(
           `WARN: draft ${draftId} cannot be finished (ReviewTemplateEmptyError`,
@@ -880,11 +992,24 @@ describe('seedDevDataset (integration)', () => {
       expect(logs).toContainEqual(
         expect.stringContaining('no usable template (skip-unfinishable-draft)'),
       );
+      // The QUARTERLY sessions were still seeded; the ANNUAL one was not.
+      const { actor } = await actors(data);
+      const technician = actor(
+        data.sessions.find((s) => s.frequency === 'ANNUAL')!.performerEmail,
+      );
+      const quarterlyIds = new Set(
+        (await lineage('QUARTERLY')).map((t) => t.id),
+      );
+      const completed = await sessionRepository.findCompletedForPerformer(
+        technician.userId,
+      );
+      expect(completed.length).toBeGreaterThan(0);
+      expect(completed.every((s) => quarterlyIds.has(s.templateId))).toBe(true);
 
       logs = [];
       const retried = await seedDevDataset(deps, data, log);
 
-      expect(retried).toBe('finish-draft');
+      expect(retried.ANNUAL).toBe('finish-draft');
       expect(
         (await lineage('ANNUAL')).find((t) => t.id === draftId)!.status,
       ).toBe('active');
@@ -893,8 +1018,12 @@ describe('seedDevDataset (integration)', () => {
     it('skips a session whose assignment QA deactivated, with a warning', async () => {
       const data = buildDataset('q17');
       const deps = resolveDevSeedDeps(moduleRef);
-      const kind = await seedDevDataset(deps, { ...data, sessions: [] }, log);
-      if (blockedByTemplate(kind)) {
+      const outcomes = await seedDevDataset(
+        deps,
+        { ...data, sessions: [] },
+        log,
+      );
+      if (blockedByTemplate(outcomes)) {
         return;
       }
       const { actor, communityId } = await actors(data);
@@ -921,7 +1050,9 @@ describe('seedDevDataset (integration)', () => {
       // The rest of the run went on.
       const { seeded } = await historyOf(admin, data);
       expect(labelsOf(seeded)).toEqual(
-        [data.sessions[0], data.sessions[1]].map(label).sort(),
+        [data.sessions[0], data.sessions[1], data.sessions[3]]
+          .map(label)
+          .sort(),
       );
     });
   });

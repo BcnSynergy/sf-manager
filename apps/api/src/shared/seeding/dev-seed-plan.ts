@@ -14,6 +14,7 @@ import { ReviewTemplateNotEditableError } from '../../modules/review-template/do
 import { ReviewTemplateNotFoundError } from '../../modules/review-template/domain/errors/review-template-not-found.error';
 import { TransactionConflictError } from '../../modules/review-template/domain/errors/transaction-conflict.error';
 import type { ReviewTemplate } from '../../modules/review-template/domain/review-template.entity';
+import type { ReviewFrequency } from '@sf-manager/validation';
 import { DEV_SEED_MARKER, type DevUser } from './dev-dataset';
 
 // dev-seed-data design.md Decision 4: every seeded entity is looked up by a
@@ -119,17 +120,32 @@ export function isExpectedTemplateError(error: unknown): boolean {
 export type SessionPlan =
   { kind: 'skip' } | { kind: 'resume'; sessionId: string } | { kind: 'open' };
 
-// design.md Decision 6: keyed on (performer, community) only. A completed
-// session wins (a draft plan QA already finished is not reopened), then a
-// draft is resumed, else a new one is opened.
+// design.md Decision 6, widened by review-schedule Decision 11: keyed on
+// (performer, community, frequency). The frequency of an existing session is
+// the one of the template it was frozen against, looked up in
+// `frequencyByTemplateId`; a session whose template is unknown matches no
+// frequency. A completed session wins (a draft plan QA already finished is
+// not reopened), then a draft is resumed, else a new one is opened.
 export function planSession(
   communityId: string,
-  completedOfPerformer: readonly Pick<ReviewSession, 'communityId'>[],
-  draftsOfPerformer: readonly Pick<ReviewSession, 'id' | 'communityId'>[],
+  frequency: ReviewFrequency,
+  completedOfPerformer: readonly Pick<
+    ReviewSession,
+    'communityId' | 'templateId'
+  >[],
+  draftsOfPerformer: readonly Pick<
+    ReviewSession,
+    'id' | 'communityId' | 'templateId'
+  >[],
+  frequencyByTemplateId: ReadonlyMap<string, ReviewFrequency>,
 ): SessionPlan {
-  if (completedOfPerformer.some((s) => s.communityId === communityId)) {
+  const inKey = (s: Pick<ReviewSession, 'communityId' | 'templateId'>) =>
+    s.communityId === communityId &&
+    frequencyByTemplateId.get(s.templateId) === frequency;
+
+  if (completedOfPerformer.some(inKey)) {
     return { kind: 'skip' };
   }
-  const draft = draftsOfPerformer.find((s) => s.communityId === communityId);
+  const draft = draftsOfPerformer.find(inKey);
   return draft ? { kind: 'resume', sessionId: draft.id } : { kind: 'open' };
 }

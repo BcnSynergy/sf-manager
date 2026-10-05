@@ -135,7 +135,7 @@ describe('DEV_DATASET', () => {
     const names = [
       ...DEV_DATASET.communities.map((c) => c.name),
       ...DEV_DATASET.elements.map((e) => e.name),
-      DEV_DATASET.template.name,
+      ...DEV_DATASET.templates.map((t) => t.name),
     ];
 
     for (const name of names) {
@@ -171,29 +171,43 @@ describe('DEV_DATASET', () => {
     );
   });
 
-  it('targets the EXTINGUISHER x MONTHLY lineage with questions suited to it', () => {
-    expect(DEV_DATASET.template).toMatchObject({
-      elementType: 'EXTINGUISHER',
-      frequency: 'MONTHLY',
-    });
+  it('seeds one EXTINGUISHER template per frequency, QUARTERLY and ANNUAL, never MONTHLY', () => {
+    expect(
+      DEV_DATASET.templates.map((t) => [t.elementType, t.frequency]),
+    ).toEqual([
+      ['EXTINGUISHER', 'QUARTERLY'],
+      ['EXTINGUISHER', 'ANNUAL'],
+    ]);
+    expect(DEV_DATASET.templates.map((t) => t.name)).toEqual([
+      'Dev Seed Extinguisher Quarterly Check',
+      'Dev Seed Extinguisher Annual Check',
+    ]);
+    expect(JSON.stringify(DEV_DATASET)).not.toContain('MONTHLY');
+  });
+
+  it('tags every question for both seeded frequencies', () => {
+    expect(DEV_DATASET.questions).toHaveLength(3);
     for (const question of DEV_DATASET.questions) {
       expect(question.elementType).toBe('EXTINGUISHER');
-      expect(question.frequencies).toContain('MONTHLY');
+      expect(question.frequencies).toEqual(['QUARTERLY', 'ANNUAL']);
     }
   });
+
   describe('sessions', () => {
     const sessions = DEV_DATASET.sessions;
 
-    it('plans three completed sessions and one partial draft', () => {
+    it('plans four completed sessions and one partial draft', () => {
       expect(
         sessions.map(
-          (s) => `${s.performerEmail}|${s.communityName}|${s.complete}`,
+          (s) =>
+            `${s.performerEmail}|${s.communityName}|${s.frequency}|${s.complete}`,
         ),
       ).toEqual([
-        'technician@sf-manager.example|Dev Seed Residences North|true',
-        'technician@sf-manager.example|Dev Seed Residences South|true',
-        'technician2@sf-manager.example|Dev Seed Residences South|true',
-        'rep@sf-manager.example|Dev Seed Residences North|false',
+        'technician@sf-manager.example|Dev Seed Residences North|QUARTERLY|true',
+        'technician@sf-manager.example|Dev Seed Residences South|QUARTERLY|true',
+        'technician2@sf-manager.example|Dev Seed Residences South|QUARTERLY|true',
+        'technician@sf-manager.example|Dev Seed Residences North|ANNUAL|true',
+        'rep@sf-manager.example|Dev Seed Residences North|QUARTERLY|false',
       ]);
       const draft = sessions.find((s) => !s.complete)!;
       const inCommunity = DEV_DATASET.elements.filter(
@@ -203,12 +217,38 @@ describe('DEV_DATASET', () => {
       expect(inCommunity).toHaveLength(2);
     });
 
-    it('never plans two sessions for the same performer and community', () => {
-      const pairs = sessions.map(
-        (s) => `${s.performerEmail}|${s.communityName}`,
+    it('plans the only ANNUAL session in North and a QUARTERLY one in each community', () => {
+      const completed = sessions.filter((s) => s.complete);
+
+      expect(
+        completed
+          .filter((s) => s.frequency === 'ANNUAL')
+          .map((s) => s.communityName),
+      ).toEqual(['Dev Seed Residences North']);
+      for (const community of DEV_DATASET.communities) {
+        expect(
+          completed.some(
+            (s) =>
+              s.frequency === 'QUARTERLY' && s.communityName === community.name,
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it('binds every session to a seeded template of its own frequency', () => {
+      for (const session of sessions) {
+        expect(DEV_DATASET.templates.map((t) => t.frequency)).toContain(
+          session.frequency,
+        );
+      }
+    });
+
+    it('never plans two sessions for the same performer, community and frequency', () => {
+      const keys = sessions.map(
+        (s) => `${s.performerEmail}|${s.communityName}|${s.frequency}`,
       );
 
-      expect(new Set(pairs).size).toBe(pairs.length);
+      expect(new Set(keys).size).toBe(keys.length);
     });
 
     it('performs each session as a user assigned to its community, on its elements', () => {
