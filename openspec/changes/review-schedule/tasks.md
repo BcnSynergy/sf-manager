@@ -71,7 +71,7 @@ Start: main. Finish: seed creates both lineages and four completed sessions; all
 - [x] 1.10 RED `dev-seed-docs.spec.ts`: README must name every template in `DEV_DATASET.templates`
 - [x] 1.11 GREEN `README.md` line 80 and `CLAUDE.md` seed bullet: Quarterly and Annual templates, four completed sessions, one draft
 - [x] 1.12 Verify: `npm run test --workspace=apps/api -- shared/seeding` and `npm run test:integration --workspace=apps/api -- seed-dev-dataset`; lint
-- [ ] 1.13 Manual acceptance (needs the user's explicit OK, then Prisma consent per CLAUDE.md): `migrate reset` + `db seed` with `NODE_ENV=development`; confirm via `psql` two templates, four completed sessions (one ANNUAL, North), one draft; rerun seed, counts unchanged — *Dataset shape*, *Second run*
+- [x] 1.13 Manual acceptance (needs the user's explicit OK, then Prisma consent per CLAUDE.md): `migrate reset` + `db seed` with `NODE_ENV=development`; confirm via `psql` two templates, four completed sessions (one ANNUAL, North), one draft; rerun seed, counts unchanged — *Dataset shape*, *Second run* (done 2026-10-05: 2 active templates QUARTERLY + ANNUAL, 5 sessions = 4 completed incl. 1 ANNUAL in North + 1 draft; second run left counts at 2 templates / 5 sessions)
 
 ## PR 2 — Clock and Madrid calendar helpers (~300 lines)
 
