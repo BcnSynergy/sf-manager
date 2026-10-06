@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "passThroughEnv": ["DATABASE_URL"],
       "outputs": ["dist/**", "build/**"]
     },
     "dev": {
