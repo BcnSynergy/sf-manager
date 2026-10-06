@@ -8,6 +8,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../../../../shared/presentation/decorators/public.decorator';
 import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from '../../../users/application/ports/user.repository.port';
+import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../../application/ports/token-denylist.port';
@@ -32,6 +36,7 @@ export class AuthenticatedGuard implements CanActivate {
     @Inject(TOKEN_ISSUER) private readonly tokenIssuer: TokenIssuer,
     @Inject(TOKEN_DENYLIST) private readonly tokenDenylist: TokenDenylist,
     @Inject(AUTH_CONFIG) private readonly authConfig: AuthConfig,
+    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -51,16 +56,35 @@ export class AuthenticatedGuard implements CanActivate {
     }
 
     // Fail-closed: if we can't confirm the signature/expiry is valid, OR we
-    // can't confirm the jti isn't revoked (e.g. a transient DB outage),
-    // treat it identically to an invalid token. This also means a DB
-    // outage never leaks an "internal error" signal distinguishable from
-    // "invalid token" to a potential attacker.
-    let payload: VerifiedAccessToken;
+    // can't confirm the jti isn't revoked, OR we can't confirm the user
+    // still exists (e.g. a transient DB outage), treat it identically to an
+    // invalid token. This also means a DB outage never leaks an "internal
+    // error" signal distinguishable from "invalid token" to a potential
+    // attacker.
+    //
+    // Order matters: a revoked token never costs a user query. The user is
+    // re-read on every request so that deletion, role and email changes
+    // take effect immediately; the JWT role/email claims are advisory only
+    // (ADR-011, 2026-10-06 addendum).
+    let user: VerifiedAccessToken;
     try {
-      payload = await this.tokenIssuer.verify(token);
+      const payload: VerifiedAccessToken = await this.tokenIssuer.verify(token);
       if (await this.tokenDenylist.isRevoked(payload.jti)) {
         throw new UnauthorizedException();
       }
+      const storedUser = await this.userRepository.findById(payload.sub);
+      if (!storedUser) {
+        throw new UnauthorizedException();
+      }
+      // Built field by field: never the entity (no passwordHash), and no
+      // stray token claims (e.g. iat) ride along.
+      user = {
+        sub: payload.sub,
+        email: storedUser.email,
+        role: storedUser.role,
+        jti: payload.jti,
+        exp: payload.exp,
+      };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -68,7 +92,7 @@ export class AuthenticatedGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    request.user = payload;
+    request.user = user;
     return true;
   }
 }
