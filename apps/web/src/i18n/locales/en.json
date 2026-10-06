@@ -541,6 +541,31 @@
     "ok": "All systems operational",
     "error": "Something is not working"
   },
+  "reviewSchedule": {
+    "title": "Review schedule",
+    "loading": "Loading review schedule...",
+    "error": "Something went wrong loading the review schedule.",
+    "empty": "No reviews are scheduled for you.",
+    "columnCommunity": "Community",
+    "columnElementType": "Element type",
+    "columnStatus": "Status",
+    "columnReason": "Reason",
+    "columnLastReview": "Last review",
+    "neverReviewed": "Never reviewed",
+    "status": {
+      "overdue": "Overdue",
+      "neverReviewed": "Never reviewed",
+      "upcoming": "Upcoming",
+      "upToDate": "Up to date"
+    },
+    "reason": {
+      "quarterMissed": "Q{{quarter}} {{year}} is not covered by a completed review (was due by {{deadline}}).",
+      "quarterDue": "Q{{quarter}} {{year}} review is due by {{deadline}}.",
+      "annualOverdue": "The annual review was due by {{deadline}}.",
+      "annualDue": "The annual review is due by {{deadline}}.",
+      "annualNotOnRecord": "No annual review on record; due by {{deadline}}."
+    }
+  },
   "nav": {
     "label": "Main navigation",
     "home": "Home",
@@ -551,6 +576,7 @@
     "reviewTemplates": "Review templates",
     "reviewSessions": "Review sessions",
     "reviewHistory": "Review history",
+    "reviewSchedule": "Review schedule",
     "organizationProfile": "Organization profile"
   },
   "auth": {

@@ -541,6 +541,31 @@
     "ok": "Tot funciona correctament",
     "error": "Alguna cosa no funciona"
   },
+  "reviewSchedule": {
+    "title": "Calendari de revisions",
+    "loading": "Carregant el calendari de revisions...",
+    "error": "S'ha produït un error en carregar el calendari de revisions.",
+    "empty": "No tens cap revisió programada.",
+    "columnCommunity": "Comunitat",
+    "columnElementType": "Tipus d'element",
+    "columnStatus": "Estat",
+    "columnReason": "Motiu",
+    "columnLastReview": "Darrera revisió",
+    "neverReviewed": "Sense revisar",
+    "status": {
+      "overdue": "Vençuda",
+      "neverReviewed": "Sense revisar",
+      "upcoming": "Propera",
+      "upToDate": "Al dia"
+    },
+    "reason": {
+      "quarterMissed": "El T{{quarter}} de {{year}} no està cobert per una revisió completada (s'havia de fer abans del {{deadline}}).",
+      "quarterDue": "La revisió del T{{quarter}} de {{year}} s'ha de fer abans del {{deadline}}.",
+      "annualOverdue": "La revisió anual s'havia de fer abans del {{deadline}}.",
+      "annualDue": "La revisió anual s'ha de fer abans del {{deadline}}.",
+      "annualNotOnRecord": "No hi ha cap revisió anual registrada; s'ha de fer abans del {{deadline}}."
+    }
+  },
   "nav": {
     "label": "Navegació principal",
     "home": "Inici",
@@ -551,6 +576,7 @@
     "reviewTemplates": "Plantilles de revisió",
     "reviewSessions": "Sessions de revisió",
     "reviewHistory": "Historial de revisions",
+    "reviewSchedule": "Calendari de revisions",
     "organizationProfile": "Perfil de l'organització"
   },
   "auth": {

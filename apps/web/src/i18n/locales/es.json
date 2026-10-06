@@ -541,6 +541,31 @@
     "ok": "Todo funciona correctamente",
     "error": "Algo no está funcionando"
   },
+  "reviewSchedule": {
+    "title": "Calendario de revisiones",
+    "loading": "Cargando el calendario de revisiones...",
+    "error": "Se ha producido un error al cargar el calendario de revisiones.",
+    "empty": "No tienes revisiones programadas.",
+    "columnCommunity": "Comunidad",
+    "columnElementType": "Tipo de elemento",
+    "columnStatus": "Estado",
+    "columnReason": "Motivo",
+    "columnLastReview": "Última revisión",
+    "neverReviewed": "Sin revisar",
+    "status": {
+      "overdue": "Vencida",
+      "neverReviewed": "Sin revisar",
+      "upcoming": "Próxima",
+      "upToDate": "Al día"
+    },
+    "reason": {
+      "quarterMissed": "El T{{quarter}} de {{year}} no está cubierto por una revisión completada (debía realizarse antes del {{deadline}}).",
+      "quarterDue": "La revisión del T{{quarter}} de {{year}} debe realizarse antes del {{deadline}}.",
+      "annualOverdue": "La revisión anual debía realizarse antes del {{deadline}}.",
+      "annualDue": "La revisión anual debe realizarse antes del {{deadline}}.",
+      "annualNotOnRecord": "No hay ninguna revisión anual registrada; debe realizarse antes del {{deadline}}."
+    }
+  },
   "nav": {
     "label": "Navegación principal",
     "home": "Inicio",
@@ -551,6 +576,7 @@
     "reviewTemplates": "Plantillas de revisión",
     "reviewSessions": "Sesiones de revisión",
     "reviewHistory": "Historial de revisiones",
+    "reviewSchedule": "Calendario de revisiones",
     "organizationProfile": "Perfil de la organización"
   },
   "auth": {
