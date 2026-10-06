@@ -16,7 +16,10 @@ read-only historical-session view now exist, owned by the separate
 none of its own, and gains only a navigation entry point into that
 surface. Out of scope: camera / QR scanning, offline capability of any
 kind, per-element history views, list filtering / pagination / sorting /
-search, due-date or overdue indicators, any signing control other than
+search, due-date or overdue indicators (the field flow's own views add
+none; the global navigation's Review schedule item, offered to this flow's
+two roles on every page, is an explicitly permitted entry to the separate
+`review-schedule-ui` capability and is not a control of this flow), any signing control other than
 the completion action itself (presented as **Sign and close**), and any
 export, print, download or send control, and any link to the printable
 review document — the printable review document is owned by
@@ -328,14 +331,31 @@ relabel. The field flow MUST NOT add a due-date or overdue indicator, a
 signing action other than the completion action itself, an export,
 print, download or send action, any link to the review document, or an
 attachment/photo control. No surface anywhere MUST add a
-per-element history view, nor a company-wide or global review view, nor
-pagination, date-range filtering, sorting or search over reviews.
+per-element history view, nor a company-wide or global **list of reviews or
+sessions**, nor pagination, date-range filtering, sorting or search over
+reviews.
+
+The global navigation's **Review schedule** item (`app-navigation`), offered
+on every authenticated page to `SYSTEM_ADMIN`, `MANAGER`,
+`COMMUNITY_REPRESENTATIVE` and `MAINTENANCE_TECHNICIAN` — the field flow's
+pages included — is **explicitly permitted**. It is a navigation entry to the
+separate `review-schedule-ui` capability. It is not a control, indicator or
+link added to the field flow, and it is outside this requirement's
+enumerations of the field flow's own controls. The Review schedule page lists
+obligations per `(community, elementType)` pair and never a session, an entry
+or a review, so it is not a "company-wide or global review view" within the
+meaning of this requirement.
 (Previously: the field flow MUST NOT add "a signing or export action" at
 all, and the by-id detail view MUST be left exactly as it is. Completion
 is now the signing act, presented as **Sign and close** — the only change
 to that view. Export stays forbidden; print, download, send and any
 document link are now named explicitly, because the only link to the
-review document lives on `review-history-ui`.)
+review document lives on `review-history-ui`. The prohibition on "a
+company-wide or global review view" is narrowed to a company-wide or global
+**list of reviews or sessions**, and the global navigation's Review schedule
+item is named as permitted, because the navigation renders on the field
+flow's pages and the schedule page is neither a list of sessions nor a
+review view.)
 
 #### Scenario: No offline infrastructure is added
 - GIVEN the web app after this change
@@ -344,18 +364,26 @@ review document lives on `review-history-ui`.)
 
 #### Scenario: The field flow adds no history view of its own
 - GIVEN every view belonging to the review-session field flow — session start, code entry, answering, completion, draft list and draft detail
-- WHEN its controls and rendered data are enumerated
+- WHEN its own controls and rendered data are enumerated, the global navigation's items excluded
 - THEN none MUST add a list of completed sessions, nor any read of a session the caller did not perform — the shipped performer-scoped, status-agnostic by-id detail view stays unchanged apart from the **Sign and close** relabel and its confirmation copy — and the flow's only permitted reference to history MUST be a navigation control leading to the `review-history-ui` surface
+(Previously: "WHEN its controls and rendered data are enumerated", with no exclusion of the global navigation.)
 
 #### Scenario: No scheduling, signing or attachment control exists in the field flow
 - GIVEN every view of the review-session field flow
-- WHEN its controls are enumerated
+- WHEN its own controls are enumerated, the global navigation's items excluded
 - THEN none MUST offer due dates, overdue lists, a signing control other than **Sign and close**, export, print, download, send, a link to the review document, photos or attachments
+(Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
+
+#### Scenario: The global navigation's Review schedule item is permitted on field-flow pages
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on any field-flow page
+- WHEN the global navigation's items are enumerated
+- THEN the Review schedule item MUST be present and MUST lead to the schedule page, and no view of the field flow itself MUST contain a due date, an overdue indicator or a schedule list
 
 #### Scenario: No per-element, company-wide or global review view exists anywhere
 - GIVEN the web app's routes and pages after this change
-- WHEN they are searched for one element's past reviews, for a company-wide review view and for a global "all reviews" view
-- THEN none MUST be found
+- WHEN they are searched for one element's past reviews, for a company-wide list of reviews or sessions and for a global "all reviews" list of sessions
+- THEN none MUST be found — the Review schedule page, which lists per-pair obligations and no session or review, is not one of them
+(Previously: "for a company-wide review view and for a global 'all reviews' view".)
 
 #### Scenario: No review list control ships anywhere
 - GIVEN every list of reviews rendered by the web app after this change

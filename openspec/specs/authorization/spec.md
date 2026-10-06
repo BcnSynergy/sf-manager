@@ -6,7 +6,8 @@ Role-based access control over authenticated requests. Introduces the
 full 5-role `Role` enum (ADR-011). `SYSTEM_ADMIN` is operational across
 every administrative surface. `MAINTENANCE_TECHNICIAN` and
 `COMMUNITY_REPRESENTATIVE` are additionally operational, but **only** on
-the review-session surface, subject to a second, composable dimension —
+the review-session surface and the review schedule read
+(`reviewSchedule:read`), subject to a second, composable dimension —
 a **resource-scope** rule requiring an active community assignment in
 addition to the role/permission check. The review **history** reads
 (FR-008) are part of that same surface and are governed by the same
@@ -16,14 +17,16 @@ representative's scope is their actively assigned communities; a
 matched against the performing company frozen onto each session — the
 first role whose resource scope is not a set of communities.
 `MAINTENANCE_COMPANY_MANAGER` is operational on the review history reads
-only, holding `reviewSession:read` alone. `SYSTEM_ADMIN` is additionally
+only, holding `reviewSession:read` alone: it holds no `reviewSchedule:read`
+and does not reach the review schedule surface (the schedule endpoint
+refuses it with `403`). `SYSTEM_ADMIN` is additionally
 operational on the review history reads, holding `reviewSession:read` as
 well — the role's first `reviewSession:*` member ever. Its scope
 dimension is unlike every other role's: it is not a set of communities,
 not a maintenance company, and not a performer relation, but the whole
 installation, with no scope predicate at all. No role is fully inert any
-longer: `MANAGER` holds `reviewSession:read` too — the **fifth** role
-operational on the review-history read surface, and the first whose
+longer: `MANAGER` holds `reviewSession:read` and `reviewSchedule:read` — the
+**fifth** role operational on the review-history read surface, and the first whose
 scope is decided not by its role alone, nor by an assignment or a
 company, but by a per-user **capability** (`VIEW_ALL_REVIEWS` in
 `User.managerCapabilities`, ADR-011 Decision 2) that a `SYSTEM_ADMIN`
@@ -36,7 +39,8 @@ surface now has a **second** endpoint — the element-keyed history read
 unchanged in every dimension that matters: the same permission
 (`reviewSession:read`), the same guard order, the same five scopes, the
 same `PermissionChecker.can` signature, and no `ROLE_PERMISSIONS` change
-of any kind. The only new authorization statement is *where* the gate
+by that read's introduction (the later review schedule read adds
+`reviewSchedule:read`, per the paragraph above). The only new authorization statement is *where* the gate
 sits: this is a review-history read that happens to be keyed by an
 element, so it is gated on `reviewSession:read` and **never** on
 `inspectableElement:read` — a permission `SYSTEM_ADMIN` holds alone, and
@@ -100,8 +104,13 @@ requested action would otherwise require role rejection (403). The
 `community:*` permissions are granted only on the `SYSTEM_ADMIN` row of
 `ROLE_PERMISSIONS`; no other role MUST hold any of them — holding an
 active community assignment grants no `community:*` permission, and
-confers access only within the review-session surface (see *Resource
-Scope — an Active Assignment Is Required Beyond the Permission*).
+confers resource scope only on the review-session surface and on the
+review-schedule read (see *Resource Scope — an Active Assignment Is Required
+Beyond the Permission* and *Permission and Scope Check on the Review Schedule
+Endpoint*), never a permission.
+(Previously: "confers access only within the review-session surface". The
+review-schedule read also resolves a representative's or technician's scope
+from their active assignments, so the sentence now names it.)
 
 #### Scenario: SYSTEM_ADMIN is permitted
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
@@ -361,9 +370,11 @@ read.
 ### Requirement: The Organization Profile Grants Nothing Beyond Itself
 
 The new family MUST widen nothing. The four non-admin rows of
-`ROLE_PERMISSIONS` MUST be **unchanged** by this change — each still
-holding exactly what it held before, with `MANAGER` and
-`MAINTENANCE_COMPANY_MANAGER` still exactly `['reviewSession:read']`.
+`ROLE_PERMISSIONS` MUST be **unchanged by this family** — it adds no
+member to any of them. `MAINTENANCE_COMPANY_MANAGER` MUST remain exactly
+`['reviewSession:read']`, and `MANAGER` MUST hold exactly
+`['reviewSession:read', 'reviewSchedule:read']`, the second member being
+granted by the review-schedule read and not by this family.
 Holding `organizationProfile:*` MUST confer nothing on any other
 surface, and no other permission family MUST be widened to reach the
 profile, with exactly **one** exception: the review-document read
@@ -388,11 +399,19 @@ slice on purpose.
 No audit trail of profile edits MUST ship: no table, no event, no
 write — consistent with ADR-011 Decision 5, under which role changes are
 equally unaudited today.
+(Previously: the four non-admin rows were unchanged "by this change", with
+`MANAGER` and `MAINTENANCE_COMPANY_MANAGER` both still exactly
+`['reviewSession:read']`. The review-schedule change grants `MANAGER`
+`reviewSchedule:read`, so the claim is scoped to this family and the
+`MANAGER` row is restated. Three scenarios below that compared rows or the
+permission table "before and after this change" are rewritten to name the
+slice they describe or to state the property directly.)
 
 #### Scenario: The four non-admin rows are unchanged
-- GIVEN `ROLE_PERMISSIONS` before and after this change
+- GIVEN `ROLE_PERMISSIONS` before and after the organization-profile family was introduced
 - WHEN the `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` entries are compared
-- THEN each MUST be identical to what it was, with `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` still exactly `['reviewSession:read']` and no `organizationProfile:*` member anywhere among the four
+- THEN that introduction MUST have added no `organizationProfile:*` member to any of the four; `MAINTENANCE_COMPANY_MANAGER` MUST still be exactly `['reviewSession:read']`, and `MANAGER` MUST be exactly `['reviewSession:read', 'reviewSchedule:read']`, the second member having been granted later by the review-schedule read
+(Previously: each MUST be identical to what it was, with `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` both still exactly `['reviewSession:read']`.)
 
 #### Scenario: The capability is still undeclared
 - GIVEN the user model, schema and authorization code after this change
@@ -400,9 +419,10 @@ equally unaudited today.
 - THEN it MUST NOT appear anywhere in `apps/**` or `packages/**`, and `ManagerCapability` MUST still declare exactly one member, `VIEW_ALL_REVIEWS`
 
 #### Scenario: The admin's other permissions are untouched
-- GIVEN the `SYSTEM_ADMIN` entry before and after this change
-- WHEN they are compared
-- THEN the entry MUST be identical, still including `organizationProfile:read` and `organizationProfile:update`, with no permission removed and none added
+- GIVEN the `SYSTEM_ADMIN` entry
+- WHEN it is read
+- THEN it MUST still include `organizationProfile:read` and `organizationProfile:update`, and neither the organization-profile family nor its letterhead exception MUST have removed any permission from it or added any beyond those two (its `reviewSession:read` and `reviewSchedule:read` members come from their own requirements)
+(Previously: "before and after this change" the entry MUST be identical, with no permission removed and none added, which cannot hold once `SYSTEM_ADMIN` also holds `reviewSchedule:read`.)
 
 #### Scenario: No profile edit is audited
 - GIVEN the schema, the domain events and the write paths after this change
@@ -415,9 +435,10 @@ equally unaudited today.
 - THEN it MUST carry exactly the six letterhead fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — and MUST NOT carry `id` or `logoAssetId`
 
 #### Scenario: No permission is added to reach the exception
-- GIVEN the `Permission` union and `ROLE_PERMISSIONS` before and after this change
-- WHEN they are compared
-- THEN they MUST be identical, and no `organizationProfile:*` member MUST appear on any non-admin row
+- GIVEN the `Permission` union and `ROLE_PERMISSIONS`
+- WHEN the review-document read's letterhead exception is inspected
+- THEN the exception MUST have added no `Permission` member, no `ROLE_PERMISSIONS` grant and no capability, and no `organizationProfile:*` member MUST appear on any non-admin row
+(Previously: the union and the table before and after "this change" MUST be identical, which cannot hold once `reviewSchedule:read` is added to both.)
 
 #### Scenario: The exception is unreachable outside the scoped read
 - GIVEN a caller holding `reviewSession:read` but not in scope for a given session, or holding `reviewSession:read` with no session context at all
@@ -426,12 +447,14 @@ equally unaudited today.
 
 ### Requirement: Non-Admin Roles Remain Inert After the Checklist Permissions Are Added
 
-The system MUST keep `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` limited
-to `reviewSession:read` alone. No `checklistQuestion:*` or
-`reviewTemplate:*` permission MUST be granted to **any** non-admin role,
-including `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`,
-`MAINTENANCE_COMPANY_MANAGER` and `MANAGER`, whose entries hold
-`reviewSession:*` members only. A session reads a template's frozen
+The system MUST keep `MANAGER` limited to exactly
+`['reviewSession:read', 'reviewSchedule:read']` and
+`MAINTENANCE_COMPANY_MANAGER` limited to exactly `['reviewSession:read']`.
+No `checklistQuestion:*` or `reviewTemplate:*` permission MUST be granted to
+**any** non-admin role, including `MAINTENANCE_TECHNICIAN`,
+`COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER` and `MANAGER`,
+whose entries hold `reviewSession:*` members and, for all but
+`MAINTENANCE_COMPANY_MANAGER`, `reviewSchedule:read` only. A session reads a template's frozen
 snapshot through the review-session surface, never through a template
 permission.
 
@@ -442,26 +465,29 @@ Decision 2 names MUST NOT be declared, implemented or referenced
 anywhere. The `User.managerCapabilities` mechanism now exists — declared
 by *The Manager Becomes Operational on Review History Reads, Gated by a
 Granted Capability* — but it MUST declare exactly one member,
-`VIEW_ALL_REVIEWS`, and it MUST gate review-history visibility only. No
-capability MUST gate, imply or unlock checklist-question or
-review-template authority. `PermissionChecker.can`'s signature MUST be
-unchanged.
-(Previously: asserted `MANAGER` MUST equal `[]` and that no
-`managerCapabilities` mechanism or `MANAGE_CHECKLIST_CONTENT` capability
-MUST exist at all — a blanket claim this change narrows to
-checklist-content authority, because `MANAGER` now holds
-`reviewSession:read` and the capability mechanism now exists for
-`VIEW_ALL_REVIEWS`.)
+`VIEW_ALL_REVIEWS`, and it MUST gate review-history visibility and the
+installation-wide scope of the review-schedule read only. No capability
+MUST gate, imply or unlock checklist-question or review-template
+authority. `PermissionChecker.can`'s signature MUST be unchanged.
+(Previously: `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` were limited to
+`reviewSession:read` alone, the entries held `reviewSession:*` members only,
+and the capability "MUST gate review-history visibility only".)
 
 #### Scenario: MANAGER holds no checklist or template permission
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN the `MANAGER` entry is read
-- THEN it MUST equal exactly `['reviewSession:read']`, containing no `checklistQuestion:*` and no `reviewTemplate:*` member
+- THEN it MUST equal exactly `['reviewSession:read', 'reviewSchedule:read']`, containing no `checklistQuestion:*` and no `reviewTemplate:*` member
+(Previously: it MUST equal exactly `['reviewSession:read']`.)
 
 #### Scenario: No non-admin role holds a checklist or template permission
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN all four non-admin entries are read
 - THEN none MUST contain a `checklistQuestion:*` or `reviewTemplate:*` permission
+
+#### Scenario: The company manager holds no schedule permission
+- GIVEN `ROLE_PERMISSIONS` is inspected after this change
+- WHEN the `MAINTENANCE_COMPANY_MANAGER` entry is read
+- THEN it MUST equal exactly `['reviewSession:read']` and MUST NOT contain `reviewSchedule:read`
 
 #### Scenario: No checklist-content capability is introduced
 - GIVEN the shipped user model, schema and authorization code after this change
@@ -512,12 +538,15 @@ The system MUST grant the `reviewSession:*` permissions to
 `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` in
 `ROLE_PERMISSIONS`. Both roles MUST receive the **same** review-session
 permission set, because both perform sessions through the identical flow.
-Neither MUST receive any other permission family.
+Neither MUST receive any other permission family, except that both
+additionally hold `reviewSchedule:read` (see *Permission and Scope Check on
+the Review Schedule Endpoint*).
 `MAINTENANCE_COMPANY_MANAGER` MUST hold exactly `['reviewSession:read']`
 and nothing more (see *The Maintenance Company Manager Becomes
-Operational*), and `MANAGER` MUST hold exactly `['reviewSession:read']`
-and nothing more (see *The Manager Becomes Operational on Review History
-Reads, Gated by a Granted Capability*). `SYSTEM_ADMIN`'s row MUST gain no
+Operational*), and `MANAGER` MUST hold exactly
+`['reviewSession:read', 'reviewSchedule:read']` and nothing more (see *The
+Manager Becomes Operational on Review History Reads, Gated by a Granted
+Capability*). `SYSTEM_ADMIN`'s row MUST gain no
 `reviewSession:*` member beyond `reviewSession:read` (see *The System
 Admin Becomes Operational on Review History Reads*). The table MUST
 remain an exhaustive `Record<Role, Permission[]>`, and
@@ -525,7 +554,9 @@ remain an exhaustive `Record<Role, Permission[]>`, and
 the scope dimension is added beside it, not inside it.
 (Previously: additionally asserted `MANAGER` MUST remain `[]` — now
 false, as `MANAGER` holds `reviewSession:read`; the performing roles'
-own grants are unchanged by this change.)
+own grants are unchanged by this change. Before the review-schedule
+change, neither performing role received any other permission family and
+`MANAGER` held exactly `['reviewSession:read']`.)
 
 #### Scenario: Both performing roles hold the same review-session permissions
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
@@ -535,12 +566,14 @@ own grants are unchanged by this change.)
 #### Scenario: The performing roles gain nothing else
 - GIVEN the two performing roles' entries after this change
 - WHEN they are read
-- THEN they MUST contain only `reviewSession:*` members — no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+- THEN they MUST contain only `reviewSession:*` members and `reviewSchedule:read` — no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+(Previously: only `reviewSession:*` members, without `reviewSchedule:read`.)
 
-#### Scenario: Both read-only roles hold read alone
+#### Scenario: Both read-only roles hold no write member
 - GIVEN `ROLE_PERMISSIONS` after this change
 - WHEN the `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` entries are read
-- THEN each MUST equal exactly `['reviewSession:read']`
+- THEN the `MANAGER` entry MUST equal exactly `['reviewSession:read', 'reviewSchedule:read']` and the `MAINTENANCE_COMPANY_MANAGER` entry MUST equal exactly `['reviewSession:read']`
+(Previously: each MUST equal exactly `['reviewSession:read']`. The title no longer says "read alone", because the `MANAGER` now also holds `reviewSchedule:read`.)
 
 #### Scenario: SYSTEM_ADMIN holds read and no other review-session member
 - GIVEN the `SYSTEM_ADMIN` entry after this change
@@ -566,10 +599,11 @@ maps to anything other than `[]`. It MUST receive **no** other
 `discard`) and **no** other permission family. `SYSTEM_ADMIN` MUST hold
 `reviewSession:read` and no other member of the family, granted by *The
 System Admin Becomes Operational on Review History Reads*, and `MANAGER`
-MUST hold `reviewSession:read` and no other permission at all, granted by
-*The Manager Becomes Operational on Review History Reads, Gated by a
-Granted Capability*; the roles share the permission and differ only in
-the scope it reaches. This role's own scope MUST stay its own maintenance
+MUST hold `reviewSession:read` and, additionally, `reviewSchedule:read` and
+no other permission at all, granted by *The Manager Becomes Operational on
+Review History Reads, Gated by a Granted Capability*; the roles share the
+permission and differ only in the scope it reaches. This role MUST NOT
+hold `reviewSchedule:read`: the schedule endpoint refuses it with `403`. This role's own scope MUST stay its own maintenance
 company, unaffected by either of the two installation-wide scopes, and it
 MUST NOT be reachable by any capability. The table MUST remain an
 exhaustive `Record<Role, Permission[]>`, and `PermissionChecker.can(role,
@@ -577,7 +611,9 @@ permission)`'s signature MUST be unchanged: the company scope is added
 beside it, not inside it.
 (Previously: additionally asserted `MANAGER` MUST remain `[]` — now
 false, as `MANAGER` holds `reviewSession:read`; this role's own grant and
-scope are unchanged by this change.)
+scope are unchanged by this change. The sentence on `MANAGER` read "and no
+other permission at all" after `reviewSession:read`; it now also names
+`reviewSchedule:read`. This role's own row is unchanged.)
 
 #### Scenario: The manager holds exactly one permission
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
@@ -587,7 +623,8 @@ scope are unchanged by this change.)
 #### Scenario: The manager gains no write member of the review-session family
 - GIVEN the `MAINTENANCE_COMPANY_MANAGER` entry after this change
 - WHEN it is compared with the technician's and representative's entries
-- THEN it MUST contain none of `reviewSession:create`, `reviewSession:perform`, `reviewSession:complete` or `reviewSession:discard`, and no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+- THEN it MUST contain none of `reviewSession:create`, `reviewSession:perform`, `reviewSession:complete` or `reviewSession:discard`, and no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*`, `reviewTemplate:*` or `reviewSchedule:read` permission
+(Previously: the list did not name `reviewSchedule:read`.)
 
 #### Scenario: The manager is refused on every review-session write endpoint
 - GIVEN an authenticated `MAINTENANCE_COMPANY_MANAGER`
@@ -611,7 +648,10 @@ in `ROLE_PERMISSIONS` — the role's **first** `reviewSession:*` member
 ever. It MUST receive **no** other member of that family: no
 `reviewSession:create`, `reviewSession:perform`, `reviewSession:complete`
 or `reviewSession:discard`. Its existing administrative permissions MUST
-be otherwise unchanged, with none removed and none added.
+be otherwise unchanged **by this grant**, with none removed and none added
+by it. The review-schedule read separately grants `SYSTEM_ADMIN`
+`reviewSchedule:read` (see *Permission and Scope Check on the Review
+Schedule Endpoint*), which is outside the `reviewSession:*` family.
 
 Holding this permission MUST NOT widen any review-session **write**
 endpoint to `SYSTEM_ADMIN`: opening, resuming, resolving a code,
@@ -628,12 +668,16 @@ The table MUST remain an exhaustive `Record<Role, Permission[]>`, and
 the installation-wide scope is added beside it, not inside it.
 (Previously: additionally asserted `MANAGER` MUST remain mapped to `[]`
 — now false, as `MANAGER` holds `reviewSession:read`; the admin's own
-grant and scope are unchanged by this change.)
+grant and scope are unchanged by this change. The sentence "Its existing
+administrative permissions MUST be otherwise unchanged, with none removed and
+none added" was unqualified; it is now scoped to this grant, because the
+review-schedule read adds `reviewSchedule:read` to the admin's row.)
 
-#### Scenario: The admin gains exactly one review-session permission
-- GIVEN the `SYSTEM_ADMIN` entry of `ROLE_PERMISSIONS` before and after this change
+#### Scenario: The review-history introduction gave the admin exactly one review-session permission
+- GIVEN the `SYSTEM_ADMIN` entry of `ROLE_PERMISSIONS` before and after the review-history introduction
 - WHEN they are compared
-- THEN the only difference MUST be the addition of `reviewSession:read`, with no other permission added or removed
+- THEN the only difference made by that introduction MUST be the addition of `reviewSession:read`, with no other permission added or removed by it
+(Previously: before and after "this change" the only difference MUST be the addition of `reviewSession:read`, with no other permission added or removed. The later `reviewSchedule:read` member is granted by the review-schedule read.)
 
 #### Scenario: The admin gains no write member of the review-session family
 - GIVEN the `SYSTEM_ADMIN` entry after this change
@@ -661,10 +705,12 @@ The system MUST grant `MANAGER` the `reviewSession:read` permission in
 `ROLE_PERMISSIONS` — the role's **first permission of any family, ever**.
 The grant MUST be unconditional on the user: it MUST NOT depend on any
 capability, and every `MANAGER` MUST hold it. It MUST receive **no**
-other permission: no other member of the `reviewSession:*` family (no
-`create`, `perform`, `complete` or `discard`) and no member of any other
-family (`user:*`, `community:*`, `maintenanceCompany:*`,
-`inspectableElement:*`, `checklistQuestion:*`, `reviewTemplate:*`).
+other permission except `reviewSchedule:read` (see *Permission and Scope
+Check on the Review Schedule Endpoint*): no other member of the
+`reviewSession:*` family (no `create`, `perform`, `complete` or `discard`)
+and no member of any other family (`user:*`, `community:*`,
+`maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*`,
+`reviewTemplate:*`).
 
 Holding this permission on its own MUST grant **no visibility**. History
 visibility for this role MUST additionally require the
@@ -673,7 +719,11 @@ visibility for this role MUST additionally require the
 reaches the history surface at all; the capability decides what — if
 anything — that surface returns. A `MANAGER` **without** the capability
 MUST be observably indistinguishable from the role as it behaved before
-this change.
+this change. That guarantee governs the review-history read surface only;
+the review-schedule endpoint is a separate read on which an ungranted
+`MANAGER` receives a success response with an empty list, not a `403`.
+(Previously: the sentence on the other permissions read "no other permission"
+after `reviewSession:read`, and the guarantee was not scoped.)
 
 Holding this permission MUST NOT widen any review-session **write**
 endpoint to `MANAGER`, granted or not: opening, resuming, resolving a
@@ -698,15 +748,17 @@ or revoke a capability. `ROLE_PERMISSIONS` MUST remain an exhaustive
 permission)`'s signature MUST be unchanged — it MUST NOT take a user, a
 capability or a resource, and MUST NOT perform a database read.
 
-#### Scenario: The manager gains exactly one permission
-- GIVEN the `MANAGER` entry of `ROLE_PERMISSIONS` before and after this change
+#### Scenario: The manager gains exactly two permissions in total
+- GIVEN the `MANAGER` entry of `ROLE_PERMISSIONS` before the review-history introduction, and the entry now
 - WHEN they are compared
-- THEN the only difference MUST be the addition of `reviewSession:read`, leaving the entry exactly `['reviewSession:read']`
+- THEN the review-history introduction MUST have added only `reviewSession:read`, and the entry MUST now equal exactly `['reviewSession:read', 'reviewSchedule:read']`, the second member being granted by the review-schedule read
+(Previously: the only difference MUST be the addition of `reviewSession:read`, leaving the entry exactly `['reviewSession:read']`; the title read "gains exactly one permission".)
 
 #### Scenario: The manager gains no other permission of any family
 - GIVEN the `MANAGER` entry after this change
 - WHEN its members are enumerated
-- THEN it MUST contain none of `reviewSession:create`, `reviewSession:perform`, `reviewSession:complete`, `reviewSession:discard`, and no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+- THEN it MUST contain none of `reviewSession:create`, `reviewSession:perform`, `reviewSession:complete`, `reviewSession:discard`, and no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission, and no permission other than `reviewSession:read` and `reviewSchedule:read`
+(Previously: no permission other than `reviewSession:read` was allowed.)
 
 #### Scenario: The permission is held whether or not the capability is granted
 - GIVEN two `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
@@ -754,12 +806,14 @@ performing-company attribution at all, MUST **still be visible**.
 The capability MUST widen **nothing else**. It MUST confer no
 administrative permission, no review-session write access, no
 user-management access, and no per-company, per-community or date-bounded
-variant of the read. It MUST affect the review-history read surface and
-nothing else in the system — which now, by construction, includes the
-review-document read: `review-document` reuses this capability's
-review-history scope resolution without widening it, so a granted
-manager's document visibility is exactly the review-document read
-inheriting this same history scope, not a second grant.
+variant of the read. It MUST affect the review-history read surface — which
+now, by construction, includes the review-document read: `review-document`
+reuses this capability's review-history scope resolution without widening
+it, so a granted manager's document visibility is exactly the
+review-document read inheriting this same history scope, not a second
+grant — and, beyond that surface, nothing else in the system except the
+installation-wide scope of the review-schedule read (see `review-schedule`),
+which returns computed per-pair statuses and never a session or an entry.
 
 Scope MUST still be evaluated in addition to, never instead of, the
 role/permission check, and authentication MUST still be evaluated before
@@ -767,6 +821,9 @@ both. The `completed` status filter MUST still apply: a `draft` MUST NOT
 be listed and MUST NOT be readable by id for this actor either. This
 grant MUST apply to history **reads** only — the lists and the by-id read
 alike.
+(Previously: "It MUST affect the review-history read surface and nothing
+else in the system", which is false once the capability also gates the
+installation-wide scope of the review-schedule read.)
 
 #### Scenario: A granted manager sees every completed session in the installation
 - GIVEN completed sessions attributed to two different maintenance companies, on two different communities, performed by different technicians, and a `MANAGER` holding `VIEW_ALL_REVIEWS`
@@ -793,10 +850,11 @@ alike.
 - WHEN a `MANAGER` holding `VIEW_ALL_REVIEWS` requests each in turn through the history detail read
 - THEN both responses MUST be `404 REVIEW_SESSION_NOT_FOUND` with identical status, error code and message
 
-#### Scenario: The capability widens nothing outside the history read
+#### Scenario: The capability widens nothing outside the history read and the schedule's installation-wide scope
 - GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS`
 - WHEN they call any administrative endpoint — users, communities, maintenance companies, inspectable elements, checklist questions, review templates — and any review-session write endpoint
-- THEN every response MUST be 403, and the capability MUST NOT appear in any authorization decision outside the review-history read
+- THEN every response MUST be 403, and the capability MUST NOT appear in any authorization decision outside the review-history read and the installation-wide scope of the review-schedule read
+(Previously: "outside the review-history read". The installation-wide scope of the review-schedule read is now the one named exception.)
 
 #### Scenario: Unauthenticated caller is rejected before the role and capability checks
 - GIVEN no valid session (no cookie, expired, or tampered token)
@@ -940,11 +998,16 @@ above.
 
 ### Requirement: Assignments Confer No Permission Outside the Review-Session Surface
 
-An active community assignment MUST remain permission-less everywhere
-except the review-session surface. It MUST NOT grant a technician or
-representative any access to `/users`, `/communities`, its assignment
-sub-resources, `/maintenance-companies`, `/checklist-questions`,
+An active community assignment MUST remain permission-less everywhere. It
+MAY decide resource scope only on the review-session surface and on the
+review-schedule read, where the permission itself comes from the role and
+the assignment decides which communities' data is reached. It MUST NOT grant
+a technician or representative any access to `/users`, `/communities`, its
+assignment sub-resources, `/maintenance-companies`, `/checklist-questions`,
 `/review-templates`, or the inspectable-element admin endpoints.
+(Previously: "permission-less everywhere except the review-session surface".
+The review-schedule read is the second surface whose scope an assignment
+decides.)
 
 #### Scenario: An assigned technician still cannot reach admin endpoints
 - GIVEN a `MAINTENANCE_TECHNICIAN` actively assigned to community C
@@ -1102,12 +1165,15 @@ require, consult, imply or be widened by any member of the
 element and its response carries an element header. It is a review-history
 read keyed by an element, not an element-management read.
 
-`ROLE_PERMISSIONS` MUST be **unchanged** by this change: no role gains a
-permission, no role loses one, and in particular **no role gains
-`inspectableElement:read`**, which MUST remain held by `SYSTEM_ADMIN`
-alone. The `Permission` union MUST gain no member, and
+`ROLE_PERMISSIONS` MUST be **unchanged by the element-keyed history read's
+introduction**: that read added no permission to any role and removed none,
+and in particular **no role gains `inspectableElement:read`**, which MUST
+remain held by `SYSTEM_ADMIN` alone. The element-keyed read MUST add no
+member to the `Permission` union, and
 `PermissionChecker.can(role, permission)`'s signature MUST be unchanged —
 no user, capability, element or resource argument, and no database read.
+The later `reviewSchedule:read` member, added by the review-schedule read, is
+outside this requirement.
 
 Consequently all **five** roles holding `reviewSession:read` MUST reach
 this endpoint's authorization layer, and what each then receives MUST be
@@ -1122,16 +1188,22 @@ Reaching this endpoint MUST confer nothing on the element-management
 surface: no element create, update, decommission, soft-delete, label or
 list route MUST widen to any role, and no element-management route's gate
 MUST be relaxed to `reviewSession:read`.
+(Previously: "`ROLE_PERMISSIONS` MUST be **unchanged** by this change: no role
+gains a permission, no role loses one … The `Permission` union MUST gain no
+member", unqualified, which is false once the review-schedule change adds
+`reviewSchedule:read`. The claim is scoped to the element-keyed read.)
 
-#### Scenario: The permission table is byte-unchanged
-- GIVEN `ROLE_PERMISSIONS` and the `Permission` union before and after this change
+#### Scenario: The element-keyed history read leaves the permission table byte-unchanged
+- GIVEN `ROLE_PERMISSIONS` and the `Permission` union before and after the element-keyed history read was introduced
 - WHEN they are compared
-- THEN they MUST be identical — no permission added, removed or moved between roles
+- THEN that introduction MUST have added, removed or moved no permission between roles and added no `Permission` member; the later `reviewSchedule:read` is not part of this comparison
+(Previously: before and after "this change" they MUST be identical — no permission added, removed or moved between roles.)
 
 #### Scenario: No role gains inspectableElement:read
 - GIVEN every role's entry after this change
 - WHEN the `inspectableElement:*` family is searched for across them
-- THEN only `SYSTEM_ADMIN` MUST hold any member of it, exactly as before this change
+- THEN only `SYSTEM_ADMIN` MUST hold any member of it, exactly as before the element-keyed history read was introduced
+(Previously: "exactly as before this change".)
 
 #### Scenario: The element-keyed endpoint declares reviewSession:read
 - GIVEN the element-keyed history route's permission metadata
@@ -1441,10 +1513,13 @@ and exactly **one** actor-unscoped element-keyed history read MUST exist.
 Both MUST be reachable from exactly **two** enumerable paths each: a
 `SYSTEM_ADMIN` unconditionally, or a `MANAGER` for whom
 `VIEW_ALL_REVIEWS` has resolved affirmatively. No third actor-unscoped
-read MUST be introduced, and no other role, and no ungranted `MANAGER`,
-MUST reach either, on any route, under any circumstance. An element
-identifier MUST NOT be mistaken for an actor scope: it narrows which
-entries are candidates and confers no visibility of its own.
+**history** read MUST be introduced, and no other role, and no ungranted
+`MANAGER`, MUST reach either, on any route, under any circumstance. The
+review-schedule read is not a history read and not a third such read: it
+returns computed per-pair statuses and never a session or an entry, and
+its installation-wide result is reachable from the same two actor paths
+only. An element identifier MUST NOT be mistaken for an actor scope: it
+narrows which entries are candidates and confers no visibility of its own.
 
 A user's `maintenanceCompanyId` MUST affect history authorization
 **only** through the `MAINTENANCE_COMPANY_MANAGER` scope defined in
@@ -1453,9 +1528,10 @@ both read surfaces. It MUST have no effect on a
 `MAINTENANCE_TECHNICIAN`'s, a `COMMUNITY_REPRESENTATIVE`'s, a
 `SYSTEM_ADMIN`'s or a `MANAGER`'s history scope, and MUST grant no
 permission to any role. Symmetrically, `managerCapabilities` MUST affect
-authorization **only** through the `MANAGER` history scope, and MUST
-grant nothing to any other role and nothing outside the review-history
-reads.
+authorization **only** through the `MANAGER` history scope and the
+installation-wide scope of the review-schedule read, and MUST grant nothing
+to any other role and nothing outside the review-history reads and the
+review-schedule read.
 
 No audit log of capability or role grants MUST ship: no table, no event,
 no write. This matches ADR-011 Decision 5, under which role changes are
@@ -1466,12 +1542,19 @@ read was allowed to exist. Per-element history now ships — the deferral
 is narrowed, not deleted: it becomes a bound on what shipped, namely one
 element-keyed read family, five scopes applied at entry level, no new
 permission, no `ROLE_PERMISSIONS` change, and a second actor-unscoped
-read reachable from exactly the same two actor paths as the first.)
+read reachable from exactly the same two actor paths as the first. This
+change further narrows the capability sentences, which read "nothing
+outside the review-history reads", to also allow the review-schedule read.
+It also qualifies "No third actor-unscoped read" as "No third actor-unscoped
+**history** read": the review-schedule read is installation-wide for the same
+two actor paths but returns computed per-pair statuses, never a session or an
+entry, so it is named explicitly as not being a history read.)
 
-#### Scenario: MANAGER holds one permission and, by default, no capability
+#### Scenario: MANAGER holds two permissions and, by default, no capability
 - GIVEN `ROLE_PERMISSIONS` and a newly created `MANAGER` after this change
 - WHEN the entry and the user record are read
-- THEN the entry MUST equal exactly `['reviewSession:read']` and the user's `managerCapabilities` MUST be empty — a capability is never held until a `SYSTEM_ADMIN` grants it
+- THEN the entry MUST equal exactly `['reviewSession:read', 'reviewSchedule:read']` and the user's `managerCapabilities` MUST be empty — a capability is never held until a `SYSTEM_ADMIN` grants it
+(Previously: the entry MUST equal exactly `['reviewSession:read']`.)
 
 #### Scenario: Exactly one capability is declared
 - GIVEN the `ManagerCapability` enum, the schema and the authorization code after this change
@@ -1482,6 +1565,11 @@ read reachable from exactly the same two actor paths as the first.)
 - GIVEN every history read path after this change, session-level and element-keyed alike
 - WHEN its scope is inspected
 - THEN each MUST be scoped to a performer, a set of assigned communities, or one maintenance company — except exactly one installation-wide session read and exactly one installation-wide element-keyed read, each of which MUST be reachable only when the caller is a `SYSTEM_ADMIN`, or a `MANAGER` whose `VIEW_ALL_REVIEWS` capability has resolved affirmatively
+
+#### Scenario: The schedule's installation-wide result is reachable from the same two paths
+- GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE`, a `MAINTENANCE_COMPANY_MANAGER` and a `MANAGER` holding no capability
+- WHEN each requests the review schedule
+- THEN none MUST receive a pair outside their own scope, the company manager MUST be refused with `403`, and the ungranted manager MUST receive an empty list
 
 #### Scenario: No other role, and no ungranted manager, reaches an installation-wide result
 - GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE`, a `MAINTENANCE_COMPANY_MANAGER` and a `MANAGER` holding no capability
@@ -1501,9 +1589,67 @@ read reachable from exactly the same two actor paths as the first.)
 #### Scenario: The performing roles still gain nothing else
 - GIVEN the `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` entries after this change
 - WHEN they are read
-- THEN they MUST contain only `reviewSession:*` members — no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+- THEN they MUST contain only `reviewSession:*` members and `reviewSchedule:read` — no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
+(Previously: only `reviewSession:*` members, without `reviewSchedule:read`.)
 
 #### Scenario: No capability or role grant is audited
 - GIVEN the schema, the domain events and the write paths after this change
 - WHEN they are inspected for an audit trail of capability or role grants
 - THEN no audit table, audit event or audit write MUST exist
+
+### Requirement: Permission and Scope Check on the Review Schedule Endpoint
+
+The review-schedule read MUST be gated by the permission
+`reviewSchedule:read`. `ROLE_PERMISSIONS` MUST grant it to `SYSTEM_ADMIN`,
+`MANAGER`, `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE`, and MUST
+NOT grant it to `MAINTENANCE_COMPANY_MANAGER`, who MUST be refused with
+`403`. Holding `reviewSession:read` MUST NOT by itself admit the company
+manager. Authentication MUST be evaluated
+first (`401`), the role gate second, scope third, and no schedule data MUST
+be read before the scope is resolved. A `MANAGER` MUST be admitted whether
+or not they hold `VIEW_ALL_REVIEWS`, receiving an empty result without it
+(see `review-schedule`). Resource scope for `COMMUNITY_REPRESENTATIVE` and
+`MAINTENANCE_TECHNICIAN` MUST be their active community assignments, with no
+performer-based or company-based widening. The capability MUST be resolved
+freshly on every request and MUST fail closed: a capability that cannot be
+affirmatively established (absent, or a soft-deleted user) yields an empty
+scope, while a genuine infrastructure fault MUST surface as an error response
+and MUST NOT be hidden as an empty result, consistently with *The Capability
+Is Resolved Fresh Per Request and Fails Closed*. No new `ManagerCapability`
+member MUST be declared, and the endpoint MUST confer no write access on any
+role.
+
+#### Scenario: Company manager is refused although it holds reviewSession:read
+- GIVEN a `MAINTENANCE_COMPANY_MANAGER`, who may read review history
+- WHEN they call the schedule endpoint
+- THEN the response MUST be `403`
+
+#### Scenario: The permission is granted to exactly four roles
+- GIVEN `ROLE_PERMISSIONS` after this change
+- WHEN the entries are read
+- THEN `reviewSchedule:read` MUST appear in the `SYSTEM_ADMIN`, `MANAGER`, `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` entries and in no other entry
+
+#### Scenario: Four roles are admitted
+- GIVEN a `SYSTEM_ADMIN`, a `MANAGER`, a `MAINTENANCE_TECHNICIAN` and a `COMMUNITY_REPRESENTATIVE`
+- WHEN each calls the schedule endpoint
+- THEN none receives `401` or `403`
+
+#### Scenario: Authentication precedes authorization
+- GIVEN no valid session
+- WHEN the schedule endpoint is called
+- THEN the response MUST be `401` and neither the role gate nor the capability resolution MUST execute
+
+#### Scenario: Scope fails closed before any data read
+- GIVEN a `MANAGER` whose capability is absent, or whose user record has been soft-deleted
+- WHEN they call the schedule endpoint
+- THEN the result MUST be empty and no schedule data MUST have been read
+
+#### Scenario: An infrastructure fault surfaces as an error
+- GIVEN a `MANAGER` and a genuine infrastructure fault while the capability is resolved (a database connection error, for example)
+- WHEN they call the schedule endpoint
+- THEN the response MUST be an error response, not a success with an empty list, and no schedule data MUST have been read
+
+#### Scenario: The endpoint widens nothing
+- GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS`
+- WHEN they call any administrative endpoint or review-session write endpoint
+- THEN every response MUST be `403`, and `ManagerCapability` MUST still declare exactly one member, `VIEW_ALL_REVIEWS`
