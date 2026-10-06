@@ -141,6 +141,23 @@ admin and the migration's default organization profile row exist. This reset is
 manual and destructive to `sfmanager` — it is never run by
 `test:integration` or any other automated command.
 
+## Continuous integration
+
+Every pull request and every push to `main` runs the `ci` job
+(`.github/workflows/ci.yml`) on Node 24: install, build, lint, unit tests,
+API e2e tests and API integration tests, in that order. The integration
+tier runs against a throwaway Postgres service container, and the workflow
+uses no secrets and a read-only token.
+
+Branch protection on `main` is applied once the `ci` check has run green
+there (see ADR-017). From then on, the `ci` check is required for everyone,
+including the admin (no bypass). Branches do not have to be up to date with `main` before
+merging. A pull request is not required, but a direct push is only accepted
+for a commit that already has a green `ci` run. Renaming the job breaks
+merges until branch protection is updated. To roll back, remove branch
+protection first, then revert the workflow; see
+[ADR-017](docs/adr/ADR-017-ci-merge-barrier.md).
+
 ## Structure
 
 - `apps/api` — NestJS backend, Clean Architecture, module-first (ADR-002).

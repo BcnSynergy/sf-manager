@@ -1,0 +1,64 @@
+name: CI
+
+# Merge barrier for main (see docs/adr/ADR-017-ci-merge-barrier.md).
+# The job name `ci` is the required status check; renaming it breaks merges
+# until branch protection is updated.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Dummy value for the throwaway service below, not a secret. Prisma's
+      # config requires it to be set for every CLI call, including the
+      # `prisma generate` inside the build.
+      DATABASE_URL: postgresql://sfmanager:sfmanager@localhost:5432/sfmanager
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: sfmanager
+          POSTGRES_PASSWORD: sfmanager
+          POSTGRES_DB: sfmanager
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sfmanager -d sfmanager"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: build
+        name: Build
+        run: npm run build
+      # Test tiers keep running after an earlier tier fails so one run reports
+      # every failure, but none of them run when the build fails.
+      - name: Lint
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run lint
+      - name: Unit
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm test
+      - name: E2E
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run test:e2e -w apps/api
+      - name: Integration
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run test:integration -w apps/api
