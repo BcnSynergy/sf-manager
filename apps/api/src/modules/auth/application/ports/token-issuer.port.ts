@@ -13,10 +13,10 @@ import type { Role } from '../../../users/domain/role';
 // "application layer bypassing a port" pattern the IdGenerator port exists
 // to prevent (PR 1, Decision 3).
 //
-// `role` (user-management-roles PR 7, design.md Interfaces/Contracts) is
-// signed at login time so PermissionsGuard (PR 3/6) never needs a DB read to
-// authorize a request. Accepted staleness: a role change is only reflected
-// once the holder's token expires or they log in again (design.md Decision 2).
+// `role` and `email` are signed at login time but are advisory only:
+// AuthenticatedGuard re-reads the user on every request and overwrites both
+// on `request.user` with the stored values, so a role or email change (or a
+// deletion) takes effect immediately (ADR-011, 2026-10-06 addendum).
 export interface AccessTokenPayload {
   sub: string;
   email: string;

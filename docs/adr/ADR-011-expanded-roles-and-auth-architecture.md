@@ -447,6 +447,35 @@ its own. Full rationale: `openspec/changes/archive/`
    audit logging of `SYSTEM_ADMIN`/`MANAGER` writes — role changes are
    equally unaudited today, so this is existing precedent, not a new gap.
 
+## Addendum (2026-10-06): `auth-live-user-check` — the guard re-reads the user on every request
+
+This addendum supersedes item 1 of the 2026-08-22 addendum (role staleness
+accepted) and the staleness note in the 2026-09-09 addendum (item 5, `role`
+"accepted as stale"). Both described a behavior that no longer holds.
+
+1. **`AuthenticatedGuard` now looks the user up by `payload.sub` on every
+   authenticated request**, after signature verification and the denylist
+   check, inside the same fail-closed `try/catch`. A missing or
+   soft-deleted user, or a lookup that throws, is answered with a bare
+   `401`, indistinguishable from an invalid token. `request.user` is built
+   field by field (`sub`, `jti`, `exp` from the token; `email`, `role` from
+   the stored user), never the entity, so `passwordHash` cannot leak.
+2. **Existence, `role` and `email` are now live.** Deleting a user, changing
+   their role or changing their email takes effect on their very next
+   request, without waiting for the token to expire. The `role` and `email`
+   JWT claims remain in the token but are advisory only.
+3. **Rationale.** The guard already performs one database read per request
+   (the denylist), so one more primary-key read is marginal, and it closes
+   the staleness this ADR previously accepted without adding a new
+   mechanism.
+4. **Residual.** A request already in flight when the user is deleted still
+   completes. A deleted user's own `POST /auth/logout` is answered with
+   `401`.
+5. **Deferred, unchanged.** The per-user invalidation epoch and refresh
+   tokens (see item 1 of the 2026-08-22 addendum), a lookup cache,
+   de-duplicating the capability checker's own read, dropping the token claims, and a live UI
+   role refresh.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort

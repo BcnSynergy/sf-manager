@@ -15,11 +15,10 @@ import {
   type PermissionChecker,
 } from '../../application/ports/permission-checker.port';
 
-// Minimal request shape this guard reads. `role` is NOT yet part of
-// AuthenticatedRequest/VerifiedAccessToken (../types.ts) — that lands in PR 7
-// (design.md Phase 7, "role in JWT"). This guard is written against the
-// intended end-state shape now; until PR 7 lands, no controller uses
-// @RequirePermission (PR 6) so this path never executes against real traffic.
+// Minimal request shape this guard reads. `role` is the live stored role:
+// AuthenticatedGuard (which runs first) re-reads the user on every request
+// and attaches it to `request.user`, so this guard needs no DB read of its
+// own.
 type RequestWithAuthenticatedUser = {
   user?: { role: Role };
 };
