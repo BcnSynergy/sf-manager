@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | ~2,890 (design.md Migration/Rollout, re-forecast below) |
+| Estimated changed lines | ~2,890 forecast (design.md Migration/Rollout, re-forecast below); delivered actuals for PRs 1-8 are ~9,877 incl. PR 1 planning artifacts, see *Delivered actuals* |
 | 400-line budget risk | High (total); Medium per PR, two PRs exceed 400 through test code |
 | Chained PRs recommended | Yes |
 | Suggested split | PR 1 → PR 2 → ... → PR 9 (stacked-to-main, design order kept) |
@@ -29,7 +29,25 @@ Decision needed: accept `size:exception` for PR 1 and PR 6 (see table), or ask f
 | 7 | Web client, labels helper, i18n keys x3, locales test | ~150 | ~100 | ~250 | No |
 | 8 | Page, route, nav, label text change, browser pass | ~160 | ~230 | ~390 | No (near limit) |
 | 9 | FR-009 docs, archive prep | ~20 | 0 | ~20 | No |
-| Total | | ~1,060 | ~1,830 | ~2,890 | |
+| Total (forecast) | | ~1,060 | ~1,830 | ~2,890 | |
+
+#### Delivered actuals (recorded at PR 9)
+
+Measured with `git diff --numstat <merge>^1 <merge>` for each merged PR (added + deleted lines). Test = `*spec*`/`*test*` files; docs = `*.md`. Locale JSON counts as test here. These are per-PR actuals, not forecasts, and they include the small docs commits that tick tasks.
+
+| PR | Merge | Code | Test | Docs | Total | Note |
+|---|---|---|---|---|---|---|
+| 1 | #177 | 148 | 921 | 3,469 | 4,538 | docs = ~12 README/CLAUDE.md + planning artifacts (proposal, specs, design, tasks); `size:exception` accepted |
+| 2 | #178 | 98 | 251 | 12 | 361 | |
+| 3 | #179 | 192 | 465 | 12 | 669 | over the forecast; test tables |
+| 4 | #180 | 275 | 859 | 18 | 1,152 | over the forecast; reader integration spec |
+| 5 | #181 | 227 | 698 | 14 | 939 | over the forecast |
+| 6 | #182 | 156 | 889 | 14 | 1,059 | over the forecast; e2e and wiring fixtures |
+| 7 | #183 | 196 | 319 | 14 | 529 | locale JSON included |
+| 8 | #184 | 131 | 479 | 20 | 630 | |
+| 1-8 | | 1,423 | 4,881 | 3,573 | 9,877 | about 6,420 without PR 1's planning artifacts |
+
+The forecast (~2,890) undershot the delivered work by roughly 2x for PRs 3-6, almost entirely test code (about 77% test overall in PRs 2-8). Each PR was still reviewed and merged as a unit; no logic was trimmed to fit the budget. PR 9 adds docs only (see its own `git diff --numstat`).
 
 Code/test split: ~37% code, ~63% test. No logic exceeds its PR budget. If PR 3, 4 or 8 passes 400, the overflow is expected to be test tables; report the split and let the user accept (never trim coverage).
 
@@ -162,9 +180,9 @@ Start: PR 7 merged. Finish: page reachable for four roles, label updated, browse
 
 Start: PR 8 merged. Finish: FR-009 marked partial. Rollback: revert PR.
 
-- [ ] 9.1 `docs/requirements/functional-requirements.md`: FR-009 status to `partial`, noting slice 1 shipped (due policy, list, UI) and reminders/notifications deferred
-- [ ] 9.2 Final full check: `npm run lint`, `npm run build`, `npm run test`, `npm run test:integration --workspace=apps/api`, `npm run test:e2e --workspace=apps/api`
-- [ ] 9.3 Archive prep note for `sdd-archive`: update the main `authorization` spec Purpose (company-manager, MANAGER, technician/representative sentences) to name `reviewSchedule:read` / the schedule surface, as the authorization delta header requires; mention the PR 1 README/CLAUDE.md edits are already merged
+- [x] 9.1 `docs/requirements/functional-requirements.md`: FR-009 status to `partial`, noting slice 1 shipped (due policy, list, UI) and reminders/notifications deferred
+- [x] 9.2 Final full check: `npm run lint`, `npm run build`, `npm run test`, `npm run test:integration --workspace=apps/api`, `npm run test:e2e --workspace=apps/api` (done 2026-10-06, `--force` to bypass the Turbo cache: lint 0 errors / 4 pre-existing warnings in `auth.controller.spec.ts` (lint also rewrote the untouched `apps/api/test/community.e2e-spec.ts`, restored); build clean; unit validation 50, api 1344 in 138 suites, web 1041 in 62 files; integration 207 in 29 suites; e2e first run 456/457: `review-session.e2e-spec.ts` guard *no review-session web file introduces a scheduling... mechanism* scanned all of `apps/web/src` and flagged "overdue" in the new schedule page, helper and locale catalogs. Fixed by excluding the schedule surface by path (`review-schedule/`, `ReviewSchedulePage*`, `i18n/locales*`); every other web file is still scanned; e2e then 457/457)
+- [x] 9.3 Archive prep note for `sdd-archive`: update the main `authorization` spec Purpose (company-manager, MANAGER, technician/representative sentences) to name `reviewSchedule:read` / the schedule surface, as the authorization delta header requires; mention the PR 1 README/CLAUDE.md edits are already merged
 
 ## Coverage Cross-Check
 
@@ -187,3 +205,22 @@ Start: PR 8 merged. Finish: FR-009 marked partial. Rollback: revert PR.
 | user-admin-ui (2) | 8.7 |
 | review-session-ui, review-history-ui deltas | 8.5 (nav on field-flow and history pages, controls scoped) |
 | review-session-management, review-history, review-document deltas | Text invariants (no new reads/ports, one unscoped-read bound): upheld by 4.2/5.6 design (no `ReviewSessionRepository` change), `git diff` check in 6.6, and existing suites run in 9.2; no new behaviour to test |
+
+## Archive Prep (for `sdd-archive`)
+
+Written at PR 9. `sdd-archive` consumes this note; nothing here is archived yet.
+
+1. **Main `authorization` spec, Purpose paragraph.** The delta header (`specs/authorization/spec.md`) says a delta cannot modify the Purpose, so the archive step MUST edit `openspec/specs/authorization/spec.md` by hand, after merging the delta, in three sentences:
+   - company manager: "operational on the review history reads only, holding `reviewSession:read` alone" stays true of its permission set, but must say it does not reach the review schedule (it has no `reviewSchedule:read`);
+   - `MANAGER`: "holds `reviewSession:read` too" becomes `reviewSession:read` and `reviewSchedule:read`;
+   - technician and representative: operational "only on the review-session surface" becomes the review-session surface plus the review schedule read (`reviewSchedule:read`).
+   Each sentence must name `reviewSchedule:read` or the review schedule surface.
+2. **Already merged, nothing to do at archive:** the PR 1 `README.md` and `CLAUDE.md` edits (seed now yields the QUARTERLY and ANNUAL templates and S4), and FR-009 set to `partial` in `docs/requirements/functional-requirements.md` (PR 9).
+3. **Open follow-ups** (deferred by ADR-006; canonical copy in `design.md` *Follow-ups*, keep both in sync):
+   - row `data-testid`s in `ReviewSchedulePage` use `communityId` only; they must include `elementType` once a second `ElementType` exists;
+   - `ReviewSchedulePage` and `ReviewHistoryPage` tables lack `<caption>` and `scope="col"`; fix both together in one cross-cutting change;
+   - compile-time single-member check for the `ManagerCapability` union;
+   - optional integration test for a soft-deleted manager through the real `PrismaUserRepository`;
+   - "Pairs are per element type" is untestable while `ElementType` has only `EXTINGUISHER`;
+   - the "in progress" marker is deferred (Decision 8).
+4. **Design text corrected at PR 9:** `ReviewSchedulePrisma` is a structural interface, not a `Pick<PrismaService>`; the *Test isolation* rows now say that the reader spec's `withActiveTemplate` helper does exercise the one-active-per-lineage index (it retires the active row first and restores it in a `finally`), while the wiring spec uses only `retired` templates.
