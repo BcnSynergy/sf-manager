@@ -407,10 +407,11 @@ describe('Review Schedule (e2e)', () => {
   });
 
   describe('Scope fails closed — soft-deleted manager', () => {
-    // The same session/JWT is reused across the soft-delete: the capability
-    // check resolves via `findById`, which excludes soft-deleted rows, so the
-    // account fails closed even with a still-valid cookie.
-    it('a soft-deleted granted MANAGER gets 200 [] and the reader is never called', async () => {
+    // The same session/JWT is reused across the soft-delete: AuthenticatedGuard
+    // re-reads the user via `findById` on every request, which excludes
+    // soft-deleted rows, so the request is rejected with 401 before the
+    // capability checker (defense in depth) is reached.
+    it('a soft-deleted granted MANAGER is rejected with 401 and the reader is never called', async () => {
       // A well-formed UUID: it is a real DELETE /users/:id target below.
       const deletedId = '00000000-0000-7000-8000-000000000049';
       const deletedEmail = 'rs-manager-granted-deleted@example.com';
@@ -431,8 +432,7 @@ describe('Review Schedule (e2e)', () => {
 
       await adminAgent.delete(`/users/${deletedId}`).expect(204);
 
-      const response = await managerAgent.get('/review-schedule').expect(200);
-      expect(response.body).toEqual([]);
+      await managerAgent.get('/review-schedule').expect(401);
       expect(built.reader.calls).toEqual([]);
     });
   });

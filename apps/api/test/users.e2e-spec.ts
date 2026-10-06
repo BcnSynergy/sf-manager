@@ -1358,6 +1358,57 @@ describe('Users (e2e)', () => {
     });
   });
 
+  // auth-live-user-check: AuthenticatedGuard re-reads the user on every
+  // request, so a real write through the API (not a repository poke) takes
+  // effect on the target's still-valid session immediately.
+  describe('Live user check on the target session (auth-live-user-check)', () => {
+    const adminAEmail = 'live-admin-a@example.com';
+    const adminBEmail = 'live-admin-b@example.com';
+    const adminBId = '00000000-0000-7000-8000-000000000902';
+    let app: INestApplication<App>;
+
+    beforeEach(async () => {
+      const adminA = await buildSeedUser({
+        id: '00000000-0000-7000-8000-000000000901',
+        email: adminAEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const adminB = await buildSeedUser({
+        id: adminBId,
+        email: adminBEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      ({ app } = await buildApp([adminA, adminB]));
+    });
+
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it('a demoted admin is refused on GET /users with their still-valid session (403, not 200)', async () => {
+      const agentA = await loginAgent(app, adminAEmail);
+      const agentB = await loginAgent(app, adminBEmail);
+      await agentB.get('/users').expect(200);
+
+      await agentA
+        .patch(`/users/${adminBId}`)
+        .send({ role: 'MANAGER' })
+        .expect(200);
+
+      await agentB.get('/users').expect(403);
+    });
+
+    it('a soft-deleted admin is rejected with 401 on their still-valid session', async () => {
+      const agentA = await loginAgent(app, adminAEmail);
+      const agentB = await loginAgent(app, adminBEmail);
+      await agentB.get('/auth/me').expect(200);
+
+      await agentA.delete(`/users/${adminBId}`).expect(204);
+
+      await agentB.get('/auth/me').expect(401);
+    });
+  });
+
   describe('GET /auth/me returns role (tasks.md 8, design.md Testing Strategy)', () => {
     let app: INestApplication<App>;
     const adminEmail = 'me-admin@example.com';
