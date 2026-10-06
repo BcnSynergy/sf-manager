@@ -10,7 +10,7 @@ The design adds one GitHub Actions workflow with a single job. The job runs the 
 |---|---|---|---|
 | Check identity | Workflow `name: CI`, job id `ci`, job `name: ci`. **Required context: `ci`**, bound to the GitHub Actions app (`app_id: 15368`, verified via `gh api apps/github-actions`). | Generic or long job names; `contexts` without an app | The check-run name is the job `name`. A short, stable name avoids drift with protection. Binding to the app prevents another integration from satisfying the check by posting a status with the same name. |
 | Action pinning | `actions/checkout@v7` (current release v7.0.1) and `actions/setup-node@v7` (current release v7.0.0) major tags, plus `persist-credentials: false` | Full SHA pins | Both are first-party GitHub actions, the token is read-only and no secrets exist. Dependabot is out of scope, so SHA pins would go stale silently. Apply confirms the current major at write time. |
-| Tier continuation | `lint`, `unit`, `e2e` and `integration` each use `if: ${{ !cancelled() && steps.build.outcome == 'success' }}` | Plain serial run; `if: always()` | One run reports every failing tier, which saves a full re-run of about 10 minutes. A build failure still skips every test tier, as the spec's "Build failure stops tests" scenario requires. `always()` would also run after cancellation or a build failure. Any failed step still fails the job. |
+| Tier continuation | `lint`, `unit`, `e2e` and `integration` each use `if: ${{ !cancelled() && steps.build.outcome == 'success' }}` | Plain serial run; `if: always()` | One run reports every failing tier, which saves a full re-run (about 2.2 minutes of job time, measured on the first green runs). A build failure still skips every test tier, as the spec's "Build failure stops tests" scenario requires. `always()` would also run after cancellation or a build failure. Any failed step still fails the job. |
 | `DATABASE_URL` | Job-wide `postgresql://sfmanager:sfmanager@localhost:5432/sfmanager` (a dummy value, not a secret) | Setting it only on the integration step | `apps/api/prisma.config.ts` evaluates `env('DATABASE_URL')`, and Prisma's `env()` throws when the variable is unset. Every Prisma CLI command loads that config, including the `prisma generate` inside `build`. Integration needs it as its base URL (`read-base-database-url.ts`), and there is no `.env` in CI. Setting it job-wide is harmless for unit and e2e. Under `turbo run build` it only reaches Prisma through the `passThroughEnv` decision below. |
 | Turbo strict env mode | `turbo.json` `build` task gets `"passThroughEnv": ["DATABASE_URL"]` | `TURBO_ENV_MODE: loose` in the workflow; `env: ["DATABASE_URL"]` on the task | Turbo 2.10.11 runs in strict env mode (`--dry=json` shows `envMode: strict`, and `@sf-manager/api#build` declares no env), so the job-wide variable is filtered out before `prisma generate`. Without it, `prisma.config.ts` fails with `PrismaConfigEnvError: Cannot resolve environment variable: DATABASE_URL`. Locally this is hidden because `dotenv/config` loads `apps/api/.env`, which CI does not have. `passThroughEnv` exposes the variable without adding it to the cache hash, which is right for a connection string that does not change build output. `env` would hash it. Loose mode would make CI diverge from local and keep the dependency undeclared. The `lint` and `test` turbo tasks do not need it, and integration and e2e run through `npm -w`, not turbo. |
 | `NODE_ENV` | Not set | `NODE_ENV=test` job-wide | Jest and Vitest set it themselves. A job-wide `test` value would leak into `vite build`. |
@@ -18,7 +18,7 @@ The design adds one GitHub Actions workflow with a single job. The job runs the 
 | Postgres role | `POSTGRES_USER=sfmanager` (the image superuser) | A dedicated non-superuser role | Global setup runs `CREATE DATABASE` and `DROP DATABASE ... WITH (FORCE)` through `/postgres`, and the superuser can do both. This mirrors `docker-compose.yml`. |
 | npm version | Use the npm bundled with Node 24 (npm 11); do not pin up front | `npm i -g npm@10.8.2`; corepack | npm does not enforce `packageManager`, and only corepack would. Corepack is no longer bundled from Node 25 onward. Lockfile v3 is read by npm 10 and 11 alike. **Fallback**: if `npm ci` fails on the first run, add a `npm i -g npm@10.8.2` step before `npm ci`. |
 | Runner | `ubuntu-24.04` | `ubuntu-latest` | The runner image cannot change silently under a required check. |
-| Timeout | `timeout-minutes: 30` | 15 | The cold run estimate is 8 to 15 minutes, and 30 leaves 2x headroom. Tighten it after measuring. |
+| Timeout | `timeout-minutes: 15` (initially 30) | 30 | The first green runs took about 2.2 minutes of job time, so 30 (set before measuring, from an 8 to 15 minute estimate) was tightened to 15 in task B.7. That still leaves several times the measured duration as headroom. |
 | Concurrency | group `${{ github.workflow }}-${{ github.event.pull_request.number \|\| github.sha }}`, `cancel-in-progress: ${{ github.event_name == 'pull_request' }}` | `github.ref` group | PR runs share one group per PR and cancel each other. Main pushes get a group per SHA and are never cancelled. |
 | Triggers | `pull_request` (any base) + `push` on `[main]` | `pull_request_target`; filtering PRs to `main` | No privileged context reaches fork code. An unfiltered PR trigger costs nothing and covers future non-main bases. |
 | Protection mechanism | Classic branch protection API | Repository rulesets | The spec's verification uses `branches/main/protection`. Rulesets add nothing a solo repo needs. Branch protection is available on Free for public repos. |
@@ -40,7 +40,7 @@ jobs:
   ci:
     name: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://sfmanager:sfmanager@localhost:5432/sfmanager
     services:
@@ -157,6 +157,6 @@ There are no new code tests: the change contains no app logic, so Strict TDD doe
 ## Open Questions
 
 - [ ] Does `npm ci` succeed with npm 11? This is verified on the first run, and the fallback is the npm pin step.
-- [ ] What are the real wall time and the argon2 prebuilt status? Measure them on the first run, then tighten `timeout-minutes`.
+- [x] What are the real wall time and the argon2 prebuilt status? About 2.2 minutes of job time; `npm ci` took 18s with no argon2 compile. `timeout-minutes` tightened to 15 (B.7).
 - [x] Is `15368` the app id? Verified via `gh api apps/github-actions`; the pre-check still confirms it on the real check run.
 - [ ] Does setup-node `cache: npm` resolve the root `package-lock.json` in this workspaces repo? Confirm in the first-run logs (cache key / restore lines).

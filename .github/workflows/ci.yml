@@ -19,7 +19,7 @@ jobs:
   ci:
     name: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       # Dummy value for the throwaway service below, not a secret. Prisma's
       # config requires it to be set for every CLI call, including the
