@@ -169,12 +169,15 @@ export function coverageWindowStart(now: Date): Date; // UTC midnight of (first 
 export function madridDate(instant: Date): string; // YYYY-MM-DD in Europe/Madrid, via Intl.DateTimeFormat(...).formatToParts
 
 // review-schedule/infrastructure/persistence/prisma-review-schedule.reader.ts
-// Declared in the adapter file, so no other layer sees it. A structural slice of PrismaService, so a test can pass a
-// `$extends` client (which is not assignable to the PrismaService class) without a cast and without importing
-// PrismaClient. Delegate names verified in schema.prisma: Community, InspectableElement, ReviewTemplate, ReviewSession.
-export type ReviewSchedulePrisma = Pick<PrismaService, 'community' | 'inspectableElement' | 'reviewTemplate' | 'reviewSession'>;
+// Declared in the adapter file, so no other layer sees it. As delivered (PR 4 spike, task 4.1) it is a structural
+// interface that spells out the six call signatures the reader makes (`community.findMany`,
+// `inspectableElement.groupBy`, `reviewTemplate.findMany`, `reviewSession.groupBy`/`findMany`), with plain
+// non-generic signatures. The originally designed `Pick<PrismaService, ...>` was rejected by `tsc`: a `$extends`
+// client is not assignable to it, and narrowing the Pick to `findMany`/`groupBy` fails the same way. The interface
+// accepts both `PrismaService` and its extended clients without a cast and without importing PrismaClient.
+export interface ReviewSchedulePrisma { /* community, inspectableElement, reviewTemplate, reviewSession call shapes */ }
 // constructor(@Inject(PrismaService) private readonly prisma: ReviewSchedulePrisma)
-// `@Inject(PrismaService)` is required: a Pick<> alias emits `Object` as decorator metadata, so Nest could not resolve it.
+// `@Inject(PrismaService)` is required: an interface or type alias emits `Object` as decorator metadata, so Nest could not resolve it.
 // Nest keeps injecting the real PrismaService.
 
 // ReviewScheduleRowDto (flat):
@@ -239,10 +242,10 @@ The integration specs run in band against one per-run database (E10), so rows le
 | Spec | Isolation rule |
 |---|---|
 | `seed-dev-dataset.integration.spec.ts` | The dataset now seeds **two** EXTINGUISHER lineages, `QUARTERLY` and `ANNUAL`, and other integration specs leave active templates in both (the file's own comment on `resetLineage`). `buildDataset(suffix)` therefore no longer takes a frequency: it keeps both templates and tags questions `['QUARTERLY','ANNUAL']`. `lineage(frequency)` and `lineageKind(frequency)` take a required `SeededFrequency`. The first-run assertion runs once per frequency (`initialKind` and `before` become records keyed by `SeededFrequency`). Scenarios that must not depend on leftovers (the current `n14` and `u21`) call `resetLineage('QUARTERLY')` **and** `resetLineage('ANNUAL')` before seeding, because a seed run now plans both lineages and an un-reset one would skip with `skip-*` and block the sessions of its frequency. |
-| `prisma-review-schedule.reader.integration.spec.ts` | Leaves the seeded and shared template lineages as it found them (one test swaps in a run-unique ACTIVE ANNUAL version and restores the previous active row in a `finally`; EXTINGUISHER is the only element type, so every covering lineage is shared). It creates its own communities (run-unique names), elements and users, inserts `retired` `ReviewTemplate` rows with run-unique high `version` numbers (the `(elementType, frequency, version)` unique index and the one-active-per-lineage partial index are never hit) and inserts `ReviewSession` rows directly, as setup only, the same way `resetLineage` already uses `PrismaService`. It reads with `{ kind: 'communities', communityIds }` of its own communities, so other specs' rows never enter the result, and deletes the template and session rows it inserted in `afterAll`. |
-| `apps/api/test/review-schedule.integration.spec.ts` | Same direct-insert approach with its own run-unique fixtures. The database is migrated but not seeded, so no admin exists: the spec sets `JWT_SECRET` and `CORS_ORIGIN` before compiling `AppModule` (as `test/app.integration.spec.ts` does), inserts its own run-unique `SYSTEM_ADMIN` with a password hashed by the real `PASSWORD_HASHER` provider, logs in through `/auth/login` and reads with the session cookie, then deletes that user in `afterAll`. The admin read uses scope `all`, so it returns every pair in the database; the spec filters the response to its own communities by id before asserting row content and order, and asserts only the relative order of its own rows. It overrides `CLOCK` only. |
+| `prisma-review-schedule.reader.integration.spec.ts` | Leaves the seeded and shared template lineages as it found them (one test swaps in a run-unique ACTIVE ANNUAL version and restores the previous active row in a `finally`; EXTINGUISHER is the only element type, so every covering lineage is shared). It creates its own communities (run-unique names), elements and users, inserts `retired` `ReviewTemplate` rows with run-unique high `version` numbers (the `(elementType, frequency, version)` unique index is avoided by the random high number, and a `retired` row never touches the one-active-per-lineage partial index). The one exception is the `withActiveTemplate` helper, which does exercise that partial index: it retires the lineage's current active row, inserts a run-unique ACTIVE row, and in a `finally` deletes it and reactivates the previous row, so the index is satisfied at every step and inserts `ReviewSession` rows directly, as setup only, the same way `resetLineage` already uses `PrismaService`. It reads with `{ kind: 'communities', communityIds }` of its own communities, so other specs' rows never enter the result, and deletes the template and session rows it inserted in `afterAll`. |
+| `apps/api/test/review-schedule.integration.spec.ts` | Same direct-insert approach with its own run-unique fixtures. Its templates are all `retired` with run-unique high versions (`createRetiredTemplate`), so neither the lineage unique index nor the one-active-per-lineage partial index is hit there. The database is migrated but not seeded, so no admin exists: the spec sets `JWT_SECRET` and `CORS_ORIGIN` before compiling `AppModule` (as `test/app.integration.spec.ts` does), inserts its own run-unique `SYSTEM_ADMIN` with a password hashed by the real `PASSWORD_HASHER` provider, logs in through `/auth/login` and reads with the session cookie, then deletes that user in `afterAll`. The admin read uses scope `all`, so it returns every pair in the database; the spec filters the response to its own communities by id before asserting row content and order, and asserts only the relative order of its own rows. It overrides `CLOCK` only. |
 
-The query-counter test relies on `tsc` accepting the `$extends` client as a `ReviewSchedulePrisma`. PR 4 checks this first. If the compiler rejects it, the `Pick` is narrowed to the exact delegate methods the six queries call (`findMany`, `groupBy`), still without importing `PrismaClient` and still without a cast.
+The query-counter test relies on `tsc` accepting the `$extends` client as a `ReviewSchedulePrisma`. PR 4 checked this first (task 4.1) and the compiler rejected both the `Pick` and the narrowed `Pick`, so the delivered type is the structural interface with plain call signatures (see Interfaces), still without importing `PrismaClient` and without a cast.
 
 ## Migration / Rollout
 
@@ -270,6 +273,17 @@ Total: about 2,900 changed lines. PR 1 and PR 6 exceed the 400-line budget throu
 - [x] The 12-month annual deadline is inclusive, and 29 Feb becomes 28 Feb. Settled on 2026-10-05.
 - [x] Tie-break: "earlier deadline drives, equal deadline → quarterly" (Due Policy, point 5). The spec and this design carry the same rule. Settled on 2026-10-05.
 - [x] The `NEVER_REVIEWED` and `UP_TO_DATE` reason codes mean "no driving obligation". Both carry `deadline: null` and `quarter: null`, which matches the spec's "no driving obligation and no deadline". Settled on 2026-10-05.
+
+## Follow-ups (deferred by ADR-006, recorded at PR 9)
+
+Not needed by slice 1; each waits for the trigger named. Mirrored in tasks.md *Archive Prep*.
+
+- [ ] Row `data-testid`s in `ReviewSchedulePage` use `communityId` only (one element type today). They must include `elementType` as soon as a second `ElementType` exists, or two rows for one community collide.
+- [ ] `ReviewSchedulePage` and `ReviewHistoryPage` tables lack `<caption>` and `scope="col"` on headers. Fix both in one cross-cutting accessibility change, not per page.
+- [ ] Compile-time single-member check for the `ManagerCapability` TypeScript union (`apps/api/src/modules/users/domain/manager-capability.ts` has `VIEW_ALL_REVIEWS` as its only member today; the schedule scope logic assumes that, so a second capability should fail the build until the logic is revisited).
+- [ ] Optional integration test for a soft-deleted manager through the real `PrismaUserRepository` (the real-repository path is not exercised for this case today).
+- [ ] The "Pairs are per element type" behaviour cannot be tested end to end while `ElementType` has only `EXTINGUISHER`; add the scenario when a second type ships.
+- [ ] The "in progress" marker on a pair with an open draft is deferred (Decision 8: status and sort are unchanged by drafts).
 
 ## Accepted Limitations
 
