@@ -613,6 +613,33 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewHistory.elementHistory.openLink',
   ];
 
+  // Existence guard for review-schedule (PR 7): every `reviewSchedule.*` key
+  // path referenced by the schedule label helpers and, from PR 8, the page.
+  // Same rationale as REQUIRED_COMMUNITY_KEY_PATHS above.
+  const REQUIRED_REVIEW_SCHEDULE_KEY_PATHS = [
+    'reviewSchedule.title',
+    'reviewSchedule.loading',
+    'reviewSchedule.error',
+    'reviewSchedule.empty',
+    'reviewSchedule.columnCommunity',
+    'reviewSchedule.columnElementType',
+    'reviewSchedule.columnStatus',
+    'reviewSchedule.columnReason',
+    'reviewSchedule.columnLastReview',
+    'reviewSchedule.neverReviewed',
+    'reviewSchedule.status.overdue',
+    'reviewSchedule.status.neverReviewed',
+    'reviewSchedule.status.upcoming',
+    'reviewSchedule.status.upToDate',
+    'reviewSchedule.reason.quarterMissed',
+    'reviewSchedule.reason.quarterDue',
+    'reviewSchedule.reason.annualOverdue',
+    'reviewSchedule.reason.annualDue',
+    'reviewSchedule.reason.annualNotOnRecord',
+    // nav item
+    'nav.reviewSchedule',
+  ];
+
   function getKeyPathValue(tree: LocaleTree, path: string): string | LocaleTree | undefined {
     return path.split('.').reduce<string | LocaleTree | undefined>((node, segment) => {
       if (node === undefined || typeof node === 'string') {
@@ -791,6 +818,20 @@ describe('locale key-set parity (en/es/ca)', () => {
   );
 
   it.each(REQUIRED_REVIEW_DOCUMENT_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
+  it.each(REQUIRED_REVIEW_SCHEDULE_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
       for (const [localeName, tree] of Object.entries(locales)) {

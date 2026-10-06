@@ -135,13 +135,13 @@ Start: PR 5 merged. Finish: `GET /review-schedule` reachable and tested through 
 
 Start: PR 6 merged. Finish: client, label/format helpers and keys exist, no page. `users.edit.viewAllReviewsLabel` untouched. Rollback: revert PR.
 
-- [ ] 7.1 RED `apps/web/src/api/review-schedule.test.ts`: `GET /review-schedule`, typed rows, `ApiError` propagates status/code
-- [ ] 7.2 GREEN `apps/web/src/api/review-schedule.ts`
-- [ ] 7.3 RED `review-schedule/schedule-labels.test.ts`: status → key, reason code → key with quarter/deadline params, element type via existing label map, `formatCalendarDate('2026-11-15')` and `'2026-12-31'` identical under TZ UTC-10 and UTC+12, per locale, no instant formatting — review-schedule-ui *Dates do not shift…*, *Raw values never appear*
-- [ ] 7.4 GREEN `apps/web/src/review-schedule/schedule-labels.ts` (`formatCalendarDate` with `timeZone: 'UTC'`)
-- [ ] 7.5 RED `i18n/locales.test.ts`: add `reviewSchedule.*` and `nav.reviewSchedule` to guard list; parity and non-placeholder values in en/es/ca — *All locales are complete*
-- [ ] 7.6 GREEN `i18n/locales/{en,es,ca}.json`: page title, states, column labels, four status labels, reason texts per code, never-reviewed text, nav label
-- [ ] 7.7 Verify: `npm run test --workspace=apps/web -- review-schedule locales`; lint; build
+- [x] 7.1 RED `apps/web/src/api/review-schedule.test.ts`: `GET /review-schedule`, typed rows, `ApiError` propagates status/code
+- [x] 7.2 GREEN `apps/web/src/api/review-schedule.ts`
+- [x] 7.3 RED `review-schedule/schedule-labels.test.ts`: status → key, reason code → key with quarter/deadline params, element type via existing label map, `formatCalendarDate('2026-11-15')` and `'2026-12-31'` identical under TZ UTC-10 and UTC+12, per locale, no instant formatting — review-schedule-ui *Dates do not shift…*, *Raw values never appear*
+- [x] 7.4 GREEN `apps/web/src/review-schedule/schedule-labels.ts` (`formatCalendarDate` with `timeZone: 'UTC'`)
+- [x] 7.5 RED `i18n/locales.test.ts`: add `reviewSchedule.*` and `nav.reviewSchedule` to guard list; parity and non-placeholder values in en/es/ca — *All locales are complete*
+- [x] 7.6 GREEN `i18n/locales/{en,es,ca}.json`: page title, states, column labels, four status labels, reason texts per code, never-reviewed text, nav label
+- [x] 7.7 Verify: `npm run test --workspace=apps/web -- review-schedule locales`; lint; build
 
 ## PR 8 — Page, route, nav, label text, browser pass (~390 lines)
 
