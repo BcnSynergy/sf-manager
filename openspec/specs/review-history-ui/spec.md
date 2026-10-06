@@ -44,7 +44,9 @@ and any export, print, download or send control on this surface — the
 printable review document is owned by `review-document-ui`, and this
 surface's only link to it is the single **View document** link on the
 read-only historical session view; scheduling, overdue indicators,
-analytics and notifications; offline capability of any kind; any
+analytics and notifications (this history surface still ships no scheduling
+or overdue indicator: scheduling lives on the separate review-schedule page,
+owned by `review-schedule-ui`); offline capability of any kind; any
 second per-element view, widget or cross-element rollup beyond the one
 page named above.
 
@@ -550,8 +552,9 @@ included — MUST lead to it, and no control offering to open, resume,
 answer, record, mark unreviewed, enter an element `code`, complete or
 discard a session MUST be rendered for them anywhere on this surface.
 Review history MUST be the admin's **only** history-or-session item; the
-admin's other six navigation items belong to Home and the administrative
-sections and MUST NOT include the review-session flow.
+admin's other navigation items belong to Home, the administrative
+sections, the Organization profile and the Review schedule, and MUST NOT
+include the review-session flow.
 
 The other roles' experience MUST be unchanged — same pages, same rows,
 same controls — and that regression check covers **all four** other
@@ -566,7 +569,10 @@ link is removed in this change and the mechanism becomes the global
 navigation, which also carries the admin's five administrative sections —
 so the requirement names the navigation as the entry point and adds the
 guarantee that none of those seven items is the review-session write
-surface.)
+surface. The counts "other six navigation items", "seven" and "seven-item"
+were already stale once the Organization profile item shipped (eight items)
+and are false with the Review schedule item (nine); the text and the two
+scenarios below no longer count items.)
 
 #### Scenario: The admin reaches history from any authenticated page
 - GIVEN a `SYSTEM_ADMIN` is signed in and on any authenticated page
@@ -585,8 +591,9 @@ surface.)
 
 #### Scenario: The admin's path never crosses the write surface
 - GIVEN a signed-in `SYSTEM_ADMIN`
-- WHEN every navigation control rendered for them is enumerated — all seven of the global navigation's items included
+- WHEN every navigation control rendered for them is enumerated — all of the global navigation's items included
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
+(Previously: "all seven of the global navigation's items included".)
 
 #### Scenario: No write control is rendered for the admin
 - GIVEN a `SYSTEM_ADMIN` viewing the history list and a session's read-only view
@@ -596,7 +603,8 @@ surface.)
 #### Scenario: The other four roles' surface is unchanged, MANAGER included
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER`, and a `MANAGER` (once granted `VIEW_ALL_REVIEWS`, once holding no capability)
 - WHEN each reaches the history list and a session's read-only view after this change
-- THEN each MUST see exactly what they were already committed to seeing — their rows and controls unaffected by the admin's seven-item navigation, and the granted/ungranted manager's own experience exactly as specified by *The Manager Reaches the Shipped History Surface, Granted or Not*
+- THEN each MUST see exactly what they were already committed to seeing — their rows and controls unaffected by the admin's navigation, and the granted/ungranted manager's own experience exactly as specified by *The Manager Reaches the Shipped History Surface, Granted or Not*
+(Previously: "unaffected by the admin's seven-item navigation".)
 
 ### Requirement: The History List Renders the Server-Scoped Result Unfiltered
 
@@ -783,13 +791,33 @@ No second per-element view, no element-history widget embedded in another
 page, no cross-element rollup ("every element in this community, last
 review each") and no per-element chart, trend, interval or overdue
 computation MUST ship.
+
+The separate **Review schedule** page (`review-schedule-ui`) is not a
+history surface and is not bound by this requirement's list of forbidden
+indicators. It shows, per `(community, elementType)` pair, one computed
+status and the date of the pair's most recent covering session. That
+per-pair date is **not** the forbidden "last review each" rollup: it is not
+per element, it is not an element's record, and no per-element figure is
+shown on it.
+
+The global navigation's **Review schedule** item (`app-navigation`) is
+rendered on every authenticated page for four roles, history views
+included. It is a navigation entry to that separate capability: it is
+**explicitly permitted**, it is not a control of the history surface, and it
+is outside every control enumeration in this requirement and its scenarios,
+which govern the history views' own controls. It MUST NOT be read as a
+history, due-date or overdue indicator of the history surface.
 (Previously: the surface was "a single unfiltered list plus a read-only
 detail view" and MUST NOT add a per-element history view at all, with the
 *"No per-element history view exists"* scenario requiring that a search
 of the web routes and pages find none. Exactly one such view now ships;
 the guard is **narrowed, not deleted**: it becomes a bound on that one
 view: one page, two links, no controls, no second variant and no
-aggregation.)
+aggregation. This change adds the paragraph on the Review schedule page,
+and the scenario *No element-history widget, rollup or chart ships* is
+clarified to match, and the global navigation's Review schedule item is
+named as permitted, with the scenario *No adjacent capability surfaces*
+restated to exclude the navigation's items.)
 
 #### Scenario: No list-control ships
 - GIVEN the history list view's controls
@@ -822,11 +850,18 @@ aggregation.)
 - THEN exactly one MUST be found, at `/communities/:communityId/inspectable-elements/:elementId/history`, and its only navigation entry points MUST be the element-list row link and the session-detail entry link
 
 #### Scenario: No element-history widget, rollup or chart ships
-- GIVEN every other page of the web app after this change
+- GIVEN every other page of the web app after this change, other than the Review schedule page
 - WHEN each is inspected
 - THEN none MUST embed an element's review record, none MUST render a cross-element "last review each" rollup, and none MUST compute a per-element chart, trend, interval or overdue indicator
+(Previously: "every other page of the web app", with no exception.)
+
+#### Scenario: The schedule page's per-pair date is not a per-element rollup
+- GIVEN the Review schedule page rendered with rows of several statuses
+- WHEN its rendered data is enumerated
+- THEN each row MUST show one date for its `(community, elementType)` pair at most, and no element, element `code` or per-element last-review figure MUST appear
 
 #### Scenario: No adjacent capability surfaces
 - GIVEN every view of the review-history surface, the element history page included
-- WHEN its controls are enumerated
+- WHEN its own controls are enumerated, the global navigation's items excluded
 - THEN none MUST offer signing, export, print, download, send, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications — the session detail view's single **View document** link being the only document-related control, and the list and element history page offering none
+(Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control. The navigation's items are checked by `app-navigation`.)

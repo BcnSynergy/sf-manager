@@ -65,8 +65,16 @@ Under the gate, the seed MUST create: 2 maintenance companies; users for the
 without), with the `SYSTEM_ADMIN` coming from the unchanged admin bootstrap;
 2 communities with asymmetric representative and technician assignments; 1 to
 2 extinguishers per community; 3 to 5 checklist questions; 1 active
-EXTINGUISHER x MONTHLY template; a few completed review sessions and 1 draft;
-and a filled organization profile.
+EXTINGUISHER x QUARTERLY template **and 1 active EXTINGUISHER x ANNUAL
+template, and no EXTINGUISHER x MONTHLY template**; checklist questions
+usable by both templates; **4** completed review sessions and 1 draft, being
+`technician@` in Dev Seed Residences North on `QUARTERLY`, `technician@` in
+Dev Seed Residences South on `QUARTERLY`, `technician2@` in South on
+`QUARTERLY`, and `technician@` in North on `ANNUAL` (the only `ANNUAL`
+session), plus the `rep@` draft in North on `QUARTERLY`; and a filled
+organization profile.
+(Previously: a single active EXTINGUISHER x MONTHLY template, a few completed
+sessions and 1 draft, and no `ANNUAL` template or session.)
 
 #### Scenario: Dataset shape
 
@@ -75,6 +83,22 @@ and a filled organization profile.
 - THEN the counts match the ranges above and each of the 4 non-admin roles has a user
 - AND the admin, seeded by the bootstrap, is the fifth role
 - AND, among the seeded `MANAGER`s, exactly one holds `VIEW_ALL_REVIEWS`
+
+#### Scenario: Templates are QUARTERLY and ANNUAL, never MONTHLY
+
+- GIVEN a freshly reset database seeded under the gate
+- WHEN the seeded EXTINGUISHER templates are read
+- THEN an active EXTINGUISHER x QUARTERLY template and an active EXTINGUISHER x ANNUAL template exist
+- AND no EXTINGUISHER x MONTHLY template exists
+
+#### Scenario: Four completed sessions, one annual, in North only
+
+- GIVEN a freshly reset database seeded under the gate
+- WHEN the completed sessions are read
+- THEN exactly four exist: `technician@` in North on `QUARTERLY`, `technician@` in South on `QUARTERLY`, `technician2@` in South on `QUARTERLY` and `technician@` in North on `ANNUAL`
+- AND the only `ANNUAL` session is in Dev Seed Residences North
+- AND each community has at least one completed `QUARTERLY` session
+- AND the draft is `rep@` in North on `QUARTERLY`
 
 #### Scenario: Organization profile overwritten
 
@@ -104,13 +128,35 @@ The dataset MUST let each role's Review history scope be checked.
 ### Requirement: Idempotent Additive Seeding
 
 Rerunning the seed MUST create no duplicates and raise no error. Existing
-records MUST be skipped, never removed.
+records MUST be skipped, never removed. This holds for the added ANNUAL
+template and ANNUAL session exactly as for every other seeded record.
+(Previously: stated for the dataset without naming an ANNUAL template or session.)
 
 #### Scenario: Second run
 
 - GIVEN a database already seeded under the gate
 - WHEN the seed runs again
 - THEN all row counts of the seeded records are unchanged and no error occurs
+
+#### Scenario: Second run adds no second annual template or session
+
+- GIVEN a database already seeded under the gate
+- WHEN the seed runs again
+- THEN exactly one EXTINGUISHER x ANNUAL template lineage and exactly one completed `ANNUAL` session still exist
+- AND exactly four completed sessions still exist
+
+#### Scenario: A performer and community may hold one session per frequency
+
+- GIVEN `technician@` already has a completed `QUARTERLY` session in North
+- WHEN the seed runs and plans the `ANNUAL` session for `technician@` in North
+- THEN the `ANNUAL` session is created and is not skipped as a duplicate of the `QUARTERLY` one
+
+#### Scenario: The session key includes the frequency, resolved from the frozen template
+
+- GIVEN seeded sessions whose template versions have been replaced by newer versions of the same frequency
+- WHEN the seed runs
+- THEN each session is matched to its plan by performer, community and the frequency of the template it was frozen against
+- AND no second session is opened for any of those keys
 
 #### Scenario: Partial data completed
 
@@ -130,9 +176,9 @@ records MUST be skipped, never removed.
 
 #### Scenario: New template version does not open a second draft
 
-- GIVEN a seeded draft or completed session for a performer and community, and a newer active template version
+- GIVEN a seeded draft or completed session for a performer, community and frequency, and a newer active template version of that frequency
 - WHEN the seed runs
-- THEN no additional draft or session is opened for that performer and community
+- THEN no additional draft or session is opened for that performer, community and frequency
 - AND a seeded draft bound to the older version is still resumed and completed against that version
 
 ### Requirement: Fail-Soft on Conflicting State
@@ -148,7 +194,10 @@ the expected domain errors of the session use cases, logs a warning naming
 the session plan, the performer, the community and the error, skips that
 session, and lets the run continue. Non-domain errors MUST propagate. The
 seed MUST NOT reactivate or modify existing assignments, elements or
-templates that it does not own.
+templates that it does not own. These rules apply independently to the
+QUARTERLY and the ANNUAL template lineages.
+(Previously: the template scenarios named an EXTINGUISHER x MONTHLY template;
+they now name QUARTERLY, and an ANNUAL scenario is added.)
 
 #### Scenario: A seeded session whose preconditions were changed by QA is skipped with a warning and the run continues
 
@@ -182,7 +231,7 @@ templates that it does not own.
 
 #### Scenario: Foreign or unusable template blocks only new sessions
 
-- GIVEN an EXTINGUISHER x MONTHLY template draft that is not a seed draft with no active template, or an active template without questions
+- GIVEN an EXTINGUISHER x QUARTERLY template draft that is not a seed draft with no active template, or an active template without questions
 - WHEN the seed runs
 - THEN the template is not modified or activated
 - AND every new session that would open against it is skipped with a logged reason
@@ -191,7 +240,7 @@ templates that it does not own.
 
 #### Scenario: Seed draft that cannot be finished blocks only new sessions
 
-- GIVEN a seed draft for EXTINGUISHER x MONTHLY with no active template
+- GIVEN a seed draft for EXTINGUISHER x QUARTERLY with no active template
 - AND setting its questions or activating it fails with an expected template domain error (for example, its questions were removed or it was activated concurrently)
 - WHEN the seed runs
 - THEN a warning names the draft and the error
@@ -201,3 +250,39 @@ templates that it does not own.
 - AND the run does not abort
 - AND a later run, once the cause is gone, finishes and activates the draft
 - AND any other error still aborts the run
+
+#### Scenario: An unusable ANNUAL template blocks only ANNUAL sessions
+
+- GIVEN a foreign or unfinishable EXTINGUISHER x ANNUAL template state, as in the two scenarios above
+- WHEN the seed runs
+- THEN the ANNUAL template is not modified or activated and the ANNUAL session is skipped with a logged reason
+- AND the outcome of one template lineage blocks only the new sessions of its own frequency
+- AND the QUARTERLY template and sessions are created as usual
+- AND the run does not abort
+
+### Requirement: Review Schedule Visibility
+
+On a freshly reset database seeded under the gate, the dataset MUST let the
+review schedule show both an `UP_TO_DATE` and an `UPCOMING` pair for an
+admin: Dev Seed Residences North `UP_TO_DATE` and Dev Seed Residences South
+`UPCOMING`, because North's completed `ANNUAL` session covers its annual
+obligation, while South has completed `QUARTERLY` sessions (two) and no
+`ANNUAL` session on record. The seed MUST NOT backdate sessions to produce
+this outcome, so the statuses hold on the day of the seed run and within the
+same quarter; after a quarter change the database needs a reseed.
+
+#### Scenario: Admin sees North up to date and South upcoming
+
+- GIVEN a freshly reset database seeded under the gate, read on the day of the seed run
+- WHEN a `SYSTEM_ADMIN` reads the review schedule
+- THEN the EXTINGUISHER pair of Dev Seed Residences North is `UP_TO_DATE`
+- AND the EXTINGUISHER pair of Dev Seed Residences South is `UPCOMING` for the annual obligation
+
+#### Scenario: Scope still differs by role
+
+- GIVEN the seeded dataset
+- WHEN each role reads the review schedule
+- THEN technician and representative each see only their assigned communities' pairs
+- AND the `MANAGER` with `VIEW_ALL_REVIEWS` sees the admin's list
+- AND the `MANAGER` without it sees an empty list
+- AND the company manager is refused with `403`

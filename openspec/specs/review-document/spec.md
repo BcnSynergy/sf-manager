@@ -138,7 +138,10 @@ review-session data access.
 
 The read MUST be gated by the existing `reviewSession:read` permission.
 No permission, `Permission` member, `ROLE_PERMISSIONS` grant or
-capability MUST be added.
+capability MUST be added **by this read**.
+(Previously: "MUST be added", unqualified. Later slices, such as the
+review-schedule read, add their own permission; this requirement governs the
+review-document read only.)
 
 #### Scenario: Each of the five scopes reads an in-scope document
 - GIVEN a technician, a representative, a company manager, a `SYSTEM_ADMIN` and a `MANAGER` holding `VIEW_ALL_REVIEWS`, each with a `completed` session in their history scope
@@ -171,9 +174,10 @@ capability MUST be added.
 - THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`, the same uniform outcome as any out-of-scope caller, because document visibility is carried entirely by the review-history scope and never by having performed the session (this is why the field-flow session page carries no document link — a performer-retained-access exception is deferred as an open question, not solved in slice 1)
 
 #### Scenario: No permission is added
-- GIVEN the `Permission` union and `ROLE_PERMISSIONS` before and after this change
-- WHEN they are compared
-- THEN they MUST be identical
+- GIVEN the `Permission` union and `ROLE_PERMISSIONS`
+- WHEN the review-document read is inspected
+- THEN the read MUST have added no `Permission` member, no `ROLE_PERMISSIONS` grant and no capability, and it MUST be gated by the existing `reviewSession:read` alone
+(Previously: the union and the table "before and after this change" MUST be identical, which cannot hold once the review-schedule change adds `reviewSchedule:read` to both.)
 
 ### Requirement: Inclusive Name Lookups Run Only Inside the Scope Gate
 

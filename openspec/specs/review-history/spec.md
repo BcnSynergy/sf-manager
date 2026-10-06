@@ -1030,11 +1030,15 @@ session and check its scope afterwards.
 - THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical to a nonexistent session
 
 > **Reconciling the base spec's "Deferred" table:** "any capability
-> gating anything other than the review-history reads" still holds. The
+> gating anything other than the review-history reads and the
+> installation-wide scope of the review-schedule read" still holds. The
 > `review-document` read is not a second thing `VIEW_ALL_REVIEWS` gates
 > — it is the review-history read's own scope, reused verbatim by a
 > second surface. No new capability check, branch or gate is added
 > anywhere for it.
+(Previously: the note read "any capability gating anything other than the
+review-history reads" still holds, which is the base table's clause before
+the review-schedule read was added to it.)
 
 ### Requirement: History Adds No Write Path
 
@@ -1061,32 +1065,44 @@ with the fifth scope; its **per-element** half ships here (see *One
 Inspectable Element's Completed Review History*). Nothing of FR-008
 remains deferred. The `ManagerCapability` mechanism MUST still declare
 exactly one member, `VIEW_ALL_REVIEWS`, and MUST gate review-history
-visibility only — now across **both** read surfaces. The system MUST NOT
-introduce any of the following.
+visibility only — now across **both** read surfaces — plus the
+installation-wide scope of the separate `review-schedule` read, and nothing
+else. The system MUST NOT introduce any of the following.
 (Previously: per-element history was deferred, its row forbade "any
 query, route or use case returning the past reviews of one inspectable
 element", the *"No per-element history query or route exists"* scenario
 required that none be found, and FR-008 did not close. That row and that
 scenario are **narrowed, not deleted**: exactly one such read now ships,
 and the guard becomes a bound on it — one element-keyed read family, five
-scopes, no controls, no second variant.)
+scopes, no controls, no second variant. The capability clause previously
+read "gate review-history visibility only"; the three rows marked
+*(narrowed for review-schedule)* below are bounded, not deleted, to allow
+the one read-only schedule read.)
 
 | Deferred | Must not exist |
 |---|---|
-| ADR-011 Decision 2's other five capabilities | Any declaration, gate, branch, UI or reference to `MANAGE_COMMUNITIES`, `MANAGE_MAINTENANCE_COMPANIES`, `MANAGE_CHECKLIST_CONTENT`, `MANAGE_INSPECTABLE_ELEMENTS` or `MANAGE_ORGANIZATION_PROFILE`, anywhere in `apps/**` or `packages/**`; any capability gating anything other than the review-history reads |
-| A third actor-unscoped read | Any actor-unscoped "all sessions" or "all entries" query beyond the two named in *History Scope Is Carried by the Query, Not by the Caller*, and any path reaching either while serving a caller who is neither a `SYSTEM_ADMIN` nor a `MANAGER` with an affirmatively resolved capability |
+| ADR-011 Decision 2's other five capabilities *(narrowed for review-schedule)* | Any declaration, gate, branch, UI or reference to `MANAGE_COMMUNITIES`, `MANAGE_MAINTENANCE_COMPANIES`, `MANAGE_CHECKLIST_CONTENT`, `MANAGE_INSPECTABLE_ELEMENTS` or `MANAGE_ORGANIZATION_PROFILE`, anywhere in `apps/**` or `packages/**`; any capability gating anything other than the review-history reads and the installation-wide scope of the `review-schedule` read |
+| A third actor-unscoped read *(narrowed for review-schedule)* | Any actor-unscoped "all sessions" or "all entries" query beyond the two named in *History Scope Is Carried by the Query, Not by the Caller*, and any path reaching either while serving a caller who is neither a `SYSTEM_ADMIN` nor a `MANAGER` with an affirmatively resolved capability. The `review-schedule` read is **not** a third such read: it is scoped to the caller by role, reads through its own module-local port, returns computed per-pair statuses and never a session or an entry, and reaches an installation-wide result only for a `SYSTEM_ADMIN` or a `MANAGER` with an affirmatively resolved capability |
 | Capability state outside the database | Any `managerCapabilities` claim in a JWT or token payload, any cached or precomputed capability, and any client-side authorization decision derived from one |
 | An audit trail | Any audit table, event or write recording a capability grant, a capability revoke or a role change |
 | A narrowed variant of the granted read | Any per-company, per-community or date-bounded variant of `VIEW_ALL_REVIEWS`, and any granted-manager-specific repository method or route, on either surface |
-| A second element-keyed surface | Any cross-element or cross-community aggregation ("every element's last review"), any element-keyed read reached from a route other than the single nested one, any unscoped `findById` on the inspectable-element port, and any `GET` by-id inspectable-element endpoint |
+| A second element-keyed surface *(narrowed for review-schedule)* | Any cross-element or cross-community aggregation ("every element's last review") **other than the `review-schedule` read, which aggregates per `(community, elementType)` pair and returns no element-level data**, any element-keyed read reached from a route other than the single nested one, any unscoped `findById` on the inspectable-element port, and any `GET` by-id inspectable-element endpoint |
 | List controls | Any pagination, cursor, limit, offset, date-range filter, sorting or search parameter on a history read — on **either** surface, including the installation-wide list and an element's own record however long it grows |
-| Analytics derived from the element record | Any stored `lastInspectedAt` or equivalent projection, any overdue or due-date computation, any trend or chart, and any export or signing path over an element's record |
+| Analytics derived from the element record | Any stored `lastInspectedAt` or equivalent projection, any overdue or due-date computation, any trend or chart, and any export or signing path over an element's record. The `review-schedule` read is not derived from an element's record: it is computed on read, per pair, from completed sessions |
 | Company-attribution history | Any effective-dated employment table, attribution version history, or route/use case that rewrites a session's recorded performing company |
+
+(Previously, the *Analytics* row ended at "an element's record"; the added
+sentence is a clarification, not a relaxation.)
 
 #### Scenario: Exactly one manager capability is declared
 - GIVEN the `ManagerCapability` enum, the user model, the schema and the authorization code after this change
 - WHEN they are searched for capability names
 - THEN exactly one — `VIEW_ALL_REVIEWS` — MUST exist, and none of ADR-011's other five names MUST appear anywhere in `apps/**` or `packages/**`
+
+#### Scenario: The capability gates only the history reads and the schedule's installation-wide scope
+- GIVEN every authorization decision that consults `VIEW_ALL_REVIEWS` after this change
+- WHEN they are enumerated
+- THEN each MUST belong to a review-history read or to the review-schedule read's installation-wide scope, and none MUST gate any other surface
 
 #### Scenario: The capability lives only in the database
 - GIVEN the token payload, the authenticated actor, the current-user endpoint's response and the client's authorization code after this change
@@ -1098,6 +1114,11 @@ scopes, no controls, no second variant.)
 - WHEN their methods are enumerated
 - THEN each company-scoped method MUST take exactly one maintenance-company identifier, each community-scoped method its communities and each performer-scoped method its performer — and exactly two methods MUST carry no actor scope at all, per *History Scope Is Carried by the Query, Not by the Caller*
 
+#### Scenario: The schedule read leaves the review-session port's bound intact
+- GIVEN the review-session repository port before and after this change
+- WHEN its methods are compared
+- THEN no method MUST have been added to it for the review-schedule read
+
 #### Scenario: The company scope never joins to the performer's current company
 - GIVEN the company-scoped history queries after this change, session-level and element-keyed alike
 - WHEN their predicates are inspected
@@ -1106,7 +1127,8 @@ scopes, no controls, no second variant.)
 #### Scenario: Exactly one per-element history read family exists, behind one route
 - GIVEN the routes, use cases and repository queries after this change
 - WHEN they are searched for the past reviews of a single element
-- THEN exactly one family MUST be found — one nested route under the element's community, one use case, and one repository method per scope — and no second route, no flat element-keyed route, and no cross-element or cross-community aggregation MUST exist
+- THEN exactly one family MUST be found — one nested route under the element's community, one use case, and one repository method per scope — and no second route, no flat element-keyed route, and no cross-element or cross-community aggregation of element reviews MUST exist
+(Previously: "no cross-element or cross-community aggregation MUST exist", unqualified. The review-schedule read returns no element-level data and is not an element-keyed read.)
 
 #### Scenario: The element port gains nothing
 - GIVEN the inspectable-element repository port and the element-management routes before and after this change
