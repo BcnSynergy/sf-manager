@@ -6,80 +6,22 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
-import {
-  USER_REPOSITORY,
-  type UserRepository,
-} from '../src/modules/users/application/ports/user.repository.port';
+import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.repository.port';
 import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import { User } from '../src/modules/users/domain/user.entity';
 
 // design.md Testing Strategy (E2E row): hermetic, no test DB — USER_REPOSITORY
-// and TOKEN_DENYLIST are overridden with in-memory implementations, so
-// PrismaService (still part of the DI graph via the @Global() PrismaModule,
-// which HealthController also injects directly) is stubbed too, purely to
-// avoid opening a real database connection in onModuleInit()/$connect().
-class InMemoryUserRepository implements UserRepository {
-  private readonly usersByEmail = new Map<string, User>();
-
-  seed(user: User): void {
-    this.usersByEmail.set(user.email, user);
-  }
-
-  findByEmail(email: string): Promise<User | null> {
-    const user = this.usersByEmail.get(email);
-    if (!user || user.isDeleted) {
-      return Promise.resolve(null);
-    }
-    return Promise.resolve(user);
-  }
-
-  save(user: User): Promise<void> {
-    this.usersByEmail.set(user.email, user);
-    return Promise.resolve();
-  }
-
-  // --- Compile bridge only (user-management-roles PR 5). This auth-only
-  // e2e suite never exercises `/users` routes, so it has no need for the
-  // full CRUD surface — but `implements UserRepository` requires these
-  // members after PR 5 extended the port (design.md Interfaces/Contracts).
-  // A dedicated in-memory fake with a real implementation of these members
-  // lands in `test/users.e2e-spec.ts` (tasks.md 8.1).
-  findById(): Promise<User | null> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  findAll(): Promise<User[]> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  create(): Promise<void> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  updateById(): Promise<void> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  softDeleteById(): Promise<void> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  countActiveByRole(): Promise<number> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  countActiveByMaintenanceCompany(): Promise<number> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-
-  transactional<T>(): Promise<T> {
-    throw new Error('Not used by auth.e2e-spec.ts');
-  }
-}
-
+// and TOKEN_DENYLIST are overridden with in-memory implementations (the user
+// repository is the shared fake, with real findById/updateById/
+// softDeleteById, because AuthenticatedGuard re-reads the user on every
+// request), so PrismaService (still part of the DI graph via the @Global()
+// PrismaModule, which HealthController also injects directly) is stubbed
+// too, purely to avoid opening a real database connection in
+// onModuleInit()/$connect().
 class InMemoryTokenDenylist implements TokenDenylist {
   private readonly revokedJtis = new Set<string>();
 
@@ -242,6 +184,80 @@ describe('Auth (e2e)', () => {
       expect(response.body).toEqual({
         id: 'seeded-admin-id',
         email: ADMIN_EMAIL,
+        role: 'SYSTEM_ADMIN',
+      });
+    });
+  });
+
+  describe('live user check (GET /auth/me)', () => {
+    async function seedAndLogin(
+      id: string,
+      email: string,
+    ): Promise<ReturnType<typeof request.agent>> {
+      const passwordHash = await argon2.hash(ADMIN_PASSWORD, {
+        type: argon2.argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        parallelism: 1,
+      });
+      const now = new Date();
+      userRepository.seed(
+        new User({
+          id,
+          email,
+          passwordHash,
+          role: 'SYSTEM_ADMIN',
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        }),
+      );
+      const agent = request.agent(app.getHttpServer());
+      await agent
+        .post('/auth/login')
+        .send({ email, password: ADMIN_PASSWORD })
+        .expect(200);
+      return agent;
+    }
+
+    it('rejects a still-valid session once the user is soft-deleted', async () => {
+      const agent = await seedAndLogin(
+        'live-deleted-id',
+        'deleted@example.com',
+      );
+      await agent.get('/auth/me').expect(200);
+
+      await userRepository.softDeleteById('live-deleted-id');
+
+      await agent.get('/auth/me').expect(401);
+    });
+
+    it('reports the current role after a role change, not the token role', async () => {
+      const agent = await seedAndLogin('live-role-id', 'role@example.com');
+
+      await userRepository.updateById('live-role-id', {
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+
+      const response = await agent.get('/auth/me').expect(200);
+      expect(response.body).toEqual({
+        id: 'live-role-id',
+        email: 'role@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+    });
+
+    it('reports the current email after an email change, not the token email', async () => {
+      const agent = await seedAndLogin('live-email-id', 'before@example.com');
+
+      await userRepository.updateById('live-email-id', {
+        email: 'after@example.com',
+      });
+
+      const response = await agent.get('/auth/me').expect(200);
+      expect(response.body).toEqual({
+        id: 'live-email-id',
+        email: 'after@example.com',
         role: 'SYSTEM_ADMIN',
       });
     });

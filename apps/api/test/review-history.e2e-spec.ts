@@ -1150,14 +1150,14 @@ describe('Review History (e2e)', () => {
     });
 
     // design.md Testing Strategy row "a soft-deleted granted manager sees
-    // nothing" (unit-pinned in user-manager-capability.checker.spec.ts) —
-    // this is the e2e counterpart, reusing the SAME session/JWT across the
-    // soft-delete the way the "Revoke -> invisible, no re-login" row does:
-    // a granted MANAGER's capability check resolves via `findById`, which
-    // excludes soft-deleted rows by construction (ADR-010), so the account
-    // being soft-deleted fails the capability closed even with a still-valid
-    // JWT.
-    it('a soft-deleted granted MANAGER sees nothing, even reusing the same session', async () => {
+    // nothing" — the e2e counterpart, reusing the SAME session/JWT across the
+    // soft-delete. AuthenticatedGuard re-reads the user on every request
+    // (`findById` excludes soft-deleted rows by construction, ADR-010) and
+    // answers 401 before the capability checker is ever reached, so the
+    // still-valid JWT no longer authenticates. The checker's own fail-closed
+    // behavior stays pinned by user-manager-capability.checker.spec.ts
+    // (defense in depth).
+    it('a soft-deleted granted MANAGER is rejected with 401, even reusing the same session', async () => {
       // uuid-path-validation branch: well-formed UUID, not a
       // human-readable placeholder — this id is a real DELETE
       // /users/:id target below (see users.e2e-spec.ts for the
@@ -1179,17 +1179,10 @@ describe('Review History (e2e)', () => {
         .delete('/users/00000000-0000-7000-8000-000000000039')
         .expect(204);
 
-      const listResponse = await softDeletedManagerAgent
-        .get('/review-history')
-        .expect(200);
-      expect(listResponse.body).toEqual([]);
-
-      const byIdResponse = await softDeletedManagerAgent
+      await softDeletedManagerAgent.get('/review-history').expect(401);
+      await softDeletedManagerAgent
         .get(`/review-history/${sessionByUForC.id}`)
-        .expect(404);
-      expect((byIdResponse.body as ErrorBody).code).toBe(
-        'REVIEW_SESSION_NOT_FOUND',
-      );
+        .expect(401);
     });
 
     // authorization/spec.md "The manager is refused on every review-session

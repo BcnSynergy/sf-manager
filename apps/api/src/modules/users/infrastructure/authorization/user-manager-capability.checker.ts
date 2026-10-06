@@ -30,11 +30,11 @@ export class UserManagerCapabilityChecker implements ManagerCapabilityChecker {
     switch (role) {
       case 'MANAGER': {
         const user = await this.userRepository.findById(userId);
-        // The `role` PARAMETER is a JWT claim, stale for up to ADR-011's
-        // accepted ~2h token lifetime. This re-checks the FRESHLY-READ
-        // persisted row's own role, structurally closing the case where a
-        // user was demoted out of MANAGER mid-token-lifetime but their JWT
-        // still claims `role: 'MANAGER'` (design.md Decision 2).
+        // Defense in depth: AuthenticatedGuard already re-reads the user on
+        // every request, so the `role` PARAMETER is normally the live role.
+        // This still re-checks the freshly-read persisted row's own role, so
+        // the checker fails closed on its own when called from any path that
+        // did not go through that guard (design.md Decision 2).
         if (!user || user.role !== 'MANAGER') {
           return false;
         }

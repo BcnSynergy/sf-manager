@@ -10,10 +10,10 @@ export interface CurrentUserResponse {
 
 // design.md: GET /auth/me follows the same layered pattern as login/logout
 // instead of being a presentation-layer passthrough — this use case owns
-// mapping the guard's verified token payload down to the public identity
-// fields only (never jti/exp/sub leaking into the response body). `role`
-// (PR 7, breaking change — authentication spec.md delta "Session
-// Introspection") comes straight off the verified token, no DB read.
+// mapping the guard's authenticated user down to the public identity fields
+// only (never jti/exp/sub leaking into the response body). `email` and
+// `role` are the live stored values: AuthenticatedGuard re-reads the user on
+// every request, so this use case itself performs no DB read.
 @Injectable()
 export class GetCurrentUserUseCase {
   execute(payload: VerifiedAccessToken): CurrentUserResponse {
