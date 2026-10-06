@@ -36,8 +36,8 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
   `community-minimal-ui` — see `openspec/changes/archive/`). "New slice =
   domain + UI together" is now the steady state with no backlog behind
   it. Every slice since `review-history` has been built this way from the
-  start. The most recent is `review-export` (FR-010 slice 1, archived
-  2026-09-24).
+  start. The most recent is `review-schedule` (FR-009 slice 1, archived
+  2026-10-06).
 - If a proposal is about to be written for API-only, ask explicitly
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
