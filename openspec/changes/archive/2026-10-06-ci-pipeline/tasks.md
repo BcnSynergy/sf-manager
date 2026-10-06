@@ -34,22 +34,23 @@ Strict TDD: N/A for every task (config/docs, no app code). apply-progress "TDD C
 - [x] A.6 `README.md`: add `## Continuous integration` after "Other commands": tiers, Node 24, throwaway Postgres, no secrets, required `ci`, no admin bypass, non-strict, pointer to ADR-017 rollback. Spec: Documentation. TDD: N/A (docs).
 - [x] A.7 Run `npm run lint`; confirm `git diff --stat` is ~155 lines and touches only the five files. TDD: N/A.
 - [x] A.8 Commit as one work unit (conventional commit); docs and config travel with the workflow.
+- [x] A.9 (added in B.1) Fix the latent order-dependent integration test the first CI run surfaced: `seed-dev-dataset.integration.spec.ts` test "a second run creates no duplicates..." asserted zero WARN without `resetLineages()`. Second commit on the same PR (`9a7b69f`). TDD: RED/GREEN reproduced locally on a cold Jest cache.
 
 ## Gate (orchestrator, not an apply task)
 
-- [ ] G.1 Fresh-context review before push, and again before merge; user confirms push, PR and merge explicitly.
+- [x] G.1 Fresh-context review before push, and again before merge; user confirms push, PR and merge explicitly. Done for #189 (pre-push full review, light review of the test fix, pre-merge review) and #191 (light pre-push and pre-merge reviews).
 
 ## Phase B: Post-merge rollout (orchestrator + user, NOT sdd-apply)
 
-- [ ] B.1 Observe the PR's own `ci` run: `npm ci` on npm 11 (fallback: add `npm i -g npm@10.8.2` step before `npm ci`), root lockfile cache hit, wall time, argon2 prebuilt. Spec: Verification tiers.
-- [ ] B.2 After merge, confirm the `main` push run is green. Spec: Push to main run, Premature protection.
-- [ ] B.3 Pre-check name and app id: `gh api repos/BcnSynergy/sf-manager/commits/main/check-runs --jq '.check_runs[] | {name, conclusion, app: .app.id}'`.
-- [ ] B.4 With the user's explicit OK, apply protection via `gh api -X PUT` (payload in design). Spec: Merge barrier.
-- [ ] B.5 Verify with `gh api .../branches/main/protection`: `ci` required (app 15368), `enforce_admins` true, `strict` false. Spec: Protection configuration.
-- [ ] B.6 Barrier probe: branch `ci-pipeline/zz-barrier-probe` with a failing spec; PR shows `BLOCKED` and `gh pr merge` is refused; then `gh pr close --delete-branch`. Spec: Failing PR blocked for admin.
-- [ ] B.7 Optional: tighten `timeout-minutes` from measured duration (separate tiny PR only if the user wants it).
+- [x] B.1 Observe the PR's own `ci` run: `npm ci` on npm 11 (fallback: add `npm i -g npm@10.8.2` step before `npm ci`), root lockfile cache hit, wall time, argon2 prebuilt. Spec: Verification tiers. Run 37502685198 failed 1/207 integration (see A.9); run 37504191872 green: `npm ci` 18s on npm 11 with no fallback needed and no argon2 compile, job 2m14s, cache saved keyed on the root lockfile and restored on run 37507255249.
+- [x] B.2 After merge, confirm the `main` push run is green. Spec: Push to main run, Premature protection. #189 merged at 8437978; run 37505671255 green.
+- [x] B.3 Pre-check name and app id: `gh api repos/BcnSynergy/sf-manager/commits/main/check-runs --jq '.check_runs[] | {name, conclusion, app: .app.id}'`. Result: `ci`, success, app 15368 (`github-actions`); protection was 404 before B.4.
+- [x] B.4 With the user's explicit OK, apply protection via `gh api -X PUT` (payload in design). Spec: Merge barrier. Applied 2026-10-06 with the user's OK.
+- [x] B.5 Verify with `gh api .../branches/main/protection`: `ci` required (app 15368), `enforce_admins` true, `strict` false. Spec: Protection configuration. Verified; no required reviews, no restrictions.
+- [x] B.6 Barrier probe: branch `ci-pipeline/zz-barrier-probe` with a failing spec; PR shows `BLOCKED` and `gh pr merge` is refused; then `gh pr close --delete-branch`. Spec: Failing PR blocked for admin. PR #190: run 37506363775 failed on Unit only, `mergeStateStatus=BLOCKED`, `gh pr merge --admin` refused with "Required status check \"ci\" is failing"; closed unmerged, branch deleted.
+- [x] B.7 Optional: tighten `timeout-minutes` from measured duration (separate tiny PR only if the user wants it). #191: 30 to 15, merged at 774a59c through the new protection; PR run 37507255249 and push run 37507803314 green.
 
 ## Phase C: Close
 
-- [ ] C.1 `sdd-verify` (after B.6).
-- [ ] C.2 `sdd-archive`, only once protection is verified (B.5, B.6).
+- [x] C.1 `sdd-verify` (after B.6). PASS WITH WARNINGS (0 CRITICAL, 2 WARNING, 3 SUGGESTION); see verify-report.md.
+- [x] C.2 `sdd-archive`, only once protection is verified (B.5, B.6). Archived 2026-10-06; see archive-report.md.
