@@ -1332,9 +1332,48 @@ describe('Review Sessions (e2e)', () => {
         'ReviewSessionHistory',
         'ScheduleReviewSession',
       ];
+      // The review schedule (FR-009 slice 1) legitimately speaks of overdue
+      // reviews. It is its own surface, not a review-session mechanism, so
+      // exactly its own files are skipped (matched on the path relative to
+      // apps/web/src), the locale catalogs are scanned without their
+      // `reviewSchedule` subtree, and the locale key-set test without its
+      // `reviewSchedule.*` key paths. Every other key and file is scanned.
+      const reviewScheduleFiles = new Set([
+        'review-schedule/schedule-labels.ts',
+        'review-schedule/schedule-labels.test.ts',
+        'pages/ReviewSchedulePage.tsx',
+        'pages/ReviewSchedulePage.test.tsx',
+      ]);
+      const withoutReviewScheduleCopy = (
+        relative: string,
+        content: string,
+      ): string => {
+        if (
+          relative.startsWith('i18n/locales/') &&
+          relative.endsWith('.json')
+        ) {
+          const catalog = JSON.parse(content) as Record<string, unknown>;
+          delete catalog.reviewSchedule;
+          return JSON.stringify(catalog);
+        }
+        if (relative === 'i18n/locales.test.ts') {
+          return content.replace(/reviewSchedule\.[\w.]+/g, '');
+        }
+        return content;
+      };
       const offenders: string[] = [];
       for (const file of collectFiles(webScanRoot)) {
-        const content = fs.readFileSync(file, 'utf-8');
+        const relative = path
+          .relative(webScanRoot, file)
+          .split(path.sep)
+          .join('/');
+        if (reviewScheduleFiles.has(relative)) {
+          continue;
+        }
+        const content = withoutReviewScheduleCopy(
+          relative,
+          fs.readFileSync(file, 'utf-8'),
+        );
         for (const term of forbidden) {
           if (content.includes(term)) {
             offenders.push(`${term} found in ${file}`);
