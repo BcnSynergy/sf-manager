@@ -505,6 +505,9 @@ describe('seedDevDataset (integration)', () => {
   });
 
   it('a second run creates no duplicates and keeps ids and counts equal', async () => {
+    // It asserts no WARN at all, so it must not see lineages other spec
+    // files left with question-less active templates.
+    await resetLineages();
     const data = buildDataset('c3');
     const deps = resolveDevSeedDeps(moduleRef);
 
