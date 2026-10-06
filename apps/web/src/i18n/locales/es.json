@@ -551,10 +551,10 @@
     "columnStatus": "Estado",
     "columnReason": "Motivo",
     "columnLastReview": "Última revisión",
-    "neverReviewed": "Sin revisiones",
+    "neverReviewed": "Sin revisar",
     "status": {
       "overdue": "Vencida",
-      "neverReviewed": "Sin revisiones",
+      "neverReviewed": "Sin revisar",
       "upcoming": "Próxima",
       "upToDate": "Al día"
     },

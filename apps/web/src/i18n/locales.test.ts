@@ -844,4 +844,26 @@ describe('locale key-set parity (en/es/ca)', () => {
       }
     },
   );
+
+  // mapReasonToText passes these params; a translation that drops one would
+  // render a reason sentence without its quarter or deadline.
+  const REVIEW_SCHEDULE_REASON_PARAMS: Record<string, string[]> = {
+    'reviewSchedule.reason.quarterMissed': ['quarter', 'year', 'deadline'],
+    'reviewSchedule.reason.quarterDue': ['quarter', 'year', 'deadline'],
+    'reviewSchedule.reason.annualOverdue': ['deadline'],
+    'reviewSchedule.reason.annualDue': ['deadline'],
+    'reviewSchedule.reason.annualNotOnRecord': ['deadline'],
+  };
+
+  it.each(Object.entries(REVIEW_SCHEDULE_REASON_PARAMS))(
+    'every locale keeps the interpolation params of %s',
+    (keyPath, params) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath) as string;
+        for (const param of params) {
+          expect(value, `${localeName}."${keyPath}" drops {{${param}}}`).toContain(`{{${param}}}`);
+        }
+      }
+    },
+  );
 });

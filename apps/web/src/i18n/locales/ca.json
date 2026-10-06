@@ -551,10 +551,10 @@
     "columnStatus": "Estat",
     "columnReason": "Motiu",
     "columnLastReview": "Darrera revisió",
-    "neverReviewed": "Sense revisions",
+    "neverReviewed": "Sense revisar",
     "status": {
       "overdue": "Vençuda",
-      "neverReviewed": "Sense revisions",
+      "neverReviewed": "Sense revisar",
       "upcoming": "Propera",
       "upToDate": "Al dia"
     },
