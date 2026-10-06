@@ -33,6 +33,10 @@ function renderAppLayout(initialEntries: string[] = ['/']) {
             <Route path="/users" element={<div data-testid="outlet-content">users</div>} />
             <Route path="/review-history" element={<div data-testid="outlet-content">history</div>} />
             <Route path="/review-sessions" element={<div data-testid="outlet-content">sessions</div>} />
+            <Route
+              path="/review-schedule"
+              element={<div data-testid="outlet-content">schedule</div>}
+            />
           </Route>
           <Route path="/login" element={<div data-testid="login-page">login</div>} />
         </Routes>
@@ -50,12 +54,23 @@ const EXPECTED_ITEM_TESTIDS: Record<Role, string[]> = {
     'nav-link-checklist-questions',
     'nav-link-review-templates',
     'nav-link-review-history',
+    'nav-link-review-schedule',
     'nav-link-organization-profile',
   ],
-  MANAGER: ['nav-link-home', 'nav-link-review-history'],
+  MANAGER: ['nav-link-home', 'nav-link-review-history', 'nav-link-review-schedule'],
   MAINTENANCE_COMPANY_MANAGER: ['nav-link-home', 'nav-link-review-history'],
-  MAINTENANCE_TECHNICIAN: ['nav-link-home', 'nav-link-review-sessions', 'nav-link-review-history'],
-  COMMUNITY_REPRESENTATIVE: ['nav-link-home', 'nav-link-review-sessions', 'nav-link-review-history'],
+  MAINTENANCE_TECHNICIAN: [
+    'nav-link-home',
+    'nav-link-review-sessions',
+    'nav-link-review-history',
+    'nav-link-review-schedule',
+  ],
+  COMMUNITY_REPRESENTATIVE: [
+    'nav-link-home',
+    'nav-link-review-sessions',
+    'nav-link-review-history',
+    'nav-link-review-schedule',
+  ],
 };
 
 describe('AppLayout', () => {
@@ -73,6 +88,93 @@ describe('AppLayout', () => {
         const nav = await screen.findByTestId('nav-root');
         const links = within(nav).getAllByRole('link');
         expect(links.map((link) => link.getAttribute('data-testid'))).toEqual(expectedTestIds);
+      },
+    );
+  });
+
+  // review-schedule-ui "Navigation Placement for the Four Roles" and the
+  // app-navigation delta: the item is decided by role alone.
+  describe('review schedule item', () => {
+    it.each<Role>(['SYSTEM_ADMIN', 'MANAGER', 'MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'])(
+      '%s is offered one item targeting /review-schedule',
+      async (role) => {
+        vi.stubGlobal('fetch', mockFetch({ role }));
+        renderAppLayout();
+
+        const nav = await screen.findByTestId('nav-root');
+        const item = within(nav).getAllByTestId('nav-link-review-schedule');
+        expect(item).toHaveLength(1);
+        expect(item[0]).toHaveAttribute('href', '/review-schedule');
+        expect(item[0]).toHaveTextContent('Review schedule');
+      },
+    );
+
+    it('MAINTENANCE_COMPANY_MANAGER is offered no item and no /review-schedule link', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(within(nav).queryByTestId('nav-link-review-schedule')).not.toBeInTheDocument();
+      const hrefs = within(nav)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href'));
+      expect(hrefs).not.toContain('/review-schedule');
+    });
+
+    it('gives the system administrator exactly nine sections', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(within(nav).getAllByRole('link')).toHaveLength(9);
+    });
+
+    it('decides the manager nav by role alone: the same items, and no capability lookup', async () => {
+      const fetchStub = mockFetch({ role: 'MANAGER' });
+      vi.stubGlobal('fetch', fetchStub);
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(
+        within(nav)
+          .getAllByRole('link')
+          .map((link) => link.getAttribute('data-testid')),
+      ).toEqual(['nav-link-home', 'nav-link-review-history', 'nav-link-review-schedule']);
+      const urls = fetchStub.mock.calls.map(([url]) => String(url));
+      expect(urls.every((url) => url.includes('/auth/me'))).toBe(true);
+    });
+
+    it('leads to the page, never to the not-authorized view', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_TECHNICIAN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      fireEvent.click(within(nav).getByTestId('nav-link-review-schedule'));
+
+      expect(await screen.findByText('schedule')).toBeInTheDocument();
+      expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+    });
+
+    // review-session-ui / review-history-ui deltas: the item is a permitted
+    // global-navigation entry, while the view's OWN controls (the outlet,
+    // outside the nav) stay free of any schedule control.
+    it.each([
+      ['/review-sessions', 'MAINTENANCE_TECHNICIAN'],
+      ['/review-sessions', 'COMMUNITY_REPRESENTATIVE'],
+      ['/review-history', 'MAINTENANCE_TECHNICIAN'],
+      ['/review-history', 'MANAGER'],
+    ] as [string, Role][])(
+      'shows the item in the nav on %s for %s while the view itself has no schedule control',
+      async (path, role) => {
+        vi.stubGlobal('fetch', mockFetch({ role }));
+        renderAppLayout([path]);
+
+        const nav = await screen.findByTestId('nav-root');
+        expect(within(nav).getByTestId('nav-link-review-schedule')).toBeInTheDocument();
+        const outlet = screen.getByTestId('outlet-content');
+        expect(within(outlet).queryAllByRole('link')).toHaveLength(0);
+        expect(outlet.closest('nav')).toBeNull();
+        expect(nav).not.toContainElement(outlet);
       },
     );
   });
