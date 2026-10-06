@@ -42,7 +42,7 @@
       "companyLabel": "Empresa de manteniment",
       "companyPlaceholder": "Selecciona una empresa de manteniment",
       "capabilitiesLabel": "Capacitats de gestor",
-      "viewAllReviewsLabel": "Pot veure totes les revisions completades de la instal·lació",
+      "viewAllReviewsLabel": "Pot veure totes les revisions completades i el calendari de revisions de la instal·lació",
       "submitLabel": "Desa els canvis",
       "validationError": "Introdueix un correu electrònic vàlid.",
       "notFound": "No s'ha pogut trobar aquest usuari."

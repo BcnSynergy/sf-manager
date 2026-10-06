@@ -51,6 +51,11 @@ const REVIEW_HISTORY: NavItem = {
   labelKey: 'nav.reviewHistory',
   testId: 'nav-link-review-history',
 };
+const REVIEW_SCHEDULE: NavItem = {
+  to: '/review-schedule',
+  labelKey: 'nav.reviewSchedule',
+  testId: 'nav-link-review-schedule',
+};
 const ORGANIZATION_PROFILE: NavItem = {
   to: '/organization-profile',
   labelKey: 'nav.organizationProfile',
@@ -64,6 +69,10 @@ const ORGANIZATION_PROFILE: NavItem = {
 // DELIBERATELY no REVIEW_SESSIONS for SYSTEM_ADMIN / MANAGER /
 // MAINTENANCE_COMPANY_MANAGER: no navigation control offered to these three
 // roles may lead to the /review-sessions write surface.
+// REVIEW_SCHEDULE is offered to four roles. DELIBERATELY not to
+// MAINTENANCE_COMPANY_MANAGER (review-schedule design.md E8): the schedule is
+// outside that role's scope, and /review-schedule denies it, so the nav never
+// offers a link the role cannot open.
 export const NAV_ITEMS_BY_ROLE = {
   SYSTEM_ADMIN: [
     HOME,
@@ -73,10 +82,11 @@ export const NAV_ITEMS_BY_ROLE = {
     CHECKLIST_QUESTIONS,
     REVIEW_TEMPLATES,
     REVIEW_HISTORY,
+    REVIEW_SCHEDULE,
     ORGANIZATION_PROFILE,
   ],
-  MANAGER: [HOME, REVIEW_HISTORY],
+  MANAGER: [HOME, REVIEW_HISTORY, REVIEW_SCHEDULE],
   MAINTENANCE_COMPANY_MANAGER: [HOME, REVIEW_HISTORY],
-  MAINTENANCE_TECHNICIAN: [HOME, REVIEW_SESSIONS, REVIEW_HISTORY],
-  COMMUNITY_REPRESENTATIVE: [HOME, REVIEW_SESSIONS, REVIEW_HISTORY],
+  MAINTENANCE_TECHNICIAN: [HOME, REVIEW_SESSIONS, REVIEW_HISTORY, REVIEW_SCHEDULE],
+  COMMUNITY_REPRESENTATIVE: [HOME, REVIEW_SESSIONS, REVIEW_HISTORY, REVIEW_SCHEDULE],
 } as const satisfies Record<Role, readonly NavItem[]>;

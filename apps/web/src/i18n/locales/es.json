@@ -42,7 +42,7 @@
       "companyLabel": "Empresa de mantenimiento",
       "companyPlaceholder": "Selecciona una empresa de mantenimiento",
       "capabilitiesLabel": "Capacidades de gestor",
-      "viewAllReviewsLabel": "Puede ver todas las revisiones completadas de la instalación",
+      "viewAllReviewsLabel": "Puede ver todas las revisiones completadas y el calendario de revisiones de la instalación",
       "submitLabel": "Guardar cambios",
       "validationError": "Introduce un correo electrónico válido.",
       "notFound": "No se ha podido encontrar este usuario."

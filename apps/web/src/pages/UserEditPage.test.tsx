@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import type { ManagerCapability } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
@@ -290,6 +290,30 @@ describe('UserEditPage', () => {
     renderPage(otherUser.id);
 
     expect(await screen.findByTestId('user-edit-view-all-reviews')).not.toBeChecked();
+  });
+
+  // review-schedule design.md Decision 12: the label names both surfaces the
+  // capability gates, in every locale, never the raw enum.
+  it.each([
+    ['en', 'Can view every completed review and the review schedule of the installation'],
+    [
+      'es',
+      'Puede ver todas las revisiones completadas y el calendario de revisiones de la instalación',
+    ],
+    ['ca', 'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació'],
+  ])('labels the capability toggle for a MANAGER with the history-and-schedule text in %s', async (locale, label) => {
+    await i18n.changeLanguage(locale);
+    try {
+      mockedListUsers.mockResolvedValue([admin, otherUser]);
+      renderPage(otherUser.id);
+
+      const toggle = await screen.findByTestId('user-edit-view-all-reviews');
+      expect(screen.getByLabelText(label)).toBe(toggle);
+      expect(screen.queryByText('VIEW_ALL_REVIEWS')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 
   it('renders the capability toggle, prefilled checked, for a granted MANAGER row', async () => {

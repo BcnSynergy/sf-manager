@@ -20,6 +20,7 @@ import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
+import { ReviewSchedulePage } from '../pages/ReviewSchedulePage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
 import { ReviewSessionElementPage } from '../pages/ReviewSessionElementPage';
 import { ReviewSessionNewPage } from '../pages/ReviewSessionNewPage';
@@ -191,6 +192,13 @@ const EXPECTED_ROUTES: {
     ],
     elementType: ReviewDocumentPage,
   },
+  // review-schedule-ui spec "One Schedule Page Behind One Route": four roles,
+  // MAINTENANCE_COMPANY_MANAGER deliberately absent (E8).
+  {
+    path: '/review-schedule',
+    allowedRoles: ['SYSTEM_ADMIN', 'MANAGER', 'COMMUNITY_REPRESENTATIVE', 'MAINTENANCE_TECHNICIAN'],
+    elementType: ReviewSchedulePage,
+  },
   {
     path: '/organization-profile',
     allowedRoles: ['SYSTEM_ADMIN'],
@@ -199,8 +207,8 @@ const EXPECTED_ROUTES: {
 ];
 
 describe('AUTHENTICATED_ROUTES', () => {
-  it('has exactly 30 entries', () => {
-    expect(AUTHENTICATED_ROUTES).toHaveLength(30);
+  it('has exactly 31 entries', () => {
+    expect(AUTHENTICATED_ROUTES).toHaveLength(31);
   });
 
   it('matches path, allowedRoles and paired element component exactly, in order', () => {
