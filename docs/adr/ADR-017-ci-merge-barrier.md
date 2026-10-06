@@ -45,8 +45,9 @@ which makes them cheap to run on a clean CI machine.
   protection together.
 - A broken CI blocks hotfixes too, since the admin has no bypass. Fixing
   the pipeline or removing protection (see rollback) is the only way out.
-- A cold run is estimated at 8 to 15 minutes; `timeout-minutes` is 30 and
-  should be tightened once real durations are known.
+- The first green runs took about 2.2 minutes of job time (runs 37504191872
+  and 37505671255). `timeout-minutes` is 15, which leaves room for the suite
+  to grow while still failing a hung run quickly.
 - Because `strict` is false, two individually green PRs can combine into a
   red `main`. This is detected by the push run, not prevented.
 
