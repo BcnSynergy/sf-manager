@@ -1334,31 +1334,44 @@ describe('Review Sessions (e2e)', () => {
       ];
       // The review schedule (FR-009 slice 1) legitimately speaks of overdue
       // reviews. It is its own surface, not a review-session mechanism, so
-      // its own files are skipped by path, and elsewhere only its i18n
-      // subtree (`reviewSchedule` in the locale catalogs, `reviewSchedule.*`
-      // key paths) is ignored. Every other key and file is still scanned.
-      const reviewScheduleFiles = [
-        `${path.sep}review-schedule${path.sep}`,
-        `${path.sep}ReviewSchedulePage`,
-      ];
+      // exactly its own files are skipped (matched on the path relative to
+      // apps/web/src), the locale catalogs are scanned without their
+      // `reviewSchedule` subtree, and the locale key-set test without its
+      // `reviewSchedule.*` key paths. Every other key and file is scanned.
+      const reviewScheduleFiles = new Set([
+        'review-schedule/schedule-labels.ts',
+        'review-schedule/schedule-labels.test.ts',
+        'pages/ReviewSchedulePage.tsx',
+        'pages/ReviewSchedulePage.test.tsx',
+      ]);
       const withoutReviewScheduleCopy = (
-        file: string,
+        relative: string,
         content: string,
       ): string => {
-        if (file.endsWith('.json')) {
+        if (
+          relative.startsWith('i18n/locales/') &&
+          relative.endsWith('.json')
+        ) {
           const catalog = JSON.parse(content) as Record<string, unknown>;
           delete catalog.reviewSchedule;
           return JSON.stringify(catalog);
         }
-        return content.replace(/reviewSchedule\.[\w.]+/g, '');
+        if (relative === 'i18n/locales.test.ts') {
+          return content.replace(/reviewSchedule\.[\w.]+/g, '');
+        }
+        return content;
       };
       const offenders: string[] = [];
       for (const file of collectFiles(webScanRoot)) {
-        if (reviewScheduleFiles.some((part) => file.includes(part))) {
+        const relative = path
+          .relative(webScanRoot, file)
+          .split(path.sep)
+          .join('/');
+        if (reviewScheduleFiles.has(relative)) {
           continue;
         }
         const content = withoutReviewScheduleCopy(
-          file,
+          relative,
           fs.readFileSync(file, 'utf-8'),
         );
         for (const term of forbidden) {
