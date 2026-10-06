@@ -102,6 +102,7 @@ business features yet, just the toolchain wired end-to-end.
 
 - `npm run build` — build all apps/packages (Turborepo).
 - `npm run lint` — lint everything, including the ADR-013 Prisma-boundary rule.
+  It only reports; `npm run lint:fix -w apps/api` applies the API's auto-fixes.
 - `npm run test` — run every package's test suite (unit only; needs no database).
 - `npm run test:integration -w apps/api` — run the API's real-database
   integration suite (`src/**/*.integration.spec.ts` plus

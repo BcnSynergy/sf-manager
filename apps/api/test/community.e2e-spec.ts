@@ -1620,12 +1620,7 @@ describe('Communities (e2e)', () => {
       async (method, path, body) => {
         const agent = await loginAgent(app, adminEmail);
 
-        const response = await sendRequest(
-          agent,
-          method,
-          path,
-          body as Record<string, unknown> | undefined,
-        );
+        const response = await sendRequest(agent, method, path, body);
 
         expect(response.status).toBe(400);
         expect(response.body).toMatchObject({
