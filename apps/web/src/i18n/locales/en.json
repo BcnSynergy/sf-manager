@@ -42,7 +42,7 @@
       "companyLabel": "Maintenance company",
       "companyPlaceholder": "Select a maintenance company",
       "capabilitiesLabel": "Manager capabilities",
-      "viewAllReviewsLabel": "Can view every completed review in the installation",
+      "viewAllReviewsLabel": "Can view every completed review and the review schedule of the installation",
       "submitLabel": "Save changes",
       "validationError": "Enter a valid email.",
       "notFound": "This user could not be found."

@@ -789,6 +789,24 @@ describe('locale key-set parity (en/es/ca)', () => {
     },
   );
 
+  // review-schedule design.md Decision 12 / user-admin-ui "The Capability
+  // Toggle Label Names Every Surface It Gates": the exact wording, in each
+  // locale, because this label is the only text a SYSTEM_ADMIN sees for the
+  // capability.
+  it.each([
+    ['en', 'Can view every completed review and the review schedule of the installation'],
+    [
+      'es',
+      'Puede ver todas las revisiones completadas y el calendario de revisiones de la instalación',
+    ],
+    ['ca', 'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació'],
+  ])('%s users.edit.viewAllReviewsLabel names history and schedule exactly', (localeName, expected) => {
+    const tree = locales[localeName as keyof typeof locales];
+    const value = getKeyPathValue(tree, 'users.edit.viewAllReviewsLabel');
+    expect(value).toBe(expected);
+    expect(value).not.toBe('VIEW_ALL_REVIEWS');
+  });
+
   it.each(REQUIRED_NAV_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
