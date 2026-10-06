@@ -67,7 +67,9 @@ export function mapReasonToText(row: ReviewScheduleRow, locale: string): ReasonT
 // locale with NO time-zone conversion: the string is read as a UTC midnight
 // and formatted with `timeZone: 'UTC'`, so the same day shows for every
 // browser time zone (spec "Dates do not shift with the viewer's time zone").
-// Never pass an instant here.
+// Never pass an instant here. Deliberately not review-session/format-date.ts's
+// formatDocumentDate: that one converts an instant to Europe/Madrid, which
+// would shift a date-only string read as UTC midnight back one day.
 export function formatCalendarDate(date: string, locale: string): string {
   const [year, month, day] = date.split('-').map(Number);
   return new Intl.DateTimeFormat(locale, {
