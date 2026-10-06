@@ -149,6 +149,11 @@ vi.mock('./pages/ReviewHistoryDetailPage', () => ({
 vi.mock('./pages/ReviewDocumentPage', () => ({
   ReviewDocumentPage: () => <div data-testid="page-stub-ReviewDocumentPage">ReviewDocumentPage</div>,
 }));
+vi.mock('./pages/ReviewSchedulePage', () => ({
+  ReviewSchedulePage: () => (
+    <div data-testid="page-stub-ReviewSchedulePage">ReviewSchedulePage</div>
+  ),
+}));
 vi.mock('./pages/OrganizationProfilePage', () => ({
   OrganizationProfilePage: () => (
     <div data-testid="page-stub-OrganizationProfilePage">OrganizationProfilePage</div>
@@ -254,6 +259,40 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
       expect(screen.getByTestId('nav-root')).toBeInTheDocument();
     },
   );
+
+  // review-schedule-ui "One Schedule Page Behind One Route": the four
+  // admitted roles reach the page; the company manager never reaches it
+  // (so the page component, and its request, never mount).
+  it.each<Role>(['SYSTEM_ADMIN', 'MANAGER', 'COMMUNITY_REPRESENTATIVE', 'MAINTENANCE_TECHNICIAN'])(
+    '/review-schedule renders the schedule page for %s',
+    async (role) => {
+      renderApp(['/review-schedule'], role);
+
+      await screen.findByTestId('page-stub-ReviewSchedulePage');
+      expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+    },
+  );
+
+  it('/review-schedule shows NotAuthorized and never mounts the page for MAINTENANCE_COMPANY_MANAGER', async () => {
+    renderApp(['/review-schedule'], 'MAINTENANCE_COMPANY_MANAGER');
+
+    await screen.findByTestId('not-authorized');
+    expect(screen.queryByTestId('page-stub-ReviewSchedulePage')).not.toBeInTheDocument();
+  });
+
+  it('/review-schedule redirects an unauthenticated visitor to /login', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)));
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/review-schedule']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    await screen.findByTestId('login-email');
+    expect(screen.queryByTestId('page-stub-ReviewSchedulePage')).not.toBeInTheDocument();
+  });
 
   // The 30th case: /login is declared OUTSIDE AUTHENTICATED_ROUTES and
   // outside the AppLayout wrapper entirely — structural, not conditional.

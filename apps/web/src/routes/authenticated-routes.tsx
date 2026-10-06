@@ -21,6 +21,7 @@ import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
 import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
+import { ReviewSchedulePage } from '../pages/ReviewSchedulePage';
 import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
 import { ReviewSessionElementPage } from '../pages/ReviewSessionElementPage';
 import { ReviewSessionNewPage } from '../pages/ReviewSessionNewPage';
@@ -306,6 +307,16 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
       'SYSTEM_ADMIN',
       'MANAGER',
     ],
+  },
+  // review-schedule-ui spec "One Schedule Page Behind One Route": four roles.
+  // MAINTENANCE_COMPANY_MANAGER is DELIBERATELY absent (review-schedule
+  // design.md E8): the schedule is not part of its scope. The gate is the
+  // role alone; what each role sees is decided server-side, and the client
+  // never learns the VIEW_ALL_REVIEWS capability.
+  {
+    path: '/review-schedule',
+    element: <ReviewSchedulePage />,
+    allowedRoles: ['SYSTEM_ADMIN', 'MANAGER', 'COMMUNITY_REPRESENTATIVE', 'MAINTENANCE_TECHNICIAN'],
   },
   // organization-profile-admin-ui spec "Role-Gated Route Access": a single
   // static settings route, SYSTEM_ADMIN-only, no sibling dynamic segment to
