@@ -48,7 +48,7 @@ export class UserManagerCapabilityChecker implements ManagerCapabilityChecker {
       case 'COMMUNITY_REPRESENTATIVE':
         return false;
       default: {
-        // `role` comes from a JWT claim with no runtime enum validation, so
+        // `role` is read from the database with no runtime enum validation, so
         // an out-of-union value can reach here despite the switch being
         // exhaustive at compile time. Fail closed at runtime too.
         role satisfies never;

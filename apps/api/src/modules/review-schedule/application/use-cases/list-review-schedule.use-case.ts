@@ -138,7 +138,7 @@ export class ListReviewScheduleUseCase {
         return null;
 
       default: {
-        // `role` comes from a JWT claim with no runtime enum validation.
+        // `role` is read from the database with no runtime enum validation.
         actor.role satisfies never;
         return null;
       }
