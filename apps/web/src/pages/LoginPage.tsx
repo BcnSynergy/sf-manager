@@ -9,10 +9,14 @@ import { useAuth } from '../auth/AuthProvider';
 // enforces (ADR-015 single source of truth) — no separate reimplementation
 // of email-format validation here. Server rejection (401) always shows one
 // generic message, never a field-specific hint (anti-enumeration).
+//
+// The session-ended notice (auth-live-user-check spec "Session-Ended
+// Notice") shows only while no login error does, and the flag is cleared on
+// submit so the notice cannot reappear when a failed login's error clears.
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, sessionEnded, clearSessionEnded } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +24,7 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    clearSessionEnded();
 
     if (!email || !password) {
       setError(t('auth.validationRequired'));
@@ -68,6 +73,9 @@ export function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           data-testid="login-password"
         />
+        {sessionEnded && !error && (
+          <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
+        )}
         {error && <p data-testid="login-error">{error}</p>}
         <button type="submit" data-testid="login-submit">
           {t('auth.submitLabel')}
