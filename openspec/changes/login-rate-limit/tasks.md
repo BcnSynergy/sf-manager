@@ -29,19 +29,19 @@ Strict TDD (ADR-016): every behavior RED, GREEN, REFACTOR. Apply records a "TDD 
 
 ## Phase A: PR 1 (sdd-apply)
 
-- [ ] A.1 Add `@nestjs/throttler` exactly `6.4.0` (no caret) to `apps/api/package.json` and lockfile.
-- [ ] A.2 RED: `login-rate-limit.config.spec.ts`: unset and empty give 10/900000; explicit values parse; `0`, `-1`, `abc`, `1.5` throw naming the var. Spec: Default/Configured limits. RED: missing module.
-- [ ] A.3 GREEN: `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts`: `getLoginRateLimitConfig()` reading `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` and `LOGIN_RATE_LIMIT_WINDOW_SECONDS`.
-- [ ] A.4 RED: `trust-proxy.spec.ts`: unset, `''`, `'false'` give `false`; `'true'` gives `1`; `'yes'` throws. Spec: Client IP Resolution.
-- [ ] A.5 GREEN: `apps/api/src/shared/infrastructure/env/trust-proxy.ts`: `getTrustProxySetting`.
-- [ ] A.6 RED: `apps/api/test/login-rate-limit.e2e-spec.ts` with `createApp(env)` helper, `NestExpressApplication`, env save/restore, all apps closed. Defaults app: 10 logins with varying XFF return 200, 11th 429 with integer `Retry-After` in [1, 900], malformed body still 429, `/health` and `/auth/me` 200. Configured app (max 2, 1 s): 3rd 429 `Retry-After` 1, 200 after ~1.1 s. Trust-proxy app: XFF A exhausted, XFF B 200. Spec: all Rate Limiting and IP scenarios. RED: 200 instead of 429.
-- [ ] A.7 GREEN: `auth.module.ts` `ThrottlerModule.forRootAsync` (name `'default'`); `auth.controller.ts` `@UseGuards(ThrottlerGuard)` on `login()` plus `@ApiTooManyRequestsResponse`; `main.ts` typed `NestExpressApplication` with `app.set('trust proxy', getTrustProxySetting(process.env))`.
-- [ ] A.8 REFACTOR: tidy; run API lint, build, unit and `npm run test:e2e --workspace=apps/api` (full suite, confirm no existing suite hits the limit).
-- [ ] A.9 RED: `AuthProvider.test.tsx`: `login()` rejects with `ApiError` status 429 and 401. `LoginPage.test.tsx`: 429 shows rate-limited message, not `loginFailed`, no digits; later submit sends and shows its result. `locales.test.ts`: exact EN/ES/CA `auth.loginRateLimited`. Spec: Rate-limited message; Form usable; Localized.
-- [ ] A.10 GREEN: `AuthProvider.tsx` throw `new ApiError(response.status)` (update comment L85-88); `LoginPage.tsx` map 429 to `auth.loginRateLimited` (update header comment); add key to `en.json`, `es.json`, `ca.json`.
-- [ ] A.11 REFACTOR: run `npx tsc -b` in apps/web, web lint and `npm run test --workspace=apps/web`.
-- [ ] A.12 Docs (TDD N/A): ADR-011 addendum with the four open questions; `README.md` env vars `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`, `TRUST_PROXY`.
-- [ ] A.13 Check `git diff --stat` (~480). Commit by work unit: api config+helper, throttle wiring+e2e, web, docs.
+- [x] A.1 Add `@nestjs/throttler` exactly `6.4.0` (no caret) to `apps/api/package.json` and lockfile.
+- [x] A.2 RED: `login-rate-limit.config.spec.ts`: unset and empty give 10/900000; explicit values parse; `0`, `-1`, `abc`, `1.5` throw naming the var. Spec: Default/Configured limits. RED: missing module.
+- [x] A.3 GREEN: `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts`: `getLoginRateLimitConfig()` reading `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` and `LOGIN_RATE_LIMIT_WINDOW_SECONDS`.
+- [x] A.4 RED: `trust-proxy.spec.ts`: unset, `''`, `'false'` give `false`; `'true'` gives `1`; `'yes'` throws. Spec: Client IP Resolution.
+- [x] A.5 GREEN: `apps/api/src/shared/infrastructure/env/trust-proxy.ts`: `getTrustProxySetting`.
+- [x] A.6 RED: `apps/api/test/login-rate-limit.e2e-spec.ts` with `createApp(env)` helper, `NestExpressApplication`, env save/restore, all apps closed. Defaults app: 10 logins with varying XFF return 200, 11th 429 with integer `Retry-After` in [1, 900], malformed body still 429, `/health` and `/auth/me` 200. Configured app (max 2, 1 s): 3rd 429 `Retry-After` 1, 200 after ~1.1 s. Trust-proxy app: XFF A exhausted, XFF B 200. Spec: all Rate Limiting and IP scenarios. RED: 200 instead of 429.
+- [x] A.7 GREEN: `auth.module.ts` `ThrottlerModule.forRootAsync` (name `'default'`); `auth.controller.ts` `@UseGuards(ThrottlerGuard)` on `login()` plus `@ApiTooManyRequestsResponse`; `main.ts` typed `NestExpressApplication` with `app.set('trust proxy', getTrustProxySetting(process.env))`.
+- [x] A.8 REFACTOR: tidy; run API lint, build, unit and `npm run test:e2e --workspace=apps/api` (full suite, confirm no existing suite hits the limit).
+- [x] A.9 RED: `AuthProvider.test.tsx`: `login()` rejects with `ApiError` status 429 and 401. `LoginPage.test.tsx`: 429 shows rate-limited message, not `loginFailed`, no digits; later submit sends and shows its result. `locales.test.ts`: exact EN/ES/CA `auth.loginRateLimited`. Spec: Rate-limited message; Form usable; Localized.
+- [x] A.10 GREEN: `AuthProvider.tsx` throw `new ApiError(response.status)` (update comment L85-88); `LoginPage.tsx` map 429 to `auth.loginRateLimited` (update header comment); add key to `en.json`, `es.json`, `ca.json`.
+- [x] A.11 REFACTOR: run `npx tsc -b` in apps/web, web lint and `npm run test --workspace=apps/web`.
+- [x] A.12 Docs (TDD N/A): ADR-011 addendum with the four open questions; `README.md` env vars `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`, `TRUST_PROXY`.
+- [x] A.13 Check `git diff --stat` (~480). Commit by work unit: api config+helper, throttle wiring+e2e, web, docs.
 - [ ] A.14 Browser verification (orchestrator + user, not sdd-apply): API freshly restarted, dev server, claude-in-chrome; the user logs in themselves. Wrong password 10 times, 11th shows the message; form still usable. Restart the API afterwards. Report browser-verified or test-verified.
 
 ## Gate (orchestrator)
