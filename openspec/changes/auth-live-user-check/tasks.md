@@ -43,15 +43,15 @@ Strict TDD (ADR-016): every behavior goes RED, GREEN, REFACTOR. Each apply batch
 
 ## Phase B: PR 2, web notice (sdd-apply, after PR 1 merges)
 
-- [ ] B.1 RED: `client.test.ts`: 401 invokes the handler and still throws `ApiError(401)`; 403 and 500 do not; no handler is fine; `afterEach(() => setUnauthorizedHandler(null))`. Spec: Session-Ended Notice. RED: missing export.
-- [ ] B.2 GREEN: `client.ts`: add `setUnauthorizedHandler(fn | null)` and call it on 401 before throwing.
-- [ ] B.3 RED: `AuthProvider.test.tsx`: a 401 while logged in sets `user` null and `sessionEnded` true; a 401 while logged out sets no flag; two 401s give one transition; `login()` clears the flag; a 401 during `logout()` shows no notice; unmount clears the handler. Spec: Mid-session 401; Session ends mid-session. RED: the flag does not exist.
-- [ ] B.4 GREEN: `AuthProvider.tsx`: `sessionEnded` state, `userRef` assigned wherever `setUser` is called, handler registered in a `useEffect` with cleanup, synchronous reset in `logout()` (before the fetch and in `finally`), `clearSessionEnded()` on the context. Fix the comment at L10-14.
-- [ ] B.5 RED: `LoginPage.test.tsx`: the notice shows when the flag is set; no notice on a failed login; hidden once an error shows; stays hidden after submit even when the error is later cleared. Spec: Failed login shows no notice. RED: no notice element.
-- [ ] B.6 GREEN: `LoginPage.tsx`: render the notice when `sessionEnded && !error`; call `clearSessionEnded()` on submit.
-- [ ] B.7 RED then GREEN: `locales.test.ts` `it.each` exact wording for EN, ES, CA; add `auth.sessionEnded` to `en.json`, `es.json` and `ca.json`. Spec: Localized notice. RED: missing key.
-- [ ] B.8 REFACTOR: tidy; run `npm run lint`, `npm run test --workspace=apps/web` and the build; check `git diff --stat` (~292 lines).
-- [ ] B.9 Browser verification (orchestrator + user, not sdd-apply). The user logs in. (1) Log in as `technician@`, log out in a second tab, trigger a data call in the first: expect `/login` with the notice, and a reload clears it. (2) A failed login shows only the generic error. (3) With the user's OK, delete a QA user created by an admin while it is logged in elsewhere. Report as browser-verified or test-verified only.
+- [x] B.1 RED: `client.test.ts`: 401 invokes the handler and still throws `ApiError(401)`; 403 and 500 do not; no handler is fine; `afterEach(() => setUnauthorizedHandler(null))`. Spec: Session-Ended Notice. RED: missing export.
+- [x] B.2 GREEN: `client.ts`: add `setUnauthorizedHandler(fn | null)` and call it on 401 before throwing.
+- [x] B.3 RED: `AuthProvider.test.tsx`: a 401 while logged in sets `user` null and `sessionEnded` true; a 401 while logged out sets no flag; two 401s give one transition; `login()` clears the flag; a 401 during `logout()` shows no notice; unmount clears the handler. Spec: Mid-session 401; Session ends mid-session. RED: the flag does not exist.
+- [x] B.4 GREEN: `AuthProvider.tsx`: `sessionEnded` state, `userRef` assigned wherever `setUser` is called, handler registered in a `useEffect` with cleanup, synchronous reset in `logout()` (before the fetch and in `finally`), `clearSessionEnded()` on the context. Fix the comment at L10-14.
+- [x] B.5 RED: `LoginPage.test.tsx`: the notice shows when the flag is set; no notice on a failed login; hidden once an error shows; stays hidden after submit even when the error is later cleared. Spec: Failed login shows no notice. RED: no notice element.
+- [x] B.6 GREEN: `LoginPage.tsx`: render the notice when `sessionEnded && !error`; call `clearSessionEnded()` on submit.
+- [x] B.7 RED then GREEN: `locales.test.ts` `it.each` exact wording for EN, ES, CA; add `auth.sessionEnded` to `en.json`, `es.json` and `ca.json`. Spec: Localized notice. RED: missing key.
+- [x] B.8 REFACTOR: tidy; run `npm run lint`, `npm run test --workspace=apps/web` and the build; check `git diff --stat` (~292 lines).
+- [x] B.9 Browser verification (orchestrator + user, not sdd-apply). The user logs in. (1) Log in as `technician@`, log out in a second tab, trigger a data call in the first: expect `/login` with the notice, and a reload clears it. (2) A failed login shows only the generic error. (3) With the user's OK, delete a QA user created by an admin while it is logged in elsewhere. Report as browser-verified or test-verified only.
 
 ## Gate (orchestrator, not an apply task)
 

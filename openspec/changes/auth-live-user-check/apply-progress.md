@@ -87,3 +87,83 @@ The old guard was restored temporarily via `git show 1b1e581:<guard path>` and t
 - Phase B (PR 2, web): blocked until PR 1 merges.
 - G.1 fresh-context review before push (orchestrator).
 - Phase C (verify, archive).
+
+---
+
+## Batch 2: Phase B (PR 2, web notice) - COMPLETE (B.1-B.8)
+
+**Mode**: Strict TDD (ADR-016). **Branch**: `auth-live-user-check/02-web-session-ended` (from `main` at d1a44b3, PR 1 merged).
+**Delivery**: `ask-on-risk`, `stacked-to-main`, PR 2 of 2. Not pushed, no PR opened. B.9 browser-verified by the orchestrator and user; G.1 and Phase C are NOT done.
+
+### Commits (work units)
+
+| SHA | Message | Unit |
+|-----|---------|------|
+| 8288cc6 | feat(web): report a 401 from apiFetch to a registered handler | client hook + tests (B.1-B.2) |
+| 5aec182 | feat(web): end the session in AuthProvider when a data call gets a 401 | AuthProvider flag, ref, handler + tests, useAuth mock updates (B.3-B.4) |
+| 4ddc8c8 | feat(web): show a localized session-ended notice on the login page | LoginPage, locales, locale tests (B.5-B.7) |
+| 5f8cf73 | docs(auth): reword role comments now that the guard reads it from the database | 5 API comments |
+| (this commit) | docs(openspec): record auth-live-user-check phase B apply-progress | tasks + apply-progress |
+
+### Task detail
+
+- [x] B.1 RED `client.test.ts`: new describe for the handler (401 invokes it and still throws `ApiError(401)`; 403/500 do not; no handler is fine; cleared with `null` stops calling); `afterEach(() => setUnauthorizedHandler(null))`.
+- [x] B.2 GREEN `client.ts`: `setUnauthorizedHandler(fn | null)`; handler called on 401 before the throw.
+- [x] B.3 RED `AuthProvider.test.tsx`: 401 while logged in -> user null and `sessionEnded`; logged out -> no flag; two concurrent 401s -> one transition; `login()` clears the flag; 401 during an in-flight `logout()` -> no notice; unmount clears the handler (via a `vi.mock` wrapper around the real `setUnauthorizedHandler`).
+- [x] B.4 GREEN `AuthProvider.tsx`: `sessionEnded` state, `userRef` through an `updateUser` helper used at every `setUser` site, handler registered in a `useEffect` with cleanup, synchronous ref and flag reset at the top of `logout()` and again in `finally`, `clearSessionEnded()` on the context. The stale comment (L10-14) was rewritten.
+- [x] B.5/B.6 `LoginPage`: `data-testid="login-session-ended"` notice when `sessionEnded && !error`; `clearSessionEnded()` on submit. Tests drive the flag the real way (`/auth/me` logged in, then `apiFetch` 401).
+- [x] B.7 `auth.sessionEnded` in en/es/ca with exact-wording `it.each` in `locales.test.ts`.
+- [x] B.8 REFACTOR/verification: see results.
+- Extra: 5 API comments reworded ("is read from the database", assignment-community-scope, user-company-scope, user-manager-capability, list-review-schedule, review-history-access).
+- Extra: `useAuth` mocks in `ProtectedRoute.test.tsx`, `OrganizationProfilePage.test.tsx`, `UserEditPage.test.tsx`, `UsersListPage.test.tsx` got `sessionEnded: false, clearSessionEnded: vi.fn()` because `tsc -b` (the build) rejected the widened `AuthContextValue`. Vitest does not type-check, so only the build caught it.
+
+### TDD Cycle Evidence
+
+| Task | Behavior | RED (command, failure) | GREEN (command, result) | REFACTOR |
+|------|----------|------------------------|--------------------------|----------|
+| B.1/B.2 | apiFetch 401 hook | `npm run test --workspace=apps/web -- client.test`: 14 failed of 14 (`TypeError: setUnauthorizedHandler is not a function`; the `afterEach` hook also failed every pre-existing case) | same command: 14/14 pass | none needed |
+| B.3/B.4 | Session ended in AuthProvider | `-- AuthProvider.test`: 6 failed, 3 passed (`sessionEnded` absent: `toHaveTextContent` mismatch; unmount case `expected undefined to be type of 'function'`) | same command: 9/9 pass | `updateUser` helper keeps ref and state in lockstep |
+| B.7 | Exact i18n wording | `-- locales.test`: 3 failed, 406 passed (`expected undefined to be 'Your session has ended...'` for en/es/ca) | same command: 409/409 pass | none needed |
+| B.5/B.6 | Login notice | `-- LoginPage.test`: 2 failed, 5 passed (`Unable to find an element by: [data-testid="login-session-ended"]`). The two vacuous-by-nature cases (no notice on fresh visit / failed login) pass before and after, as expected | same command: 7/7 pass. Mutation check: commenting out `clearSessionEnded()` in `handleSubmit` makes "keeps it hidden after the error clears" fail (1 failed, 6 passed), then restored | none needed |
+
+Ordering note: B.7 was done before B.5/B.6 so the B.5 RED failed on the missing element rather than on missing copy.
+
+### Verification results
+
+- `npm run test --workspace=apps/web`: 62 files / 1058 tests green.
+- `npm run test --workspace=apps/api` (comments only touched): 138 suites / 1353 tests green.
+- `npm run lint`: 0 errors (the same 4 pre-existing warnings in `auth.controller.spec.ts`).
+- `npm run build --workspace=apps/web` (`tsc -b && vite build`): succeeds (only the pre-existing chunk-size notice).
+- Prettier on the changed API files: clean.
+
+### Size / split (`git diff --numstat main...HEAD`, before the openspec commit)
+
+18 files, about +369 / -19 in the web and API files.
+- Code: client +14, AuthProvider +60/-10, LoginPage +9/-1, 3 locale lines, 5 API comment lines (+5/-5): about 92 added.
+- Tests: client.test +61/-2, AuthProvider.test +172, LoginPage.test +82/-1, locales.test +9, 4 `useAuth` mock files +40: about 364 added.
+- Docs: none besides the openspec artifacts.
+- Over the 400-line budget, excess is tests (see forecast ~292; the extra comes from the mock-typing fixes and fuller AuthProvider/LoginPage cases). Needs the user's size-exception OK.
+
+### Deviations / issues
+
+- Extra test files touched beyond the design list (4 `useAuth` mocks) because of the type widening.
+- The `useAuth` mock fixes first landed one commit late, so the AuthProvider commit alone failed `tsc -b`. The orchestrator moved them into that commit before push (tree identical; `tsc -b` verified at 5aec182).
+- Fixed in the LoginPage "stays hidden" test: it uses a hanging login so the error is cleared while no flag reset would make the notice reappear.
+
+### B.9 Browser verification (2026-10-07, orchestrator + user)
+
+Dev server via `npm run dev`; the user logged in, the orchestrator drove the page through claude-in-chrome. Result: browser-verified.
+
+| Case | Result |
+|------|--------|
+| Explicit logout in tab 2 | `/login`, no notice |
+| Data call in tab 1 after that logout (Users, then Communities) | 401, `/login` with "Your session has ended. Please sign in again." |
+| Failed login while the notice shows | "Invalid email or password." only; notice hidden |
+| Reload with the notice showing | notice gone |
+| Admin soft-deletes QA user `qa_test@sf-manager.example` (MANAGER) while it is logged in from an incognito window; `deletedAt` confirmed in the dev DB | its next nav click lands on `/login` with the notice (observed by the user; the extension cannot reach incognito) |
+
+No console errors. Checks read the DOM (screenshots timed out). ES/CA wording is covered by locale tests only (web i18n is hardcoded to `en`). The QA user stays soft-deleted in the dev DB.
+
+### Remaining
+
+- G.1 fresh review, Phase C (verify, archive).
