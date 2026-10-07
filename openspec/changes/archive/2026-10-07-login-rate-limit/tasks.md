@@ -47,9 +47,12 @@ Strict TDD (ADR-016): every behavior RED, GREEN, REFACTOR. Apply records a "TDD 
 
 ## Gate (orchestrator)
 
-- [ ] G.1 Fresh-context review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
+- [x] G.1 Fresh-context review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
+  - Done: two fresh reviews, PR #196 merged at a35f225, CI green on main (run 37657858109).
 
 ## Phase B: Close
 
-- [ ] B.1 `sdd-verify` against spec scenarios after PR 1 merges.
-- [ ] B.2 `sdd-archive`: merge the authentication delta into `openspec/specs/authentication/spec.md`; archive via `login-rate-limit/02-archive` PR (orchestrator does `git mv` and commit).
+- [x] B.1 `sdd-verify` against spec scenarios after PR 1 merges.
+  - Done: `verify-report.md` (PASS WITH WARNINGS, 0 CRITICAL).
+- [x] B.2 `sdd-archive`: merge the authentication delta into `openspec/specs/authentication/spec.md`; archive via `login-rate-limit/02-archive` PR (orchestrator does `git mv` and commit).
+  - Done: this archive. Ships as PR 2/2, branch `login-rate-limit/02-archive`, title `docs(openspec): PR 2/2 — archive login-rate-limit`.
