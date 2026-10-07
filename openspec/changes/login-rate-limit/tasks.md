@@ -42,7 +42,8 @@ Strict TDD (ADR-016): every behavior RED, GREEN, REFACTOR. Apply records a "TDD 
 - [x] A.11 REFACTOR: run `npx tsc -b` in apps/web, web lint and `npm run test --workspace=apps/web`.
 - [x] A.12 Docs (TDD N/A): ADR-011 addendum with the four open questions; `README.md` env vars `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, `LOGIN_RATE_LIMIT_WINDOW_SECONDS`, `TRUST_PROXY`.
 - [x] A.13 Check `git diff --stat` (~480). Commit by work unit: api config+helper, throttle wiring+e2e, web, docs.
-- [ ] A.14 Browser verification (orchestrator + user, not sdd-apply): API freshly restarted, dev server, claude-in-chrome; the user logs in themselves. Wrong password 10 times, 11th shows the message; form still usable. Restart the API afterwards. Report browser-verified or test-verified.
+- [x] A.14 Browser verification (orchestrator + user, not sdd-apply): API freshly restarted, dev server, claude-in-chrome; the user logs in themselves. Wrong password 10 times, 11th shows the message; form still usable. Restart the API afterwards. Report browser-verified or test-verified.
+  - Browser-verified 2026-10-07 on a freshly started `npm run dev`. The user logged in successfully (attempt 1, `/auth/me` 200), then logged out. Wrong-password submissions through the login form returned 401 for attempts 2–10; attempt 11 onwards returned 429. The page showed "Too many login attempts. Please try again later." and the submit button stayed enabled. curl from `localhost` (::1) got 429 with `Retry-After: 888`; curl from `127.0.0.1` (a separate bucket) still got 401 "Invalid email or password"; `GET /health` returned 200. The dev server was stopped afterwards, which clears the in-memory counters.
 
 ## Gate (orchestrator)
 
