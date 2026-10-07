@@ -55,9 +55,9 @@ Strict TDD (ADR-016): every behavior goes RED, GREEN, REFACTOR. Each apply batch
 
 ## Gate (orchestrator, not an apply task)
 
-- [ ] G.1 Fresh-context review before push and before merge for each PR; the user confirms push, PR and merge. Each PR passes `ci` (ADR-017).
+- [x] G.1 Fresh-context review before push and before merge for each PR; the user confirms push, PR and merge. Each PR passes `ci` (ADR-017). Done: PR #193 (d1a44b3) and PR #194 (96856a8) both approved after fresh-context review; PR CI runs 37516717748 and 37583375940 green; push-to-main run 37588733570 green.
 
 ## Phase C: Close
 
-- [ ] C.1 `sdd-verify` against the spec scenarios, after both PRs are merged.
-- [ ] C.2 `sdd-archive`: merge the authentication delta into `openspec/specs/authentication/spec.md`; archive as an `auth-live-user-check/03-archive` PR (orchestrator commits the move).
+- [x] C.1 `sdd-verify` against the spec scenarios, after both PRs are merged. Done: PASS WITH WARNINGS, 0 CRITICAL, 2 WARNING, 3 SUGGESTION (verify-report.md, Engram #463), run on main@96856a8.
+- [x] C.2 `sdd-archive`: merge the authentication delta into `openspec/specs/authentication/spec.md`; archive as an `auth-live-user-check/03-archive` PR (orchestrator commits the move). Done 2026-10-07: delta merged (2 ADDED, 3 MODIFIED), archive-report.md written; the orchestrator performs the `git mv` and commit.
