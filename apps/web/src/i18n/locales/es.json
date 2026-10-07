@@ -587,6 +587,7 @@
     "validationRequired": "El correo electrónico y la contraseña son obligatorios.",
     "validationInvalidEmail": "Introduce un correo electrónico válido.",
     "loginFailed": "Correo electrónico o contraseña incorrectos.",
+    "loginRateLimited": "Demasiados intentos de inicio de sesión. Vuelve a intentarlo más tarde.",
     "sessionEnded": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
     "logoAlt": "SF-Manager",
     "logoutLabel": "Cerrar sesión"

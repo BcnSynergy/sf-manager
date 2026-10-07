@@ -587,6 +587,7 @@
     "validationRequired": "El correu electrònic i la contrasenya són obligatoris.",
     "validationInvalidEmail": "Introdueix un correu electrònic vàlid.",
     "loginFailed": "Correu electrònic o contrasenya incorrectes.",
+    "loginRateLimited": "Massa intents d'inici de sessió. Torna-ho a provar més tard.",
     "sessionEnded": "La teva sessió ha acabat. Torna a iniciar la sessió.",
     "logoAlt": "SF-Manager",
     "logoutLabel": "Tanca sessió"

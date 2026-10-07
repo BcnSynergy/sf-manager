@@ -1,15 +1,21 @@
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import {
   AUTH_CONFIG,
   type AuthConfig,
 } from './modules/auth/infrastructure/config/auth.config';
+import { getTrustProxySetting } from './shared/infrastructure/env/trust-proxy';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Rate limiting keys on req.ip; TRUST_PROXY decides whether that is the
+  // socket address (default) or the client IP one trusted hop back.
+  app.set('trust proxy', getTrustProxySetting(process.env));
 
   // AuthenticatedGuard (design.md Decision 4) reads the access-token cookie
   // off `req.cookies`, which only exists once this middleware runs.

@@ -2,13 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
+import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
 
 // spec.md "Login Form Validation": empty/invalid fields are blocked
 // client-side, before any network call, using the SAME schema the API
 // enforces (ADR-015 single source of truth) — no separate reimplementation
 // of email-format validation here. Server rejection (401) always shows one
-// generic message, never a field-specific hint (anti-enumeration).
+// generic message, never a field-specific hint (anti-enumeration). The one
+// exception is a 429 (login rate limit), which shows its own message with
+// no countdown; the form stays usable for a later retry.
 //
 // The session-ended notice (auth-live-user-check spec "Session-Ended
 // Notice") shows only while no login error does, and the flag is cleared on
@@ -45,8 +48,12 @@ export function LoginPage() {
     try {
       await login(result.data.email, result.data.password);
       navigate('/');
-    } catch {
-      setError(t('auth.loginFailed'));
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 429
+          ? t('auth.loginRateLimited')
+          : t('auth.loginFailed'),
+      );
     }
   }
 
