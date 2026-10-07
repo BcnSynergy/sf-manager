@@ -83,6 +83,42 @@ describe('LoginPage', () => {
       'Invalid email or password.',
     );
   });
+
+  // login-rate-limit spec "Rate-limited message" / "Form usable after rate
+  // limit": a 429 gets its own message (no countdown, no digits) and the
+  // form keeps working.
+  it('shows the rate-limited message, not the invalid-credentials one, on a 429', async () => {
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 429 } as Response));
+    renderLoginPage();
+
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    const error = await screen.findByTestId('login-error');
+    expect(error).toHaveTextContent('Too many login attempts. Please try again later.');
+    expect(error).not.toHaveTextContent('Invalid email or password.');
+    expect(error.textContent).not.toMatch(/\d/);
+  });
+
+  it('stays usable after a 429: a later submit is sent and shows its own result', async () => {
+    const rateLimited = mockFetch({ ok: false, status: 429 } as Response);
+    vi.stubGlobal('fetch', rateLimited);
+    renderLoginPage();
+
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await screen.findByText('Too many login attempts. Please try again later.');
+
+    const unauthorized = mockFetch({ ok: false, status: 401 } as Response);
+    vi.stubGlobal('fetch', unauthorized);
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'another-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent('Invalid email or password.');
+    expect(unauthorized.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
+  });
 });
 
 // auth-live-user-check spec "Session-Ended Notice": the flag is raised by a

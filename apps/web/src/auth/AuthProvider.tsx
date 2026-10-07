@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Role } from '@sf-manager/validation';
-import { setUnauthorizedHandler } from '../api/client';
+import { ApiError, setUnauthorizedHandler } from '../api/client';
 
 // role is returned as-is by both POST /auth/login and GET /auth/me
 // (design.md "Data Flow") — the frontend does not decide or cache it
@@ -83,9 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!response.ok) {
       // Per spec.md's anti-enumeration requirement: never surface whether
-      // the email or the password was wrong — the caller (LoginPage) shows
-      // one generic message regardless of the underlying reason.
-      throw new Error('Login failed');
+      // the email or the password was wrong. Only the HTTP status is
+      // exposed, so the caller (LoginPage) can tell a rate-limited 429 from
+      // every other rejection and show one generic message for the rest.
+      throw new ApiError(response.status);
     }
 
     const data = (await response.json()) as AuthUser;

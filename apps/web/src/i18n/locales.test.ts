@@ -893,4 +893,13 @@ describe('locale key-set parity (en/es/ca)', () => {
   ])('%s defines the exact auth.sessionEnded wording', (localeName, expected) => {
     expect(getKeyPathValue(locales[localeName], 'auth.sessionEnded')).toBe(expected);
   });
+
+  // login-rate-limit spec "Localized rate-limited message": exact wording.
+  it.each([
+    ['en', 'Too many login attempts. Please try again later.'],
+    ['es', 'Demasiados intentos de inicio de sesión. Vuelve a intentarlo más tarde.'],
+    ['ca', "Massa intents d'inici de sessió. Torna-ho a provar més tard."],
+  ])('%s defines the exact auth.loginRateLimited wording', (localeName, expected) => {
+    expect(getKeyPathValue(locales[localeName], 'auth.loginRateLimited')).toBe(expected);
+  });
 });

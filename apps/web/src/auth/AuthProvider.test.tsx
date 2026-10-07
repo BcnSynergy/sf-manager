@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { apiFetch, setUnauthorizedHandler } from '../api/client';
+import { ApiError, apiFetch, setUnauthorizedHandler } from '../api/client';
 import { AuthProvider, useAuth } from './AuthProvider';
 
 // Wraps the real setUnauthorizedHandler so a test can assert what
@@ -272,5 +273,55 @@ describe('AuthProvider — session ended on a mid-session 401', () => {
     view.unmount();
 
     expect(vi.mocked(setUnauthorizedHandler).mock.calls.at(-1)?.[0]).toBeNull();
+  });
+});
+
+// login-rate-limit design.md D9: a rejected login throws ApiError carrying
+// the HTTP status, so callers can tell a 429 from a 401 without parsing text.
+describe('AuthProvider — login() rejection', () => {
+  function LoginRejectionProbe() {
+    const { login } = useAuth();
+    const [result, setResult] = useState('pending');
+    return (
+      <div>
+        <span data-testid="probe-result">{result}</span>
+        <button
+          data-testid="probe-login"
+          onClick={() => {
+            login('admin@sf-manager.example', 'irrelevant-password').catch((err: unknown) => {
+              setResult(err instanceof ApiError ? `ApiError:${err.status}` : 'other');
+            });
+          }}
+        >
+          login
+        </button>
+      </div>
+    );
+  }
+
+  it.each([429, 401])('rejects with an ApiError carrying status %i', async (status) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        Promise.resolve(
+          String(url).includes('/auth/me')
+            ? ({ ok: false, status: 401 } as Response)
+            : ({ ok: false, status } as Response),
+        ),
+      ),
+    );
+    render(
+      <AuthProvider>
+        <LoginRejectionProbe />
+      </AuthProvider>,
+    );
+
+    await act(async () => {
+      screen.getByTestId('probe-login').click();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-result')).toHaveTextContent(`ApiError:${status}`),
+    );
   });
 });
