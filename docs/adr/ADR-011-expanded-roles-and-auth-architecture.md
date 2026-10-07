@@ -485,6 +485,31 @@ accepted) and the staleness note in the 2026-09-09 addendum (item 5, `role`
    `/login`; the halves are tested separately and the whole flow was
    browser-verified.
 
+## Addendum (2026-10-07): `login-rate-limit` — Decision 4's rate limiting made concrete
+
+`POST /auth/login` is now rate-limited per client IP with `@nestjs/throttler`
+(pinned to `6.4.0`, the first 6.x whose peer range includes Nest 11). Only
+the login handler carries the guard; no other endpoint is throttled. Defaults
+are 10 attempts per 15 minutes, configurable through
+`LOGIN_RATE_LIMIT_MAX_ATTEMPTS` and `LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Every
+attempt counts, successful or not, and an over-limit attempt gets `429` with
+`Retry-After` before the body or credentials are evaluated. Counters live in
+memory (single instance, ADR-001). The client IP is the socket address unless
+`TRUST_PROXY=true`, which trusts exactly one proxy hop. The web login form
+shows its own message on a `429`, with no countdown.
+
+Open questions, deliberately not implemented in this slice (ADR-006):
+
+1. **Deployment topology.** Whether production runs behind a proxy decides
+   the `TRUST_PROXY` value. This does not block the change.
+2. **Number of proxy hops.** With a CDN in front of a proxy (two hops),
+   `TRUST_PROXY=true` resolves the CDN address, so all clients share one
+   bucket; a numeric hop count may be needed. Conversely, `TRUST_PROXY=true`
+   with no proxy lets a client spoof its key with a single `X-Forwarded-For`.
+3. **IPv6 clients** can rotate the low 64 bits to get fresh buckets; keying on
+   the `/64` prefix may be needed later.
+4. **Restarts.** In-memory counters reset on every restart or redeploy.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
