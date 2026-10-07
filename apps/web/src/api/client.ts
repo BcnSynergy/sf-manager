@@ -36,6 +36,17 @@ export class ApiError extends Error {
 }
 
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
+const HTTP_UNAUTHORIZED = 401;
+
+// auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
+// a mid-session 401 (the API now re-reads the user on every request) is
+// reported from here. AuthProvider registers the handler; login, logout and
+// the mount-time /auth/me use raw fetch and never reach it.
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
 
 // Callers type the success shape via T (e.g. UserResponseDto[]); a 204
 // response resolves to undefined regardless of T (design.md Interfaces).
@@ -71,6 +82,9 @@ export async function apiFetch<T = undefined>(
     } catch {
       // Empty or non-JSON error body — ApiError still carries the real
       // HTTP status, just without a discriminator code.
+    }
+    if (response.status === HTTP_UNAUTHORIZED) {
+      unauthorizedHandler?.();
     }
     throw new ApiError(response.status, code, extra);
   }
