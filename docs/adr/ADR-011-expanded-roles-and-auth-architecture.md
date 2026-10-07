@@ -475,6 +475,15 @@ accepted) and the staleness note in the 2026-09-09 addendum (item 5, `role`
    tokens (see item 1 of the 2026-08-22 addendum), a lookup cache,
    de-duplicating the capability checker's own read, dropping the token claims, and a live UI
    role refresh.
+6. **Open question (web): a stale in-flight 401 after a re-login.** The web
+   `AuthProvider` ends the session on any data-call `401` whenever a user is
+   set. A request sent before a re-login that only returns `401` after the
+   new login would therefore end the new, valid session. Likelihood is low,
+   so it is deferred per ADR-006. A possible fix is a session epoch captured
+   when the request starts and checked in the handler. Related: no single
+   automated test covers the mid-session `401` followed by the redirect to
+   `/login`; the halves are tested separately and the whole flow was
+   browser-verified.
 
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
