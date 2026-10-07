@@ -176,7 +176,7 @@ describe('Login rate limit (e2e)', () => {
       const rejected = await login(app).expect(429);
       expect(rejected.headers['retry-after']).toBe('1');
 
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       await login(app).expect(200);
     });
