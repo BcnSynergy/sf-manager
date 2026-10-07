@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import type { StringValue } from 'ms';
 import { HashingModule } from '../../shared/infrastructure/hashing/hashing.module';
 import { UsersModule } from '../users/users.module';
@@ -15,6 +16,7 @@ import {
   AUTH_CONFIG,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
+import { getLoginRateLimitConfig } from './infrastructure/config/login-rate-limit.config';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
@@ -39,6 +41,17 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // as AuthModule is instantiated — mirrors the IdGeneratorModule
     // precedent (app.module.ts), just registered from this module instead.
     HashingModule,
+    // Only the login handler opts in (@UseGuards(ThrottlerGuard) in
+    // AuthController); this module registers no APP_GUARD for it. The
+    // throttler MUST stay named 'default': v6 suffixes headers of named
+    // throttlers (Retry-After-login), and only 'default' emits a plain
+    // Retry-After. forRootAsync so env is read at module initialisation.
+    ThrottlerModule.forRootAsync({
+      useFactory: () => {
+        const { maxAttempts, windowMs } = getLoginRateLimitConfig();
+        return [{ name: 'default', ttl: windowMs, limit: maxAttempts }];
+      },
+    }),
     JwtModule.registerAsync({
       useFactory: () => {
         const config = getAuthConfig();

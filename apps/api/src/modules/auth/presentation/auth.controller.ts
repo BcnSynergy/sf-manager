@@ -9,13 +9,16 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiOkResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { loginRequestSchema } from '@sf-manager/validation';
 import type { Response } from 'express';
 import { Public } from '../../../shared/presentation/decorators/public.decorator';
@@ -48,6 +51,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -62,6 +66,9 @@ export class AuthController {
   })
   @ApiOkResponse({ type: AuthUserResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password.' })
+  @ApiTooManyRequestsResponse({
+    description: 'Too many login attempts from this IP; see Retry-After.',
+  })
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequestDto,
     @Res({ passthrough: true }) response: Response,
