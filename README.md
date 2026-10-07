@@ -43,7 +43,7 @@ business features yet, just the toolchain wired end-to-end.
    | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
    | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | No | `10` | Login attempts allowed per client IP within the window. Must be a positive integer; the app throws at boot otherwise. |
    | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the login rate-limit window, in seconds. Must be a positive integer. |
-   | `TRUST_PROXY` | No | off | `true` makes the rate limit key on the client IP from `X-Forwarded-For` (one trusted proxy hop). Leave off unless the API runs behind exactly one reverse proxy; with no proxy, `true` lets a client spoof its key. `false` or unset uses the socket address. |
+   | `TRUST_PROXY` | No | off | `true` makes the rate limit key on the client IP from `X-Forwarded-For` (one trusted proxy hop). Leave off unless the API runs behind exactly one reverse proxy; with no proxy, `true` lets a client spoof its key. `false` or unset uses the socket address. Any other value makes the app throw at boot. |
    | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `NODE_ENV` | For dev seed data | — | Must be exactly `development` for `prisma db seed` to create the dev accounts. |
