@@ -38,6 +38,8 @@ describe('ProtectedRoute', () => {
       isLoading: true,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderProtectedRoute();
@@ -52,6 +54,8 @@ describe('ProtectedRoute', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderProtectedRoute();
@@ -65,6 +69,8 @@ describe('ProtectedRoute', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderProtectedRoute();
@@ -98,6 +104,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       isLoading: true,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -113,6 +121,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -127,6 +137,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -142,6 +154,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -193,6 +207,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -206,6 +222,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -219,6 +237,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -232,6 +252,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -249,6 +271,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -274,6 +298,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     render(
@@ -311,6 +337,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -370,6 +398,8 @@ describe('ProtectedRoute for the element review-history route (5 allowed roles, 
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderElementHistoryRoute();
@@ -387,6 +417,8 @@ describe('ProtectedRoute for the element review-history route (5 allowed roles, 
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     render(

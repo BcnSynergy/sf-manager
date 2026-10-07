@@ -380,6 +380,8 @@ describe('OrganizationProfilePage route access', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
 
     renderRoute();
@@ -396,6 +398,8 @@ describe('OrganizationProfilePage route access', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
 
