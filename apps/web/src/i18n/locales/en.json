@@ -587,6 +587,7 @@
     "validationRequired": "Email and password are required.",
     "validationInvalidEmail": "Enter a valid email address.",
     "loginFailed": "Invalid email or password.",
+    "sessionEnded": "Your session has ended. Please sign in again.",
     "logoAlt": "SF-Manager",
     "logoutLabel": "Log out"
   }

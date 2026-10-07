@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { apiFetch, ApiError } from './client';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { apiFetch, ApiError, setUnauthorizedHandler } from './client';
 
 function mockResponse(init: {
   ok: boolean;
@@ -16,6 +16,10 @@ function mockResponse(init: {
 describe('apiFetch', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    setUnauthorizedHandler(null);
   });
 
   it('returns the parsed body on a successful (200) response', async () => {
@@ -196,5 +200,60 @@ describe('apiFetch', () => {
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(0);
+  });
+});
+
+describe('apiFetch — unauthorized handler', () => {
+  afterEach(() => {
+    setUnauthorizedHandler(null);
+    vi.unstubAllGlobals();
+  });
+
+  function stubStatus(status: number) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(mockResponse({ ok: false, status })),
+    );
+  }
+
+  it('invokes the registered handler on a 401 and still throws ApiError(401)', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    stubStatus(401);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+  });
+
+  it.each([403, 500])('does not invoke the handler on a %i', async (status) => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    stubStatus(status);
+
+    await apiFetch('/users').catch(() => undefined);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('still throws ApiError(401) when no handler is registered', async () => {
+    stubStatus(401);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+  });
+
+  it('stops invoking a handler once it is cleared with null', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    setUnauthorizedHandler(null);
+    stubStatus(401);
+
+    await apiFetch('/users').catch(() => undefined);
+
+    expect(handler).not.toHaveBeenCalled();
   });
 });

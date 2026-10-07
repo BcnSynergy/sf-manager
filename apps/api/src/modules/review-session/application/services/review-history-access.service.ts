@@ -134,7 +134,7 @@ export class ReviewHistoryAccessService {
         return this.repository.findCompletedAcrossInstallation();
       }
       default: {
-        // `role` comes from a JWT claim with no runtime enum validation —
+        // `role` is read from the database with no runtime enum validation —
         // same fail-closed backstop as CommunityScopeChecker's own switch.
         actor.role satisfies never;
         return [];

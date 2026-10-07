@@ -74,6 +74,8 @@ describe('UserEditPage', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
     });
     mockedListMaintenanceCompanies.mockResolvedValue(COMPANIES);
   });

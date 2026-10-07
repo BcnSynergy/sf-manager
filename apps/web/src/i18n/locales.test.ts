@@ -884,4 +884,13 @@ describe('locale key-set parity (en/es/ca)', () => {
       }
     },
   );
+
+  // auth-live-user-check spec "Localized notice": exact wording per locale.
+  it.each([
+    ['en', 'Your session has ended. Please sign in again.'],
+    ['es', 'Tu sesión ha terminado. Vuelve a iniciar sesión.'],
+    ['ca', 'La teva sessió ha acabat. Torna a iniciar la sessió.'],
+  ])('%s defines the exact auth.sessionEnded wording', (localeName, expected) => {
+    expect(getKeyPathValue(locales[localeName], 'auth.sessionEnded')).toBe(expected);
+  });
 });
