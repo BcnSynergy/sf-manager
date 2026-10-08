@@ -21,6 +21,19 @@ import {
 } from '../ports/review-session.repository.port';
 import type { Actor } from './session-access.service';
 
+// Merged-list order, mirroring the adapter's `completedAt DESC, id DESC`
+// (ids are lowercase UUIDv7 strings, so string comparison matches Postgres).
+// The epoch fallback is unreachable — both operands read `completed`
+// sessions, which always carry a `completedAt` — it only avoids a `!`.
+function completedHistoryOrder(a: ReviewSession, b: ReviewSession): number {
+  const byCompletedAt =
+    (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0);
+  if (byCompletedAt !== 0) {
+    return byCompletedAt;
+  }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+}
+
 // review-history-per-element/design.md Decision 4: the reachability
 // verdict for the element-keyed read. A DISCRIMINATED UNION, deliberately
 // NOT `ElementReviewEntryRow[] | null` — this is the one surface where an
@@ -73,19 +86,30 @@ export class ReviewHistoryAccessService {
       case 'MAINTENANCE_TECHNICIAN':
         return this.repository.findCompletedForPerformer(actor.userId);
 
-      // UNCHANGED, byte for byte in behaviour — still gated on a currently
-      // active assignment, still re-read per request, still an
-      // empty-scope early return before any repository call.
+      // representative-retained-access D1/D2: the union of the sessions in
+      // the actively assigned communities (re-read per request, empty scope
+      // skips the community read) and the sessions the representative
+      // performed themselves, which no assignment state can revoke. Each
+      // operand is an already-scoped read, so the union cannot widen beyond
+      // "assigned communities + own".
       case 'COMMUNITY_REPRESENTATIVE': {
         const communityIds =
           await this.communityScopeChecker.listAssignedCommunityIds(
             actor.userId,
             actor.role,
           );
-        if (communityIds.length === 0) {
-          return [];
+        const own = await this.repository.findCompletedForPerformer(
+          actor.userId,
+        );
+        const inCommunities =
+          communityIds.length === 0
+            ? []
+            : await this.repository.findCompletedInCommunities(communityIds);
+        const byId = new Map<string, ReviewSession>();
+        for (const session of [...own, ...inCommunities]) {
+          byId.set(session.id, session);
         }
-        return this.repository.findCompletedInCommunities(communityIds);
+        return [...byId.values()].sort(completedHistoryOrder);
       }
 
       // NEW (design.md Decision 3/4/7/9): the manager's scope is their own
