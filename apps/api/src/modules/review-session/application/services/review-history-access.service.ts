@@ -196,7 +196,17 @@ export class ReviewHistoryAccessService {
           actor.userId,
         );
 
+      // representative-retained-access D3: an own performed session wins
+      // first and needs no Layer 2 lookup; only on a miss is the assignment
+      // resolved (lazily), and an empty scope is a plain miss.
       case 'COMMUNITY_REPRESENTATIVE': {
+        const own = await this.repository.findCompletedByIdForPerformer(
+          sessionId,
+          actor.userId,
+        );
+        if (own) {
+          return own;
+        }
         const communityIds =
           await this.communityScopeChecker.listAssignedCommunityIds(
             actor.userId,

@@ -588,6 +588,80 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
     ).rejects.toThrow(ReviewSessionNotFoundError);
   });
 
+  // representative-retained-access D3: own performed session first, the
+  // assignment is only consulted on an own miss.
+  it('a representative reads back their own performed session without any Layer 2 lookup', async () => {
+    repository.seed(
+      completedSession({
+        id: 'own',
+        performedById: 'rep-1',
+        communityId: 'community-9',
+      }),
+    );
+    communityScopeChecker.assign('rep-1', 'community-1');
+    const listSpy = jest.spyOn(
+      communityScopeChecker,
+      'listAssignedCommunityIds',
+    );
+
+    const result = await service.loadCompletedForActor('own', {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(result.id).toBe('own');
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+
+  it('a representative with no assignment still reads back their own performed session', async () => {
+    repository.seed(completedSession({ id: 'own', performedById: 'rep-1' }));
+
+    const result = await service.loadCompletedForActor('own', {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(result.id).toBe('own');
+  });
+
+  it("a representative with no assignment gets ReviewSessionNotFoundError for another performer's session", async () => {
+    repository.seed(
+      completedSession({ id: 'technician', performedById: 'user-2' }),
+    );
+
+    await expect(
+      service.loadCompletedForActor('technician', {
+        userId: 'rep-1',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      }),
+    ).rejects.toThrow(ReviewSessionNotFoundError);
+  });
+
+  it('a representative who misses on own sessions falls through to the community read', async () => {
+    repository.seed(
+      completedSession({
+        id: 'community-session',
+        performedById: 'user-2',
+        communityId: 'community-1',
+      }),
+    );
+    communityScopeChecker.assign('rep-1', 'community-1');
+    const communitySpy = jest.spyOn(
+      repository,
+      'findCompletedByIdInCommunities',
+    );
+
+    const result = await service.loadCompletedForActor('community-session', {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(result.id).toBe('community-session');
+    expect(communitySpy).toHaveBeenCalledWith('community-session', [
+      'community-1',
+    ]);
+  });
+
   it('a manager reads back a session performed under their resolved company', async () => {
     const session = completedSession({
       id: 'company-session',
@@ -654,7 +728,7 @@ describe('ReviewHistoryAccessService.loadCompletedForActor', () => {
         repository.seed(
           completedSession({
             id: 'foreign-community',
-            performedById: 'user-1',
+            performedById: 'user-2',
             communityId: 'community-2',
           }),
         );
