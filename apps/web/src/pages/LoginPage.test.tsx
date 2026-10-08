@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
+import i18n from '../i18n';
 import { apiFetch } from '../api/client';
 import { AuthProvider } from '../auth/AuthProvider';
 import { LoginPage } from './LoginPage';
@@ -198,5 +198,34 @@ describe('LoginPage — session-ended notice', () => {
     fillAndSubmit();
     await waitFor(() => expect(screen.queryByTestId('login-error')).not.toBeInTheDocument());
     expect(screen.queryByTestId('login-session-ended')).not.toBeInTheDocument();
+  });
+});
+
+// web-locale-selection "Present on both surfaces": the login page carries the
+// selector too, since no shell is mounted there.
+describe('LoginPage language selector', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch({ ok: true, json: async () => ({}) }));
+  });
+
+  afterEach(async () => {
+    localStorage.clear();
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    document.documentElement.lang = 'en';
+  });
+
+  it('renders exactly one selector and switches the page language', async () => {
+    renderLoginPage();
+
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByTestId('login-submit')).toHaveTextContent('Sign in');
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'es' } });
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Iniciar sesión'),
+    );
   });
 });

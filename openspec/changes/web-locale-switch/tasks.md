@@ -1,0 +1,71 @@
+# Tasks: Web language selector (EN/ES/CA)
+
+## Review Workload Forecast
+
+| Field | Value |
+|-------|-------|
+| Estimated changed lines | PR 1 ~380-430 (code ~80, tests ~270-320, docs ~30) plus openspec artifacts; PR 2 archive only (docs) |
+| 400-line budget risk | Medium-High (PR 1 only; any excess is tests) |
+| Chained PRs recommended | Yes |
+| Suggested split | PR 1 (selector + ADR/CLAUDE.md docs) then PR 2 (archive) |
+| Delivery strategy | ask-on-risk |
+| Chain strategy | stacked-to-main |
+
+Decision needed before apply: Yes
+Chained PRs recommended: Yes
+Chain strategy: stacked-to-main
+400-line budget risk: Medium
+
+Decision needed: PR 1 may exceed 400 lines at the upper estimate. Code is ~80 lines; the excess is tests (CLAUDE.md size-exception rule). The user accepts it; coverage is never trimmed.
+
+### Suggested Work Units
+
+| Unit | Goal | Likely PR | Notes |
+|------|------|-----------|-------|
+| 1 | Resolver/storage, i18n init + `<html lang>`, selector, placements, locale keys, ADR-007 addendum, CLAUDE.md Locale | PR 1/2 | Base: main. Branch `web-locale-switch/01-locale-selector`. Title `feat(web): PR 1/2 — language selector (EN/ES/CA)` |
+| 2 | Archive, spec merge, D9 hand edit | PR 2/2 | Base: main (after PR 1 merges). Branch `web-locale-switch/02-archive`. Title `docs(openspec): PR 2/2 — archive web-locale-switch` |
+
+Strict TDD: each unit RED, GREEN, REFACTOR; apply records a "TDD Cycle Evidence" table. One commit per work unit (tests with code). Every commit must compile: `npx tsc -b` in apps/web. All paths below are under `apps/web/src/`.
+
+## Phase A: PR 1 (sdd-apply)
+
+Unit A, resolver and storage (D1-D4; Initial Language Resolution, Storage unavailable)
+- [x] A.1 RED: `i18n/locale-preference.test.ts`: stored en/es/ca win; stored `xx`, `''`, `ES`, `es-ES` ignored; `es-ES`/`ca-ES`/`CA` map to base, `fr`/`''`/`undefined` give en; `navigator.languages` empty falls back to `navigator.language`; throwing `Storage` stub: read gives `null`, write does not throw; round trip. RED: missing module.
+- [x] A.2 GREEN: `i18n/locale-preference.ts`: `resolveInitialLocale`, browser-language read, `readStoredLocale`/`writeStoredLocale` (key `sf-manager.locale`, try/catch).
+- [x] A.3 REFACTOR: tidy; `npx tsc -b`.
+
+Unit B, i18n init and `<html lang>` (D5; Switch updates html lang, Browser base language, Valid stored choice wins)
+- [x] B.1 RED: `i18n/index.test.ts`: `vi.resetModules()`, stub `navigator.languages=['es']`, dynamic `import('./index')`, `<html lang>` is `es`; stored `ca` wins; after `changeLanguage('ca')` lang is `ca`. afterEach restores stubs, storage, lang.
+- [x] B.2 GREEN: `i18n/index.ts`: `lng` from resolver, `languageChanged` listener before `init`, update comment L7-9.
+
+Unit C, selector (D6, D8; Labels do not translate, Switch, Choice survives reload, Storage unavailable)
+- [x] C.1 RED: `components/LanguageSelector.test.tsx`: three fixed endonym options with `lang` attrs in every active language; choosing Català sets `i18n.language`, stores `ca`, re-renders `language.label`; follows external `changeLanguage('es')`; throwing `setItem` still switches. afterEach resets.
+- [x] C.2 RED: `i18n/locales.test.ts`: `REQUIRED_LANGUAGE_KEY_PATHS` includes `language.label`.
+- [x] C.3 GREEN: `components/LanguageSelector.tsx` (native `<select>`, `aria-label`, store then change); add `language.label` to `i18n/locales/{en,es,ca}.json` (Language/Idioma/Idioma).
+- [x] C.4 REFACTOR: tidy; `npx tsc -b`.
+
+Unit D, placements (D7; Present on both surfaces, Language selector is the only added control)
+- [x] D.1 RED: `layout/AppLayout.test.tsx` and `pages/LoginPage.test.tsx`: exactly one selector (inside `nav-root` / on login); switching to ES changes `nav.home` / `auth.loginTitle`. afterEach resets.
+- [x] D.2 GREEN: mount in `layout/AppLayout.tsx` `<nav>` after logout; in `pages/LoginPage.tsx` first child of `<main>`.
+- [x] D.3 REFACTOR: run `npx tsc -b`, web lint, `npm run test --workspace=apps/web`. Confirm no manifest, API or schema change (No backend or dependency change).
+
+Docs (TDD N/A)
+- [x] D.4 `docs/adr/ADR-007-i18n-multilanguage-ui-english-codebase.md` addendum with open questions (per-user `User.locale`; walking `navigator.languages`); update `CLAUDE.md` Locale bullet.
+- [x] D.5 Check `git diff --stat`; commit by work unit: resolver, init, selector+keys, placements, docs.
+
+## Gate (orchestrator)
+
+- [x] G.1 Browser verification (orchestrator + user; the user logs in): Vite dev server, claude-in-chrome. Per design plan: (1) login switch ES then CA, `<html lang>` via `javascript_tool`, check placement vs logo (D7 fallback); (2) logged in, switch and reload persists; (3) `localStorage['sf-manager.locale']='xx'` falls back to browser language; (4) ES/CA screenshots of nav, login, a list, schedule dates, review document; fix findings; (5) print CSS copied into screen `<style>`, selector hidden. Report browser- or test-verified.
+  - Browser-verified 2026-10-08 (Chrome, 1904px viewport, browser language `en-US`). No code changes needed.
+  - Login: first load `en` with nothing stored; ES and CA switch text, `aria-label` and `<html lang>` immediately and store the choice; reload keeps ES; stored `garbage` is ignored and falls back to `en`. Options are endonyms with `lang` attributes. The selector sits inline left of the logo; it is functional, so the D7 fallback was not applied.
+  - Shell: selector after the logout button; it follows an external `changeLanguage` without storing it. Schedule dates and review document dates (including "Signed on" date/time) render in EN/ES/CA. No untranslated strings found. No console errors.
+  - Print: `@media print` rules copied into a screen `<style>` give `nav { display: none }`, so the selector is hidden.
+  - Accepted by the user: the nav bar already wraps link labels to 2 lines in EN and CA (52px); in ES the selector pushes it to 3 lines (78px; 52px without it). No overflow. The root cause is ten links in a constrained width, and nav styling is out of scope per `app-navigation`; recorded as follow-up debt.
+  - Pre-existing, out of scope: `ReviewHistoryPage.tsx:85` and `ReviewHistoryDetailPage.tsx:96` render `completedAt` as a raw ISO string in every language, unrelated to this change. Recorded as follow-up debt.
+- [ ] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
+
+## Phase B: Close
+
+- [ ] B.1 `sdd-verify` against spec scenarios after PR 1 merges.
+- [ ] B.2 `sdd-archive` via `web-locale-switch/02-archive`: merge both deltas (new `web-locale-selection`, modified `app-navigation`) into `openspec/specs/`; orchestrator does `git mv` and commit.
+- [ ] B.3 D9 hand edit in the same PR: `openspec/specs/app-navigation/spec.md` Purpose L28-29, "a language switcher (deferred by ADR-007)" becomes "any language switcher other than the single selector defined by `web-locale-selection`".

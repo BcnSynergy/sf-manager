@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Role } from '@sf-manager/validation';
-import '../i18n';
+import i18n from '../i18n';
 import { AuthProvider } from '../auth/AuthProvider';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
 import { AppLayout } from './AppLayout';
@@ -307,5 +307,31 @@ describe('AppLayout', () => {
 
       await waitFor(() => expect(screen.getByTestId('login-page')).toBeInTheDocument());
     });
+  });
+});
+
+// web-locale-selection / app-navigation delta: the shell carries exactly one
+// language selector, inside the nav, and switching it re-labels the nav.
+describe('AppLayout language selector', () => {
+  afterEach(async () => {
+    localStorage.clear();
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    document.documentElement.lang = 'en';
+  });
+
+  it('renders exactly one selector inside the nav and switches the nav language', async () => {
+    vi.stubGlobal('fetch', mockFetch());
+    renderAppLayout();
+
+    const nav = await screen.findByTestId('nav-root');
+    const selectors = within(nav).getAllByRole('combobox');
+    expect(selectors).toHaveLength(1);
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+
+    fireEvent.change(selectors[0], { target: { value: 'es' } });
+
+    await waitFor(() => expect(screen.getByTestId('nav-link-home')).toHaveTextContent('Inicio'));
   });
 });

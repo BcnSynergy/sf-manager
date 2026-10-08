@@ -1,4 +1,7 @@
 {
+  "language": {
+    "label": "Idioma"
+  },
   "common": {
     "notAuthorizedTitle": "No autorizado",
     "notAuthorizedMessage": "No tienes permiso para ver esta página.",

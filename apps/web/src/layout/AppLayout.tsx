@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { NAV_ITEMS_BY_ROLE } from './nav-items';
 
 // nav-menu/design.md Decision 2: the one authenticated shell. It owns no
@@ -59,6 +60,7 @@ export function AppLayout() {
           >
             {t('auth.logoutLabel')}
           </button>
+          <LanguageSelector />
         </nav>
       )}
       <Outlet />
