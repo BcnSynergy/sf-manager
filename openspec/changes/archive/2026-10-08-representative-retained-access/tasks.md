@@ -63,12 +63,12 @@ Docs (TDD N/A; D7)
   - Assignment active: history lists 3 North sessions (own plus two by `technician@`), newest first.
   - Assignment deactivated (`CommunityRepresentative` `…8663`, `deactivatedAt = now()`): history lists only the own session. Own detail and own document render. The technician's North session detail shows not-found, its document shows not-available, and a South session shows not-found. Both element-history links from the own detail render and list only the rep's own entries (technicians' entries on the same element are excluded). A South element the rep never reviewed shows not-found.
   - Assignment restored (`deactivatedAt = NULL`); history lists 3 sessions again. No console errors.
-- [ ] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge.
+- [x] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge.
 
 ## Phase B: PR 2 Close
 
-- [ ] B.1 `sdd-verify` against spec scenarios after PR 1 merges; write the verify report.
-- [ ] B.2 `sdd-archive` via `representative-retained-access/02-archive`: merge the three deltas (review-history, authorization, review-document) into `openspec/specs/`; orchestrator does `git mv` and commit.
-- [ ] B.3 D8(a) hand edit: `openspec/specs/review-history/spec.md` Purpose L10-11 gains "plus the sessions they performed themselves, with or without an assignment".
-- [ ] B.4 D8(b) hand edit: `openspec/specs/authorization/spec.md` Purpose L15 gains the same addition.
-- [ ] B.5 Confirm no edit needed at review-history L464-465, L490-491 and authorization ~L611, ~L969, L1424, L1446 (D8), and that L931-935 is carried by the MODIFIED delta.
+- [x] B.1 `sdd-verify` against spec scenarios after PR 1 merges; write the verify report.
+- [x] B.2 `sdd-archive` via `representative-retained-access/02-archive`: merge the three deltas (review-history, authorization, review-document) into `openspec/specs/`; orchestrator does `git mv` and commit.
+- [x] B.3 D8(a) hand edit: `openspec/specs/review-history/spec.md` Purpose L10-11 gains "plus the sessions they performed themselves, with or without an assignment".
+- [x] B.4 D8(b) hand edit: `openspec/specs/authorization/spec.md` Purpose L15 gains the same addition.
+- [x] B.5 Confirm no edit needed at review-history L464-465, L490-491 and authorization ~L611, ~L969, L1424, L1446 (D8), and that L931-935 is carried by the MODIFIED delta.
