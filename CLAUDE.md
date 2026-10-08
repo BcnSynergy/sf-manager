@@ -42,6 +42,33 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
 
+## Choosing SDD vs ODD at Task Start
+
+Since gentle-ai 3.x, the global default workflow is ODD (Organic Driven
+Development), and SDD runs only when explicitly requested or when a proposal
+for it is accepted. This project has built every change through SDD with
+`openspec/` artifacts so far, so that choice must not be made silently.
+
+At the start of every task that will change code, after the minimal
+exploration needed to classify it and before the first write, recommend a
+route with a one-line reason and ask the user to confirm it. Do not start
+writing until they answer.
+
+- **Recommend SDD** (`/gentle-sdd-new <change>`, OpenSpec artifacts under
+  `openspec/changes/`) when the task:
+  - is a new domain slice or an FR slice (ADR-006, domain + minimal UI);
+  - adds or changes an entity, Value Object, use case, permission/role rule,
+    or Prisma schema;
+  - has an open design decision, or is likely to need a chained PR.
+- **Recommend ODD** for everything else, for example bug fixes with a clear
+  root cause, small UI/copy/i18n tweaks, test-only or tooling changes,
+  dependency bumps, and docs.
+- If the task grows past its route mid-way (e.g. an ODD fix turns out to
+  need a schema change), stop and ask again before switching.
+- Read-only requests (explain, review, investigate) need no route question.
+- Both routes follow the Git & PR conventions below. ODD feature branches
+  also use `<change-name>/<NN>-<slug>`.
+
 ## Git & PR Conventions
 
 Established across the `auth-minimal-skeleton`, `user-management-roles`,
