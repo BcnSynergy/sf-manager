@@ -524,11 +524,12 @@ review-history scope.
 
 The rule is a read rule only. Writes keep requiring an active assignment:
 opening a session without an active assignment is still refused (`403`, as
-before), and `SessionAccessService` is unchanged. The scope cannot widen beyond "assigned communities plus own", because
+before), and `SessionAccessService` is unchanged. The scope cannot widen
+beyond "assigned communities plus own", because
 `ReviewHistoryAccessService` composes two reads that already exist and are
-already integration-tested (`findCompleted…InCommunities` and the technician's
-`findCompleted…ForPerformer`). No port method, adapter or schema changed;
-the price is one extra query per representative request.
+already integration-tested (`findCompleted…InCommunities` and the
+technician's `findCompleted…ForPerformer`). No port method, adapter or
+schema changed; the price is one extra query per representative request.
 
 Deferred (ADR-006): the field-flow link from the session page to the review
 document (FR-010) is not part of this change.
