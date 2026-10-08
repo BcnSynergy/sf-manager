@@ -1641,6 +1641,109 @@ describe('Review History (e2e)', () => {
         .get(`/review-history/${completed.id}`)
         .expect(200);
     });
+
+    // representative-retained-access: a representative keeps READ access to
+    // the sessions they performed themselves after their assignment is
+    // deactivated, but nothing beyond them, and the write surface stays
+    // closed. An isolated representative, so the shared fixture above is
+    // untouched.
+    it("a deactivated representative keeps only their own performed sessions (list, detail, element history), never a technician's, and cannot write", async () => {
+      const isolatedRepresentative = await buildSeedUser({
+        id: '00000000-0000-7000-8000-000000000105',
+        email: 'rhr-representative-own@example.com',
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      built.userRepository.seed(isolatedRepresentative);
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      await assignRepresentative(
+        adminAgent,
+        community.id,
+        '00000000-0000-7000-8000-000000000105',
+      );
+      const representativeAgent = await loginAgent(
+        built.app,
+        'rhr-representative-own@example.com',
+      );
+      const technicianAgent = await loginAgent(built.app, technicianEmail);
+
+      const complete = async (agent: Agent): Promise<SessionBody> => {
+        const opened = (
+          await agent
+            .post('/review-sessions')
+            .send({ communityId: community.id, templateId })
+            .expect(201)
+        ).body as { id: string };
+        await agent
+          .put(`/review-sessions/${opened.id}/entries/${element.id}`)
+          .send({ answers: [{ questionId: question.id, value: 'YES' }] })
+          .expect(200);
+        return (
+          await agent.post(`/review-sessions/${opened.id}/complete`).expect(200)
+        ).body as SessionBody;
+      };
+      const ownSession = await complete(representativeAgent);
+      const technicianSession = await complete(technicianAgent);
+
+      // An element on another community where the representative has no
+      // entries at all.
+      const otherCommunity = await createCommunity(
+        adminAgent,
+        'Retained access other community',
+      );
+      const otherElement = await createElement(
+        adminAgent,
+        otherCommunity.id,
+        'Retained access other extinguisher',
+      );
+
+      await adminAgent
+        .delete(
+          `/communities/${community.id}/representatives/00000000-0000-7000-8000-000000000105`,
+        )
+        .expect(204);
+
+      const list = await representativeAgent.get('/review-history').expect(200);
+      const listedIds = (list.body as HistoryRowBody[]).map((row) => row.id);
+      expect(listedIds).toContain(ownSession.id);
+      expect(listedIds).not.toContain(technicianSession.id);
+
+      await representativeAgent
+        .get(`/review-history/${ownSession.id}`)
+        .expect(200);
+      const foreign = await representativeAgent
+        .get(`/review-history/${technicianSession.id}`)
+        .expect(404);
+      expect((foreign.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+
+      const elementHistory = await representativeAgent
+        .get(
+          `/communities/${community.id}/inspectable-elements/${element.id}/review-history`,
+        )
+        .expect(200);
+      const elementBody = elementHistory.body as {
+        entries: { reviewSessionId: string; performedById: string }[];
+      };
+      expect(elementBody.entries.map((row) => row.reviewSessionId)).toEqual([
+        ownSession.id,
+      ]);
+      expect(JSON.stringify(elementBody)).not.toContain(technicianSession.id);
+
+      const noEntries = await representativeAgent
+        .get(
+          `/communities/${otherCommunity.id}/inspectable-elements/${otherElement.id}/review-history`,
+        )
+        .expect(404);
+      expect((noEntries.body as ErrorBody).code).toBe(
+        'INSPECTABLE_ELEMENT_NOT_FOUND',
+      );
+
+      // The write surface stays closed: opening a session still needs an
+      // active assignment.
+      await representativeAgent
+        .post('/review-sessions')
+        .send({ communityId: community.id, templateId })
+        .expect(403);
+    });
   });
 
   // authorization/spec.md "Company-Wide Review History Scope for a
@@ -3837,12 +3940,14 @@ describe('Review History (e2e)', () => {
       );
     });
 
-    // spec.md review-document "A representative who signed loses the
-    // document after reassignment (accepted for slice 1)" — a representative
-    // who performed and signed her OWN session on C still loses it once her
-    // assignment is deactivated; document visibility is carried entirely by
-    // the review-history scope, never by having performed the session.
-    it('a representative who signed loses the document after her assignment is deactivated', async () => {
+    // REVERSED by representative-retained-access (review-document "A
+    // document read by an unassigned representative is limited to their own
+    // sessions"): a representative who performed and signed her OWN session
+    // keeps the document after her assignment is deactivated, because the
+    // document follows the review-history scope (assigned communities plus
+    // own performed sessions). The negative is kept: a technician's session
+    // on the same community stays a 404 for her.
+    it('a representative who signed keeps the document after her assignment is deactivated, and still gets 404 on a technician document on that community', async () => {
       // uuid-path-validation branch: well-formed UUID — a real DELETE
       // /communities/:id/representatives/:userId target below, on
       // CommunityController (see community.e2e-spec.ts for the
@@ -3889,8 +3994,40 @@ describe('Review History (e2e)', () => {
           .expect(200)
       ).body as SessionBody;
 
+      // A technician-performed session on the SAME community, completed
+      // while the representative is still assigned.
+      const isolatedTechnician = await buildSeedUser({
+        id: '00000000-0000-7000-8000-000000000104',
+        email: 'rhdoc-technician-signer@example.com',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      built.userRepository.seed(isolatedTechnician);
+      await assignTechnician(
+        adminAgent,
+        communityRepSigner.id,
+        '00000000-0000-7000-8000-000000000104',
+      );
+      const technicianAgent = await loginAgent(
+        built.app,
+        'rhdoc-technician-signer@example.com',
+      );
+      const technicianOpened = (
+        await technicianAgent
+          .post('/review-sessions')
+          .send({ communityId: communityRepSigner.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+      const technicianCompleted = (
+        await technicianAgent
+          .post(`/review-sessions/${technicianOpened.id}/complete`)
+          .expect(200)
+      ).body as SessionBody;
+
       await representativeAgent
         .get(`/review-history/${completed.id}/document`)
+        .expect(200);
+      await representativeAgent
+        .get(`/review-history/${technicianCompleted.id}/document`)
         .expect(200);
 
       await adminAgent
@@ -3899,8 +4036,11 @@ describe('Review History (e2e)', () => {
         )
         .expect(204);
 
-      const response = await representativeAgent
+      await representativeAgent
         .get(`/review-history/${completed.id}/document`)
+        .expect(200);
+      const response = await representativeAgent
+        .get(`/review-history/${technicianCompleted.id}/document`)
         .expect(404);
       expect((response.body as ErrorBody).code).toBe(
         'REVIEW_SESSION_NOT_FOUND',
