@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
+import { LanguageSelector } from '../components/LanguageSelector';
 
 // spec.md "Login Form Validation": empty/invalid fields are blocked
 // client-side, before any network call, using the SAME schema the API
@@ -59,6 +60,7 @@ export function LoginPage() {
 
   return (
     <main>
+      <LanguageSelector />
       <img src="/logo.svg" alt={t('auth.logoAlt')} data-testid="login-logo" />
       <h1>{t('auth.loginTitle')}</h1>
       {/* noValidate: validation messages are ours (i18n-driven), not the
