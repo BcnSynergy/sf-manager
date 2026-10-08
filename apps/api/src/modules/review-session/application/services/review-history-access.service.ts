@@ -299,17 +299,29 @@ export class ReviewHistoryAccessService {
         // The REACHABILITY gate consults the ASSIGNMENT, never the entry
         // set — a never-reviewed element in an assigned community renders
         // an empty state, not a 404 (design.md Decision 4, OQ5).
-        if (!communityIds.includes(element.communityId)) {
-          return { reachable: false };
+        if (communityIds.includes(element.communityId)) {
+          return {
+            reachable: true,
+            entries:
+              await this.repository.findCompletedEntriesForElementInCommunities(
+                element.id,
+                communityIds,
+              ),
+          };
         }
-        return {
-          reachable: true,
-          entries:
-            await this.repository.findCompletedEntriesForElementInCommunities(
-              element.id,
-              communityIds,
-            ),
-        };
+        // representative-retained-access D4: no assignment to the element's
+        // community, so only the representative's own entries are readable,
+        // and (like the technician) having none is unreachable. When
+        // assigned, the community read above already contains the own
+        // entries, so no union is needed.
+        const ownEntries =
+          await this.repository.findCompletedEntriesForElementForPerformer(
+            element.id,
+            actor.userId,
+          );
+        return ownEntries.length === 0
+          ? { reachable: false }
+          : { reachable: true, entries: ownEntries };
       }
 
       case 'MAINTENANCE_COMPANY_MANAGER': {

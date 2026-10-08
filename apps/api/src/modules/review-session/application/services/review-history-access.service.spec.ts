@@ -1009,7 +1009,96 @@ describe('ReviewHistoryAccessService.listElementHistoryForActor', () => {
     expect(scope).toEqual({ reachable: true, entries: [] });
   });
 
-  it('a representative without an active assignment to the element community is unreachable, with no repository call', async () => {
+  // representative-retained-access D4: no assignment to the element's
+  // community falls back to the representative's own entries; none means
+  // unreachable (same shape as the technician branch).
+  it('an unassigned representative with own entries on the element reaches only those entries', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-mine',
+        performedById: 'rep-1',
+        entries: [
+          reviewedEntry({ id: 'entry-mine', reviewSessionId: 'session-mine' }),
+        ],
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-other',
+        performedById: 'user-2',
+        entries: [
+          reviewedEntry({
+            id: 'entry-other',
+            reviewSessionId: 'session-other',
+          }),
+        ],
+      }),
+    );
+    const communityRepoSpy = jest.spyOn(
+      repository,
+      'findCompletedEntriesForElementInCommunities',
+    );
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-mine',
+    ]);
+    expect(communityRepoSpy).not.toHaveBeenCalled();
+  });
+
+  it('a representative assigned elsewhere with own entries on the element reaches only those entries', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-mine',
+        performedById: 'rep-1',
+        entries: [
+          reviewedEntry({ id: 'entry-mine', reviewSessionId: 'session-mine' }),
+        ],
+      }),
+    );
+    repository.seed(
+      completedSession({
+        id: 'session-other',
+        performedById: 'user-2',
+        entries: [
+          reviewedEntry({
+            id: 'entry-other',
+            reviewSessionId: 'session-other',
+          }),
+        ],
+      }),
+    );
+    communityScopeChecker.assign('rep-1', 'community-2');
+
+    const scope = await service.listElementHistoryForActor(element, {
+      userId: 'rep-1',
+      role: 'COMMUNITY_REPRESENTATIVE',
+    });
+
+    expect(scope.reachable).toBe(true);
+    expect(scope.reachable && scope.entries.map((e) => e.entryId)).toEqual([
+      'entry-mine',
+    ]);
+  });
+
+  it('a representative without an assignment and without own entries on the element is unreachable', async () => {
+    repository.seed(
+      completedSession({
+        id: 'session-other',
+        performedById: 'user-2',
+        entries: [
+          reviewedEntry({
+            id: 'entry-other',
+            reviewSessionId: 'session-other',
+          }),
+        ],
+      }),
+    );
     const repoSpy = jest.spyOn(
       repository,
       'findCompletedEntriesForElementInCommunities',
