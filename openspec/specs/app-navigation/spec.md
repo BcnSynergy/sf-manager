@@ -25,10 +25,11 @@ result"* precedent requires.
 The nav is a **link bar and nothing more**. Out of scope: a sidebar, a
 hamburger/dropdown or any responsive-collapse treatment; breadcrumbs, a
 "back" affordance, search, a dashboard or a user/profile menu; a design
-system, CSS framework, theming or app branding; a language switcher
-(deferred by ADR-007); and any change to a route's `allowedRoles` or to
-`ProtectedRoute`'s precedence logic. Promoting a CRUD sub-route or the
-element-history drill-in to a nav item is likewise out of scope.
+system, CSS framework, theming or app branding; any language switcher
+other than the single selector defined by `web-locale-selection`; and
+any change to a route's `allowedRoles` or to `ProtectedRoute`'s
+precedence logic. Promoting a CRUD sub-route or the element-history
+drill-in to a nav item is likewise out of scope.
 
 > **Recorded, explicitly out of scope — not a requirement of this
 > capability.** The product owner asked to flag that a future change
@@ -424,10 +425,13 @@ value MUST be rendered as visible text.
 ### Requirement: The Navigation Stays a Link Bar and Nothing More
 
 The navigation MUST remain a plain list of links plus the logout
-control. It MUST NOT introduce a sidebar, a hamburger, dropdown or any
-collapse/toggle state; breadcrumbs, a "back" affordance, search, a
-dashboard or a user/profile menu; a design system, CSS framework,
-theming or app branding; or a language switcher.
+control, plus exactly one language selector as specified by
+`web-locale-selection`. It MUST NOT introduce a sidebar, a hamburger,
+dropdown or any collapse/toggle state other than that language selector;
+breadcrumbs, a "back" affordance, search, a dashboard or a user/profile
+menu; a design system, CSS framework, theming or app branding; or any
+language switcher other than that one selector.
+(Previously: forbade "a language switcher" outright and allowed no control other than the links and logout.)
 
 The navigation's introduction MUST add no new runtime dependency, and MUST
 leave the API, database schema and shared validation packages untouched.
@@ -437,9 +441,14 @@ unqualified, which is false once the review-schedule change adds an API
 endpoint. The claim is scoped to the navigation's introduction.)
 
 #### Scenario: No collapse, menu or dashboard chrome ships
-- GIVEN the navigation after this change
+- GIVEN the navigation after the web-locale-switch change
 - WHEN its rendered controls and its state are enumerated
-- THEN none MUST offer a sidebar, hamburger, dropdown, collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
+- THEN none MUST offer a sidebar, hamburger, dropdown (other than the language selector), collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
+
+#### Scenario: The language selector is the only added control
+- GIVEN the navigation after the web-locale-switch change
+- WHEN its rendered controls are enumerated
+- THEN they MUST be the links, the logout control and exactly one language selector, and nothing else
 
 #### Scenario: No dependency and no backend change ships
 - GIVEN the project's dependency manifests, the API, the database schema and the shared validation package before and after the navigation's introduction

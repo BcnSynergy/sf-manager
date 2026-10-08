@@ -62,10 +62,10 @@ Docs (TDD N/A)
   - Print: `@media print` rules copied into a screen `<style>` give `nav { display: none }`, so the selector is hidden.
   - Accepted by the user: the nav bar already wraps link labels to 2 lines in EN and CA (52px); in ES the selector pushes it to 3 lines (78px; 52px without it). No overflow. The root cause is ten links in a constrained width, and nav styling is out of scope per `app-navigation`; recorded as follow-up debt.
   - Pre-existing, out of scope: `ReviewHistoryPage.tsx:85` and `ReviewHistoryDetailPage.tsx:96` render `completedAt` as a raw ISO string in every language, unrelated to this change. Recorded as follow-up debt.
-- [ ] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
+- [x] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
 
 ## Phase B: Close
 
-- [ ] B.1 `sdd-verify` against spec scenarios after PR 1 merges.
-- [ ] B.2 `sdd-archive` via `web-locale-switch/02-archive`: merge both deltas (new `web-locale-selection`, modified `app-navigation`) into `openspec/specs/`; orchestrator does `git mv` and commit.
-- [ ] B.3 D9 hand edit in the same PR: `openspec/specs/app-navigation/spec.md` Purpose L28-29, "a language switcher (deferred by ADR-007)" becomes "any language switcher other than the single selector defined by `web-locale-selection`".
+- [x] B.1 `sdd-verify` against spec scenarios after PR 1 merges.
+- [x] B.2 `sdd-archive` via `web-locale-switch/02-archive`: merge both deltas (new `web-locale-selection`, modified `app-navigation`) into `openspec/specs/`; orchestrator does `git mv` and commit.
+- [x] B.3 D9 hand edit in the same PR: `openspec/specs/app-navigation/spec.md` Purpose L28-29, "a language switcher (deferred by ADR-007)" becomes "any language switcher other than the single selector defined by `web-locale-selection`".
