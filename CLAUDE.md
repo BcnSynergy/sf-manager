@@ -44,29 +44,35 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
 
 ## Choosing SDD vs ODD at Task Start
 
-Since gentle-ai 3.x, the global default workflow is ODD (Organic Driven
-Development), and SDD runs only when explicitly requested or when a proposal
-for it is accepted. This project has built every change through SDD with
-`openspec/` artifacts so far, so that choice must not be made silently.
+The global default workflow is ODD (Organic Driven Development), and SDD
+runs only when explicitly requested or when a proposal for it is accepted.
+In this project, `openspec/specs/` is the living specification of what the
+system does, kept current by archiving SDD changes. ODD has no equivalent,
+so a behavior change built through ODD would leave the specs silently out of
+date. This project rule deliberately overrides the global "do not recommend
+SDD" default.
 
 At the start of every task that will change code, after the minimal
 exploration needed to classify it and before the first write, recommend a
 route with a one-line reason and ask the user to confirm it. Do not start
-writing until they answer.
+writing until they answer. If the user already named a route ("use SDD",
+"just fix it"), skip the question.
 
-- **Recommend SDD** (`/gentle-sdd-new <change>`, OpenSpec artifacts under
-  `openspec/changes/`) when the task:
-  - is a new domain slice or an FR slice (ADR-006, domain + minimal UI);
-  - adds or changes an entity, Value Object, use case, permission/role rule,
-    or Prisma schema;
-  - has an open design decision, or is likely to need a chained PR.
-- **Recommend ODD** for everything else, for example bug fixes with a clear
-  root cause, small UI/copy/i18n tweaks, test-only or tooling changes,
+The deciding question: **does this change create or alter behavior that
+`openspec/specs/` describes, or should describe?**
+
+- **Yes → recommend SDD** (`/gentle-sdd-new <change>`, artifacts under
+  `openspec/changes/`). This covers new domain or FR slices and any
+  non-trivial change to an existing capability's rules, data, or flows.
+- **No → recommend ODD**, for example a bug fix that restores specified
+  behavior, copy/style/i18n tweaks, test-only or tooling changes,
   dependency bumps, and docs.
-- If the task grows past its route mid-way (e.g. an ODD fix turns out to
-  need a schema change), stop and ask again before switching.
+- If ODD work turns out to alter specified behavior, stop and ask again. If
+  the user keeps ODD, update the affected spec in `openspec/specs/` in the
+  same PR.
 - Read-only requests (explain, review, investigate) need no route question.
-- Both routes follow the Git & PR conventions below. ODD feature branches
+- ADR-006 scope discipline, including minimal UI for a domain slice, and
+  the Git & PR conventions below apply to both routes. ODD feature branches
   also use `<change-name>/<NN>-<slug>`.
 
 ## Git & PR Conventions
