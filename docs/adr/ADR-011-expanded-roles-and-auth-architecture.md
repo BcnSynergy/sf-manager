@@ -510,6 +510,29 @@ Open questions, deliberately not implemented in this slice (ADR-006):
    the `/64` prefix may be needed later.
 4. **Restarts.** In-memory counters reset on every restart or redeploy.
 
+## Addendum (2026-10-08): `representative-retained-access` — a representative keeps their own performed sessions
+
+A `COMMUNITY_REPRESENTATIVE` can open and sign a session, so they can end up
+as the performer of a completed session on a community they are no longer
+assigned to. Before this change, deactivating the assignment hid that work
+from them. The read scope for the role is now **actively assigned
+communities, plus the completed sessions the representative performed
+themselves**, re-read per request. The same rule covers the list, the
+by-id read, the per-element history (own entries only when the element's
+community is not assigned) and the review document, which follows the
+review-history scope.
+
+The rule is a read rule only. Writes keep requiring an active assignment:
+opening a session without an active assignment is still refused (`403`, as
+before), and `SessionAccessService` is unchanged. The scope cannot widen beyond "assigned communities plus own", because
+`ReviewHistoryAccessService` composes two reads that already exist and are
+already integration-tested (`findCompleted…InCommunities` and the technician's
+`findCompleted…ForPerformer`). No port method, adapter or schema changed;
+the price is one extra query per representative request.
+
+Deferred (ADR-006): the field-flow link from the session page to the review
+document (FR-010) is not part of this change.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
