@@ -57,7 +57,12 @@ Docs (TDD N/A; D7)
 
 ## Gates (orchestrator)
 
-- [ ] G.1 Browser verification (API-only change; user pass). With the user's explicit OK, deactivate `rep@sf-manager.example`'s assignment in the dev DB (the rep may first need a completed session they performed). As the rep (user logs in): history list shows only own sessions; detail, document and element-history link render; a seeded technician session URL shows not-found. Restore the assignment. Report browser- or test-verified.
+- [x] G.1 Browser verification (API-only change; user pass). With the user's explicit OK, deactivate `rep@sf-manager.example`'s assignment in the dev DB (the rep may first need a completed session they performed). As the rep (user logs in): history list shows only own sessions; detail, document and element-history link render; a seeded technician session URL shows not-found. Restore the assignment. Report browser- or test-verified.
+  - Browser-verified 2026-10-08 (Chrome, dev DB, logged in as `rep@sf-manager.example`). No code changes needed.
+  - Setup (user OK): completed the rep's seeded draft session `…e44a` in Dev Seed Residences North through the app. This leaves one extra completed QA session in the dev DB.
+  - Assignment active: history lists 3 North sessions (own plus two by `technician@`), newest first.
+  - Assignment deactivated (`CommunityRepresentative` `…8663`, `deactivatedAt = now()`): history lists only the own session. Own detail and own document render. The technician's North session detail shows not-found, its document shows not-available, and a South session shows not-found. Both element-history links from the own detail render and list only the rep's own entries (technicians' entries on the same element are excluded). A South element the rep never reviewed shows not-found.
+  - Assignment restored (`deactivatedAt = NULL`); history lists 3 sessions again. No console errors.
 - [ ] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge.
 
 ## Phase B: PR 2 Close
