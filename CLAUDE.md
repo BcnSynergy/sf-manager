@@ -129,5 +129,7 @@ Practicalities learned so far:
   and routine; it does not soft-delete the seeded admin or touch dev data
   in any way. If `sfmanager` itself ever needs resetting (e.g. after manual
   row edits for QA), see the one-time dev reset procedure in `README.md`.
-- **Locale**: web i18n is hardcoded to `en`, so ES/CA can only be verified
-  by locale tests, not in the browser.
+- **Locale**: the web app has a language selector (nav and login page), so
+  ES/CA can be verified in the browser. The choice persists in
+  `localStorage['sf-manager.locale']`; without it the browser language
+  applies (else `en`).

@@ -44,3 +44,23 @@ domain entity names, database columns, API contracts, code comments.
 - **English-only UI, i18n as future work** — rejected explicitly: real end
   users (community representatives) need Spanish/Catalan for the tool to be
   usable in practice, not just as a translation nice-to-have added later.
+
+## Addendum: Web Language Selector (2026-10-08)
+
+The web app now has a language selector (`web-locale-switch`). It is the
+first step toward "users can select/change their language", scoped to one
+browser:
+
+- A native `<select>` (English / Español / Català, fixed endonyms) in the
+  authenticated nav and on the login page.
+- The choice is stored in `localStorage` (`sf-manager.locale`), not on the
+  `User`. The initial language is the stored choice, else the browser's
+  primary language reduced to its base, else English.
+- `<html lang>` follows the active language.
+
+### Open questions (not built, per ADR-006)
+
+- A persisted per-user language preference (`User.locale`, API, validation)
+  is still unmet; the web choice is per browser only.
+- Walk the whole `navigator.languages` list instead of using the primary
+  language only.
