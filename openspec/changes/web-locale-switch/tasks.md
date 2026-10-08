@@ -55,7 +55,13 @@ Docs (TDD N/A)
 
 ## Gate (orchestrator)
 
-- [ ] G.1 Browser verification (orchestrator + user; the user logs in): Vite dev server, claude-in-chrome. Per design plan: (1) login switch ES then CA, `<html lang>` via `javascript_tool`, check placement vs logo (D7 fallback); (2) logged in, switch and reload persists; (3) `localStorage['sf-manager.locale']='xx'` falls back to browser language; (4) ES/CA screenshots of nav, login, a list, schedule dates, review document; fix findings; (5) print CSS copied into screen `<style>`, selector hidden. Report browser- or test-verified.
+- [x] G.1 Browser verification (orchestrator + user; the user logs in): Vite dev server, claude-in-chrome. Per design plan: (1) login switch ES then CA, `<html lang>` via `javascript_tool`, check placement vs logo (D7 fallback); (2) logged in, switch and reload persists; (3) `localStorage['sf-manager.locale']='xx'` falls back to browser language; (4) ES/CA screenshots of nav, login, a list, schedule dates, review document; fix findings; (5) print CSS copied into screen `<style>`, selector hidden. Report browser- or test-verified.
+  - Browser-verified 2026-10-08 (Chrome, 1904px viewport, browser language `en-US`). No code changes needed.
+  - Login: first load `en` with nothing stored; ES and CA switch text, `aria-label` and `<html lang>` immediately and store the choice; reload keeps ES; stored `garbage` is ignored and falls back to `en`. Options are endonyms with `lang` attributes. The selector sits inline left of the logo; it is functional, so the D7 fallback was not applied.
+  - Shell: selector after the logout button; it follows an external `changeLanguage` without storing it. Schedule dates and review document dates (including "Signed on" date/time) render in EN/ES/CA. No untranslated strings found. No console errors.
+  - Print: `@media print` rules copied into a screen `<style>` give `nav { display: none }`, so the selector is hidden.
+  - Accepted by the user: the nav bar already wraps link labels to 2 lines in EN and CA (52px); in ES the selector pushes it to 3 lines (78px; 52px without it). No overflow. The root cause is ten links in a constrained width, and nav styling is out of scope per `app-navigation`; recorded as follow-up debt.
+  - Pre-existing, out of scope: `ReviewHistoryPage.tsx:85` and `ReviewHistoryDetailPage.tsx:96` render `completedAt` as a raw ISO string in every language, unrelated to this change. Recorded as follow-up debt.
 - [ ] G.2 Fresh-context PR review before push and before merge; the user confirms push, PR and merge. PR passes `ci`.
 
 ## Phase B: Close
