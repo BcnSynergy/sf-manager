@@ -21,6 +21,19 @@ import {
 } from '../ports/review-session.repository.port';
 import type { Actor } from './session-access.service';
 
+// Merged-list order, mirroring the adapter's `completedAt DESC, id DESC`
+// (ids are lowercase UUIDv7 strings, so string comparison matches Postgres).
+// The epoch fallback is unreachable — both operands read `completed`
+// sessions, which always carry a `completedAt` — it only avoids a `!`.
+function completedHistoryOrder(a: ReviewSession, b: ReviewSession): number {
+  const byCompletedAt =
+    (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0);
+  if (byCompletedAt !== 0) {
+    return byCompletedAt;
+  }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+}
+
 // review-history-per-element/design.md Decision 4: the reachability
 // verdict for the element-keyed read. A DISCRIMINATED UNION, deliberately
 // NOT `ElementReviewEntryRow[] | null` — this is the one surface where an
@@ -73,19 +86,30 @@ export class ReviewHistoryAccessService {
       case 'MAINTENANCE_TECHNICIAN':
         return this.repository.findCompletedForPerformer(actor.userId);
 
-      // UNCHANGED, byte for byte in behaviour — still gated on a currently
-      // active assignment, still re-read per request, still an
-      // empty-scope early return before any repository call.
+      // representative-retained-access D1/D2: the union of the sessions in
+      // the actively assigned communities (re-read per request, empty scope
+      // skips the community read) and the sessions the representative
+      // performed themselves, which no assignment state can revoke. Each
+      // operand is an already-scoped read, so the union cannot widen beyond
+      // "assigned communities + own".
       case 'COMMUNITY_REPRESENTATIVE': {
         const communityIds =
           await this.communityScopeChecker.listAssignedCommunityIds(
             actor.userId,
             actor.role,
           );
-        if (communityIds.length === 0) {
-          return [];
+        const own = await this.repository.findCompletedForPerformer(
+          actor.userId,
+        );
+        const inCommunities =
+          communityIds.length === 0
+            ? []
+            : await this.repository.findCompletedInCommunities(communityIds);
+        const byId = new Map<string, ReviewSession>();
+        for (const session of [...own, ...inCommunities]) {
+          byId.set(session.id, session);
         }
-        return this.repository.findCompletedInCommunities(communityIds);
+        return [...byId.values()].sort(completedHistoryOrder);
       }
 
       // NEW (design.md Decision 3/4/7/9): the manager's scope is their own
@@ -172,7 +196,17 @@ export class ReviewHistoryAccessService {
           actor.userId,
         );
 
+      // representative-retained-access D3: an own performed session wins
+      // first and needs no Layer 2 lookup; only on a miss is the assignment
+      // resolved (lazily), and an empty scope is a plain miss.
       case 'COMMUNITY_REPRESENTATIVE': {
+        const own = await this.repository.findCompletedByIdForPerformer(
+          sessionId,
+          actor.userId,
+        );
+        if (own) {
+          return own;
+        }
         const communityIds =
           await this.communityScopeChecker.listAssignedCommunityIds(
             actor.userId,
@@ -265,17 +299,29 @@ export class ReviewHistoryAccessService {
         // The REACHABILITY gate consults the ASSIGNMENT, never the entry
         // set — a never-reviewed element in an assigned community renders
         // an empty state, not a 404 (design.md Decision 4, OQ5).
-        if (!communityIds.includes(element.communityId)) {
-          return { reachable: false };
+        if (communityIds.includes(element.communityId)) {
+          return {
+            reachable: true,
+            entries:
+              await this.repository.findCompletedEntriesForElementInCommunities(
+                element.id,
+                communityIds,
+              ),
+          };
         }
-        return {
-          reachable: true,
-          entries:
-            await this.repository.findCompletedEntriesForElementInCommunities(
-              element.id,
-              communityIds,
-            ),
-        };
+        // representative-retained-access D4: no assignment to the element's
+        // community, so only the representative's own entries are readable,
+        // and (like the technician) having none is unreachable. When
+        // assigned, the community read above already contains the own
+        // entries, so no union is needed.
+        const ownEntries =
+          await this.repository.findCompletedEntriesForElementForPerformer(
+            element.id,
+            actor.userId,
+          );
+        return ownEntries.length === 0
+          ? { reachable: false }
+          : { reachable: true, entries: ownEntries };
       }
 
       case 'MAINTENANCE_COMPANY_MANAGER': {
