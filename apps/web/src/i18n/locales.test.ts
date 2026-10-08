@@ -733,6 +733,23 @@ describe('locale key-set parity (en/es/ca)', () => {
     },
   );
 
+  // web-locale-switch (design.md D8): the selector's accessible name.
+  const REQUIRED_LANGUAGE_KEY_PATHS = ['language.label'];
+
+  it.each(REQUIRED_LANGUAGE_KEY_PATHS)(
+    'every locale defines a real (non-placeholder) value for %s',
+    (keyPath) => {
+      for (const [localeName, tree] of Object.entries(locales)) {
+        const value = getKeyPathValue(tree, keyPath);
+        expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
+        expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
+        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
+          keyPath,
+        );
+      }
+    },
+  );
+
   it.each(REQUIRED_REVIEW_SESSION_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
     (keyPath) => {
