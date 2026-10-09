@@ -141,9 +141,13 @@ project's Engram memory on 2026-10-09.
   script, parallel jobs, and SHA-pinned actions. Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
-- **TD-33**: Prettier is a dependency but is not enforced: there is no format
-  script or CI step, and `main` already fails `prettier --check` (for example
-  `apps/web/src/index.css`). Origin: `table-accessibility` review, 2026-10-09.
+- **TD-33**: Prettier is a dependency but is not enforced. `apps/api` has a
+  `format` script that only writes; there is no `--check` script or CI step,
+  `apps/web` has no format script, and `main` already fails `prettier --check`
+  (for example `apps/web/src/index.css`). Evidence: `apps/api/package.json:11`;
+  `.github/workflows/ci.yml` (no format step); `npx prettier --check` run at
+  `main` `7c39824` on 2026-10-09. Origin: `table-accessibility` review,
+  2026-10-09.
 - **TD-34**: Stale wording in `docs/adr/INDEX.md`: it says most slices are
   API-only and that i18n tooling is undecided, but every slice since
   `review-history` ships with web UI and the web app uses react-i18next.
@@ -182,5 +186,6 @@ project's Engram memory on 2026-10-09.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
-TD-21 does not appear in the migrated inventory. TD-32 and TD-34 were
+TD-21 does not appear in the migrated inventory; the ID stays reserved and is
+never reused. TD-32 and TD-34 were
 unnumbered in the inventory and got IDs during the migration; TD-33 is new.

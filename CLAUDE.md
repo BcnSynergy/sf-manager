@@ -102,7 +102,10 @@ Rules:
 - When work resolves an item, move it to the register's Resolved/Done
   section with the change name and PR numbers, in the same PR.
 - IDs are stable: never reuse or renumber them. Refer to items by ID in
-  commits, PRs, and SDD artifacts (for example "tech-debt TD-14").
+  commits, PRs, and SDD artifacts (for example "TD-14").
+- Deferred scope that ADR-006 says to note in an ADR's "Open questions" or
+  the FR list still gets a register entry that points there. The register is
+  the canonical to-do list; the ADR or FR keeps the design context.
 - When choosing what to work on next, read both registers first.
 - Picking an item up still follows "Choosing SDD vs ODD at Task Start" above.
 

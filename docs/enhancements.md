@@ -12,10 +12,12 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   area, the evidence (file path or source review), and the origin.
 - Typical sources: non-blocking suggestions from fresh-context reviews, RDD
   reviews, `sdd-verify`, and `sdd-archive` follow-ups.
-- When an item is done, move it to **Done** with the PR number. If it is
-  dropped, move it to **Done** marked "dropped" with a one-line reason.
-- If an item turns out to fix a real gap, move it to
-  [technical-debt.md](technical-debt.md) instead.
+- When an item is done, move it to **Done** with the change name and PR
+  numbers. If it is dropped, move it to **Done** marked "dropped" with a
+  one-line reason.
+- If an item turns out to fix a real gap, add it to
+  [technical-debt.md](technical-debt.md) with the next free `TD-<n>` and
+  "(ex EN-<n>)", and move the EN item to **Done** marked "moved to TD-<n>".
 
 ## Open
 
