@@ -82,6 +82,30 @@ flows. It does not mean internal structure.
   both routes as relevant. ODD feature branches also use
   `<change-name>/<NN>-<slug>`.
 
+## Technical Debt and Enhancements Registers
+
+Known debt and optional improvements are tracked in the repo, not only in
+memory. These two files are the source of truth:
+
+- `docs/technical-debt.md` (`TD-<n>`): defects, gaps, shortcuts, and
+  deferred work that make the system harder to change, operate, or trust.
+- `docs/enhancements.md` (`EN-<n>`): optional improvements that nothing
+  currently requires, such as non-blocking review suggestions or extra test
+  coverage.
+
+Rules:
+
+- When a review, `sdd-verify`, or `sdd-archive` leaves a non-blocking finding
+  that is not fixed in the same PR, add it to the matching register in that
+  PR (or the change's archive PR). Do not leave it only in a report or in
+  Engram. Before reporting a change complete, say which items were added.
+- When work resolves an item, move it to the register's Resolved/Done
+  section with the change name and PR numbers, in the same PR.
+- IDs are stable: never reuse or renumber them. Refer to items by ID in
+  commits, PRs, and SDD artifacts (for example "tech-debt TD-14").
+- When choosing what to work on next, read both registers first.
+- Picking an item up still follows "Choosing SDD vs ODD at Task Start" above.
+
 ## Git & PR Conventions
 
 Established across the `auth-minimal-skeleton`, `user-management-roles`,
