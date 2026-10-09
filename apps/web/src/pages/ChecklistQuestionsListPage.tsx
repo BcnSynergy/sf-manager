@@ -131,11 +131,12 @@ export function ChecklistQuestionsListPage() {
           <section key={elementType} data-testid={`checklist-question-group-${elementType}`}>
             <h2>{t(mapElementTypeToLabelKey(elementType))}</h2>
             <table>
+              <caption className="visually-hidden">{t(mapElementTypeToLabelKey(elementType))}</caption>
               <thead>
                 <tr>
-                  <th>{t('checklistQuestion.list.columnText')}</th>
-                  <th>{t('checklistQuestion.list.columnFrequencies')}</th>
-                  <th>{t('checklistQuestion.list.columnActions')}</th>
+                  <th scope="col">{t('checklistQuestion.list.columnText')}</th>
+                  <th scope="col">{t('checklistQuestion.list.columnFrequencies')}</th>
+                  <th scope="col">{t('checklistQuestion.list.columnActions')}</th>
                 </tr>
               </thead>
               <tbody>

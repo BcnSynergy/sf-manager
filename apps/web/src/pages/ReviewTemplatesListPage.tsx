@@ -96,18 +96,18 @@ export function ReviewTemplatesListPage() {
           const [elementType, frequency] = groupTemplates[0]
             ? [groupTemplates[0].elementType, groupTemplates[0].frequency]
             : (lineageKey.split('::') as [ElementType, ReviewFrequency]);
+          const groupTitle = `${t(mapElementTypeToLabelKey(elementType))} — ${t(mapReviewFrequencyToLabelKey(frequency))}`;
           return (
             <section key={lineageKey} data-testid={`review-template-group-${lineageKey}`}>
-              <h2>
-                {t(mapElementTypeToLabelKey(elementType))} — {t(mapReviewFrequencyToLabelKey(frequency))}
-              </h2>
+              <h2>{groupTitle}</h2>
               <table>
+                <caption className="visually-hidden">{groupTitle}</caption>
                 <thead>
                   <tr>
-                    <th>{t('reviewTemplate.list.columnName')}</th>
-                    <th>{t('reviewTemplate.list.columnVersion')}</th>
-                    <th>{t('reviewTemplate.list.columnStatus')}</th>
-                    <th>{t('reviewTemplate.list.columnActions')}</th>
+                    <th scope="col">{t('reviewTemplate.list.columnName')}</th>
+                    <th scope="col">{t('reviewTemplate.list.columnVersion')}</th>
+                    <th scope="col">{t('reviewTemplate.list.columnStatus')}</th>
+                    <th scope="col">{t('reviewTemplate.list.columnActions')}</th>
                   </tr>
                 </thead>
                 <tbody>

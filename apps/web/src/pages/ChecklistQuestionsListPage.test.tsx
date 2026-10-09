@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -143,5 +143,22 @@ describe('ChecklistQuestionsListPage', () => {
 
     const link = await screen.findByTestId(`checklist-question-list-edit-${questionOne.id}`);
     expect(link).toHaveAttribute('href', `/checklist-questions/${questionOne.id}/edit`);
+  });
+
+  it('names the group table by its group heading and scopes every column header', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([questionOne]);
+
+    renderPage();
+
+    const group = await screen.findByTestId('checklist-question-group-EXTINGUISHER');
+    const table = within(group).getByRole('table', { name: 'Fire extinguisher' });
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers).toHaveLength(3);
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+    expect(table.querySelector('[scope="row"]')).toBeNull();
   });
 });
