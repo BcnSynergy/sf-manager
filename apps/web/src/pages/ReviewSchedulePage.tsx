@@ -57,13 +57,14 @@ export function ReviewSchedulePage() {
         <p data-testid="review-schedule-empty">{t('reviewSchedule.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('reviewSchedule.title')}</caption>
           <thead>
             <tr>
-              <th>{t('reviewSchedule.columnCommunity')}</th>
-              <th>{t('reviewSchedule.columnElementType')}</th>
-              <th>{t('reviewSchedule.columnStatus')}</th>
-              <th>{t('reviewSchedule.columnReason')}</th>
-              <th>{t('reviewSchedule.columnLastReview')}</th>
+              <th scope="col">{t('reviewSchedule.columnCommunity')}</th>
+              <th scope="col">{t('reviewSchedule.columnElementType')}</th>
+              <th scope="col">{t('reviewSchedule.columnStatus')}</th>
+              <th scope="col">{t('reviewSchedule.columnReason')}</th>
+              <th scope="col">{t('reviewSchedule.columnLastReview')}</th>
             </tr>
           </thead>
           <tbody>

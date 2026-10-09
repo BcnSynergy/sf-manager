@@ -85,12 +85,13 @@ export function MaintenanceCompaniesListPage() {
         <p data-testid="maintenance-companies-list-empty">{t('maintenanceCompany.list.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('maintenanceCompany.list.title')}</caption>
           <thead>
             <tr>
-              <th>{t('maintenanceCompany.list.columnName')}</th>
-              <th>{t('maintenanceCompany.list.columnTaxId')}</th>
-              <th>{t('maintenanceCompany.list.columnContactInfo')}</th>
-              <th></th>
+              <th scope="col">{t('maintenanceCompany.list.columnName')}</th>
+              <th scope="col">{t('maintenanceCompany.list.columnTaxId')}</th>
+              <th scope="col">{t('maintenanceCompany.list.columnContactInfo')}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>

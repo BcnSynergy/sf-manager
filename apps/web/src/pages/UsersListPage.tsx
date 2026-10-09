@@ -149,13 +149,14 @@ export function UsersListPage() {
         <p data-testid="users-list-empty">{t('users.list.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('users.list.title')}</caption>
           <thead>
             <tr>
-              <th>{t('users.list.columnId')}</th>
-              <th>{t('users.list.columnEmail')}</th>
-              <th>{t('users.list.columnRole')}</th>
-              <th>{t('users.list.columnCompany')}</th>
-              <th></th>
+              <th scope="col">{t('users.list.columnId')}</th>
+              <th scope="col">{t('users.list.columnEmail')}</th>
+              <th scope="col">{t('users.list.columnRole')}</th>
+              <th scope="col">{t('users.list.columnCompany')}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>

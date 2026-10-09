@@ -101,17 +101,18 @@ export function CommunityElementsListPage() {
         </p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('inspectableElement.list.title')}</caption>
           <thead>
             <tr>
-              <th>{t('inspectableElement.list.columnType')}</th>
-              <th>{t('inspectableElement.list.columnName')}</th>
-              <th>{t('inspectableElement.list.columnDescription')}</th>
-              <th>{t('inspectableElement.list.columnLocation')}</th>
-              <th>{t('inspectableElement.list.columnSerialNumber')}</th>
-              <th>{t('inspectableElement.list.columnInstalledAt')}</th>
-              <th>{t('inspectableElement.list.columnCode')}</th>
-              <th>{t('inspectableElement.list.columnState')}</th>
-              <th>{t('inspectableElement.list.columnActions')}</th>
+              <th scope="col">{t('inspectableElement.list.columnType')}</th>
+              <th scope="col">{t('inspectableElement.list.columnName')}</th>
+              <th scope="col">{t('inspectableElement.list.columnDescription')}</th>
+              <th scope="col">{t('inspectableElement.list.columnLocation')}</th>
+              <th scope="col">{t('inspectableElement.list.columnSerialNumber')}</th>
+              <th scope="col">{t('inspectableElement.list.columnInstalledAt')}</th>
+              <th scope="col">{t('inspectableElement.list.columnCode')}</th>
+              <th scope="col">{t('inspectableElement.list.columnState')}</th>
+              <th scope="col">{t('inspectableElement.list.columnActions')}</th>
             </tr>
           </thead>
           <tbody>

@@ -99,12 +99,13 @@ export function CommunitiesListPage() {
         <p data-testid="communities-list-empty">{t('community.list.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('community.list.title')}</caption>
           <thead>
             <tr>
-              <th>{t('community.list.columnName')}</th>
-              <th>{t('community.list.columnAddress')}</th>
-              <th>{t('community.list.columnLocale')}</th>
-              <th></th>
+              <th scope="col">{t('community.list.columnName')}</th>
+              <th scope="col">{t('community.list.columnAddress')}</th>
+              <th scope="col">{t('community.list.columnLocale')}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>

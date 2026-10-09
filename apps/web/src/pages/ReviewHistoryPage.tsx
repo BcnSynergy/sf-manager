@@ -65,12 +65,13 @@ export function ReviewHistoryPage() {
         <p data-testid="review-history-empty">{t('reviewHistory.list.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('reviewHistory.list.title')}</caption>
           <thead>
             <tr>
-              <th>{t('reviewHistory.list.columnCommunity')}</th>
-              <th>{t('reviewHistory.list.columnPerformer')}</th>
-              <th>{t('reviewHistory.list.columnCompletedAt')}</th>
-              <th></th>
+              <th scope="col">{t('reviewHistory.list.columnCommunity')}</th>
+              <th scope="col">{t('reviewHistory.list.columnPerformer')}</th>
+              <th scope="col">{t('reviewHistory.list.columnCompletedAt')}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>

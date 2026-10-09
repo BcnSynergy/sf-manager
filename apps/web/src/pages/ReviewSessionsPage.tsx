@@ -72,10 +72,11 @@ export function ReviewSessionsPage() {
         <p data-testid="review-sessions-empty">{t('reviewSession.entry.empty')}</p>
       ) : (
         <table>
+          <caption className="visually-hidden">{t('reviewSession.entry.title')}</caption>
           <thead>
             <tr>
-              <th>{t('reviewSession.entry.columnStarted')}</th>
-              <th></th>
+              <th scope="col">{t('reviewSession.entry.columnStarted')}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>

@@ -273,4 +273,32 @@ describe('ReviewSchedulePage', () => {
     );
     expect(within(row).getByTestId('review-schedule-reason-c2')).toHaveTextContent('2026');
   });
+
+  it('names the table by its heading and scopes every column header', async () => {
+    mockedListReviewSchedule.mockResolvedValue([baseRow]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('reviewSchedule.title') });
+    expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers).toHaveLength(5);
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+    expect(table.querySelector('[scope="row"]')).toBeNull();
+  });
+
+  it('names the table by the page heading in the active language (es)', async () => {
+    await i18n.changeLanguage('es');
+    mockedListReviewSchedule.mockResolvedValue([baseRow]);
+
+    renderPage();
+
+    const heading = await screen.findByRole('heading', { level: 1 });
+    const table = screen.getByRole('table', { name: i18n.t('reviewSchedule.title') });
+    expect(i18n.t('reviewSchedule.title')).not.toBe(i18n.t('reviewSchedule.title', { lng: 'en' }));
+    expect(table.querySelector('caption')).toHaveTextContent(heading.textContent ?? '');
+    expect(heading.textContent).toBe(i18n.t('reviewSchedule.title'));
+  });
 });

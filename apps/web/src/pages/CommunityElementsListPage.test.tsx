@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { CommunityElementsListPage } from './CommunityElementsListPage';
@@ -177,5 +177,20 @@ describe('CommunityElementsListPage', () => {
 
     expect(stateA.dataset.elementState).toBe('active');
     expect(stateB.dataset.elementState).toBe('decommissioned');
+  });
+
+  it('names the table by its heading and scopes every column header', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('inspectableElement.list.title') });
+    expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers).toHaveLength(9);
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+    expect(table.querySelector('[scope="row"]')).toBeNull();
   });
 });

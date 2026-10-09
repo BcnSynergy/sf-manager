@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunitiesListPage } from './CommunitiesListPage';
@@ -51,6 +51,16 @@ describe('CommunitiesListPage', () => {
     renderPage();
 
     expect(await screen.findByTestId('communities-list-empty')).toBeInTheDocument();
+  });
+
+  it('renders no table and no caption in the empty state', async () => {
+    mockedListCommunities.mockResolvedValue([]);
+
+    const { container } = renderPage();
+
+    await screen.findByTestId('communities-list-empty');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(container.querySelector('caption')).toBeNull();
   });
 
   it('shows an error state (not blank or loading) when the list request fails', async () => {
@@ -165,5 +175,20 @@ describe('CommunitiesListPage', () => {
 
     expect(await screen.findByTestId('communities-list-action-error')).toBeInTheDocument();
     expect(screen.getByTestId(`communities-list-row-${communityA.id}`)).toBeInTheDocument();
+  });
+
+  it('names the table by its heading and scopes every column header', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('community.list.title') });
+    expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+    expect(table.querySelector('[scope="row"]')).toBeNull();
   });
 });
