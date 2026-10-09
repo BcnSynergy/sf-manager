@@ -30,6 +30,12 @@ project's Engram memory on 2026-10-09.
   Evidence: `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`
   (2026-10-06 addendum, item 6); `auth-live-user-check` archive-report W-2.
   Origin: `auth-live-user-check`.
+- **TD-28**: The production `TRUST_PROXY` value depends on the deployment
+  topology; a CDN plus a proxy (two hops) needs a numeric hop count, and
+  `true` with no proxy lets clients spoof their key, so a wrong
+  value either puts every client in one bucket or lets the limit be evaded. Evidence:
+  `login-rate-limit` archive-report, open questions 1 and 2. Origin:
+  `login-rate-limit` (ADR-011 open questions).
 - **TD-29**: IPv6 clients can rotate the low 64 bits to get fresh login
   rate-limit buckets, so the limit can be evaded; keying on the /64 prefix may
   be needed. Evidence: `login-rate-limit` archive-report, open question 3.
@@ -130,19 +136,19 @@ project's Engram memory on 2026-10-09.
 - **TD-27**: The public-endpoint "no lookup" behavior is proven at unit level
   only. Evidence: `auth-live-user-check` archive-report S-1. Origin:
   `auth-live-user-check`.
-- **TD-28**: The production `TRUST_PROXY` value depends on the deployment
-  topology; a CDN plus a proxy (two hops) needs a numeric hop count, and
-  `true` with no proxy lets clients spoof their key. Evidence:
-  `login-rate-limit` archive-report, open questions 1 and 2. Origin:
-  `login-rate-limit` (ADR-011 open questions).
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
   upload, matrix builds, Dependabot, Playwright, extra caching, a typecheck
-  script, parallel jobs, and SHA-pinned actions.
+  script, parallel jobs, and SHA-pinned actions. Evidence:
+  `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
+  ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
 - **TD-33**: Prettier is a dependency but is not enforced: there is no format
   script or CI step, and `main` already fails `prettier --check` (for example
   `apps/web/src/index.css`). Origin: `table-accessibility` review, 2026-10-09.
 - **TD-34**: Stale wording in `docs/adr/INDEX.md`: it says most slices are
-  API-only and that i18n tooling is undecided.
+  API-only and that i18n tooling is undecided, but every slice since
+  `review-history` ships with web UI and the web app uses react-i18next.
+  Evidence: `docs/adr/INDEX.md:30-31` and `:43-46`. Origin: the 2026-10-06
+  debt inventory.
 
 ## Resolved
 
