@@ -49,7 +49,8 @@ Unit D, wrap-up
 
 ## Gate (orchestrator)
 
-- [ ] G.1 Browser verification (`claude-in-chrome`, dev seed, user logs in) on Users, Review templates (2 groups), Review schedule: caption `getBoundingClientRect()` 1x1, `clip-path: inset(50%)`, no visible caption in screenshot, names in `read_page` (two distinct on templates), no layout shift (`offsetTop` and screenshot vs `main`), and print check by copying `@media print` rules into a screen `<style>` on the review document. Report browser- or test-verified.
+- [x] G.1 Browser verification (`claude-in-chrome`, dev seed, user logs in) on Users, Review templates (2 groups), Review schedule: caption `getBoundingClientRect()` 1x1, `clip-path: inset(50%)`, no visible caption in screenshot, names in `read_page` (two distinct on templates), no layout shift (`offsetTop` and screenshot vs `main`), and print check by copying `@media print` rules into a screen `<style>` on the review document. Report browser- or test-verified.
+  - Evidence (2026-10-09, browser-verified, locale `ca`, dev seed, admin): Users (1 table), Review templates (2 tables: `Extintor — Trimestral`, `Extintor — Anual`), Review schedule (1 table). Every caption equals its heading, is the table's first child, measures 1x1 with `clip-path: inset(50%)`, and is invisible in screenshots; every thead `th` has `scope="col"`, with no `scope="row"`. Removing the caption leaves the thead position unchanged (0px shift). `read_page` lists the caption text inside the table node, so it stays in the accessibility tree. Print check deviation: the review document renders no table, so the 11 `@media print` rules were injected as a screen `<style>` on Review schedule instead; the caption stayed 1x1 and hidden, and no print rule targets `caption` or `.visually-hidden`.
 - [ ] G.2 Fresh-context PR review before push and before merge; user confirms push, PR and merge.
 
 ## Phase B: Close
