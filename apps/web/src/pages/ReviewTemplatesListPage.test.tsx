@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -92,5 +92,39 @@ describe('ReviewTemplatesListPage', () => {
 
     const link = await screen.findByTestId(`review-template-list-view-${templateOne.id}`);
     expect(link).toHaveAttribute('href', `/review-templates/${templateOne.id}`);
+  });
+
+  it('names each group table by its group heading and scopes every column header', async () => {
+    mockedListReviewTemplates.mockResolvedValue([
+      templateOne,
+      {
+        ...templateOne,
+        id: 'template-2',
+        frequency: 'ANNUAL' as const,
+        name: 'Annual extinguisher check',
+      },
+    ]);
+
+    renderPage();
+
+    await screen.findByTestId('review-template-group-EXTINGUISHER::QUARTERLY');
+    const tables = screen.getAllByRole('table');
+    expect(tables).toHaveLength(2);
+
+    const names = ['Fire extinguisher — Quarterly', 'Fire extinguisher — Annual'];
+    const lineages = ['EXTINGUISHER::QUARTERLY', 'EXTINGUISHER::ANNUAL'];
+    names.forEach((name, index) => {
+      const table = screen.getByRole('table', { name });
+      const group = screen.getByTestId(`review-template-group-${lineages[index]}`);
+      expect(within(group).getByRole('table', { name })).toBe(table);
+      expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+      const headers = within(table).getAllByRole('columnheader');
+      expect(headers).toHaveLength(4);
+      for (const header of headers) {
+        expect(header).toHaveAttribute('scope', 'col');
+      }
+      expect(table.querySelector('[scope="row"]')).toBeNull();
+    });
+    expect(new Set(tables.map((table) => table.querySelector('caption')?.textContent)).size).toBe(2);
   });
 });

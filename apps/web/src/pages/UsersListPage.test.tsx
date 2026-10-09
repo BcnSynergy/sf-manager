@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import * as usersApi from '../api/users';
@@ -247,5 +247,20 @@ describe('UsersListPage', () => {
       'The last system administrator cannot be removed.',
     );
     expect(screen.getByTestId(`users-list-row-${otherUser.id}`)).toBeInTheDocument();
+  });
+
+  it('names the table by its heading and scopes every column header', async () => {
+    mockedListUsers.mockResolvedValue([admin]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('users.list.title') });
+    expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers).toHaveLength(5);
+    for (const header of headers) {
+      expect(header).toHaveAttribute('scope', 'col');
+    }
+    expect(table.querySelector('[scope="row"]')).toBeNull();
   });
 });
