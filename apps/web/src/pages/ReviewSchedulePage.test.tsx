@@ -291,14 +291,18 @@ describe('ReviewSchedulePage', () => {
 
   it('names the table by the page heading in the active language (es)', async () => {
     await i18n.changeLanguage('es');
-    mockedListReviewSchedule.mockResolvedValue([baseRow]);
+    try {
+      mockedListReviewSchedule.mockResolvedValue([baseRow]);
 
-    renderPage();
+      renderPage();
 
-    const heading = await screen.findByRole('heading', { level: 1 });
-    const table = screen.getByRole('table', { name: i18n.t('reviewSchedule.title') });
-    expect(i18n.t('reviewSchedule.title')).not.toBe(i18n.t('reviewSchedule.title', { lng: 'en' }));
-    expect(table.querySelector('caption')).toHaveTextContent(heading.textContent ?? '');
-    expect(heading.textContent).toBe(i18n.t('reviewSchedule.title'));
+      const heading = await screen.findByRole('heading', { level: 1 });
+      const table = screen.getByRole('table', { name: i18n.t('reviewSchedule.title') });
+      expect(i18n.t('reviewSchedule.title')).not.toBe(i18n.t('reviewSchedule.title', { lng: 'en' }));
+      expect(table.querySelector('caption')).toHaveTextContent(heading.textContent ?? '');
+      expect(heading.textContent).toBe(i18n.t('reviewSchedule.title'));
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });
