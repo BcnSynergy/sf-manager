@@ -42,6 +42,46 @@ possible end-to-end slice = API + one client" premise. See ADR-006's
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
 
+## Choosing SDD vs ODD at Task Start
+
+The global default workflow is ODD (Organic Driven Development), and SDD
+runs only when explicitly requested or when a proposal for it is accepted.
+In this project, `openspec/specs/` is the living specification of what the
+system does, kept current by archiving SDD changes. ODD has no equivalent,
+so a behavior change built through ODD would leave the specs silently out of
+date. This project rule deliberately overrides the global "do not recommend
+SDD" default.
+
+At the start of every task that will change code, after the minimal
+exploration needed to classify it and before the first write, recommend a
+route with a one-line reason and ask the user to confirm it. Do not start
+writing until they answer. If the user already named a route ("use SDD",
+"just fix it"), skip the question. Read-only requests (explain, review,
+investigate) and trivial one-file fixes such as a typo need no route
+question.
+
+The deciding question: **does this change create or alter behavior that
+`openspec/specs/` describes, or should describe?** "Behavior" means what a
+user or a business rule can observe: permissions, validations, data, and
+flows. It does not mean internal structure.
+
+- **Yes → recommend SDD** (`/gentle-sdd-new <change>`, artifacts under
+  `openspec/changes/`). This covers new domain or FR slices and any change
+  to an existing capability's observable rules, data, or flows.
+- **No → recommend ODD**, for example a bug fix that restores behavior the
+  specs already describe, refactors, copy/style/i18n tweaks, test-only or
+  tooling changes, dependency bumps, and docs.
+- When in doubt, or when the specs are silent on the behavior involved,
+  recommend SDD.
+- If ODD work turns out to alter specified behavior, stop and ask again. If
+  the user keeps ODD, edit the affected main spec in `openspec/specs/`
+  directly in the same PR. This is the accepted exception to the
+  delta-spec + archive flow.
+- ADR-006 scope discipline (including minimal UI for a domain slice), the
+  global ODD tracking rules, and the Git & PR conventions below apply to
+  both routes as relevant. ODD feature branches also use
+  `<change-name>/<NN>-<slug>`.
+
 ## Git & PR Conventions
 
 Established across the `auth-minimal-skeleton`, `user-management-roles`,
