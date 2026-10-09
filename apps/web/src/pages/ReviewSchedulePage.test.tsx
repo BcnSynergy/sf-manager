@@ -296,8 +296,8 @@ describe('ReviewSchedulePage', () => {
 
       renderPage();
 
-      const heading = await screen.findByRole('heading', { level: 1 });
-      const table = screen.getByRole('table', { name: i18n.t('reviewSchedule.title') });
+      const table = await screen.findByRole('table', { name: i18n.t('reviewSchedule.title') });
+      const heading = screen.getByRole('heading', { level: 1 });
       expect(i18n.t('reviewSchedule.title')).not.toBe(i18n.t('reviewSchedule.title', { lng: 'en' }));
       expect(table.querySelector('caption')).toHaveTextContent(heading.textContent ?? '');
       expect(heading.textContent).toBe(i18n.t('reviewSchedule.title'));
