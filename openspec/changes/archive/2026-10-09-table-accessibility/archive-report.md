@@ -43,7 +43,7 @@ All tasks in `tasks.md` are checked at archive time (A.1, B.1-B.5, C.1-C.4, D.1-
 
 - Verify result: PASS WITH WARNINGS (0 CRITICAL, 2 WARNING, 2 SUGGESTION), per `verify-report` (Engram #519, written 2026-10-09 after the PR 1 merge).
 - Warning 2 (G.2 and B.1 unchecked at verify time) is resolved by this archive: both are now checked with the evidence above.
-- Warning 1 (TDD Cycle Evidence table missing from Engram `apply-progress`) is explained below and the evidence is restored in this report and in Engram.
+- Warning 1 (TDD Cycle Evidence table missing from Engram `apply-progress`) is explained below; the evidence is restated in this report and in Engram from the apply agent's completion report. It is explained, not independently verified: RED history cannot be reconstructed from git because each unit's tests and code were committed together.
 - Browser verification G.1 passed (2026-10-09, locale `ca`, dev seed, admin) on Users, Review templates (2 groups) and Review schedule. The print check was done on Review schedule because the review document has no table.
 
 ### Why the TDD table was missing
@@ -88,8 +88,8 @@ Safety net: existing tests in the touched files passed before any edits.
 
 ## Readback
 
-`diff -r openspec/changes/table-accessibility openspec/changes/archive/2026-10-09-table-accessibility` (taken before this report was added): empty output, exit 0.
+`diff -r openspec/changes/table-accessibility openspec/changes/archive/2026-10-09-table-accessibility` (taken against the working copy after the tasks.md checkbox updates and before this report was added): empty output, exit 0. The archived tasks.md therefore differs from the pre-archive source by those checkbox and evidence lines.
 
 ## Risks
 
-The source folder `openspec/changes/table-accessibility/` still exists; the orchestrator removes it (git mv equivalent) and commits.
+None open. The source folder `openspec/changes/table-accessibility/` was removed in the archive commit; git records the moves as renames.
