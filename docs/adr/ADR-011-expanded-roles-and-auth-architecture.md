@@ -534,9 +534,9 @@ schema changed; the price is one extra query per representative request.
 Deferred (ADR-006): the field-flow link from the session page to the review
 document (FR-010) is not part of this change.
 
-## Addendum (2026-10-12): `login-rate-limit-hardening` (PR 1/4) — hop-count `TRUST_PROXY` and IPv6 `/64` client key
+## Addendum (2026-10-12): `login-rate-limit-hardening` (PRs 1/4 and 3/4) — hop-count `TRUST_PROXY`, IPv6 `/64` client key and persistent counters
 
-Answers open questions 2 and 3 of the 2026-10-07 addendum.
+Answers open questions 2, 3 and 4 of the 2026-10-07 addendum.
 
 **Open question 2 (proxy hops).** `TRUST_PROXY` now accepts a positive integer
 N in addition to `true` (one hop) and off (unset, empty or `false`). Express
@@ -563,8 +563,34 @@ of `ThrottlerGuard` overrides only `getTracker`.
 
 Fixed-window note: the window is fixed and anchored at the first attempt, so
 up to about 2x the limit can pass around a window boundary. This matches the
-spec's "fixed time window". PR 3/4 (task C.6) extends this addendum with open
-question 4.
+spec's "fixed time window".
+
+**Open question 4 (restarts).** Login counters are now persisted in Postgres
+(PR 3/4). A `PrismaThrottlerStorage` adapter implements `ThrottlerStorage`
+and is wired into `ThrottlerModule.forRootAsync` in `AuthModule`. Each
+attempt is one atomic `INSERT ... ON CONFLICT DO UPDATE` on a
+`ThrottleCounter` row keyed by the throttler's own SHA-256 hash of the client
+key, so no raw IP is stored. All timestamps use the database clock, so
+counters survive an API restart and are shared by every API instance, and
+concurrent attempts are all counted. Expired rows are removed by a bounded,
+best-effort cleanup when a window opens. The price is one extra database
+write per login attempt. The storage fails closed: if it errors, the login
+attempt is refused with a `500` rather than going uncounted. There is no
+environment switch back to the in-memory store; the e2e suites, which mock
+`PrismaService`, override `ThrottlerStorage` with the library's in-memory
+store. The counter is a fixed window, as noted above; a sliding window or
+per-email keying and lockout (TD-31) remain out of scope.
+
+Still open:
+
+1. **Deployment topology** (question 1 of the 2026-10-07 addendum). Whether
+   production runs behind a proxy, and how many hops, still decides the
+   `TRUST_PROXY` value. Nothing in this change assumes one.
+2. **ADR-001 and serverless.** ADR-001 describes a single long-running API
+   instance. Counters no longer depend on that assumption, but a serverless
+   deployment would also change connection pooling and the cost of the
+   per-attempt write. This is recorded as a question to revisit if the
+   deployment target changes; ADR-001 itself is not revisited here.
 
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable

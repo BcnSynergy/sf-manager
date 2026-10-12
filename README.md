@@ -61,6 +61,13 @@ business features yet, just the toolchain wired end-to-end.
 
    IPv6 clients are limited per `/64` prefix, and an IPv4-mapped IPv6 address
    (`::ffff:a.b.c.d`) counts as the IPv4 address.
+
+   Login attempt counters are persisted in Postgres (table `ThrottleCounter`,
+   keyed by a hash of the client key, no raw IP). They survive API restarts and
+   are shared by every API instance, at the cost of one extra database write
+   per login attempt. If that write fails, the login attempt is refused. The
+   window is fixed, so up to about twice the limit can pass around a window
+   boundary.
 3. Start Postgres:
    ```
    docker compose up -d

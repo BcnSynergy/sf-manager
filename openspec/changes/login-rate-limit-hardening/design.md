@@ -204,7 +204,7 @@ In `ON CONFLICT DO UPDATE SET`, every right-hand expression reads the old row
 
 ```sql
 INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
-VALUES (${key}, 1, now() + ${ttl}::int * interval '1 millisecond', NULL)
+VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond', NULL)
 ON CONFLICT ("key") DO UPDATE SET
   "hits" = CASE
     WHEN t."blockedUntil" > now() THEN t."hits"                       -- (A) still blocked: not counted
@@ -214,14 +214,14 @@ ON CONFLICT ("key") DO UPDATE SET
   "windowEndsAt" = CASE
     WHEN t."blockedUntil" > now() THEN t."windowEndsAt"
     WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now()
-      THEN now() + ${ttl}::int * interval '1 millisecond'
+      THEN date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
     ELSE t."windowEndsAt"
   END,
   "blockedUntil" = CASE
     WHEN t."blockedUntil" > now() THEN t."blockedUntil"
     WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN NULL
     WHEN t."hits" + 1 > ${limit}::int
-      THEN now() + ${blockDuration}::int * interval '1 millisecond'
+      THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'
     ELSE NULL
   END
 RETURNING
@@ -232,6 +232,15 @@ RETURNING
     THEN CEIL(EXTRACT(EPOCH FROM ("blockedUntil" - now())))::int ELSE 0 END AS "timeToBlockExpire";
 ```
 
+`ttl` and `blockDuration` are cast to `bigint`, not `int`, so a value above
+2^31-1 ms cannot overflow and fail every login closed (`interval * bigint` is
+evaluated as double precision). Window and block ends are anchored on
+`date_trunc('milliseconds', now())` because the columns are `timestamptz(3)`,
+which rounds: an untruncated `now() + ttl` could be stored up to 0.5 ms late
+and make `CEIL` of the remaining seconds report `ttl + 1` (observed: 61 for a
+60 s window). Comparisons against the stored columns still use plain `now()`.
+Both refinements came out of the PR 2 implementation and review.
+
 The adapter maps the single returned row to `ThrottlerStorageRecord`. The
 `throttlerName` argument is ignored because it is already part of the hashed
 key. The exact casts and parameter types under `@prisma/adapter-pg` are
@@ -239,8 +248,8 @@ confirmed by the RED integration tests. Raw-query errors surface as `P2010`
 (see the note in `prisma-review-template.repository.ts`).
 
 **Block semantics** (identical to the reference store): the hit that takes
-`hits` above `limit` sets `blockedUntil = now() + blockDuration`, where
-`blockDuration` equals `ttl` because no `blockDuration` is configured. That
+`hits` above `limit` sets `blockedUntil = date_trunc('milliseconds', now()) + blockDuration`,
+where `blockDuration` equals `ttl` because no `blockDuration` is configured. That
 same hit returns `isBlocked = true`, so the 11th attempt gets 429. Attempts
 during the block are rejected and not counted. The first attempt after the
 block expires opens a new window with `hits = 1`, which covers the spec's
