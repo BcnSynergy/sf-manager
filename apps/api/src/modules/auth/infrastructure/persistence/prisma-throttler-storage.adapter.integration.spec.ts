@@ -158,13 +158,11 @@ describe('PrismaThrottlerStorage (integration)', () => {
   });
 
   it('removes expired rows (at most 100 per call) when a new window opens and keeps live rows', async () => {
-    // Cleanup removes any 100 expired rows of the shared table, so start from
-    // a table without foreign expired rows to make the count deterministic.
-    await prisma.$executeRaw`
-      DELETE FROM "ThrottleCounter"
-      WHERE "windowEndsAt" < now()
-        AND ("blockedUntil" IS NULL OR "blockedUntil" < now())
-    `;
+    // Cleanup removes any 100 expired rows of the shared table. Rows left by
+    // earlier tests can expire between this setup and the increment below,
+    // so start from an empty table to make the count deterministic.
+    // Integration suites run in band, so nothing else uses the table now.
+    await prisma.$executeRaw`DELETE FROM "ThrottleCounter"`;
     const past = new Date(Date.now() - 60_000);
     const future = new Date(Date.now() + 600_000);
     const expiredKeys = Array.from({ length: 105 }, () => randomUUID());
