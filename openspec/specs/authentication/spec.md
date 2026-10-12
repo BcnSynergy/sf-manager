@@ -324,6 +324,7 @@ fail with an error. No production default other than off applies.
 - GIVEN `TRUST_PROXY` is set to `0`, `-1`, `1.5`, `loopback`, a CIDR list, or any other value outside the accepted set
 - WHEN the application starts
 - THEN startup MUST fail with an error and the application MUST NOT begin serving requests
+
 ### Requirement: Login Form Validation (Web)
 
 The login form MUST require both fields client-side before submission
