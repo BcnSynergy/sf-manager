@@ -19,7 +19,7 @@ API only, no UI change (the browser gate does not apply).
 
 | Domain | Action | Details |
 |--------|--------|---------|
-| authentication | Updated | 2 MODIFIED requirements replaced in full: "Login Attempt Rate Limiting" (client key, `/64` grouping, IPv4-mapped handling, persistence, shared instances, concurrency; 17 scenarios) and "Client IP Resolution for Rate Limiting" (hop-count `TRUST_PROXY`, startup validation; 6 scenarios). 0 added, 0 removed. All other requirements are unchanged. |
+| authentication | Updated | 2 MODIFIED requirements replaced in full: "Login Attempt Rate Limiting" (client key, `/64` grouping, IPv4-mapped handling, persistence, shared instances, concurrency; 16 scenarios) and "Client IP Resolution for Rate Limiting" (hop-count `TRUST_PROXY`, startup validation; 6 scenarios). 0 added, 0 removed. All other requirements are unchanged. |
 
 Composition ran through the native command (zero exit), on LF copies of both files, and the result was converted back to CRLF to match the main spec's line endings:
 
@@ -51,7 +51,7 @@ Per the persisted `tasks.md` at archive time: Phases A, B and C and gates G.1-G.
 
 ## Verification (final state)
 
-Per `verify-report` (Engram #548, written 2026-10-12 after the PR 3 merge): PASS, 0 CRITICAL, 0 WARNING, 3 SUGGESTION. At verify time: lint exit 0 (0 errors, 4 pre-existing warnings), build exit 0, unit 143 suites / 1425 tests, integration 31 suites / 224 tests, e2e 12 suites / 470 tests, all passing. All 29 spec scenarios are covered. Strict TDD evidence was reported per phase (recorded in `apply-progress`, Engram #534).
+Per `verify-report` (Engram #548, written 2026-10-12 after the PR 3 merge): PASS, 0 CRITICAL, 0 WARNING, 3 SUGGESTION. At verify time: lint exit 0 (0 errors, 4 pre-existing warnings), build exit 0, unit 143 suites / 1425 tests, integration 31 suites / 224 tests, e2e 12 suites / 470 tests, all passing. All 22 spec scenarios (16 + 6) are covered. Strict TDD evidence was reported per phase (recorded in `apply-progress`, Engram #534).
 
 Suggestions at verify time and their final state:
 
@@ -69,14 +69,14 @@ The "Invalid TRUST_PROXY rejected at startup" scenario is proven at unit level o
 - TD-31 (account lockout, per-email keying) stays open; annotated as deferred to its own slice (decided 2026-10-12).
 - Added TD-35 (Medium): every login attempt does a Postgres upsert on the shared Prisma pool, and the cleanup is awaited on the request path with no `statement_timeout` and an index only on `windowEndsAt`. Origin: PR 2 and PR 3 RDD reviews.
 
-`docs/enhancements.md` (all with origin `login-rate-limit-hardening`, 2026-10-12): EN-5 was added earlier by PR 1; this archive adds EN-6 (HMAC-keyed throttle key hashing), EN-7 (client-key and guard test gaps), EN-8 (README note on an oversized `TRUST_PROXY`), EN-9 (adapter SQL readability), EN-10 (adapter and integration test gaps), EN-11 (test-harness cleanup), EN-12 (map storage failures to 503 with `Retry-After`).
+`docs/enhancements.md` (all with origin `login-rate-limit-hardening`, 2026-10-12): EN-5 was added earlier by PR 1; this archive adds EN-6 (HMAC-keyed throttle key hashing), EN-7 (client-key and guard test gaps), EN-8 (README note on an oversized `TRUST_PROXY`), EN-9 (adapter SQL readability), EN-10 (adapter and integration test gaps), EN-11 (test-harness cleanup), EN-12 (map storage failures to 503 with `Retry-After`), EN-13 (boot-level test that an invalid `TRUST_PROXY` stops the app).
 
 ## Deferred Items and Open Questions
 
 - TD-31: account lockout and per-email keying, deferred to its own slice.
 - Production deployment topology (which `TRUST_PROXY` value production needs): still an open question in the ADR-011 2026-10-12 addendum; nothing assumes one.
 - ADR-001 and serverless: ADR-001 describes a single long-running instance. Counters no longer depend on that, but a serverless target would change pooling and the cost of the per-attempt write; to be revisited if the deployment target changes.
-- TD-35 and EN-5 to EN-12, as above.
+- TD-35 and EN-5 to EN-13, as above.
 
 ## Archive Contents
 

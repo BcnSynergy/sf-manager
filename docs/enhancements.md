@@ -99,6 +99,13 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   behavior in `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`
   (2026-10-12 addendum). Origin: `login-rate-limit-hardening` reviews,
   2026-10-12.
+- **EN-13** (api tests): Prove at boot level that an invalid `TRUST_PROXY`
+  stops the app before it serves requests. Today only the parser is
+  unit-tested (`trust-proxy.spec.ts`); that `main.ts` calls it before
+  `listen` is checked by reading the code only, so a reorder would go
+  unnoticed. Evidence: `apps/api/src/main.ts`,
+  `apps/api/src/shared/infrastructure/env/trust-proxy.spec.ts`. Origin:
+  `login-rate-limit-hardening` archive RDD review, 2026-10-12.
 
 ## Done
 
