@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 
@@ -28,6 +28,8 @@ const CLEANUP_BATCH_SIZE = 100;
 
 @Injectable()
 export class PrismaThrottlerStorage implements ThrottlerStorage {
+  private readonly logger = new Logger(PrismaThrottlerStorage.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async increment(
@@ -36,6 +38,10 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     limit: number,
     blockDuration: number,
   ): Promise<ThrottlerStorageRecord> {
+    // ttl and blockDuration are milliseconds, cast to bigint so values above
+    // 2^31-1 cannot overflow and fail every login closed (interval * bigint
+    // is evaluated as double precision).
+    //
     // Window and block ends are anchored on now() truncated to milliseconds:
     // the columns are timestamptz(3), which ROUNDS, so an untruncated
     // now() + ttl could be stored up to 0.5 ms later than ttl and make
@@ -50,7 +56,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     //   (D) live window            -> hits + 1, block when it exceeds limit
     const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
       INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
-      VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::int * interval '1 millisecond', NULL)
+      VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond', NULL)
       ON CONFLICT ("key") DO UPDATE SET
         "hits" = CASE
           WHEN t."blockedUntil" > now() THEN t."hits"
@@ -60,14 +66,14 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
         "windowEndsAt" = CASE
           WHEN t."blockedUntil" > now() THEN t."windowEndsAt"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now()
-            THEN date_trunc('milliseconds', now()) + ${ttl}::int * interval '1 millisecond'
+            THEN date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
           ELSE t."windowEndsAt"
         END,
         "blockedUntil" = CASE
           WHEN t."blockedUntil" > now() THEN t."blockedUntil"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN NULL
           WHEN t."hits" + 1 > ${limit}::int
-            THEN date_trunc('milliseconds', now()) + ${blockDuration}::int * interval '1 millisecond'
+            THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'
           ELSE NULL
         END
       RETURNING
@@ -118,8 +124,12 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
           FOR UPDATE SKIP LOCKED
         )
       `;
-    } catch {
-      // Intentionally ignored; see above.
+    } catch (error) {
+      // Swallowed (see above) but not silent: a persistently failing cleanup
+      // would otherwise let the table grow unnoticed.
+      this.logger.warn(
+        `ThrottleCounter cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

@@ -9,8 +9,9 @@ import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 // cleanup) live in one SQL statement, so only a real database can prove
 // them; a mocked PrismaService would only prove the statement is issued.
 //
-// Every test uses its own randomUUID() key, so tests never interfere with
-// each other even though they share one database.
+// Every test uses its own randomUUID() key, but the table is shared and the
+// adapter's cleanup deletes ANY expired rows, so a test that depends on the
+// set of expired rows (the cleanup test) clears them in its own setup.
 describe('PrismaThrottlerStorage (integration)', () => {
   let prisma: PrismaService;
   let storage: PrismaThrottlerStorage;
@@ -157,6 +158,13 @@ describe('PrismaThrottlerStorage (integration)', () => {
   });
 
   it('removes expired rows (at most 100 per call) when a new window opens and keeps live rows', async () => {
+    // Cleanup removes any 100 expired rows of the shared table, so start from
+    // a table without foreign expired rows to make the count deterministic.
+    await prisma.$executeRaw`
+      DELETE FROM "ThrottleCounter"
+      WHERE "windowEndsAt" < now()
+        AND ("blockedUntil" IS NULL OR "blockedUntil" < now())
+    `;
     const past = new Date(Date.now() - 60_000);
     const future = new Date(Date.now() + 600_000);
     const expiredKeys = Array.from({ length: 105 }, () => randomUUID());
@@ -194,6 +202,19 @@ describe('PrismaThrottlerStorage (integration)', () => {
       where: { key: expiredButBlockedKey },
     });
     expect(blocked.hits).toBe(11);
+  });
+
+  it('accepts a ttl and block duration above 2^31-1 ms', async () => {
+    const key = randomUUID();
+    const hugeMs = 3_000_000_000;
+
+    const first = await storage.increment(key, hugeMs, 1, hugeMs, NAME);
+    const blocked = await storage.increment(key, hugeMs, 1, hugeMs, NAME);
+
+    expect(first.totalHits).toBe(1);
+    expect(first.timeToExpire).toBeGreaterThan(2_000_000);
+    expect(blocked.isBlocked).toBe(true);
+    expect(blocked.timeToBlockExpire).toBeGreaterThan(2_000_000);
   });
 
   it('does not run cleanup for a hit inside a live window', async () => {
