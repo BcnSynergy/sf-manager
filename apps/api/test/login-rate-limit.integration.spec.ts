@@ -101,7 +101,10 @@ describe('Login rate limit persistence (integration)', () => {
     await closeApp(appA);
 
     const appB = await createApp();
-    await failedLogin(appB, client).expect(429);
+    // The persisted block also drives the plain Retry-After header.
+    await failedLogin(appB, client)
+      .expect(429)
+      .expect('Retry-After', /^[1-9]\d*$/);
     // Another client is unaffected: the rejection came from the persisted
     // counter for this key, not from a global state.
     await failedLogin(appB, uniqueClient()).expect(401);

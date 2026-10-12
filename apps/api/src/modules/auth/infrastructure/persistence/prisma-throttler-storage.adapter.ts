@@ -3,7 +3,8 @@ import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 
 // Postgres-backed ThrottlerStorage (login-rate-limit-hardening/design.md
-// Decisions 4-6, TD-30). Not wired into AuthModule yet (PR 3).
+// Decisions 4-6, TD-30). Wired into AuthModule through
+// ThrottlerModule.forRootAsync.
 //
 // The key is already ThrottlerGuard.generateKey's sha256 hex, so no raw IP is
 // ever stored, and `throttlerName` is ignored because it is already part of
