@@ -5,6 +5,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { PrismaThrottlerStorage } from '../src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter';
+import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
 
 // login-rate-limit-hardening design.md Testing Strategy, "Integration (app,
 // real Postgres)": the real AppModule (real PrismaThrottlerStorage) against
@@ -12,11 +14,14 @@ import { AppModule } from '../src/app.module';
 // toward the limit, so no user is seeded.
 //
 // Isolation: every test uses its own client key, built from random bytes in
-// the documentation ranges (2001:db8::/32, 203.0.113.0/24), and never
-// 127.0.0.1, which other integration specs share. Counters for those keys
+// the IPv6 documentation range (2001:db8::/32), and never 127.0.0.1, which
+// other integration specs share. Counters for those keys
 // are left behind; the per-run database is dropped at teardown.
 const LIMIT = 3;
 const MANAGED_ENV = [
+  'JWT_SECRET',
+  'CORS_ORIGIN',
+  'JWT_EXPIRES_IN',
   'LOGIN_RATE_LIMIT_MAX_ATTEMPTS',
   'LOGIN_RATE_LIMIT_WINDOW_SECONDS',
   'TRUST_PROXY',
@@ -68,6 +73,10 @@ describe('Login rate limit persistence (integration)', () => {
     delete process.env.TRUST_PROXY;
     delete process.env.LOGIN_RATE_LIMIT_WINDOW_SECONDS;
     process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = String(LIMIT);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -123,5 +132,30 @@ describe('Login rate limit persistence (integration)', () => {
 
     expect(statuses).toEqual(Array.from({ length: LIMIT }, () => 401));
     await failedLogin(app, client).expect(429);
+  });
+
+  it('fails closed with a 500 when the counter storage fails', async () => {
+    const app = await createApp();
+    jest
+      .spyOn(PrismaThrottlerStorage.prototype, 'increment')
+      .mockRejectedValueOnce(new Error('simulated storage outage'));
+
+    // Not 401 (attempt let through) nor 429: the login is refused outright.
+    await failedLogin(app, uniqueClient()).expect(500);
+  });
+
+  it('never stores the raw client address in a counter key', async () => {
+    const client = uniqueClient();
+    const app = await createApp();
+    const prisma = app.get(PrismaService);
+
+    await failedLogin(app, client).expect(401);
+
+    const keys = (await prisma.throttleCounter.findMany()).map((r) => r.key);
+    // Non-vacuous: the attempt above did write a counter row.
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(key).not.toContain(client);
+    }
   });
 });
