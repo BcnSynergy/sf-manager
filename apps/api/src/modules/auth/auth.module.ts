@@ -41,7 +41,7 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // as AuthModule is instantiated — mirrors the IdGeneratorModule
     // precedent (app.module.ts), just registered from this module instead.
     HashingModule,
-    // Only the login handler opts in (@UseGuards(ThrottlerGuard) in
+    // Only the login handler opts in (@UseGuards(LoginThrottlerGuard) in
     // AuthController); this module registers no APP_GUARD for it. The
     // throttler MUST stay named 'default': v6 suffixes headers of named
     // throttlers (Retry-After-login), and only 'default' emits a plain

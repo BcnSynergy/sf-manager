@@ -14,7 +14,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Rate limiting keys on req.ip; TRUST_PROXY decides whether that is the
-  // socket address (default) or the client IP one trusted hop back.
+  // socket address (default) or the client IP N trusted hops back (N is the
+  // TRUST_PROXY hop count; `true` means 1).
   app.set('trust proxy', getTrustProxySetting(process.env));
 
   // AuthenticatedGuard (design.md Decision 4) reads the access-token cookie

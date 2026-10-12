@@ -534,6 +534,38 @@ schema changed; the price is one extra query per representative request.
 Deferred (ADR-006): the field-flow link from the session page to the review
 document (FR-010) is not part of this change.
 
+## Addendum (2026-10-12): `login-rate-limit-hardening` (PR 1/4) — hop-count `TRUST_PROXY` and IPv6 `/64` client key
+
+Answers open questions 2 and 3 of the 2026-10-07 addendum.
+
+**Open question 2 (proxy hops).** `TRUST_PROXY` now accepts a positive integer
+N in addition to `true` (one hop) and off (unset, empty or `false`). Express
+resolves `req.ip` as the address N hops back from the socket address, so
+entries a client prepends to `X-Forwarded-For` cannot choose its key. Any
+other value (`0`, negatives, non-integers, `loopback`, CIDR lists, `TRUE`,
+padded values) throws at boot, so a typo fails fast instead of silently
+sharing or spoofing keys. The default stays off; no production value is
+assumed.
+
+| Topology | `TRUST_PROXY` |
+|----------|---------------|
+| No proxy | unset (off) |
+| One reverse proxy | `true` or `1` |
+| CDN plus reverse proxy | `2` |
+| PaaS (e.g. Vercel) | confirm the platform's documented forwarding hops first; no value is asserted here |
+
+**Open question 3 (IPv6).** The login throttle key is now derived from
+`req.ip` by `toClientKey`: IPv4 as is, IPv4-mapped IPv6 (`::ffff:a.b.c.d`) as
+its IPv4, any other IPv6 as its canonical `/64` prefix (zone ids stripped),
+and a missing or unparsable address as one shared `unresolved` key so the
+request is still counted and never errors. A `LoginThrottlerGuard` subclass
+of `ThrottlerGuard` overrides only `getTracker`.
+
+Fixed-window note, deferred to the PR that completes this addendum (PR 3/4,
+task C.6, with open question 4): the window is fixed and anchored at the first
+attempt, so up to about 2x the limit can pass around a window boundary. This
+matches the spec's "fixed time window".
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort

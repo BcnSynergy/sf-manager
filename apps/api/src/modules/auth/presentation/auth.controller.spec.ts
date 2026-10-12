@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
@@ -43,7 +43,7 @@ describe('AuthController', () => {
     })
       // Throttling is covered by login-rate-limit.e2e-spec.ts; this unit
       // test only exercises the handler's own logic.
-      .overrideGuard(ThrottlerGuard)
+      .overrideGuard(LoginThrottlerGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
