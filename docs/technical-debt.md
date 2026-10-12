@@ -30,23 +30,21 @@ project's Engram memory on 2026-10-09.
   Evidence: `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`
   (2026-10-06 addendum, item 6); `auth-live-user-check` archive-report W-2.
   Origin: `auth-live-user-check`.
-- **TD-28**: The production `TRUST_PROXY` value depends on the deployment
-  topology; a CDN plus a proxy (two hops) needs a numeric hop count, and
-  `true` with no proxy lets clients spoof their key, so a wrong
-  value either puts every client in one bucket or lets the limit be evaded. Evidence:
-  `login-rate-limit` archive-report, open questions 1 and 2. Origin:
-  `login-rate-limit` (ADR-011 open questions).
-- **TD-29**: IPv6 clients can rotate the low 64 bits to get fresh login
-  rate-limit buckets, so the limit can be evaded; keying on the /64 prefix may
-  be needed. Evidence: `login-rate-limit` archive-report, open question 3.
-  Origin: `login-rate-limit`.
-- **TD-30**: The in-memory login throttle counters reset on every restart or
-  redeploy, so the limit does not survive them. Evidence: `login-rate-limit`
-  archive-report, open question 4. Origin: `login-rate-limit`.
 - **TD-31**: Account lockout and per-email rate-limit keying are deferred, so
   a distributed attack on one account is not limited. Evidence:
   `login-rate-limit` archive-report, open question 5. Origin:
   `login-rate-limit`.
+  Deferred to its own slice (decided 2026-10-12, at the close of
+  `login-rate-limit-hardening`).
+- **TD-35**: Every login attempt, including an already-blocked one, does a
+  Postgres upsert on the shared Prisma pool, and the expired-row cleanup is
+  awaited on the request path with no `statement_timeout`. The cleanup can scan
+  expired-but-still-blocked rows because the only index is on `windowEndsAt`.
+  Under a login flood this adds database load to the whole API and can delay
+  unrelated requests. Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`;
+  `apps/api/src/modules/auth/auth.module.ts`. Origin:
+  `login-rate-limit-hardening` PR 2 and PR 3 RDD reviews, 2026-10-12.
 
 ### Low
 
@@ -168,6 +166,17 @@ project's Engram memory on 2026-10-09.
   Resolved by `web-locale-switch` (#198, #199).
 - **TD-14**: Web tables had no caption or `scope="col"`. Resolved by
   `table-accessibility` (#203, #204).
+- **TD-28**: Production `TRUST_PROXY` depends on topology; only off or one
+  hop was supported. Resolved by `login-rate-limit-hardening` (#206):
+  `TRUST_PROXY` accepts a hop count N and invalid values fail at startup;
+  README and ADR-011 (2026-10-12 addendum) carry the topology table. Which
+  value production needs remains an open deployment question in the addendum.
+- **TD-29**: IPv6 clients could rotate the low 64 bits to evade the login
+  limit. Resolved by `login-rate-limit-hardening` (#206): the client key is the
+  `/64` prefix.
+- **TD-30**: The in-memory login throttle counters reset on every restart.
+  Resolved by `login-rate-limit-hardening` (#207, #208): counters persist in
+  Postgres and are shared by all instances.
 - **TD-17**: `ReviewDocumentPage` fell back to the raw `questionId` for an
   unknown question. Resolved by 5356761 (#165, 2026-09-24): it now shows the
   localized `reviewDocument.record.questionTextUnknown` label

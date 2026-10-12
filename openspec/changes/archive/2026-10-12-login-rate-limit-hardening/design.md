@@ -359,8 +359,9 @@ applies.
 next to `PrismaTokenDenylistAdapter`, and implements `ThrottlerStorage` from
 `@nestjs/throttler` directly. The library interface is the port. Its only
 consumer is the library guard, so there is no application-layer use case to
-shield, and a wrapper port would add no value (ADR-006). It is plain
-`@Injectable()`-free construction with `PrismaService` passed in. Tests use
+shield, and a wrapper port would add no value (ADR-006). It is
+constructed manually in `forRootAsync` with `PrismaService` passed in (the class
+does carry `@Injectable()`, but Nest does not resolve it). Tests use
 `new PrismaThrottlerStorage(prisma)`, exactly like the token-denylist
 integration spec.
 
