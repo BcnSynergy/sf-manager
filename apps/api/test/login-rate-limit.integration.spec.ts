@@ -140,22 +140,29 @@ describe('Login rate limit persistence (integration)', () => {
       .spyOn(PrismaThrottlerStorage.prototype, 'increment')
       .mockRejectedValueOnce(new Error('simulated storage outage'));
 
+    const client = uniqueClient();
     // Not 401 (attempt let through) nor 429: the login is refused outright.
-    await failedLogin(app, uniqueClient()).expect(500);
+    await failedLogin(app, client).expect(500);
+    // No lasting side effect: once storage recovers, counting resumes.
+    await failedLogin(app, client).expect(401);
   });
 
   it('never stores the raw client address in a counter key', async () => {
-    const client = uniqueClient();
     const app = await createApp();
     const prisma = app.get(PrismaService);
+    // Integration suites run in band, so emptying the table here is safe and
+    // makes the row below provably this attempt's own.
+    await prisma.throttleCounter.deleteMany();
 
-    await failedLogin(app, client).expect(401);
+    await failedLogin(app, uniqueClient()).expect(401);
 
+    // Non-vacuous: this attempt wrote exactly one counter row.
+    expect(await prisma.throttleCounter.count()).toBe(1);
+    // Every key is a sha256 hex digest, so neither the full address nor its
+    // /64 tracker prefix can appear in it.
     const keys = (await prisma.throttleCounter.findMany()).map((r) => r.key);
-    // Non-vacuous: the attempt above did write a counter row.
-    expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) {
-      expect(key).not.toContain(client);
+      expect(key).toMatch(/^[0-9a-f]{64}$/);
     }
   });
 });
