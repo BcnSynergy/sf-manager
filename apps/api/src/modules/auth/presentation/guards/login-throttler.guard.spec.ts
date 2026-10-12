@@ -42,18 +42,21 @@ describe('LoginThrottlerGuard', () => {
     );
   });
 
-  it('counts a request without req.ip instead of exempting or failing it', async () => {
-    const headers = jest.fn();
-    const context = {
+  function contextFor(request: Record<string, unknown>): ExecutionContext {
+    return {
       getHandler: () => function login() {},
       getClass: () => class AuthController {},
       switchToHttp: () => ({
-        getRequest: () => ({ headers: {} }),
-        getResponse: () => ({ header: headers }),
+        getRequest: () => request,
+        getResponse: () => ({ header: jest.fn() }),
       }),
     } as unknown as ExecutionContext;
+  }
 
-    await expect(guard.canActivate(context)).resolves.toBe(true);
+  it('counts a request without req.ip instead of exempting or failing it', async () => {
+    await expect(guard.canActivate(contextFor({ headers: {} }))).resolves.toBe(
+      true,
+    );
 
     expect(increment).toHaveBeenCalledTimes(1);
     expect(increment).toHaveBeenCalledWith(
@@ -63,5 +66,17 @@ describe('LoginThrottlerGuard', () => {
       expect.any(Number),
       expect.any(String),
     );
+  });
+
+  it('counts every request without req.ip against one shared key', async () => {
+    await guard.canActivate(contextFor({ headers: {} }));
+    await guard.canActivate(contextFor({ headers: {} }));
+    await guard.canActivate(contextFor({ headers: {}, ip: '198.51.100.7' }));
+
+    const [first, second, withIp] = increment.mock.calls.map(
+      (call: unknown[]) => call[0],
+    );
+    expect(second).toBe(first);
+    expect(withIp).not.toBe(first);
   });
 });

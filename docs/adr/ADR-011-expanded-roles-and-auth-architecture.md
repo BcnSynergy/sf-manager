@@ -561,10 +561,10 @@ and a missing or unparsable address as one shared `unresolved` key so the
 request is still counted and never errors. A `LoginThrottlerGuard` subclass
 of `ThrottlerGuard` overrides only `getTracker`.
 
-Fixed-window note, deferred to the PR that completes this addendum (PR 3/4,
-task C.6, with open question 4): the window is fixed and anchored at the first
-attempt, so up to about 2x the limit can pass around a window boundary. This
-matches the spec's "fixed time window".
+Fixed-window note: the window is fixed and anchored at the first attempt, so
+up to about 2x the limit can pass around a window boundary. This matches the
+spec's "fixed time window". PR 3/4 (task C.6) extends this addendum with open
+question 4.
 
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable

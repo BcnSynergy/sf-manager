@@ -38,6 +38,13 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   strings"). In a living spec they cannot be checked. For example, state that
   each caption uses the same translation key as its heading. Origin:
   `table-accessibility` archive RDD review, 2026-10-09.
+- **EN-5** (api): Unmap the other IPv6 forms that embed an IPv4 address in
+  the login throttle key. Today only IPv4-mapped (`::ffff:a.b.c.d`) becomes
+  IPv4. IPv4-compatible (`::a.b.c.d`) and NAT64 (`64:ff9b::/96`) addresses
+  collapse into one `/64` bucket each, so behind a NAT64 translator one client
+  could throttle all translated clients. No documented topology does this.
+  Evidence: `apps/api/src/modules/auth/presentation/guards/client-key.ts`.
+  Origin: `login-rate-limit-hardening` PR 1 RDD review (R1-001), 2026-10-12.
 
 ## Done
 
