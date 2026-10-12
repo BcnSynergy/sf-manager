@@ -62,14 +62,14 @@ Strict TDD (ADR-016): every behavior is RED, GREEN, REFACTOR. Apply records a "T
 
 ## Gate PR 1 (orchestrator)
 
-- [ ] G.1 Fresh-context independent review (sub-agent with no prior context) before push; the user confirms push, PR creation and merge. PR passes `ci`. No UI change: browser gate not applicable, state explicitly.
+- [x] G.1 Fresh-context independent review (sub-agent with no prior context) before push; the user confirms push, PR creation and merge. PR passes `ci`. No UI change: browser gate not applicable, state explicitly. Done: fresh review APPROVE WITH NITS (nits go to the PR 4 registers), PR #206 merged at d7c3379, CI green.
 
 ## Phase B: PR 2 — Postgres storage, not wired (branch `login-rate-limit-hardening/02-prisma-throttler-storage`)
 
 Branch from `main` after PR 1 merges (or independently; no code dependency on PR 1).
 
-- [ ] B.1 Schema first: add `ThrottleCounter` to `apps/api/prisma/schema.prisma` (Decision 4: `key String @id`, `hits Int`, `windowEndsAt DateTime @db.Timestamptz(3)`, `blockedUntil DateTime? @db.Timestamptz(3)`, `@@index([windowEndsAt])`, with the design comment). Generate the migration `apps/api/prisma/migrations/<timestamp>_add_throttle_counter/migration.sql`: purely additive `CREATE TABLE "ThrottleCounter"` plus index, no existing-data changes. Verify the migration applies on the hermetic test DB. (Schema change is the prerequisite for RED tests that use `prisma.throttleCounter`.)
-- [ ] B.2 RED: create `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts` (`new PrismaThrottlerStorage(new PrismaService())`, `randomUUID()` keys, same pattern as the token-denylist integration spec). Cases:
+- [x] B.1 Schema first: add `ThrottleCounter` to `apps/api/prisma/schema.prisma` (Decision 4: `key String @id`, `hits Int`, `windowEndsAt DateTime @db.Timestamptz(3)`, `blockedUntil DateTime? @db.Timestamptz(3)`, `@@index([windowEndsAt])`, with the design comment). Generate the migration `apps/api/prisma/migrations/<timestamp>_add_throttle_counter/migration.sql`: purely additive `CREATE TABLE "ThrottleCounter"` plus index, no existing-data changes. Verify the migration applies on the hermetic test DB. (Schema change is the prerequisite for RED tests that use `prisma.throttleCounter`.)
+- [x] B.2 RED: create `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts` (`new PrismaThrottlerStorage(new PrismaService())`, `randomUUID()` keys, same pattern as the token-denylist integration spec). Cases:
   - (1) first hit returns `{ totalHits: 1, timeToExpire ~ ttl seconds, isBlocked: false, timeToBlockExpire: 0 }`;
   - (2) `limit + 1` hits: the last is `isBlocked` with `timeToBlockExpire >= 1` (Attempt over the limit);
   - (3) hits while blocked are not counted (row `hits` unchanged);
@@ -80,10 +80,10 @@ Branch from `main` after PR 1 merges (or independently; no code dependency on PR
   - (8) cleanup: seed expired rows and one live row via `prisma.throttleCounter.createMany` with past and future dates; incrementing a new key removes expired rows (at most 100 per call) and leaves the live row intact;
   - (9) a 64-char hashed key is stored verbatim; no raw-IP column exists.
   RED: missing adapter module.
-- [ ] B.3 GREEN: create `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`: `PrismaThrottlerStorage implements ThrottlerStorage`, `constructor(prisma: PrismaService)`, `increment()` as the single `$queryRaw` `INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING` (Decision 5), using the DB clock; map the returned row to `ThrottlerStorageRecord`; ignore `throttlerName`; errors propagate (fail closed). Confirm exact casts and parameter types under `@prisma/adapter-pg` using the RED tests; note P2010 handling as in `prisma-review-template.repository.ts`.
-- [ ] B.4 GREEN (cleanup): in the same adapter, when the returned `totalHits === 1`, run the awaited bounded `DELETE ... WHERE "key" IN (SELECT ... LIMIT 100 FOR UPDATE SKIP LOCKED)` inside `try/catch` that swallows errors (Decision 6). Makes B.2 case (8) pass.
-- [ ] B.5 REFACTOR: tidy the SQL and mapping; confirm the adapter is NOT referenced from `auth.module.ts` (no runtime change in this PR). Run API lint, build, unit tests and `npm run test:integration --workspace=apps/api` (full integration suite, confirm migration does not disturb other specs).
-- [ ] B.6 Check `git diff --stat` (~310 expected; report code vs test split). Commit by work unit: schema + migration (B.1), adapter + integration spec (B.2-B.4). Conventional Commits.
+- [x] B.3 GREEN: create `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`: `PrismaThrottlerStorage implements ThrottlerStorage`, `constructor(prisma: PrismaService)`, `increment()` as the single `$queryRaw` `INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING` (Decision 5), using the DB clock; map the returned row to `ThrottlerStorageRecord`; ignore `throttlerName`; errors propagate (fail closed). Confirm exact casts and parameter types under `@prisma/adapter-pg` using the RED tests; note P2010 handling as in `prisma-review-template.repository.ts`.
+- [x] B.4 GREEN (cleanup): in the same adapter, when the returned `totalHits === 1`, run the awaited bounded `DELETE ... WHERE "key" IN (SELECT ... LIMIT 100 FOR UPDATE SKIP LOCKED)` inside `try/catch` that swallows errors (Decision 6). Makes B.2 case (8) pass.
+- [x] B.5 REFACTOR: tidy the SQL and mapping; confirm the adapter is NOT referenced from `auth.module.ts` (no runtime change in this PR). Run API lint, build, unit tests and `npm run test:integration --workspace=apps/api` (full integration suite, confirm migration does not disturb other specs).
+- [x] B.6 Check `git diff --stat` (~310 expected; report code vs test split). Commit by work unit: schema + migration (B.1), adapter + integration spec (B.2-B.4). Conventional Commits. Done: code 166 (adapter 135, schema 14, migration 17), tests ~317 (integration 260, unit 57); ~483 total, over the ~310 forecast and the 400 budget because review fixes added tests (size exception: excess is tests, user to accept). Commits dd467ee, d509797, ba90176 plus the cleanup-test follow-up.
 
 ## Gate PR 2 (orchestrator)
 

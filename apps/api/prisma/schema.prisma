@@ -497,3 +497,17 @@ model OrganizationProfile {
   logoAssetId String? // reserved, inert this slice (ADR-012)
   singleton   Boolean @unique @default(true) // design.md Decision 1 — Prisma-visible half of the guard; the CHECK is hand-written in migration.sql
 }
+
+// login-rate-limit-hardening/design.md Decision 4: persisted counters for
+// ThrottlerStorage. `key` is ThrottlerGuard.generateKey's sha256 hex — never
+// a raw IP. Rows are written only by raw SQL using the DB clock (now()), so
+// both timestamps are timestamptz to avoid any session-timezone ambiguity.
+model ThrottleCounter {
+  key          String    @id
+  hits         Int
+  windowEndsAt DateTime  @db.Timestamptz(3)
+  blockedUntil DateTime? @db.Timestamptz(3)
+
+  // Opportunistic cleanup filters on windowEndsAt (Decision 6).
+  @@index([windowEndsAt])
+}
