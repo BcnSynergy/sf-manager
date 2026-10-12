@@ -18,7 +18,6 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import { loginRequestSchema } from '@sf-manager/validation';
 import type { Response } from 'express';
 import { Public } from '../../../shared/presentation/decorators/public.decorator';
@@ -35,6 +34,7 @@ import {
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';
 import type { LoginRequestDto } from './dto/login-request.dto';
+import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 import type { AuthenticatedRequest } from './types';
 
 // design.md Data Flow. Cookie name/httpOnly/path/secure/sameSite/maxAge all
@@ -51,7 +51,7 @@ export class AuthController {
   ) {}
 
   @Public()
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(LoginThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiBody({
@@ -67,7 +67,7 @@ export class AuthController {
   @ApiOkResponse({ type: AuthUserResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password.' })
   @ApiTooManyRequestsResponse({
-    description: 'Too many login attempts from this IP; see Retry-After.',
+    description: 'Too many login attempts from this client; see Retry-After.',
   })
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequestDto,

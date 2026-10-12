@@ -41,12 +41,26 @@ business features yet, just the toolchain wired end-to-end.
    | `JWT_SECRET` | Yes | — | App throws at boot without it. |
    | `CORS_ORIGIN` | Yes | — | The web origin allowed to send credentialed requests (e.g. `http://localhost:5173` in dev). App throws at boot without it. |
    | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
-   | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | No | `10` | Login attempts allowed per client IP within the window. Must be a positive integer; the app throws at boot otherwise. |
+   | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | No | `10` | Login attempts allowed per client key (IPv4 address or IPv6 /64 prefix) within the window. Must be a positive integer; the app throws at boot otherwise. |
    | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the login rate-limit window, in seconds. Must be a positive integer. |
-   | `TRUST_PROXY` | No | off | `true` makes the rate limit key on the client IP from `X-Forwarded-For` (one trusted proxy hop). Leave off unless the API runs behind exactly one reverse proxy; with no proxy, `true` lets a client spoof its key. `false` or unset uses the socket address. Any other value makes the app throw at boot. |
+   | `TRUST_PROXY` | No | off | How many trusted proxy hops sit between the client and the API, for the login rate limit's client IP. Accepted: unset, empty or `false` (off, use the socket address); `true` (one hop); a positive integer N (N hops). Any other value makes the app throw at boot. See the topology table below. |
    | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `NODE_ENV` | For dev seed data | — | Must be exactly `development` for `prisma db seed` to create the dev accounts. |
+
+   `TRUST_PROXY` must match the real topology; a wrong value either lets a
+   client choose its own rate-limit key (too high) or puts every client in one
+   bucket (too low):
+
+   | Topology | `TRUST_PROXY` |
+   |----------|---------------|
+   | No proxy (API reachable directly) | unset (off) |
+   | One reverse proxy (e.g. nginx) in front of the API | `true` (or `1`) |
+   | CDN plus a reverse proxy | `2` |
+   | PaaS (e.g. Vercel) | Confirm the platform's documented number of forwarding hops before setting any value; this README asserts none. |
+
+   IPv6 clients are limited per `/64` prefix, and an IPv4-mapped IPv6 address
+   (`::ffff:a.b.c.d`) counts as the IPv4 address.
 3. Start Postgres:
    ```
    docker compose up -d

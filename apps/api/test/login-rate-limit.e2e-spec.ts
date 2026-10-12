@@ -196,4 +196,58 @@ describe('Login rate limit (e2e)', () => {
       await login(app, '198.51.100.2').expect(200);
     });
   });
+
+  describe('TRUST_PROXY=2 (two trusted hops)', () => {
+    it('keys on the client two hops back and gives each client its own counter', async () => {
+      const app = await createApp({
+        TRUST_PROXY: '2',
+        LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '2',
+      });
+
+      await login(app, '198.51.100.1, 192.0.2.10').expect(200);
+      await login(app, '198.51.100.1, 192.0.2.10').expect(200);
+      await login(app, '198.51.100.1, 192.0.2.10').expect(429);
+
+      await login(app, '198.51.100.2, 192.0.2.10').expect(200);
+    });
+
+    it('ignores spoofed entries prepended by the client', async () => {
+      const app = await createApp({
+        TRUST_PROXY: '2',
+        LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '2',
+      });
+
+      await login(app, '203.0.113.1, 198.51.100.1, 192.0.2.10').expect(200);
+      await login(app, '203.0.113.2, 198.51.100.1, 192.0.2.10').expect(200);
+      // Different spoofed prefix, same real client: still the same counter.
+      await login(app, '203.0.113.3, 198.51.100.1, 192.0.2.10').expect(429);
+    });
+  });
+
+  describe('IPv6 client keys (TRUST_PROXY=true)', () => {
+    it('shares one counter across a /64 and isolates other /64 prefixes', async () => {
+      const app = await createApp({
+        TRUST_PROXY: 'true',
+        LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '2',
+      });
+
+      await login(app, '2001:db8:0:1::1').expect(200);
+      await login(app, '2001:db8:0:1:aaaa:bbbb:cccc:dddd').expect(200);
+      // Rotating the low 64 bits does not reset the limit.
+      await login(app, '2001:db8:0:1:1:2:3:4').expect(429);
+
+      await login(app, '2001:db8:0:2::1').expect(200);
+    });
+
+    it('shares the IPv4 counter with the IPv4-mapped form', async () => {
+      const app = await createApp({
+        TRUST_PROXY: 'true',
+        LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '2',
+      });
+
+      await login(app, '198.51.100.7').expect(200);
+      await login(app, '198.51.100.7').expect(200);
+      await login(app, '::ffff:198.51.100.7').expect(429);
+    });
+  });
 });
