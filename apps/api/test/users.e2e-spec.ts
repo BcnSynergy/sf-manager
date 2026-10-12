@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
 import {
@@ -131,6 +132,8 @@ async function buildApp(
     .useValue(tokenDenylist)
     .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)
     .useValue(companyLookup)
+    .overrideProvider(ThrottlerStorage)
+    .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),

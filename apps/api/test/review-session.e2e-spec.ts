@@ -6,6 +6,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
 import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.repository.port';
@@ -197,6 +198,8 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
     .useValue(sessionRepository)
     .overrideProvider(USER_DIRECTORY)
     .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
+    .overrideProvider(ThrottlerStorage)
+    .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
