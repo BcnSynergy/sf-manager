@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import type { StringValue } from 'ms';
 import { HashingModule } from '../../shared/infrastructure/hashing/hashing.module';
+import { PrismaService } from '../../shared/infrastructure/persistence/prisma.service';
 import { UsersModule } from '../users/users.module';
 import { PERMISSION_CHECKER } from './application/ports/permission-checker.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
@@ -17,6 +18,7 @@ import {
   getAuthConfig,
 } from './infrastructure/config/auth.config';
 import { getLoginRateLimitConfig } from './infrastructure/config/login-rate-limit.config';
+import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
@@ -46,10 +48,20 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // throttler MUST stay named 'default': v6 suffixes headers of named
     // throttlers (Retry-After-login), and only 'default' emits a plain
     // Retry-After. forRootAsync so env is read at module initialisation.
+    //
+    // Counters live in Postgres (PrismaThrottlerStorage, TD-30) so they
+    // survive restarts and are shared across API instances. PrismaModule is
+    // @Global(), so PrismaService is injectable here. Fail closed: a storage
+    // error refuses the login attempt (500). e2e suites that mock
+    // PrismaService override ThrottlerStorage with the in-memory store.
     ThrottlerModule.forRootAsync({
-      useFactory: () => {
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => {
         const { maxAttempts, windowMs } = getLoginRateLimitConfig();
-        return [{ name: 'default', ttl: windowMs, limit: maxAttempts }];
+        return {
+          throttlers: [{ name: 'default', ttl: windowMs, limit: maxAttempts }],
+          storage: new PrismaThrottlerStorage(prisma),
+        };
       },
     }),
     JwtModule.registerAsync({

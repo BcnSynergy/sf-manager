@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
 import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.repository.port';
@@ -144,6 +145,8 @@ async function buildApp(
     .useValue(reader)
     .overrideProvider(CLOCK)
     .useValue(new FixedClock(NOW))
+    .overrideProvider(ThrottlerStorage)
+    .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
