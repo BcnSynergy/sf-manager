@@ -31,45 +31,45 @@ Strict TDD (vitest + Testing Library in `apps/web`, runner `npm run test --works
 
 ## Phase A: Branch and baseline (PR 1)
 
-- [ ] A.1 Create branch `stale-401-session-guard/01-session-epoch-guard` from `main` (the untracked change folder, including `explore.md`, travels with it).
-- [ ] A.2 Baseline: from the repo root run `npm run lint --workspace=apps/web`, `npm run test --workspace=apps/web`; confirm green before any edit (existing tests "session ended on a mid-session 401" and the client "unauthorized handler" cases are the regression net).
-- [ ] A.3 Commit the change artifacts as `docs(openspec): add stale-401-session-guard exploration, proposal, spec, design and tasks` (explore.md, proposal.md, design.md, specs/authentication/spec.md, tasks.md).
+- [x] A.1 Create branch `stale-401-session-guard/01-session-epoch-guard` from `main` (the untracked change folder, including `explore.md`, travels with it).
+- [x] A.2 Baseline: from the repo root run `npm run lint --workspace=apps/web`, `npm run test --workspace=apps/web`; confirm green before any edit (existing tests "session ended on a mid-session 401" and the client "unauthorized handler" cases are the regression net).
+- [x] A.3 Commit the change artifacts as `docs(openspec): add stale-401-session-guard exploration, proposal, spec, design and tasks` (explore.md, proposal.md, design.md, specs/authentication/spec.md, tasks.md).
 
 ## Phase B: Epoch in the API client (spec: Redirect When Unauthenticated; Session-Ended Notice)
 
-- [ ] B.1 RED: in `apps/web/src/api/client.test.ts` ("unauthorized handler" describe) add: (a) a `fetch` stub returns a deferred promise; call `apiFetch`, call `advanceSessionEpoch()`, resolve with 401; assert the handler is not called and the call rejects with `ApiError` status 401 (Stale 401 keeps caller error). (b) `advanceSessionEpoch()` first, then `apiFetch` with an immediate 401; assert the handler is called once (triangulates "captured at start", not "ever changed"). No reset hook (Decision 2). RED: `advanceSessionEpoch` is not exported.
-- [ ] B.2 GREEN: `apps/web/src/api/client.ts`: add module-level `let sessionEpoch = 0`, export `advanceSessionEpoch()`, capture `const epochAtStart = sessionEpoch;` as the first statement of `apiFetch`, and guard the 401 branch with `epochAtStart === sessionEpoch`; `ApiError` is still thrown in every case (Decisions 1 and 4). Add a comment referencing the design.
-- [ ] B.3 REFACTOR and check: existing client cases (invoke, 403, 500, no handler, cleared handler) still green; web lint. Commit `fix(web): skip the unauthorized handler for requests from an earlier session epoch`.
+- [x] B.1 RED: in `apps/web/src/api/client.test.ts` ("unauthorized handler" describe) add: (a) a `fetch` stub returns a deferred promise; call `apiFetch`, call `advanceSessionEpoch()`, resolve with 401; assert the handler is not called and the call rejects with `ApiError` status 401 (Stale 401 keeps caller error). (b) `advanceSessionEpoch()` first, then `apiFetch` with an immediate 401; assert the handler is called once (triangulates "captured at start", not "ever changed"). No reset hook (Decision 2). RED: `advanceSessionEpoch` is not exported.
+- [x] B.2 GREEN: `apps/web/src/api/client.ts`: add module-level `let sessionEpoch = 0`, export `advanceSessionEpoch()`, capture `const epochAtStart = sessionEpoch;` as the first statement of `apiFetch`, and guard the 401 branch with `epochAtStart === sessionEpoch`; `ApiError` is still thrown in every case (Decisions 1 and 4). Add a comment referencing the design.
+- [x] B.3 REFACTOR and check: existing client cases (invoke, 403, 500, no handler, cleared handler) still green; web lint. Commit `fix(web): skip the unauthorized handler for requests from an earlier session epoch`.
 
 ## Phase C: Epoch advance points in AuthProvider (spec: stale 401 after re-login; across logout)
 
-- [ ] C.1 Test helper: extend `sessionFetch` in `apps/web/src/auth/AuthProvider.test.tsx` with an optional `data?: () => Promise<Response>` so a test can hold a data response open (mirrors the existing `logout` option). Existing tests unchanged in intent.
-- [ ] C.2 RED: add "stale 401 after re-login keeps the new session": logged in via `/auth/me`; start `apiFetch('/users')` with a deferred 401; click login and wait for the user; resolve the 401; assert user still set, `probe-ended` false, and the call rejected with `ApiError(401)`. Expected RED: the new session is ended.
-- [ ] C.3 GREEN: `apps/web/src/auth/AuthProvider.tsx` `login()`: call `advanceSessionEpoch()` immediately after the `!response.ok` check, before `await response.json()`, `setSessionEnded(false)` and `updateUser(data)`, with an ordering comment (Decision 3).
-- [ ] C.4 Characterization: add "stale 401 across logout raises no notice and keeps the new session": logged in; start a deferred data call; logout, then login; resolve the 401; assert user set and `probe-ended` false. It passes after C.3 (the login advance covers it). Verify with a mutation: remove the C.3 advance and confirm both C.2 and C.4 fail, then restore.
-- [ ] C.5 GREEN (defensive, no observable RED): `logout()`: call `advanceSessionEpoch()` as the first statement next to `userRef.current = null`, before `await fetch('/auth/logout')`. Keeps "every session boundary advances the epoch" true on its own. Note in apply-progress that no test can fail without it, because the `userRef` null check already covers a 401 landing between logout and the next login.
-- [ ] C.6 GREEN (defensive, no observable RED): in the unauthorized handler, call `advanceSessionEpoch()` after the `userRef.current === null` early return and before `updateUser(null)` / `setSessionEnded(true)`, so concurrent 401s from the same epoch collapse. Existing "two collapsed 401s" and "401 during logout" tests must stay green. The mount-time `/auth/me` restore does NOT advance the epoch (gap answer 5).
-- [ ] C.7 REFACTOR and check: all `AuthProvider.test.tsx` cases green, web lint. Commit `fix(web): advance the session epoch at login, logout and session end`.
+- [x] C.1 Test helper: extend `sessionFetch` in `apps/web/src/auth/AuthProvider.test.tsx` with an optional `data?: () => Promise<Response>` so a test can hold a data response open (mirrors the existing `logout` option). Existing tests unchanged in intent.
+- [x] C.2 RED: add "stale 401 after re-login keeps the new session": logged in via `/auth/me`; start `apiFetch('/users')` with a deferred 401; click login and wait for the user; resolve the 401; assert user still set, `probe-ended` false, and the call rejected with `ApiError(401)`. Expected RED: the new session is ended.
+- [x] C.3 GREEN: `apps/web/src/auth/AuthProvider.tsx` `login()`: call `advanceSessionEpoch()` immediately after the `!response.ok` check, before `await response.json()`, `setSessionEnded(false)` and `updateUser(data)`, with an ordering comment (Decision 3).
+- [x] C.4 Characterization: add "stale 401 across logout raises no notice and keeps the new session": logged in; start a deferred data call; logout, then login; resolve the 401; assert user set and `probe-ended` false. It passes after C.3 (the login advance covers it). Verify with a mutation: remove the C.3 advance and confirm both C.2 and C.4 fail, then restore.
+- [x] C.5 GREEN (defensive, no observable RED): `logout()`: call `advanceSessionEpoch()` as the first statement next to `userRef.current = null`, before `await fetch('/auth/logout')`. Keeps "every session boundary advances the epoch" true on its own. Note in apply-progress that no test can fail without it, because the `userRef` null check already covers a 401 landing between logout and the next login.
+- [x] C.6 GREEN (defensive, no observable RED): in the unauthorized handler, call `advanceSessionEpoch()` after the `userRef.current === null` early return and before `updateUser(null)` / `setSessionEnded(true)`, so concurrent 401s from the same epoch collapse. Existing "two collapsed 401s" and "401 during logout" tests must stay green. The mount-time `/auth/me` restore does NOT advance the epoch (gap answer 5).
+- [x] C.7 REFACTOR and check: all `AuthProvider.test.tsx` cases green, web lint. Commit `fix(web): advance the session epoch at login, logout and session end`.
 
 ## Phase D: Whole-flow test (ADR-011 addendum item 6)
 
-- [ ] D.1 Create `apps/web/src/auth/session-ended-flow.test.tsx` (`import '../i18n'` as `LoginPage.test.tsx` does): real `AuthProvider`, `MemoryRouter` at `/`, `Routes` with a `ProtectedRoute`-wrapped probe at `/` and the real `LoginPage` at `/login`; fetch stubbed so `/auth/me` returns a user and any data call returns 401. Flow: wait for the protected probe; `apiFetch` returns 401; assert the probe is gone, `LoginPage` is rendered and `login-session-ended` is shown. This is a characterization test (current behavior already satisfies it; it closes the coverage gap).
-- [ ] D.2 Mutation check: temporarily make the handler a no-op (or drop `updateUser(null)`) and confirm D.1 fails; restore. Run web lint and the new file. Commit `test(web): cover the mid-session 401 redirect and session-ended notice end to end`.
+- [x] D.1 Create `apps/web/src/auth/session-ended-flow.test.tsx` (`import '../i18n'` as `LoginPage.test.tsx` does): real `AuthProvider`, `MemoryRouter` at `/`, `Routes` with a `ProtectedRoute`-wrapped probe at `/` and the real `LoginPage` at `/login`; fetch stubbed so `/auth/me` returns a user and any data call returns 401. Flow: wait for the protected probe; `apiFetch` returns 401; assert the probe is gone, `LoginPage` is rendered and `login-session-ended` is shown. This is a characterization test (current behavior already satisfies it; it closes the coverage gap).
+- [x] D.2 Mutation check: temporarily make the handler a no-op (or drop `updateUser(null)`) and confirm D.1 fails; restore. Run web lint and the new file. Commit `test(web): cover the mid-session 401 redirect and session-ended notice end to end`.
 
 ## Phase E: Spec and registers (docs, TDD N/A)
 
-- [ ] E.1 Re-read `specs/authentication/spec.md` (delta, two MODIFIED requirements) against the implemented behavior; fix any wording drift. Every scenario maps to a test: Current-session 401 -> D.1 and the existing mid-session tests; Stale 401 after re-login -> C.2; Stale 401 across logout and new login -> C.4; Stale 401 across logout (no notice) -> C.4; caller still gets 401 -> B.1 and C.2.
-- [ ] E.2 `docs/technical-debt.md`: move TD-25 to the Resolved section with change name `stale-401-session-guard` and PR 1/2 (PR number added once known). IDs are never reused or renumbered.
-- [ ] E.3 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`: add a resolution note to addendum 2026-10-06 item 6 (epoch guard in `client.ts`, advance points, whole-flow test in `session-ended-flow.test.tsx`).
-- [ ] E.4 Commit `docs: resolve TD-25 and note the ADR-011 item 6 resolution`.
+- [x] E.1 Re-read `specs/authentication/spec.md` (delta, two MODIFIED requirements) against the implemented behavior; fix any wording drift. Every scenario maps to a test: Current-session 401 -> D.1 and the existing mid-session tests; Stale 401 after re-login -> C.2; Stale 401 across logout and new login -> C.4; Stale 401 across logout (no notice) -> C.4; caller still gets 401 -> B.1 and C.2.
+- [x] E.2 `docs/technical-debt.md`: move TD-25 to the Resolved section with change name `stale-401-session-guard` and PR 1/2 (PR number added once known). IDs are never reused or renumbered.
+- [x] E.3 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`: add a resolution note to addendum 2026-10-06 item 6 (epoch guard in `client.ts`, advance points, whole-flow test in `session-ended-flow.test.tsx`).
+- [x] E.4 Commit `docs: resolve TD-25 and note the ADR-011 item 6 resolution`.
 
 ## Phase F: Verification (PR 1)
 
-- [ ] F.1 `npm run lint --workspace=apps/web` and `npm run build --workspace=apps/web` (`tsc -b && vite build`) pass.
-- [ ] F.2 `npm run test --workspace=apps/web` passes in full; record the pass count and the RED/GREEN evidence per behavior task.
-- [ ] F.3 Repo root scripts (turbo): `npm run lint`, `npm run build`, `npm run test`. The API is untouched; confirm `git diff --stat main -- apps/api` is empty.
+- [x] F.1 `npm run lint --workspace=apps/web` and `npm run build --workspace=apps/web` (`tsc -b && vite build`) pass.
+- [x] F.2 `npm run test --workspace=apps/web` passes in full; record the pass count and the RED/GREEN evidence per behavior task.
+- [x] F.3 Repo root scripts (turbo): `npm run lint`, `npm run build`, `npm run test`. The API is untouched; confirm `git diff --stat main -- apps/api` is empty.
 - [ ] F.4 Browser pass (claude-in-chrome; `npm run dev` from the repo root; the user logs in, since Claude cannot type passwords). Golden-path regression only: login, logout, a mid-session 401 showing the session-ended notice, redirect to `/login`. Optionally verify the notice in ES/CA. The stale-401 race is NOT browser-verified; report it as test-verified only.
-- [ ] F.5 Check `git diff --stat main` (expected ~190 changed lines; report the code vs test vs docs split).
+- [x] F.5 Check `git diff --stat main` (expected ~190 changed lines; report the code vs test vs docs split).
 
 ## Gate PR 1 (orchestrator)
 
