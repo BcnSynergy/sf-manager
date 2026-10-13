@@ -59,7 +59,7 @@ Per `verify-report` (Engram #563, 2026-10-13, after the PR 1/2 merge): PASS, 0 C
 
 ## Archive Readback
 
-The folder was moved with `git mv` after a recursive snapshot; `diff -r <snapshot> <archive folder>` produced empty output (exit 0). The untracked `verify-report.md` moved with it and is still untracked.
+The folder was moved with `git mv` after a recursive snapshot; `diff -r <snapshot> <archive folder>` produced empty output (exit 0). The then-untracked `verify-report.md` moved with it and was committed with the archive.
 
 ## Engram Observation IDs (traceability)
 
