@@ -146,6 +146,9 @@ function SessionProbe() {
 type SessionFetchOptions = {
   loggedIn: boolean;
   logout?: () => Promise<Response>;
+  // Holds a data call's response open so a test can resolve it after a
+  // session boundary (stale-401-session-guard).
+  data?: () => Promise<Response>;
 };
 
 function sessionFetch(options: SessionFetchOptions) {
@@ -168,6 +171,9 @@ function sessionFetch(options: SessionFetchOptions) {
         : Promise.resolve({ ok: true, status: 204 } as Response);
     }
     // Any data call: the API answers 401 (the session ended server-side).
+    if (options.data) {
+      return options.data();
+    }
     return Promise.resolve({
       ok: false,
       status: 401,
@@ -264,6 +270,95 @@ describe('AuthProvider — session ended on a mid-session 401', () => {
 
     await waitFor(() => expect(screen.getByTestId('probe-user')).toHaveTextContent('none'));
     expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+  });
+
+  // stale-401-session-guard (TD-25): a 401 for a request issued under an
+  // earlier session must not end the session that replaced it.
+  function deferredData() {
+    let resolve!: () => void;
+    const data = () =>
+      new Promise<Response>((res) => {
+        resolve = () =>
+          res({ ok: false, status: 401, json: async () => ({}) } as Response);
+      });
+    return { data, resolve: () => resolve() };
+  }
+
+  it('keeps the new session when a stale 401 lands after a re-login', async () => {
+    const held = deferredData();
+    await renderSession({ loggedIn: true, data: held.data });
+
+    let result: unknown;
+    const pending = apiFetch('/users').catch((e: unknown) => {
+      result = e;
+    });
+    await act(async () => {
+      screen.getByTestId('probe-login').click();
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user')).toHaveTextContent('admin@sf-manager.example'),
+    );
+    await act(async () => {
+      held.resolve();
+      await pending;
+    });
+
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('admin@sf-manager.example');
+    expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+    expect(result).toBeInstanceOf(ApiError);
+    expect((result as ApiError).status).toBe(401);
+  });
+
+  it('raises no notice for a stale 401 that lands after a logout', async () => {
+    const held = deferredData();
+    await renderSession({ loggedIn: true, data: held.data });
+
+    let result: unknown;
+    const pending = apiFetch('/users').catch((e: unknown) => {
+      result = e;
+    });
+    await act(async () => {
+      screen.getByTestId('probe-logout').click();
+    });
+    await waitFor(() => expect(screen.getByTestId('probe-user')).toHaveTextContent('none'));
+    await act(async () => {
+      held.resolve();
+      await pending;
+    });
+
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('none');
+    expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+    expect(result).toBeInstanceOf(ApiError);
+    expect((result as ApiError).status).toBe(401);
+  });
+
+  it('raises no notice and keeps the new session for a stale 401 across logout', async () => {
+    const held = deferredData();
+    await renderSession({ loggedIn: true, data: held.data });
+
+    let result: unknown;
+    const pending = apiFetch('/users').catch((e: unknown) => {
+      result = e;
+    });
+    await act(async () => {
+      screen.getByTestId('probe-logout').click();
+    });
+    await waitFor(() => expect(screen.getByTestId('probe-user')).toHaveTextContent('none'));
+    await act(async () => {
+      screen.getByTestId('probe-login').click();
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user')).toHaveTextContent('admin@sf-manager.example'),
+    );
+    await act(async () => {
+      held.resolve();
+      await pending;
+    });
+
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('admin@sf-manager.example');
+    expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+    expect(result).toBeInstanceOf(ApiError);
+    expect((result as ApiError).status).toBe(401);
   });
 
   it('clears the handler when the provider unmounts', async () => {

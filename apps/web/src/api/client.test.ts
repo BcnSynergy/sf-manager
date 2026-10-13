@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { apiFetch, ApiError, setUnauthorizedHandler } from './client';
+import { advanceSessionEpoch, apiFetch, ApiError, setUnauthorizedHandler } from './client';
 
 function mockResponse(init: {
   ok: boolean;
@@ -255,5 +255,42 @@ describe('apiFetch — unauthorized handler', () => {
     await apiFetch('/users').catch(() => undefined);
 
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  // stale-401-session-guard design.md Decision 1/2: the epoch is compared
+  // relative to the value captured at request start, so no reset hook is
+  // needed between tests.
+  it('skips the handler but still throws ApiError(401) when the epoch advances mid-request', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    let respond!: (response: Response) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockReturnValue(
+        new Promise<Response>((resolve) => {
+          respond = resolve;
+        }),
+      ),
+    );
+
+    const pending = apiFetch('/users').catch((e: unknown) => e);
+    advanceSessionEpoch();
+    respond(mockResponse({ ok: false, status: 401 }));
+    const error = await pending;
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+  });
+
+  it('invokes the handler when the epoch advanced before the request started', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    advanceSessionEpoch();
+    stubStatus(401);
+
+    await apiFetch('/users').catch(() => undefined);
+
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 });

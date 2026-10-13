@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Role } from '@sf-manager/validation';
-import { ApiError, setUnauthorizedHandler } from '../api/client';
+import { ApiError, advanceSessionEpoch, setUnauthorizedHandler } from '../api/client';
 
 // role is returned as-is by both POST /auth/login and GET /auth/me
 // (design.md "Data Flow") — the frontend does not decide or cache it
@@ -67,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userRef.current === null) {
         return;
       }
+      // The session ends here: 401s from the same epoch checked afterwards
+      // skip the handler (design.md Decision 3).
+      advanceSessionEpoch();
       updateUser(null);
       setSessionEnded(true);
     });
@@ -89,6 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new ApiError(response.status);
     }
 
+    // stale-401-session-guard design.md Decision 3: the new Set-Cookie is
+    // applied when the headers arrive, so this is the session boundary.
+    // Advance before any further await and before updateUser makes the new
+    // session visible to the handler; otherwise a 401 from a request issued
+    // under the previous session could still end this one.
+    advanceSessionEpoch();
     const data = (await response.json()) as AuthUser;
     setSessionEnded(false);
     updateUser(data);
@@ -105,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // landing mid-logout is ignored by the handler instead of showing the
     // session-ended notice after an explicit logout.
     userRef.current = null;
+    advanceSessionEpoch();
     setSessionEnded(false);
     try {
       await fetch(`${API_BASE_URL}/auth/logout`, {

@@ -485,6 +485,15 @@ accepted) and the staleness note in the 2026-09-09 addendum (item 5, `role`
    `/login`; the halves are tested separately and the whole flow was
    browser-verified.
 
+   **Resolved by `stale-401-session-guard` (TD-25).** `apiFetch` captures a
+   session epoch when a request starts and skips the unauthorized handler if
+   it has advanced; the caller still receives `ApiError(401)`.
+   `AuthProvider` advances the epoch right after a successful login response
+   (before the user is set), at the start of `logout()`, and when the
+   handler ends a session; the mount-time `/auth/me` restore does not. The
+   whole flow (mid-session `401`, redirect to `/login`, session-ended
+   notice) is covered by `apps/web/src/auth/session-ended-flow.test.tsx`.
+
 ## Addendum (2026-10-07): `login-rate-limit` — Decision 4's rate limiting made concrete
 
 `POST /auth/login` is now rate-limited per client IP with `@nestjs/throttler`
