@@ -51,7 +51,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 
 - [x] T1 Blocked attempts do not rewrite the row. Route: delegated direct (writer trigger: adapter + specs). RED: an integration test proving a blocked attempt leaves the row's tuple unchanged (for example `xmin` unchanged) while still returning the blocked state and `timeToBlockExpire`. GREEN: conditional `DO UPDATE ... WHERE`, read fallback when no row is returned. All existing adapter tests stay green.
 - [x] T2 `expiresAt` column and index for cleanup. Route: delegated direct. RED: an integration test where many expired-but-still-blocked rows precede deletable rows and cleanup still deletes the deletable ones, scanning only deletable rows (assert via the predicate/index or by row outcome). GREEN: Prisma schema + migration (add column, backfill, index, drop old index), upsert maintains `expiresAt`, cleanup selects `expiresAt < now()`.
-- [ ] T3 `statement_timeout` for cleanup. Route: delegated direct. RED: a test showing the cleanup runs under a bounded timeout and a timeout failure is logged and does not fail the login. GREEN: cleanup runs in a transaction with `SET LOCAL statement_timeout`.
+- [x] T3 `statement_timeout` for cleanup. Route: delegated direct. RED: a test showing the cleanup runs under a bounded timeout and a timeout failure is logged and does not fail the login. GREEN: cleanup runs in a transaction with `SET LOCAL statement_timeout`.
 - [ ] T4 Docs and closure. README throttle note, TD-35 to Resolved, design/ADR note if needed; full unit, integration and e2e suites, lint, build.
 
 ## Acceptance Criteria
@@ -66,6 +66,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 - 2026-10-13: exploration done; approach confirmed by the user; document created.
 - 2026-10-13: T1 done (route: delegated direct, single writer). Blocked attempts skip the DO UPDATE via `WHERE blockedUntil IS NULL OR blockedUntil <= now()` and a follow-up `readBlocked` SELECT builds the record; a missing row after both statements still fails closed.
 - 2026-10-13: T2 done. `expiresAt` + `ThrottleCounter_expiresAt_idx` replace the windowEndsAt index; migration `20261013120000_throttle_counter_expires_at` hand-written (no shadow DB; `prisma validate` and the hermetic integration DB applying all migrations confirm it); upsert maintains `expiresAt` in every branch; cleanup selects `expiresAt < now()`.
+- 2026-10-13: T3 done. Cleanup runs in `$transaction` with `set_config('statement_timeout', '500ms', true)` (transaction-local, equivalent to SET LOCAL but bindable, so no raw SQL interpolation) before the delete; constant `CLEANUP_STATEMENT_TIMEOUT_MS = 500`. A real timeout is not forced in an integration test (non-deterministic); failure logging stays covered by the unit spec.
 
 ## Verification Evidence
 
@@ -78,6 +79,12 @@ T2:
 - Index assertion: `EXPLAIN` inside a transaction with `SET LOCAL enable_seqscan = off` (the table is too small for the planner to choose the index on its own), asserting the plan names `ThrottleCounter_expiresAt_idx`. It proves the predicate can use the index, not that the planner prefers it at small sizes.
 - GREEN: adapter suite 16/16.
 
+T3:
+- RED: new unit tests failed (`Expected number of calls: 1 / Received: 0` for `$transaction`; the cleanup-failure spec also failed against the old top-level `$executeRaw`).
+- GREEN: adapter unit spec 6/6; integration adds a no-leak check (`SHOW statement_timeout` is `0` on 5 pooled connections after a cleanup).
+
 ## Next Step
 
-T3.
+T4.
+
+Final checks after T3: lint 0 errors (4 pre-existing warnings), unit 1429, integration 229, e2e 470 passed, root build green.

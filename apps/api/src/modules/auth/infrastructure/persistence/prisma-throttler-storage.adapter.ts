@@ -27,6 +27,13 @@ type ThrottlerStorageRecord = Awaited<
 // for an unbounded delete (Decision 6).
 const CLEANUP_BATCH_SIZE = 100;
 
+// Upper bound on the cleanup statement's runtime. The cleanup is awaited on the
+// login path and shares the single Prisma pool with the whole API, so a slow or
+// lock-starved delete must give its connection back quickly (TD-35). A
+// healthy batch of 100 index-ordered rows takes a few milliseconds; on timeout
+// the failure is logged and the login proceeds.
+const CLEANUP_STATEMENT_TIMEOUT_MS = 500;
+
 @Injectable()
 export class PrismaThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger(PrismaThrottlerStorage.name);
@@ -159,14 +166,22 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
   // deleteExpired() in LoginUseCase/LogoutUseCase).
   private async deleteExpired(): Promise<void> {
     try {
-      await this.prisma.$executeRaw`
-        DELETE FROM "ThrottleCounter" WHERE "key" IN (
-          SELECT "key" FROM "ThrottleCounter"
-          WHERE "expiresAt" < now()
-          LIMIT ${CLEANUP_BATCH_SIZE}::int
-          FOR UPDATE SKIP LOCKED
-        )
-      `;
+      await this.prisma.$transaction(async (tx) => {
+        // set_config(..., true) is SET LOCAL with a bindable value: the
+        // timeout ends with the transaction, so it can never leak onto the
+        // pooled connection and affect other queries.
+        await tx.$executeRaw`
+          SELECT set_config('statement_timeout', ${`${CLEANUP_STATEMENT_TIMEOUT_MS}ms`}, true)
+        `;
+        await tx.$executeRaw`
+          DELETE FROM "ThrottleCounter" WHERE "key" IN (
+            SELECT "key" FROM "ThrottleCounter"
+            WHERE "expiresAt" < now()
+            LIMIT ${CLEANUP_BATCH_SIZE}::int
+            FOR UPDATE SKIP LOCKED
+          )
+        `;
+      });
     } catch (error) {
       // Swallowed (see above) but not silent: a persistently failing cleanup
       // would otherwise let the table grow unnoticed.

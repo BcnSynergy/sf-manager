@@ -307,6 +307,25 @@ describe('PrismaThrottlerStorage (integration)', () => {
     });
   });
 
+  it('runs the cleanup under a transaction-local timeout that does not leak to the pool', async () => {
+    // A new key opens a window, so the cleanup (and its SET LOCAL equivalent)
+    // runs. Every pooled connection must still report the server default.
+    await storage.increment(randomUUID(), TTL_MS, 10, TTL_MS, NAME);
+
+    const settings = await Promise.all(
+      Array.from(
+        { length: 5 },
+        () =>
+          prisma.$queryRaw<
+            { statement_timeout: string }[]
+          >`SHOW statement_timeout`,
+      ),
+    );
+    expect(settings.map((r) => r[0]?.statement_timeout)).toEqual(
+      Array.from({ length: 5 }, () => '0'),
+    );
+  });
+
   it('accepts a ttl and block duration above 2^31-1 ms', async () => {
     const key = randomUUID();
     const hugeMs = 3_000_000_000;
