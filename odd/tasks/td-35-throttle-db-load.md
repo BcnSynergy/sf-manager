@@ -68,6 +68,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 - 2026-10-13: T2 done. `expiresAt` + `ThrottleCounter_expiresAt_idx` replace the windowEndsAt index; migration `20261013120000_throttle_counter_expires_at` hand-written (no shadow DB; `prisma validate` and the hermetic integration DB applying all migrations confirm it); upsert maintains `expiresAt` in every branch; cleanup selects `expiresAt < now()`.
 - 2026-10-13: T3 done. Cleanup runs in `$transaction` with `set_config('statement_timeout', '500ms', true)` (transaction-local, equivalent to SET LOCAL but bindable, so no raw SQL interpolation) before the delete; constant `CLEANUP_STATEMENT_TIMEOUT_MS = 500`. A real timeout is not forced in an integration test (non-deterministic); failure logging stays covered by the unit spec.
 - 2026-10-13: T1 follow-up (parent review). The blocked read moved into the same statement as the upsert (`WITH upsert ... UNION ALL SELECT ... WHERE NOT EXISTS (SELECT 1 FROM upsert)`), removing `readBlocked()` and its race (cleanup deleting the row, or the block ending, between two statements).
+- 2026-10-13: native review CRITICAL (NOT NULL `expiresAt` without default broke the previous adapter during a rolling deploy or rollback). Fix: the migration adds a `BEFORE INSERT OR UPDATE` trigger that derives `expiresAt`, the backfill goes through it, and the adapter no longer writes the column. The blocked path does not UPDATE, so the trigger does not fire there.
 
 ## Verification Evidence
 
@@ -93,3 +94,5 @@ T3:
 RDD review of the branch, fresh-context review, then ask the user before push, PR and merge. Fill the TD-35 PR number once the PR exists.
 
 Final checks after the T1 follow-up (5b938ae): lint 0 errors (4 pre-existing warnings), unit 1430, integration 229 (adapter suite green on 3 consecutive runs), e2e 470 passed (parent re-run), root build green (parent re-run).
+
+Trigger fix: RED = old-style INSERT/ON CONFLICT without expiresAt failed with 23502 (not-null violation); GREEN = see commit checks (lint, unit, integration).

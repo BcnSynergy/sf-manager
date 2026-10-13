@@ -1,13 +1,28 @@
 -- TD-35: ThrottleCounter cleanup filters on a single column. expiresAt is the
 -- later of windowEndsAt and blockedUntil, so "deletable" is one indexed range
 -- condition instead of a windowEndsAt scan that filters out blocked rows.
--- Existing rows are backfilled before the column becomes NOT NULL.
+--
+-- A BEFORE INSERT OR UPDATE trigger owns the value, so writers that do not know
+-- the column (the previous adapter version during a rolling deploy or a
+-- code-only rollback) keep working and never leave a stale expiresAt behind.
+-- NOT NULL is checked after BEFORE triggers, so inserts that omit it succeed.
 
 -- AlterTable
 ALTER TABLE "ThrottleCounter" ADD COLUMN "expiresAt" TIMESTAMPTZ(3);
 
-UPDATE "ThrottleCounter"
-SET "expiresAt" = GREATEST("windowEndsAt", COALESCE("blockedUntil", "windowEndsAt"));
+CREATE FUNCTION "throttle_counter_set_expires_at"() RETURNS trigger AS $$
+BEGIN
+  NEW."expiresAt" := GREATEST(NEW."windowEndsAt", COALESCE(NEW."blockedUntil", NEW."windowEndsAt"));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "ThrottleCounter_set_expires_at"
+BEFORE INSERT OR UPDATE ON "ThrottleCounter"
+FOR EACH ROW EXECUTE FUNCTION "throttle_counter_set_expires_at"();
+
+-- Backfill through the trigger.
+UPDATE "ThrottleCounter" SET "windowEndsAt" = "windowEndsAt";
 
 ALTER TABLE "ThrottleCounter" ALTER COLUMN "expiresAt" SET NOT NULL;
 

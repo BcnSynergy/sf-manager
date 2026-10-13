@@ -289,6 +289,36 @@ describe('PrismaThrottlerStorage (integration)', () => {
       );
     });
 
+    it('derives expiresAt for writers that omit it (previous adapter version)', async () => {
+      // The pre-expiresAt adapter inserted without the column and updated
+      // windowEndsAt/blockedUntil without touching it; a rolling deploy or a
+      // code-only rollback must keep working and keep expiresAt correct.
+      const key = randomUUID();
+      await prisma.$executeRaw`
+        INSERT INTO "ThrottleCounter" ("key", "hits", "windowEndsAt", "blockedUntil")
+        VALUES (${key}, 1, now() + interval '60 seconds', NULL)
+      `;
+      const inserted = await prisma.throttleCounter.findUniqueOrThrow({
+        where: { key },
+      });
+      expect(inserted.expiresAt.getTime()).toBe(
+        inserted.windowEndsAt.getTime(),
+      );
+
+      await prisma.$executeRaw`
+        INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
+        VALUES (${key}, 1, now() + interval '60 seconds', NULL)
+        ON CONFLICT ("key") DO UPDATE SET
+          "hits" = t."hits" + 1,
+          "blockedUntil" = now() + interval '600 seconds'
+      `;
+      const blocked = await prisma.throttleCounter.findUniqueOrThrow({
+        where: { key },
+      });
+      expect(blocked.blockedUntil).not.toBeNull();
+      expect(blocked.expiresAt.getTime()).toBe(blocked.blockedUntil?.getTime());
+    });
+
     it('serves the cleanup predicate from the expiresAt index', async () => {
       // enable_seqscan = off only removes the planner's cost preference on a
       // tiny table; it still proves the predicate can use the index.
