@@ -121,10 +121,6 @@ project's Engram memory on 2026-10-09.
   and W3; `apps/api/test/review-history.e2e-spec.ts` has no such case (the
   comment at lines 2255-2263 defers W1 to the admin equivalent). Origin:
   `review-history-manager-capability`.
-- **TD-26**: No integrated test of the mid-session 401 to `/login` redirect.
-  The flag and the redirect are tested separately; the whole flow was only
-  browser-verified. Evidence: `auth-live-user-check` archive-report W-1.
-  Origin: `auth-live-user-check`.
 - **TD-27**: The public-endpoint "no lookup" behavior is proven at unit level
   only. Evidence: `auth-live-user-check` archive-report S-1. Origin:
   `auth-live-user-check`.
@@ -192,6 +188,12 @@ project's Engram memory on 2026-10-09.
   handler when the session epoch advanced since the request started
   (`apps/web/src/api/client.ts`), and `AuthProvider` advances it at login,
   logout and session end. Origin: `auth-live-user-check`.
+- **TD-26**: No integrated test of the mid-session 401 to `/login` redirect.
+  Resolved by `stale-401-session-guard` (PR 1/2, #210):
+  `apps/web/src/auth/session-ended-flow.test.tsx` renders the real
+  `AuthProvider`, `ProtectedRoute` and `LoginPage` and covers the 401, the
+  redirect to `/login` and the session-ended notice in one test. Origin:
+  `auth-live-user-check`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
