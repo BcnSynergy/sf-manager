@@ -188,11 +188,11 @@ project's Engram memory on 2026-10-09.
 - **TD-35**: Every login attempt, including an already-blocked one, rewrote
   the `ThrottleCounter` row, and the awaited expired-row cleanup could scan
   expired-but-still-blocked rows with no statement timeout. Resolved by
-  `td-35-throttle-db-load` (ODD, #213): a blocked
-  attempt locks the row but writes nothing, cleanup selects on an indexed
+  `td-35-throttle-db-load` (ODD, #213): a blocked attempt only locks the row
+  and does not rewrite it, cleanup selects on an indexed, trigger-maintained
   `expiresAt` column, and it runs under a 500 ms `statement_timeout`
   (`apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`).
-  Origin: `login-rate-limit-hardening`.
+  Origin: `login-rate-limit-hardening` PR 2 and PR 3 RDD reviews, 2026-10-12.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

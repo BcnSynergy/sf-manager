@@ -152,7 +152,11 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `DELETE` or that a timeout is logged and the login still succeeds at
   integration level (the unit spec covers the logging). The "deletes fully
   expired rows past more than 100 ... still-blocked rows" test empties the
-  whole table first, which couples it to other tests in the suite. Origin:
+  whole table first, which couples it to other tests in the suite. The
+  index test runs `EXPLAIN` on a copy of the cleanup SQL rather than the
+  adapter's statement, so it would not notice the predicate drifting. The
+  no-leak test relies on the pool reusing the cleanup's connection among a
+  few parallel queries, which is likely but not guaranteed. Origin:
   `td-35-throttle-db-load` native review, 2026-10-13.
 - **EN-21** (api): The window-end expression
   `date_trunc('milliseconds', now()) + ttl * interval '1 millisecond'` is
@@ -174,7 +178,9 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   (TD-32). `ThrottleCounter.expiresAt` is a
   required field in the Prisma client although the trigger owns it, so a
   future Prisma `create` would have to pass a value the trigger then
-  overwrites.
+  overwrites. The cleanup's `$transaction` uses Prisma's default `maxWait`
+  to acquire a connection, so under pool exhaustion the wait before the
+  500 ms statement timeout applies is longer than that timeout suggests.
 
 ## Done
 

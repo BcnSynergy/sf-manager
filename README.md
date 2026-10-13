@@ -66,11 +66,10 @@ business features yet, just the toolchain wired end-to-end.
    keyed by a hash of the client key, no raw IP). They survive API restarts and
    are shared by every API instance, at the cost of one extra database
    statement per login attempt; an attempt that is already blocked only locks
-   the row and does not rewrite it. Expired rows are cleaned up in small batches under a
-   500 ms statement timeout. If the counter write fails, the login attempt is
-   refused. The
-   window is fixed, so up to about twice the limit can pass around a window
-   boundary.
+   the row and does not rewrite it. Expired rows are cleaned up in small
+   batches under a 500 ms statement timeout. If the counter write fails, the
+   login attempt is refused. The window is fixed, so up to about twice the
+   limit can pass around a window boundary.
 3. Start Postgres:
    ```
    docker compose up -d

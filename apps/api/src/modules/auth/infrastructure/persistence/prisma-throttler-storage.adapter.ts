@@ -130,8 +130,9 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     // statement sees it, so retry once.
     const row = (await run())[0] ?? (await run())[0];
     if (row === undefined) {
-      // Two statements in a row found nothing: the driver contract changed.
-      // Fail closed.
+      // Two statements in a row found nothing, which the reasoning above rules
+      // out short of a driver contract change or an unexpected delete. Fail
+      // closed rather than let the attempt through uncounted.
       throw new Error('ThrottleCounter increment returned no row');
     }
 

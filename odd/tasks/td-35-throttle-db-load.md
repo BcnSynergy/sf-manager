@@ -50,7 +50,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 ## Tasks
 
 - [x] T1 Blocked attempts do not rewrite the row. Route: delegated direct (writer trigger: adapter + specs). RED: an integration test proving a blocked attempt leaves the row's tuple unchanged (for example `xmin` unchanged) while still returning the blocked state and `timeToBlockExpire`. GREEN: conditional `DO UPDATE ... WHERE`, read fallback when no row is returned. All existing adapter tests stay green.
-- [x] T2 `expiresAt` column and index for cleanup. Route: delegated direct. RED: an integration test where many expired-but-still-blocked rows precede deletable rows and cleanup still deletes the deletable ones, scanning only deletable rows (assert via the predicate/index or by row outcome). GREEN: Prisma schema + migration (add column, backfill, index, drop old index), upsert maintains `expiresAt`, cleanup selects `expiresAt < now()`.
+- [x] T2 `expiresAt` column and index for cleanup. Route: delegated direct. RED: an integration test where many expired-but-still-blocked rows precede deletable rows and cleanup still deletes the deletable ones, scanning only deletable rows (assert via the predicate/index or by row outcome). GREEN: Prisma schema + migration (add column, backfill, index, drop old index), `expiresAt` maintained (by the upsert at first, by a trigger after the native review), cleanup selects `expiresAt < now()`.
 - [x] T3 `statement_timeout` for cleanup. Route: delegated direct. RED: a test showing the cleanup runs under a bounded timeout and a timeout failure is logged and does not fail the login. GREEN: cleanup runs in a transaction with `SET LOCAL statement_timeout`.
 - [x] T4 Docs and closure. README throttle note, TD-35 to Resolved, design/ADR note if needed; full unit, integration and e2e suites, lint, build. Route: inline (two mechanical doc edits). Done 2026-10-13: README describes the blocked path and the cleanup timeout; TD-35 moved to Resolved (PR number pending). The archived `login-rate-limit-hardening` design is historical and was not edited.
 
@@ -65,7 +65,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 
 - 2026-10-13: exploration done; approach confirmed by the user; document created.
 - 2026-10-13: T1 done (route: delegated direct, single writer). Blocked attempts skip the DO UPDATE via `WHERE blockedUntil IS NULL OR blockedUntil <= now()` and a follow-up `readBlocked` SELECT builds the record; a missing row after both statements still fails closed.
-- 2026-10-13: T2 done. `expiresAt` + `ThrottleCounter_expiresAt_idx` replace the windowEndsAt index; migration `20261013120000_throttle_counter_expires_at` hand-written (no shadow DB; `prisma validate` and the hermetic integration DB applying all migrations confirm it); upsert maintains `expiresAt` in every branch; cleanup selects `expiresAt < now()`.
+- 2026-10-13: T2 done. `expiresAt` + `ThrottleCounter_expiresAt_idx` replace the windowEndsAt index; migration `20261013120000_throttle_counter_expires_at` hand-written (no shadow DB; `prisma validate` and the hermetic integration DB applying all migrations confirm it); upsert maintained `expiresAt` in every branch (superseded by the trigger in bed1512); cleanup selects `expiresAt < now()`.
 - 2026-10-13: T3 done. Cleanup runs in `$transaction` with `set_config('statement_timeout', '500ms', true)` (transaction-local, equivalent to SET LOCAL but bindable, so no raw SQL interpolation) before the delete; constant `CLEANUP_STATEMENT_TIMEOUT_MS = 500`. A real timeout is not forced in an integration test (non-deterministic); failure logging stays covered by the unit spec.
 - 2026-10-13: T1 follow-up (parent review). The blocked read moved into the same statement as the upsert (`WITH upsert ... UNION ALL SELECT ... WHERE NOT EXISTS (SELECT 1 FROM upsert)`), removing `readBlocked()` and its race (cleanup deleting the row, or the block ending, between two statements).
 - 2026-10-13: native review CRITICAL (NOT NULL `expiresAt` without default broke the previous adapter during a rolling deploy or rollback). Fix: the migration adds a `BEFORE INSERT OR UPDATE` trigger that derives `expiresAt`, the backfill goes through it, and the adapter no longer writes the column. The blocked path does not UPDATE, so the trigger does not fire there.
@@ -95,8 +95,8 @@ T3:
 
 ## Next Step
 
-RDD review of the branch, fresh-context review, then ask the user before push, PR and merge. Fill the TD-35 PR number once the PR exists.
+Push and open the PR (expected #213) after the user confirms; then merge on the user's confirmation.
 
-Final checks after the T1 follow-up (5b938ae): lint 0 errors (4 pre-existing warnings), unit 1430, integration 229 (adapter suite green on 3 consecutive runs), e2e 470 passed (parent re-run), root build green (parent re-run).
+Final checks at ec385f1 (fresh-context review re-run): lint 0 errors (4 pre-existing warnings), unit 1430, integration 230. e2e 470 and root build green at c0207bc; later commits change only the trigger-owned column, comments, tests and docs, and the throttle e2e passed (7) after 6e45e75.
 
-Trigger fix: RED = old-style INSERT/ON CONFLICT without expiresAt failed with 23502 (not-null violation); GREEN = see commit checks (lint, unit, integration).
+Reviews: native RDD approved and acknowledged five times (one bounded correction, bed1512); fresh-context review APPROVE WITH NITS, nits fixed in the final commit; remaining items in EN-20..EN-22.

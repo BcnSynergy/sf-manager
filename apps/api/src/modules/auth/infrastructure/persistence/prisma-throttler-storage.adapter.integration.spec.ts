@@ -246,7 +246,7 @@ describe('PrismaThrottlerStorage (integration)', () => {
       return keys;
     };
 
-    it('deletes fully expired rows past more than 100 expired-window but still-blocked rows', async () => {
+    it('deletes fully expired rows even when more than 100 still-blocked rows have an ended window', async () => {
       await prisma.$executeRaw`DELETE FROM "ThrottleCounter"`;
       const blockedKeys = await seed(150, 600);
       const expiredKeys = await seed(30, null);
