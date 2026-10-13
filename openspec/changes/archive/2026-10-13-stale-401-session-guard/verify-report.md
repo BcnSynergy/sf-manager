@@ -40,7 +40,7 @@ Paths relative to `apps/web/src`. CL = `api/client.test.ts`, AP = `auth/AuthProv
 | Scenario | Covering test | Verification |
 |---|---|---|
 | Mid-session 401 | FL:14; LP:170 | test + browser (F.4, CA) |
-| Failed login shows no notice | LP:176, LP:187; AP:240 | test |
+| Failed login shows no notice | LP:176, LP:187 | test |
 | Localized notice | `i18n/locales.test.ts:910` (EN/ES/CA wording) | test + browser (CA) |
 | Stale 401 after re-login does not end the new session | AP:287; CL:263 | test only |
 | Stale 401 across logout raises no notice | AP:312 | test only |
@@ -73,4 +73,4 @@ None new.
 
 ## Known Non-Blocking Items
 
-Already queued for the enhancements register (not re-raised): the logout-only stale test passes without the fix; the defensive logout and handler advances are untested; login advance ordering is not pinned; the stale-test scaffold is duplicated; `session-ended-flow.test.tsx` lacks `afterEach(vi.unstubAllGlobals)`; stale design.md open questions; near-duplicate spec scenarios; ambiguous stale-logout test title; misplaced comment at `AuthProvider.test.tsx:174-176`.
+Already queued for the enhancements register (not re-raised): the logout-only stale test passes without the fix; the defensive logout and handler advances are untested; login advance ordering is not pinned; the stale-test scaffold is duplicated; `session-ended-flow.test.tsx` lacks `afterEach(vi.unstubAllGlobals)`; stale design.md open questions; near-duplicate spec scenarios; ambiguous stale-logout test title; misplaced comment at `AuthProvider.test.tsx:173`.
