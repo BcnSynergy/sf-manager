@@ -107,6 +107,45 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `apps/api/src/shared/infrastructure/env/trust-proxy.spec.ts`. Origin:
   `login-rate-limit-hardening` archive RDD review, 2026-10-12.
 
+- **EN-14** (web tests): Pin the defensive epoch advances. The
+  `advanceSessionEpoch()` calls in `logout()` and in the unauthorized handler
+  (`apps/web/src/auth/AuthProvider.tsx:117`, `:72`) have no test that fails
+  without them, and the logout-only stale test
+  (`apps/web/src/auth/AuthProvider.test.tsx:312`) passes even without the
+  fix, because the `userRef` null check already covers it. Either find an
+  observable case or accept them as documented defensive code. Origin:
+  `stale-401-session-guard` tasks C.5/C.6 and `sdd-verify`, 2026-10-13.
+- **EN-15** (web tests): Pin the ordering in `login()`: the epoch advance
+  must run before `response.json()` and `updateUser`
+  (`apps/web/src/auth/AuthProvider.tsx:100`). The re-login stale test
+  (`apps/web/src/auth/AuthProvider.test.tsx:287-310`) does not fail if the
+  advance moves after them. Origin: `stale-401-session-guard` `sdd-verify`,
+  2026-10-13.
+- **EN-16** (web tests): Tidy `AuthProvider.test.tsx`. The stale-401 tests
+  repeat the same scaffold (`:287-363`; extract a helper), the stale-logout
+  test title is ambiguous (`:335`; say it covers logout followed by a new
+  login), and the comment "Any data call: the API answers 401" (`:173`)
+  sits above the `options.data` branch instead of the default 401 response.
+  Origin: `stale-401-session-guard` `sdd-verify`, 2026-10-13.
+- **EN-17** (web tests): `apps/web/src/auth/session-ended-flow.test.tsx:15`
+  stubs `fetch` with `vi.stubGlobal` but has no
+  `afterEach(vi.unstubAllGlobals)`, unlike the repo convention (for example
+  `apps/web/src/components/LanguageSelector.test.tsx:9`). Origin:
+  `stale-401-session-guard` `sdd-verify`, 2026-10-13.
+- **EN-18** (specs): Tidy the authentication spec and the archived design.
+  In `openspec/specs/authentication/spec.md`, "Session ends mid-session" and
+  "Current-session 401 ends the session and redirects" are near-duplicates,
+  as are "Mid-session 401" and "Current-session 401 still shows the notice";
+  merge or differentiate them. The Open Questions in
+  `openspec/changes/archive/2026-10-13-stale-401-session-guard/design.md:254`
+  are stale (both were settled in `sdd-tasks`/`sdd-design`). Origin:
+  `stale-401-session-guard` `sdd-verify`, 2026-10-13.
+- **EN-19** (web): The mount-time `/auth/me` restore does not advance the
+  session epoch. It is unreachable as a problem today because
+  `ProtectedRoute` renders no `apiFetch` caller while loading (see the
+  ADR-011 2026-10-06 addendum, item 6). Revisit if a caller can run before
+  the restore completes. Origin: `stale-401-session-guard` design, 2026-10-13.
+
 ## Done
 
 None yet.
