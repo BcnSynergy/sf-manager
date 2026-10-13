@@ -52,7 +52,7 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 - [x] T1 Blocked attempts do not rewrite the row. Route: delegated direct (writer trigger: adapter + specs). RED: an integration test proving a blocked attempt leaves the row's tuple unchanged (for example `xmin` unchanged) while still returning the blocked state and `timeToBlockExpire`. GREEN: conditional `DO UPDATE ... WHERE`, read fallback when no row is returned. All existing adapter tests stay green.
 - [x] T2 `expiresAt` column and index for cleanup. Route: delegated direct. RED: an integration test where many expired-but-still-blocked rows precede deletable rows and cleanup still deletes the deletable ones, scanning only deletable rows (assert via the predicate/index or by row outcome). GREEN: Prisma schema + migration (add column, backfill, index, drop old index), upsert maintains `expiresAt`, cleanup selects `expiresAt < now()`.
 - [x] T3 `statement_timeout` for cleanup. Route: delegated direct. RED: a test showing the cleanup runs under a bounded timeout and a timeout failure is logged and does not fail the login. GREEN: cleanup runs in a transaction with `SET LOCAL statement_timeout`.
-- [ ] T4 Docs and closure. README throttle note, TD-35 to Resolved, design/ADR note if needed; full unit, integration and e2e suites, lint, build.
+- [x] T4 Docs and closure. README throttle note, TD-35 to Resolved, design/ADR note if needed; full unit, integration and e2e suites, lint, build. Route: inline (two mechanical doc edits). Done 2026-10-13: README describes the blocked path and the cleanup timeout; TD-35 moved to Resolved (PR number pending). The archived `login-rate-limit-hardening` design is historical and was not edited.
 
 ## Acceptance Criteria
 
@@ -90,8 +90,6 @@ T3:
 
 ## Next Step
 
-T4.
+RDD review of the branch, fresh-context review, then ask the user before push, PR and merge. Fill the TD-35 PR number once the PR exists.
 
-Final checks after T3: lint 0 errors (4 pre-existing warnings), unit 1429, integration 229, e2e 470 passed, root build green.
-
-After the T1 follow-up: lint 0 errors, unit and integration green (counts in the final report).
+Final checks after the T1 follow-up (5b938ae): lint 0 errors (4 pre-existing warnings), unit 1430, integration 229 (adapter suite green on 3 consecutive runs), e2e 470 passed (parent re-run), root build green (parent re-run).

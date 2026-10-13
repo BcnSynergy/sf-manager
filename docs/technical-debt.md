@@ -30,15 +30,6 @@ project's Engram memory on 2026-10-09.
   `login-rate-limit`.
   Deferred to its own slice (decided 2026-10-12, at the close of
   `login-rate-limit-hardening`).
-- **TD-35**: Every login attempt, including an already-blocked one, does a
-  Postgres upsert on the shared Prisma pool, and the expired-row cleanup is
-  awaited on the request path with no `statement_timeout`. The cleanup can scan
-  expired-but-still-blocked rows because the only index is on `windowEndsAt`.
-  Under a login flood this adds database load to the whole API and can delay
-  unrelated requests. Evidence:
-  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`;
-  `apps/api/src/modules/auth/auth.module.ts`. Origin:
-  `login-rate-limit-hardening` PR 2 and PR 3 RDD reviews, 2026-10-12.
 
 ### Low
 
@@ -194,6 +185,14 @@ project's Engram memory on 2026-10-09.
   `AuthProvider`, `ProtectedRoute` and `LoginPage` and covers the 401, the
   redirect to `/login` and the session-ended notice in one test. Origin:
   `auth-live-user-check`.
+- **TD-35**: Every login attempt, including an already-blocked one, rewrote
+  the `ThrottleCounter` row, and the awaited expired-row cleanup could scan
+  expired-but-still-blocked rows with no statement timeout. Resolved by
+  `td-35-throttle-db-load` (ODD, PR number added once known): a blocked
+  attempt locks the row but writes nothing, cleanup selects on an indexed
+  `expiresAt` column, and it runs under a 500 ms `statement_timeout`
+  (`apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`).
+  Origin: `login-rate-limit-hardening`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
