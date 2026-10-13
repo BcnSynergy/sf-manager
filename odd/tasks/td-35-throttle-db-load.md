@@ -72,6 +72,8 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 
 - 2026-10-13: native review (lineage review-444abe6d2162684c, user granted) required one correction: CRITICAL R4-expiresat-not-null-no-default, fixed in bed1512 with a BEFORE INSERT OR UPDATE trigger owning expiresAt; targeted validation approved and acknowledged. WARNING R2-dead-blocked-branch (dead `blockedUntil > now()` CASE branches) and the WAL comment fixed in the follow-up commit; remaining suggestions registered as EN-20 and EN-21.
 
+- 2026-10-13: second and third native reviews approved and acknowledged. WARNING R4-old-adapter-cleanup-loses-index accepted by the user (option b: no production deployment yet) and noted in EN-22; WARNING R3-truncate-shared-table kept as EN-20 (cleanup is table-global; hermetic, in-band suite). TD-35 cites PR #213 (the next PR number, checked when the PR is opened).
+
 ## Verification Evidence
 
 T1:

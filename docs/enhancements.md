@@ -167,7 +167,11 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   statement or a batched transaction would be cheaper. Migration
   `20261013120000_throttle_counter_expires_at` rewrites every row and builds
   the index without `CONCURRENTLY`, so it locks the table for its duration
-  (small today; revisit if the table grows). `ThrottleCounter.expiresAt` is a
+  (small today; revisit if the table grows). It also drops
+  `ThrottleCounter_windowEndsAt_idx`, so after a code-only rollback the
+  previous adapter's cleanup (which filters on `windowEndsAt`) falls back to a
+  sequential scan; accepted while there is no production deployment
+  (TD-32). `ThrottleCounter.expiresAt` is a
   required field in the Prisma client although the trigger owns it, so a
   future Prisma `create` would have to pass a value the trigger then
   overwrites.
