@@ -124,7 +124,7 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
 - **EN-16** (web tests): Tidy `AuthProvider.test.tsx`. The stale-401 tests
   repeat the same scaffold (`:287-363`; extract a helper), the stale-logout
   test title is ambiguous (`:335`; say it covers logout followed by a new
-  login), and the comment "Any data call: the API answers 401" (`:173-174`)
+  login), and the comment "Any data call: the API answers 401" (`:173`)
   sits above the `options.data` branch instead of the default 401 response.
   Origin: `stale-401-session-guard` `sdd-verify`, 2026-10-13.
 - **EN-17** (web tests): `apps/web/src/auth/session-ended-flow.test.tsx:15`

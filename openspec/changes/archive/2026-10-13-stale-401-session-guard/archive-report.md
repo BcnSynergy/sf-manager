@@ -35,7 +35,7 @@ Composition ran through the native command (zero exit) on LF copies, and the res
 gentle-ai sdd-archive-compose --canonical <canonical.md> --delta <delta.md> --output <out.md>
 ```
 
-`git diff -U0` shows hunks only inside the two modified requirements (lines 370-432); the rest is unchanged. As in the `login-rate-limit-hardening` archive, the delta's "(Previously: ...)" notes were carried into the main spec (the main spec already holds such notes).
+`git diff -U0` shows hunks only inside the two modified requirements (new-file lines 370-457); the rest is unchanged. As in the `login-rate-limit-hardening` archive, the delta's "(Previously: ...)" notes were carried into the main spec (the main spec already holds such notes).
 
 ## Tasks
 
