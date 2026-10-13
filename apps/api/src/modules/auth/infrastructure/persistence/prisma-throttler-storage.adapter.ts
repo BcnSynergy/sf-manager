@@ -66,8 +66,13 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     // step with them so cleanup is a single indexed range condition (TD-35).
     // Case (A) is excluded by the DO UPDATE ... WHERE below, so a blocked
     // attempt takes the row lock but writes no new tuple version (no WAL, no
-    // dead tuple) and RETURNING yields no row; readBlocked() then reads it.
-    const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
+    // dead tuple) and the upsert CTE yields no row. The `skipped` CTE then reports
+    // the locked row from the same statement, so both branches share one now():
+    // the block cannot "end" between the skipped update and the read, and a
+    // concurrent cleanup cannot delete the row in between.
+    const run = () =>
+      this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
+      WITH upsert AS (
       INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil", "expiresAt")
       VALUES (
         ${key}, 1,
@@ -103,7 +108,23 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
           ELSE t."windowEndsAt"
         END
       WHERE t."blockedUntil" IS NULL OR t."blockedUntil" <= now()
-      RETURNING
+      RETURNING *
+      ),
+      -- FOR UPDATE re-reads the latest committed version of the row this very
+      -- statement just locked (a plain snapshot read could return the stale
+      -- pre-wait version of a concurrent attempt).
+      skipped AS (
+        SELECT t."hits", t."windowEndsAt", t."blockedUntil"
+        FROM "ThrottleCounter" t
+        WHERE t."key" = ${key} AND NOT EXISTS (SELECT 1 FROM upsert)
+        FOR UPDATE
+      ),
+      result AS (
+        SELECT "hits", "windowEndsAt", "blockedUntil" FROM upsert
+        UNION ALL
+        SELECT "hits", "windowEndsAt", "blockedUntil" FROM skipped
+      )
+      SELECT
         "hits" AS "totalHits",
         GREATEST(0, CEIL(EXTRACT(EPOCH FROM ("windowEndsAt" - now()))))::int AS "timeToExpire",
         ("blockedUntil" IS NOT NULL AND "blockedUntil" > now()) AS "isBlocked",
@@ -111,14 +132,17 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
           THEN CEIL(EXTRACT(EPOCH FROM ("blockedUntil" - now())))::int
           ELSE 0
         END AS "timeToBlockExpire"
+      FROM result
     `;
 
-    // An empty result means the conflict update was skipped because the key is
-    // still blocked; any other outcome returns exactly one row.
-    const row = rows[0] ?? (await this.readBlocked(key));
+    // One empty result is legitimate: this statement's snapshot predates a
+    // row a concurrent first attempt inserted, the upsert then skipped because
+    // that row became blocked, and the snapshot read cannot see it. A fresh
+    // statement sees it, so retry once.
+    const row = (await run())[0] ?? (await run())[0];
     if (row === undefined) {
-      // Neither the upsert nor the follow-up read found the row: it vanished
-      // between the two statements or the driver contract changed. Fail closed.
+      // Two statements in a row found nothing: the driver contract changed.
+      // Fail closed.
       throw new Error('ThrottleCounter increment returned no row');
     }
 
@@ -134,28 +158,6 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       isBlocked: row.isBlocked,
       timeToBlockExpire: row.timeToBlockExpire,
     };
-  }
-
-  // Reads the state of a key whose upsert was skipped as still blocked. Safe
-  // against the skip-then-read race: a block can only end by time passing, and
-  // a row is never deleted before both its window and block have ended, so the
-  // row read here is the one the skipped update saw, or an already-ended block
-  // (reported as not blocked) whose next attempt resets it.
-  private async readBlocked(
-    key: string,
-  ): Promise<ThrottlerStorageRecord | undefined> {
-    const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
-      SELECT
-        "hits" AS "totalHits",
-        GREATEST(0, CEIL(EXTRACT(EPOCH FROM ("windowEndsAt" - now()))))::int AS "timeToExpire",
-        ("blockedUntil" IS NOT NULL AND "blockedUntil" > now()) AS "isBlocked",
-        CASE WHEN "blockedUntil" > now()
-          THEN CEIL(EXTRACT(EPOCH FROM ("blockedUntil" - now())))::int
-          ELSE 0
-        END AS "timeToBlockExpire"
-      FROM "ThrottleCounter" WHERE "key" = ${key}
-    `;
-    return rows[0];
   }
 
   // Best-effort, bounded cleanup. SKIP LOCKED never waits on a row a

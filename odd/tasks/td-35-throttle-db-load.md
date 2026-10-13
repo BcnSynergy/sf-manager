@@ -67,12 +67,17 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 - 2026-10-13: T1 done (route: delegated direct, single writer). Blocked attempts skip the DO UPDATE via `WHERE blockedUntil IS NULL OR blockedUntil <= now()` and a follow-up `readBlocked` SELECT builds the record; a missing row after both statements still fails closed.
 - 2026-10-13: T2 done. `expiresAt` + `ThrottleCounter_expiresAt_idx` replace the windowEndsAt index; migration `20261013120000_throttle_counter_expires_at` hand-written (no shadow DB; `prisma validate` and the hermetic integration DB applying all migrations confirm it); upsert maintains `expiresAt` in every branch; cleanup selects `expiresAt < now()`.
 - 2026-10-13: T3 done. Cleanup runs in `$transaction` with `set_config('statement_timeout', '500ms', true)` (transaction-local, equivalent to SET LOCAL but bindable, so no raw SQL interpolation) before the delete; constant `CLEANUP_STATEMENT_TIMEOUT_MS = 500`. A real timeout is not forced in an integration test (non-deterministic); failure logging stays covered by the unit spec.
+- 2026-10-13: T1 follow-up (parent review). The blocked read moved into the same statement as the upsert (`WITH upsert ... UNION ALL SELECT ... WHERE NOT EXISTS (SELECT 1 FROM upsert)`), removing `readBlocked()` and its race (cleanup deleting the row, or the block ending, between two statements).
 
 ## Verification Evidence
 
 T1:
 - RED: new integration test (xmin unchanged on a blocked attempt) failed: `Expected: "117714" Received: "117715"` (tuple rewritten).
 - GREEN: same suite 13/13 passed; unit spec gained the fallback and fail-closed cases.
+
+T1 follow-up:
+- RED: unit test "resolves a blocked attempt from one statement" failed with 2 `$queryRaw` calls instead of 1. The race itself has no deterministic RED (it needs a block ending and a cleanup between two statements); the xmin and blocked-state integration tests stay green as the behavioral guard.
+- GREEN: a plain snapshot UNION branch failed the concurrent limit test (stale pre-wait version, isBlocked=false). Final design: `skipped` CTE with `FOR UPDATE` (re-reads the latest locked version) plus one retry when the statement snapshot cannot see a row a concurrent first attempt just inserted (observed as "returned no row"); fail closed after two empty results. Adapter integration 17/17 on 3 consecutive runs.
 
 T2:
 - RED: new cleanup tests failed with `column "expiresAt" of relation "ThrottleCounter" does not exist` (42703). The behavior test (150 still-blocked + 30 expired) would also pass on the old predicate; the index assertion is what proves the new access path.
@@ -88,3 +93,5 @@ T3:
 T4.
 
 Final checks after T3: lint 0 errors (4 pre-existing warnings), unit 1429, integration 229, e2e 470 passed, root build green.
+
+After the T1 follow-up: lint 0 errors, unit and integration green (counts in the final report).

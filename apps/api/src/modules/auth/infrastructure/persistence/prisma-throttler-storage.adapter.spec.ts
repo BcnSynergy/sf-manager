@@ -47,22 +47,32 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
     expect(executeRaw).not.toHaveBeenCalled();
   });
 
-  it('reads the blocked row when the skipped upsert returns nothing', async () => {
+  it('resolves a blocked attempt from one statement, with no follow-up read', async () => {
     const blockedRow = { ...row, isBlocked: true, timeToBlockExpire: 42 };
-    queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([blockedRow]);
+    queryRaw.mockResolvedValueOnce([blockedRow]);
 
     await expect(
       storage.increment('k', 60_000, 10, 60_000, 'default'),
     ).resolves.toEqual(blockedRow);
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries once when the statement snapshot cannot see the row', async () => {
+    queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([row]);
+
+    await expect(
+      storage.increment('k', 60_000, 10, 60_000, 'default'),
+    ).resolves.toEqual(row);
     expect(queryRaw).toHaveBeenCalledTimes(2);
   });
 
-  it('fails closed when neither the upsert nor the follow-up read finds a row', async () => {
+  it('fails closed when two statements in a row return no row', async () => {
     queryRaw.mockResolvedValue([]);
 
     await expect(
       storage.increment('k', 60_000, 10, 60_000, 'default'),
     ).rejects.toThrow('returned no row');
+    expect(queryRaw).toHaveBeenCalledTimes(2);
   });
 
   it('bounds the cleanup with a transaction-local statement timeout set before the delete', async () => {
