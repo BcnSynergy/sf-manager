@@ -48,12 +48,24 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
+// stale-401-session-guard design.md Decision 1 (TD-25): counts session
+// boundaries. apiFetch captures it when a request starts, so a 401 from a
+// request issued under an earlier session cannot end the current one.
+// AuthProvider advances it at login, logout and session end; only the
+// relative comparison matters, so there is deliberately no reset export.
+let sessionEpoch = 0;
+
+export function advanceSessionEpoch(): void {
+  sessionEpoch += 1;
+}
+
 // Callers type the success shape via T (e.g. UserResponseDto[]); a 204
 // response resolves to undefined regardless of T (design.md Interfaces).
 export async function apiFetch<T = undefined>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  const epochAtStart = sessionEpoch;
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -83,7 +95,9 @@ export async function apiFetch<T = undefined>(
       // Empty or non-JSON error body — ApiError still carries the real
       // HTTP status, just without a discriminator code.
     }
-    if (response.status === HTTP_UNAUTHORIZED) {
+    // A stale 401 (epoch advanced since the request started) skips the
+    // handler but the caller still gets ApiError(401) (Decision 4).
+    if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
       unauthorizedHandler?.();
     }
     throw new ApiError(response.status, code, extra);
