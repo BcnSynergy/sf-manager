@@ -188,7 +188,7 @@ project's Engram memory on 2026-10-09.
   (`apps/api/src/shared/seeding/seed-dev-dataset.ts:535-547`).
 - **TD-25**: A stale in-flight request that returned 401 after a re-login
   ended the new, valid web session. Resolved by `stale-401-session-guard`
-  (PR 1/2, PR number added once known): `apiFetch` skips the unauthorized
+  (PR 1/2, #210): `apiFetch` skips the unauthorized
   handler when the session epoch advanced since the request started
   (`apps/web/src/api/client.ts`), and `AuthProvider` advances it at login,
   logout and session end. Origin: `auth-live-user-check`.
