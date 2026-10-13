@@ -507,7 +507,11 @@ model ThrottleCounter {
   hits         Int
   windowEndsAt DateTime  @db.Timestamptz(3)
   blockedUntil DateTime? @db.Timestamptz(3)
+  // Greatest of windowEndsAt and blockedUntil: the instant the row is deletable.
+  // Maintained by a DB trigger (see the throttle_counter_expires_at migration),
+  // never written by the application.
+  expiresAt    DateTime  @db.Timestamptz(3)
 
-  // Opportunistic cleanup filters on windowEndsAt (Decision 6).
-  @@index([windowEndsAt])
+  // Opportunistic cleanup filters on expiresAt (Decision 6, TD-35).
+  @@index([expiresAt])
 }

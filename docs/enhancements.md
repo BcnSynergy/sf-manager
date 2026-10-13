@@ -145,6 +145,45 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `ProtectedRoute` renders no `apiFetch` caller while loading (see the
   ADR-011 2026-10-06 addendum, item 6). Revisit if a caller can run before
   the restore completes. Origin: `stale-401-session-guard` design, 2026-10-13.
+- **EN-20** (api tests): Login-throttle cleanup test gaps in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts`.
+  The statement-timeout test only shows the timeout does not leak onto
+  pooled connections; nothing proves the 500 ms bound applies to the cleanup
+  `DELETE` or that a timeout is logged and the login still succeeds at
+  integration level (the unit spec covers the logging). The "deletes fully
+  expired rows even when more than 100 still-blocked rows have an ended
+  window" test empties the
+  whole table first, which couples it to other tests in the suite. The
+  index test runs `EXPLAIN` on a copy of the cleanup SQL rather than the
+  adapter's statement, so it would not notice the predicate drifting. The
+  no-leak test relies on the pool reusing the cleanup's connection among a
+  few parallel queries, which is likely but not guaranteed. The one-retry
+  path in `increment()` is covered by unit tests only, and one seed helper
+  still writes an explicit `expiresAt` that the trigger overwrites. Origin:
+  `td-35-throttle-db-load` native review, 2026-10-13.
+- **EN-21** (api): The window-end expression
+  `date_trunc('milliseconds', now()) + ttl * interval '1 millisecond'` is
+  repeated in the throttle upsert in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`;
+  computing it once (for example in a CTE) would make the SQL easier to read
+  and change. Related to EN-9. Origin: `td-35-throttle-db-load` native
+  review, 2026-10-13.
+- **EN-22** (api): Login-throttle follow-ups from the `td-35-throttle-db-load`
+  native review, 2026-10-13. The cleanup's interactive `$transaction` costs
+  extra round trips (`BEGIN`, `set_config`, `DELETE`, `COMMIT`); a single
+  statement or a batched transaction would be cheaper. Migration
+  `20261013120000_throttle_counter_expires_at` rewrites every row and builds
+  the index without `CONCURRENTLY`, so it locks the table for its duration
+  (small today; revisit if the table grows). It also drops
+  `ThrottleCounter_windowEndsAt_idx`, so after a code-only rollback the
+  previous adapter's cleanup (which filters on `windowEndsAt`) falls back to a
+  sequential scan; accepted while there is no production deployment
+  (TD-32). `ThrottleCounter.expiresAt` is a
+  required field in the Prisma client although the trigger owns it, so a
+  future Prisma `create` would have to pass a value the trigger then
+  overwrites. The cleanup's `$transaction` uses Prisma's default `maxWait`
+  to acquire a connection, so under pool exhaustion the wait before the
+  500 ms statement timeout applies is longer than that timeout suggests.
 
 ## Done
 

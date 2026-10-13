@@ -27,6 +27,13 @@ type ThrottlerStorageRecord = Awaited<
 // for an unbounded delete (Decision 6).
 const CLEANUP_BATCH_SIZE = 100;
 
+// Upper bound on the cleanup statement's runtime. The cleanup is awaited on the
+// login path and shares the single Prisma pool with the whole API, so a slow or
+// lock-starved delete must give its connection back quickly (TD-35). A
+// healthy batch of 100 index-ordered rows takes a few milliseconds; on timeout
+// the failure is logged and the login proceeds.
+const CLEANUP_STATEMENT_TIMEOUT_MS = 500;
+
 @Injectable()
 export class PrismaThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger(PrismaThrottlerStorage.name);
@@ -52,32 +59,61 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     // One atomic statement (Decision 5). In ON CONFLICT DO UPDATE every
     // right-hand expression reads the pre-update row `t`, so the three CASE
     // columns see a consistent pre-image:
-    //   (A) still blocked          -> row unchanged, hit not counted
+    //   (A) still blocked          -> no update (DO UPDATE ... WHERE), hit not counted
     //   (B/C) block or window over -> new window, hits = 1
     //   (D) live window            -> hits + 1, block when it exceeds limit
-    const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
+    // "expiresAt" (later of window end and block end, for the indexed cleanup,
+    // TD-35) is not written here: a BEFORE trigger derives it on every write.
+    // Case (A) is excluded by the DO UPDATE ... WHERE below, so a blocked
+    // attempt only takes the row lock (a small lock record in WAL) and writes
+    // no new tuple version (no dead tuple, no index churn); the upsert CTE
+    // yields no row. The `skipped` CTE then reports
+    // the locked row from the same statement, so both branches share one now():
+    // the block cannot "end" between the skipped update and the read, and a
+    // concurrent cleanup cannot delete the row in between.
+    const run = () =>
+      this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
+      WITH upsert AS (
       INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
-      VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond', NULL)
+      VALUES (
+        ${key}, 1,
+        date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond',
+        NULL
+      )
       ON CONFLICT ("key") DO UPDATE SET
         "hits" = CASE
-          WHEN t."blockedUntil" > now() THEN t."hits"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN 1
           ELSE t."hits" + 1
         END,
         "windowEndsAt" = CASE
-          WHEN t."blockedUntil" > now() THEN t."windowEndsAt"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now()
             THEN date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
           ELSE t."windowEndsAt"
         END,
         "blockedUntil" = CASE
-          WHEN t."blockedUntil" > now() THEN t."blockedUntil"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN NULL
           WHEN t."hits" + 1 > ${limit}::int
             THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'
           ELSE NULL
         END
-      RETURNING
+      WHERE t."blockedUntil" IS NULL OR t."blockedUntil" <= now()
+      RETURNING *
+      ),
+      -- FOR UPDATE re-reads the latest committed version of the row this very
+      -- statement just locked (a plain snapshot read could return the stale
+      -- pre-wait version of a concurrent attempt).
+      skipped AS (
+        SELECT t."hits", t."windowEndsAt", t."blockedUntil"
+        FROM "ThrottleCounter" t
+        WHERE t."key" = ${key} AND NOT EXISTS (SELECT 1 FROM upsert)
+        FOR UPDATE
+      ),
+      result AS (
+        SELECT "hits", "windowEndsAt", "blockedUntil" FROM upsert
+        UNION ALL
+        SELECT "hits", "windowEndsAt", "blockedUntil" FROM skipped
+      )
+      SELECT
         "hits" AS "totalHits",
         GREATEST(0, CEIL(EXTRACT(EPOCH FROM ("windowEndsAt" - now()))))::int AS "timeToExpire",
         ("blockedUntil" IS NOT NULL AND "blockedUntil" > now()) AS "isBlocked",
@@ -85,12 +121,18 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
           THEN CEIL(EXTRACT(EPOCH FROM ("blockedUntil" - now())))::int
           ELSE 0
         END AS "timeToBlockExpire"
+      FROM result
     `;
 
-    const row = rows[0];
+    // One empty result is legitimate: this statement's snapshot predates a
+    // row a concurrent first attempt inserted, the upsert then skipped because
+    // that row became blocked, and the snapshot read cannot see it. A fresh
+    // statement sees it, so retry once.
+    const row = (await run())[0] ?? (await run())[0];
     if (row === undefined) {
-      // INSERT ... ON CONFLICT DO UPDATE ... RETURNING always yields exactly
-      // one row; reaching this means the driver contract changed.
+      // Two statements in a row found nothing, which the reasoning above rules
+      // out short of a driver contract change or an unexpected delete. Fail
+      // closed rather than let the attempt through uncounted.
       throw new Error('ThrottleCounter increment returned no row');
     }
 
@@ -116,15 +158,22 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
   // deleteExpired() in LoginUseCase/LogoutUseCase).
   private async deleteExpired(): Promise<void> {
     try {
-      await this.prisma.$executeRaw`
-        DELETE FROM "ThrottleCounter" WHERE "key" IN (
-          SELECT "key" FROM "ThrottleCounter"
-          WHERE "windowEndsAt" < now()
-            AND ("blockedUntil" IS NULL OR "blockedUntil" < now())
-          LIMIT ${CLEANUP_BATCH_SIZE}::int
-          FOR UPDATE SKIP LOCKED
-        )
-      `;
+      await this.prisma.$transaction(async (tx) => {
+        // set_config(..., true) is SET LOCAL with a bindable value: the
+        // timeout ends with the transaction, so it can never leak onto the
+        // pooled connection and affect other queries.
+        await tx.$executeRaw`
+          SELECT set_config('statement_timeout', ${`${CLEANUP_STATEMENT_TIMEOUT_MS}ms`}, true)
+        `;
+        await tx.$executeRaw`
+          DELETE FROM "ThrottleCounter" WHERE "key" IN (
+            SELECT "key" FROM "ThrottleCounter"
+            WHERE "expiresAt" < now()
+            LIMIT ${CLEANUP_BATCH_SIZE}::int
+            FOR UPDATE SKIP LOCKED
+          )
+        `;
+      });
     } catch (error) {
       // Swallowed (see above) but not silent: a persistently failing cleanup
       // would otherwise let the table grow unnoticed.

@@ -95,6 +95,29 @@ describe('PrismaThrottlerStorage (integration)', () => {
     );
   });
 
+  it('does not rewrite the row for an attempt on a blocked key and still reports the block', async () => {
+    const key = randomUUID();
+    await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+    const blocked = await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+    expect(blocked.isBlocked).toBe(true);
+    const xmin = async () => {
+      const rows = await prisma.$queryRaw<{ xmin: string }[]>`
+        SELECT xmin::text AS xmin FROM "ThrottleCounter" WHERE "key" = ${key}
+      `;
+      return rows[0]?.xmin;
+    };
+    const before = await xmin();
+
+    const whileBlocked = await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+
+    expect(whileBlocked.isBlocked).toBe(true);
+    expect(whileBlocked.totalHits).toBe(blocked.totalHits);
+    expect(whileBlocked.timeToBlockExpire).toBeGreaterThanOrEqual(59);
+    expect(whileBlocked.timeToBlockExpire).toBeLessThanOrEqual(60);
+    expect(whileBlocked.timeToExpire).toBeGreaterThanOrEqual(59);
+    expect(await xmin()).toBe(before);
+  });
+
   it('starts a new window once the window has elapsed', async () => {
     const key = randomUUID();
     await storage.increment(key, 1000, 10, 1000, NAME);
@@ -174,13 +197,15 @@ describe('PrismaThrottlerStorage (integration)', () => {
           key,
           hits: 2,
           windowEndsAt: past,
+          expiresAt: past,
         })),
-        { key: liveKey, hits: 4, windowEndsAt: future },
+        { key: liveKey, hits: 4, windowEndsAt: future, expiresAt: future },
         {
           key: expiredButBlockedKey,
           hits: 11,
           windowEndsAt: past,
           blockedUntil: future,
+          expiresAt: future,
         },
       ],
     });
@@ -200,6 +225,134 @@ describe('PrismaThrottlerStorage (integration)', () => {
       where: { key: expiredButBlockedKey },
     });
     expect(blocked.hits).toBe(11);
+  });
+
+  describe('cleanup on expiresAt', () => {
+    // Seeds rows whose window has ended, optionally still blocked. expiresAt
+    // is omitted: the trigger derives it (later of windowEndsAt and
+    // blockedUntil), as it does for every writer.
+    const seed = async (count: number, blockedForSeconds: number | null) => {
+      const keys = Array.from({ length: count }, () => randomUUID());
+      for (const key of keys) {
+        await prisma.$executeRaw`
+          INSERT INTO "ThrottleCounter" ("key", "hits", "windowEndsAt", "blockedUntil")
+          VALUES (
+            ${key}, 2, now() - interval '60 seconds',
+            CASE WHEN ${blockedForSeconds}::int IS NULL THEN NULL
+              ELSE now() + ${blockedForSeconds}::int * interval '1 second' END
+          )
+        `;
+      }
+      return keys;
+    };
+
+    it('deletes fully expired rows even when more than 100 still-blocked rows have an ended window', async () => {
+      await prisma.$executeRaw`DELETE FROM "ThrottleCounter"`;
+      const blockedKeys = await seed(150, 600);
+      const expiredKeys = await seed(30, null);
+
+      await storage.increment(randomUUID(), TTL_MS, 10, TTL_MS, NAME);
+
+      expect(
+        await prisma.throttleCounter.count({
+          where: { key: { in: expiredKeys } },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.throttleCounter.count({
+          where: { key: { in: blockedKeys } },
+        }),
+      ).toBe(150);
+    });
+
+    it('keeps expiresAt at the later of the window end and the block end', async () => {
+      const key = randomUUID();
+      const read = () =>
+        prisma.throttleCounter.findUniqueOrThrow({ where: { key } });
+
+      await storage.increment(key, TTL_MS, 1, 5 * TTL_MS, NAME);
+      const live = await read();
+      expect(live.expiresAt.getTime()).toBe(live.windowEndsAt.getTime());
+
+      await storage.increment(key, TTL_MS, 1, 5 * TTL_MS, NAME);
+      const blocked = await read();
+      expect(blocked.blockedUntil).not.toBeNull();
+      expect(blocked.expiresAt.getTime()).toBe(
+        Math.max(
+          blocked.windowEndsAt.getTime(),
+          blocked.blockedUntil?.getTime() ?? 0,
+        ),
+      );
+      expect(blocked.expiresAt.getTime()).toBeGreaterThan(
+        blocked.windowEndsAt.getTime(),
+      );
+    });
+
+    it('derives expiresAt for writers that omit it (previous adapter version)', async () => {
+      // The pre-expiresAt adapter inserted without the column and updated
+      // windowEndsAt/blockedUntil without touching it; a rolling deploy or a
+      // code-only rollback must keep working and keep expiresAt correct.
+      const key = randomUUID();
+      await prisma.$executeRaw`
+        INSERT INTO "ThrottleCounter" ("key", "hits", "windowEndsAt", "blockedUntil")
+        VALUES (${key}, 1, now() + interval '60 seconds', NULL)
+      `;
+      const inserted = await prisma.throttleCounter.findUniqueOrThrow({
+        where: { key },
+      });
+      expect(inserted.expiresAt.getTime()).toBe(
+        inserted.windowEndsAt.getTime(),
+      );
+
+      await prisma.$executeRaw`
+        INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
+        VALUES (${key}, 1, now() + interval '60 seconds', NULL)
+        ON CONFLICT ("key") DO UPDATE SET
+          "hits" = t."hits" + 1,
+          "blockedUntil" = now() + interval '600 seconds'
+      `;
+      const blocked = await prisma.throttleCounter.findUniqueOrThrow({
+        where: { key },
+      });
+      expect(blocked.blockedUntil).not.toBeNull();
+      expect(blocked.expiresAt.getTime()).toBe(blocked.blockedUntil?.getTime());
+    });
+
+    it('serves the cleanup predicate from the expiresAt index', async () => {
+      // enable_seqscan = off only removes the planner's cost preference on a
+      // tiny table; it still proves the predicate can use the index.
+      const plan = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL enable_seqscan = off`;
+        const rows = await tx.$queryRaw<{ 'QUERY PLAN': string }[]>`
+          EXPLAIN SELECT "key" FROM "ThrottleCounter"
+          WHERE "expiresAt" < now()
+          LIMIT 100
+          FOR UPDATE SKIP LOCKED
+        `;
+        return rows.map((r) => r['QUERY PLAN']).join(' ');
+      });
+
+      expect(plan).toContain('ThrottleCounter_expiresAt_idx');
+    });
+  });
+
+  it('runs the cleanup under a transaction-local timeout that does not leak to the pool', async () => {
+    // A new key opens a window, so the cleanup (and its SET LOCAL equivalent)
+    // runs. Every pooled connection must still report the server default.
+    await storage.increment(randomUUID(), TTL_MS, 10, TTL_MS, NAME);
+
+    const settings = await Promise.all(
+      Array.from(
+        { length: 5 },
+        () =>
+          prisma.$queryRaw<
+            { statement_timeout: string }[]
+          >`SHOW statement_timeout`,
+      ),
+    );
+    expect(settings.map((r) => r[0]?.statement_timeout)).toEqual(
+      Array.from({ length: 5 }, () => '0'),
+    );
   });
 
   it('accepts a ttl and block duration above 2^31-1 ms', async () => {
@@ -224,6 +377,7 @@ describe('PrismaThrottlerStorage (integration)', () => {
         key: staleKey,
         hits: 1,
         windowEndsAt: new Date(Date.now() - 60_000),
+        expiresAt: new Date(Date.now() - 60_000),
       },
     });
 
@@ -248,6 +402,7 @@ describe('PrismaThrottlerStorage (integration)', () => {
     expect(row.key).toBe(hashedKey);
     expect(Object.keys(row).sort()).toEqual([
       'blockedUntil',
+      'expiresAt',
       'hits',
       'key',
       'windowEndsAt',
