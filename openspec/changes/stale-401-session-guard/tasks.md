@@ -68,7 +68,7 @@ Strict TDD (vitest + Testing Library in `apps/web`, runner `npm run test --works
 - [x] F.1 `npm run lint --workspace=apps/web` and `npm run build --workspace=apps/web` (`tsc -b && vite build`) pass.
 - [x] F.2 `npm run test --workspace=apps/web` passes in full; record the pass count and the RED/GREEN evidence per behavior task.
 - [x] F.3 Repo root scripts (turbo): `npm run lint`, `npm run build`, `npm run test`. The API is untouched; confirm `git diff --stat main -- apps/api` is empty.
-- [ ] F.4 Browser pass (claude-in-chrome; `npm run dev` from the repo root; the user logs in, since Claude cannot type passwords). Golden-path regression only: login, logout, a mid-session 401 showing the session-ended notice, redirect to `/login`. Optionally verify the notice in ES/CA. The stale-401 race is NOT browser-verified; report it as test-verified only.
+- [x] F.4 Browser pass (claude-in-chrome; `npm run dev` from the repo root; the user logs in, since Claude cannot type passwords). Golden-path regression only: login, logout, a mid-session 401 showing the session-ended notice, redirect to `/login`. Optionally verify the notice in ES/CA. The stale-401 race is NOT browser-verified; report it as test-verified only. Done 2026-10-13 (CA locale): login OK; a server-side logout outside the app followed by opening /users produced four 401s (/users and /maintenance-companies, twice each) collapsed into one redirect to `/login` with "La teva sessió ha acabat. Torna a iniciar la sessió."; logout via the nav button redirected to `/login` with no notice. The stale-401 race is test-verified only.
 - [x] F.5 Check `git diff --stat main` (expected ~190 changed lines; report the code vs test vs docs split).
 
 ## Gate PR 1 (orchestrator)
