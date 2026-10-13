@@ -95,6 +95,29 @@ describe('PrismaThrottlerStorage (integration)', () => {
     );
   });
 
+  it('does not rewrite the row for an attempt on a blocked key and still reports the block', async () => {
+    const key = randomUUID();
+    await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+    const blocked = await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+    expect(blocked.isBlocked).toBe(true);
+    const xmin = async () => {
+      const rows = await prisma.$queryRaw<{ xmin: string }[]>`
+        SELECT xmin::text AS xmin FROM "ThrottleCounter" WHERE "key" = ${key}
+      `;
+      return rows[0]?.xmin;
+    };
+    const before = await xmin();
+
+    const whileBlocked = await storage.increment(key, TTL_MS, 1, TTL_MS, NAME);
+
+    expect(whileBlocked.isBlocked).toBe(true);
+    expect(whileBlocked.totalHits).toBe(blocked.totalHits);
+    expect(whileBlocked.timeToBlockExpire).toBeGreaterThanOrEqual(59);
+    expect(whileBlocked.timeToBlockExpire).toBeLessThanOrEqual(60);
+    expect(whileBlocked.timeToExpire).toBeGreaterThanOrEqual(59);
+    expect(await xmin()).toBe(before);
+  });
+
   it('starts a new window once the window has elapsed', async () => {
     const key = randomUUID();
     await storage.increment(key, 1000, 10, 1000, NAME);

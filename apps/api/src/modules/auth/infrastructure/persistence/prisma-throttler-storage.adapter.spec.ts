@@ -41,6 +41,24 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
     expect(executeRaw).not.toHaveBeenCalled();
   });
 
+  it('reads the blocked row when the skipped upsert returns nothing', async () => {
+    const blockedRow = { ...row, isBlocked: true, timeToBlockExpire: 42 };
+    queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([blockedRow]);
+
+    await expect(
+      storage.increment('k', 60_000, 10, 60_000, 'default'),
+    ).resolves.toEqual(blockedRow);
+    expect(queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when neither the upsert nor the follow-up read finds a row', async () => {
+    queryRaw.mockResolvedValue([]);
+
+    await expect(
+      storage.increment('k', 60_000, 10, 60_000, 'default'),
+    ).rejects.toThrow('returned no row');
+  });
+
   it('still resolves with the record and logs a warning when cleanup rejects', async () => {
     queryRaw.mockResolvedValue([row]);
     executeRaw.mockRejectedValue(new Error('cleanup boom'));

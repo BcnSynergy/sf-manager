@@ -55,6 +55,9 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     //   (A) still blocked          -> row unchanged, hit not counted
     //   (B/C) block or window over -> new window, hits = 1
     //   (D) live window            -> hits + 1, block when it exceeds limit
+    // Case (A) is excluded by the DO UPDATE ... WHERE below, so a blocked
+    // attempt takes the row lock but writes no new tuple version (no WAL, no
+    // dead tuple) and RETURNING yields no row; readBlocked() then reads it.
     const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
       INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
       VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond', NULL)
@@ -77,6 +80,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
             THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'
           ELSE NULL
         END
+      WHERE t."blockedUntil" IS NULL OR t."blockedUntil" <= now()
       RETURNING
         "hits" AS "totalHits",
         GREATEST(0, CEIL(EXTRACT(EPOCH FROM ("windowEndsAt" - now()))))::int AS "timeToExpire",
@@ -87,10 +91,12 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
         END AS "timeToBlockExpire"
     `;
 
-    const row = rows[0];
+    // An empty result means the conflict update was skipped because the key is
+    // still blocked; any other outcome returns exactly one row.
+    const row = rows[0] ?? (await this.readBlocked(key));
     if (row === undefined) {
-      // INSERT ... ON CONFLICT DO UPDATE ... RETURNING always yields exactly
-      // one row; reaching this means the driver contract changed.
+      // Neither the upsert nor the follow-up read found the row: it vanished
+      // between the two statements or the driver contract changed. Fail closed.
       throw new Error('ThrottleCounter increment returned no row');
     }
 
@@ -106,6 +112,28 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       isBlocked: row.isBlocked,
       timeToBlockExpire: row.timeToBlockExpire,
     };
+  }
+
+  // Reads the state of a key whose upsert was skipped as still blocked. Safe
+  // against the skip-then-read race: a block can only end by time passing, and
+  // a row is never deleted before both its window and block have ended, so the
+  // row read here is the one the skipped update saw, or an already-ended block
+  // (reported as not blocked) whose next attempt resets it.
+  private async readBlocked(
+    key: string,
+  ): Promise<ThrottlerStorageRecord | undefined> {
+    const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
+      SELECT
+        "hits" AS "totalHits",
+        GREATEST(0, CEIL(EXTRACT(EPOCH FROM ("windowEndsAt" - now()))))::int AS "timeToExpire",
+        ("blockedUntil" IS NOT NULL AND "blockedUntil" > now()) AS "isBlocked",
+        CASE WHEN "blockedUntil" > now()
+          THEN CEIL(EXTRACT(EPOCH FROM ("blockedUntil" - now())))::int
+          ELSE 0
+        END AS "timeToBlockExpire"
+      FROM "ThrottleCounter" WHERE "key" = ${key}
+    `;
+    return rows[0];
   }
 
   // Best-effort, bounded cleanup. SKIP LOCKED never waits on a row a
