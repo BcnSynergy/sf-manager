@@ -19,7 +19,7 @@ regardless of which session issued the call.)
 
 #### Scenario: Session ends mid-session
 - GIVEN a signed-in user on a protected route
-- WHEN an authenticated API call (not login) returns 401
+- WHEN an authenticated API call (not login) issued under the current session returns 401
 - THEN the local session MUST be cleared and the app MUST redirect to `/login`
 
 #### Scenario: Current-session 401 ends the session and redirects
@@ -54,7 +54,7 @@ the call.)
 
 #### Scenario: Mid-session 401
 - GIVEN a signed-in user whose session is no longer accepted by the API
-- WHEN any authenticated API call returns 401
+- WHEN any authenticated API call issued under the current session returns 401
 - THEN the app MUST land on `/login` showing the session-ended notice
 - AND the notice MUST NOT state why the session ended
 
