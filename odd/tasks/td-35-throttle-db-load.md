@@ -70,6 +70,8 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 - 2026-10-13: T1 follow-up (parent review). The blocked read moved into the same statement as the upsert (`WITH upsert ... UNION ALL SELECT ... WHERE NOT EXISTS (SELECT 1 FROM upsert)`), removing `readBlocked()` and its race (cleanup deleting the row, or the block ending, between two statements).
 - 2026-10-13: native review CRITICAL (NOT NULL `expiresAt` without default broke the previous adapter during a rolling deploy or rollback). Fix: the migration adds a `BEFORE INSERT OR UPDATE` trigger that derives `expiresAt`, the backfill goes through it, and the adapter no longer writes the column. The blocked path does not UPDATE, so the trigger does not fire there.
 
+- 2026-10-13: native review (lineage review-444abe6d2162684c, user granted) required one correction: CRITICAL R4-expiresat-not-null-no-default, fixed in bed1512 with a BEFORE INSERT OR UPDATE trigger owning expiresAt; targeted validation approved and acknowledged. WARNING R2-dead-blocked-branch (dead `blockedUntil > now()` CASE branches) and the WAL comment fixed in the follow-up commit; remaining suggestions registered as EN-20 and EN-21.
+
 ## Verification Evidence
 
 T1:

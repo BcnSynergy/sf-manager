@@ -59,14 +59,15 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     // One atomic statement (Decision 5). In ON CONFLICT DO UPDATE every
     // right-hand expression reads the pre-update row `t`, so the three CASE
     // columns see a consistent pre-image:
-    //   (A) still blocked          -> row unchanged, hit not counted
+    //   (A) still blocked          -> no update (DO UPDATE ... WHERE), hit not counted
     //   (B/C) block or window over -> new window, hits = 1
     //   (D) live window            -> hits + 1, block when it exceeds limit
     // "expiresAt" (later of window end and block end, for the indexed cleanup,
     // TD-35) is not written here: a BEFORE trigger derives it on every write.
     // Case (A) is excluded by the DO UPDATE ... WHERE below, so a blocked
-    // attempt takes the row lock but writes no new tuple version (no WAL, no
-    // dead tuple) and the upsert CTE yields no row. The `skipped` CTE then reports
+    // attempt only takes the row lock (a small lock record in WAL) and writes
+    // no new tuple version (no dead tuple, no index churn); the upsert CTE
+    // yields no row. The `skipped` CTE then reports
     // the locked row from the same statement, so both branches share one now():
     // the block cannot "end" between the skipped update and the read, and a
     // concurrent cleanup cannot delete the row in between.
@@ -81,18 +82,15 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       )
       ON CONFLICT ("key") DO UPDATE SET
         "hits" = CASE
-          WHEN t."blockedUntil" > now() THEN t."hits"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN 1
           ELSE t."hits" + 1
         END,
         "windowEndsAt" = CASE
-          WHEN t."blockedUntil" > now() THEN t."windowEndsAt"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now()
             THEN date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
           ELSE t."windowEndsAt"
         END,
         "blockedUntil" = CASE
-          WHEN t."blockedUntil" > now() THEN t."blockedUntil"
           WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now() THEN NULL
           WHEN t."hits" + 1 > ${limit}::int
             THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'

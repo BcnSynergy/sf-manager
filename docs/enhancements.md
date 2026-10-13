@@ -145,6 +145,22 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `ProtectedRoute` renders no `apiFetch` caller while loading (see the
   ADR-011 2026-10-06 addendum, item 6). Revisit if a caller can run before
   the restore completes. Origin: `stale-401-session-guard` design, 2026-10-13.
+- **EN-20** (api tests): Login-throttle cleanup test gaps in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts`.
+  The statement-timeout test only shows the timeout does not leak onto
+  pooled connections; nothing proves the 500 ms bound applies to the cleanup
+  `DELETE` or that a timeout is logged and the login still succeeds at
+  integration level (the unit spec covers the logging). The "deletes fully
+  expired rows past more than 100 ... still-blocked rows" test empties the
+  whole table first, which couples it to other tests in the suite. Origin:
+  `td-35-throttle-db-load` native review, 2026-10-13.
+- **EN-21** (api): The window-end expression
+  `date_trunc('milliseconds', now()) + ttl * interval '1 millisecond'` is
+  repeated in the throttle upsert in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`;
+  computing it once (for example in a CTE) would make the SQL easier to read
+  and change. Related to EN-9. Origin: `td-35-throttle-db-load` native
+  review, 2026-10-13.
 
 ## Done
 
