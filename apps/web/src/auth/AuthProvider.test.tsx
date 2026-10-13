@@ -309,11 +309,37 @@ describe('AuthProvider — session ended on a mid-session 401', () => {
     expect((result as ApiError).status).toBe(401);
   });
 
+  it('raises no notice for a stale 401 that lands after a logout', async () => {
+    const held = deferredData();
+    await renderSession({ loggedIn: true, data: held.data });
+
+    let result: unknown;
+    const pending = apiFetch('/users').catch((e: unknown) => {
+      result = e;
+    });
+    await act(async () => {
+      screen.getByTestId('probe-logout').click();
+    });
+    await waitFor(() => expect(screen.getByTestId('probe-user')).toHaveTextContent('none'));
+    await act(async () => {
+      held.resolve();
+      await pending;
+    });
+
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('none');
+    expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+    expect(result).toBeInstanceOf(ApiError);
+    expect((result as ApiError).status).toBe(401);
+  });
+
   it('raises no notice and keeps the new session for a stale 401 across logout', async () => {
     const held = deferredData();
     await renderSession({ loggedIn: true, data: held.data });
 
-    const pending = apiFetch('/users').catch(() => undefined);
+    let result: unknown;
+    const pending = apiFetch('/users').catch((e: unknown) => {
+      result = e;
+    });
     await act(async () => {
       screen.getByTestId('probe-logout').click();
     });
@@ -331,6 +357,8 @@ describe('AuthProvider — session ended on a mid-session 401', () => {
 
     expect(screen.getByTestId('probe-user')).toHaveTextContent('admin@sf-manager.example');
     expect(screen.getByTestId('probe-ended')).toHaveTextContent('false');
+    expect(result).toBeInstanceOf(ApiError);
+    expect((result as ApiError).status).toBe(401);
   });
 
   it('clears the handler when the provider unmounts', async () => {
