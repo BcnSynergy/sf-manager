@@ -151,12 +151,15 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   pooled connections; nothing proves the 500 ms bound applies to the cleanup
   `DELETE` or that a timeout is logged and the login still succeeds at
   integration level (the unit spec covers the logging). The "deletes fully
-  expired rows past more than 100 ... still-blocked rows" test empties the
+  expired rows even when more than 100 still-blocked rows have an ended
+  window" test empties the
   whole table first, which couples it to other tests in the suite. The
   index test runs `EXPLAIN` on a copy of the cleanup SQL rather than the
   adapter's statement, so it would not notice the predicate drifting. The
   no-leak test relies on the pool reusing the cleanup's connection among a
-  few parallel queries, which is likely but not guaranteed. Origin:
+  few parallel queries, which is likely but not guaranteed. The one-retry
+  path in `increment()` is covered by unit tests only, and one seed helper
+  still writes an explicit `expiresAt` that the trigger overwrites. Origin:
   `td-35-throttle-db-load` native review, 2026-10-13.
 - **EN-21** (api): The window-end expression
   `date_trunc('milliseconds', now()) + ttl * interval '1 millisecond'` is
