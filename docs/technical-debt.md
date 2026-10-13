@@ -24,12 +24,6 @@ project's Engram memory on 2026-10-09.
 
 ### Medium
 
-- **TD-25**: A stale in-flight request that returns 401 after a re-login ends
-  the new, valid web session, because the handler acts whenever a user is set.
-  Likelihood is low; a session epoch captured at request start would fix it.
-  Evidence: `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`
-  (2026-10-06 addendum, item 6); `auth-live-user-check` archive-report W-2.
-  Origin: `auth-live-user-check`.
 - **TD-31**: Account lockout and per-email rate-limit keying are deferred, so
   a distributed attack on one account is not limited. Evidence:
   `login-rate-limit` archive-report, open question 5. Origin:
@@ -192,6 +186,12 @@ project's Engram memory on 2026-10-09.
   a1e07df (#176, `chore/dev-seed-leftovers`): the seed catches the expected
   template errors, logs a WARN, and returns `skip-unfinishable-draft`
   (`apps/api/src/shared/seeding/seed-dev-dataset.ts:535-547`).
+- **TD-25**: A stale in-flight request that returned 401 after a re-login
+  ended the new, valid web session. Resolved by `stale-401-session-guard`
+  (PR 1/2, PR number added once known): `apiFetch` skips the unauthorized
+  handler when the session epoch advanced since the request started
+  (`apps/web/src/api/client.ts`), and `AuthProvider` advances it at login,
+  logout and session end. Origin: `auth-live-user-check`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
