@@ -55,12 +55,19 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     //   (A) still blocked          -> row unchanged, hit not counted
     //   (B/C) block or window over -> new window, hits = 1
     //   (D) live window            -> hits + 1, block when it exceeds limit
+    // "expiresAt" is the later of the window end and the block end, kept in
+    // step with them so cleanup is a single indexed range condition (TD-35).
     // Case (A) is excluded by the DO UPDATE ... WHERE below, so a blocked
     // attempt takes the row lock but writes no new tuple version (no WAL, no
     // dead tuple) and RETURNING yields no row; readBlocked() then reads it.
     const rows = await this.prisma.$queryRaw<ThrottlerStorageRecord[]>`
-      INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
-      VALUES (${key}, 1, date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond', NULL)
+      INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil", "expiresAt")
+      VALUES (
+        ${key}, 1,
+        date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond',
+        NULL,
+        date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
+      )
       ON CONFLICT ("key") DO UPDATE SET
         "hits" = CASE
           WHEN t."blockedUntil" > now() THEN t."hits"
@@ -79,6 +86,14 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
           WHEN t."hits" + 1 > ${limit}::int
             THEN date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond'
           ELSE NULL
+        END,
+        "expiresAt" = CASE
+          WHEN t."blockedUntil" > now() THEN t."expiresAt"
+          WHEN t."blockedUntil" IS NOT NULL OR t."windowEndsAt" <= now()
+            THEN date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond'
+          WHEN t."hits" + 1 > ${limit}::int
+            THEN GREATEST(t."windowEndsAt", date_trunc('milliseconds', now()) + ${blockDuration}::bigint * interval '1 millisecond')
+          ELSE t."windowEndsAt"
         END
       WHERE t."blockedUntil" IS NULL OR t."blockedUntil" <= now()
       RETURNING
@@ -147,8 +162,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       await this.prisma.$executeRaw`
         DELETE FROM "ThrottleCounter" WHERE "key" IN (
           SELECT "key" FROM "ThrottleCounter"
-          WHERE "windowEndsAt" < now()
-            AND ("blockedUntil" IS NULL OR "blockedUntil" < now())
+          WHERE "expiresAt" < now()
           LIMIT ${CLEANUP_BATCH_SIZE}::int
           FOR UPDATE SKIP LOCKED
         )
