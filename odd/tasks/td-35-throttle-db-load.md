@@ -24,7 +24,7 @@ TD-35 (`docs/technical-debt.md`), raised by the `login-rate-limit-hardening` PR 
 
 In:
 - Blocked attempts do not rewrite the row (conditional `DO UPDATE ... WHERE`, plus a read of the blocked row's state).
-- An `expiresAt` column (greatest of `windowEndsAt` and `blockedUntil`) maintained by the upsert, indexed, replacing the `windowEndsAt` index; cleanup selects on it. Migration with backfill.
+- An `expiresAt` column (greatest of `windowEndsAt` and `blockedUntil`) maintained by a `BEFORE INSERT OR UPDATE` trigger (originally by the upsert; changed after the native review, see Progress), indexed, replacing the `windowEndsAt` index; cleanup selects on it. Migration with backfill.
 - A short `statement_timeout` for the cleanup statement only.
 - Docs: README throttle note, TD-35 to Resolved, a note on design Decision 6 if needed.
 

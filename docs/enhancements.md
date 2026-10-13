@@ -161,6 +161,16 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   computing it once (for example in a CTE) would make the SQL easier to read
   and change. Related to EN-9. Origin: `td-35-throttle-db-load` native
   review, 2026-10-13.
+- **EN-22** (api): Login-throttle follow-ups from the `td-35-throttle-db-load`
+  native review, 2026-10-13. The cleanup's interactive `$transaction` costs
+  extra round trips (`BEGIN`, `set_config`, `DELETE`, `COMMIT`); a single
+  statement or a batched transaction would be cheaper. Migration
+  `20261013120000_throttle_counter_expires_at` rewrites every row and builds
+  the index without `CONCURRENTLY`, so it locks the table for its duration
+  (small today; revisit if the table grows). `ThrottleCounter.expiresAt` is a
+  required field in the Prisma client although the trigger owns it, so a
+  future Prisma `create` would have to pass a value the trigger then
+  overwrites.
 
 ## Done
 

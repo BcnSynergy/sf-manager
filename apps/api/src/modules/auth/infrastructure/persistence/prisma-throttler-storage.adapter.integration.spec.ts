@@ -228,18 +228,17 @@ describe('PrismaThrottlerStorage (integration)', () => {
   });
 
   describe('cleanup on expiresAt', () => {
-    // Seeds rows through SQL so the test states the column contract itself:
-    // expiresAt is the later of windowEndsAt and blockedUntil.
+    // Seeds rows whose window has ended, optionally still blocked. expiresAt
+    // is omitted: the trigger derives it (later of windowEndsAt and
+    // blockedUntil), as it does for every writer.
     const seed = async (count: number, blockedForSeconds: number | null) => {
       const keys = Array.from({ length: count }, () => randomUUID());
       for (const key of keys) {
         await prisma.$executeRaw`
-          INSERT INTO "ThrottleCounter" ("key", "hits", "windowEndsAt", "blockedUntil", "expiresAt")
+          INSERT INTO "ThrottleCounter" ("key", "hits", "windowEndsAt", "blockedUntil")
           VALUES (
             ${key}, 2, now() - interval '60 seconds',
             CASE WHEN ${blockedForSeconds}::int IS NULL THEN NULL
-              ELSE now() + ${blockedForSeconds}::int * interval '1 second' END,
-            CASE WHEN ${blockedForSeconds}::int IS NULL THEN now() - interval '60 seconds'
               ELSE now() + ${blockedForSeconds}::int * interval '1 second' END
           )
         `;
