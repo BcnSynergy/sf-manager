@@ -299,6 +299,31 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   window can roll over and the 4th request gets 401 instead of 429 (a
   timing-dependent failure, not a false pass). A longer window would make it
   deterministic. Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-39** (api): A client already blocked by its client key can learn, at no
+  cost, whether any email is currently blocked: `LoginThrottlerGuard` raises
+  `Retry-After` above the client-key value when the email block is longer, and
+  the probe records no failure and evaluates no credentials. It does not
+  reveal whether an account exists (unknown emails are counted the same way),
+  and the email-only 429 already exposes block state to unblocked clients, so
+  the extra signal is small and matches the accepted design. Revisit only if
+  block state becomes sensitive. Evidence:
+  `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`.
+  Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-40** (api): When the advisory `getBlock` read fails in
+  `LoginThrottlerGuard.throwThrottlingException`, one `warn` line is written
+  per rejected login. During a store outage under attack, log volume grows
+  with attack traffic. Rate-limit or sample the warn, or count failures as a
+  metric. Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-41** (api tests): `login-throttler.guard.spec.ts` has two diverging
+  `ExecutionContext` fakes: `rejectWith` builds its own stub (handler, class,
+  `switchToHttp`) instead of extending the existing `contextFor` helper with a
+  response. A later change to what the guard reads from the context must be
+  made in both. Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-42** (api tests): No test boots `AppModule` with an invalid
+  `LOGIN_EMAIL_RATE_LIMIT_*` value to prove the factory in
+  `apps/api/src/modules/auth/auth.module.ts` (~line 105) throws at startup. The
+  "Invalid configuration rejected at startup" scenario is proven only by the
+  config unit spec. Origin: `login-account-lockout` sdd-verify, 2026-10-14.
 
 ## Done
 
