@@ -150,22 +150,34 @@ describe('Login rate limit persistence (integration)', () => {
     await failedLogin(app, client).expect(401);
   });
 
-  it('never stores the raw client address in a counter key', async () => {
+  it('never stores the raw client address or the raw email in a counter key', async () => {
     const app = await createApp();
     const prisma = app.get(PrismaService);
     // Integration suites run in band, so emptying the table here is safe and
     // makes the row below provably this attempt's own.
     await prisma.throttleCounter.deleteMany();
 
-    await failedLogin(app, uniqueClient()).expect(401);
+    const client = uniqueClient();
+    const email = `nobody-${randomUUID()}@example.com`;
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .set('X-Forwarded-For', client)
+      .send({ email, password: 'wrong-password-1' })
+      .expect(401);
 
-    // Non-vacuous: this attempt wrote exactly one counter row.
-    expect(await prisma.throttleCounter.count()).toBe(1);
-    // Every key is a sha256 hex digest, so neither the full address nor its
-    // /64 tracker prefix can appear in it.
-    const keys = (await prisma.throttleCounter.findMany()).map((r) => r.key);
-    for (const key of keys) {
+    // Non-vacuous: a failed attempt writes two counter rows, one for the
+    // client key and one for the email (login-account-lockout).
+    const rows = await prisma.throttleCounter.findMany();
+    expect(rows).toHaveLength(2);
+    // Every key is a sha256 hex digest, so neither the full address, its /64
+    // tracker prefix nor the email can appear in it, and no other column
+    // holds them either.
+    for (const { key } of rows) {
       expect(key).toMatch(/^[0-9a-f]{64}$/);
     }
+    expect(new Set(rows.map((r) => r.key)).size).toBe(2);
+    const stored = JSON.stringify(rows);
+    expect(stored).not.toContain(email);
+    expect(stored).not.toContain(client);
   });
 });
