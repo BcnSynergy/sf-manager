@@ -200,7 +200,11 @@ None.
   which called `increment()` with the library's five arguments on a variable
   typed as the four-parameter adapter. Resolved by
   `td-36-throttler-spec-types` (#218): the specs now type the variable as the
-  `ThrottlerStorage` port, as `ThrottlerGuard` calls it.
+  `ThrottlerStorage` port, as `ThrottlerGuard` calls it. The adapter still
+  declares four parameters on purpose: the throttler name is already part of
+  the key that `ThrottlerGuard.generateKey` hashes, so it is ignored. Nothing
+  in CI type-checks the specs yet, so a regression would go unnoticed until
+  TD-32's typecheck script lands.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
