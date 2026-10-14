@@ -53,6 +53,11 @@ jobs:
       - name: Lint
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run lint
+      # nest build excludes specs and Jest does not type-check, so this is the
+      # only step that type-checks the API's specs (TD-32, TD-36).
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run typecheck -w apps/api
       - name: Unit
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm test

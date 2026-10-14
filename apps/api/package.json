@@ -15,6 +15,7 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "pretest": "npm run build --workspace=@sf-manager/validation",
     "test": "jest",
     "test:watch": "jest --watch",
