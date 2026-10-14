@@ -82,9 +82,9 @@ describe('api/review-session', () => {
       mockResponse({ ok: true, status: 201, json: async () => session }),
     );
 
-    await expect(
-      openReviewSession({ communityId: 'c1', templateId: 't1' }),
-    ).resolves.toEqual(session);
+    await expect(openReviewSession({ communityId: 'c1', templateId: 't1' })).resolves.toEqual(
+      session,
+    );
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/review-sessions');
     expect(init.method).toBe('POST');
@@ -145,7 +145,11 @@ describe('api/review-session', () => {
       mockResponse({
         ok: true,
         status: 200,
-        json: async () => ({ id: 's1', status: 'completed', completedAt: '2026-09-08T00:00:00.000Z' }),
+        json: async () => ({
+          id: 's1',
+          status: 'completed',
+          completedAt: '2026-09-08T00:00:00.000Z',
+        }),
       }),
     );
 

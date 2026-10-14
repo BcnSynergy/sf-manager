@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
-import {
-  readElementReviewHistory,
-  type ElementReviewHistory,
-} from '../api/review-history';
+import { readElementReviewHistory, type ElementReviewHistory } from '../api/review-history';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -99,13 +96,10 @@ export function ElementReviewHistoryPage() {
             type: t(mapElementTypeToLabelKey(element.elementType)),
           })}
         </p>
-        <p>
-          {t('reviewHistory.elementHistory.locationLabel', { location: element.location })}
-        </p>
+        <p>{t('reviewHistory.elementHistory.locationLabel', { location: element.location })}</p>
         <p>
           {t('reviewHistory.elementHistory.communityLabel', {
-            community:
-              element.communityName || t('reviewHistory.elementHistory.communityUnknown'),
+            community: element.communityName || t('reviewHistory.elementHistory.communityUnknown'),
           })}
         </p>
         {/* inspectable-element-admin-ui spec.md "Element State Shown in the

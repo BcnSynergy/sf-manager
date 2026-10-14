@@ -18,7 +18,11 @@ describe('mid-session 401 flow', () => {
         if (String(url).includes('/auth/me')) {
           return Promise.resolve({
             ok: true,
-            json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' }),
+            json: async () => ({
+              id: '1',
+              email: 'admin@sf-manager.example',
+              role: 'SYSTEM_ADMIN',
+            }),
           } as Response);
         }
         // Any data call: the API answers 401 (the session ended server-side).

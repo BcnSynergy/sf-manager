@@ -60,14 +60,18 @@ describe('UserCreatePage', () => {
     renderPage();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.click(screen.getByTestId('user-create-submit'));
 
-    await waitFor(() => expect(mockedCreateUser).toHaveBeenCalledWith({
-      email: VALID_EMAIL,
-      password: VALID_PASSWORD,
-      role: 'SYSTEM_ADMIN',
-    }));
+    await waitFor(() =>
+      expect(mockedCreateUser).toHaveBeenCalledWith({
+        email: VALID_EMAIL,
+        password: VALID_PASSWORD,
+        role: 'SYSTEM_ADMIN',
+      }),
+    );
     expect(await screen.findByTestId('users-list-sentinel')).toBeInTheDocument();
   });
 
@@ -76,7 +80,9 @@ describe('UserCreatePage', () => {
     renderPage();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.click(screen.getByTestId('user-create-submit'));
 
     expect(await screen.findByTestId('user-create-error')).toHaveTextContent(
@@ -126,7 +132,9 @@ describe('UserCreatePage', () => {
     expect(screen.queryByTestId('user-create-company')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.click(screen.getByTestId('user-create-submit'));
 
     await waitFor(() =>
@@ -149,7 +157,9 @@ describe('UserCreatePage', () => {
     renderPage();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.change(screen.getByTestId('user-create-role'), {
       target: { value: 'MAINTENANCE_TECHNICIAN' },
     });
@@ -172,7 +182,9 @@ describe('UserCreatePage', () => {
     renderPage();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.change(screen.getByTestId('user-create-role'), {
       target: { value: 'MAINTENANCE_TECHNICIAN' },
     });
@@ -188,7 +200,9 @@ describe('UserCreatePage', () => {
     renderPage();
 
     fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
-    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: VALID_PASSWORD } });
+    fireEvent.change(screen.getByTestId('user-create-password'), {
+      target: { value: VALID_PASSWORD },
+    });
     fireEvent.change(screen.getByTestId('user-create-role'), {
       target: { value: 'MAINTENANCE_TECHNICIAN' },
     });

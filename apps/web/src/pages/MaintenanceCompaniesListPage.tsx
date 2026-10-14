@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { ApiError } from '../api/client';
-import {
-  listMaintenanceCompanies,
-  type MaintenanceCompany,
-} from '../api/maintenance-company';
+import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';

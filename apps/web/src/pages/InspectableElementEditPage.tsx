@@ -320,9 +320,7 @@ export function InspectableElementEditPage() {
           {t('inspectableElement.edit.submitLabel')}
         </button>
       </form>
-      {deleteError && (
-        <p data-testid="inspectable-element-edit-delete-error">{deleteError}</p>
-      )}
+      {deleteError && <p data-testid="inspectable-element-edit-delete-error">{deleteError}</p>}
       <button
         type="button"
         data-testid="inspectable-element-edit-delete"

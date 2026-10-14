@@ -64,7 +64,9 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
         setLoadErrorKey(null);
       })
       .catch((error: unknown) => {
-        setLoadErrorKey(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
+        setLoadErrorKey(
+          mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+        );
         setLoadState('error');
       });
   }, [ops]);
@@ -213,9 +215,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
         >
           {t(keys.assignLabel)}
         </button>
-        {assignErrorKey && (
-          <p data-testid={`${testIdPrefix}-assign-error`}>{t(assignErrorKey)}</p>
-        )}
+        {assignErrorKey && <p data-testid={`${testIdPrefix}-assign-error`}>{t(assignErrorKey)}</p>}
       </form>
 
       <ConfirmDialog

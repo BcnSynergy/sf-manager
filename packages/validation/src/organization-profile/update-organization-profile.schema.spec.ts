@@ -114,9 +114,7 @@ describe('updateOrganizationProfileSchema', () => {
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(
-        (result.data as Record<string, unknown>).logoAssetId,
-      ).toBeUndefined();
+      expect((result.data as Record<string, unknown>).logoAssetId).toBeUndefined();
     }
   });
 
@@ -126,9 +124,7 @@ describe('updateOrganizationProfileSchema', () => {
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(
-        (result.data as Record<string, unknown>).unknownField,
-      ).toBeUndefined();
+      expect((result.data as Record<string, unknown>).unknownField).toBeUndefined();
     }
   });
 });

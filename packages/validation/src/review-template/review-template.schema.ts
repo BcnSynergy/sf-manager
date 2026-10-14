@@ -23,9 +23,7 @@ export const createDraftReviewTemplateSchema = z.object({
   name: z.string().trim().min(1),
 });
 
-export type CreateDraftReviewTemplateRequest = z.infer<
-  typeof createDraftReviewTemplateSchema
->;
+export type CreateDraftReviewTemplateRequest = z.infer<typeof createDraftReviewTemplateSchema>;
 
 // design.md Interfaces (PUT /review-templates/:id/questions) + spec.md
 // "Replace a Draft's Ordered Question Selection": a full, ordered list of
@@ -35,6 +33,4 @@ export const setReviewTemplateQuestionsSchema = z.object({
   questionIds: z.array(z.string()),
 });
 
-export type SetReviewTemplateQuestionsRequest = z.infer<
-  typeof setReviewTemplateQuestionsSchema
->;
+export type SetReviewTemplateQuestionsRequest = z.infer<typeof setReviewTemplateQuestionsSchema>;

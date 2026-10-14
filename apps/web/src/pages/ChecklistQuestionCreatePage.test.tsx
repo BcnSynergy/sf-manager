@@ -80,9 +80,7 @@ describe('ChecklistQuestionCreatePage', () => {
         text: VALID_TEXT,
       }),
     );
-    expect(
-      await screen.findByTestId('checklist-question-list-sentinel'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('checklist-question-list-sentinel')).toBeInTheDocument();
   });
 
   it('shows a mapped error message (not English server prose) on a server-side failure', async () => {

@@ -87,9 +87,7 @@ export function ChecklistQuestionsListPage() {
     return (
       <main>
         <h1>{t('checklistQuestion.list.title')}</h1>
-        <p data-testid="checklist-question-list-loading">
-          {t('checklistQuestion.list.loading')}
-        </p>
+        <p data-testid="checklist-question-list-loading">{t('checklistQuestion.list.loading')}</p>
       </main>
     );
   }
@@ -131,7 +129,9 @@ export function ChecklistQuestionsListPage() {
           <section key={elementType} data-testid={`checklist-question-group-${elementType}`}>
             <h2>{t(mapElementTypeToLabelKey(elementType))}</h2>
             <table>
-              <caption className="visually-hidden">{t(mapElementTypeToLabelKey(elementType))}</caption>
+              <caption className="visually-hidden">
+                {t(mapElementTypeToLabelKey(elementType))}
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">{t('checklistQuestion.list.columnText')}</th>

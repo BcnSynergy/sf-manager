@@ -7,12 +7,7 @@ import { elementTypeSchema } from '../inspectable-element/inspectable-element.sc
 // apps/api/src/modules/checklist-question/domain/review-frequency.ts)
 // gates against this type via `satisfies`, mirroring `elementTypeSchema` /
 // `ELEMENT_TYPES`.
-export const reviewFrequencySchema = z.enum([
-  'MONTHLY',
-  'QUARTERLY',
-  'SEMIANNUAL',
-  'ANNUAL',
-]);
+export const reviewFrequencySchema = z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']);
 
 export type ReviewFrequency = z.infer<typeof reviewFrequencySchema>;
 
@@ -29,9 +24,7 @@ export const createChecklistQuestionSchema = z.object({
   text: z.string().trim().min(1),
 });
 
-export type CreateChecklistQuestionRequest = z.infer<
-  typeof createChecklistQuestionSchema
->;
+export type CreateChecklistQuestionRequest = z.infer<typeof createChecklistQuestionSchema>;
 
 // design.md Interfaces (PATCH /checklist-questions/:id) + checklist-
 // question-management spec.md "Update Checklist Question": elementType is
@@ -42,6 +35,4 @@ export const updateChecklistQuestionSchema = z.object({
   frequencies: z.array(reviewFrequencySchema).min(1).optional(),
 });
 
-export type UpdateChecklistQuestionRequest = z.infer<
-  typeof updateChecklistQuestionSchema
->;
+export type UpdateChecklistQuestionRequest = z.infer<typeof updateChecklistQuestionSchema>;

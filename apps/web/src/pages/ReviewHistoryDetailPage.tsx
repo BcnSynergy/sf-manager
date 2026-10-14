@@ -87,7 +87,9 @@ export function ReviewHistoryDetailPage() {
     );
   }
 
-  const questionTextById = new Map(detail.questions.map((question) => [question.questionId, question.text]));
+  const questionTextById = new Map(
+    detail.questions.map((question) => [question.questionId, question.text]),
+  );
 
   return (
     <main>

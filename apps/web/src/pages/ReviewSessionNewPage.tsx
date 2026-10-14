@@ -3,11 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { ElementType } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
-import {
-  getReviewScope,
-  openReviewSession,
-  type ReviewScope,
-} from '../api/review-session';
+import { getReviewScope, openReviewSession, type ReviewScope } from '../api/review-session';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 

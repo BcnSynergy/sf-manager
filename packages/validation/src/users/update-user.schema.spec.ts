@@ -49,14 +49,11 @@ describe('updateUserSchema — managerCapabilities', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues.find(
-        (i) => i.path[0] === 'managerCapabilities',
-      );
+      const issue = result.error.issues.find((i) => i.path[0] === 'managerCapabilities');
       expect(issue).toBeDefined();
-      expect(
-        (issue as { params?: { userErrorCode?: string } }).params
-          ?.userErrorCode,
-      ).toBe('MANAGER_CAPABILITIES_NOT_ALLOWED');
+      expect((issue as { params?: { userErrorCode?: string } }).params?.userErrorCode).toBe(
+        'MANAGER_CAPABILITIES_NOT_ALLOWED',
+      );
     }
   });
 
@@ -87,9 +84,7 @@ describe('updateUserSchema — managerCapabilities', () => {
       const firstIssue = result.error.issues[0] as {
         params?: { userErrorCode?: string };
       };
-      expect(firstIssue.params?.userErrorCode).toBe(
-        'MAINTENANCE_COMPANY_NOT_ALLOWED',
-      );
+      expect(firstIssue.params?.userErrorCode).toBe('MAINTENANCE_COMPANY_NOT_ALLOWED');
     }
   });
 });
@@ -117,9 +112,7 @@ describe('createUserSchema — unchanged parse behaviour (tag-key rename only)',
       const issue = result.error.issues[0] as {
         params?: { userErrorCode?: string };
       };
-      expect(issue.params?.userErrorCode).toBe(
-        'MAINTENANCE_COMPANY_NOT_ALLOWED',
-      );
+      expect(issue.params?.userErrorCode).toBe('MAINTENANCE_COMPANY_NOT_ALLOWED');
     }
   });
 

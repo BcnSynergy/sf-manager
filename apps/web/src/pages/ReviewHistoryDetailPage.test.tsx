@@ -232,7 +232,7 @@ describe('ReviewHistoryDetailPage', () => {
   // this is the single link into the document page, offered for every one
   // of the five history roles (this page's API read is already scoped by
   // history for all five — no role-specific branching needed here).
-  it('renders exactly one View document link leading to this session\'s document page', async () => {
+  it("renders exactly one View document link leading to this session's document page", async () => {
     mockedReadReviewHistory.mockResolvedValue(detail);
 
     renderPage();

@@ -120,11 +120,7 @@ export function ChecklistQuestionCreatePage() {
           data-testid="checklist-question-create-text"
         />
         {error && <p data-testid="checklist-question-create-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="checklist-question-create-submit"
-          disabled={submitting}
-        >
+        <button type="submit" data-testid="checklist-question-create-submit" disabled={submitting}>
           {t('checklistQuestion.create.submitLabel')}
         </button>
       </form>

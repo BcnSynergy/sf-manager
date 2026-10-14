@@ -39,7 +39,9 @@ export function CommunitiesListPage() {
         setLoadErrorKey(null);
       })
       .catch((error: unknown) => {
-        setLoadErrorKey(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
+        setLoadErrorKey(
+          mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+        );
         setLoadState('error');
       });
   }, []);
@@ -64,7 +66,9 @@ export function CommunitiesListPage() {
       await softDeleteCommunity(id);
       await loadCommunities();
     } catch (error) {
-      setActionErrorKey(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
+      setActionErrorKey(
+        mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+      );
     }
   }
 
@@ -92,9 +96,7 @@ export function CommunitiesListPage() {
       <Link to="/communities/new" data-testid="communities-list-create-link">
         {t('community.list.createLink')}
       </Link>
-      {actionErrorKey && (
-        <p data-testid="communities-list-action-error">{t(actionErrorKey)}</p>
-      )}
+      {actionErrorKey && <p data-testid="communities-list-action-error">{t(actionErrorKey)}</p>}
       {communities.length === 0 ? (
         <p data-testid="communities-list-empty">{t('community.list.empty')}</p>
       ) : (
@@ -115,10 +117,16 @@ export function CommunitiesListPage() {
                 <td>{row.address}</td>
                 <td>{t(mapLocaleToLabelKey(row.locale))}</td>
                 <td>
-                  <Link to={`/communities/${row.id}`} data-testid={`communities-list-view-${row.id}`}>
+                  <Link
+                    to={`/communities/${row.id}`}
+                    data-testid={`communities-list-view-${row.id}`}
+                  >
                     {t('community.list.viewLink')}
                   </Link>
-                  <Link to={`/communities/${row.id}/edit`} data-testid={`communities-list-edit-${row.id}`}>
+                  <Link
+                    to={`/communities/${row.id}/edit`}
+                    data-testid={`communities-list-edit-${row.id}`}
+                  >
                     {t('community.list.editLink')}
                   </Link>
                   <button

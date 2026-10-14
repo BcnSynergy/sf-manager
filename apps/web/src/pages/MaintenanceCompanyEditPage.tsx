@@ -198,9 +198,7 @@ export function MaintenanceCompanyEditPage() {
           {t('maintenanceCompany.edit.submitLabel')}
         </button>
       </form>
-      {deleteError && (
-        <p data-testid="maintenance-company-edit-delete-error">{deleteError}</p>
-      )}
+      {deleteError && <p data-testid="maintenance-company-edit-delete-error">{deleteError}</p>}
       <button
         type="button"
         data-testid="maintenance-company-edit-delete"

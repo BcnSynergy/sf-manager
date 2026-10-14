@@ -147,7 +147,9 @@ vi.mock('./pages/ReviewHistoryDetailPage', () => ({
   ),
 }));
 vi.mock('./pages/ReviewDocumentPage', () => ({
-  ReviewDocumentPage: () => <div data-testid="page-stub-ReviewDocumentPage">ReviewDocumentPage</div>,
+  ReviewDocumentPage: () => (
+    <div data-testid="page-stub-ReviewDocumentPage">ReviewDocumentPage</div>
+  ),
 }));
 vi.mock('./pages/ReviewSchedulePage', () => ({
   ReviewSchedulePage: () => (
@@ -215,7 +217,9 @@ function renderApp(initialEntries: string[], role?: string) {
 // entry itself, not a hand-typed duplicate list.
 function expectedMarkerOf(element: ReactElement): string {
   const { container, unmount } = render(element);
-  const marker = container.querySelector('[data-testid^="page-stub-"]')?.getAttribute('data-testid');
+  const marker = container
+    .querySelector('[data-testid^="page-stub-"]')
+    ?.getAttribute('data-testid');
   unmount();
   if (!marker) {
     throw new Error('Expected a page-stub-* marker in the rendered route element.');
@@ -281,7 +285,10 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
   });
 
   it('/review-schedule redirects an unauthenticated visitor to /login', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)),
+    );
     render(
       <AuthProvider>
         <MemoryRouter initialEntries={['/review-schedule']}>

@@ -8,9 +8,7 @@ import { CommunityElementsListPage } from './CommunityElementsListPage';
 
 vi.mock('../api/inspectable-element');
 
-const mockedListInspectableElements = vi.mocked(
-  inspectableElementApi.listInspectableElements,
-);
+const mockedListInspectableElements = vi.mocked(inspectableElementApi.listInspectableElements);
 
 const COMMUNITY_ID = 'community-1';
 
@@ -112,10 +110,7 @@ describe('CommunityElementsListPage', () => {
     renderPage();
 
     const link = await screen.findByTestId('community-elements-list-create-link');
-    expect(link).toHaveAttribute(
-      'href',
-      `/communities/${COMMUNITY_ID}/inspectable-elements/new`,
-    );
+    expect(link).toHaveAttribute('href', `/communities/${COMMUNITY_ID}/inspectable-elements/new`);
   });
 
   it('renders the code column and a per-row Print link to the label route', async () => {
@@ -138,9 +133,7 @@ describe('CommunityElementsListPage', () => {
 
     renderPage();
 
-    const historyLink = await screen.findByTestId(
-      `community-elements-list-history-${elementA.id}`,
-    );
+    const historyLink = await screen.findByTestId(`community-elements-list-history-${elementA.id}`);
     expect(historyLink).toHaveAttribute(
       'href',
       `/communities/${COMMUNITY_ID}/inspectable-elements/${elementA.id}/history`,
@@ -184,7 +177,9 @@ describe('CommunityElementsListPage', () => {
 
     renderPage();
 
-    const table = await screen.findByRole('table', { name: i18n.t('inspectableElement.list.title') });
+    const table = await screen.findByRole('table', {
+      name: i18n.t('inspectableElement.list.title'),
+    });
     expect(table.querySelector('caption')).toHaveClass('visually-hidden');
     const headers = within(table).getAllByRole('columnheader');
     expect(headers).toHaveLength(9);

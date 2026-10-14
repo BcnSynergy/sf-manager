@@ -21,10 +21,7 @@ function renderPage() {
     <MemoryRouter initialEntries={['/review-sessions/new']}>
       <Routes>
         <Route path="/review-sessions/new" element={<ReviewSessionNewPage />} />
-        <Route
-          path="/review-sessions/:id"
-          element={<div data-testid="detail-page">detail</div>}
-        />
+        <Route path="/review-sessions/:id" element={<div data-testid="detail-page">detail</div>} />
       </Routes>
     </MemoryRouter>,
   );

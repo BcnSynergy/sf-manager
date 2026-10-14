@@ -230,10 +230,7 @@ describe('api/community', () => {
       }),
     );
 
-    await expect(listTechnicians('c1')).resolves.toEqual([
-      activeAssignment,
-      deactivatedAssignment,
-    ]);
+    await expect(listTechnicians('c1')).resolves.toEqual([activeAssignment, deactivatedAssignment]);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/communities/c1/technicians');

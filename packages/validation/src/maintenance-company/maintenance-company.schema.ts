@@ -20,9 +20,7 @@ export const createMaintenanceCompanySchema = z.object({
   contactInfo: z.string().trim().min(1),
 });
 
-export type CreateMaintenanceCompanyRequest = z.infer<
-  typeof createMaintenanceCompanySchema
->;
+export type CreateMaintenanceCompanyRequest = z.infer<typeof createMaintenanceCompanySchema>;
 
 // design.md Interfaces/Contracts (PATCH /maintenance-companies/:id) +
 // maintenance-company-management spec.md "Update Maintenance Company": all
@@ -34,6 +32,4 @@ export const updateMaintenanceCompanySchema = z.object({
   contactInfo: z.string().trim().min(1).optional(),
 });
 
-export type UpdateMaintenanceCompanyRequest = z.infer<
-  typeof updateMaintenanceCompanySchema
->;
+export type UpdateMaintenanceCompanyRequest = z.infer<typeof updateMaintenanceCompanySchema>;

@@ -16,7 +16,12 @@ const document: reviewHistoryApi.ReviewDocument = {
   id: SESSION_ID,
   communityId: 'c1',
   communityName: 'Community One',
-  template: { name: 'Extinguisher check', elementType: 'EXTINGUISHER', frequency: 'ANNUAL', version: 1 },
+  template: {
+    name: 'Extinguisher check',
+    elementType: 'EXTINGUISHER',
+    frequency: 'ANNUAL',
+    version: 1,
+  },
   maintenanceCompanyName: 'Acme Maintenance',
   performedById: 'u1',
   performedByEmail: 'tech@sf-manager.example',
@@ -131,7 +136,9 @@ describe('letterhead region', () => {
     await screen.findByTestId('review-document-content');
 
     expect(screen.getByTestId('review-document-letterhead-name')).toHaveTextContent('ACME');
-    expect(screen.getByTestId('review-document-letterhead-legal-name')).toHaveTextContent('ACME S.L.');
+    expect(screen.getByTestId('review-document-letterhead-legal-name')).toHaveTextContent(
+      'ACME S.L.',
+    );
     expect(screen.getByTestId('review-document-letterhead-tax-id')).toHaveTextContent('B12345678');
     expect(screen.getByTestId('review-document-letterhead-address')).toHaveTextContent('Main St 1');
     expect(screen.getByTestId('review-document-letterhead-phone')).toHaveTextContent('111222333');
@@ -178,7 +185,9 @@ describe('session data region', () => {
     renderPage();
     await screen.findByTestId('review-document-content');
 
-    expect(screen.getByTestId('review-document-session-community')).toHaveTextContent('Community One');
+    expect(screen.getByTestId('review-document-session-community')).toHaveTextContent(
+      'Community One',
+    );
     expect(screen.getByTestId('review-document-session-element-type')).toBeInTheDocument();
     expect(screen.getByTestId('review-document-session-frequency')).toBeInTheDocument();
     expect(screen.getByTestId('review-document-session-template-name')).toHaveTextContent(
@@ -227,7 +236,9 @@ describe('session data region', () => {
     renderPage();
     await screen.findByTestId('review-document-content');
 
-    expect(screen.queryByTestId('review-document-session-template-version')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('review-document-session-template-version'),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -340,9 +351,9 @@ describe('record region', () => {
     expect(firstIdentity).toHaveTextContent('Extinguisher Z');
     expect(firstIdentity).toHaveTextContent('Floor 9');
 
-    const zzAnswers = within(
-      screen.getByTestId('review-document-record-entry-e-zz'),
-    ).getAllByRole('listitem');
+    const zzAnswers = within(screen.getByTestId('review-document-record-entry-e-zz')).getAllByRole(
+      'listitem',
+    );
     expect(zzAnswers.map((element) => element.textContent)).toEqual([
       expect.stringContaining('Is the hose intact?'),
       expect.stringContaining('Is it charged?'),
@@ -369,9 +380,9 @@ describe('record region', () => {
     const identity = screen.getByTestId('review-document-record-entry-identity-e-unknown');
     expect(identity.textContent).not.toBe('');
     expect(identity).not.toHaveTextContent('null');
-    expect(
-      screen.getByTestId('review-document-record-entry-reason-e-unknown'),
-    ).toHaveTextContent('Access blocked');
+    expect(screen.getByTestId('review-document-record-entry-reason-e-unknown')).toHaveTextContent(
+      'Access blocked',
+    );
   });
 
   it('renders no entry and no error for a completed session with zero entries', async () => {

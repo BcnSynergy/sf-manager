@@ -31,8 +31,14 @@ function renderAppLayout(initialEntries: string[] = ['/']) {
           <Route element={<AppLayout />}>
             <Route path="/" element={<div data-testid="outlet-content">home</div>} />
             <Route path="/users" element={<div data-testid="outlet-content">users</div>} />
-            <Route path="/review-history" element={<div data-testid="outlet-content">history</div>} />
-            <Route path="/review-sessions" element={<div data-testid="outlet-content">sessions</div>} />
+            <Route
+              path="/review-history"
+              element={<div data-testid="outlet-content">history</div>}
+            />
+            <Route
+              path="/review-sessions"
+              element={<div data-testid="outlet-content">sessions</div>}
+            />
             <Route
               path="/review-schedule"
               element={<div data-testid="outlet-content">schedule</div>}
@@ -95,19 +101,21 @@ describe('AppLayout', () => {
   // review-schedule-ui "Navigation Placement for the Four Roles" and the
   // app-navigation delta: the item is decided by role alone.
   describe('review schedule item', () => {
-    it.each<Role>(['SYSTEM_ADMIN', 'MANAGER', 'MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'])(
-      '%s is offered one item targeting /review-schedule',
-      async (role) => {
-        vi.stubGlobal('fetch', mockFetch({ role }));
-        renderAppLayout();
+    it.each<Role>([
+      'SYSTEM_ADMIN',
+      'MANAGER',
+      'MAINTENANCE_TECHNICIAN',
+      'COMMUNITY_REPRESENTATIVE',
+    ])('%s is offered one item targeting /review-schedule', async (role) => {
+      vi.stubGlobal('fetch', mockFetch({ role }));
+      renderAppLayout();
 
-        const nav = await screen.findByTestId('nav-root');
-        const item = within(nav).getAllByTestId('nav-link-review-schedule');
-        expect(item).toHaveLength(1);
-        expect(item[0]).toHaveAttribute('href', '/review-schedule');
-        expect(item[0]).toHaveTextContent('Review schedule');
-      },
-    );
+      const nav = await screen.findByTestId('nav-root');
+      const item = within(nav).getAllByTestId('nav-link-review-schedule');
+      expect(item).toHaveLength(1);
+      expect(item[0]).toHaveAttribute('href', '/review-schedule');
+      expect(item[0]).toHaveTextContent('Review schedule');
+    });
 
     it('MAINTENANCE_COMPANY_MANAGER is offered no item and no /review-schedule link', async () => {
       vi.stubGlobal('fetch', mockFetch({ role: 'MAINTENANCE_COMPANY_MANAGER' }));

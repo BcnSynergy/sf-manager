@@ -353,7 +353,10 @@ export function ReviewTemplateDetailPage() {
           ) : (
             <ul>
               {availableQuestions.map((question) => (
-                <li key={question.id} data-testid={`review-template-detail-picker-item-${question.id}`}>
+                <li
+                  key={question.id}
+                  data-testid={`review-template-detail-picker-item-${question.id}`}
+                >
                   <span>{question.text}</span>
                   <button
                     type="button"

@@ -5,8 +5,7 @@
 // the file wins during print. A pure, testable check so this invariant has
 // a regression guard instead of resting on a one-time by-eye review.
 export type PrintSuppressionResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly reason: string };
+  { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 // Only inspects the FIRST `@media print` block in the stylesheet (no `/g`

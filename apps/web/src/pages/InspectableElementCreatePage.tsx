@@ -149,11 +149,7 @@ export function InspectableElementCreatePage() {
           data-testid="inspectable-element-create-installed-at"
         />
         {error && <p data-testid="inspectable-element-create-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="inspectable-element-create-submit"
-          disabled={submitting}
-        >
+        <button type="submit" data-testid="inspectable-element-create-submit" disabled={submitting}>
           {t('inspectableElement.create.submitLabel')}
         </button>
       </form>

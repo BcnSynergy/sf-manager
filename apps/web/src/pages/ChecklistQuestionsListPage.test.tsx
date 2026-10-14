@@ -106,7 +106,9 @@ describe('ChecklistQuestionsListPage', () => {
     fireEvent.click(await screen.findByTestId(`checklist-question-list-delete-${questionOne.id}`));
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
-    await waitFor(() => expect(mockedSoftDeleteChecklistQuestion).toHaveBeenCalledWith(questionOne.id));
+    await waitFor(() =>
+      expect(mockedSoftDeleteChecklistQuestion).toHaveBeenCalledWith(questionOne.id),
+    );
     await waitFor(() =>
       expect(
         screen.queryByTestId(`checklist-question-list-row-${questionOne.id}`),

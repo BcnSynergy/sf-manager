@@ -17,9 +17,7 @@ describe('mapRoleToLabelKey', () => {
   });
 
   it('maps MAINTENANCE_TECHNICIAN to users.role.maintenanceTechnician', () => {
-    expect(mapRoleToLabelKey('MAINTENANCE_TECHNICIAN')).toBe(
-      'users.role.maintenanceTechnician',
-    );
+    expect(mapRoleToLabelKey('MAINTENANCE_TECHNICIAN')).toBe('users.role.maintenanceTechnician');
   });
 
   it('maps COMMUNITY_REPRESENTATIVE to users.role.communityRepresentative', () => {

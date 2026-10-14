@@ -51,10 +51,7 @@ describe('api/organization-profile', () => {
   });
 
   it('getOrganizationProfile() rejects with an ApiError on a network failure', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new TypeError('network down')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network down')));
 
     const error = await getOrganizationProfile().catch((e: unknown) => e);
 

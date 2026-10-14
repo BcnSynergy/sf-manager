@@ -56,9 +56,7 @@ const decommissionedElementHistory = {
 function renderPage() {
   return render(
     <MemoryRouter
-      initialEntries={[
-        `/communities/${COMMUNITY_ID}/inspectable-elements/${ELEMENT_ID}/history`,
-      ]}
+      initialEntries={[`/communities/${COMMUNITY_ID}/inspectable-elements/${ELEMENT_ID}/history`]}
     >
       <Routes>
         <Route

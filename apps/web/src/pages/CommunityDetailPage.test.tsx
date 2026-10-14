@@ -14,7 +14,12 @@ const mockedListTechnicians = vi.mocked(communityApi.listTechnicians);
 const mockedAddRepresentative = vi.mocked(communityApi.addRepresentative);
 const mockedDeactivateRepresentative = vi.mocked(communityApi.deactivateRepresentative);
 
-const communityA = { id: 'community-1', name: 'Sunrise', address: '1 Main St', locale: 'en' as const };
+const communityA = {
+  id: 'community-1',
+  name: 'Sunrise',
+  address: '1 Main St',
+  locale: 'en' as const,
+};
 
 function renderPage(id: string) {
   return render(
@@ -147,15 +152,23 @@ describe('CommunityDetailPage', () => {
 
     fireEvent.click(within(repSection).getByTestId('confirm-dialog-confirm'));
 
-    await waitFor(() => expect(mockedDeactivateRepresentative).toHaveBeenCalledWith(communityA.id, 'rep-a'));
+    await waitFor(() =>
+      expect(mockedDeactivateRepresentative).toHaveBeenCalledWith(communityA.id, 'rep-a'),
+    );
   });
 
   it('renders the representative exclusivity swap after a mocked add, scoped to the representatives section', async () => {
     mockedListCommunities.mockResolvedValue([communityA]);
     mockedListRepresentatives
-      .mockResolvedValueOnce([{ communityId: communityA.id, userId: 'incumbent', deactivatedAt: null }])
       .mockResolvedValueOnce([
-        { communityId: communityA.id, userId: 'incumbent', deactivatedAt: '2026-08-26T00:00:00.000Z' },
+        { communityId: communityA.id, userId: 'incumbent', deactivatedAt: null },
+      ])
+      .mockResolvedValueOnce([
+        {
+          communityId: communityA.id,
+          userId: 'incumbent',
+          deactivatedAt: '2026-08-26T00:00:00.000Z',
+        },
         { communityId: communityA.id, userId: 'new-rep', deactivatedAt: null },
       ]);
     mockedAddRepresentative.mockResolvedValue({
@@ -173,13 +186,9 @@ describe('CommunityDetailPage', () => {
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent(
-        'Deactivated',
-      ),
+      expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent('Deactivated'),
     );
-    expect(screen.getByTestId('representatives-row-new-rep')).toHaveTextContent(
-      'Active',
-    );
+    expect(screen.getByTestId('representatives-row-new-rep')).toHaveTextContent('Active');
     // Technicians section is untouched by the representative-only swap.
     expect(screen.getByTestId('technicians-empty')).toBeInTheDocument();
   });

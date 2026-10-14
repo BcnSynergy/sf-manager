@@ -71,7 +71,12 @@ describe('mapReasonToText', () => {
 
   it('names the current quarter and the deadline for QUARTER_DUE', () => {
     const text = mapReasonToText(
-      row({ reasonCode: 'QUARTER_DUE', quarterYear: 2026, quarterNumber: 4, deadline: '2026-12-31' }),
+      row({
+        reasonCode: 'QUARTER_DUE',
+        quarterYear: 2026,
+        quarterNumber: 4,
+        deadline: '2026-12-31',
+      }),
       'es',
     );
 
@@ -112,7 +117,10 @@ describe('mapReasonToText', () => {
 
   it('returns no reason line for a quarter code arriving without its quarter', () => {
     expect(
-      mapReasonToText(row({ reasonCode: 'QUARTER_DUE', quarterYear: null, quarterNumber: null }), 'en'),
+      mapReasonToText(
+        row({ reasonCode: 'QUARTER_DUE', quarterYear: null, quarterNumber: null }),
+        'en',
+      ),
     ).toBeNull();
   });
 });
@@ -138,12 +146,15 @@ describe('formatCalendarDate', () => {
     }
   });
 
-  it.each(['en', 'es', 'ca'])('shows 15 Nov 2026 and 31 Dec 2026 as that calendar date in %s', (locale) => {
-    expect(formatCalendarDate('2026-11-15', locale)).toMatch(/15/);
-    expect(formatCalendarDate('2026-11-15', locale)).toMatch(/2026/);
-    expect(formatCalendarDate('2026-12-31', locale)).toMatch(/31/);
-    expect(formatCalendarDate('2026-12-31', locale)).toMatch(/2026/);
-  });
+  it.each(['en', 'es', 'ca'])(
+    'shows 15 Nov 2026 and 31 Dec 2026 as that calendar date in %s',
+    (locale) => {
+      expect(formatCalendarDate('2026-11-15', locale)).toMatch(/15/);
+      expect(formatCalendarDate('2026-11-15', locale)).toMatch(/2026/);
+      expect(formatCalendarDate('2026-12-31', locale)).toMatch(/31/);
+      expect(formatCalendarDate('2026-12-31', locale)).toMatch(/2026/);
+    },
+  );
 
   it.each(['en', 'es', 'ca'])(
     'is identical under UTC-10 and UTC+12 for every locale (%s)',

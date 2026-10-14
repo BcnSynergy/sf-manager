@@ -7,8 +7,7 @@ import { apiFetch } from './client';
 // apps/api/test/maintenance-company.e2e-spec.ts (Phase 12) is the anti-drift
 // guard on the API side.
 export type MaintenanceCompanyErrorCode =
-  | 'TAX_ID_ALREADY_IN_USE'
-  | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS';
+  'TAX_ID_ALREADY_IN_USE' | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS';
 
 // Mirrors apps/api's MaintenanceCompanyResponseDto — deletedAt is never
 // returned (design.md "Data Flow — POST /maintenance-companies").

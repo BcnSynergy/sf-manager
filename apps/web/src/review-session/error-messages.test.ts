@@ -14,10 +14,7 @@ describe('mapApiErrorToMessageKey (review-session)', () => {
       ['ANSWERS_DO_NOT_MATCH_TEMPLATE', 'reviewSession.error.answersDoNotMatchTemplate'],
       ['MISSING_OBSERVATIONS', 'reviewSession.error.missingObservations'],
       ['MISSING_ANSWERS', 'reviewSession.error.missingAnswers'],
-      [
-        'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
-        'reviewSession.error.unreviewedElementsWithoutReason',
-      ],
+      ['UNREVIEWED_ELEMENTS_WITHOUT_REASON', 'reviewSession.error.unreviewedElementsWithoutReason'],
     ];
 
     for (const [code, key] of cases) {
@@ -85,9 +82,7 @@ describe('mapApiErrorToMessageKey (review-session)', () => {
   });
 
   it('maps a 400 with no code to reviewSession.error.validationFailed', () => {
-    expect(mapApiErrorToMessageKey(new ApiError(400))).toBe(
-      'reviewSession.error.validationFailed',
-    );
+    expect(mapApiErrorToMessageKey(new ApiError(400))).toBe('reviewSession.error.validationFailed');
   });
 
   it('maps status 0 (network/parse failure) to common.error.network', () => {

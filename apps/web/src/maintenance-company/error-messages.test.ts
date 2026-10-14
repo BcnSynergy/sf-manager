@@ -10,9 +10,9 @@ describe('mapApiErrorToMessageKey (maintenance-company)', () => {
   });
 
   it('maps MAINTENANCE_COMPANY_HAS_ACTIVE_USERS to maintenanceCompany.error.hasActiveUsers', () => {
-    expect(
-      mapApiErrorToMessageKey(new ApiError(409, 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS')),
-    ).toBe('maintenanceCompany.error.hasActiveUsers');
+    expect(mapApiErrorToMessageKey(new ApiError(409, 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS'))).toBe(
+      'maintenanceCompany.error.hasActiveUsers',
+    );
   });
 
   it('the two codes map to two distinct keys (spec: distinguishable from each other)', () => {
@@ -42,9 +42,9 @@ describe('mapApiErrorToMessageKey (maintenance-company)', () => {
   });
 
   it('maps a 409 with an unrecognized code to common.error.network', () => {
-    expect(
-      mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never)),
-    ).toBe('common.error.network');
+    expect(mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never))).toBe(
+      'common.error.network',
+    );
   });
 
   it('never branches on error.message text — the mapping only reads status/code', () => {

@@ -8,9 +8,7 @@ import { MaintenanceCompaniesListPage } from './MaintenanceCompaniesListPage';
 
 vi.mock('../api/maintenance-company');
 
-const mockedListMaintenanceCompanies = vi.mocked(
-  maintenanceCompanyApi.listMaintenanceCompanies,
-);
+const mockedListMaintenanceCompanies = vi.mocked(maintenanceCompanyApi.listMaintenanceCompanies);
 
 const companyA = {
   id: 'company-1',
@@ -60,9 +58,7 @@ describe('MaintenanceCompaniesListPage', () => {
     renderPage();
 
     expect(await screen.findByTestId('maintenance-companies-list-error')).toBeInTheDocument();
-    expect(
-      screen.queryByTestId('maintenance-companies-list-loading'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('maintenance-companies-list-loading')).not.toBeInTheDocument();
   });
 
   it('renders each active company row with name, taxId, and contactInfo', async () => {
@@ -99,7 +95,9 @@ describe('MaintenanceCompaniesListPage', () => {
 
     renderPage();
 
-    const table = await screen.findByRole('table', { name: i18n.t('maintenanceCompany.list.title') });
+    const table = await screen.findByRole('table', {
+      name: i18n.t('maintenanceCompany.list.title'),
+    });
     expect(table.querySelector('caption')).toHaveClass('visually-hidden');
     const headers = within(table).getAllByRole('columnheader');
     expect(headers).toHaveLength(4);
