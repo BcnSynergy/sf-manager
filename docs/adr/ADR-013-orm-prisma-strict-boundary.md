@@ -1,9 +1,11 @@
 # ADR-013: ORM Strategy — Prisma, with a Strictly Enforced Clean Architecture Boundary
 
 ## Status
+
 Accepted
 
 ## Context
+
 NestJS + PostgreSQL + Clean Architecture ([ADR-002](ADR-002-backend-nestjs-clean-architecture.md))
 needs a data-access layer. Prisma, Drizzle, and MikroORM were considered.
 Prisma offers the strongest DX, tooling, and community, but has a known
@@ -12,6 +14,7 @@ leak into domain/application code, producing an anemic domain model built
 directly around Prisma's generated types instead of real domain entities.
 
 ## Decision
+
 **Prisma**, used exclusively inside infrastructure-layer repository
 implementations. Concrete discipline rules — enforced, not just intended:
 
@@ -34,6 +37,7 @@ implementations. Concrete discipline rules — enforced, not just intended:
    just gets missed in code review.
 
 ## Consequences
+
 - More boilerplate than "use Prisma's client everywhere" (explicit mapper
   per entity) — accepted cost for a genuinely isolated domain layer.
 - The lint rule is an automated guardrail, not a documentation-only
@@ -44,6 +48,7 @@ implementations. Concrete discipline rules — enforced, not just intended:
   mapper).
 
 ## Alternatives Considered
+
 - **Drizzle** — more explicit, SQL-like, less "magic," but less mature
   tooling/community than Prisma. Deferred, not rejected outright.
 - **MikroORM** — natively DDD-aligned (Unit of Work, Identity Map), the

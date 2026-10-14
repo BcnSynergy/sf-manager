@@ -16,7 +16,7 @@ explicitly granted them the `VIEW_ALL_REVIEWS` capability.** Verified today:
 `[]`/`null` in both `listForActor` and `loadByRole` for this role; the `User`
 model has no capability column; and a full-repo search for
 `ManagerCapability` / `managerCapabilities` / `VIEW_ALL_REVIEWS` finds only
-ADR-011's own text and three specs' *"this MUST NOT exist"* guards.
+ADR-011's own text and three specs' _"this MUST NOT exist"_ guards.
 
 `MANAGER` is the property-management company's own operator role — the people
 who actually answer to the communities. Today the only way to give one of them
@@ -52,19 +52,19 @@ FR-003, FR-008.
 Closed with the product owner before this proposal. **Inputs, not open items —
 do not re-litigate in `sdd-spec`/`sdd-design`.**
 
-| Decision | Resolution |
-|---|---|
-| **Granted on edit only, never on creation** | The `VIEW_ALL_REVIEWS` control appears **only** on the user-edit surface (`UserEditPage.tsx`). `UserCreatePage.tsx` is **not** touched. A `MANAGER` is always created inert; granting is a deliberate second act by a `SYSTEM_ADMIN`. The asymmetry with `maintenanceCompanyId` (which appears on both forms) is intentional: a company is an identity fact a maintenance user cannot exist without; a capability is a privilege grant. |
-| **Revocable through the same control** | One toggle grants and revokes. No separate grant/revoke endpoint, no extra state, no lifecycle beyond what an ordinary edit-and-save already does. |
-| **Role-change hygiene: capabilities are cleared** | When a user's role changes **away** from `MANAGER` to any other role, `managerCapabilities` is cleared as part of that same change. A stale flag MUST NOT silently reappear if the user is later changed back to `MANAGER`. Symmetrically, a payload that sets a capability for a non-`MANAGER` resulting role is rejected. |
-| **No audit trail** | Out of scope, deliberately. Consistent with ADR-011 Decision 5 already deferring audit logging for role changes and `SYSTEM_ADMIN` writes generally — role changes are equally unaudited today, so this is existing precedent, **not** a new gap this slice opens. |
-| **Array-of-enum on `User`, one member** | `User.managerCapabilities ManagerCapability[]`, enum declaring **only** `VIEW_ALL_REVIEWS`. ADR-011 Decision 2's literal signature; the other five capability names it lists stay undeclared until their own slices (ADR-006). Not a boolean (would need a breaking rename on the second capability), not a grant table (ADR-011 explicitly rejected that shape). |
-| **Resolved fresh per request, never from the JWT** | A new checker reads the capability from the database on every request, mirroring `UserCompanyScopeChecker` exactly (same fail-closed shape, same no-cache contract, same free soft-delete filter via `findById`). ADR-011's 2026-09-09 addendum rejected token-carried company scope for the revocation-lag reason; that reasoning applies at least as strongly to a security grant. `Actor` stays `{userId, role}`. |
-| **Layer 1 grants broadly, Layer 2/3 gates** | `ROLE_PERMISSIONS.MANAGER` gains `['reviewSession:read']` **unconditionally**, mirroring `MAINTENANCE_COMPANY_MANAGER`'s shipped pattern. The real gate is the new `MANAGER` branch in `ReviewHistoryAccessService`, which returns `[]`/404 when the capability is absent — byte-identical observable behaviour to today **on the review-history read surface**. **Named consequence, not an oversight**: `reviewSession:read` also gates `GET /review-sessions` and `GET /review-sessions/:sessionId` in `review-session.controller.ts` (the draft-resume list and the performer-scoped read) — two routes outside `review-history`'s surface. Granting `MANAGER` this permission unconditionally moves those two routes from 403 to `200 []`/404 for **every** `MANAGER`, granted or not, since neither route consults the capability. This is new read access nobody decided on before this proposal; it is accepted here as the unavoidable shape of an unconditional Layer-1 grant, not silently absorbed into the "byte-identical" claim above, which is scoped to `review-history` only. |
-| **The read is `SYSTEM_ADMIN`'s read, verbatim** | A granted `MANAGER` calls `findCompletedAcrossInstallation` / `findCompletedByIdAcrossInstallation` (shipped by `review-history-admin-scope`) unchanged. `VIEW_ALL_REVIEWS` means literally everything, including sessions of deactivated/soft-deleted communities and companies. **No new repository method.** |
-| **Only `SYSTEM_ADMIN` grants it — no new permission** | Reuses the existing `user:update` gate on `PATCH /users/:id`. No `user:grantCapability` permission: no second trust tier exists that would hold `user:update` without capability-grant rights, so the granularity would be ungrounded. (`community:assign` vs `community:update` was split because two roles genuinely needed different subsets — not the case here.) |
-| **An ungranted `MANAGER` stays exactly as inert as today** | Binding, not aspirational. Three prior slices each shipped a regression guard asserting `MANAGER` reaches nothing; this slice must keep that true for the ungranted case and prove it, not assert it. |
-| **Ungranted `MANAGER`'s web experience: link visible, empty result** | The `/review-history*` routes and the `HealthPage` entry link are gated on `role === 'MANAGER'` alone, same as every other role today — NOT on the capability. An ungranted manager reaches the page and sees the normal empty-installation state (already shipped, already tested). `/auth/me` is **not** extended with a DB-read `managerCapabilities` field for UI affordance — the server stays the sole authority, no new surface. (Was Open Question 1; confirmed with the product owner, resolved here rather than left to `sdd-design`.) |
+| Decision                                                             | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Granted on edit only, never on creation**                          | The `VIEW_ALL_REVIEWS` control appears **only** on the user-edit surface (`UserEditPage.tsx`). `UserCreatePage.tsx` is **not** touched. A `MANAGER` is always created inert; granting is a deliberate second act by a `SYSTEM_ADMIN`. The asymmetry with `maintenanceCompanyId` (which appears on both forms) is intentional: a company is an identity fact a maintenance user cannot exist without; a capability is a privilege grant.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Revocable through the same control**                               | One toggle grants and revokes. No separate grant/revoke endpoint, no extra state, no lifecycle beyond what an ordinary edit-and-save already does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Role-change hygiene: capabilities are cleared**                    | When a user's role changes **away** from `MANAGER` to any other role, `managerCapabilities` is cleared as part of that same change. A stale flag MUST NOT silently reappear if the user is later changed back to `MANAGER`. Symmetrically, a payload that sets a capability for a non-`MANAGER` resulting role is rejected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **No audit trail**                                                   | Out of scope, deliberately. Consistent with ADR-011 Decision 5 already deferring audit logging for role changes and `SYSTEM_ADMIN` writes generally — role changes are equally unaudited today, so this is existing precedent, **not** a new gap this slice opens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Array-of-enum on `User`, one member**                              | `User.managerCapabilities ManagerCapability[]`, enum declaring **only** `VIEW_ALL_REVIEWS`. ADR-011 Decision 2's literal signature; the other five capability names it lists stay undeclared until their own slices (ADR-006). Not a boolean (would need a breaking rename on the second capability), not a grant table (ADR-011 explicitly rejected that shape).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Resolved fresh per request, never from the JWT**                   | A new checker reads the capability from the database on every request, mirroring `UserCompanyScopeChecker` exactly (same fail-closed shape, same no-cache contract, same free soft-delete filter via `findById`). ADR-011's 2026-09-09 addendum rejected token-carried company scope for the revocation-lag reason; that reasoning applies at least as strongly to a security grant. `Actor` stays `{userId, role}`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Layer 1 grants broadly, Layer 2/3 gates**                          | `ROLE_PERMISSIONS.MANAGER` gains `['reviewSession:read']` **unconditionally**, mirroring `MAINTENANCE_COMPANY_MANAGER`'s shipped pattern. The real gate is the new `MANAGER` branch in `ReviewHistoryAccessService`, which returns `[]`/404 when the capability is absent — byte-identical observable behaviour to today **on the review-history read surface**. **Named consequence, not an oversight**: `reviewSession:read` also gates `GET /review-sessions` and `GET /review-sessions/:sessionId` in `review-session.controller.ts` (the draft-resume list and the performer-scoped read) — two routes outside `review-history`'s surface. Granting `MANAGER` this permission unconditionally moves those two routes from 403 to `200 []`/404 for **every** `MANAGER`, granted or not, since neither route consults the capability. This is new read access nobody decided on before this proposal; it is accepted here as the unavoidable shape of an unconditional Layer-1 grant, not silently absorbed into the "byte-identical" claim above, which is scoped to `review-history` only. |
+| **The read is `SYSTEM_ADMIN`'s read, verbatim**                      | A granted `MANAGER` calls `findCompletedAcrossInstallation` / `findCompletedByIdAcrossInstallation` (shipped by `review-history-admin-scope`) unchanged. `VIEW_ALL_REVIEWS` means literally everything, including sessions of deactivated/soft-deleted communities and companies. **No new repository method.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Only `SYSTEM_ADMIN` grants it — no new permission**                | Reuses the existing `user:update` gate on `PATCH /users/:id`. No `user:grantCapability` permission: no second trust tier exists that would hold `user:update` without capability-grant rights, so the granularity would be ungrounded. (`community:assign` vs `community:update` was split because two roles genuinely needed different subsets — not the case here.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **An ungranted `MANAGER` stays exactly as inert as today**           | Binding, not aspirational. Three prior slices each shipped a regression guard asserting `MANAGER` reaches nothing; this slice must keep that true for the ungranted case and prove it, not assert it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Ungranted `MANAGER`'s web experience: link visible, empty result** | The `/review-history*` routes and the `HealthPage` entry link are gated on `role === 'MANAGER'` alone, same as every other role today — NOT on the capability. An ungranted manager reaches the page and sees the normal empty-installation state (already shipped, already tested). `/auth/me` is **not** extended with a DB-read `managerCapabilities` field for UI affordance — the server stays the sole authority, no new surface. (Was Open Question 1; confirmed with the product owner, resolved here rather than left to `sdd-design`.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Scope
 
@@ -125,10 +125,10 @@ do not re-litigate in `sdd-spec`/`sdd-design`.**
   **plus** the `VIEW_ALL_REVIEWS` capability grants every completed session;
   the permission alone grants nothing.
 - Narrowing (not deleting) the shipped guards that this slice makes false:
-  `authorization`'s *"The Deferred Review Visibility Scopes Grant Nothing"*
-  **and** *"Non-Admin Roles Remain Inert After the Checklist Permissions Are
-  Added"* (whose *"`MANAGER` MUST equal `[]`"* and *"no
-  `managerCapabilities` MUST exist"* scenarios both break here — the latter
+  `authorization`'s _"The Deferred Review Visibility Scopes Grant Nothing"_
+  **and** _"Non-Admin Roles Remain Inert After the Checklist Permissions Are
+  Added"_ (whose _"`MANAGER` MUST equal `[]`"_ and _"no
+  `managerCapabilities` MUST exist"_ scenarios both break here — the latter
   must narrow to `MANAGE_CHECKLIST_CONTENT` only), plus the equivalent rows
   and scenarios in `review-history` and `review-session-management`. Per-element
   history and the five undeclared capability names stay explicitly unbuilt.
@@ -141,7 +141,7 @@ do not re-litigate in `sdd-spec`/`sdd-design`.**
   `maintenanceCompanyId`. Submitted whenever the current role is `MANAGER`,
   never as a stale value carried across a role change.
 - `MANAGER` added to both `/review-history*` routes' `ProtectedRoute
-  allowedRoles` (4 roles → 5) and to `HealthPage.tsx`'s
+allowedRoles` (4 roles → 5) and to `HealthPage.tsx`'s
   `REVIEW_HISTORY_ROLES`, reusing `ReviewHistoryPage` /
   `ReviewHistoryDetailPage` unmodified — no manager variant.
 - Real `en`/`es`/`ca` translations for every new key, parity test-enforced.
@@ -198,7 +198,7 @@ do not re-litigate in `sdd-spec`/`sdd-design`.**
 
 ### Why this scope and not more (ADR-006)
 
-The capability *mechanism* is the expensive part, and it is paid for exactly
+The capability _mechanism_ is the expensive part, and it is paid for exactly
 once here: one enum member, one column, one checker. Declaring all six ADR-011
 capability names would ship five flags no code reads and no UI can act on —
 the "code with no reachable trigger" failure the admin-scope slice explicitly
@@ -219,26 +219,26 @@ adds a second surface for zero product need the success criteria name.
 - `review-history` — add the capability-gated `MANAGER` installation-wide
   visibility as a requirement in its own right (granted ⇒ identical scope to
   `SYSTEM_ADMIN`, including deactivated/soft-deleted context; ungranted ⇒
-  nothing); amend the now-false *"Global visibility for `MANAGER`"* deferral
+  nothing); amend the now-false _"Global visibility for `MANAGER`"_ deferral
   row and its `ManagerCapability`-must-not-exist scenario (spec.md ~L29, L535,
-  L543); confirm *"History Scope Is Carried by the Query, Not by the Caller"*
+  L543); confirm _"History Scope Is Carried by the Query, Not by the Caller"_
   still holds when two different roles share one unscoped query.
-- `review-history-ui` — add `MANAGER` to *"Role-Gated Route Access for the
-  History Views"* and give it a reachable entry point from `/`; state what an
+- `review-history-ui` — add `MANAGER` to _"Role-Gated Route Access for the
+  History Views"_ and give it a reachable entry point from `/`; state what an
   **ungranted** manager sees; keep the no-filtering guard intact.
 - `authorization` — `MANAGER` gains `reviewSession:read`; the new
   permission-plus-capability visibility rule; the installation-wide read is now
-  reachable by two roles under different conditions (amending *"The one
-  unscoped history read is reachable only by the admin"*); narrow *"The
-  Deferred Review Visibility Scopes Grant Nothing"* to per-element history and
-  the five undeclared capabilities; narrow *"Non-Admin Roles Remain Inert
-  After the Checklist Permissions Are Added"* so its `MANAGER = []` and
+  reachable by two roles under different conditions (amending _"The one
+  unscoped history read is reachable only by the admin"_); narrow _"The
+  Deferred Review Visibility Scopes Grant Nothing"_ to per-element history and
+  the five undeclared capabilities; narrow _"Non-Admin Roles Remain Inert
+  After the Checklist Permissions Are Added"_ so its `MANAGER = []` and
   no-`managerCapabilities` claims become `MANAGE_CHECKLIST_CONTENT`-specific.
-- `user-management` — *"Update User"* accepts `managerCapabilities`; the
+- `user-management` — _"Update User"_ accepts `managerCapabilities`; the
   meaningful-only-for-`MANAGER` invariant; the clear-on-role-change rule;
   `managerCapabilities` on the shared user response.
-- `user-admin-ui` — *"Edit User"* gains the role-conditional capability
-  toggle (grant **and** revoke); *"Create User"* explicitly unchanged;
+- `user-admin-ui` — _"Edit User"_ gains the role-conditional capability
+  toggle (grant **and** revoke); _"Create User"_ explicitly unchanged;
   i18n coverage for the new keys.
 - `review-session-management` — narrow its FR-008 deferral row (spec.md ~L473,
   L485) so only per-element history and the undeclared capabilities remain
@@ -267,18 +267,18 @@ Five proposal-level choices:
    method.** A granted `MANAGER` gets literally everything, so a parallel
    method would be a duplicate with a different name and a second chance to
    drift. The consequence for the spec is real and must be stated, not
-   implied: the shipped *"exactly one unscoped read, reachable only by
-   `SYSTEM_ADMIN`"* requirement becomes *"exactly one unscoped read, reachable
+   implied: the shipped _"exactly one unscoped read, reachable only by
+   `SYSTEM_ADMIN`"_ requirement becomes _"exactly one unscoped read, reachable
    by `SYSTEM_ADMIN` unconditionally or by a `MANAGER` holding
-   `VIEW_ALL_REVIEWS`"* — still one method, still two enumerable call sites.
+   `VIEW_ALL_REVIEWS`"_ — still one method, still two enumerable call sites.
 4. **Clearing on role change is a resulting-state policy, not form
    behaviour.** The web form clearing the toggle on a role change is an
    affordance; the guarantee lives in `UpdateUserUseCase` evaluated against
    the resulting state, exactly like the maintenance-company policy. Any
    client, any payload shape, same outcome — a non-`MANAGER` user can never
    end a PATCH holding a capability.
-5. **One declared enum member.** The enum's *shape* is ADR-011's; its
-   *population* is this slice's. Each future capability adds its own member,
+5. **One declared enum member.** The enum's _shape_ is ADR-011's; its
+   _population_ is this slice's. Each future capability adds its own member,
    its own branch and its own UI, the same way each FR-008 slice added its own
    `ROLE_PERMISSIONS` row without redesigning the table.
 
@@ -290,39 +290,40 @@ One `stacked-to-main` chain (CLAUDE.md), branches
 **4 PRs, not 3**: the exploration's 3-PR sketch folds the schema/domain
 plumbing and the checker plus the access-service branch into one PR, and it
 underweights the write path (validation refinement + domain policy + use case
-+ DTO + grant/revoke tests), which is comfortably a PR of its own. Chained PRs
-are clearly needed; `sdd-tasks` owns the final split and the binding 400-line
-forecast.
 
-| PR | Content | Rough size |
-|---|---|---|
-| ~1 | `ManagerCapability` enum + `User.managerCapabilities` + migration + entity/mapper/repository/fake plumbing + migration & repository integration tests | ~250–350 |
-| ~2 | Capability-scope checker (port + adapter + tests) + `ReviewHistoryAccessService` `MANAGER` branch + `ROLE_PERMISSIONS` row + ungranted-stays-inert regression tests | ~250–350 |
-| ~3 | `PATCH /users/:id`: schema refinement, domain policy, use case, DTO, clear-on-role-change + unit/integration/E2E grant **and** revoke | ~350–450 |
-| ~4 | Web capability toggle + route/entry-link widening + i18n + component tests + five-role E2E matrix + spec merges + FR-008 status + ADR-011 addendum + browser verification | ~350–450 |
+- DTO + grant/revoke tests), which is comfortably a PR of its own. Chained PRs
+  are clearly needed; `sdd-tasks` owns the final split and the binding 400-line
+  forecast.
+
+| PR  | Content                                                                                                                                                                   | Rough size |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| ~1  | `ManagerCapability` enum + `User.managerCapabilities` + migration + entity/mapper/repository/fake plumbing + migration & repository integration tests                     | ~250–350   |
+| ~2  | Capability-scope checker (port + adapter + tests) + `ReviewHistoryAccessService` `MANAGER` branch + `ROLE_PERMISSIONS` row + ungranted-stays-inert regression tests       | ~250–350   |
+| ~3  | `PATCH /users/:id`: schema refinement, domain policy, use case, DTO, clear-on-role-change + unit/integration/E2E grant **and** revoke                                     | ~350–450   |
+| ~4  | Web capability toggle + route/entry-link widening + i18n + component tests + five-role E2E matrix + spec merges + FR-008 status + ADR-011 addendum + browser verification | ~350–450   |
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` + `prisma/migrations/**` | Modified/New | `ManagerCapability` enum (one member) + `User.managerCapabilities`; additive, **no backfill** |
-| `.../users/domain/user.entity.ts` | Modified | The user carries its capabilities; no constructor validation (shipped precedent) |
-| `.../users/domain/` (new policy) | New | Capabilities-meaningful-only-for-`MANAGER` + clear-on-role-change, shaped after `maintenance-company-assignment.policy.ts` |
-| `.../users/application/ports/user.repository.port.ts` + `infrastructure/persistence/**` + in-memory fake | Modified | Read/write the new field |
-| `.../users/application/use-cases/update-user.use-case.ts` | Modified | Resulting-state capability rules |
-| `.../users/presentation/dto/{update-user-request,user-response}.dto.ts`, `users.controller.ts` | Modified | Accept and return `managerCapabilities` |
-| `packages/validation/src/users/update-user.schema.ts` (+ `create-user.schema.ts` helpers) | Modified | Optional field + NOT_ALLOWED refinement; `createUserSchema` **unchanged** |
-| `shared/application/authorization/` (new checker port) | New | Capability-scope port, sibling of `company-scope.checker.port.ts` |
-| `.../users/infrastructure/authorization/` (new adapter) | New | Fresh-read, fail-closed, exhaustive-`switch` adapter |
-| `.../review-session/application/services/review-history-access.service.ts` | Modified | `MANAGER` branch in both switches, replacing `[]`/`null` |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modified | `MANAGER: ['reviewSession:read']` — first non-empty entry ever |
-| `apps/web/src/pages/UserEditPage.tsx` (+ test) | Modified | Role-conditional capability toggle |
-| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx` | Modified | `/review-history*` `allowedRoles` 4 → 5 |
-| `apps/web/src/pages/HealthPage.tsx` (+ test) | Modified | `MANAGER` added to `REVIEW_HISTORY_ROLES` |
-| `apps/web/src/api/users.ts`, `i18n/locales/{en,es,ca}.json` | Modified | Field on the client type; real translations |
-| `openspec/specs/{review-history,review-history-ui,authorization,user-management,user-admin-ui,review-session-management}/spec.md` | Modified | Delta specs |
-| `docs/adr/ADR-011-*.md`, `docs/requirements/functional-requirements.md` | Modified | Addendum + FR-008 status |
-| `apps/api/test/*.e2e-spec.ts` | New/Modified | Five-role matrix; MANAGER-without vs MANAGER-with; grant/revoke round trip |
+| Area                                                                                                                              | Impact       | Description                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma` + `prisma/migrations/**`                                                                          | Modified/New | `ManagerCapability` enum (one member) + `User.managerCapabilities`; additive, **no backfill**                              |
+| `.../users/domain/user.entity.ts`                                                                                                 | Modified     | The user carries its capabilities; no constructor validation (shipped precedent)                                           |
+| `.../users/domain/` (new policy)                                                                                                  | New          | Capabilities-meaningful-only-for-`MANAGER` + clear-on-role-change, shaped after `maintenance-company-assignment.policy.ts` |
+| `.../users/application/ports/user.repository.port.ts` + `infrastructure/persistence/**` + in-memory fake                          | Modified     | Read/write the new field                                                                                                   |
+| `.../users/application/use-cases/update-user.use-case.ts`                                                                         | Modified     | Resulting-state capability rules                                                                                           |
+| `.../users/presentation/dto/{update-user-request,user-response}.dto.ts`, `users.controller.ts`                                    | Modified     | Accept and return `managerCapabilities`                                                                                    |
+| `packages/validation/src/users/update-user.schema.ts` (+ `create-user.schema.ts` helpers)                                         | Modified     | Optional field + NOT_ALLOWED refinement; `createUserSchema` **unchanged**                                                  |
+| `shared/application/authorization/` (new checker port)                                                                            | New          | Capability-scope port, sibling of `company-scope.checker.port.ts`                                                          |
+| `.../users/infrastructure/authorization/` (new adapter)                                                                           | New          | Fresh-read, fail-closed, exhaustive-`switch` adapter                                                                       |
+| `.../review-session/application/services/review-history-access.service.ts`                                                        | Modified     | `MANAGER` branch in both switches, replacing `[]`/`null`                                                                   |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                                                                | Modified     | `MANAGER: ['reviewSession:read']` — first non-empty entry ever                                                             |
+| `apps/web/src/pages/UserEditPage.tsx` (+ test)                                                                                    | Modified     | Role-conditional capability toggle                                                                                         |
+| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx`                                                                            | Modified     | `/review-history*` `allowedRoles` 4 → 5                                                                                    |
+| `apps/web/src/pages/HealthPage.tsx` (+ test)                                                                                      | Modified     | `MANAGER` added to `REVIEW_HISTORY_ROLES`                                                                                  |
+| `apps/web/src/api/users.ts`, `i18n/locales/{en,es,ca}.json`                                                                       | Modified     | Field on the client type; real translations                                                                                |
+| `openspec/specs/{review-history,review-history-ui,authorization,user-management,user-admin-ui,review-session-management}/spec.md` | Modified     | Delta specs                                                                                                                |
+| `docs/adr/ADR-011-*.md`, `docs/requirements/functional-requirements.md`                                                           | Modified     | Addendum + FR-008 status                                                                                                   |
+| `apps/api/test/*.e2e-spec.ts`                                                                                                     | New/Modified | Five-role matrix; MANAGER-without vs MANAGER-with; grant/revoke round trip                                                 |
 
 **Untouched**: `ReviewSessionRepository` (no new method, no signature change),
 `SessionAccessService`, the whole review-session write path,
@@ -331,18 +332,18 @@ checkers, `UserCreatePage.tsx`, `POST /users`, and `createUserSchema`.
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **A `MANAGER` without the capability gains access anyway** — a missing or inverted check turns the app's most inert role into its most privileged reader, on the largest data set in the system | High | Fail-closed early return **before** any repository call, mirroring `CompanyScopeChecker`'s shipped shape; the five-role E2E matrix asserts the ungranted manager gets `[]` and 404 on every route, no sampling; `sdd-verify` enumerates every call site of the across-installation methods |
-| **The capability is read from the JWT** by this slice or a later one, making revocation silently lag by a token lifetime on a security grant | High | Settled decision + Approach choice 2 make the DB read binding; `Actor` gains no field; a test asserts a revoke takes effect on the next request with the **same** session/cookie, no re-login |
-| **`MANAGER` gaining its first permission ever silently widens something else** — three specs and several tests encode "`MANAGER` is `[]`" as a global invariant, including `authorization`'s checklist-inertness requirement | High | Exactly one permission added; specs narrowed deliberately rather than deleted (named as in-scope spec work, with the checklist requirement called out explicitly); `sdd-verify` asserts `MANAGER` holds `reviewSession:read` and nothing else, and that no `/review-sessions*` write route or `checklistQuestion:*`/`reviewTemplate:*`/`user:*`/`community:*` permission reaches it |
-| **A stale capability survives a role round trip** (`MANAGER` → other → `MANAGER`) and silently re-grants installation-wide read | Med | Settled decision 3 + Approach choice 4: enforced in the use case against the resulting state, not in the form; explicit unit + E2E round-trip test |
-| **PATCH semantics swallow a revoke** — "field absent means unchanged" is the shipped partial-PATCH contract, so a form that omits the array on revoke would silently keep the grant | Med | Named as OQ3 with a working assumption; the form always submits the array while the role is `MANAGER`; an E2E test revokes and asserts the very next history request returns `[]` |
-| **Scope creep into the other five ADR-011 capabilities** — the enum is right there, and declaring them is one line each | Med | Explicit non-goal; `sdd-verify` asserts the enum has exactly one member and that no other capability name appears anywhere in `apps/**` or `packages/**` |
-| **An ungranted `MANAGER` gets a navigation link to an empty page**, because client route-gating is role-based and `/auth/me` carries no capability | Med | Named as OQ1 with a working assumption (role-only gate, empty state — server stays the only authority); browser-verified in **both** manager states so the wart is seen and judged, not assumed |
-| **A Postgres enum-array column breaks the hand-written FK/partial-index conventions Prisma cannot see** (ADR-013) | Low | Extend the shipped `prisma-user.repository.integration.spec.ts` and migration-integration precedents rather than trusting Prisma's diff; the column is additive with an empty default and no FK |
-| **The installation-wide list is unusable** — every session, all time, no filter, by standing decision | Med | Accepted and on record (inherited verbatim from the admin-scope slice); the app-wide filtering initiative is the remedy; the composite index shipped by that slice already covers this read |
-| ES/CA translations stubbed with English placeholders | Low | Real translations in scope; `locales.test.ts` parity guard covers new keys |
+| Risk                                                                                                                                                                                                                         | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A `MANAGER` without the capability gains access anyway** — a missing or inverted check turns the app's most inert role into its most privileged reader, on the largest data set in the system                              | High       | Fail-closed early return **before** any repository call, mirroring `CompanyScopeChecker`'s shipped shape; the five-role E2E matrix asserts the ungranted manager gets `[]` and 404 on every route, no sampling; `sdd-verify` enumerates every call site of the across-installation methods                                                                                          |
+| **The capability is read from the JWT** by this slice or a later one, making revocation silently lag by a token lifetime on a security grant                                                                                 | High       | Settled decision + Approach choice 2 make the DB read binding; `Actor` gains no field; a test asserts a revoke takes effect on the next request with the **same** session/cookie, no re-login                                                                                                                                                                                       |
+| **`MANAGER` gaining its first permission ever silently widens something else** — three specs and several tests encode "`MANAGER` is `[]`" as a global invariant, including `authorization`'s checklist-inertness requirement | High       | Exactly one permission added; specs narrowed deliberately rather than deleted (named as in-scope spec work, with the checklist requirement called out explicitly); `sdd-verify` asserts `MANAGER` holds `reviewSession:read` and nothing else, and that no `/review-sessions*` write route or `checklistQuestion:*`/`reviewTemplate:*`/`user:*`/`community:*` permission reaches it |
+| **A stale capability survives a role round trip** (`MANAGER` → other → `MANAGER`) and silently re-grants installation-wide read                                                                                              | Med        | Settled decision 3 + Approach choice 4: enforced in the use case against the resulting state, not in the form; explicit unit + E2E round-trip test                                                                                                                                                                                                                                  |
+| **PATCH semantics swallow a revoke** — "field absent means unchanged" is the shipped partial-PATCH contract, so a form that omits the array on revoke would silently keep the grant                                          | Med        | Named as OQ3 with a working assumption; the form always submits the array while the role is `MANAGER`; an E2E test revokes and asserts the very next history request returns `[]`                                                                                                                                                                                                   |
+| **Scope creep into the other five ADR-011 capabilities** — the enum is right there, and declaring them is one line each                                                                                                      | Med        | Explicit non-goal; `sdd-verify` asserts the enum has exactly one member and that no other capability name appears anywhere in `apps/**` or `packages/**`                                                                                                                                                                                                                            |
+| **An ungranted `MANAGER` gets a navigation link to an empty page**, because client route-gating is role-based and `/auth/me` carries no capability                                                                           | Med        | Named as OQ1 with a working assumption (role-only gate, empty state — server stays the only authority); browser-verified in **both** manager states so the wart is seen and judged, not assumed                                                                                                                                                                                     |
+| **A Postgres enum-array column breaks the hand-written FK/partial-index conventions Prisma cannot see** (ADR-013)                                                                                                            | Low        | Extend the shipped `prisma-user.repository.integration.spec.ts` and migration-integration precedents rather than trusting Prisma's diff; the column is additive with an empty default and no FK                                                                                                                                                                                     |
+| **The installation-wide list is unusable** — every session, all time, no filter, by standing decision                                                                                                                        | Med        | Accepted and on record (inherited verbatim from the admin-scope slice); the app-wide filtering initiative is the remedy; the composite index shipped by that slice already covers this read                                                                                                                                                                                         |
+| ES/CA translations stubbed with English placeholders                                                                                                                                                                         | Low        | Real translations in scope; `locales.test.ts` parity guard covers new keys                                                                                                                                                                                                                                                                                                          |
 
 ## Rollback Plan
 
@@ -506,28 +507,28 @@ decision above, confirmed with the product owner; not repeated here.)
 
 1. **How the edit form prefills the toggle.** There is no `GET /users/:id`
    (`user-admin-ui` design Decision 5); the page selects its row from
-   `listUsers()`. *Working assumption*: `managerCapabilities` joins
+   `listUsers()`. _Working assumption_: `managerCapabilities` joins
    `maintenanceCompanyId` on the shared `UserResponseDto`, so list, create and
    update responses all carry it.
-2. **Absent field vs. empty array on `PATCH`.** *Working assumption*: absent
+2. **Absent field vs. empty array on `PATCH`.** _Working assumption_: absent
    ⇒ unchanged (the shipped partial-PATCH contract); `[]` ⇒ explicit revoke;
    the web form always submits the array while the role is `MANAGER`, the
    same way it always submits `maintenanceCompanyId` while the role is
    maintenance-side. `sdd-design` must state this explicitly — the silent
    failure mode is a revoke that does nothing.
-3. **Where the checker and its port live, and what they return.** *Working
-   assumption*: a `shared/application/authorization/` port (sibling of
+3. **Where the checker and its port live, and what they return.** _Working
+   assumption_: a `shared/application/authorization/` port (sibling of
    `company-scope.checker.port.ts`) with a `users/infrastructure/authorization/`
    adapter (sibling of `UserCompanyScopeChecker`). Whether it answers a
    capability **list** or a single `has(capability)` boolean is
    `sdd-design`'s: the list is more faithful to ADR-011's shape, the boolean
    is harder to misuse.
 4. **Whether the clear-on-role-change rule is a domain policy or use-case
-   logic.** *Working assumption*: a policy module mirroring
+   logic.** _Working assumption_: a policy module mirroring
    `maintenance-company-assignment.policy.ts`, so both directions (cleared on
    demotion, rejected on a non-`MANAGER` resulting role) live in one testable
    place.
-5. **Migration default for an enum-array column.** *Working assumption*: an
+5. **Migration default for an enum-array column.** _Working assumption_: an
    empty-array default, making the column additive with no backfill — but
    `sdd-design` should state it rather than letting Prisma's generated SQL
    decide, given `schema.prisma`'s standing "no silent `@default`" note on

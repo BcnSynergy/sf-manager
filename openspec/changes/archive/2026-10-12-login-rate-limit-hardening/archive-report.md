@@ -17,8 +17,8 @@ API only, no UI change (the browser gate does not apply).
 
 ## Specs Synced
 
-| Domain | Action | Details |
-|--------|--------|---------|
+| Domain         | Action  | Details                                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | authentication | Updated | 2 MODIFIED requirements replaced in full: "Login Attempt Rate Limiting" (client key, `/64` grouping, IPv4-mapped handling, persistence, shared instances, concurrency; 16 scenarios) and "Client IP Resolution for Rate Limiting" (hop-count `TRUST_PROXY`, startup validation; 6 scenarios). 0 added, 0 removed. All other requirements are unchanged. |
 
 Composition ran through the native command (zero exit), on LF copies of both files, and the result was converted back to CRLF to match the main spec's line endings:
@@ -31,12 +31,12 @@ gentle-ai sdd-archive-compose --canonical <canonical.md> --delta <delta.md> --ou
 
 ## Delivery (final state)
 
-| PR | Content | Merge |
-|----|---------|-------|
-| #206 (PR 1/4) | TD-28 hop-count `TRUST_PROXY` + TD-29 `toClientKey` / `LoginThrottlerGuard`, README topology table, ADR-011 addendum | d7c3379 |
-| #207 (PR 2/4) | Postgres storage: `ThrottleCounter` migration and `PrismaThrottlerStorage` adapter | a79d3a8 |
-| #208 (PR 3/4) | Wiring (`ThrottlerModule.forRootAsync`), e2e storage overrides, integration spec, docs | c3f6430 |
-| PR 4/4 (archive) | This change; number not known at writing time | pending |
+| PR               | Content                                                                                                              | Merge   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- | ------- |
+| #206 (PR 1/4)    | TD-28 hop-count `TRUST_PROXY` + TD-29 `toClientKey` / `LoginThrottlerGuard`, README topology table, ADR-011 addendum | d7c3379 |
+| #207 (PR 2/4)    | Postgres storage: `ThrottleCounter` migration and `PrismaThrottlerStorage` adapter                                   | a79d3a8 |
+| #208 (PR 3/4)    | Wiring (`ThrottlerModule.forRootAsync`), e2e storage overrides, integration spec, docs                               | c3f6430 |
+| PR 4/4 (archive) | This change; number not known at writing time                                                                        | pending |
 
 PR 3 size was about 340 lines (+307/-33): code ~16, tests ~220, docs ~72. The earlier "~244" note in `tasks.md` (C.7) was corrected at archive.
 

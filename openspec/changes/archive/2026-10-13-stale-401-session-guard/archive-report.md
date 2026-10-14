@@ -16,15 +16,15 @@ Resolves TD-25. A stale in-flight request that returned 401 after a re-login (or
 
 ## Delivery (final state)
 
-| PR | Content | Merge |
-|----|---------|-------|
-| #210 (PR 1/2) | Epoch guard, advance points, tests, TD-25 resolution, ADR-011 note | 668c167 |
-| PR 2/2 (archive) | This change; number not known at writing time | pending |
+| PR               | Content                                                            | Merge   |
+| ---------------- | ------------------------------------------------------------------ | ------- |
+| #210 (PR 1/2)    | Epoch guard, advance points, tests, TD-25 resolution, ADR-011 note | 668c167 |
+| PR 2/2 (archive) | This change; number not known at writing time                      | pending |
 
 ## Specs Synced
 
-| Domain | Action | Details |
-|--------|--------|---------|
+| Domain         | Action  | Details                                                                                                                                                                        |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | authentication | Updated | 2 MODIFIED requirements replaced in full: "Redirect When Unauthenticated (Web)" (4 scenarios) and "Session-Ended Notice (Web)" (7 scenarios). 0 added, 0 removed requirements. |
 
 Scenarios (11 total, checked against the main spec before the merge): 6 new, 2 reworded to "issued under the current session" ("Session ends mid-session", "Mid-session 401"), 3 unchanged ("Unauthenticated visit redirected", "Failed login shows no session-ended notice", "Localized notice"). Previously 5 scenarios in these two requirements.

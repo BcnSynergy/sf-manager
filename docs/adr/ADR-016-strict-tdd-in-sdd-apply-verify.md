@@ -1,9 +1,11 @@
 # ADR-016: Strict TDD Mode for sdd-apply / sdd-verify
 
 ## Status
+
 Accepted
 
 ## Context
+
 This project uses Spec-Driven Development (SDD): each domain slice goes
 through `sdd-propose` → `sdd-spec`/`sdd-design` → `sdd-tasks` → `sdd-apply`
 → `sdd-verify` → `sdd-archive`. `sdd-init` (run 2026-08-21) detected that
@@ -20,6 +22,7 @@ and tooling ADRs (e.g. ADR-006, ADR-015) rather than living only in a
 session-memory store that isn't versioned with the code.
 
 ## Decision
+
 - **Strict TDD Mode is enabled** for this project.
 - It applies only to the two execution phases of the SDD cycle:
   - `sdd-apply` — tasks must be implemented test-first (red → green →
@@ -36,6 +39,7 @@ session-memory store that isn't versioned with the code.
   (Jest) and `npm run test --workspace=apps/web` (Vitest run).
 
 ## Consequences
+
 - Every implementation PR is expected to show a visible test-first cycle
   in its `apply-progress`/PR history, not just a final green suite —
   this is already how `inspectable-elements` (verify-report, 2026-09-02)
@@ -51,6 +55,7 @@ session-memory store that isn't versioned with the code.
   whether the Engram lookup happens to succeed in a given session.
 
 ## Alternatives Considered
+
 - **Standard Mode (test-after)** — rejected: the project already had
   test runners and test files in place before any slice was built,
   which is precisely the condition the SDD tooling's own decision gate

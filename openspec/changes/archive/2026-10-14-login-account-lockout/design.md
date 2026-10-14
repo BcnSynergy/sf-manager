@@ -91,23 +91,25 @@ execute(email, password):
 carries `retryAfterSeconds` and no email.
 
 **Alternatives considered**:
-- *Extend `LoginThrottlerGuard` to do the check.* The guard runs before the
+
+- _Extend `LoginThrottlerGuard` to do the check._ The guard runs before the
   Zod pipe, so it would need its own normalization and its own handling of
   non-string and missing emails. It also cannot see the outcome of the
   credential check, so the failure and reset hooks would still need a second
   place (controller or use case), splitting one rule across two layers.
-- *Controller-level hooks* (`AuthController.login` calls the limiter around
+- _Controller-level hooks_ (`AuthController.login` calls the limiter around
   `loginUseCase.execute`). Workable, but it moves a business rule ("failures
   count, success resets, blocked attempts evaluate no credentials") into the
   presentation layer, where it can only be tested through Nest. The use case
   already owns the anti-enumeration rule, which this limit must preserve.
-- *Count before credentials, then reset on success* (pessimistic
+- _Count before credentials, then reset on success_ (pessimistic
   reservation). It makes the limit exact under concurrency, but it counts
   attempts that fail for non-credential reasons (a 500 from the user
   repository), and contradicts the proposal's "count after credentials".
   The overshoot it would remove is bounded (see Decision 4).
 
 **Rationale**:
+
 - Hexagonal boundaries: the rule lives in the application layer with a port,
   the same shape as `TokenDenylist`. The use case stays framework-free in
   logic and is unit-tested with a mocked port.
@@ -140,16 +142,16 @@ export const loginRequestSchema = z.object({
 });
 ```
 
-The pipe produces the normalized email for the use case. The guard (Decision
-5) calls `loginEmailSchema.safeParse(req.body?.email)` and uses the email only
+The pipe produces the normalized email for the use case. The guard (Decision 5) calls `loginEmailSchema.safeParse(req.body?.email)` and uses the email only
 on success. There is no separate `normalizeEmail` function.
 
 **Alternatives considered**:
-- *A plain `normalizeLoginEmail(raw: unknown): string` helper* used by both
+
+- _A plain `normalizeLoginEmail(raw: unknown): string` helper_ used by both
   the schema (`z.preprocess`) and the guard. It would also normalize strings
   that later fail email validation, which nothing needs, and it changes the
   schema's shape for the web client.
-- *Repeat `String(email).trim().toLowerCase()` in the guard.* That is the
+- _Repeat `String(email).trim().toLowerCase()` in the guard._ That is the
   drift risk the proposal names.
 
 **Rationale**: one Zod value is the single source of truth (ADR-015); the web
@@ -165,7 +167,9 @@ itself:
 ```ts
 const EMAIL_KEY_PREFIX = 'login-email:';
 const keyFor = (email: string) =>
-  createHash('sha256').update(EMAIL_KEY_PREFIX + email).digest('hex');
+  createHash('sha256')
+    .update(EMAIL_KEY_PREFIX + email)
+    .digest('hex');
 ```
 
 The raw email never reaches SQL, a row or a log. The library's per-client-key
@@ -174,15 +178,16 @@ prefixes differ, so the two namespaces can only collide through a SHA-256
 collision.
 
 **Alternatives considered**:
-- *Add the three methods to `PrismaThrottlerStorage`.* That class implements
+
+- _Add the three methods to `PrismaThrottlerStorage`._ That class implements
   the library's `ThrottlerStorage` with library semantics (every hit counts,
   block when `hits > limit`, `ThrottlerStorageRecord` results). The email
   limit has different semantics (failures only, block on reaching the limit,
   reset, read-only state). One class with two contracts would be harder to
   read and to test.
-- *A new table* (`LoginFailureCounter`). Needs a migration and its own
+- _A new table_ (`LoginFailureCounter`). Needs a migration and its own
   cleanup, for the same columns and the same lifecycle.
-- *Columns on `User`* (explore Approach B). Rejected by decision answer 1.
+- _Columns on `User`_ (explore Approach B). Rejected by decision answer 1.
 
 **Rationale**: same table, same trigger, same cleanup, no migration; a small
 class whose contract is the port.
@@ -250,7 +255,7 @@ RETURNING ("blockedUntil" IS NOT NULL) AS "blocked"
   rejected by `getBlock` with 429. This matches "after 5 failed attempts,
   further attempts get 429".
 - **Blocked rows are not rewritten** (TD-35 pattern): the `DO UPDATE ...
-  WHERE` skips a still-blocked row, so a failure recorded during a block
+WHERE` skips a still-blocked row, so a failure recorded during a block
   writes no tuple, does not count and does not extend the block. The
   statement then returns no row. An expired block opens a new window
   (`hits = 1`).
@@ -266,23 +271,24 @@ RETURNING ("blockedUntil" IS NOT NULL) AS "blocked"
 **Reset** (`reset`): `DELETE FROM "ThrottleCounter" WHERE "key" = ${key}`.
 
 **Concurrency** (READ COMMITTED, as in the hardening design Decision 5):
-- *N concurrent failures below the limit*: the upserts serialize on the row
+
+- _N concurrent failures below the limit_: the upserts serialize on the row
   lock, each re-reads the latest version, so all N are counted.
-- *Concurrent failures crossing the limit*: exactly the failure that reaches
+- _Concurrent failures crossing the limit_: exactly the failure that reaches
   `maxFailures` sets the block; later ones in the same burst are absorbed by
   the `WHERE` (not counted, block not extended).
-- *Check-then-verify gap*: `getBlock` and `recordFailure` are separate
+- _Check-then-verify gap_: `getBlock` and `recordFailure` are separate
   statements around the argon2 verify, so requests already past the check
   when the bucket blocks still have their credentials evaluated. Per window,
   at most `maxFailures + (in-flight requests at that moment - 1)` credential
   evaluations happen for one email. The per-client-key limit bounds each
   source. Accepted; recorded in the ADR addendum.
-- *A success concurrent with a failure*: the `DELETE` and the upsert
+- _A success concurrent with a failure_: the `DELETE` and the upsert
   serialize on the row. If the reset lands last the counter is 0; if the
   failure lands last the counter is 1 in a fresh window. Either outcome is
   correct: no failure is double-counted and no block survives a reset that
   ran after it.
-- *A success after a concurrent block*: a request that passed the check and
+- _A success after a concurrent block_: a request that passed the check and
   presents the correct password succeeds and its reset deletes the block.
   This follows from decision answer 3 (success resets), because the holder of
   the correct password is not the threat this limit addresses.
@@ -291,12 +297,13 @@ RETURNING ("blockedUntil" IS NOT NULL) AS "blocked"
 `now()`, so all instances agree, as for the per-client-key counter.
 
 **Alternatives considered**:
-- *A `SERIALIZABLE` transaction around read, verify and record.* It would
+
+- _A `SERIALIZABLE` transaction around read, verify and record._ It would
   hold a transaction open during argon2 (tens of milliseconds) on the shared
   pool; rejected for the same reasons as the hardening design.
-- *Block when `hits > maxFailures`* (library semantics). It would allow a 6th
+- _Block when `hits > maxFailures`_ (library semantics). It would allow a 6th
   evaluated failure, contradicting the success criterion.
-- *Extending the block on failures during the block.* Turns the bounded DoS
+- _Extending the block on failures during the block._ Turns the bounded DoS
   into an indefinite one for anyone who keeps sending failures; the block is
   temporary by decision.
 
@@ -327,12 +334,12 @@ The guard gains a constructor that re-declares the inherited dependencies
 
 Why this is the only place the larger value must be computed:
 
-| Client key | Email | Who answers | `Retry-After` |
-|---|---|---|---|
-| blocked | not blocked | guard | client key's |
-| blocked | blocked, shorter | guard | client key's (already the larger) |
-| blocked | blocked, longer | guard, overridden | email's (the larger) |
-| not blocked | blocked | use case, via controller | email's (the client key is not blocked, so there is nothing to combine) |
+| Client key  | Email            | Who answers              | `Retry-After`                                                           |
+| ----------- | ---------------- | ------------------------ | ----------------------------------------------------------------------- |
+| blocked     | not blocked      | guard                    | client key's                                                            |
+| blocked     | blocked, shorter | guard                    | client key's (already the larger)                                       |
+| blocked     | blocked, longer  | guard, overridden        | email's (the larger)                                                    |
+| not blocked | blocked          | use case, via controller | email's (the client key is not blocked, so there is nothing to combine) |
 
 So "both blocked" is only ever answered by the guard, and the larger value is
 **not** reached naturally: without the override, a client blocked for 100 s
@@ -349,30 +356,31 @@ client key's 429 with its own `Retry-After`. The email check and the failure
 record in the login use case still fail closed (500).
 
 **Alternatives considered**:
-- *Compute the max on the email 429 by reading the per-client-key bucket.*
+
+- _Compute the max on the email 429 by reading the per-client-key bucket._
   The use case only runs when the client key is not blocked, so that read
   would never find a block; it computes nothing.
-- *Ignore the case and rely on the client retrying.* Contradicts decision
+- _Ignore the case and rely on the client retrying._ Contradicts decision
   answer 9.
-- *Propagate a read error (500).* Considered first for one error policy on
+- _Propagate a read error (500)._ Considered first for one error policy on
   the port, but the guard's read is advisory and the request is refused
   anyway, so failing closed protects nothing and loses the 429 and its
   `Retry-After`. Changed after the PR 3 review.
-- *Override `handleRequest`.* Re-implements library code that sets headers
+- _Override `handleRequest`._ Re-implements library code that sets headers
   and counts; the protected `throwThrottlingException` hook is narrower.
 
 ### Decision 6: Error and response mapping
 
-| Situation | Status | Body | Headers | Credentials evaluated | Email failure recorded |
-|---|---|---|---|---|---|
-| Client key blocked | 429 | `ThrottlerException` (library) | `Retry-After` = max(key, email) | no | no |
-| Email blocked | 429 | `ThrottlerException` (same) | `Retry-After` = email's | no | no |
-| Invalid body | 400 | unchanged | unchanged | no | no |
-| Wrong password / unknown / soft-deleted | 401 | unchanged | unchanged | yes | yes |
-| Success | 200 | unchanged | unchanged | yes | no (reset) |
-| Use case `getBlock` or `recordFailure` storage error | 500 | Nest default | — | `getBlock`: no; `recordFailure`: yes | — |
-| Guard's advisory `getBlock` storage error (client key blocked) | 429 | `ThrottlerException` (library) | `Retry-After` = client key's (`warn` logged) | no | no |
-| `reset` storage error | 200 | unchanged | — | yes | — (`warn` logged) |
+| Situation                                                      | Status | Body                           | Headers                                      | Credentials evaluated                | Email failure recorded |
+| -------------------------------------------------------------- | ------ | ------------------------------ | -------------------------------------------- | ------------------------------------ | ---------------------- |
+| Client key blocked                                             | 429    | `ThrottlerException` (library) | `Retry-After` = max(key, email)              | no                                   | no                     |
+| Email blocked                                                  | 429    | `ThrottlerException` (same)    | `Retry-After` = email's                      | no                                   | no                     |
+| Invalid body                                                   | 400    | unchanged                      | unchanged                                    | no                                   | no                     |
+| Wrong password / unknown / soft-deleted                        | 401    | unchanged                      | unchanged                                    | yes                                  | yes                    |
+| Success                                                        | 200    | unchanged                      | unchanged                                    | yes                                  | no (reset)             |
+| Use case `getBlock` or `recordFailure` storage error           | 500    | Nest default                   | —                                            | `getBlock`: no; `recordFailure`: yes | —                      |
+| Guard's advisory `getBlock` storage error (client key blocked) | 429    | `ThrottlerException` (library) | `Retry-After` = client key's (`warn` logged) | no                                   | no                     |
+| `reset` storage error                                          | 200    | unchanged                      | —                                            | yes                                  | — (`warn` logged)      |
 
 `AuthController.login` adds one branch:
 
@@ -515,34 +523,34 @@ expiresAt trigger; bounded cleanup driven by PrismaThrottlerStorage.
 
 ## File Changes
 
-| File | Action | PR | Description |
-|------|--------|----|-------------|
-| `packages/validation/src/auth/login.schema.ts` | Modify | 1 | Export `loginEmailSchema`; `loginRequestSchema.email` uses it (Decision 2) |
-| `packages/validation/src/auth/login.schema.spec.ts` | Create | 1 | Vitest: trim/lowercase, invalid and non-string rejected, request schema uses the same output |
-| `apps/api/src/modules/auth/application/ports/login-failure-limiter.port.ts` | Create | 1 | Port, `LoginBlock` type, `LOGIN_FAILURE_LIMITER` token |
-| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts` | Modify | 1 | `getLoginEmailRateLimitConfig()` (Decision 8) |
-| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.spec.ts` | Modify | 1 | Defaults, valid values, rejected values for both new variables |
-| `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts` | Create | 1 | Hashing, `getBlock`, `recordFailure`, `reset`, transition log (Decisions 3, 4, 7) |
-| `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.integration.spec.ts` | Create | 1 | Real Postgres (see Testing Strategy) |
-| `apps/api/src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter.ts` | Create | 1 | Fake for e2e (Decision 9) |
-| `apps/api/src/modules/auth/domain/login-blocked.error.ts` | Create | 2 | Domain error with `retryAfterSeconds` |
-| `apps/api/src/modules/auth/application/use-cases/login.use-case.ts` | Modify | 2 | Check, record, reset (Decision 1) |
-| `apps/api/src/modules/auth/application/use-cases/login.use-case.spec.ts` | Modify | 2 | Port mock; ordering and error cases |
-| `apps/api/src/modules/auth/presentation/auth.controller.ts` | Modify | 2 | `LoginBlockedError` → `Retry-After` + `ThrottlerException`; OpenAPI wording |
-| `apps/api/src/modules/auth/presentation/auth.controller.spec.ts` | Modify | 2 | Mapping test |
-| `apps/api/src/modules/auth/auth.module.ts` | Modify | 2 | `LOGIN_FAILURE_LIMITER` provider |
-| `apps/api/test/*.e2e-spec.ts` (12 suites overriding `ThrottlerStorage`) | Modify | 2 | Fake limiter override |
-| `apps/api/test/e2e-env.setup.ts`, `apps/api/test/test-database/rate-limit-env.setup.ts` | Modify | 2 | `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES=1000` |
-| `apps/api/test/login-email-limit.e2e-spec.ts` | Create | 2 | HTTP contract with the fake (block, body identity, reset, parity) |
-| `apps/api/test/login-email-limit.integration.spec.ts` | Create | 2 | Real `AppModule` + Postgres scenarios |
-| `apps/api/test/login-rate-limit.integration.spec.ts` | Modify | 2 | "never stores the raw client address" now expects two rows per failed attempt (client key + email), both 64-char hex, neither containing the raw email |
-| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts` | Modify | 3 | Constructor + `throwThrottlingException` override (Decision 5) |
-| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts` | Modify | 3 | Four-argument construction; combined header cases |
-| `apps/api/test/login-email-limit.e2e-spec.ts` | Modify | 3 | Both-limits `Retry-After` |
-| `README.md` | Modify | 3 | Two new env vars |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modify | 3 | Addendum (Approach A, failures only, reset on success, no stored lock, SHA-256 with prefix, combined `Retry-After`, check-then-verify bound, bounded DoS) |
-| `docs/technical-debt.md`, `docs/enhancements.md` | Modify | 3 | TD-31 Resolved; EN-6 extended to email keys; new ENs (admin unlock, audit table) |
-| `openspec/specs/authentication/spec.md` | Modify | archive | Delta merged |
+| File                                                                                                            | Action | PR      | Description                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------- | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/validation/src/auth/login.schema.ts`                                                                  | Modify | 1       | Export `loginEmailSchema`; `loginRequestSchema.email` uses it (Decision 2)                                                                                |
+| `packages/validation/src/auth/login.schema.spec.ts`                                                             | Create | 1       | Vitest: trim/lowercase, invalid and non-string rejected, request schema uses the same output                                                              |
+| `apps/api/src/modules/auth/application/ports/login-failure-limiter.port.ts`                                     | Create | 1       | Port, `LoginBlock` type, `LOGIN_FAILURE_LIMITER` token                                                                                                    |
+| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts`                                    | Modify | 1       | `getLoginEmailRateLimitConfig()` (Decision 8)                                                                                                             |
+| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.spec.ts`                               | Modify | 1       | Defaults, valid values, rejected values for both new variables                                                                                            |
+| `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`                  | Create | 1       | Hashing, `getBlock`, `recordFailure`, `reset`, transition log (Decisions 3, 4, 7)                                                                         |
+| `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.integration.spec.ts` | Create | 1       | Real Postgres (see Testing Strategy)                                                                                                                      |
+| `apps/api/src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter.ts`                    | Create | 1       | Fake for e2e (Decision 9)                                                                                                                                 |
+| `apps/api/src/modules/auth/domain/login-blocked.error.ts`                                                       | Create | 2       | Domain error with `retryAfterSeconds`                                                                                                                     |
+| `apps/api/src/modules/auth/application/use-cases/login.use-case.ts`                                             | Modify | 2       | Check, record, reset (Decision 1)                                                                                                                         |
+| `apps/api/src/modules/auth/application/use-cases/login.use-case.spec.ts`                                        | Modify | 2       | Port mock; ordering and error cases                                                                                                                       |
+| `apps/api/src/modules/auth/presentation/auth.controller.ts`                                                     | Modify | 2       | `LoginBlockedError` → `Retry-After` + `ThrottlerException`; OpenAPI wording                                                                               |
+| `apps/api/src/modules/auth/presentation/auth.controller.spec.ts`                                                | Modify | 2       | Mapping test                                                                                                                                              |
+| `apps/api/src/modules/auth/auth.module.ts`                                                                      | Modify | 2       | `LOGIN_FAILURE_LIMITER` provider                                                                                                                          |
+| `apps/api/test/*.e2e-spec.ts` (12 suites overriding `ThrottlerStorage`)                                         | Modify | 2       | Fake limiter override                                                                                                                                     |
+| `apps/api/test/e2e-env.setup.ts`, `apps/api/test/test-database/rate-limit-env.setup.ts`                         | Modify | 2       | `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES=1000`                                                                                                                |
+| `apps/api/test/login-email-limit.e2e-spec.ts`                                                                   | Create | 2       | HTTP contract with the fake (block, body identity, reset, parity)                                                                                         |
+| `apps/api/test/login-email-limit.integration.spec.ts`                                                           | Create | 2       | Real `AppModule` + Postgres scenarios                                                                                                                     |
+| `apps/api/test/login-rate-limit.integration.spec.ts`                                                            | Modify | 2       | "never stores the raw client address" now expects two rows per failed attempt (client key + email), both 64-char hex, neither containing the raw email    |
+| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`                                        | Modify | 3       | Constructor + `throwThrottlingException` override (Decision 5)                                                                                            |
+| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts`                                   | Modify | 3       | Four-argument construction; combined header cases                                                                                                         |
+| `apps/api/test/login-email-limit.e2e-spec.ts`                                                                   | Modify | 3       | Both-limits `Retry-After`                                                                                                                                 |
+| `README.md`                                                                                                     | Modify | 3       | Two new env vars                                                                                                                                          |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`                                                      | Modify | 3       | Addendum (Approach A, failures only, reset on success, no stored lock, SHA-256 with prefix, combined `Retry-After`, check-then-verify bound, bounded DoS) |
+| `docs/technical-debt.md`, `docs/enhancements.md`                                                                | Modify | 3       | TD-31 Resolved; EN-6 extended to email keys; new ENs (admin unlock, audit table)                                                                          |
+| `openspec/specs/authentication/spec.md`                                                                         | Modify | archive | Delta merged                                                                                                                                              |
 
 `apps/api/prisma/schema.prisma`, migrations, `apps/web/**` and i18n: unchanged.
 
@@ -596,16 +604,16 @@ change it covers. Commands: `npm run test --workspace=apps/api`,
 `npm run test:integration` (hermetic database), the api e2e script, and
 `npm run test --workspace=packages/validation`.
 
-| Layer | What to Test | Approach and seam |
-|-------|-------------|----------|
-| Unit (Vitest) | `loginEmailSchema` | `'  Admin@Example.COM '` → `'admin@example.com'`; `42`, `undefined`, `''`, `'not-an-email'` fail; `loginRequestSchema` output email equals `loginEmailSchema` output for the same input |
-| Unit | `getLoginEmailRateLimitConfig` | Unset/empty → 5 / 900 000 ms; `'3'`, `'60'` accepted; `'0'`, `'-1'`, `'1.5'`, `'abc'` throw naming the variable; `2147483647` failures and `86400` s accepted, `2147483648` failures and `86401` s throw naming the variable and the maximum; the existing `LOGIN_RATE_LIMIT_*` variables reject values above `Number.MAX_SAFE_INTEGER` |
-| Unit | `LoginUseCase` | Mocked port. (1) Blocked → `LoginBlockedError(n)`; `findByEmail`, `verify`, `verifyAgainstDummy`, `recordFailure` not called. (2) Wrong password, unknown email and soft-deleted (repo returns null) each call `recordFailure(email)` once and throw `InvalidCredentialsError`; call sequence identical for unknown and existing. (3) Success calls `reset(email)`, not `recordFailure`. (4) `getBlock` rejects → rejects, no credential evaluation. (5) `recordFailure` rejects → rejects (not `InvalidCredentialsError`). (6) `reset` rejects → login still returns the token, `Logger.prototype.warn` called, message without the email |
-| Unit | `AuthController.login` | `LoginBlockedError(42)` → `ThrottlerException` (429, default message) and `Retry-After: 42` set on the response |
-| Unit | `LoginThrottlerGuard` | Fake storage returning blocked with `timeToBlockExpire` 100. Email blocked 800 → header 800. Email blocked 50 → header stays 100. Not blocked → 100. Invalid or missing body email → `getBlock` not called. Not blocked by key → `getBlock` not called. `getBlock` rejects → still `ThrottlerException` (429), `Retry-After` stays the client key's value, a `warn` is logged without the email. Existing tracker tests kept |
-| Integration (adapter, real Postgres) | `PrismaLoginFailureLimiter` | `randomUUID()` emails, small config. (1) Fresh email → not blocked. (2) `maxFailures - 1` failures → not blocked; the next → blocked, `retryAfterSeconds` in `[1, window]`. (3) Failures while blocked: `hits` unchanged and `blockedUntil` unchanged (no rewrite). (4) Window expiry (window 3 s; 1 s raced slow CI runners, see EN-26) → count restarts at 1. (5) Block expiry → not blocked, next failure opens a new window. (6) `reset` deletes the row; reset of a missing key resolves. (7) **Concurrency**: 50 parallel `recordFailure` with max 1000 → `hits = 50`. (8) Parallel `maxFailures + 5` → blocked and exactly one transition `warn`. (9) Stored key is `sha256("login-email:" + email)` hex; no column contains the email; the warn log contains the hash and not the email. (10) `expiresAt` is set by the trigger and an expired email row is removed by `PrismaThrottlerStorage`'s cleanup. (11) Case/whitespace variants only meet in one bucket through `loginEmailSchema` (documented as a schema-level guarantee; the adapter receives normalized input) |
-| Integration (app, real Postgres) | Spec scenarios | `test/login-email-limit.integration.spec.ts`, real `AppModule`, `trust proxy` 1, `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES=3`, a unique email and unique `X-Forwarded-For` client per failure. (1) **Distributed**: 3 failures for one email from 3 client keys → 4th from a 4th key → 429 + `Retry-After`. (2) **Reset**: seeded user (via Prisma, unique email), 2 failures, success, then 2 more failures → 401, not 429. (3) **Successes do not count**: 4 successes → still 200. (4) **Parity**: unknown email vs seeded email, same steps → identical status sequence, bodies and `Retry-After` presence. (5) **Restart and two instances**: block in app A, 429 in app B. (6) **Concurrency**: 3 parallel failures → all 401, next → 429. (7) **Fail closed**: `getBlock` and `recordFailure` spied to reject once → 500; `reset` rejects → 200. (8) Mixed-case/whitespace email variant hits the same bucket |
-| E2E (mocked Prisma, fakes) | HTTP contract | `test/login-email-limit.e2e-spec.ts`, `TRUST_PROXY=true`, email max 2. Block after 2 failures across two `X-Forwarded-For` values; the 429 body equals the per-client-key 429 body from the same app; a request rejected by the email limit does not evaluate credentials (spy on the hasher); the email limit does not block another email. PR 3: both limits blocked (client key max 3 with a 10 s window, email blocked for 900 s) → `Retry-After` > 10 (10 s rather than 1 s so the four requests stay inside one window on slow CI; see EN-38). Timing parity is not asserted at e2e (non-deterministic); parity is proven by call-sequence equality in the use-case unit test and status/body equality at integration |
+| Layer                                | What to Test                   | Approach and seam                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (Vitest)                        | `loginEmailSchema`             | `'  Admin@Example.COM '` → `'admin@example.com'`; `42`, `undefined`, `''`, `'not-an-email'` fail; `loginRequestSchema` output email equals `loginEmailSchema` output for the same input                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Unit                                 | `getLoginEmailRateLimitConfig` | Unset/empty → 5 / 900 000 ms; `'3'`, `'60'` accepted; `'0'`, `'-1'`, `'1.5'`, `'abc'` throw naming the variable; `2147483647` failures and `86400` s accepted, `2147483648` failures and `86401` s throw naming the variable and the maximum; the existing `LOGIN_RATE_LIMIT_*` variables reject values above `Number.MAX_SAFE_INTEGER`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Unit                                 | `LoginUseCase`                 | Mocked port. (1) Blocked → `LoginBlockedError(n)`; `findByEmail`, `verify`, `verifyAgainstDummy`, `recordFailure` not called. (2) Wrong password, unknown email and soft-deleted (repo returns null) each call `recordFailure(email)` once and throw `InvalidCredentialsError`; call sequence identical for unknown and existing. (3) Success calls `reset(email)`, not `recordFailure`. (4) `getBlock` rejects → rejects, no credential evaluation. (5) `recordFailure` rejects → rejects (not `InvalidCredentialsError`). (6) `reset` rejects → login still returns the token, `Logger.prototype.warn` called, message without the email                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Unit                                 | `AuthController.login`         | `LoginBlockedError(42)` → `ThrottlerException` (429, default message) and `Retry-After: 42` set on the response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Unit                                 | `LoginThrottlerGuard`          | Fake storage returning blocked with `timeToBlockExpire` 100. Email blocked 800 → header 800. Email blocked 50 → header stays 100. Not blocked → 100. Invalid or missing body email → `getBlock` not called. Not blocked by key → `getBlock` not called. `getBlock` rejects → still `ThrottlerException` (429), `Retry-After` stays the client key's value, a `warn` is logged without the email. Existing tracker tests kept                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Integration (adapter, real Postgres) | `PrismaLoginFailureLimiter`    | `randomUUID()` emails, small config. (1) Fresh email → not blocked. (2) `maxFailures - 1` failures → not blocked; the next → blocked, `retryAfterSeconds` in `[1, window]`. (3) Failures while blocked: `hits` unchanged and `blockedUntil` unchanged (no rewrite). (4) Window expiry (window 3 s; 1 s raced slow CI runners, see EN-26) → count restarts at 1. (5) Block expiry → not blocked, next failure opens a new window. (6) `reset` deletes the row; reset of a missing key resolves. (7) **Concurrency**: 50 parallel `recordFailure` with max 1000 → `hits = 50`. (8) Parallel `maxFailures + 5` → blocked and exactly one transition `warn`. (9) Stored key is `sha256("login-email:" + email)` hex; no column contains the email; the warn log contains the hash and not the email. (10) `expiresAt` is set by the trigger and an expired email row is removed by `PrismaThrottlerStorage`'s cleanup. (11) Case/whitespace variants only meet in one bucket through `loginEmailSchema` (documented as a schema-level guarantee; the adapter receives normalized input) |
+| Integration (app, real Postgres)     | Spec scenarios                 | `test/login-email-limit.integration.spec.ts`, real `AppModule`, `trust proxy` 1, `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES=3`, a unique email and unique `X-Forwarded-For` client per failure. (1) **Distributed**: 3 failures for one email from 3 client keys → 4th from a 4th key → 429 + `Retry-After`. (2) **Reset**: seeded user (via Prisma, unique email), 2 failures, success, then 2 more failures → 401, not 429. (3) **Successes do not count**: 4 successes → still 200. (4) **Parity**: unknown email vs seeded email, same steps → identical status sequence, bodies and `Retry-After` presence. (5) **Restart and two instances**: block in app A, 429 in app B. (6) **Concurrency**: 3 parallel failures → all 401, next → 429. (7) **Fail closed**: `getBlock` and `recordFailure` spied to reject once → 500; `reset` rejects → 200. (8) Mixed-case/whitespace email variant hits the same bucket                                                                                                                                                                     |
+| E2E (mocked Prisma, fakes)           | HTTP contract                  | `test/login-email-limit.e2e-spec.ts`, `TRUST_PROXY=true`, email max 2. Block after 2 failures across two `X-Forwarded-For` values; the 429 body equals the per-client-key 429 body from the same app; a request rejected by the email limit does not evaluate credentials (spy on the hasher); the email limit does not block another email. PR 3: both limits blocked (client key max 3 with a 10 s window, email blocked for 900 s) → `Retry-After` > 10 (10 s rather than 1 s so the four requests stay inside one window on slow CI; see EN-38). Timing parity is not asserted at e2e (non-deterministic); parity is proven by call-sequence equality in the use-case unit test and status/body equality at integration                                                                                                                                                                                                                                                                                                                                                         |
 
 Existing suites (`login-rate-limit.e2e-spec.ts`, `login-rate-limit.integration.spec.ts`,
 `auth.e2e-spec.ts`) stay green; the per-client-key rules are unchanged.
@@ -635,12 +643,12 @@ enumeration, bounded DoS) is covered by Decisions 1, 4 and 5 and their tests.
 
 ## PR Slicing (final split is decided in sdd-tasks)
 
-| PR | Branch | Content | Rough lines (code / tests / docs) |
-|---|---|---|---|
-| 1/4 | `login-account-lockout/01-email-failure-store` | Change artifacts (incl. `explore.md`), shared email schema, config, port, Prisma adapter, in-memory fake, unit and adapter integration tests | ≈ 190 / 260 / – → **~450** (excess is tests) |
-| 2/4 | `login-account-lockout/02-email-login-limit` | Domain error, use case, controller, module wiring, e2e overrides (12 suites × ~3), env setups, use-case/controller unit, e2e and app-level integration tests | ≈ 110 / 300 / – → **~410** |
-| 3/4 | `login-account-lockout/03-combined-retry-after` | Guard override and tests, both-limits e2e, README, ADR-011 addendum, registers | ≈ 40 / 100 / 110 → **~250** |
-| 4/4 | `login-account-lockout/04-archive` | Spec merge, archive | docs only |
+| PR  | Branch                                          | Content                                                                                                                                                      | Rough lines (code / tests / docs)            |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| 1/4 | `login-account-lockout/01-email-failure-store`  | Change artifacts (incl. `explore.md`), shared email schema, config, port, Prisma adapter, in-memory fake, unit and adapter integration tests                 | ≈ 190 / 260 / – → **~450** (excess is tests) |
+| 2/4 | `login-account-lockout/02-email-login-limit`    | Domain error, use case, controller, module wiring, e2e overrides (12 suites × ~3), env setups, use-case/controller unit, e2e and app-level integration tests | ≈ 110 / 300 / – → **~410**                   |
+| 3/4 | `login-account-lockout/03-combined-retry-after` | Guard override and tests, both-limits e2e, README, ADR-011 addendum, registers                                                                               | ≈ 40 / 100 / 110 → **~250**                  |
+| 4/4 | `login-account-lockout/04-archive`              | Spec merge, archive                                                                                                                                          | docs only                                    |
 
 Planning artifacts in PR 1 are not counted above. This revises the proposal's
 3-PR hint: with the guard, wiring and all tests in one PR, the forecast is

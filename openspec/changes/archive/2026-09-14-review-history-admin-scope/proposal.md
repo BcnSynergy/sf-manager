@@ -37,14 +37,14 @@ ADR-011 (+ addenda), FR-008, FR-012.
 Closed with the product owner before this proposal. **Inputs, not open items —
 do not re-litigate in `sdd-spec`/`sdd-design`.**
 
-| Decision | Resolution |
-|---|---|
-| **`SYSTEM_ADMIN` only** | `MANAGER` + `VIEW_ALL_REVIEWS` is explicitly **OUT**, deferred to its own later slice. It requires standing up the whole `ManagerCapability` mechanism (enum, `User.managerCapabilities` column + migration, capability checker) from scratch, with **no admin UI to grant the capability** — it would ship code with no reachable trigger. This slice MUST NOT touch `ManagerCapability` at all. |
-| **Total oversight, no exceptions** | A `SYSTEM_ADMIN` sees **all** completed sessions, **including those of deactivated/soft-deleted communities and maintenance companies**. A deliberate divergence from the other three scopes (a representative loses a deactivated assignment's communities, a manager fails closed on a soft-deleted/company-less user): the purpose here is total system audit, not operational scoping. Deleted context must not hide a compliance record from the auditor. |
-| **No scope predicate at all** | `SYSTEM_ADMIN` is unconditional — no Layer 2 checker call, no scope resolution, no fail-closed branch, because there is no scope to fail closed on. This is the first read path in the codebase with no scope narrowing, and that is the whole point of the slice. |
-| **Reuse the shipped surface verbatim** | Same `/review-history` and `/review-history/:sessionId` pages and components the manager already uses since `review-history-company-scope` PR5. No new page, no admin variant, no new column, no controls. |
-| **Demo mode gets no special handling** | FR-012's demo-mode `SYSTEM_ADMIN` auto-assignment is already gated by existing ADR-011 rules. This slice adds zero demo-mode-specific logic. |
-| **Per-element history stays out** | FR-008's other half — a different query axis that would reverse `review-history-ui`'s standing "No Filtering, Analytics or Adjacent Controls Ship" rule. Its own future exploration/proposal, not touched here. FR-008 does not close with this slice. |
+| Decision                               | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`SYSTEM_ADMIN` only**                | `MANAGER` + `VIEW_ALL_REVIEWS` is explicitly **OUT**, deferred to its own later slice. It requires standing up the whole `ManagerCapability` mechanism (enum, `User.managerCapabilities` column + migration, capability checker) from scratch, with **no admin UI to grant the capability** — it would ship code with no reachable trigger. This slice MUST NOT touch `ManagerCapability` at all.                                                              |
+| **Total oversight, no exceptions**     | A `SYSTEM_ADMIN` sees **all** completed sessions, **including those of deactivated/soft-deleted communities and maintenance companies**. A deliberate divergence from the other three scopes (a representative loses a deactivated assignment's communities, a manager fails closed on a soft-deleted/company-less user): the purpose here is total system audit, not operational scoping. Deleted context must not hide a compliance record from the auditor. |
+| **No scope predicate at all**          | `SYSTEM_ADMIN` is unconditional — no Layer 2 checker call, no scope resolution, no fail-closed branch, because there is no scope to fail closed on. This is the first read path in the codebase with no scope narrowing, and that is the whole point of the slice.                                                                                                                                                                                             |
+| **Reuse the shipped surface verbatim** | Same `/review-history` and `/review-history/:sessionId` pages and components the manager already uses since `review-history-company-scope` PR5. No new page, no admin variant, no new column, no controls.                                                                                                                                                                                                                                                     |
+| **Demo mode gets no special handling** | FR-012's demo-mode `SYSTEM_ADMIN` auto-assignment is already gated by existing ADR-011 rules. This slice adds zero demo-mode-specific logic.                                                                                                                                                                                                                                                                                                                   |
+| **Per-element history stays out**      | FR-008's other half — a different query axis that would reverse `review-history-ui`'s standing "No Filtering, Analytics or Adjacent Controls Ship" rule. Its own future exploration/proposal, not touched here. FR-008 does not close with this slice.                                                                                                                                                                                                         |
 
 ## Scope
 
@@ -138,21 +138,21 @@ in the same review as a new authorization primitive.
 
 - `review-history` — add the `SYSTEM_ADMIN` unscoped visibility as a
   requirement in its own right (explicitly including deactivated/soft-deleted
-  communities and companies); narrow *"The Deferred Review Visibility Scopes
-  Are Not Built"* to `MANAGER`/`VIEW_ALL_REVIEWS`/`ManagerCapability` and
-  per-element only, and amend its now-false scenarios (*"Every company-scoped
-  query names a single company; no global query exists"*, *"The only migration
-  is the attribution column and its backfill"*); confirm
-  *"History Scope Is Carried by the Query, Not by the Caller"* still holds
+  communities and companies); narrow _"The Deferred Review Visibility Scopes
+  Are Not Built"_ to `MANAGER`/`VIEW_ALL_REVIEWS`/`ManagerCapability` and
+  per-element only, and amend its now-false scenarios (_"Every company-scoped
+  query names a single company; no global query exists"_, _"The only migration
+  is the attribution column and its backfill"_); confirm
+  _"History Scope Is Carried by the Query, Not by the Caller"_ still holds
   when the scope is "everything".
-- `review-history-ui` — add `SYSTEM_ADMIN` to *"Role-Gated Route Access for
-  the History Views"*; give it a reachable entry point from `/`; keep the
+- `review-history-ui` — add `SYSTEM_ADMIN` to _"Role-Gated Route Access for
+  the History Views"_; give it a reachable entry point from `/`; keep the
   no-filtering guard intact and unchanged.
 - `authorization` — `SYSTEM_ADMIN` gains `reviewSession:read`; the global
-  visibility rule; narrow *"The Deferred Review Visibility Scopes Grant
-  Nothing"* to `MANAGER`/`VIEW_ALL_REVIEWS`/`ManagerCapability` and replace
-  its now-false claims (*"`SYSTEM_ADMIN`'s row MUST be unchanged"*, *"No
-  unscoped 'all sessions' history read MUST exist"*) with the precise new
+  visibility rule; narrow _"The Deferred Review Visibility Scopes Grant
+  Nothing"_ to `MANAGER`/`VIEW_ALL_REVIEWS`/`ManagerCapability` and replace
+  its now-false claims (_"`SYSTEM_ADMIN`'s row MUST be unchanged"_, _"No
+  unscoped 'all sessions' history read MUST exist"_) with the precise new
   rule.
 
 ## Approach
@@ -165,16 +165,16 @@ Four proposal-level choices:
    admin's `WHERE` is `status = 'completed'`, full stop. The danger of this
    slice is that "no filter" is indistinguishable in code review from
    "forgot the filter", so the spec must assert the unscoped read is
-   *intended* and the port must name it unmistakably (e.g. a name a reader
+   _intended_ and the port must name it unmistakably (e.g. a name a reader
    cannot mistake for a scoped one).
 2. **No Layer 2 checker call in the admin branch.** There is no
    `AdminScopeChecker` to add: a checker that always returns "everything" is
    ceremony that dilutes the meaning of the two real checkers. The role
-   *is* the scope. This keeps `CommunityScopeChecker`/`CompanyScopeChecker`
+   _is_ the scope. This keeps `CommunityScopeChecker`/`CompanyScopeChecker`
    meaning exactly what they mean today.
 3. **The new pair is the only unscoped read, and `findById` stays absent.**
    The shipped invariant is "no identifier-only read on the port". The by-id
-   admin method takes an id and no scope — so it *is* an identifier-only
+   admin method takes an id and no scope — so it _is_ an identifier-only
    read, for this actor by design. `sdd-design` MUST state how the invariant
    is preserved for every other caller (naming, reachability, and the fact
    that only `ReviewHistoryAccessService`'s admin branch may call it). **This
@@ -191,26 +191,26 @@ One `stacked-to-main` chain (CLAUDE.md), branches
 `feat(review-history-admin-scope): PR N/M — ...`. Materially smaller than the
 previous two slices; `sdd-tasks` owns the split and the 400-line forecast.
 
-| PR | Content |
-|---|---|
-| ~1 | Unscoped port method pair + both adapters + the access-service `SYSTEM_ADMIN` branch |
-| ~2 | `ROLE_PERMISSIONS` entry, visibility rule, E2E four-role matrix incl. the deactivated/soft-deleted cases |
-| ~3 | Web role-widening + entry link, spec amendments, FR-008 status, browser verification |
+| PR  | Content                                                                                                  |
+| --- | -------------------------------------------------------------------------------------------------------- |
+| ~1  | Unscoped port method pair + both adapters + the access-service `SYSTEM_ADMIN` branch                     |
+| ~2  | `ROLE_PERMISSIONS` entry, visibility rule, E2E four-role matrix incl. the deactivated/soft-deleted cases |
+| ~3  | Web role-widening + entry link, spec amendments, FR-008 status, browser verification                     |
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modified | Unscoped completed list + by-id pair |
-| `.../review-session/infrastructure/persistence/**` (Prisma + in-memory fake) | Modified | Adapters for the new pair |
-| `.../review-session/application/services/review-history-access.service.ts` | Modified | `SYSTEM_ADMIN` branch in both switches, replacing `[]`/`null` |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modified | `SYSTEM_ADMIN` gains `reviewSession:read` |
-| `apps/web/src/App.tsx` | Modified | `SYSTEM_ADMIN` added to both `/review-history*` `allowedRoles` |
-| `apps/web/src/pages/HealthPage.tsx` (+ `.test.tsx`) | Modified | `SYSTEM_ADMIN` added to `REVIEW_HISTORY_ROLES`; the manager's link-enumeration test needs an admin sibling |
-| `apps/web/src/auth/ProtectedRoute.test.tsx` | Modified | 3-role route family becomes 4 |
-| `openspec/specs/{review-history,review-history-ui,authorization}/spec.md` | Modified | Delta specs |
-| `docs/requirements/functional-requirements.md` | Modified | FR-008 status |
-| `apps/api/test/*.e2e-spec.ts` | New/Modified | Four-role visibility matrix + deactivated/soft-deleted visibility cases |
+| Area                                                                         | Impact       | Description                                                                                                |
+| ---------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `.../review-session/application/ports/review-session.repository.port.ts`     | Modified     | Unscoped completed list + by-id pair                                                                       |
+| `.../review-session/infrastructure/persistence/**` (Prisma + in-memory fake) | Modified     | Adapters for the new pair                                                                                  |
+| `.../review-session/application/services/review-history-access.service.ts`   | Modified     | `SYSTEM_ADMIN` branch in both switches, replacing `[]`/`null`                                              |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`           | Modified     | `SYSTEM_ADMIN` gains `reviewSession:read`                                                                  |
+| `apps/web/src/App.tsx`                                                       | Modified     | `SYSTEM_ADMIN` added to both `/review-history*` `allowedRoles`                                             |
+| `apps/web/src/pages/HealthPage.tsx` (+ `.test.tsx`)                          | Modified     | `SYSTEM_ADMIN` added to `REVIEW_HISTORY_ROLES`; the manager's link-enumeration test needs an admin sibling |
+| `apps/web/src/auth/ProtectedRoute.test.tsx`                                  | Modified     | 3-role route family becomes 4                                                                              |
+| `openspec/specs/{review-history,review-history-ui,authorization}/spec.md`    | Modified     | Delta specs                                                                                                |
+| `docs/requirements/functional-requirements.md`                               | Modified     | FR-008 status                                                                                              |
+| `apps/api/test/*.e2e-spec.ts`                                                | New/Modified | Four-role visibility matrix + deactivated/soft-deleted visibility cases                                    |
 
 **No new column, no new table, no backfill** — a real relief versus the
 company-scope slice. **One exception**: a PR1 fix-up (4R fresh-context review
@@ -226,15 +226,15 @@ largest list from being pathological. Untouched: `modules/users/**`,
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **The unscoped method is reachable from a non-admin path**, turning the app's first "see everything" query into a leak for the other three roles | High | The method is called from exactly one branch of one service; `sdd-verify` enumerates every call site; the E2E four-role matrix asserts each non-admin role still sees only its own scope after this change, no sampling |
-| **The unscoped by-id method becomes a de facto bare `findById`**, destroying the shipped "no identifier-only read on the port" property | High | Approach choice 3 makes this `sdd-design`'s explicit deliverable, not an afterthought; naming must make misuse obvious; a test asserts no other use case calls it |
-| **A reviewer or a later slice reads "no `WHERE` scope" as a bug and "fixes" it**, silently breaking admin oversight | Med | Spec asserts the unscoped read as intended behaviour with its own scenario, including the deactivated/soft-deleted cases; the port comment states it; the E2E test would fail on a re-added filter |
-| **Scope creep into `MANAGER`/`VIEW_ALL_REVIEWS`.** "While we're here" is one `ROLE_PERMISSIONS` line away and pulls in the whole capability mechanism | High | Explicit non-goal; `sdd-verify` asserts `MANAGER` is still `[]` and that no `ManagerCapability`/`managerCapabilities`/`VIEW_ALL_REVIEWS` symbol exists anywhere |
-| **The installation-wide list is unusable** — every session, every company, every community, all time, with no filter, sort or pagination by settled decision | Med | Accepted deliberately and on record; the app-wide filtering initiative (named in the company-scope slice) is the remedy. Flagged for browser verification with realistic volume so the pain is measured, not assumed |
-| **Widening the shipped pages breaks the three roles already using them** | Low | Same surface, no variant; existing component/route tests keep asserting all four roles; browser verification per role |
-| **`SYSTEM_ADMIN` gaining its first `reviewSession:*` permission is read as "admin can now perform reviews"** | Low | Exactly one permission added; spec scenario asserts no create/perform/complete/discard, and that `/review-sessions*` write routes are NOT widened |
+| Risk                                                                                                                                                         | Likelihood | Mitigation                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The unscoped method is reachable from a non-admin path**, turning the app's first "see everything" query into a leak for the other three roles             | High       | The method is called from exactly one branch of one service; `sdd-verify` enumerates every call site; the E2E four-role matrix asserts each non-admin role still sees only its own scope after this change, no sampling |
+| **The unscoped by-id method becomes a de facto bare `findById`**, destroying the shipped "no identifier-only read on the port" property                      | High       | Approach choice 3 makes this `sdd-design`'s explicit deliverable, not an afterthought; naming must make misuse obvious; a test asserts no other use case calls it                                                       |
+| **A reviewer or a later slice reads "no `WHERE` scope" as a bug and "fixes" it**, silently breaking admin oversight                                          | Med        | Spec asserts the unscoped read as intended behaviour with its own scenario, including the deactivated/soft-deleted cases; the port comment states it; the E2E test would fail on a re-added filter                      |
+| **Scope creep into `MANAGER`/`VIEW_ALL_REVIEWS`.** "While we're here" is one `ROLE_PERMISSIONS` line away and pulls in the whole capability mechanism        | High       | Explicit non-goal; `sdd-verify` asserts `MANAGER` is still `[]` and that no `ManagerCapability`/`managerCapabilities`/`VIEW_ALL_REVIEWS` symbol exists anywhere                                                         |
+| **The installation-wide list is unusable** — every session, every company, every community, all time, with no filter, sort or pagination by settled decision | Med        | Accepted deliberately and on record; the app-wide filtering initiative (named in the company-scope slice) is the remedy. Flagged for browser verification with realistic volume so the pain is measured, not assumed    |
+| **Widening the shipped pages breaks the three roles already using them**                                                                                     | Low        | Same surface, no variant; existing component/route tests keep asserting all four roles; browser verification per role                                                                                                   |
+| **`SYSTEM_ADMIN` gaining its first `reviewSession:*` permission is read as "admin can now perform reviews"**                                                 | Low        | Exactly one permission added; spec scenario asserts no create/perform/complete/discard, and that `/review-sessions*` write routes are NOT widened                                                                       |
 
 ## Rollback Plan
 
@@ -331,21 +331,21 @@ Each has a working assumption; none blocks the next phases.
 
 1. **Naming of the unscoped pair.** It must read as deliberately unscoped and
    must not be pickable by autocomplete for a scoped need (the company-scope
-   slice deleted a dead method for exactly this reason). *Working
-   assumption*: an explicit `…Unscoped`/`…AcrossInstallation` marker in the
+   slice deleted a dead method for exactly this reason). _Working
+   assumption_: an explicit `…Unscoped`/`…AcrossInstallation` marker in the
    name rather than a bare `findAllCompleted`.
 2. **How the "no identifier-only read" invariant is restated** now that one
-   by-id method legitimately carries no scope. *Working assumption*: the
+   by-id method legitimately carries no scope. _Working assumption_: the
    invariant becomes "every by-id read carries a scope **or** is reachable
    only from the role branch that has none" — `sdd-design` owns the wording
    and the enforcement.
 3. **Whether the `SYSTEM_ADMIN` branch needs any guard at all** beyond the
-   role (e.g. a soft-deleted admin). *Working assumption*: authentication
+   role (e.g. a soft-deleted admin). _Working assumption_: authentication
    already resolves the actor; no extra check — but state it explicitly
    rather than letting the absence decide.
 4. **Whether the existing row shape is sufficient** for an installation-wide
-   list (community + performer + completedAt, no company column). *Working
-   assumption*: unchanged — adding a company column is UI scope this slice's
+   list (community + performer + completedAt, no company column). _Working
+   assumption_: unchanged — adding a company column is UI scope this slice's
    success criteria do not require (ADR-006).
 
 ## Deferred by this slice (ADR-006 record)

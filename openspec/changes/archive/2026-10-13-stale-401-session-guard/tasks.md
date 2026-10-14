@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Estimated changed lines | PR 1 ~190 (code ~20, tests ~110, spec/registers/ADR/artifacts ~60 excluding the already-written proposal/design/explore text); PR 2 docs only (~60 plus the spec merge) |
-| 400-line budget risk | Low |
-| Chained PRs recommended | Yes (2 PRs: implementation, archive) |
-| Suggested split | PR 1 (guard + tests + delta spec + registers + ADR note + artifacts incl. explore.md) -> PR 2 (archive) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | Low                                                                                                                                                                     |
+| Chained PRs recommended | Yes (2 PRs: implementation, archive)                                                                                                                                    |
+| Suggested split         | PR 1 (guard + tests + delta spec + registers + ADR note + artifacts incl. explore.md) -> PR 2 (archive)                                                                 |
+| Delivery strategy       | ask-on-risk                                                                                                                                                             |
+| Chain strategy          | stacked-to-main                                                                                                                                                         |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
@@ -22,10 +22,10 @@ UI: no new UI. The change touches `apps/web/**`, so a browser pass is required, 
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Focused test command | Runtime harness | Rollback boundary |
-|------|------|-----------|----------------------|-----------------|-------------------|
-| 1 | Session epoch in `client.ts`, three advance points in `AuthProvider.tsx`, tests, whole-flow test, delta spec, TD-25 Resolved, ADR-011 item 6 note, change artifacts | PR 1/2. Branch `stale-401-session-guard/01-session-epoch-guard`. Title `fix(web): PR 1/2 — ignore stale 401s from earlier sessions` | `npx vitest run src/api/client.test.ts src/auth` from `apps/web` | Deferred-fetch provider tests; whole-flow test with real `AuthProvider` + router + `LoginPage`; browser pass for regression | Revert PR. Web-only, no migration or persisted state |
-| 2 | Archive: merge delta spec, finish registers/ADR | PR 2/2. Branch `stale-401-session-guard/02-archive`. Title `docs(openspec): PR 2/2 — archive stale-401-session-guard` | N/A (docs only) | N/A | Revert PR; if reverted after archive, move TD-25 back to Open and remove the ADR-011 note |
+| Unit | Goal                                                                                                                                                                | Likely PR                                                                                                                           | Focused test command                                             | Runtime harness                                                                                                             | Rollback boundary                                                                         |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1    | Session epoch in `client.ts`, three advance points in `AuthProvider.tsx`, tests, whole-flow test, delta spec, TD-25 Resolved, ADR-011 item 6 note, change artifacts | PR 1/2. Branch `stale-401-session-guard/01-session-epoch-guard`. Title `fix(web): PR 1/2 — ignore stale 401s from earlier sessions` | `npx vitest run src/api/client.test.ts src/auth` from `apps/web` | Deferred-fetch provider tests; whole-flow test with real `AuthProvider` + router + `LoginPage`; browser pass for regression | Revert PR. Web-only, no migration or persisted state                                      |
+| 2    | Archive: merge delta spec, finish registers/ADR                                                                                                                     | PR 2/2. Branch `stale-401-session-guard/02-archive`. Title `docs(openspec): PR 2/2 — archive stale-401-session-guard`               | N/A (docs only)                                                  | N/A                                                                                                                         | Revert PR; if reverted after archive, move TD-25 back to Open and remove the ADR-011 note |
 
 Strict TDD (vitest + Testing Library in `apps/web`, runner `npm run test --workspace=apps/web`): each behavior task is RED (failing test observed), GREEN, REFACTOR. Apply records a "TDD Cycle Evidence" table (RED command and failure; GREEN command and pass count). Tasks marked "characterization" cover behavior the existing null-check guard already satisfies, so no RED is observable; they are verified by a temporary mutation instead (remove the line, confirm the stated outcome, restore it). Every commit must pass web lint and compile.
 

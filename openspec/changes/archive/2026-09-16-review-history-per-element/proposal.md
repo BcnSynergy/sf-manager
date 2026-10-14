@@ -2,25 +2,25 @@
 
 ## Intent
 
-FR-008 reads *"View review history, **per element** and per community"*. The
+FR-008 reads _"View review history, **per element** and per community"_. The
 per-community half shipped across four slices (`review-history` 2026-09-09,
 `review-history-company-scope` 2026-09-13, `review-history-admin-scope`
 2026-09-14, `review-history-manager-capability` 2026-09-15). All five
 visibility scopes are live. **The per-element half has never been built**, and
 every one of those four slices punted it in the same words:
 
-- `review-history`/proposal.md: *"Narrowing a history list to one element's
-  past reviews is deferred, deliberately and explicitly."*
-- `review-history-manager-capability`/proposal.md: *"FR-008's role-based
+- `review-history`/proposal.md: _"Narrowing a history list to one element's
+  past reviews is deferred, deliberately and explicitly."_
+- `review-history-manager-capability`/proposal.md: _"FR-008's role-based
   visibility axis closes with this slice. FR-008 itself closes only after
-  per-element history lands."*
+  per-element history lands."_
 - `review-history`/spec.md and `review-session-management`/spec.md carry
-  positive guards — *"No per-element review history surface exists"*, *"WHEN
+  positive guards — _"No per-element review history surface exists"_, _"WHEN
   they are searched for a view of one inspectable element's past reviews /
-  THEN none MUST be found."*
-- `docs/requirements/functional-requirements.md` FR-008 status: *"per-element
+  THEN none MUST be found."_
+- `docs/requirements/functional-requirements.md` FR-008 status: _"per-element
   history remains the only deferred piece — FR-008 does not close until it
-  lands."*
+  lands."_
 
 No deferral note ever cited a technical blocker; it was pure ADR-006 scope
 discipline. Verified today: `ElementReviewEntry.inspectableElementId` is
@@ -30,8 +30,8 @@ community-scoped, indistinguishable-404 element lookup. **This is one new
 read query and one new page — no schema change, no new aggregate, no new
 authorization primitive.**
 
-Today the compliance question *"show me everything that has ever been
-recorded against extinguisher `K7M2XQ4PTR`"* — the question a RIPCI
+Today the compliance question _"show me everything that has ever been
+recorded against extinguisher `K7M2XQ4PTR`"_ — the question a RIPCI
 inspection actually asks — can only be answered by opening every past session
 of that community one by one and scanning for the element's row. The data is
 there; the query is not.
@@ -58,17 +58,17 @@ Closed with the product owner before this proposal, or resolved by direct code
 reading where noted. **Inputs, not open items — do not re-litigate in
 `sdd-spec`/`sdd-design`.**
 
-| Decision | Resolution |
-|---|---|
-| **Entry point: from the element, not from a session list** | The primary entry point is the element itself. **Verified: no inspectable-element detail page exists** — `apps/web/src/pages/` has `CommunityElementsListPage`, `InspectableElementCreatePage`, `InspectableElementEditPage` and `InspectableElementLabelPage`, and the API exposes no `GET` by-id element route at all (only `POST`/`GET`-list/`PATCH`/`DELETE`). Rather than build a general element detail page (scope this slice does not need), the slice ships **one** new page that **is** the element's detail-plus-history view: element header (code, name, type, location, state, community) + its full review record, at `/communities/:communityId/inspectable-elements/:elementId/history` — a sibling of the shipped depth-5 `/edit` and `/label` routes. |
-| **Second entry link, because otherwise four of five scopes have no UI path** | Every route under `/communities/:communityId/inspectable-elements/**` is `SYSTEM_ADMIN`-only today, and `inspectableElement:read` is held by `SYSTEM_ADMIN` **alone** (verified in `role-permission.checker.ts`). An element-list-only entry point would ship a five-scope API behind an admin-only UI — exactly the "API-only drift" CLAUDE.md's 2026-08-25 course correction forbids. So a **second** entry link ships: a per-entry *"this element's full history"* link on the existing `ReviewHistoryDetailPage`, which all five roles already reach. Two links, **one** new page. |
-| **Gated on `reviewSession:read`, never on `inspectableElement:read`** | This is a review-history read that happens to be keyed by an element, not an element-management read. `reviewSession:read` is exactly the permission all five history roles already hold. Shipped precedent: the review-session write flow reads elements through `findReviewableByCode`/`findReviewableById` without `inspectableElement:read`. **No permission table row changes in this slice.** |
-| **Reuse the five existing scopes, applied at entry level** | Technician → their own recorded entries; representative → their actively-assigned communities; company manager → their company's sessions; `SYSTEM_ADMIN` → everything; `MANAGER` → everything **iff** `VIEW_ALL_REVIEWS`, fail-closed. Same `CommunityScopeChecker` / `CompanyScopeChecker` / `ManagerCapabilityChecker`, same per-branch resolution, same exhaustive `switch` with the `satisfies never` backstop. **No new, narrower technician rule is invented.** |
-| **Element reachability decides 404 vs. empty state** | Unknown, wrong-community or soft-deleted element → `404 INSPECTABLE_ELEMENT_NOT_FOUND`, indistinguishable (the shipped `findByIdInCommunity` contract). Beyond that: `SYSTEM_ADMIN` and a granted `MANAGER` reach any existing element (empty history renders as an empty state); a representative reaches any element in an actively-assigned community (same); a technician and a company manager reach the element **iff** the scoped entry set is non-empty, otherwise 404 — their scope is session-derived, so "no entries in scope" *is* "not reachable". An **ungranted** `MANAGER` always gets 404. |
-| **Element reassignment between communities is impossible today — resolved by reading code, not assumed** | `communityId` is **not** an updatable field: `InspectableElementRepository.updateById`'s `changes` type excludes it, with the explicit port comment *"an element does not move between communities and does not change type in this slice"*, mirrored verbatim in `UpdateInspectableElementUseCase`. No reassignment or transfer endpoint exists anywhere, and `code` is immutable with *"no regeneration/reassignment endpoint"* (`domain-model-inspections.md`). The only mention of reassignment in the whole repo is a **hypothetical** justification for globally-unique codes (*"avoids ambiguity **if** an element is ever reassigned"*). **So: an element belongs to exactly one community for its entire lifetime, every entry ever recorded against it belongs to a session in that one community, and there is no pre-reassignment-entry question to answer.** This slice therefore scopes the read through the element's current (= only) community and adds no cross-community logic. Recorded as a standing assumption a future reassignment slice must revisit — this proposal's authorization model would need an explicit decision then, not now. |
-| **Rows link out to the session; answers are not re-rendered here** | Each row shows when, who, reviewed/unreviewed, and observations, and links to the already-shipped `/review-history/:sessionId`. Rendering every answer per element would mean loading one frozen template snapshot **per row** — real cost, zero product need this slice's success criteria name. Invariant that makes this safe: every row an actor can see belongs to a session that same actor can open, by construction of the five scopes. |
-| **Decommissioned elements keep their history; soft-deleted ones do not** | `deactivatedAt` is domain state, not a delete (`review-session` design Decision 3) — a decommissioned extinguisher's compliance record must stay readable. `deletedAt` is the administrative delete and 404s, consistent with every other read (ADR-010). |
-| **No pagination, filter, sort or search** | Same discipline as all four shipped slices; `review-history-ui`'s *"No Filtering, Analytics or Adjacent Controls Ship"* stays in force unchanged. Explicit non-goal below. |
+| Decision                                                                                                 | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Entry point: from the element, not from a session list**                                               | The primary entry point is the element itself. **Verified: no inspectable-element detail page exists** — `apps/web/src/pages/` has `CommunityElementsListPage`, `InspectableElementCreatePage`, `InspectableElementEditPage` and `InspectableElementLabelPage`, and the API exposes no `GET` by-id element route at all (only `POST`/`GET`-list/`PATCH`/`DELETE`). Rather than build a general element detail page (scope this slice does not need), the slice ships **one** new page that **is** the element's detail-plus-history view: element header (code, name, type, location, state, community) + its full review record, at `/communities/:communityId/inspectable-elements/:elementId/history` — a sibling of the shipped depth-5 `/edit` and `/label` routes.                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Second entry link, because otherwise four of five scopes have no UI path**                             | Every route under `/communities/:communityId/inspectable-elements/**` is `SYSTEM_ADMIN`-only today, and `inspectableElement:read` is held by `SYSTEM_ADMIN` **alone** (verified in `role-permission.checker.ts`). An element-list-only entry point would ship a five-scope API behind an admin-only UI — exactly the "API-only drift" CLAUDE.md's 2026-08-25 course correction forbids. So a **second** entry link ships: a per-entry _"this element's full history"_ link on the existing `ReviewHistoryDetailPage`, which all five roles already reach. Two links, **one** new page.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Gated on `reviewSession:read`, never on `inspectableElement:read`**                                    | This is a review-history read that happens to be keyed by an element, not an element-management read. `reviewSession:read` is exactly the permission all five history roles already hold. Shipped precedent: the review-session write flow reads elements through `findReviewableByCode`/`findReviewableById` without `inspectableElement:read`. **No permission table row changes in this slice.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Reuse the five existing scopes, applied at entry level**                                               | Technician → their own recorded entries; representative → their actively-assigned communities; company manager → their company's sessions; `SYSTEM_ADMIN` → everything; `MANAGER` → everything **iff** `VIEW_ALL_REVIEWS`, fail-closed. Same `CommunityScopeChecker` / `CompanyScopeChecker` / `ManagerCapabilityChecker`, same per-branch resolution, same exhaustive `switch` with the `satisfies never` backstop. **No new, narrower technician rule is invented.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Element reachability decides 404 vs. empty state**                                                     | Unknown, wrong-community or soft-deleted element → `404 INSPECTABLE_ELEMENT_NOT_FOUND`, indistinguishable (the shipped `findByIdInCommunity` contract). Beyond that: `SYSTEM_ADMIN` and a granted `MANAGER` reach any existing element (empty history renders as an empty state); a representative reaches any element in an actively-assigned community (same); a technician and a company manager reach the element **iff** the scoped entry set is non-empty, otherwise 404 — their scope is session-derived, so "no entries in scope" _is_ "not reachable". An **ungranted** `MANAGER` always gets 404.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Element reassignment between communities is impossible today — resolved by reading code, not assumed** | `communityId` is **not** an updatable field: `InspectableElementRepository.updateById`'s `changes` type excludes it, with the explicit port comment _"an element does not move between communities and does not change type in this slice"_, mirrored verbatim in `UpdateInspectableElementUseCase`. No reassignment or transfer endpoint exists anywhere, and `code` is immutable with _"no regeneration/reassignment endpoint"_ (`domain-model-inspections.md`). The only mention of reassignment in the whole repo is a **hypothetical** justification for globally-unique codes (_"avoids ambiguity **if** an element is ever reassigned"_). **So: an element belongs to exactly one community for its entire lifetime, every entry ever recorded against it belongs to a session in that one community, and there is no pre-reassignment-entry question to answer.** This slice therefore scopes the read through the element's current (= only) community and adds no cross-community logic. Recorded as a standing assumption a future reassignment slice must revisit — this proposal's authorization model would need an explicit decision then, not now. |
+| **Rows link out to the session; answers are not re-rendered here**                                       | Each row shows when, who, reviewed/unreviewed, and observations, and links to the already-shipped `/review-history/:sessionId`. Rendering every answer per element would mean loading one frozen template snapshot **per row** — real cost, zero product need this slice's success criteria name. Invariant that makes this safe: every row an actor can see belongs to a session that same actor can open, by construction of the five scopes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Decommissioned elements keep their history; soft-deleted ones do not**                                 | `deactivatedAt` is domain state, not a delete (`review-session` design Decision 3) — a decommissioned extinguisher's compliance record must stay readable. `deletedAt` is the administrative delete and 404s, consistent with every other read (ADR-010).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **No pagination, filter, sort or search**                                                                | Same discipline as all four shipped slices; `review-history-ui`'s _"No Filtering, Analytics or Adjacent Controls Ship"_ stays in force unchanged. Explicit non-goal below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## Scope
 
@@ -112,8 +112,8 @@ reading where noted. **Inputs, not open items — do not re-litigate in
   `inspectable-elements` URL family**, which is `SYSTEM_ADMIN`-only. Carries
   an explicit comment and a `ProtectedRoute` test so a future reader does not
   "fix" it in either direction.
-- Two entry links, no new pages: a per-row *History* link on
-  `CommunityElementsListPage` (same shape as the shipped *Print* link), and a
+- Two entry links, no new pages: a per-row _History_ link on
+  `CommunityElementsListPage` (same shape as the shipped _Print_ link), and a
   per-entry link on `ReviewHistoryDetailPage`.
 - Real `en`/`es`/`ca` translations for every new key, parity test-enforced.
 
@@ -121,10 +121,10 @@ reading where noted. **Inputs, not open items — do not re-litigate in
 
 - **FR-008 closes.** Its status column records per-element history as shipped.
 - Narrowing (not deleting) the shipped guards this slice makes false:
-  `review-history`'s and `review-session-management`'s *"No per-element review
-  history surface exists"* scenarios, `review-history-ui`'s *"Scenario: No
-  per-element history view exists"*, and `authorization`'s per-element clause
-  in *"The Deferred Review Visibility Scopes Grant Nothing"*.
+  `review-history`'s and `review-session-management`'s _"No per-element review
+  history surface exists"_ scenarios, `review-history-ui`'s _"Scenario: No
+  per-element history view exists"_, and `authorization`'s per-element clause
+  in _"The Deferred Review Visibility Scopes Grant Nothing"_.
 - Unit, repository integration, a **five-scope** E2E matrix (including
   ungranted `MANAGER`, null-company manager, deactivated-assignment
   representative), and **browser verification** against a running dev server
@@ -159,7 +159,7 @@ reading where noted. **Inputs, not open items — do not re-litigate in
 
 ### Why this scope and not more (ADR-006)
 
-The expensive thing here is the *authorization* of an element-keyed read, and
+The expensive thing here is the _authorization_ of an element-keyed read, and
 it is paid for exactly once — four port methods and one branch set, all
 shaped by conventions four shipped slices already proved. Everything else on
 the table (filters, charts, export, an element management detail page,
@@ -180,18 +180,18 @@ reachable by exactly the actors who can see the rows.
 - `review-history` — the element-keyed read as a requirement in its own
   right: the five scopes applied at entry level, the reachability/404 matrix,
   deterministic ordering, decommissioned-visible / soft-deleted-404; amend the
-  now-false *"No per-element review history surface exists"* guard.
+  now-false _"No per-element review history surface exists"_ guard.
 - `review-history-ui` — the new page, its five-role route gate, both entry
-  links, its loading/empty/error states; amend *"Scenario: No per-element
-  history view exists"*; keep the no-filtering guard intact.
-- `review-session-management` — narrow its FR-008 deferral row and its *"No
-  per-element review history surface exists"* scenario.
+  links, its loading/empty/error states; amend _"Scenario: No per-element
+  history view exists"_; keep the no-filtering guard intact.
+- `review-session-management` — narrow its FR-008 deferral row and its _"No
+  per-element review history surface exists"_ scenario.
 - `authorization` — record that the element-keyed history read is gated on
   `reviewSession:read` and **not** on `inspectableElement:read`, with the
   scope decided by `ReviewHistoryAccessService`; narrow the per-element clause
-  of *"The Deferred Review Visibility Scopes Grant Nothing"*. **No
+  of _"The Deferred Review Visibility Scopes Grant Nothing"_. **No
   `ROLE_PERMISSIONS` change.**
-- `inspectable-element-admin-ui` — the per-row *History* link on the community
+- `inspectable-element-admin-ui` — the per-row _History_ link on the community
   element list.
 
 ## Approach
@@ -205,7 +205,7 @@ Extend the seams the four shipped history slices built; add nothing new.
    cannot widen its own scope by forgetting an argument.
 2. **The element lookup is the community gate.** Resolving through the
    existing `findByIdInCommunity(communityId, elementId)` makes the
-   `:communityId` URL segment *verified*, not decorative — wrong community,
+   `:communityId` URL segment _verified_, not decorative — wrong community,
    unknown id and soft-deleted all collapse into the one indistinguishable
    404 the element module already ships. This is why the route is nested
    rather than a flat `/review-history/elements/:elementId`: a flat route
@@ -233,31 +233,31 @@ One `stacked-to-main` chain (CLAUDE.md), branches
 `feat(review-history-per-element): PR N/M — ...`. Chained PRs are needed;
 `sdd-tasks` owns the final split and the binding 400-line forecast.
 
-| PR | Content | Rough size |
-|---|---|---|
-| ~1 | Four port methods + Prisma adapter + in-memory fake + repository integration tests | ~250–350 |
-| ~2 | Access-service element branches + use case + route + DTO + unit tests + five-scope E2E matrix | ~350–450 |
-| ~3 | Web page + route gate + both entry links + i18n + component tests + spec merges + FR-008 closure + browser verification | ~350–450 |
+| PR  | Content                                                                                                                 | Rough size |
+| --- | ----------------------------------------------------------------------------------------------------------------------- | ---------- |
+| ~1  | Four port methods + Prisma adapter + in-memory fake + repository integration tests                                      | ~250–350   |
+| ~2  | Access-service element branches + use case + route + DTO + unit tests + five-scope E2E matrix                           | ~350–450   |
+| ~3  | Web page + route gate + both entry links + i18n + component tests + spec merges + FR-008 closure + browser verification | ~350–450   |
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modified | Four `…ForElement…` methods, scope in each signature |
-| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts` | Modified | Element-filtered joins over `ElementReviewEntry.inspectableElementId` |
-| `.../review-session/application/use-cases/testing/` (in-memory fake) | Modified | Same four methods |
-| `.../review-session/application/services/review-history-access.service.ts` | Modified | Element-keyed branch set, mirroring `listForActor` |
-| `.../review-session/application/use-cases/read-element-review-history.use-case.ts` | New | Element header + scoped, ordered entry list |
-| `.../review-session/presentation/**` (history controller + DTO) | Modified/New | One nested route, `reviewSession:read`, one coded-404 site |
-| `.../inspectable-element/application/ports/**` | **Untouched** | `findByIdInCommunity` reused verbatim; no new method |
-| `apps/web/src/pages/ElementReviewHistoryPage.tsx` (+ test) | New | The one new page |
-| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test) | Modified | Per-row *History* link |
-| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) | Modified | Per-entry element-history link |
-| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx` | Modified | New depth-5 route, five-role gate + its guard test |
-| `apps/web/src/api/review-history.ts`, `i18n/locales/{en,es,ca}.json` | Modified | Client call + real translations |
-| `openspec/specs/{review-history,review-history-ui,review-session-management,authorization,inspectable-element-admin-ui}/spec.md` | Modified | Delta specs |
-| `docs/requirements/functional-requirements.md` | Modified | **FR-008 closes** |
-| `apps/api/test/*.e2e-spec.ts` | New/Modified | Five-scope element-history matrix |
+| Area                                                                                                                             | Impact        | Description                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------- |
+| `.../review-session/application/ports/review-session.repository.port.ts`                                                         | Modified      | Four `…ForElement…` methods, scope in each signature                  |
+| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts`                                              | Modified      | Element-filtered joins over `ElementReviewEntry.inspectableElementId` |
+| `.../review-session/application/use-cases/testing/` (in-memory fake)                                                             | Modified      | Same four methods                                                     |
+| `.../review-session/application/services/review-history-access.service.ts`                                                       | Modified      | Element-keyed branch set, mirroring `listForActor`                    |
+| `.../review-session/application/use-cases/read-element-review-history.use-case.ts`                                               | New           | Element header + scoped, ordered entry list                           |
+| `.../review-session/presentation/**` (history controller + DTO)                                                                  | Modified/New  | One nested route, `reviewSession:read`, one coded-404 site            |
+| `.../inspectable-element/application/ports/**`                                                                                   | **Untouched** | `findByIdInCommunity` reused verbatim; no new method                  |
+| `apps/web/src/pages/ElementReviewHistoryPage.tsx` (+ test)                                                                       | New           | The one new page                                                      |
+| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test)                                                                      | Modified      | Per-row _History_ link                                                |
+| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test)                                                                        | Modified      | Per-entry element-history link                                        |
+| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx`                                                                           | Modified      | New depth-5 route, five-role gate + its guard test                    |
+| `apps/web/src/api/review-history.ts`, `i18n/locales/{en,es,ca}.json`                                                             | Modified      | Client call + real translations                                       |
+| `openspec/specs/{review-history,review-history-ui,review-session-management,authorization,inspectable-element-admin-ui}/spec.md` | Modified      | Delta specs                                                           |
+| `docs/requirements/functional-requirements.md`                                                                                   | Modified      | **FR-008 closes**                                                     |
+| `apps/api/test/*.e2e-spec.ts`                                                                                                    | New/Modified  | Five-scope element-history matrix                                     |
 
 **Untouched**: `prisma/schema.prisma` and `prisma/migrations/**` (no schema
 change, no migration), `role-permission.checker.ts`, `SessionAccessService`,
@@ -266,17 +266,17 @@ every element-management route, all three scope/capability checkers.
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **The element-keyed read leaks entries outside the actor's scope** — the whole point of the feature is cross-session reach, so a missing conjunct exposes other communities' or other technicians' records | High | Scope is a required parameter of every new port method (no identifier-only read); branches mirror the shipped ones one-for-one; the five-scope E2E matrix asserts each role against an element reviewed by **two different** performers from **two different** companies in a community the actor does not own |
-| **A technician sees another technician's entries for the same element** — the most likely misreading of "all history for this element" | High | Settled decision: technician scope is their own entries, entry-level, unchanged from the session-level rule; E2E asserts a two-performer element shows exactly one row to each technician |
-| **The 404-vs-empty matrix is inconsistent between roles**, leaking element existence to a role that should not reach it | Med | Matrix is a settled decision above and becomes explicit spec scenarios; every 404 path collapses to one throw site and one code, per the shipped indistinguishable-404 convention |
-| **The five-role web route inside a `SYSTEM_ADMIN`-only URL family is copied by a future route** | Med | Explicit in-file comment + a `ProtectedRoute` test naming both the five allowed roles and the family's default; called out in the spec delta |
-| **A new unscoped `findById` is added to the element port** to make a flat route work | Med | Approach decision 2 makes the nested route binding; `sdd-verify` asserts `InspectableElementRepository` gained no method |
-| **`inspectableElement:read` is quietly granted to another role** to make the page work | Med | Approach decision 4; `sdd-verify` asserts `ROLE_PERMISSIONS` is byte-unchanged |
-| **The element-filtered join is slow** on an installation with many sessions — the existing composite index is `(status, completedAt, id)` on `ReviewSession`, not on `ElementReviewEntry.inspectableElementId` | Med | Named for `sdd-design`: confirm the FK's index coverage against a real `EXPLAIN` before deciding whether an index ships; an index-only change is additive and independently revertable |
-| **Scope creep into filters/charts/export** once a per-element timeline exists on screen | Med | Explicit non-goals; `sdd-verify` asserts no filter, sort, pagination or date control ships on any history surface |
-| ES/CA translations stubbed with English placeholders | Low | Real translations in scope; `locales.test.ts` parity guard covers new keys |
+| Risk                                                                                                                                                                                                           | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The element-keyed read leaks entries outside the actor's scope** — the whole point of the feature is cross-session reach, so a missing conjunct exposes other communities' or other technicians' records     | High       | Scope is a required parameter of every new port method (no identifier-only read); branches mirror the shipped ones one-for-one; the five-scope E2E matrix asserts each role against an element reviewed by **two different** performers from **two different** companies in a community the actor does not own |
+| **A technician sees another technician's entries for the same element** — the most likely misreading of "all history for this element"                                                                         | High       | Settled decision: technician scope is their own entries, entry-level, unchanged from the session-level rule; E2E asserts a two-performer element shows exactly one row to each technician                                                                                                                      |
+| **The 404-vs-empty matrix is inconsistent between roles**, leaking element existence to a role that should not reach it                                                                                        | Med        | Matrix is a settled decision above and becomes explicit spec scenarios; every 404 path collapses to one throw site and one code, per the shipped indistinguishable-404 convention                                                                                                                              |
+| **The five-role web route inside a `SYSTEM_ADMIN`-only URL family is copied by a future route**                                                                                                                | Med        | Explicit in-file comment + a `ProtectedRoute` test naming both the five allowed roles and the family's default; called out in the spec delta                                                                                                                                                                   |
+| **A new unscoped `findById` is added to the element port** to make a flat route work                                                                                                                           | Med        | Approach decision 2 makes the nested route binding; `sdd-verify` asserts `InspectableElementRepository` gained no method                                                                                                                                                                                       |
+| **`inspectableElement:read` is quietly granted to another role** to make the page work                                                                                                                         | Med        | Approach decision 4; `sdd-verify` asserts `ROLE_PERMISSIONS` is byte-unchanged                                                                                                                                                                                                                                 |
+| **The element-filtered join is slow** on an installation with many sessions — the existing composite index is `(status, completedAt, id)` on `ReviewSession`, not on `ElementReviewEntry.inspectableElementId` | Med        | Named for `sdd-design`: confirm the FK's index coverage against a real `EXPLAIN` before deciding whether an index ships; an index-only change is additive and independently revertable                                                                                                                         |
+| **Scope creep into filters/charts/export** once a per-element timeline exists on screen                                                                                                                        | Med        | Explicit non-goals; `sdd-verify` asserts no filter, sort, pagination or date control ships on any history surface                                                                                                                                                                                              |
+| ES/CA translations stubbed with English placeholders                                                                                                                                                           | Low        | Real translations in scope; `locales.test.ts` parity guard covers new keys                                                                                                                                                                                                                                     |
 
 ## Rollback Plan
 
@@ -381,7 +381,7 @@ makes this the cleanest rollback of the five history slices:
 
 Each has a working assumption; none blocks the next phases.
 
-1. **Exact shape of the four port methods.** *Working assumption*:
+1. **Exact shape of the four port methods.** _Working assumption_:
    `findCompletedForElementForPerformer(elementId, performedById)`,
    `…ForElementInCommunities(elementId, communityIds)`,
    `…ForElementForCompany(elementId, companyId)`,
@@ -390,20 +390,20 @@ Each has a working assumption; none blocks the next phases.
    entries. `sdd-design` may instead return flattened entry rows — the
    tradeoff is payload shape vs. reuse of the existing `ReviewSession`
    mapping.
-2. **Where the element-keyed branches live.** *Working assumption*: new
+2. **Where the element-keyed branches live.** _Working assumption_: new
    methods on `ReviewHistoryAccessService` beside `listForActor`/`loadByRole`,
    not a new service — same invariants, same checkers.
-3. **Index coverage for the element-filtered join.** *Working assumption*: the
+3. **Index coverage for the element-filtered join.** _Working assumption_: the
    `ElementReviewEntry.inspectableElementId` FK's index suffices; `sdd-design`
    must confirm with a real `EXPLAIN` before shipping or skipping an index,
    given ADR-013's hand-written-index convention.
 4. **What the element header carries, and where it comes from.**
-   *Working assumption*: code, name, element type (through the shipped label
+   _Working assumption_: code, name, element type (through the shipped label
    map, never the raw enum), location, state and community, all from the
    `findByIdInCommunity` result — no extra query, no community name lookup
    unless `sdd-spec` judges the community id unusable in the UI.
-5. **Representative reachability for a never-reviewed element.** *Working
-   assumption*: `CommunityScopeChecker` decides it, giving an empty state
+5. **Representative reachability for a never-reviewed element.** _Working
+   assumption_: `CommunityScopeChecker` decides it, giving an empty state
    rather than a 404 (settled matrix above). `sdd-design` must confirm this
    costs no query the branch does not already make.
 

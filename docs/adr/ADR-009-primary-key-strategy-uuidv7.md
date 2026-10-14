@@ -1,9 +1,11 @@
 # ADR-009: Primary Key Strategy — UUIDv7, Generated in the Application Layer
 
 ## Status
+
 Accepted
 
 ## Context
+
 Every entity's `id` was set as a standard UUID primary key. A fully random
 UUID (v4) has a well-known downside as a B-tree-indexed primary key in
 PostgreSQL: since values are inserted in random order, the index suffers
@@ -12,6 +14,7 @@ increasing key — a real performance/bloat cost as tables grow, unlike a
 classic auto-increment integer.
 
 ## Decision
+
 Every entity's `id` uses **UUIDv7** ([RFC 9562](https://www.rfc-editor.org/rfc/rfc9562)):
 a 128-bit, UUID-formatted identifier with a leading 48-bit millisecond Unix
 timestamp followed by random bits. Generated values are roughly
@@ -43,6 +46,7 @@ purpose; embedding a timestamp there would leak registration order to
 anyone reading a physical label.
 
 ## Consequences
+
 - Better index locality/less bloat than UUIDv4 at scale.
 - `id` values leak an approximate creation timestamp to anyone who can read
   them. Acceptable here since `id` is never the public-facing identifier
@@ -52,8 +56,9 @@ anyone reading a physical label.
   dependency, portable across Postgres versions.
 
 ## Alternatives Considered
+
 - **UUIDv4** — rejected as a PK for the index-locality reason above; still
-  the right shape for identifiers that specifically need to *not* be
+  the right shape for identifiers that specifically need to _not_ be
   time-ordered (e.g. `InspectableElement.code`, which isn't a UUID at all
   though — see the domain model doc).
 - **ULID** — same core idea (48-bit timestamp + randomness), predates

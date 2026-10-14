@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Estimated changed lines | ~1900-2500 (migration, `shared` move, new authorization seam, full `users` CRUD across 4 layers, breaking `/auth/me` change, web + docs — all with Strict TDD tests) |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR1 -> PR9 (see Suggested Work Units) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High                                                                                                                                                                 |
+| Chained PRs recommended | Yes                                                                                                                                                                  |
+| Suggested split         | PR1 -> PR9 (see Suggested Work Units)                                                                                                                                |
+| Delivery strategy       | ask-on-risk                                                                                                                                                          |
+| Chain strategy          | stacked-to-main                                                                                                                                                      |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,17 +18,17 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Schema/migration + seed + `Role` domain type | PR 1 | No behavior change; unblocks 2 & 3 |
-| 2 | Shared infra: move `PasswordHasher`, add `Permission` + `@RequirePermission` | PR 2 | Depends on PR 1; mechanical move + small additions |
-| 3 | Authorization: `PermissionChecker`, `RolePermissionChecker`, `PermissionsGuard` | PR 3 | Depends on PR 2; second `APP_GUARD` wiring |
-| 4 | Users domain: `PlainPassword`, last-admin policy, errors, entity `role` | PR 4 | Depends on PR 1; ~150-200 lines |
-| 5 | Users application: repo port + 4 use cases | PR 5 | Depends on PR 4; largest single unit, watch budget |
-| 6 | Users infra + presentation: Prisma repo, controller, DTOs, module wiring | PR 6 | Depends on PR 3 (guard) + PR 5 |
-| 7 | Auth wiring: `role` in JWT/login/`/auth/me` + delta spec + auth e2e | PR 7 | Depends on PR 1 only; can land in parallel with 4-6 |
-| 8 | Users E2E incl. in-memory fake repo soft-delete parity | PR 8 | Depends on PR 3, 6, 7 |
-| 9 | Web `AuthUser.role` + ADR-011 addendum | PR 9 | Depends on PR 7 |
+| Unit | Goal                                                                            | Likely PR | Notes                                               |
+| ---- | ------------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
+| 1    | Schema/migration + seed + `Role` domain type                                    | PR 1      | No behavior change; unblocks 2 & 3                  |
+| 2    | Shared infra: move `PasswordHasher`, add `Permission` + `@RequirePermission`    | PR 2      | Depends on PR 1; mechanical move + small additions  |
+| 3    | Authorization: `PermissionChecker`, `RolePermissionChecker`, `PermissionsGuard` | PR 3      | Depends on PR 2; second `APP_GUARD` wiring          |
+| 4    | Users domain: `PlainPassword`, last-admin policy, errors, entity `role`         | PR 4      | Depends on PR 1; ~150-200 lines                     |
+| 5    | Users application: repo port + 4 use cases                                      | PR 5      | Depends on PR 4; largest single unit, watch budget  |
+| 6    | Users infra + presentation: Prisma repo, controller, DTOs, module wiring        | PR 6      | Depends on PR 3 (guard) + PR 5                      |
+| 7    | Auth wiring: `role` in JWT/login/`/auth/me` + delta spec + auth e2e             | PR 7      | Depends on PR 1 only; can land in parallel with 4-6 |
+| 8    | Users E2E incl. in-memory fake repo soft-delete parity                          | PR 8      | Depends on PR 3, 6, 7                               |
+| 9    | Web `AuthUser.role` + ADR-011 addendum                                          | PR 9      | Depends on PR 7                                     |
 
 ## Phase 1: Database & Role Foundation
 

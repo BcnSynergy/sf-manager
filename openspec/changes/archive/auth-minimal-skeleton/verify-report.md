@@ -6,11 +6,11 @@
 
 ## Completeness
 
-| Metric | Value |
-|--------|-------|
-| Tasks total | 39 (Phases 0-10) |
-| Tasks complete | 39 |
-| Tasks incomplete | 0 |
+| Metric           | Value            |
+| ---------------- | ---------------- |
+| Tasks total      | 39 (Phases 0-10) |
+| Tasks complete   | 39               |
+| Tasks incomplete | 0                |
 
 ## Build and Tests Execution
 
@@ -81,6 +81,7 @@ CRITICAL: None
 WARNING: None
 
 SUGGESTION:
+
 - 4 lint warnings (no-unsafe-argument) in auth.controller.spec.ts mock typing -- cosmetic, no runtime risk, safe to leave or clean up in a follow-up.
 - CORS e2e coverage only asserts headers on the public /health endpoint, not a protected one -- functionally equivalent (Nest CORS middleware runs before the guard) but a slightly narrower test than the spec wording "applies to any endpoint" implies. Not blocking.
 

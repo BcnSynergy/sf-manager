@@ -15,10 +15,10 @@
 
 The `review-document` read is a history read of one session and MUST be
 bound by this capability's session-level guards exactly as the history
-detail read is: *Only Completed Sessions Appear in History*, *History
-Scope Is Carried by the Query, Not by the Caller*, *An Out-of-Scope
-Historical Session Is Indistinguishable From a Nonexistent One*, *An
-Ungranted Manager Reads Nothing* and *History Adds No Write Path*.
+detail read is: _Only Completed Sessions Appear in History_, _History
+Scope Is Carried by the Query, Not by the Caller_, _An Out-of-Scope
+Historical Session Is Indistinguishable From a Nonexistent One_, _An
+Ungranted Manager Reads Nothing_ and _History Adds No Write Path_.
 
 It MUST resolve its session through the same five scopes and the same
 scoped reads the history detail read uses. It MUST NOT add a third
@@ -28,21 +28,25 @@ and the affirmatively granted `MANAGER` path, and MUST NOT fetch a
 session and check its scope afterwards.
 
 #### Scenario: Still exactly two actor-unscoped reads
+
 - GIVEN the review-session repository port and its adapters after this change
 - WHEN the methods reading `completed` sessions or their entries are enumerated
 - THEN exactly the same two actor-unscoped reads MUST exist as before this change, and every other method MUST carry a performer, community or maintenance-company scope
 
 #### Scenario: The actor-unscoped reads gain no new caller path
+
 - GIVEN every call site of the two actor-unscoped reads after this change
 - WHEN they are enumerated — no sampling
 - THEN each MUST still be reachable only from the `SYSTEM_ADMIN` path and the affirmatively granted `MANAGER` path
 
 #### Scenario: The document read is scoped in the query
+
 - GIVEN the document read for a technician, a representative and a company manager
 - WHEN its data access is inspected
 - THEN each MUST carry its own scope predicate, and none MUST fetch the session unscoped and narrow afterwards
 
 #### Scenario: A draft is not readable through the document read
+
 - GIVEN a `draft` session in the caller's own scope
 - WHEN the caller reads its document
 - THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical to a nonexistent session

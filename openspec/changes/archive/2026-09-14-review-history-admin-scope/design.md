@@ -14,13 +14,13 @@ suite. Everything below is shaped by that.
 
 The slice's rules, each in exactly one place:
 
-| Rule | Where it is enforced | How it is auditable |
-|---|---|---|
-| Caller holds `reviewSession:read` | `PermissionsGuard` + `@RequirePermission` (Layer 1) | `ROLE_PERMISSIONS` gains one entry |
+| Rule                                               | Where it is enforced                                         | How it is auditable                                               |
+| -------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Caller holds `reviewSession:read`                  | `PermissionsGuard` + `@RequirePermission` (Layer 1)          | `ROLE_PERMISSIONS` gains one entry                                |
 | A `SYSTEM_ADMIN`'s scope is the whole installation | The port method **name**, `…AcrossInstallation` (Decision 1) | Two methods, two `WHERE status='completed'` clauses, nothing else |
-| No Layer 2 call for this role | The branch calls the repository directly (Decision 3) | Unit test asserts neither scope checker is touched |
-| The unscoped pair has exactly one caller | `ReviewHistoryAccessService`'s `SYSTEM_ADMIN` branch | Source-scan call-site guard test (Decision 2) |
-| The other three scopes are byte-unchanged | Their branches and their four methods are untouched | E2E four-role matrix, no sampling |
+| No Layer 2 call for this role                      | The branch calls the repository directly (Decision 3)        | Unit test asserts neither scope checker is touched                |
+| The unscoped pair has exactly one caller           | `ReviewHistoryAccessService`'s `SYSTEM_ADMIN` branch         | Source-scan call-site guard test (Decision 2)                     |
+| The other three scopes are byte-unchanged          | Their branches and their four methods are untouched          | E2E four-role matrix, no sampling                                 |
 
 **Verified on `main` before designing, not assumed**: `ReviewSessionRepository`
 has 8 read methods, every one carrying a performer, community or company scope;
@@ -61,8 +61,8 @@ findCompletedByIdAcrossInstallation(id: string): Promise<ReviewSession | null>;
 
 **Rationale**: the port's three shipped suffixes (`InCommunities`,
 `ForPerformer`, `ForCompany`) each name **a scope dimension**. `AcrossInstallation`
-is the fourth value of that same dimension, so the pair reads as *"the
-installation-wide scope"* — a positive statement about the data set — and slots
+is the fourth value of that same dimension, so the pair reads as _"the
+installation-wide scope"_ — a positive statement about the data set — and slots
 into the existing convention rather than fracturing it. The rejected names all
 describe the **absence of a check**: `…Unrestricted`/`…Unscoped` read as an
 escape hatch and actively invite the misuse this slice must prevent ("I just
@@ -97,7 +97,7 @@ Three enforcement mechanisms, in order of strength:
    the port, the two adapters and `review-history-access.service.ts`. A
    second production caller fails the build. Precedent for reading source from a
    test: `review-session-migration.integration.spec.ts`.
-3. **The comment quoted in Decision 1** states *why* the `WHERE` is bare, so a
+3. **The comment quoted in Decision 1** states _why_ the `WHERE` is bare, so a
    reviewer or a later slice reading "no scope clause" finds the intent in place
    rather than inferring a bug and "fixing" it.
 
@@ -111,8 +111,8 @@ real: a second injection, a second fake, a second binding, and a fracture of the
 one-port convention three slices built, for one role. ADR-006: the naming plus
 two guards buy the same property at a fraction of the structure. Also rejected:
 having the admin branch call the list method and filter by id in memory — that
-is caller-side narrowing, which the shipped spec requirement *"History Scope Is
-Carried by the Query, Not by the Caller"* forbids outright.
+is caller-side narrowing, which the shipped spec requirement _"History Scope Is
+Carried by the Query, Not by the Caller"_ forbids outright.
 
 ### Decision 3 — the admin branch makes no Layer 2 call and no extra guard (open question 3)
 
@@ -185,39 +185,39 @@ slice shipped for every actor).
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modify | +2 methods (Decision 1) and the restated invariant comment (Decision 2); **still no `findById`** |
-| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts` | Modify | `where: { status: 'completed' }`, shared `COMPLETED_HISTORY_ORDER_BY`; by-id hydrates entries like the other detail reads |
-| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify | Same pair, same ordering, same completed-only filter |
-| `.../review-session/application/services/review-history-access.service.ts` | Modify | Split the `SYSTEM_ADMIN`/`MANAGER` fallthrough in both switches (Decision 3) |
-| `.../review-session/application/services/session-access.service.ts` | **Unchanged** | Write-path gate, byte-untouched |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modify | `SYSTEM_ADMIN` gains `reviewSession:read` — nothing else (Decision 4) |
-| `apps/web/src/App.tsx` | Modify | `SYSTEM_ADMIN` added to both `/review-history*` `allowedRoles` (3 roles -> 4); `/review-sessions*` untouched |
-| `apps/web/src/pages/HealthPage.tsx` | Modify | `SYSTEM_ADMIN` added to `REVIEW_HISTORY_ROLES` |
-| `apps/web/src/pages/ReviewHistory{,Detail}Page.tsx` | **Unchanged** | Reused verbatim, no admin variant |
-| `.../prisma-review-session.repository.integration.spec.ts` | Modify | Allowlist 8 -> 10 names; new installation-wide describe block |
-| `.../review-history-access.service.spec.ts` | Modify | Admin branch: reaches the pair, touches neither checker |
-| `apps/web/src/pages/HealthPage.test.tsx`, `auth/ProtectedRoute.test.tsx` | Modify | Admin sibling assertions (see Testing Strategy) |
-| `apps/api/test/review-history.e2e-spec.ts` | Modify | Four-role matrix + deactivated/soft-deleted visibility |
-| `openspec/specs/{review-history,review-history-ui,authorization}/spec.md` | Modify | Delta specs (owned by `sdd-spec`) |
-| `docs/requirements/functional-requirements.md` | Modify | FR-008 status |
+| File                                                                                      | Action        | Description                                                                                                               |
+| ----------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `.../review-session/application/ports/review-session.repository.port.ts`                  | Modify        | +2 methods (Decision 1) and the restated invariant comment (Decision 2); **still no `findById`**                          |
+| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts`       | Modify        | `where: { status: 'completed' }`, shared `COMPLETED_HISTORY_ORDER_BY`; by-id hydrates entries like the other detail reads |
+| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify        | Same pair, same ordering, same completed-only filter                                                                      |
+| `.../review-session/application/services/review-history-access.service.ts`                | Modify        | Split the `SYSTEM_ADMIN`/`MANAGER` fallthrough in both switches (Decision 3)                                              |
+| `.../review-session/application/services/session-access.service.ts`                       | **Unchanged** | Write-path gate, byte-untouched                                                                                           |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                        | Modify        | `SYSTEM_ADMIN` gains `reviewSession:read` — nothing else (Decision 4)                                                     |
+| `apps/web/src/App.tsx`                                                                    | Modify        | `SYSTEM_ADMIN` added to both `/review-history*` `allowedRoles` (3 roles -> 4); `/review-sessions*` untouched              |
+| `apps/web/src/pages/HealthPage.tsx`                                                       | Modify        | `SYSTEM_ADMIN` added to `REVIEW_HISTORY_ROLES`                                                                            |
+| `apps/web/src/pages/ReviewHistory{,Detail}Page.tsx`                                       | **Unchanged** | Reused verbatim, no admin variant                                                                                         |
+| `.../prisma-review-session.repository.integration.spec.ts`                                | Modify        | Allowlist 8 -> 10 names; new installation-wide describe block                                                             |
+| `.../review-history-access.service.spec.ts`                                               | Modify        | Admin branch: reaches the pair, touches neither checker                                                                   |
+| `apps/web/src/pages/HealthPage.test.tsx`, `auth/ProtectedRoute.test.tsx`                  | Modify        | Admin sibling assertions (see Testing Strategy)                                                                           |
+| `apps/api/test/review-history.e2e-spec.ts`                                                | Modify        | Four-role matrix + deactivated/soft-deleted visibility                                                                    |
+| `openspec/specs/{review-history,review-history-ui,authorization}/spec.md`                 | Modify        | Delta specs (owned by `sdd-spec`)                                                                                         |
+| `docs/requirements/functional-requirements.md`                                            | Modify        | FR-008 status                                                                                                             |
 
 ## Testing Strategy
 
-| Layer | What to test | Approach |
-|---|---|---|
-| Unit (api) | `ReviewHistoryAccessService` admin dispatch | Admin reaches `findCompletedAcrossInstallation`/`…ById…` with **no** arguments beyond the id; `communityScopeChecker` and `companyScopeChecker` mocks assert `not.toHaveBeenCalled()`; `MANAGER` still reaches no repository call |
-| Unit (api) | The other three branches | Byte-identical behaviour assertions kept, re-run after the switch split |
-| Unit (api) | In-memory fake parity | Installation-wide pair returns every completed session regardless of community/company/performer; a draft never surfaces; ordering identical to the other list methods |
-| Integration (api) | Port-surface guard | The allowlist grows to exactly 10 named reads; `findById` still absent |
-| Integration (api) | **Call-site guard** (Decision 2) | Source scan: the two names appear in production code only in the port, both adapters, and `review-history-access.service.ts` |
-| Integration (api) | Installation-wide queries, real Postgres | Returns rows across ≥2 companies and ≥2 communities including one whose **community is deactivated/soft-deleted** and one whose **maintenance company is soft-deleted**; never a draft; `completedAt DESC, id DESC` |
-| E2E (api) | Four-role visibility matrix, no sampling | Admin sees every seeded completed session incl. the deactivated/soft-deleted cases; technician/representative/manager each still see exactly their shipped scope after this change; admin gets 404 on a draft and on a nonexistent id |
-| E2E (api) | Scope guards | `SYSTEM_ADMIN` holds `reviewSession:read` and no other `reviewSession:*`; 403 on every `/review-sessions*` write route; `MANAGER` still `[]`; no `ManagerCapability`/`managerCapabilities`/`VIEW_ALL_REVIEWS` symbol exists; no filter/sort/page parameter accepted |
-| Unit (web) | Routes | `ProtectedRoute` family: all four roles reach `/review-history*`; admin still blocked from `/review-sessions*` |
-| Unit (web) | `HealthPage` | **Note for `sdd-tasks`**: the manager's link-enumeration test (`HealthPage.test.tsx:137-153`) stays **passing and unmodified** — widening `REVIEW_HISTORY_ROLES` does not change the manager's render. Add an admin **sibling**: for `SYSTEM_ADMIN`, `hrefs` equals exactly `['/review-history']` (from none today) and one button, the logout control |
-| Browser | CLAUDE.md | Real dev server, `SYSTEM_ADMIN` login: entry link from `/`, installation-wide list at realistic volume, drill-in, a deactivated-community session visible, empty state; regression pass for the other three roles |
+| Layer             | What to test                                | Approach                                                                                                                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit (api)        | `ReviewHistoryAccessService` admin dispatch | Admin reaches `findCompletedAcrossInstallation`/`…ById…` with **no** arguments beyond the id; `communityScopeChecker` and `companyScopeChecker` mocks assert `not.toHaveBeenCalled()`; `MANAGER` still reaches no repository call                                                                                                                      |
+| Unit (api)        | The other three branches                    | Byte-identical behaviour assertions kept, re-run after the switch split                                                                                                                                                                                                                                                                                |
+| Unit (api)        | In-memory fake parity                       | Installation-wide pair returns every completed session regardless of community/company/performer; a draft never surfaces; ordering identical to the other list methods                                                                                                                                                                                 |
+| Integration (api) | Port-surface guard                          | The allowlist grows to exactly 10 named reads; `findById` still absent                                                                                                                                                                                                                                                                                 |
+| Integration (api) | **Call-site guard** (Decision 2)            | Source scan: the two names appear in production code only in the port, both adapters, and `review-history-access.service.ts`                                                                                                                                                                                                                           |
+| Integration (api) | Installation-wide queries, real Postgres    | Returns rows across ≥2 companies and ≥2 communities including one whose **community is deactivated/soft-deleted** and one whose **maintenance company is soft-deleted**; never a draft; `completedAt DESC, id DESC`                                                                                                                                    |
+| E2E (api)         | Four-role visibility matrix, no sampling    | Admin sees every seeded completed session incl. the deactivated/soft-deleted cases; technician/representative/manager each still see exactly their shipped scope after this change; admin gets 404 on a draft and on a nonexistent id                                                                                                                  |
+| E2E (api)         | Scope guards                                | `SYSTEM_ADMIN` holds `reviewSession:read` and no other `reviewSession:*`; 403 on every `/review-sessions*` write route; `MANAGER` still `[]`; no `ManagerCapability`/`managerCapabilities`/`VIEW_ALL_REVIEWS` symbol exists; no filter/sort/page parameter accepted                                                                                    |
+| Unit (web)        | Routes                                      | `ProtectedRoute` family: all four roles reach `/review-history*`; admin still blocked from `/review-sessions*`                                                                                                                                                                                                                                         |
+| Unit (web)        | `HealthPage`                                | **Note for `sdd-tasks`**: the manager's link-enumeration test (`HealthPage.test.tsx:137-153`) stays **passing and unmodified** — widening `REVIEW_HISTORY_ROLES` does not change the manager's render. Add an admin **sibling**: for `SYSTEM_ADMIN`, `hrefs` equals exactly `['/review-history']` (from none today) and one button, the logout control |
+| Browser           | CLAUDE.md                                   | Real dev server, `SYSTEM_ADMIN` login: entry link from `/`, installation-wide list at realistic volume, drill-in, a deactivated-community session visible, empty state; regression pass for the other three roles                                                                                                                                      |
 
 ## Migration / Rollout
 

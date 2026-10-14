@@ -6,11 +6,11 @@
 
 ## Completeness
 
-| Metric | Value |
-|--------|-------|
-| Tasks total (Phases 1-9) | 24 |
-| Tasks complete | 24 |
-| Tasks incomplete | 0 |
+| Metric                   | Value |
+| ------------------------ | ----- |
+| Tasks total (Phases 1-9) | 24    |
+| Tasks complete           | 24    |
+| Tasks incomplete         | 0     |
 
 Spot-checked tasks.md against actual commits/diff: `git diff --stat 3a922bd..780fadd -- apps/web/src` (25 files, incl. tests) matches design.md's File Changes table exactly — no undeclared files, no missing ones. The one stale note in tasks.md (9.2, previously said the role-enum i18n gap was "not fixed") was corrected in commit `606cb95`; the actual fix landed in `0d7cd70` and is independently re-verified below, not just re-trusted.
 

@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|---|---|
+| Field                   | Value                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Estimated changed lines | ~4200-4900 (2 migrations, new resource-scope auth mechanism across 2 modules, a from-scratch 3-entity aggregate module across 4 layers incl. 8 use cases + a session-load service, 2 new by-user repo methods x2 ports, 4 new web pages + entry-point wiring, 3 locale files, full e2e incl. an 8-route scope matrix, 1 admin control, 1 docs correction) |
-| 400-line budget risk | High (as a single PR); each chained slice below stays under budget |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 -> PR 9 (see Suggested Work Units) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High (as a single PR); each chained slice below stays under budget                                                                                                                                                                                                                                                                                        |
+| Chained PRs recommended | Yes                                                                                                                                                                                                                                                                                                                                                       |
+| Suggested split         | PR 1 -> PR 9 (see Suggested Work Units)                                                                                                                                                                                                                                                                                                                   |
+| Delivery strategy       | ask-on-risk                                                                                                                                                                                                                                                                                                                                               |
+| Chain strategy          | stacked-to-main                                                                                                                                                                                                                                                                                                                                           |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,16 +18,16 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Est. lines | Notes |
-|---|---|---|---|---|
-| 1 | `InspectableElement.deactivatedAt`: migration, entity, mapper, port, use cases, DTO, admin control (web) | PR 1 | ~420 | Independently shippable; no dependency on the rest |
-| 2 | Scoped-authorization foundation: `CommunityScopeChecker` port + adapter, `findActiveByUser` on both assignment ports + adapters, `reviewSession:*` permission stubs, role activation | PR 2 | ~380 | Depends on nothing from PR 1; independently shippable |
-| 3 | Review-session schema: migration (3 tables, 2 enums, hand-written FKs incl. `ON DELETE CASCADE`, partial unique draft index, `observations` CHECK) + domain entities/invariants + errors | PR 3 | ~520 | Depends on PR 1 (eligibility predicate reads `deactivatedAt`) and PR 2 (permissions exist for later PRs) at the schema/domain level only |
-| 4 | Application ports/services + open/resume/discard/list use cases + `SessionAccess` + template `findActiveByElementType` query + `/review-scope`, `POST /review-sessions`, `GET /review-sessions`, `GET /review-sessions/:id`, `DELETE /review-sessions/:id` endpoints | PR 4 | ~560 | Depends on PR 3 |
-| 5 | By-code resolution (`findReviewableByCode`) + record-answer/mark-unreviewed use cases + `GET .../elements/:code` + `PUT .../entries/:elementId` endpoints + Zod discriminated-union schemas | PR 5 | ~520 | Depends on PR 4 |
-| 6 | Complete-session use case + immutability enforcement + `POST .../complete` + full e2e (scope matrix, indistinguishability, immutability x2, frozen snapshot, scope guards) | PR 6 | ~640 | Depends on PR 5; highest-risk unit |
-| 7 | Web: api client, 4 pages (`ReviewSessions`, `New`, `Detail`, `Element`), routes, `HealthPage` entry link, i18n | PR 7 | ~560 | Depends on PR 6 (needs the full API surface) |
-| 8 | Docs correction (`domain-model-inspections.md`) + browser verification (both non-admin roles) + final checks | PR 8 | ~180 | Depends on PR 7 |
+| Unit | Goal                                                                                                                                                                                                                                                                 | Likely PR | Est. lines | Notes                                                                                                                                    |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `InspectableElement.deactivatedAt`: migration, entity, mapper, port, use cases, DTO, admin control (web)                                                                                                                                                             | PR 1      | ~420       | Independently shippable; no dependency on the rest                                                                                       |
+| 2    | Scoped-authorization foundation: `CommunityScopeChecker` port + adapter, `findActiveByUser` on both assignment ports + adapters, `reviewSession:*` permission stubs, role activation                                                                                 | PR 2      | ~380       | Depends on nothing from PR 1; independently shippable                                                                                    |
+| 3    | Review-session schema: migration (3 tables, 2 enums, hand-written FKs incl. `ON DELETE CASCADE`, partial unique draft index, `observations` CHECK) + domain entities/invariants + errors                                                                             | PR 3      | ~520       | Depends on PR 1 (eligibility predicate reads `deactivatedAt`) and PR 2 (permissions exist for later PRs) at the schema/domain level only |
+| 4    | Application ports/services + open/resume/discard/list use cases + `SessionAccess` + template `findActiveByElementType` query + `/review-scope`, `POST /review-sessions`, `GET /review-sessions`, `GET /review-sessions/:id`, `DELETE /review-sessions/:id` endpoints | PR 4      | ~560       | Depends on PR 3                                                                                                                          |
+| 5    | By-code resolution (`findReviewableByCode`) + record-answer/mark-unreviewed use cases + `GET .../elements/:code` + `PUT .../entries/:elementId` endpoints + Zod discriminated-union schemas                                                                          | PR 5      | ~520       | Depends on PR 4                                                                                                                          |
+| 6    | Complete-session use case + immutability enforcement + `POST .../complete` + full e2e (scope matrix, indistinguishability, immutability x2, frozen snapshot, scope guards)                                                                                           | PR 6      | ~640       | Depends on PR 5; highest-risk unit                                                                                                       |
+| 7    | Web: api client, 4 pages (`ReviewSessions`, `New`, `Detail`, `Element`), routes, `HealthPage` entry link, i18n                                                                                                                                                       | PR 7      | ~560       | Depends on PR 6 (needs the full API surface)                                                                                             |
+| 8    | Docs correction (`domain-model-inspections.md`) + browser verification (both non-admin roles) + final checks                                                                                                                                                         | PR 8      | ~180       | Depends on PR 7                                                                                                                          |
 
 ## Deferred / Follow-up (do NOT implement in this batch)
 
@@ -41,6 +41,7 @@ Chain strategy: stacked-to-main
   `CommunityMaintenanceAssignment`).
 
 ## Phase 1: InspectableElement Active State (PR 1)
+
 - [x] 1.1 `apps/api/prisma/schema.prisma`: add `deactivatedAt DateTime?` to `InspectableElement` (NULL = active, no default — no backfill needed) (design Decision 3).
 - [x] 1.2 Hand-written `migrations/<ts>_add_inspectable_element_deactivated_at/migration.sql`: single `ADD COLUMN`. Apply in dev; confirm no `DropForeignKey`/`DropIndex` for existing hand-written FKs/indexes; regenerate client.
 - [x] 1.3 Integration: `is_nullable = 'YES'` and `COUNT(*) WHERE "deactivatedAt" IS NOT NULL = 0` after migration (spec: inspectable-element-management "Pre-Existing Elements Are Active After the Migration").
@@ -54,6 +55,7 @@ Chain strategy: stacked-to-main
 - [x] 1.11 `apps/api/test/inspectable-element.e2e-spec.ts` — decommission/reactivate round trip, element list unaffected in lifecycle filtering (spec: "Element Lifecycle Filtering Unchanged").
 
 ## Phase 2: Scoped-Authorization Foundation (PR 2)
+
 - [x] 2.1 `shared/application/authorization/permission.ts` — add 5 `reviewSession:create|read|perform|complete|discard` members (design Decision 10).
 - [x] 2.2 `.../auth/infrastructure/authorization/role-permission.checker.ts` — `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` get the identical `reviewSession:*` set; `SYSTEM_ADMIN`, `MANAGER`, `MAINTENANCE_COMPANY_MANAGER` unchanged (spec: authorization "Technician and Representative Become Operational").
 - [x] 2.3 RED/GREEN `shared/application/authorization/community-scope.checker.port.ts` — `isAssignedTo(userId, role, communityId): Promise<boolean>` (design Decision 4, Layer 2).
@@ -64,6 +66,7 @@ Chain strategy: stacked-to-main
 - [x] 2.8 Unit: assignment-scope adapter enforces "deactivating an assignment removes access on the next request" with no cache (spec: "Deactivating an assignment removes access on the next request").
 
 ## Phase 3: Review-Session Schema + Domain (PR 3)
+
 - [x] 3.1 `schema.prisma`: `enum ReviewSessionStatus { draft completed }`, `enum AnswerValue { YES NO NOT_APPLICABLE }`, `ReviewSession`, `ElementReviewEntry` (`observations String?`), `QuestionAnswer` models per design Interfaces/Contracts — no `deletedAt` on any of the three.
 - [x] 3.2 Hand-written `migrations/<ts>_add_review_session/migration.sql`: 3 tables, 2 enums, 6 hand-written cross-module FKs (the two rooted at `ReviewSession` -> `ElementReviewEntry`/`QuestionAnswer` chain declare `ON DELETE CASCADE`), partial unique index `ReviewSession_open_draft_key` on `(communityId, templateId, performedById) WHERE status = 'draft'`, `ElementReviewEntry_observations_not_blank` CHECK. Apply in dev; confirm no `DropForeignKey`/`DropIndex` for the now-12 pre-existing hand-written objects (7 FKs + 5 indexes); regenerate client.
 - [x] 3.3 Integration: `pg_indexes`/`pg_constraint` — 6 FKs (2 with `ON DELETE CASCADE`), partial unique index, CHECK constraint, no `deletedAt` column on the three tables (spec: "Review Records Carry No Deletion Path").
@@ -75,6 +78,7 @@ Chain strategy: stacked-to-main
 - [x] 3.9 Unit: completion coverage logic (pure) — active element with no entry rejects; decommissioned mid-walk not required; entry with only `observations` accepted (spec: "Complete a Session With Explained Gaps Only").
 
 ## Phase 4: Open/Resume + Template Resolution (PR 4) — COMPLETE, awaiting fresh-context review + push
+
 - [x] 4.1 RED/GREEN `review-template/application/ports/review-template.repository.port.ts` — `findActiveByElementType(elementType): Promise<ReviewTemplate[]>` (design Decision 7).
 - [x] 4.2 `application/ports/review-session.repository.port.ts` — `create`, `findByIdForPerformer`, `findDraftsByPerformer`, `upsertEntry`, `complete`, `discardDraft` — deliberately no `findById`/`updateById` (design Decisions 4, 8).
 - [x] 4.3 RED/GREEN `application/services/session-access.service.ts` — `loadForActor(sessionId, actor)`: `findByIdForPerformer` -> null => `ReviewSessionNotFoundError`; then `communityScopeChecker.isAssignedTo` -> false => same error (design Decision 4, Layer 3).
@@ -90,6 +94,7 @@ Chain strategy: stacked-to-main
 - [x] 4.13 Integration: enum parity — `ReviewSessionStatus`/`AnswerValue` TS unions == Prisma enums == Zod schemas (shipped 3-way parity precedent). Minimal Zod scaffolding added to `@sf-manager/validation` (also includes `openReviewSessionSchema`, needed by 4.11's controller); full write-side schemas remain Phase 5's task 5.3.
 
 ## Phase 5: By-Code Resolution + Record Answers + Mark Unreviewed (PR 5) — COMPLETE, awaiting fresh-context review + push
+
 - [x] 5.1 RED/GREEN `inspectable-element/application/ports/inspectable-element.repository.port.ts` — `findReviewableByCode(communityId, elementType, code)`; single `WHERE` collapses unknown/foreign/wrong-type/decommissioned/soft-deleted to one `null` (design Decision 6; spec: "Resolving an Element by Code Is Always Scope-Constrained", "Rejected Codes Are Indistinguishable"). RED/GREEN coverage lives in `resolve-element-by-code.use-case.spec.ts` (the fake's only real consumer) rather than a standalone port spec — this module has no precedent for testing a fake in isolation from its consuming use case.
 - [x] 5.2 RED/GREEN `resolve-element-by-code.use-case.ts` — via `SessionAccess` -> `findFrozenWithSnapshot(session.templateId)` (for `elementType`, since `ReviewSession` carries no elementType column — Decision 7 — AND for wording) -> `findReviewableByCode(session.communityId, template.elementType, code)` -> null => one `InspectableElementNotFoundError` (spec: "Sessions Render the Template's Frozen Snapshot").
 - [x] 5.3 `packages/validation/src/review-session/**` — entry-write union (`{answers:[...]}` | `{observations:string}`), answer-value schema, open-request schema. Implemented as `z.union` of two `.strict()` object schemas, not literal `z.discriminatedUnion` — see PR5 apply-progress "Deviations" for why (no discriminator field exists in the wire body; design Decision 1 rejected adding one).
@@ -99,6 +104,7 @@ Chain strategy: stacked-to-main
 - [x] 5.7 Unit: `ElementReviewEntry` `answers XOR observations` — both-populated state unconstructible (already covered by Phase 3's `element-review-entry.entity.spec.ts`); reconfirmed at the use-case/wire boundary via `review-session.schema.spec.ts` (new, Phase 5) against the `z.union` XOR schema.
 
 ## Phase 6: Complete Session + Immutability + E2E (PR 6)
+
 - [x] 6.1 RED/GREEN `complete-review-session.use-case.ts` — active elements of (community, elementType) MINUS entries; non-empty => 409 `UNREVIEWED_ELEMENTS_WITHOUT_REASON` listing offending codes; `repository.complete(id, at)` `WHERE status='draft'`, false => 409 (spec: "Complete a Session With Explained Gaps Only"; design Decision 2). New port method `InspectableElementRepository.findActiveByCommunityAndType` added (Prisma adapter + in-memory fake) to resolve the required set. `buildCodedError` gained an optional 4th `extra` parameter (additive, RED/GREEN-covered) so the 409 body can carry `elementCodes`.
 - [x] 6.2 Confirmed `ReviewSession.recordEntry`/`markUnreviewed`/`complete`/`discard` domain guards (Phase 3.7) are exercised through every mutating use case — no code path calls a repository mutation without going through the aggregate (verified by reading every use case; `CompleteReviewSessionUseCase` calls `session.complete()` before any repository write, mirroring `DiscardReviewSessionUseCase`/`RecordEntryUseCase`).
 - [x] 6.3 `apps/api/test/review-session.e2e-spec.ts` — full lifecycle: open -> resolve code -> record answers -> mark unreviewed with reason -> resume -> complete (spec: all "Performing a review" scenarios).
@@ -112,6 +118,7 @@ Chain strategy: stacked-to-main
 - [x] 6.11 E2E: partial-completion + decommissioned/soft-deleted elements do not block completion; also asserts the rejection path (an uncovered active element blocks completion with 409 listing its code) (spec: "Decommissioned and soft-deleted elements do not block completion").
 
 ## Phase 7: Web Flow (PR 7) — COMPLETE, awaiting fresh-context review + push
+
 - [x] 7.1 `apps/web/src/api/review-session.ts` — `apiFetch` typed client for all 8 endpoints + error-code union.
 - [x] 7.2 `review-session/error-messages.ts` — one uniform message for every code-rejection reason (spec: review-session-ui "Rejected Codes Get One Uniform Message"). Also added `review-session/answer-value-labels.ts` (not a separate tasks.md bullet — the minimal glue "Enum values are never rendered raw" requires, mirroring `inspectable-element/element-type-labels.ts`'s precedent) and an additive `ApiError.extra` field on `api/client.ts` (needed to surface the 409 `UNREVIEWED_ELEMENTS_WITHOUT_REASON` body's `elementCodes` for task 7.7 — RED/GREEN covered in `client.test.ts`).
 - [x] 7.3 `apps/web/src/pages/ReviewSessionsPage.tsx` — entry point: resumable draft(s) + Start-a-session link (spec: "Both Non-Admin Roles Have a Reachable Entry Point").
@@ -125,15 +132,17 @@ Chain strategy: stacked-to-main
 - [x] 7.11 Unit (web): 4 pages x loading/error/empty; code-entry error path (`ReviewSessionElementPage.test.tsx`) asserts the SAME rendered message across 3 distinct rejection causes (unknown/foreign-community/decommissioned, all served by the server as one `ELEMENT_NOT_FOUND`); `locales.test.ts` parity + existence guard. 636/636 web unit tests pass; `npm run build --workspace=apps/web` and `npm run lint --workspace=apps/web` both clean.
 
 ## Phase 8: Docs Correction, Browser Verification, Final Checks (PR 8)
+
 - [x] 8.1 `docs/architecture/domain-model-inspections.md` — correct `CommunityMaintenanceAssignment` drift (never shipped; technician scope resolves through `CommunityTechnicianRepository`'s direct `(communityId, userId)` assignment); document `deactivatedAt`; document the `observations` placement decision.
 - [x] 8.2 Browser verification (`npm run dev`, `claude-in-chrome`): login as `MAINTENANCE_TECHNICIAN` AND separately as `COMMUNITY_REPRESENTATIVE` — open a session, walk (valid code, foreign code rejected, skip with reason), pause, resume, complete; `SYSTEM_ADMIN` decommission/reactivate round-trip (CLAUDE.md "Verifying UI Changes"). Both roles independently confirmed: community/template picker correctly scoped to only their own assignment, unknown-code rejection renders the uniform message, pause (navigate away) + resume via the sessions list works, completion succeeds and the session becomes read-only. `SYSTEM_ADMIN` decommission → reactivate round-trip on an `InspectableElement` confirmed reversible via the edit page.
 - [x] 8.3 Full API + web suites, lint, build pass; `no-restricted-imports` passes (no `@prisma/client` outside `infrastructure/persistence/**`).
 - [x] 8.4 Final scope-guard grep: no `apps/web` camera/scanner dependency, no offline storage/service worker/sync logic added anywhere in the diff.
 
 ## Rules Applied
+
 - Strict TDD: RED/GREEN on domain entities, invariants, the scope checker, use cases, and the session-access service. Migrations/DTOs/module wiring/enum declarations/mappers-without-logic are mechanical.
 - Phase 1 and Phase 2 are independently shippable and carry no dependency on each other; both must land before Phase 3's schema depends on Phase 1's eligibility predicate and Phase 2's permissions.
 - Design Decisions 1-11 (observations on `ElementReviewEntry`, stored-entry completion coverage, `deactivatedAt` orthogonal to `deletedAt`, `SessionAccess` as the only session-load path, `findActiveByUser` additions, one scope-constrained by-code method, `templateId`-only version storage, binary status enum, no Value Objects, flat API + 4 web routes, per-element frozen-question fetch) are settled — do not re-litigate at apply time.
 - Do not re-open any settled product decision from the proposal (both roles day one, pausable/resumable, unknown-code reject-nothing, partial completion allowed, mandatory `observations`, `active` ships with a control, offline non-goal, no compliance calendar).
-- The ADR-011 addendum (design "Open Questions") is explicitly deferred — see *Deferred / Follow-up* above. Do not author it in any PR of this chain.
+- The ADR-011 addendum (design "Open Questions") is explicitly deferred — see _Deferred / Follow-up_ above. Do not author it in any PR of this chain.
 - Every review-session endpoint must be covered by the Phase 6 scope matrix — no representative sampling (proposal risk 1, spec authorization "Refusal is proven on every endpoint, not a sample").

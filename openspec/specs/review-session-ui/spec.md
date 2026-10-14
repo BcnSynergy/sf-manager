@@ -39,21 +39,25 @@ explicit "not authorized" message, not a silent redirect. An
 unauthenticated visitor MUST be redirected to `/login`.
 
 #### Scenario: A technician reaches the field flow
+
 - GIVEN the caller is authenticated as `MAINTENANCE_TECHNICIAN`
 - WHEN they navigate to a review-session route
 - THEN the flow MUST be shown
 
 #### Scenario: A representative reaches the identical field flow
+
 - GIVEN the caller is authenticated as `COMMUNITY_REPRESENTATIVE`
 - WHEN they navigate to a review-session route
 - THEN the same flow MUST be shown, with no reduced or alternative variant
 
 #### Scenario: Another role is denied with an explicit message
+
 - GIVEN the caller is authenticated as any role other than the two above
 - WHEN they navigate to any review-session route
 - THEN an explicit "not authorized" message MUST be shown, not a silent redirect
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to any review-session route
 - THEN they MUST be redirected to `/login`
@@ -89,26 +93,31 @@ in terms of the navigation and gains scenarios for the two roles it
 serves and for the three it must not.)
 
 #### Scenario: A non-admin lands somewhere usable after login
+
 - GIVEN a user with either non-admin role logs in successfully
 - WHEN the post-login landing view is rendered
 - THEN it MUST NOT be a "not authorized" screen, and the global navigation rendered on it MUST offer an item leading into the review-session flow
 
 #### Scenario: The flow is enterable from any authenticated page
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on any authenticated page, including the wrong-role denial view
 - WHEN the page renders
 - THEN a navigation item leading into the review-session flow MUST be present, with no hand-typed URL required
 
 #### Scenario: The entry page no longer carries the link
+
 - GIVEN a signed-in user of either role on the app's entry page after this change
 - WHEN that page's own controls are enumerated
 - THEN it MUST render its health-status readout only — no role-conditional review-session link and no logout button of its own
 
 #### Scenario: No other role is offered a path into the flow
+
 - GIVEN a signed-in `SYSTEM_ADMIN`, `MANAGER` or `MAINTENANCE_COMPANY_MANAGER`
 - WHEN every navigation control rendered for them is enumerated
 - THEN none MUST lead into the review-session flow
 
 #### Scenario: The route gate is unchanged
+
 - GIVEN every review-session route before and after this change
 - WHEN each route's allowed roles are compared
 - THEN they MUST be identical — still `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` only
@@ -122,16 +131,19 @@ exists for the chosen element type, a distinct, actionable message MUST be
 shown and no session MUST be started.
 
 #### Scenario: Only assigned communities are offered
+
 - GIVEN the user is actively assigned to community C and not to community D
 - WHEN they open the session-start view
 - THEN C MUST be offered and D MUST NOT appear
 
 #### Scenario: No active template is reported clearly
+
 - GIVEN the chosen element type has no `active` template
 - WHEN the user attempts to start the session
 - THEN a distinct message MUST be shown and no session MUST be started
 
 #### Scenario: Distinct loading, empty and error states
+
 - GIVEN the assigned-communities request is loading, returns nothing, or fails
 - WHEN the session-start view is rendered
 - THEN each case MUST show its own distinct state, never a blank screen
@@ -145,11 +157,13 @@ the underlying alphabet permits, and MUST be trimmed of surrounding
 whitespace before submission.
 
 #### Scenario: A code is entered by typing
+
 - GIVEN the user is in an open session
 - WHEN they type an element's `code` and submit it
 - THEN the element's questions MUST be presented
 
 #### Scenario: No camera or scanner dependency exists
+
 - GIVEN the web app's dependencies and code after this change
 - WHEN they are inspected
 - THEN none MUST provide camera capture, QR scanning or a media-device permission prompt
@@ -163,16 +177,19 @@ recorded, the user MUST receive explicit confirmation that it was saved
 and MUST be returned to code entry for the next element.
 
 #### Scenario: Questions are shown in snapshot order and answered
+
 - GIVEN an element is resolved in an open session
 - WHEN its questions are rendered
 - THEN they MUST appear in the template snapshot's order, each offering exactly the three answer values
 
 #### Scenario: Saving is confirmed and the flow continues
+
 - GIVEN the user has answered every question for the resolved element
 - WHEN they submit
 - THEN a save confirmation MUST be shown and the user MUST be able to enter the next element's code
 
 #### Scenario: A save failure is reported without losing entered answers
+
 - GIVEN the record request fails
 - WHEN the failure is shown
 - THEN a distinct error state MUST be shown and the user's entered answers MUST still be on screen
@@ -187,16 +204,19 @@ select its message from `ApiError.status`/`.code`, never by comparing a
 server-supplied English message string.
 
 #### Scenario: All rejection causes show the same message
+
 - GIVEN the user submits, in turn, an unknown code, a foreign-community code, a wrong-element-type code and a decommissioned element's code
 - WHEN each rejection is shown
 - THEN the displayed message MUST be identical in all four cases
 
 #### Scenario: No message hints that the element exists
+
 - GIVEN any rejected code
 - WHEN the message is read
 - THEN it MUST NOT state or imply that the element exists in another community, of another type, or in another state
 
 #### Scenario: Error handling does not branch on English message text
+
 - GIVEN any client path mapping an API error to a UI message in this flow
 - WHEN it selects the message
 - THEN it MUST branch only on `ApiError.status` and `.code`
@@ -210,16 +230,19 @@ session MUST be offered only to the user who opened it. The system MUST
 offer a discard action for a draft, behind an explicit confirmation.
 
 #### Scenario: Leaving and returning preserves recorded work
+
 - GIVEN the user recorded answers for two elements and navigated away
 - WHEN they return and resume the session
 - THEN both elements MUST be shown as already recorded
 
 #### Scenario: Another user sees no resume entry point for someone else's draft
+
 - GIVEN user U holds a draft for community C and user W is also assigned to C
 - WHEN W views their own session list
 - THEN U's draft MUST NOT be offered to W for resuming
 
 #### Scenario: Discard is confirmed before it happens
+
 - GIVEN the user has an open draft
 - WHEN they trigger discard
 - THEN an explicit confirmation MUST be required, and only on confirming MUST the draft be discarded
@@ -254,46 +277,55 @@ signing meaning and no irreversibility warning, and the absence of a
 document link was implicit.)
 
 #### Scenario: Completion collects a reason for each unreviewed element
+
 - GIVEN 5 active elements exist and 3 have been answered
 - WHEN the user starts completion
 - THEN the 2 unanswered elements MUST be presented, each requiring a non-empty reason
 
 #### Scenario: Completion is refused while a gap is unexplained
+
 - GIVEN at least one unanswered element has no reason
 - WHEN the user attempts to complete
 - THEN completion MUST NOT succeed and a clear message MUST explain what is missing
 
 #### Scenario: The completing control reads Sign and close
+
 - GIVEN an open session whose gaps are all explained
 - WHEN the user looks for the completing control
 - THEN it MUST be labelled **Sign and close**
 
 #### Scenario: Signing asks for a conscious confirmation
+
 - GIVEN an open session whose gaps are all explained
 - WHEN the user activates **Sign and close**
 - THEN a confirmation dialog MUST warn that the review will be closed and can no longer be modified, and no completion request MUST have been sent yet
 
 #### Scenario: Confirming signs and closes the session
+
 - GIVEN the signing confirmation dialog is open
 - WHEN the user confirms with **Sign and close**
 - THEN the completion request MUST be sent, and on success the session MUST be shown read-only
 
 #### Scenario: Cancelling leaves the session a draft
+
 - GIVEN the signing confirmation dialog is open
 - WHEN the user cancels it
 - THEN no completion request MUST be sent, and the session MUST remain a `draft` with its answers and reasons intact
 
 #### Scenario: A completed session offers no mutating control
+
 - GIVEN a session has been completed
 - WHEN the user views it
 - THEN no control MUST offer to edit, reopen, answer, discard or delete it
 
 #### Scenario: The completed session offers no document link
+
 - GIVEN a session has just been signed and closed
 - WHEN its read-only view renders
 - THEN no **View document** link and no print control MUST be offered, and the document MUST NOT have opened by itself
 
 #### Scenario: A draft offers no document link either
+
 - GIVEN an open `draft` session
 - WHEN its view renders
 - THEN no **View document** link MUST be offered, exactly as on a completed session
@@ -308,11 +340,13 @@ by the existing locale parity test. No `elementType` or answer enum value
 MUST be rendered raw.
 
 #### Scenario: All visible text is translated in every configured locale
+
 - GIVEN any view of the review-session flow is rendered
 - WHEN the active locale is `en`, `es` or `ca`
 - THEN every visible string MUST come from a translation key with a real value for that locale, not a placeholder or English fallback
 
 #### Scenario: Enum values are never rendered raw
+
 - GIVEN an element type or an answer value is displayed as visible text
 - WHEN it is rendered
 - THEN it MUST show a localized label, not the raw enum string
@@ -358,39 +392,46 @@ flow's pages and the schedule page is neither a list of sessions nor a
 review view.)
 
 #### Scenario: No offline infrastructure is added
+
 - GIVEN the web app after this change
 - WHEN it is inspected for a service worker, offline cache, local queue or sync logic
 - THEN none MUST be found
 
 #### Scenario: The field flow adds no history view of its own
+
 - GIVEN every view belonging to the review-session field flow — session start, code entry, answering, completion, draft list and draft detail
 - WHEN its own controls and rendered data are enumerated, the global navigation's items excluded
 - THEN none MUST add a list of completed sessions, nor any read of a session the caller did not perform — the shipped performer-scoped, status-agnostic by-id detail view stays unchanged apart from the **Sign and close** relabel and its confirmation copy — and the flow's only permitted reference to history MUST be a navigation control leading to the `review-history-ui` surface
-(Previously: "WHEN its controls and rendered data are enumerated", with no exclusion of the global navigation.)
+  (Previously: "WHEN its controls and rendered data are enumerated", with no exclusion of the global navigation.)
 
 #### Scenario: No scheduling, signing or attachment control exists in the field flow
+
 - GIVEN every view of the review-session field flow
 - WHEN its own controls are enumerated, the global navigation's items excluded
 - THEN none MUST offer due dates, overdue lists, a signing control other than **Sign and close**, export, print, download, send, a link to the review document, photos or attachments
-(Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
+  (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
 
 #### Scenario: The global navigation's Review schedule item is permitted on field-flow pages
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on any field-flow page
 - WHEN the global navigation's items are enumerated
 - THEN the Review schedule item MUST be present and MUST lead to the schedule page, and no view of the field flow itself MUST contain a due date, an overdue indicator or a schedule list
 
 #### Scenario: No per-element, company-wide or global review view exists anywhere
+
 - GIVEN the web app's routes and pages after this change
 - WHEN they are searched for one element's past reviews, for a company-wide list of reviews or sessions and for a global "all reviews" list of sessions
 - THEN none MUST be found — the Review schedule page, which lists per-pair obligations and no session or review, is not one of them
-(Previously: "for a company-wide review view and for a global 'all reviews' view".)
+  (Previously: "for a company-wide review view and for a global 'all reviews' view".)
 
 #### Scenario: No review list control ships anywhere
+
 - GIVEN every list of reviews rendered by the web app after this change
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting or search
 
 #### Scenario: A completed session still offers no mutating control
+
 - GIVEN a session has been completed
 - WHEN the user views it, in the field flow or in the history surface
 - THEN no control MUST offer to edit, reopen, answer, discard or delete it

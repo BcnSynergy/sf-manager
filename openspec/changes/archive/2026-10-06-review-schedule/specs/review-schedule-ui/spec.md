@@ -46,12 +46,12 @@ the `VIEW_ALL_REVIEWS` capability.
 The page MUST render exactly one of the following and MUST NOT be blank in any
 case.
 
-| State | Required rendering |
-|---|---|
-| Loading | An explicit loading indication while the request is in flight |
-| Empty | A distinct localized empty message when the server returns no pair. It is not an error and not a "not authorized" message |
-| Error | One uniform localized message chosen from `ApiError.status` / `.code`, never from a server-supplied English message string |
-| Table | One row per pair returned |
+| State   | Required rendering                                                                                                         |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Loading | An explicit loading indication while the request is in flight                                                              |
+| Empty   | A distinct localized empty message when the server returns no pair. It is not an error and not a "not authorized" message  |
+| Error   | One uniform localized message chosen from `ApiError.status` / `.code`, never from a server-supplied English message string |
+| Table   | One row per pair returned                                                                                                  |
 
 An ungranted `MANAGER` MUST reach the empty state.
 

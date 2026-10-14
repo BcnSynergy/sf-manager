@@ -13,8 +13,8 @@
 
 ## Specs Synced
 
-| Capability | Action | Details |
-|---|---|---|
+| Capability      | Action                                                                                                            | Details                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `dev-seed-data` | Created (new capability; no prior `openspec/specs/dev-seed-data/`, the change spec was a full spec, copied as is) | 7 requirements, 17 scenarios added / 0 modified / 0 removed |
 
 Source of truth: `openspec/specs/dev-seed-data/spec.md` (new).

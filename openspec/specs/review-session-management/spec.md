@@ -21,8 +21,8 @@ company on whose behalf it was performed, frozen at performance time. Out
 of scope here: global visibility, per-element history filtering,
 scheduling / due dates / reminders (FR-009), offline operation, camera
 scanning, photos, attachments, per-answer notes, defect records, and
-notifications. Signing is completion itself (see *Completion Is the
-Signing Act*); the printable review document is owned by
+notifications. Signing is completion itself (see _Completion Is the
+Signing Act_); the printable review document is owned by
 `review-document` and `review-document-ui`, not by this capability; a
 signature image and signer full name are FR-010 slice 2.
 
@@ -34,7 +34,7 @@ Completing a session MUST be the act of signing it. The signer of a
 `completed` session MUST be its performer (`performedById`) and the
 signing date MUST be its `completedAt`. Signing MUST NOT introduce a new
 operation, status, field, column or write: the completion write path,
-its preconditions (*Complete a Session With Explained Gaps Only*) and its
+its preconditions (_Complete a Session With Explained Gaps Only_) and its
 resulting `completed` status MUST be unchanged, and no `signed` status
 MUST exist.
 
@@ -43,31 +43,36 @@ this change — MUST count as signed by its performer at its
 `completedAt`, with no backfill and no data migration.
 
 Signing MUST NOT open any path to reopen, unsign, re-sign or amend a
-completed session, for any role, `SYSTEM_ADMIN` included. *Completed
-Sessions Are Immutable* MUST hold unchanged; a correction is a new
+completed session, for any role, `SYSTEM_ADMIN` included. _Completed
+Sessions Are Immutable_ MUST hold unchanged; a correction is a new
 session.
 
 #### Scenario: The performer signs at completion time
+
 - GIVEN technician U completes a session at instant T
 - WHEN the session is read afterwards
 - THEN its signer MUST be U and its signing date MUST be T, its `completedAt`
 
 #### Scenario: A session completed before this change counts as signed
+
 - GIVEN a session completed before this change was deployed
 - WHEN its signer and signing date are resolved
 - THEN they MUST be its performer and its `completedAt`, with no backfill having run
 
 #### Scenario: The completion contract is unchanged
+
 - GIVEN the completion request, its preconditions and its response before and after this change
 - WHEN they are compared
 - THEN they MUST be identical, and the resulting status MUST be `completed`
 
 #### Scenario: No signed status or signature field exists
+
 - GIVEN the schema, the domain entity and the status enum after this change
 - WHEN they are inspected
 - THEN no `signed` status, no `signedAt`/`signedById` field and no signature column MUST exist
 
 #### Scenario: Not even an admin can reopen a signed session
+
 - GIVEN a `completed` session
 - WHEN a `SYSTEM_ADMIN` attempts to reopen, unsign or re-sign it by any available means
 - THEN no such operation MUST exist or succeed, and the session MUST remain `completed` and unchanged
@@ -89,31 +94,37 @@ be rejected with a clear, identifiable error and no session MUST be
 persisted.
 
 #### Scenario: A technician opens a session for an assigned community
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` is actively assigned to community C and an `active` frozen template exists for element type T
 - WHEN they open a session for C and T
 - THEN the response MUST be 2xx, a session MUST exist in `draft` status, and it MUST reference C and that template
 
 #### Scenario: A representative opens a session through the identical flow
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` is actively assigned to community C and an `active` frozen template exists for element type T
 - WHEN they open a session for C and T using the same operation a technician uses
 - THEN the response MUST be 2xx and the resulting session MUST be indistinguishable in shape from a technician-opened session
 
 #### Scenario: No active template for the element type
+
 - GIVEN no `active` template exists for element type T
 - WHEN an authorized user attempts to open a session for community C and T
 - THEN the request MUST be rejected with an identifiable error and no session row MUST be created
 
 #### Scenario: A draft template can never back a session
+
 - GIVEN element type T has a `draft` template and no `active` one
 - WHEN an authorized user attempts to open a session for T
 - THEN the request MUST be rejected and no session MUST reference the `draft` template
 
 #### Scenario: Element type and frequency are derived, not supplied
+
 - GIVEN a session bound to a template
 - WHEN the session's element type and frequency are read
 - THEN they MUST equal the template's, and no operation MUST allow setting them independently of the template
 
 #### Scenario: Element type resolves to exactly one template
+
 - GIVEN more than one `active` template exists for element type T across different frequency lineages
 - WHEN a user opens a session for T
 - THEN the system MUST NOT choose one arbitrarily; the requester MUST identify which template applies, or the request MUST be rejected
@@ -145,40 +156,47 @@ changed employer MUST be accepted as wrongly attributed, and the system
 MUST NOT grow an employment-history mechanism, an attribution version
 history or a correction path to repair them. No application code path
 MUST write this column on a session whose status is not `draft`; the
-backfill MUST occur as a migration only, and MUST NOT weaken *Completed
-Sessions Are Immutable*.
+backfill MUST occur as a migration only, and MUST NOT weaken _Completed
+Sessions Are Immutable_.
 
 #### Scenario: A newly opened session carries the performer's company
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` employed by company X opens a session for community C
 - WHEN the created session is inspected
 - THEN it MUST record X as the company on whose behalf it was performed
 
 #### Scenario: A representative-opened session is attributed the same way
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` opens a session through the identical flow
 - WHEN the created session is inspected
 - THEN it MUST record that user's maintenance company by the same rule, or no company if they have none
 
 #### Scenario: The attribution never changes after the fact
+
 - GIVEN a session opened by a technician employed by company X
 - WHEN that technician is later reassigned to company Y, and the session is subsequently completed and read
 - THEN the session MUST still record X, in `draft` and in `completed` alike
 
 #### Scenario: No caller can supply or override the attribution
+
 - GIVEN the request contracts, routes and use cases of the session write flow after this change
 - WHEN they are inspected
 - THEN none MUST accept a company identifier as input, and none MUST expose an operation that sets or changes a session's recorded performing company
 
 #### Scenario: A performer with no company yields an absent attribution
+
 - GIVEN a user with no maintenance company opens a session
 - WHEN the created session is inspected
 - THEN its recorded performing company MUST be absent, and the session MUST still be created successfully
 
 #### Scenario: Pre-existing completed sessions are backfilled once
+
 - GIVEN completed sessions that existed before this change
 - WHEN the migration has been applied
 - THEN each MUST carry its performer's maintenance company as of migration time, and no runtime code path MUST have written it
 
 #### Scenario: Immutability of completed sessions is not weakened
+
 - GIVEN a `completed` session after this change
 - WHEN every application write path is enumerated
 - THEN none MUST write, clear or change its recorded performing company, and every mutation attempt MUST still be refused by the domain layer
@@ -193,21 +211,25 @@ user MAY hold their own draft for the same pair, and the same user MAY
 hold drafts for different communities or different templates at once.
 
 #### Scenario: A second draft for the same pair is rejected
+
 - GIVEN user U holds a `draft` session for community C and template V
 - WHEN U attempts to open another session for C and V
 - THEN the request MUST be rejected with an identifiable error, no second session MUST be created, and U's existing draft MUST be unchanged
 
 #### Scenario: Another user may hold their own draft for the same pair
+
 - GIVEN user U holds a `draft` session for community C and template V, and user W is also actively assigned to C
 - WHEN W opens a session for C and V
 - THEN the request MUST succeed and W MUST hold a separate `draft` session
 
 #### Scenario: The same user may hold drafts for different pairs
+
 - GIVEN user U holds a `draft` session for community C and template V
 - WHEN U opens a session for a different community, or for a different template of C
 - THEN the request MUST succeed
 
 #### Scenario: Completing frees the pair
+
 - GIVEN user U's session for community C and template V is `completed`
 - WHEN U opens a new session for C and V
 - THEN the request MUST succeed
@@ -221,16 +243,19 @@ assigned to the same community, MUST be rejected. Handover of a session
 between users is out of scope for this slice.
 
 #### Scenario: The opener resumes with all prior work intact
+
 - GIVEN user U opened a session and recorded answers for two elements before leaving
 - WHEN U resumes that session later
 - THEN the response MUST be 2xx and both elements' recorded answers MUST be returned unchanged
 
 #### Scenario: Another assigned user cannot resume someone else's draft
+
 - GIVEN user U holds a `draft` session for community C, and user W is also actively assigned to C
 - WHEN W attempts to resume U's session
 - THEN the request MUST be rejected and the session MUST be unchanged
 
 #### Scenario: No handover operation exists
+
 - GIVEN the API surface and use cases after this change
 - WHEN they are inspected
 - THEN none MUST transfer a session's ownership from one user to another
@@ -240,14 +265,16 @@ between users is out of scope for this slice.
 The system MUST allow the user who opened a `draft` session to discard it.
 A discarded session MUST NOT be resumable and MUST free its (community,
 template) pair for a new draft. Only a `draft` session MAY be discarded —
-see *Completed Sessions Are Immutable*.
+see _Completed Sessions Are Immutable_.
 
 #### Scenario: The opener discards their draft
+
 - GIVEN user U holds a `draft` session for community C and template V
 - WHEN U discards it
 - THEN the response MUST be 2xx, the session MUST NOT be resumable, and U MUST be able to open a new session for C and V
 
 #### Scenario: Another user cannot discard someone else's draft
+
 - GIVEN user U holds a `draft` session and user W is also actively assigned to the same community
 - WHEN W attempts to discard U's session
 - THEN the request MUST be rejected and the session MUST remain resumable by U
@@ -259,20 +286,23 @@ Within a `draft` session, the system MUST resolve a submitted element
 resolution MUST succeed only when the element belongs to the session's
 community, is of the session's element type, is active (not
 decommissioned), and is not soft-deleted. Every other outcome MUST be
-rejected under *Rejected Codes Are Indistinguishable*. A failed resolution
+rejected under _Rejected Codes Are Indistinguishable_. A failed resolution
 MUST persist nothing and MUST leave the session untouched.
 
 #### Scenario: A valid in-scope code resolves and presents questions
+
 - GIVEN a `draft` session for community C and element type T, and an active element E in C of type T with `code` X
 - WHEN the user submits X
 - THEN the response MUST be 2xx, MUST identify E, and MUST present the session template's questions for E
 
 #### Scenario: A rejected code persists nothing
+
 - GIVEN a `draft` session with two elements already answered
 - WHEN the user submits a code that cannot be resolved in scope
 - THEN the request MUST be rejected, and the session's status and recorded answers MUST be byte-for-byte unchanged
 
 #### Scenario: No bare global code lookup is exposed
+
 - GIVEN the API surface after this change
 - WHEN it is inspected
 - THEN no operation MUST return an element from a `code` alone, without a session scope or an equivalent community-and-element-type constraint
@@ -284,48 +314,54 @@ unique across the installation, so a distinguishable "exists, but not
 yours" response would let any authorized user enumerate other companies'
 communities and elements by guessing codes.
 
-The system MUST reject **all** of the following with the *same* HTTP
-status and the *same* error code and message, carrying no field, hint or
+The system MUST reject **all** of the following with the _same_ HTTP
+status and the _same_ error code and message, carrying no field, hint or
 payload difference between them:
 
-| Rejected input |
-|---|
-| A code matching no element at all |
-| A code of an element in another community |
+| Rejected input                               |
+| -------------------------------------------- |
+| A code matching no element at all            |
+| A code of an element in another community    |
 | A code of an element of another element type |
-| A code of a decommissioned element |
-| A code of a soft-deleted element |
+| A code of a decommissioned element           |
+| A code of a soft-deleted element             |
 
 No distinct error code MUST exist for any of these cases, and no response
 MUST disclose that the code exists elsewhere in the installation. No audit
 or logging mechanism for failed lookups is introduced by this slice.
 
 #### Scenario: A foreign-community code behaves exactly like a nonsense code
+
 - GIVEN a `draft` session for community C, and an active element E in a different community with `code` X
 - WHEN the user submits X, and separately submits a well-formed code matching no element
 - THEN both responses MUST have the identical status, identical error code and identical message
 
 #### Scenario: A wrong-element-type code behaves exactly like a nonsense code
+
 - GIVEN a `draft` session for community C and element type T, and an element in C of a different element type with `code` X
 - WHEN the user submits X, and separately submits a well-formed code matching no element
 - THEN both responses MUST be identical in status, error code and message
 
 #### Scenario: A decommissioned element's code behaves exactly like a nonsense code
+
 - GIVEN a `draft` session for community C and element type T, and a decommissioned element in C of type T with `code` X
 - WHEN the user submits X, and separately submits a well-formed code matching no element
 - THEN both responses MUST be identical in status, error code and message
 
 #### Scenario: A soft-deleted element's code behaves exactly like a nonsense code
+
 - GIVEN a soft-deleted element in the session's community and element type with `code` X
 - WHEN the user submits X, and separately submits a well-formed code matching no element
 - THEN both responses MUST be identical in status, error code and message
 
 #### Scenario: No "exists but not yours" error code exists
+
 - GIVEN the application's declared error codes after this change
 - WHEN they are inspected
 - THEN none MUST distinguish an out-of-scope element from an unknown code
 
 #### Scenario: No failed-lookup audit trail is introduced
+
 - GIVEN the schema and use cases after this change
 - WHEN they are inspected
 - THEN no table, record or logging mechanism MUST capture rejected code lookups
@@ -340,16 +376,19 @@ session presents, at any later point in its life, including after it is
 completed.
 
 #### Scenario: Editing the live pool does not change an open session
+
 - GIVEN a `draft` session bound to template V whose snapshot contains question Q with wording W
 - WHEN a `SYSTEM_ADMIN` edits Q's live wording to W2 and the user then resolves an element in that session
 - THEN the presented wording for Q MUST still be W
 
 #### Scenario: Soft-deleting a pool question does not shrink an open session
+
 - GIVEN a `draft` session bound to template V whose snapshot contains question Q
 - WHEN a `SYSTEM_ADMIN` soft-deletes Q from the live pool and the user then resolves an element in that session
 - THEN Q MUST still be presented, in its snapshotted position
 
 #### Scenario: A completed session reads back as it was answered
+
 - GIVEN a `completed` session and subsequent edits to the live question pool
 - WHEN the session's recorded answers are read afterwards
 - THEN each answer MUST still be paired with the snapshotted wording that was answered
@@ -367,26 +406,31 @@ declared ones. Recording MUST be possible only while the session is
 `draft`.
 
 #### Scenario: An element's answers are durable immediately
+
 - GIVEN a `draft` session with element E resolved
 - WHEN the user records answers for every snapshot question of E and the session is never completed
 - THEN reading the session afterwards MUST return E's answers exactly as recorded
 
 #### Scenario: Re-recording corrects rather than duplicating
+
 - GIVEN element E already has recorded answers in a `draft` session
 - WHEN the user records answers for E again in that session
 - THEN the session MUST still hold exactly one review record for E, carrying the latest values
 
 #### Scenario: An incomplete answer set is rejected
+
 - GIVEN a `draft` session with element E resolved and a snapshot of N questions
 - WHEN the user submits answers for fewer than N of them
 - THEN the request MUST be rejected and no partial record MUST be persisted for E
 
 #### Scenario: An unknown question is rejected
+
 - GIVEN a `draft` session with element E resolved
 - WHEN the user submits an answer for a question that is not in the session template's snapshot
 - THEN the request MUST be rejected and nothing MUST be persisted
 
 #### Scenario: An out-of-range answer value is rejected
+
 - GIVEN a `draft` session with element E resolved
 - WHEN the user submits any answer value other than `YES`, `NO` or `NOT_APPLICABLE`
 - THEN the request MUST be a 4xx validation error and nothing MUST be persisted
@@ -403,16 +447,19 @@ reason is persisted on the per-element review record
 (`ElementReviewEntry.observations`), settled by `sdd-design`.
 
 #### Scenario: An element is left unreviewed with a reason
+
 - GIVEN a `draft` session for community C and element type T, containing active element E
 - WHEN the user marks E unreviewed with the reason "sealed room, no access"
 - THEN the response MUST be 2xx, and reading the session MUST report E as unreviewed together with that reason
 
 #### Scenario: An empty or missing reason is rejected
+
 - GIVEN a `draft` session containing active element E
 - WHEN the user attempts to mark E unreviewed with no reason, or with a blank one
 - THEN the request MUST be rejected and nothing MUST be persisted for E
 
 #### Scenario: An unreviewed element is not counted as reviewed
+
 - GIVEN element E is marked unreviewed with a reason
 - WHEN the session's reviewed elements are read
 - THEN E MUST NOT appear among them
@@ -429,21 +476,25 @@ Decommissioned and soft-deleted elements MUST NOT be required for
 completion.
 
 #### Scenario: A partial session with explained gaps completes
+
 - GIVEN community C has 5 active elements of type T, 3 reviewed in the session and 2 marked unreviewed with reasons
 - WHEN the user completes the session
 - THEN the response MUST be 2xx and the session's status MUST be `completed`
 
 #### Scenario: An unexplained gap blocks completion
+
 - GIVEN community C has 5 active elements of type T and the session has 3 reviewed and 2 with neither answers nor a reason
 - WHEN the user attempts to complete the session
 - THEN the request MUST be rejected with an identifiable error and the session MUST remain `draft`
 
 #### Scenario: A fully reviewed session completes
+
 - GIVEN every active element of the session's community and element type has recorded answers
 - WHEN the user completes the session
 - THEN the response MUST be 2xx and the status MUST be `completed`
 
 #### Scenario: Decommissioned and soft-deleted elements do not block completion
+
 - GIVEN community C has active elements all reviewed, plus a decommissioned element and a soft-deleted one of the same type
 - WHEN the user completes the session
 - THEN the response MUST be 2xx, and no reason MUST be required for the decommissioned or soft-deleted elements
@@ -458,26 +509,31 @@ layer, so that it holds regardless of which route, use case or repository
 method is used to reach the session.
 
 #### Scenario: Answering a completed session is rejected
+
 - GIVEN a `completed` session
 - WHEN any user attempts to record answers for an element in it
 - THEN the request MUST be rejected with an identifiable error and the session MUST be unchanged
 
 #### Scenario: Reopening a completed session is rejected
+
 - GIVEN a `completed` session
 - WHEN any user attempts to transition it back to `draft`
 - THEN the request MUST be rejected and the status MUST remain `completed`
 
 #### Scenario: A SYSTEM_ADMIN cannot delete a completed session
+
 - GIVEN a `completed` session
 - WHEN a `SYSTEM_ADMIN` attempts to delete or discard it by any available means
 - THEN the request MUST be rejected and the session MUST still exist with its answers intact
 
 #### Scenario: Discarding is refused for a completed session
+
 - GIVEN a `completed` session
 - WHEN its opener attempts to discard it
 - THEN the request MUST be rejected
 
 #### Scenario: Immutability holds below the controller
+
 - GIVEN the domain layer is exercised directly, bypassing routes and guards
 - WHEN a mutation is attempted against a session whose status is not `draft`
 - THEN the domain MUST refuse it
@@ -492,11 +548,13 @@ review tables (ADR-010's stricter rule for review records). Discarding a
 reachable for any other status.
 
 #### Scenario: No deletedAt exists on the review tables
+
 - GIVEN the migrated schema
 - WHEN the three review tables are inspected
 - THEN none MUST carry a `deletedAt` column
 
 #### Scenario: No delete operation is exposed
+
 - GIVEN the API surface, use cases and repository ports after this change
 - WHEN they are inspected
 - THEN none MUST delete an element's review record or an individual answer
@@ -508,7 +566,7 @@ Reading completed sessions ships in the separate `review-history`
 capability — now for the per-performer, per-community, per-company,
 installation-wide **and capability-gated manager** scopes — and is
 therefore no longer deferred wholesale. Signing now ships as completion
-itself (*Completion Is the Signing Act*), and the printable review
+itself (_Completion Is the Signing Act_), and the printable review
 document ships in the separate `review-document` and
 `review-document-ui` capabilities. The read-only due and overdue list
 (FR-009 slice 1) ships in the separate `review-schedule` and
@@ -528,12 +586,12 @@ read-only data request owned by `review-document`, itself barred from
 producing any PDF, file or email. The FR-008 row's capability clause and
 the FR-009 row are now narrowed in the same way, see below.)
 
-| Deferred to | Must not exist |
-|---|---|
+| Deferred to                                                                             | Must not exist                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FR-008 (closed — per-element history shipped in `review-history` / `review-history-ui`) | Per-element history — any query, route, page or use case in **this** capability's own routes, use cases or repository reads returning one inspectable element's past reviews; that surface belongs to `review-history` and `review-history-ui` instead. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped, installation-wide or capability-gated one. Any `managerCapabilities` or `VIEW_ALL_REVIEWS` reference inside this capability: the manager capability MUST affect the `review-history` read and the `review-schedule` read only, and MUST grant nothing on this capability's write flow |
-| FR-009 | Within **this** capability's own routes, use cases and repository reads: scheduling service, due dates, overdue lists, cadence rules or reminders. The read-only due and overdue list belongs to `review-schedule`; reminders, notifications and any scheduled job remain deferred everywhere |
-| FR-010 | Any `signed` status or any code path transitioning a session to it; any signing operation other than completion; any document read, PDF, file or export generation in **this** capability's own routes, use cases or repository reads — the review document belongs to `review-document`; any email or sending path; a signature image or signer name (slice 2) |
-| — | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications |
+| FR-009                                                                                  | Within **this** capability's own routes, use cases and repository reads: scheduling service, due dates, overdue lists, cadence rules or reminders. The read-only due and overdue list belongs to `review-schedule`; reminders, notifications and any scheduled job remain deferred everywhere                                                                                                                                                                                                                                                                                                                                                                           |
+| FR-010                                                                                  | Any `signed` status or any code path transitioning a session to it; any signing operation other than completion; any document read, PDF, file or export generation in **this** capability's own routes, use cases or repository reads — the review document belongs to `review-document`; any email or sending path; a signature image or signer name (slice 2)                                                                                                                                                                                                                                                                                                         |
+| —                                                                                       | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 (Previously, FR-008 row: "the manager capability MUST affect the
 `review-history` read only". FR-009 row: "Scheduling service, due dates,
@@ -541,55 +599,65 @@ overdue lists, cadence rules or reminders", unqualified, forbidding them
 anywhere.)
 
 #### Scenario: The one installation-wide read lives in review-history, not here
+
 - GIVEN this capability's own routes, pages, use cases and repository reads after this change
 - WHEN they are inspected
 - THEN none MUST contain a review read unscoped across the installation — the single such read MUST belong to `review-history` and MUST be reachable only by a `SYSTEM_ADMIN` or a `MANAGER` whose `VIEW_ALL_REVIEWS` capability resolved affirmatively
 
 #### Scenario: No capability mechanism reaches this capability
+
 - GIVEN the routes, pages, use cases and repository queries of this capability after this change
 - WHEN they are searched for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
 - THEN none MUST be found — the capability MUST live in the users, review-history and review-schedule capabilities only, and `MANAGER` MUST hold no write access here, granted or not
-(Previously: "the users and review-history capabilities only".)
+  (Previously: "the users and review-history capabilities only".)
 
 #### Scenario: This capability's two GET routes widen to MANAGER as an accepted, unrelated consequence
+
 - GIVEN `GET /review-sessions` (the draft-resume list) and `GET /review-sessions/:sessionId` (the performer-scoped read), both gated by `reviewSession:read` and both belonging to this capability, not to `review-history`
 - WHEN an authenticated `MANAGER` — granted or ungranted, since neither route consults `VIEW_ALL_REVIEWS` — calls either route
-- THEN the response MUST be `200`/`404` rather than `403`; this is an accepted, named consequence of `authorization`'s unconditional `reviewSession:read` grant to `MANAGER` (see the `authorization` delta's *The Manager Becomes Operational…* requirement), not a capability-gated read, and it MUST NOT be treated as license to add a capability check, a company scope, or any cross-session query to either route — they remain performer-scoped and status-agnostic exactly as shipped
+- THEN the response MUST be `200`/`404` rather than `403`; this is an accepted, named consequence of `authorization`'s unconditional `reviewSession:read` grant to `MANAGER` (see the `authorization` delta's _The Manager Becomes Operational…_ requirement), not a capability-gated read, and it MUST NOT be treated as license to add a capability check, a company scope, or any cross-session query to either route — they remain performer-scoped and status-agnostic exactly as shipped
 
 #### Scenario: The company scope lives in review-history, not here
+
 - GIVEN this capability's own routes, use cases and repository reads after this change
 - WHEN they are inspected
 - THEN none MUST contain a company-scoped review query — this capability's only contact with the performing company MUST be writing the attribution when a session is opened
 
 #### Scenario: The per-element review history read lives in review-history, not here
+
 - GIVEN this capability's own routes, pages, use cases and repository queries after this change
 - WHEN they are searched for a query, route, page or use case returning the past reviews of a single inspectable element
 - THEN none MUST be found there — the per-element read MUST belong to `review-history` and `review-history-ui` instead, reached through the routes and page shipped there
-(Previously: *No per-element review history surface exists* — unqualified, forbidding the feature outright. Per-element history shipped as part of `review-history-per-element`, deliberately outside this capability's own surface, which is what this scenario now asserts.)
+  (Previously: _No per-element review history surface exists_ — unqualified, forbidding the feature outright. Per-element history shipped as part of `review-history-per-element`, deliberately outside this capability's own surface, which is what this scenario now asserts.)
 
 #### Scenario: This capability's own surface adds no cross-session query
+
 - GIVEN the routes, use cases and repository reads belonging to the field write flow after this change
 - WHEN they are inspected
 - THEN each MUST still read at most the caller's own session — the shipped performer-scoped, status-agnostic by-id read stays exactly as it is — and every read of a session the caller did not perform, and every cross-session list of completed sessions, MUST live in the `review-history` capability instead
 
 #### Scenario: No scheduling or due-date logic exists in this capability
+
 - GIVEN this capability's own routes, use cases and repository reads after this change
 - WHEN they are searched for due dates, overdue detection, cadence or reminders
 - THEN none MUST be found — the due and overdue computation MUST belong to `review-schedule`, and no reminder, notification or scheduled job MUST exist anywhere
-(Previously: "the shipped code", anywhere, with no qualifier; the title read "No scheduling or due-date logic exists".)
+  (Previously: "the shipped code", anywhere, with no qualifier; the title read "No scheduling or due-date logic exists".)
 
 #### Scenario: No path reaches a signed session
+
 - GIVEN the session status transitions implemented after this change
 - WHEN they are enumerated
 - THEN no reachable code path MUST transition a session to `signed`, and this capability's own routes, use cases and repository reads MUST contain no document read, export or document generation
-(Previously: also required that no export or document generation exist anywhere; the review document now exists, owned by `review-document`.)
+  (Previously: also required that no export or document generation exist anywhere; the review document now exists, owned by `review-document`.)
 
 #### Scenario: The review document lives in review-document, not here
+
 - GIVEN this capability's own routes, use cases and repository reads after this change
 - WHEN they are searched for a read returning a review document, letterhead or organization-profile data
 - THEN none MUST be found — that read MUST belong to `review-document`
 
 #### Scenario: No per-answer attachments or notes exist
+
 - GIVEN the answer contract after this change
 - WHEN it is inspected
 - THEN it MUST carry an answer value only, with no photo, attachment or free-text note field

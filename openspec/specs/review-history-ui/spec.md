@@ -60,10 +60,10 @@ review record, at
 
 It MUST render two things and nothing else:
 
-| Region | Required content |
-|---|---|
+| Region         | Required content                                                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Element header | The element's `code`, name, element type (through the shipped localized label map, never the raw enum), location, active/decommissioned state and its community — identifying the physical element the record is about |
-| Review record | One row per entry the server returned, most recent first, each showing when the review was recorded, who recorded it, whether the element was reviewed or left unreviewed, and its observations |
+| Review record  | One row per entry the server returned, most recent first, each showing when the review was recorded, who recorded it, whether the element was reviewed or left unreviewed, and its observations                        |
 
 Each row MUST link to that entry's session on the already-shipped
 read-only historical session view at `/review-history/:sessionId`. That
@@ -81,10 +81,10 @@ deletes.
 
 It MUST render three distinct states, none of which MUST be a blank page:
 
-| State | Required rendering |
-|---|---|
-| Loading | An explicit loading indication while the request is in flight |
-| Empty | For an element the caller reaches whose record is empty, an explicit empty state — **not** an error and **not** a "not authorized" message |
+| State               | Required rendering                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loading             | An explicit loading indication while the request is in flight                                                                                                        |
+| Empty               | For an element the caller reaches whose record is empty, an explicit empty state — **not** an error and **not** a "not authorized" message                           |
 | Unreachable / error | For a rejected or failed request, one uniform localized message selected from `ApiError.status`/`.code`, never by comparing a server-supplied English message string |
 
 The unreachable message MUST be identical whether the element does not
@@ -99,56 +99,67 @@ element field MUST be editable on it, and no element-management action
 MUST be offered from it.
 
 #### Scenario: The page shows the element and its full record
+
 - GIVEN an element reviewed in three `completed` sessions the caller can see
 - WHEN they open the element's history page
 - THEN the element's `code`, name, localized type, location, state and community MUST be shown, together with all three entries, most recent first
 
 #### Scenario: Each row opens its session's read-only view
+
 - GIVEN the element history page rendering at least one entry
 - WHEN the user activates that row's link
 - THEN the read-only historical session view of that entry's session MUST be reached
 
 #### Scenario: The server's result is rendered unfiltered and unreordered
+
 - GIVEN the server returns a list of entries in its own order
 - WHEN the page renders
 - THEN every returned entry MUST be shown, in the order received, with none hidden, grouped, re-sorted, paginated or truncated client-side
 
 #### Scenario: No derived figure is displayed
+
 - GIVEN an element history page with several entries
 - WHEN its rendered data is enumerated
 - THEN no count-based status, "last inspected" badge, interval, overdue or due indicator MUST be computed or shown
 
 #### Scenario: No mutating or element-management control renders
+
 - GIVEN the element history page
 - WHEN its controls are enumerated
 - THEN none MUST offer edit, reopen, answer, record, mark-unreviewed, code entry, complete, discard, sign, export, delete, decommission or reactivate, and no element field MUST be editable
 
 #### Scenario: A reachable element with no reviews shows an empty state
+
 - GIVEN a `SYSTEM_ADMIN` opens the history page of an element that has never been reviewed
 - WHEN the page renders
 - THEN the element header MUST be shown with an explicit empty state — not an error, not a "not authorized" message and not a blank page
 
 #### Scenario: A decommissioned element's page renders its record and its state
+
 - GIVEN a decommissioned element with two past reviews
 - WHEN a caller who can see them opens its history page
 - THEN both entries MUST render and the header MUST show the element as decommissioned, through a localized label rather than a raw value
 
 #### Scenario: Every unreachable cause shows the same message
+
 - GIVEN the user opens, in turn, the history page of a nonexistent element, a soft-deleted element, an element of another community, and an element outside their own scope
 - WHEN each rejection is shown
 - THEN the displayed message MUST be identical in all four cases and MUST NOT state or imply that the element exists
 
 #### Scenario: Error handling does not branch on English message text
+
 - GIVEN the element history page mapping an API error to a UI message
 - WHEN it selects the message
 - THEN it MUST branch only on `ApiError.status` and `.code`
 
 #### Scenario: A loading state renders while the request is in flight
+
 - GIVEN the element history request has not yet resolved
 - WHEN the page renders
 - THEN an explicit loading indication MUST be shown, not a blank page and not an empty state
 
 #### Scenario: Every new string is translated in all three locales
+
 - GIVEN the translation keys this page introduces
 - WHEN `en`, `es` and `ca` are compared
 - THEN each key MUST have a real, non-placeholder value in all three, enforced by the existing locale parity test
@@ -159,10 +170,10 @@ The element history page MUST be reachable by navigation, without a
 hand-typed URL, through **exactly two** entry links. Neither MUST
 introduce a new page, a new layout or a new control family.
 
-| Entry link | Where | Who reaches it |
-|---|---|---|
-| From the element itself | A per-row action on the community's element list, alongside the shipped per-element print action | `SYSTEM_ADMIN`, the only role that reaches that list |
-| From a session's history detail | A per-entry action on each entry row of the shipped read-only historical session view, leading to **that entry's own element's** full history | All five history roles |
+| Entry link                      | Where                                                                                                                                         | Who reaches it                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| From the element itself         | A per-row action on the community's element list, alongside the shipped per-element print action                                              | `SYSTEM_ADMIN`, the only role that reaches that list |
+| From a session's history detail | A per-entry action on each entry row of the shipped read-only historical session view, leading to **that entry's own element's** full history | All five history roles                               |
 
 The second link is **required, not optional**: every role other than
 `SYSTEM_ADMIN` reaches no element list, so without it four of the five
@@ -182,34 +193,40 @@ existing columns and actions, and the session detail view's existing
 rendering of entries, answers and observations, MUST be unchanged apart
 from the added link — and, on the session detail view only, apart from
 the single **View document** link this change adds
-(*Read-Only Historical Session View*).
+(_Read-Only Historical Session View_).
 
 #### Scenario: The element list row reaches that element's history
+
 - GIVEN a `SYSTEM_ADMIN` viewing community C's element list containing element E
 - WHEN they trigger the history action on E's row
 - THEN E's history page — and no other element's — MUST be reached
 
 #### Scenario: A session entry row reaches that entry's element's history
+
 - GIVEN any of the five history roles viewing a completed session whose record contains an entry for element E
 - WHEN they trigger that entry's element-history action
 - THEN E's history page MUST be reached, showing E's record across all its sessions, not only the session they came from
 
 #### Scenario: All four non-admin roles have a browser path to the feature
+
 - GIVEN a `MAINTENANCE_TECHNICIAN`, a `COMMUNITY_REPRESENTATIVE`, a `MAINTENANCE_COMPANY_MANAGER` and a `MANAGER` holding `VIEW_ALL_REVIEWS`, each with at least one readable session containing an element entry
 - WHEN each navigates via the global navigation's Review history item, reachable from any authenticated page, through the history list and into a session's detail view
 - THEN each MUST be offered a control leading to that entry's element's history page, with no hand-typed URL required
 
 #### Scenario: An entry whose element no longer resolves offers no link
+
 - GIVEN a session detail view containing an entry whose inspectable element was soft-deleted after completion
 - WHEN that row renders
 - THEN no element-history link MUST be offered on it, and the row MUST still render its answers and observations as it already does
 
 #### Scenario: No bulk or cross-element history action is offered
+
 - GIVEN the community element list and the session detail view after this change
 - WHEN their list-level actions are enumerated
 - THEN none MUST offer the history of more than one element at a time
 
 #### Scenario: The host pages are otherwise unchanged
+
 - GIVEN the community element list and the read-only session detail view before and after this change
 - WHEN each is compared
 - THEN the only differences MUST be the added per-row element-history link and, on the session detail view only, the single **View document** link — no column removed or reordered, no existing action changed, and no rendering of entries, answers or observations altered
@@ -247,26 +264,31 @@ and no element-management route MUST become reachable by any non-admin
 role.
 
 #### Scenario: All five history roles reach the element history route
+
 - GIVEN the caller is authenticated as `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER`, `SYSTEM_ADMIN` or `MANAGER`
 - WHEN they navigate to the element history route
 - THEN the page MUST render for each, and in no case MUST the client's "not authorized" message appear
 
 #### Scenario: An ungranted manager reaches the route and gets the server's answer
+
 - GIVEN a signed-in `MANAGER` holding no capability, navigating directly to an existing element's history route
 - WHEN the page resolves
 - THEN the route MUST NOT refuse them client-side, and the surface's uniform unreachable message MUST be shown from the server's rejection
 
 #### Scenario: The rest of the element family stays admin-only
+
 - GIVEN the caller is authenticated as any role other than `SYSTEM_ADMIN`
 - WHEN they navigate to the community element list, create, edit or label routes
 - THEN an explicit "not authorized" message MUST be shown for each — the history route's widening MUST NOT have extended to any of them
 
 #### Scenario: The divergence is documented and gate-tested
+
 - GIVEN the element history route declaration after this change
 - WHEN it is inspected
 - THEN an explicit comment MUST name both the five allowed roles and the `inspectable-elements` family's `SYSTEM_ADMIN`-only default, and a route gate test MUST assert both the five-role allowance here and the admin-only default on a sibling route
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to the element history route
 - THEN they MUST be redirected to `/login`
@@ -279,8 +301,8 @@ users holding `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`,
 reach the identical surface, with no reduced or alternative variant. The
 `MANAGER` gate MUST be the role alone: it MUST NOT be conditioned on the
 `VIEW_ALL_REVIEWS` capability, so a `MANAGER` without it reaches the same
-surface and sees the shipped empty state (see *The Manager Reaches the
-Shipped History Surface, Granted or Not*). An authenticated user of any
+surface and sees the shipped empty state (see _The Manager Reaches the
+Shipped History Surface, Granted or Not_). An authenticated user of any
 other role who reaches such a route MUST see an explicit "not authorized"
 message, not a silent redirect. An unauthenticated visitor MUST be
 redirected to `/login`.
@@ -289,9 +311,9 @@ redirected to `/login`.
 prefix**. It now includes one route outside the `/review-history*` family
 — the element history route under
 `/communities/:communityId/inspectable-elements/:elementId/history` — and
-that route MUST carry the identical five-role gate, per *The Element
+that route MUST carry the identical five-role gate, per _The Element
 History Route Is Gated on the Five History Roles Despite Its Admin-Only
-URL Family*. A future review-history view placed under any other URL
+URL Family_. A future review-history view placed under any other URL
 prefix MUST likewise take this gate; matching its URL neighbours instead
 MUST be treated as a defect.
 
@@ -311,56 +333,67 @@ requirement's reach is restated as behavioural rather than prefix-based,
 and the deny branch gains a second family that still exercises it.)
 
 #### Scenario: A technician reaches the history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_TECHNICIAN`
 - WHEN they navigate to a review-history route
 - THEN the history surface MUST be shown
 
 #### Scenario: A representative reaches the identical history views
+
 - GIVEN the caller is authenticated as `COMMUNITY_REPRESENTATIVE`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced or alternative variant
 
 #### Scenario: A maintenance company manager reaches the identical history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced, alternative or manager-specific variant
 
 #### Scenario: A system admin reaches the identical history views
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they navigate to a review-history route, list or detail
 - THEN the same surface MUST be shown, with no reduced, alternative or admin-specific variant
 
 #### Scenario: A MANAGER reaches the identical history views whether granted or not
+
 - GIVEN the caller is authenticated as `MANAGER`, once holding `VIEW_ALL_REVIEWS` and once holding no capability
 - WHEN they navigate to a review-history route, list or detail
 - THEN in both cases the same surface MUST be shown, with no reduced, alternative or manager-specific variant, and in neither case MUST the "not authorized" message appear
 
 #### Scenario: The element history route carries the same five-role gate
+
 - GIVEN each of the five history roles in turn
 - WHEN they navigate to `/communities/:communityId/inspectable-elements/:elementId/history`
 - THEN each MUST reach the page, and none MUST be refused client-side — despite every sibling route of that URL family being `SYSTEM_ADMIN`-only
 
 #### Scenario: The manager is still denied the review-session write routes
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render
 
 #### Scenario: The admin is denied the review-session write routes too
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render — the history widening MUST NOT extend to the write surface
 
 #### Scenario: The MANAGER is denied the review-session write routes too
+
 - GIVEN the caller is authenticated as `MANAGER`, granted or ungranted
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render
 
 #### Scenario: The deny branch is still exercised on the element-management routes
+
 - GIVEN the caller is authenticated as any role other than `SYSTEM_ADMIN`
 - WHEN they navigate directly to a community's element list, create, edit or label route
 - THEN an explicit "not authorized" message MUST be shown — the element history route's five-role gate MUST NOT have widened its siblings
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to any review-history route, including the element history route
 - THEN they MUST be redirected to `/login`
@@ -373,11 +406,13 @@ be able to reach the history list by navigation from the existing
 of the history list MUST navigate to that session's read-only view.
 
 #### Scenario: History is reachable by navigation
+
 - GIVEN a user with either in-scope role is signed in and viewing the existing review-session surface
 - WHEN they look for their past reviews
 - THEN a control MUST be offered that navigates to the history list, with no hand-typed URL required
 
 #### Scenario: A history row opens its session
+
 - GIVEN the history list shows at least one completed session
 - WHEN the user activates that row
 - THEN the read-only view of that session MUST be shown
@@ -398,7 +433,7 @@ That control MUST now be the **global navigation's Review history item**
 on the app's entry page alone — so the requirement is no longer satisfied
 by a landing-page link, which is deleted by the same change.
 Correspondingly, the write-surface guarantee MUST be read against the
-global navigation: when *"every navigation control rendered for them"* is
+global navigation: when _"every navigation control rendered for them"_ is
 enumerated, the global navigation's items MUST be included in that
 enumeration, and this role's single item MUST be the history list.
 (Previously: the entry point was a role-conditional link on the app's
@@ -408,26 +443,31 @@ mechanism becomes global, so the requirement names the navigation as the
 entry point and the enumeration explicitly covers it on every page.)
 
 #### Scenario: The manager reaches history from any authenticated page
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` is signed in and on any authenticated page, including the wrong-role denial view
 - WHEN they look for their company's past reviews
 - THEN a navigation control MUST be offered that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The manager's path never crosses the write surface
+
 - GIVEN a signed-in `MAINTENANCE_COMPANY_MANAGER`
 - WHEN every navigation control rendered for them is enumerated — the global navigation's items included
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
 
 #### Scenario: The manager's navigation offers exactly two items
+
 - GIVEN a signed-in `MAINTENANCE_COMPANY_MANAGER`
 - WHEN the global navigation renders for them
 - THEN it MUST offer exactly two items, Home and the history list, plus the logout control and nothing else
 
 #### Scenario: No write control is rendered for the manager
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` viewing the history list and a session's read-only view
 - WHEN the controls on each are enumerated
 - THEN none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other two roles' entry point is unchanged
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
 - WHEN they reach the history list
 - THEN the shipped `/review-sessions` in-page entry point MUST still work exactly as before, unaffected by the manager's navigation item
@@ -461,7 +501,7 @@ identical navigation item, reach the history list and see the surface's
 already-shipped **empty state** — not an error, not a "not authorized"
 message, and not a hidden or disabled item. Their detail-route access
 MUST resolve to the surface's existing uniform unreachable-session
-message, per *An Unreachable Session Gets One Uniform Message*.
+message, per _An Unreachable Session Gets One Uniform Message_.
 
 That navigation path MUST NOT cross the `/review-sessions` write surface
 owned by `review-session-ui`, which this role MUST NOT gain: no
@@ -485,46 +525,55 @@ filtering, and clarifies that the navigation's own labels are not this
 surface's keys.)
 
 #### Scenario: The manager reaches history from any authenticated page
+
 - GIVEN a `MANAGER` is signed in and on any authenticated page
 - WHEN they look for the installation's past reviews
 - THEN a navigation control MUST be offered that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The navigation item is shown regardless of the capability
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
 - WHEN the navigation is rendered for each
 - THEN both MUST be offered the identical history item — its visibility MUST NOT depend on the capability, and neither MUST see it hidden or disabled
 
 #### Scenario: A granted manager sees the installation's sessions on the shipped page
+
 - GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` and completed sessions across several companies and communities
 - WHEN they open the history list
 - THEN the shipped list page MUST render every session the server returned, with the same row shape a `SYSTEM_ADMIN` sees and no manager-only column, badge, section or control
 
 #### Scenario: An ungranted manager sees the normal empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability, in an installation that does contain completed sessions
 - WHEN they open the history list
 - THEN the surface's already-shipped empty state MUST be rendered — not an error, not a "not authorized" message, and not a blank page
 
 #### Scenario: An ungranted manager opening a session by URL gets the uniform message
+
 - GIVEN a signed-in `MANAGER` holding no capability and the URL of an existing completed session's detail route
 - WHEN they navigate to it directly
 - THEN the surface's existing uniform unreachable-session message MUST be shown, identical to the one shown for a nonexistent session
 
 #### Scenario: The client never learns the capability
+
 - GIVEN the current-user endpoint's response, the client's auth context, the client's route-gating code and the navigation's role → items lookup after this change
 - WHEN each is inspected
 - THEN none MUST carry or branch on `managerCapabilities` or `VIEW_ALL_REVIEWS`, and no endpoint MUST have been added to expose it
 
 #### Scenario: The manager's path never crosses the write surface
+
 - GIVEN a signed-in `MANAGER`, granted or ungranted
 - WHEN every navigation control rendered for them is enumerated — the global navigation's items included
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view, and none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other four roles' surface is unchanged
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER` and `SYSTEM_ADMIN`
 - WHEN each reaches the history list and a session's read-only view after this change
 - THEN each MUST see exactly what they saw before it — their rows and controls unaffected by the manager's widening
 
 #### Scenario: This surface gains no new string
+
 - GIVEN the review-history UI's own translation keys before and after this change
 - WHEN they are compared
 - THEN they MUST be identical — the navigation's labels are `app-navigation`'s keys and MUST NOT be added to this surface's namespace
@@ -560,8 +609,8 @@ The other roles' experience MUST be unchanged — same pages, same rows,
 same controls — and that regression check covers **all four** other
 roles, including `MANAGER`: a `MANAGER`, granted or ungranted, MUST see
 exactly what this and the sibling `review-history-ui` requirements
-already commit this role to (see *The Manager Reaches the Shipped History
-Surface, Granted or Not*), unaffected by anything the admin's own
+already commit this role to (see _The Manager Reaches the Shipped History
+Surface, Granted or Not_), unaffected by anything the admin's own
 navigation does.
 (Previously: the admin's entry point was a role-conditional link on the
 app's entry page, justified by the absence of an admin dashboard. That
@@ -575,36 +624,42 @@ and are false with the Review schedule item (nine); the text and the two
 scenarios below no longer count items.)
 
 #### Scenario: The admin reaches history from any authenticated page
+
 - GIVEN a `SYSTEM_ADMIN` is signed in and on any authenticated page
 - WHEN they look for the installation's past reviews
 - THEN a navigation control MUST be offered that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The admin sees the identical shipped pages
+
 - GIVEN a `SYSTEM_ADMIN` viewing the history list and a session's read-only view
 - WHEN both are compared with what a `MAINTENANCE_COMPANY_MANAGER` sees
 - THEN they MUST be the same pages and the same row shape, with no admin-only column, badge, section or control
 
 #### Scenario: A history row opens its session for the admin
+
 - GIVEN the admin's history list shows at least one completed session
 - WHEN they activate that row
 - THEN the read-only view of that session MUST be shown
 
 #### Scenario: The admin's path never crosses the write surface
+
 - GIVEN a signed-in `SYSTEM_ADMIN`
 - WHEN every navigation control rendered for them is enumerated — all of the global navigation's items included
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
-(Previously: "all seven of the global navigation's items included".)
+  (Previously: "all seven of the global navigation's items included".)
 
 #### Scenario: No write control is rendered for the admin
+
 - GIVEN a `SYSTEM_ADMIN` viewing the history list and a session's read-only view
 - WHEN the controls on each are enumerated
 - THEN none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other four roles' surface is unchanged, MANAGER included
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER`, and a `MANAGER` (once granted `VIEW_ALL_REVIEWS`, once holding no capability)
 - WHEN each reaches the history list and a session's read-only view after this change
-- THEN each MUST see exactly what they were already committed to seeing — their rows and controls unaffected by the admin's navigation, and the granted/ungranted manager's own experience exactly as specified by *The Manager Reaches the Shipped History Surface, Granted or Not*
-(Previously: "unaffected by the admin's seven-item navigation".)
+- THEN each MUST see exactly what they were already committed to seeing — their rows and controls unaffected by the admin's navigation, and the granted/ungranted manager's own experience exactly as specified by _The Manager Reaches the Shipped History Surface, Granted or Not_
+  (Previously: "unaffected by the admin's seven-item navigation".)
 
 ### Requirement: The History List Renders the Server-Scoped Result Unfiltered
 
@@ -626,31 +681,37 @@ NOT be shown.
 with no requirement to identify the performer.)
 
 #### Scenario: Rows are rendered as returned
+
 - GIVEN the scoped history endpoint returns a list of completed sessions
 - WHEN the list view renders
 - THEN every returned row MUST be shown, in the returned order, with no client-side filtering step applied
 
 #### Scenario: A manager's company-wide list is rendered unfiltered
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` whose endpoint returns sessions from several technicians and several communities
 - WHEN the list view renders
 - THEN every returned row MUST be shown, with no client-side narrowing by community, performer or date
 
 #### Scenario: An empty history renders an empty state
+
 - GIVEN the scoped history endpoint returns an empty list
 - WHEN the list view renders
 - THEN a localized empty state MUST be shown, and it MUST NOT be an error state
 
 #### Scenario: Distinct loading and error states
+
 - GIVEN the history request is loading, and separately fails
 - WHEN the list view renders in each case
 - THEN each case MUST show its own distinct state, never a blank screen
 
 #### Scenario: A multi-community caller sees each row's community
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` or `MAINTENANCE_COMPANY_MANAGER` whose result spans more than one community
 - WHEN their history list renders
 - THEN each row MUST show the community the session belongs to
 
 #### Scenario: A multi-performer caller sees who performed each row
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` whose result contains sessions performed by two different technicians
 - WHEN their history list renders
 - THEN each row MUST identify the user who performed that session
@@ -672,31 +733,37 @@ addition: its existing rendering of entries, answers and observations,
 and its per-entry element-history links, MUST be unchanged.
 
 #### Scenario: The recorded record is rendered in full
+
 - GIVEN a completed session with answered elements and one element marked unreviewed with a reason
 - WHEN its read-only view renders
 - THEN every entry MUST be shown with its snapshotted question wording, its recorded answer values, and the unreviewed element's observations
 
 #### Scenario: No mutating control renders
+
 - GIVEN the read-only view of a completed session
 - WHEN its controls are enumerated
 - THEN none MUST offer edit, reopen, answer, record, mark-unreviewed, code entry, complete, discard, sign, export, print or delete
 
 #### Scenario: An entry whose element no longer resolves still renders
+
 - GIVEN a completed session one of whose inspectable elements was decommissioned or soft-deleted after completion
 - WHEN its read-only view renders
 - THEN that entry MUST still be shown with its answers and observations, under a localized neutral label in place of the missing element identity, and MUST NOT render as a blank, an error or a raw identifier
 
 #### Scenario: A representative opens a session they did not perform
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` whose history list includes a technician-performed session
 - WHEN they open it
 - THEN its full recorded record MUST be shown, identically to the performer's view and still with no mutating control
 
 #### Scenario: The view offers one View document link
+
 - GIVEN any of the five history roles on the read-only view of a completed session
 - WHEN its controls are enumerated
 - THEN exactly one **View document** link MUST be offered, and it MUST lead to that session's document page
 
 #### Scenario: The link changes nothing else on the view
+
 - GIVEN the read-only session view before and after this change
 - WHEN both are compared
 - THEN the only difference MUST be the added **View document** link
@@ -712,16 +779,19 @@ that the session exists, and the client MUST select it from
 message string.
 
 #### Scenario: Every unreachable cause shows the same message
+
 - GIVEN the user opens, in turn, a nonexistent session id, another performer's session, another community's session, and a draft
 - WHEN each rejection is shown
 - THEN the displayed message MUST be identical in all four cases
 
 #### Scenario: No message hints that the session exists
+
 - GIVEN any rejected session id
 - WHEN the message is read
 - THEN it MUST NOT state or imply that the session exists for another performer, another community, or in another status
 
 #### Scenario: Error handling does not branch on English message text
+
 - GIVEN any client path mapping an API error to a UI message in this flow
 - WHEN it selects the message
 - THEN it MUST branch only on `ApiError.status` and `.code`
@@ -750,16 +820,19 @@ value — the element's active/decommissioned state — so the requirement's
 reach and its raw-value prohibition are both extended.)
 
 #### Scenario: All visible text is translated in every configured locale
+
 - GIVEN any view of the review-history surface is rendered, including the element history page
 - WHEN the active locale is `en`, `es` or `ca`
 - THEN every visible string MUST come from a translation key with a real value for that locale, not a placeholder or English fallback
 
 #### Scenario: Enum values are never rendered raw
+
 - GIVEN an element type, a session status, an element's active/decommissioned state or an answer value is displayed as visible text
 - WHEN it is rendered
 - THEN it MUST show a localized label, not the raw enum string, boolean or timestamp
 
 #### Scenario: The element history page's own keys have real values in all three locales
+
 - GIVEN the translation keys introduced by the element history page and its two entry links
 - WHEN `en`, `es` and `ca` are compared by the locale parity test
 - THEN every key MUST be present with a real, non-placeholder value in all three
@@ -774,7 +847,7 @@ three**; and MUST NOT add signing, export, print, download or send
 controls, scheduling, due-date or overdue indicators, compliance
 dashboards, per-community or per-technician statistics, attachments or
 notifications. The one exception is the single **View document** link
-on the read-only session view (*Read-Only Historical Session View*),
+on the read-only session view (_Read-Only Historical Session View_),
 which is navigation, not an export control. The
 installation-wide list is explicitly included — reachable by **two**
 roles, a `SYSTEM_ADMIN` unconditionally and a granted `MANAGER` — and it
@@ -785,8 +858,8 @@ search across all entities is a separate app-wide initiative that MUST
 NOT be started, stubbed or parameterized for here.
 
 Exactly **one** per-element history view MUST exist: the page defined by
-*An Element's Own Review History Page*, reachable only through the two
-entry links defined by *Two Entry Links Reach the Element History Page*.
+_An Element's Own Review History Page_, reachable only through the two
+entry links defined by _Two Entry Links Reach the Element History Page_.
 No second per-element view, no element-history widget embedded in another
 page, no cross-element rollup ("every element in this community, last
 review each") and no per-element chart, trend, interval or overdue
@@ -809,59 +882,68 @@ which govern the history views' own controls. It MUST NOT be read as a
 history, due-date or overdue indicator of the history surface.
 (Previously: the surface was "a single unfiltered list plus a read-only
 detail view" and MUST NOT add a per-element history view at all, with the
-*"No per-element history view exists"* scenario requiring that a search
+_"No per-element history view exists"_ scenario requiring that a search
 of the web routes and pages find none. Exactly one such view now ships;
 the guard is **narrowed, not deleted**: it becomes a bound on that one
 view: one page, two links, no controls, no second variant and no
 aggregation. This change adds the paragraph on the Review schedule page,
-and the scenario *No element-history widget, rollup or chart ships* is
+and the scenario _No element-history widget, rollup or chart ships_ is
 clarified to match, and the global navigation's Review schedule item is
-named as permitted, with the scenario *No adjacent capability surfaces*
+named as permitted, with the scenario _No adjacent capability surfaces_
 restated to exclude the navigation's items.)
 
 #### Scenario: No list-control ships
+
 - GIVEN the history list view's controls
 - WHEN they are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting or search
 
 #### Scenario: No list-control ships for the company manager either
+
 - GIVEN the history list view rendered for a `MAINTENANCE_COMPANY_MANAGER` with a large company-wide result
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-community or per-technician grouping control
 
 #### Scenario: No list-control ships for the admin either
+
 - GIVEN the history list view rendered for a `SYSTEM_ADMIN` with an installation-wide result spanning several companies and communities
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-company, per-community or per-technician grouping control
 
 #### Scenario: No list-control ships for the manager either
+
 - GIVEN the history list view rendered for a `MANAGER` holding `VIEW_ALL_REVIEWS` with an installation-wide result spanning several companies and communities
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-company, per-community or per-technician grouping control — mirroring the admin's own guarantee, since a granted manager's result is the identical read
 
 #### Scenario: No list-control ships on the element's own record either
+
 - GIVEN the element history page rendered for an element with a long record, for each of the five roles in turn
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-session, per-performer or per-company grouping control
 
 #### Scenario: Exactly one per-element history view exists, reachable from exactly two links
+
 - GIVEN the web routes and pages after this change
 - WHEN they are searched for a view of one inspectable element's past reviews
 - THEN exactly one MUST be found, at `/communities/:communityId/inspectable-elements/:elementId/history`, and its only navigation entry points MUST be the element-list row link and the session-detail entry link
 
 #### Scenario: No element-history widget, rollup or chart ships
+
 - GIVEN every other page of the web app after this change, other than the Review schedule page
 - WHEN each is inspected
 - THEN none MUST embed an element's review record, none MUST render a cross-element "last review each" rollup, and none MUST compute a per-element chart, trend, interval or overdue indicator
-(Previously: "every other page of the web app", with no exception.)
+  (Previously: "every other page of the web app", with no exception.)
 
 #### Scenario: The schedule page's per-pair date is not a per-element rollup
+
 - GIVEN the Review schedule page rendered with rows of several statuses
 - WHEN its rendered data is enumerated
 - THEN each row MUST show one date for its `(community, elementType)` pair at most, and no element, element `code` or per-element last-review figure MUST appear
 
 #### Scenario: No adjacent capability surfaces
+
 - GIVEN every view of the review-history surface, the element history page included
 - WHEN its own controls are enumerated, the global navigation's items excluded
 - THEN none MUST offer signing, export, print, download, send, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications — the session detail view's single **View document** link being the only document-related control, and the list and element history page offering none
-(Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control. The navigation's items are checked by `app-navigation`.)
+  (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control. The navigation's items are checked by `app-navigation`.)

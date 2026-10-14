@@ -1,6 +1,7 @@
 ## Exploration: ci-pipeline (GitHub Actions CI)
 
 ### Current State
+
 - No `.github/` directory exists, so nothing is automated today.
 - Node: root `engines.node` is `>=24`, `packageManager` is `npm@10.8.2`, and `package-lock.json` exists. There is no `.nvmrc` or `.node-version`.
 - Root scripts (Turborepo): `build`, `dev`, `lint`, `test`.
@@ -12,14 +13,14 @@
   - Test files are typechecked only when ts-jest runs them.
 - Test tiers:
 
-| Tier | Command | Needs |
-|---|---|---|
-| unit | `npm test` (turbo): api jest, web vitest, validation vitest | no DB |
+| Tier        | Command                                                                                         | Needs    |
+| ----------- | ----------------------------------------------------------------------------------------------- | -------- |
+| unit        | `npm test` (turbo): api jest, web vitest, validation vitest                                     | no DB    |
 | integration | `npm run test:integration -w apps/api` (`jest --config test/jest-integration.json --runInBand`) | Postgres |
-| e2e | `npm run test:e2e -w apps/api` | no DB |
+| e2e         | `npm run test:e2e -w apps/api`                                                                  | no DB    |
 
-  - Both `test:integration` and `test:e2e` have a `pretest:*` hook that builds `@sf-manager/validation`.
-  - API unit tests exclude `*.integration.spec.ts` and have a tripwire that refuses to run them.
+- Both `test:integration` and `test:e2e` have a `pretest:*` hook that builds `@sf-manager/validation`.
+- API unit tests exclude `*.integration.spec.ts` and have a tripwire that refuses to run them.
 - Integration setup (`apps/api/test/test-database/global-setup.ts`, helpers in `apps/api/src/shared/testing/test-database.ts`):
   - It reads `DATABASE_URL` from the shell, or else from `apps/api/.env`. In CI the shell value is the only source.
   - It creates `sf_manager_test_<id>` through the `/postgres` maintenance database (so the role needs CREATE DATABASE).
@@ -38,12 +39,14 @@
 - No test tier needs browsers or Docker-in-Docker. Web tests use jsdom.
 
 ### Affected Areas
+
 - `.github/workflows/ci.yml` (new) is the only deliverable.
 - `README.md`: a short note on CI, the commands it runs, and the manual branch-protection step.
 - `docs/adr/`: optional. The CI decision could become an ADR, or be noted under Open decisions in `INDEX.md`.
 - No application code changes.
 
 ### Approaches
+
 1. **Single job with Postgres service**: checkout, `setup-node` (24, `cache: npm`), `npm ci`, `npm run build`, `npm run lint`, `npm test`, `npm run test:e2e -w apps/api`, `npm run test:integration -w apps/api`.
    - Pros: simplest, one install and one build, easy to debug.
    - Cons: serial wall time; one failure hides later tiers unless steps use `if: always()`.
@@ -58,7 +61,9 @@
    - Effort: Medium.
 
 ### Recommendation
+
 Approach 1, sticking to existing scripts and adding no new repo scripts.
+
 - Triggers: `pull_request` and `push` to `main`.
 - Hardening: `permissions: contents: read`, a concurrency group that cancels stale PR runs, and `timeout-minutes`.
 - Job env:
@@ -71,6 +76,7 @@ Approach 1, sticking to existing scripts and adding no new repo scripts.
 **Scope per ADR-006** (thinnest first slice): one workflow file, the commands above, npm cache through `setup-node`, and a README note.
 
 **Defer explicitly**:
+
 - Branch protection / required checks. This is a repo setting the user applies manually after the workflow has run green at least once, because the check name must exist first.
 - Deploy and release.
 - Coverage upload.
@@ -83,6 +89,7 @@ Approach 1, sticking to existing scripts and adding no new repo scripts.
 **Non-UI slice**: this change is deliberately infrastructure-only, with no domain and no web UI. The CLAUDE.md "every slice includes UI" rule targets domain slices and does not apply.
 
 ### Risks
+
 - Node and npm: `setup-node` with 24 ships npm 11, while `packageManager` pins npm 10.8.2. `npm ci` against the existing lockfile should work, but verify on the first run. Pinning npm is a possible fix.
 - Service-container health-check timing could cause a flaky first connection; use `pg_isready` retries.
 - Duration is unknown. About 2,750 tests run, with `--runInBand` integration (207) and argon2 hashing in e2e. A cold first run may take 8 to 15 minutes. Measure it, and set `timeout-minutes` generously.
@@ -94,4 +101,5 @@ Approach 1, sticking to existing scripts and adding no new repo scripts.
 - Branch protection is manual. If it is enabled before the workflow runs once, the required check name will not exist yet.
 
 ### Ready for Proposal
+
 Yes.

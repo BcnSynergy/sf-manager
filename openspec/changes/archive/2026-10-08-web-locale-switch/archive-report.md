@@ -7,10 +7,10 @@
 
 ## Specs merged
 
-| Capability | Action |
-|------------|--------|
-| `web-locale-selection` | New main spec created at `openspec/specs/web-locale-selection/spec.md` (4 requirements) |
-| `app-navigation` | Requirement "The Navigation Stays a Link Bar and Nothing More" replaced by the MODIFIED version (adds the single language selector scenario) |
+| Capability               | Action                                                                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web-locale-selection`   | New main spec created at `openspec/specs/web-locale-selection/spec.md` (4 requirements)                                                                   |
+| `app-navigation`         | Requirement "The Navigation Stays a Link Bar and Nothing More" replaced by the MODIFIED version (adds the single language selector scenario)              |
 | `app-navigation` Purpose | D9 hand edit: "a language switcher (deferred by ADR-007)" became "any language switcher other than the single selector defined by `web-locale-selection`" |
 
 ## Follow-up debts

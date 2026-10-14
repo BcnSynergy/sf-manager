@@ -23,6 +23,7 @@ session still ends it exactly as today.
 ## Scope
 
 ### In Scope
+
 - A session epoch in the web API client: captured when each `apiFetch`
   request starts; on 401 the unauthorized handler runs only if the epoch
   is unchanged.
@@ -46,6 +47,7 @@ session still ends it exactly as today.
   artifacts in the first PR.
 
 ### Out of Scope
+
 - Any API change. The access token stays an httpOnly cookie; the server
   contract is unchanged.
 - Advancing the epoch on the mount-time `/auth/me` restore (user
@@ -64,9 +66,11 @@ session still ends it exactly as today.
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `authentication`:
   - "Redirect When Unauthenticated (Web)": the "Session ends mid-session"
     behavior applies only to a 401 from a call issued under the current
@@ -103,27 +107,27 @@ mid-session notice, and the redirect to `/login`.
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/web/src/api/client.ts` | Modified | Epoch counter, `advanceSessionEpoch()`, epoch check before invoking the handler |
-| `apps/web/src/auth/AuthProvider.tsx` | Modified | Advance the epoch at login success, logout start, and session end in the handler |
-| `apps/web/src/api/client.test.ts` | Modified | Epoch-aware handler tests; reset in `beforeEach` |
-| `apps/web/src/auth/AuthProvider.test.tsx` | Modified | Stale 401 after re-login, stale 401 across logout, whole-flow redirect test |
-| `openspec/changes/stale-401-session-guard/specs/authentication/spec.md` | New | Delta spec (MODIFIED requirements) |
-| `docs/technical-debt.md` | Modified | TD-25 moved to Resolved |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modified | Resolution note on addendum item 6 |
+| Area                                                                    | Impact   | Description                                                                      |
+| ----------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------- |
+| `apps/web/src/api/client.ts`                                            | Modified | Epoch counter, `advanceSessionEpoch()`, epoch check before invoking the handler  |
+| `apps/web/src/auth/AuthProvider.tsx`                                    | Modified | Advance the epoch at login success, logout start, and session end in the handler |
+| `apps/web/src/api/client.test.ts`                                       | Modified | Epoch-aware handler tests; reset in `beforeEach`                                 |
+| `apps/web/src/auth/AuthProvider.test.tsx`                               | Modified | Stale 401 after re-login, stale 401 across logout, whole-flow redirect test      |
+| `openspec/changes/stale-401-session-guard/specs/authentication/spec.md` | New      | Delta spec (MODIFIED requirements)                                               |
+| `docs/technical-debt.md`                                                | Modified | TD-25 moved to Resolved                                                          |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`              | Modified | Resolution note on addendum item 6                                               |
 
 Unaffected: the API, `LoginPage`, `ProtectedRoute`, i18n files.
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| Wrong ordering of the epoch advance (after `updateUser`, or late in `logout()`) reopens the race | Low | Tests with deferred fetches pin the ordering |
-| Module-level epoch leaks between tests | Low | Reset in `beforeEach`; vitest isolates modules per file |
-| A legitimate current-session 401 is wrongly treated as stale | Low | Existing "session ended on a mid-session 401" tests stay green; whole-flow test added |
-| The stale path is not browser-verified | Medium (accepted) | Deterministic tests; stated explicitly as test-verified only (user decision 3) |
-| The `auth-live-user-check` archive-report W-2 text was not located | Low | Origin evidence relies on TD-25 and ADR-011 item 6 |
+| Risk                                                                                             | Likelihood        | Mitigation                                                                            |
+| ------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------- |
+| Wrong ordering of the epoch advance (after `updateUser`, or late in `logout()`) reopens the race | Low               | Tests with deferred fetches pin the ordering                                          |
+| Module-level epoch leaks between tests                                                           | Low               | Reset in `beforeEach`; vitest isolates modules per file                               |
+| A legitimate current-session 401 is wrongly treated as stale                                     | Low               | Existing "session ended on a mid-session 401" tests stay green; whole-flow test added |
+| The stale path is not browser-verified                                                           | Medium (accepted) | Deterministic tests; stated explicitly as test-verified only (user decision 3)        |
+| The `auth-live-user-check` archive-report W-2 text was not located                               | Low               | Origin evidence relies on TD-25 and ADR-011 item 6                                    |
 
 ## Rollback Plan
 

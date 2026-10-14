@@ -30,19 +30,19 @@ decisions below).
 
 These were closed with the product owner. They are inputs, not open items.
 
-| Decision | Resolution |
-|---|---|
-| Entity shape | `Community` = `id`, `name`, `address`, `locale`, `deletedAt`. **No `contactInfo`** — replaced by the assignment lists. |
-| Assignment model | **Two distinct concepts**, not one generic "membership": community **representatives** and community **technicians**. |
-| Representative exclusivity | Exactly **one active representative per community** at any time. Activating one auto-deactivates the currently-active representative *of that same community*. |
-| Deactivation semantics | Deactivated representative records **persist and can be reactivated at any time** — reversible toggle, not a one-way historical close-out. Reactivation re-applies the exclusivity rule. |
-| Representative in multiple communities | **Allowed**, not blocked. The activation call that creates this situation returns a **warning in its response**; the activation still succeeds (warning, not a validation error). |
-| Technician exclusivity | **None.** Many active technicians per community; a technician may be active in many communities, **with no warning**. The multi-community warning applies to representatives only. |
-| Eligibility gate | A user may join a community's representative list only if their global `role` is exactly `COMMUNITY_REPRESENTATIVE`; the technician list only if it is exactly `MAINTENANCE_TECHNICIAN` (`apps/api/src/modules/users/domain/role.ts`). |
-| User creation | **Not in this slice.** Reuse the existing `users` CRUD from `user-management-roles`. This slice only links an *existing* user to a community. |
-| Permission enforcement | **Out of scope.** `COMMUNITY_REPRESENTATIVE` and `MAINTENANCE_TECHNICIAN` stay functionally inert (`[]` in `role-permission.checker.ts`) after this slice. |
+| Decision                                                | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entity shape                                            | `Community` = `id`, `name`, `address`, `locale`, `deletedAt`. **No `contactInfo`** — replaced by the assignment lists.                                                                                                                                                                                                                                                                                                                                                                  |
+| Assignment model                                        | **Two distinct concepts**, not one generic "membership": community **representatives** and community **technicians**.                                                                                                                                                                                                                                                                                                                                                                   |
+| Representative exclusivity                              | Exactly **one active representative per community** at any time. Activating one auto-deactivates the currently-active representative _of that same community_.                                                                                                                                                                                                                                                                                                                          |
+| Deactivation semantics                                  | Deactivated representative records **persist and can be reactivated at any time** — reversible toggle, not a one-way historical close-out. Reactivation re-applies the exclusivity rule.                                                                                                                                                                                                                                                                                                |
+| Representative in multiple communities                  | **Allowed**, not blocked. The activation call that creates this situation returns a **warning in its response**; the activation still succeeds (warning, not a validation error).                                                                                                                                                                                                                                                                                                       |
+| Technician exclusivity                                  | **None.** Many active technicians per community; a technician may be active in many communities, **with no warning**. The multi-community warning applies to representatives only.                                                                                                                                                                                                                                                                                                      |
+| Eligibility gate                                        | A user may join a community's representative list only if their global `role` is exactly `COMMUNITY_REPRESENTATIVE`; the technician list only if it is exactly `MAINTENANCE_TECHNICIAN` (`apps/api/src/modules/users/domain/role.ts`).                                                                                                                                                                                                                                                  |
+| User creation                                           | **Not in this slice.** Reuse the existing `users` CRUD from `user-management-roles`. This slice only links an _existing_ user to a community.                                                                                                                                                                                                                                                                                                                                           |
+| Permission enforcement                                  | **Out of scope.** `COMMUNITY_REPRESENTATIVE` and `MAINTENANCE_TECHNICIAN` stay functionally inert (`[]` in `role-permission.checker.ts`) after this slice.                                                                                                                                                                                                                                                                                                                              |
 | Eligibility drift (role change while actively assigned) | **Accepted for now, documented as a gap.** The real rule — block removal/role-change once the user has performed a `ReviewSession` for that community (any community, for role changes) — depends on `ReviewSession`, which does not exist yet (deferred entity). Until that slice ships, a `SYSTEM_ADMIN` may freely change an actively-assigned user's global role; the assignment is left as-is (no cascade deactivation, no block). Revisit this policy when `ReviewSession` lands. |
-| Reactivation precondition | A soft-deleted user **stays deleted permanently** — no restore capability exists anywhere in `users` (confirmed: only the in-memory test fake implements `restore`). Reactivating an assignment for a soft-deleted user must therefore be rejected. |
+| Reactivation precondition                               | A soft-deleted user **stays deleted permanently** — no restore capability exists anywhere in `users` (confirmed: only the in-memory test fake implements `restore`). Reactivating an assignment for a soft-deleted user must therefore be rejected.                                                                                                                                                                                                                                     |
 
 ## Scope
 
@@ -92,7 +92,7 @@ These were closed with the product owner. They are inputs, not open items.
   `ReviewTemplate`, `ElementReviewEntry`, `QuestionAnswer`.
 - `MaintenanceCompany` / `CommunityMaintenanceAssignment` — the company side
   does not exist (FR-002, unbuilt); a company↔community join is meaningless
-  without it. Note this is a *different* concept from the technician
+  without it. Note this is a _different_ concept from the technician
   assignment in this slice, which links a **user** to a community.
 - `PropertyManagementCompany` (ADR-012) — unrelated singleton, no dependency
   on `Community`.
@@ -108,7 +108,7 @@ and each one is tempting. The walking-skeleton rule says a slice earns a
 concept only when the slice needs it:
 
 - **Permission wiring is excluded** because there is still no
-  community-scoped *resource* for a representative or technician to act on.
+  community-scoped _resource_ for a representative or technician to act on.
   Granting permissions now would mean inventing the scoping rules for
   endpoints that do not exist. The assignment data must exist before
   authorization can meaningfully consume it — that ordering is the point.
@@ -117,7 +117,7 @@ concept only when the slice needs it:
 - **The web UI is excluded** because the API contract is what the next slices
   consume, and `user-management-roles` already set the API-first precedent.
 
-What this slice *does* need — and therefore takes on — is the assignment
+What this slice _does_ need — and therefore takes on — is the assignment
 state machine, because the exclusivity and reactivation rules are real
 business rules that cannot be deferred without shipping a `Community` that
 records nothing meaningful about who runs it.
@@ -145,17 +145,17 @@ Mirror the `users` module **exactly**. `user-management-roles` produced a
 reviewed, archived Clean Architecture reference implementation; this slice
 copies its layering rather than inventing a second style:
 
-| `apps/api/src/modules/users/**` | → mirrored under `apps/api/src/modules/community/**` |
-|---|---|
-| `domain/user.entity.ts` (no Prisma, ADR-013) | `domain/community.entity.ts` + assignment domain type(s) |
-| `domain/errors/*.error.ts` | assignment/eligibility/not-found domain errors |
-| `application/ports/user.repository.port.ts` | community + assignment repository port(s) with a `Symbol` token |
-| `application/use-cases/*.use-case.ts` | community CRUD + assignment lifecycle use cases |
-| `application/use-cases/testing/in-memory-user.repository.ts` | in-memory fake for the same port, with invariant parity |
+| `apps/api/src/modules/users/**`                                                                 | → mirrored under `apps/api/src/modules/community/**`                    |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `domain/user.entity.ts` (no Prisma, ADR-013)                                                    | `domain/community.entity.ts` + assignment domain type(s)                |
+| `domain/errors/*.error.ts`                                                                      | assignment/eligibility/not-found domain errors                          |
+| `application/ports/user.repository.port.ts`                                                     | community + assignment repository port(s) with a `Symbol` token         |
+| `application/use-cases/*.use-case.ts`                                                           | community CRUD + assignment lifecycle use cases                         |
+| `application/use-cases/testing/in-memory-user.repository.ts`                                    | in-memory fake for the same port, with invariant parity                 |
 | `infrastructure/persistence/prisma-user.repository.ts` (extends `soft-deletable.repository.ts`) | Prisma adapter with the same default `deletedAt: null` filter (ADR-010) |
-| `infrastructure/persistence/user.mapper.ts` | persistence ↔ domain mapper |
-| `presentation/users.controller.ts` + `dto/**` | `community.controller.ts` + assignment routes + DTOs |
-| `users.module.ts` | `community.module.ts` |
+| `infrastructure/persistence/user.mapper.ts`                                                     | persistence ↔ domain mapper                                             |
+| `presentation/users.controller.ts` + `dto/**`                                                   | `community.controller.ts` + assignment routes + DTOs                    |
+| `users.module.ts`                                                                               | `community.module.ts`                                                   |
 
 Three deliberate choices at proposal level:
 
@@ -190,34 +190,34 @@ Three deliberate choices at proposal level:
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma`, `migrations/` | Modified | `Community` model + assignment storage |
-| `apps/api/src/modules/community/domain/**` | New | Entity, assignment domain, invariant, errors |
-| `apps/api/src/modules/community/application/**` | New | Port(s), CRUD + assignment use cases, in-memory fake |
-| `apps/api/src/modules/community/infrastructure/persistence/**` | New | Prisma adapter (extends `soft-deletable.repository.ts`), mapper |
-| `apps/api/src/modules/community/presentation/**` | New | Controller, assignment routes, DTOs |
-| `apps/api/src/modules/community/community.module.ts` | New | Providers + controller wiring |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modified | Extend `Permission` union |
-| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified | Grant new permissions to `SYSTEM_ADMIN` only |
-| `apps/api/src/modules/users/application/ports/user.repository.port.ts` | Possibly modified | Read access for the eligibility check (may already suffice via `findById`) |
-| `packages/validation/src/community/**` | New | Zod schemas shared web/API |
-| `apps/api/test/**` | New | E2E suite for community + assignments |
+| Area                                                                                | Impact            | Description                                                                |
+| ----------------------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`, `migrations/`                                      | Modified          | `Community` model + assignment storage                                     |
+| `apps/api/src/modules/community/domain/**`                                          | New               | Entity, assignment domain, invariant, errors                               |
+| `apps/api/src/modules/community/application/**`                                     | New               | Port(s), CRUD + assignment use cases, in-memory fake                       |
+| `apps/api/src/modules/community/infrastructure/persistence/**`                      | New               | Prisma adapter (extends `soft-deletable.repository.ts`), mapper            |
+| `apps/api/src/modules/community/presentation/**`                                    | New               | Controller, assignment routes, DTOs                                        |
+| `apps/api/src/modules/community/community.module.ts`                                | New               | Providers + controller wiring                                              |
+| `apps/api/src/shared/application/authorization/permission.ts`                       | Modified          | Extend `Permission` union                                                  |
+| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified          | Grant new permissions to `SYSTEM_ADMIN` only                               |
+| `apps/api/src/modules/users/application/ports/user.repository.port.ts`              | Possibly modified | Read access for the eligibility check (may already suffice via `findById`) |
+| `packages/validation/src/community/**`                                              | New               | Zod schemas shared web/API                                                 |
+| `apps/api/test/**`                                                                  | New               | E2E suite for community + assignments                                      |
 
 Untouched by design: `apps/web/**` (API-only slice), `uuid-v7.id-generator.ts`
 (reused as-is via the global `IdGeneratorModule`).
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Race on representative activation — two concurrent activations both observe "no active rep" and both commit, breaking the one-active invariant | Med | Reuse the `users` `transactional()` + `SERIALIZABLE` seam and surface `TransactionConflictError` as 409; back it with a DB-level constraint decided in `sdd-design` |
-| Eligibility drift — a user is assigned as representative, then their global role is changed to something else via `/users`, leaving an active assignment held by an ineligible user | Med | **Resolved at proposal level**: drift is accepted for now (no block, no cascade). The real rule — block once the user has performed a `ReviewSession` — is deferred to the `ReviewSession` slice and documented as a known gap in the Settled decisions table. `sdd-spec` writes this as an explicit accepted-drift scenario, not an accident |
-| Reactivation resurrects an assignment for a user who has since been soft-deleted | Low | **Resolved at proposal level**: soft-deleted users stay deleted permanently (no restore capability exists in `users`); reactivating an assignment for a soft-deleted user must be rejected. `sdd-spec` writes this as an explicit scenario |
-| Two-tables-vs-one-table decision made implicitly during `sdd-apply` instead of `sdd-design` | Med | Flagged above as an explicit design-phase decision with a required rationale |
-| Scope creep toward permission wiring — "assignments exist now, let's make the role real" | High | Permission enforcement is an explicit non-goal; `ROLE_PERMISSIONS` keeps the four non-admin roles at `[]` and `sdd-verify` should assert that |
-| Two similar assignment concepts invite a premature generic abstraction that hides the exclusivity asymmetry | Med | Treat them as two named concepts in the domain language; any shared implementation must be justified in `sdd-design`, not assumed |
-| The warning payload is silently dropped by clients, so multi-community representatives go unnoticed | Low | Ship it as a typed, documented field in the response DTO + Swagger; no web consumer exists yet to break |
+| Risk                                                                                                                                                                                | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Race on representative activation — two concurrent activations both observe "no active rep" and both commit, breaking the one-active invariant                                      | Med        | Reuse the `users` `transactional()` + `SERIALIZABLE` seam and surface `TransactionConflictError` as 409; back it with a DB-level constraint decided in `sdd-design`                                                                                                                                                                           |
+| Eligibility drift — a user is assigned as representative, then their global role is changed to something else via `/users`, leaving an active assignment held by an ineligible user | Med        | **Resolved at proposal level**: drift is accepted for now (no block, no cascade). The real rule — block once the user has performed a `ReviewSession` — is deferred to the `ReviewSession` slice and documented as a known gap in the Settled decisions table. `sdd-spec` writes this as an explicit accepted-drift scenario, not an accident |
+| Reactivation resurrects an assignment for a user who has since been soft-deleted                                                                                                    | Low        | **Resolved at proposal level**: soft-deleted users stay deleted permanently (no restore capability exists in `users`); reactivating an assignment for a soft-deleted user must be rejected. `sdd-spec` writes this as an explicit scenario                                                                                                    |
+| Two-tables-vs-one-table decision made implicitly during `sdd-apply` instead of `sdd-design`                                                                                         | Med        | Flagged above as an explicit design-phase decision with a required rationale                                                                                                                                                                                                                                                                  |
+| Scope creep toward permission wiring — "assignments exist now, let's make the role real"                                                                                            | High       | Permission enforcement is an explicit non-goal; `ROLE_PERMISSIONS` keeps the four non-admin roles at `[]` and `sdd-verify` should assert that                                                                                                                                                                                                 |
+| Two similar assignment concepts invite a premature generic abstraction that hides the exclusivity asymmetry                                                                         | Med        | Treat them as two named concepts in the domain language; any shared implementation must be justified in `sdd-design`, not assumed                                                                                                                                                                                                             |
+| The warning payload is silently dropped by clients, so multi-community representatives go unnoticed                                                                                 | Low        | Ship it as a typed, documented field in the response DTO + Swagger; no web consumer exists yet to break                                                                                                                                                                                                                                       |
 
 ## Rollback Plan
 

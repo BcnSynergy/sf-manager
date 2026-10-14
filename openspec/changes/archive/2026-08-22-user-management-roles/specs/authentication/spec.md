@@ -20,16 +20,19 @@ identity fields, now including `role`.
 carry role.)
 
 #### Scenario: Valid session
+
 - GIVEN a valid access-token cookie from a successful login
 - WHEN the client calls `GET /auth/me`
 - THEN the response MUST be 2xx with a body containing `{ id, email, role }`
 
 #### Scenario: No or invalid session
+
 - GIVEN no cookie, an expired token, or a tampered token
 - WHEN the client calls `GET /auth/me`
 - THEN the response MUST be 401
 
 #### Scenario: Access token carries role
+
 - GIVEN a user with a given role successfully logs in
 - WHEN the resulting access token is decoded
 - THEN it MUST contain that user's `role` alongside the existing claims

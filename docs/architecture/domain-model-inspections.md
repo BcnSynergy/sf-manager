@@ -38,7 +38,7 @@ for why this split exists.
 Every entity's `id` is a **UUIDv7** primary key ([ADR-009](../adr/ADR-009-primary-key-strategy-uuidv7.md))
 — internal, never printed or exposed as a scannable identifier.
 `InspectableElement.code` (below) is the one exception: a separate, short,
-human/QR-facing public identifier, deliberately *not* time-ordered, distinct
+human/QR-facing public identifier, deliberately _not_ time-ordered, distinct
 from `id` on purpose.
 
 Every **reference/master-data** entity — `Community`, `MaintenanceCompany`,
@@ -59,6 +59,7 @@ exists in its place.
 ## Entities
 
 ### PropertyManagementCompany
+
 Singleton — exactly one per deployment
 ([ADR-001](../adr/ADR-001-deployment-model-single-instance-per-property-manager.md)),
 holding the company's own corporate data used on report headers/branding
@@ -72,11 +73,13 @@ foreign-keyed from elsewhere) — omitted from the ER diagram below for that
 reason.
 
 ### Community
+
 A residential building managed under this installation. `id`, `name`,
 `address`, `locale` (default UI language for this community's users),
 `contactInfo`.
 
 ### MaintenanceCompany
+
 `id`, `name`, `taxId`, `contactInfo`.
 
 > Per [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md),
@@ -87,6 +90,7 @@ A residential building managed under this installation. `id`, `name`,
 > not the norm); revisit if it ever comes up for real.
 
 ### Community-to-technician scope (correction, `review-session` PR 8 — `CommunityMaintenanceAssignment` never shipped)
+
 This doc previously documented a `CommunityMaintenanceAssignment` join
 entity (`communityId`, `maintenanceCompanyId`, `active`) as the mechanism
 that resolves a `MAINTENANCE_TECHNICIAN`'s access scope. **That entity was
@@ -110,8 +114,8 @@ Exposed through `CommunityTechnicianRepository` (`findByCommunityAndUser`,
 timestamp). `COMMUNITY_REPRESENTATIVE` mirrors this exactly via the sibling
 `CommunityRepresentative`/`CommunityRepresentativeRepository` pair, already
 correctly documented on `User` below. There is no company-to-community
-assignment at all: a technician's scope is a set of communities *that
-technician* is individually assigned to, not a set inherited from their
+assignment at all: a technician's scope is a set of communities _that
+technician_ is individually assigned to, not a set inherited from their
 `MaintenanceCompany` having a company-wide assignment to that community.
 
 At request time, `review-session/design.md` Decision 4's
@@ -136,10 +140,12 @@ mechanism in full.
 > granularity, revisit if needed.
 
 ### User
+
 `id`, `name`, `email`, `passwordHash`, `role` (`SYSTEM_ADMIN` | `MANAGER` |
 `MAINTENANCE_COMPANY_MANAGER` | `MAINTENANCE_TECHNICIAN` |
 `COMMUNITY_REPRESENTATIVE` — [ADR-011](../adr/ADR-011-expanded-roles-and-auth-architecture.md)),
 `locale`, plus role-dependent fields:
+
 - `SYSTEM_ADMIN` — no extra field, scope is global, unrestricted.
 - `MANAGER` — `managerCapabilities` (set of `MANAGE_COMMUNITIES` |
   `MANAGE_MAINTENANCE_COMPANIES` | `MANAGE_CHECKLIST_CONTENT` |
@@ -149,9 +155,9 @@ mechanism in full.
   CRUD over that company's `MAINTENANCE_TECHNICIAN` users, read access to
   every review performed by any of them.
 - `MAINTENANCE_TECHNICIAN` — `maintenanceCompanyId` (fixed, for company
-  membership); the scope for *performing* reviews is resolved dynamically,
+  membership); the scope for _performing_ reviews is resolved dynamically,
   per community, via the direct `CommunityTechnician` `(communityId,
-  userId)` assignment — **correction**: not via `CommunityMaintenanceAssignment`,
+userId)` assignment — **correction**: not via `CommunityMaintenanceAssignment`,
   which was never shipped; see "Community-to-technician scope" above.
   Review **visibility** is narrower — only sessions where
   `performedById = self`.
@@ -162,11 +168,13 @@ mechanism in full.
   employee.
 
 ### ElementType (code-level enum, ADR-008)
+
 `EXTINGUISHER` today; `BIE`, `EMERGENCY_LIGHTING`, `FIRE_DOOR`, ... added by
 development as needed. Not a database table — a TypeScript discriminated
 union, so each type's detail attributes stay strongly typed.
 
 ### InspectableElement
+
 Base fields shared by every element type: `id`, `communityId`,
 `elementType`, `name`, `description?`, `location` (free text, e.g. "planta
 baja, pasillo"), `imageUrl?`, `installedAt`.
@@ -178,10 +186,10 @@ Decision 3 — **correction**: this doc previously speculated a boolean
 not a boolean). Orthogonal to `deletedAt` (ADR-010) — two independent
 columns for two different audiences:
 
-| Column | Meaning | Effect on reads |
-|---|---|---|
-| `deletedAt` | administrative delete (ADR-010) | Hides the row from **every** read |
-| `deactivatedAt` | domain state: decommissioned | Hides it from review eligibility only; stays in the admin list so it can be reactivated |
+| Column          | Meaning                         | Effect on reads                                                                         |
+| --------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
+| `deletedAt`     | administrative delete (ADR-010) | Hides the row from **every** read                                                       |
+| `deactivatedAt` | domain state: decommissioned    | Hides it from review eligibility only; stays in the admin list so it can be reactivated |
 
 Review eligibility (whether an element is due for review, and whether a
 scanned `code` resolves at all) is `deletedAt IS NULL AND deactivatedAt IS
@@ -194,6 +202,7 @@ so no new permission was added for this.
 its questions → move to the next element. The manufacturer's serial number
 is unreliable for this (often hard to locate/read on the physical unit), so
 identification is driven by an **app-generated `code`** instead:
+
 - `code`: a short (10-character), random, non-sequential public identifier
   generated by the app when the element is registered — **not** the raw
   `id` UUID. Uses an alphabet that excludes visually ambiguous characters
@@ -229,6 +238,7 @@ in English per the project's naming convention, see
 [compliance doc](../compliance/ripci-extinguisher-maintenance-program.md))
 is tracked on `InspectableElement` directly, since it's a per-element clock,
 not a community-scheduled `ReviewSession`:
+
 - `lastHydrostaticTestAt?`: date of the most recent test.
 - `hydrostaticTestCount`: how many times it's been done (default 0).
 
@@ -242,15 +252,18 @@ constant, not stored as a flag.
 
 Type-specific details, one shape per `ElementType` (illustrative, refined
 when each type is actually implemented):
+
 - `ExtinguisherDetails`: `weightKg`, `agentType`
   (`POWDER`/`CO2`/`FOAM`/`WATER`), `efficacyRating`.
 - Other types: not yet designed — added when first needed.
 
 ### ReviewFrequency (code-level enum, ADR-008)
+
 `MONTHLY` | `QUARTERLY` | `SEMIANNUAL` | `ANNUAL` (M/T/S/A from the
 original form).
 
 ### ChecklistQuestion
+
 The **pool** of available questions an admin can draw from — not, by
 itself, what gets asked in any given review (see `ReviewTemplate`).
 `id`, `elementType`, `frequencies` (**set** of `ReviewFrequency` — an
@@ -337,6 +350,7 @@ later soft-deleted, since the frozen read path never touches the pool
 table at all.
 
 ### ReviewTemplateQuestion
+
 Join entity: the curated, ordered selection for one **frozen** template
 version only (**correction, `checklist-management` PR 11**: this table is
 NOT the draft's live selection — that moved to
@@ -347,6 +361,7 @@ the source of displayed wording), `order`, `questionText` (the frozen
 wording snapshot, `NOT NULL`).
 
 ### ReviewSession
+
 One review visit. `id`, `communityId`, `templateId`, `performedById`
 (User), `status` (`draft` | `completed` — binary, per `review-session/
 design.md` Decision 8; no `signed` value, no separate `date` field —
@@ -375,6 +390,7 @@ This protects RIPCI's 5-year documentary retention minimum.
 
 **Review scheduling policy** (verified against
 [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md)):
+
 - Every calendar quarter needs exactly one `ReviewSession` per
   `(community, elementType)` — no gaps.
 - Which quarter uses an `ANNUAL`-frequency template (vs `QUARTERLY`) is
@@ -393,6 +409,7 @@ This protects RIPCI's 5-year documentary retention minimum.
   expected/due) and FR-009 (overdue/upcoming reminders).
 
 ### ElementReviewEntry
+
 `id`, `reviewSessionId`, `inspectableElementId`, `recordedAt`. One row per
 physical element checked in that session.
 
@@ -417,6 +434,7 @@ the intra-row half (it cannot see sibling `QuestionAnswer` rows, so it
 guards only what a table constraint honestly can).
 
 ### QuestionAnswer
+
 `id`, `elementReviewEntryId`, `questionId`, `answer`
 (`YES` | `NO` | `NOT_APPLICABLE`).
 
@@ -449,7 +467,7 @@ erDiagram
   slice is actually implemented.
 - The hydrostatic test is tracked but has no workflow yet (who records
   `lastHydrostaticTestAt`, from where) — deferred, see compliance doc.
-- ~~If a `ChecklistQuestion`'s *text* changes (not just which questions
+- ~~If a `ChecklistQuestion`'s _text_ changes (not just which questions
   are bundled), should that force a new template version too, or edit the
   question in place (which would retroactively change the wording shown
   for old, already-answered sessions referencing it)?~~ **Closed,

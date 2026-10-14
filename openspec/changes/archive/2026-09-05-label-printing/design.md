@@ -94,7 +94,7 @@ runtime path, not a parallel one); the retry loop absorbs the astronomically
 unlikely collision; `SET NOT NULL` fails the whole migration closed if any row
 was somehow missed. Re-runnable from empty: zero rows means the `DO` block is a
 no-op. Backfill uses SQL `random()`, not a CSPRNG — deliberate: the domain model
-requires *non-sequential*, not *unguessable*, and every code-bearing surface
+requires _non-sequential_, not _unguessable_, and every code-bearing surface
 stays authenticated.
 
 ### Decision 4a: transitional DB default bridges the PR1→PR3 window
@@ -119,7 +119,7 @@ since the `P2002`→`ElementCodeAlreadyExistsError` mapping is PR3 task 3.5.
 **Consequence, stated plainly**: any row created via the real API during the
 PR1→PR3 window gets a bridge-generated code. Per the scope-guard in Phase 7
 (task 7.5 — no `code` regeneration/reassignment path ever exists), those
-codes are **permanent**, not cleaned up once PR3 lands; only the *default*
+codes are **permanent**, not cleaned up once PR3 lands; only the _default_
 becomes inert going forward, not any rows already created under it.
 
 **Risk accepted, not eliminated**: collision probability is negligible
@@ -156,7 +156,7 @@ bundle. Rendering the matrix ourselves is what makes the proposal's "decode the
 rendered QR" criterion honest: the test reads rects out of the DOM,
 reconstructs the boolean matrix, rasterizes it into an `ImageData` buffer and
 lets `jsqr` decode it — no canvas, no native dependency, and it asserts the
-*output*, not the input. Level `H` (30% recovery) is affordable because the
+_output_, not the input. Level `H` (30% recovery) is affordable because the
 payload is 10 uppercase-alphanumeric characters: QR alphanumeric mode, version
 1-H holds exactly 10 — a 21×21 grid, the smallest possible symbol, so `H` costs
 nothing in module count. (Gotcha: the alphabet being uppercase-only is what
@@ -246,37 +246,37 @@ separate docs change.
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `packages/validation/src/inspectable-element/inspectable-element.schema.ts` | Modify | `ELEMENT_CODE_ALPHABET`, `ELEMENT_CODE_LENGTH`, `elementCodeSchema` (single declaration) |
-| `apps/api/src/modules/inspectable-element/domain/element-code.ts` | Create | Re-export alphabet/length + `isElementCode()` predicate |
-| `.../domain/inspectable-element.entity.ts` | Modify | `readonly code: string` (+ props) |
-| `.../domain/errors/element-code-generation-failed.error.ts` | Create | Thrown when the 3 attempts are exhausted |
-| `.../domain/errors/element-code-already-exists.error.ts` | Create | Repository's `P2002` translation, consumed only by the retry loop |
-| `.../application/ports/element-code-generator.port.ts` | Create | `ElementCodeGenerator` + `ELEMENT_CODE_GENERATOR`, shaped like `id-generator.port.ts` |
-| `.../infrastructure/code/random-element-code.generator.ts` | Create | `node:crypto` `randomInt` adapter over the alphabet |
-| `.../infrastructure/code/random-element-code.generator.spec.ts` | Create | Large-sample alphabet/length assertions |
-| `.../application/use-cases/create-inspectable-element.use-case.ts` | Modify | Generate `code`, bounded 3-attempt retry, `code` in the result |
-| `.../application/use-cases/{list,update}-*.use-case.ts` | Modify | `code` on the result type |
-| `.../application/use-cases/testing/in-memory-inspectable-element.repository.ts` | Modify | Track codes; `create()` throws `ElementCodeAlreadyExistsError` on duplicate |
-| `.../infrastructure/persistence/prisma-inspectable-element.repository.ts` | Modify | `create()` maps `P2002` on `InspectableElement_code_key` |
-| `.../infrastructure/persistence/inspectable-element.mapper.ts` | Modify | `code` both directions |
+| File                                                                               | Action | Description                                                                                             |
+| ---------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| `packages/validation/src/inspectable-element/inspectable-element.schema.ts`        | Modify | `ELEMENT_CODE_ALPHABET`, `ELEMENT_CODE_LENGTH`, `elementCodeSchema` (single declaration)                |
+| `apps/api/src/modules/inspectable-element/domain/element-code.ts`                  | Create | Re-export alphabet/length + `isElementCode()` predicate                                                 |
+| `.../domain/inspectable-element.entity.ts`                                         | Modify | `readonly code: string` (+ props)                                                                       |
+| `.../domain/errors/element-code-generation-failed.error.ts`                        | Create | Thrown when the 3 attempts are exhausted                                                                |
+| `.../domain/errors/element-code-already-exists.error.ts`                           | Create | Repository's `P2002` translation, consumed only by the retry loop                                       |
+| `.../application/ports/element-code-generator.port.ts`                             | Create | `ElementCodeGenerator` + `ELEMENT_CODE_GENERATOR`, shaped like `id-generator.port.ts`                   |
+| `.../infrastructure/code/random-element-code.generator.ts`                         | Create | `node:crypto` `randomInt` adapter over the alphabet                                                     |
+| `.../infrastructure/code/random-element-code.generator.spec.ts`                    | Create | Large-sample alphabet/length assertions                                                                 |
+| `.../application/use-cases/create-inspectable-element.use-case.ts`                 | Modify | Generate `code`, bounded 3-attempt retry, `code` in the result                                          |
+| `.../application/use-cases/{list,update}-*.use-case.ts`                            | Modify | `code` on the result type                                                                               |
+| `.../application/use-cases/testing/in-memory-inspectable-element.repository.ts`    | Modify | Track codes; `create()` throws `ElementCodeAlreadyExistsError` on duplicate                             |
+| `.../infrastructure/persistence/prisma-inspectable-element.repository.ts`          | Modify | `create()` maps `P2002` on `InspectableElement_code_key`                                                |
+| `.../infrastructure/persistence/inspectable-element.mapper.ts`                     | Modify | `code` both directions                                                                                  |
 | `.../infrastructure/persistence/inspectable-element-migration.integration.spec.ts` | Modify | Unique index present; `code` is `character varying(10)`, `NOT NULL`; every row well-formed and distinct |
-| `.../presentation/dto/inspectable-element-response.dto.ts` | Modify | `code` + `@ApiProperty` |
-| `.../presentation/inspectable-element.controller.ts` | Modify | Map `ElementCodeGenerationFailedError` to a 500 (no error code) |
-| `.../inspectable-element.module.ts` | Modify | Bind `ELEMENT_CODE_GENERATOR` |
-| `apps/api/prisma/schema.prisma` | Modify | `code String @unique @db.VarChar(10)` |
-| `apps/api/prisma/migrations/<ts>_add_inspectable_element_code/migration.sql` | Create | Add column → unique index → `DO` backfill → `SET NOT NULL` |
-| `apps/api/test/inspectable-element.e2e-spec.ts` | Modify | `code` present/well-formed, distinct across creates, unchanged by PATCH |
-| `apps/web/package.json` | Modify | `+qrcode`; dev `+@types/qrcode`, `+jsqr` |
-| `apps/web/src/api/inspectable-element.ts` | Modify | `code` on the `InspectableElement` type |
-| `apps/web/src/inspectable-element/ElementQrCode.tsx` | Create | Matrix → `<svg>` rects, no canvas |
-| `apps/web/src/pages/InspectableElementLabelPage.tsx` (+ `.test.tsx`) | Create | QR + code + name/location/community + Print |
-| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test) | Modify | `code` column + per-row Print link |
-| `apps/web/src/App.tsx` | Modify | The `:elementId/label` route |
-| `apps/web/src/index.css` | Modify | `@media print` block, `.label-print` |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real translations for the label/print keys |
-| `docs/architecture/domain-model-inspections.md` | Modify | Bare-`code` QR payload, immutability, batch deferral |
+| `.../presentation/dto/inspectable-element-response.dto.ts`                         | Modify | `code` + `@ApiProperty`                                                                                 |
+| `.../presentation/inspectable-element.controller.ts`                               | Modify | Map `ElementCodeGenerationFailedError` to a 500 (no error code)                                         |
+| `.../inspectable-element.module.ts`                                                | Modify | Bind `ELEMENT_CODE_GENERATOR`                                                                           |
+| `apps/api/prisma/schema.prisma`                                                    | Modify | `code String @unique @db.VarChar(10)`                                                                   |
+| `apps/api/prisma/migrations/<ts>_add_inspectable_element_code/migration.sql`       | Create | Add column → unique index → `DO` backfill → `SET NOT NULL`                                              |
+| `apps/api/test/inspectable-element.e2e-spec.ts`                                    | Modify | `code` present/well-formed, distinct across creates, unchanged by PATCH                                 |
+| `apps/web/package.json`                                                            | Modify | `+qrcode`; dev `+@types/qrcode`, `+jsqr`                                                                |
+| `apps/web/src/api/inspectable-element.ts`                                          | Modify | `code` on the `InspectableElement` type                                                                 |
+| `apps/web/src/inspectable-element/ElementQrCode.tsx`                               | Create | Matrix → `<svg>` rects, no canvas                                                                       |
+| `apps/web/src/pages/InspectableElementLabelPage.tsx` (+ `.test.tsx`)               | Create | QR + code + name/location/community + Print                                                             |
+| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test)                        | Modify | `code` column + per-row Print link                                                                      |
+| `apps/web/src/App.tsx`                                                             | Modify | The `:elementId/label` route                                                                            |
+| `apps/web/src/index.css`                                                           | Modify | `@media print` block, `.label-print`                                                                    |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                        | Modify | Real translations for the label/print keys                                                              |
+| `docs/architecture/domain-model-inspections.md`                                    | Modify | Bare-`code` QR payload, immutability, batch deferral                                                    |
 
 ## Interfaces / Contracts
 
@@ -316,16 +316,16 @@ ALTER TABLE "InspectableElement" ALTER COLUMN "code" SET NOT NULL;
 
 ## Testing Strategy
 
-| Layer | What | Approach |
-|---|---|---|
-| Unit (api) | Generator | 10,000 codes: length 10, every char in the alphabet, none of `0O1IL`; all distinct |
-| Unit (api) | Retry path | Fake generator returns a duplicate then a fresh code; in-memory repo throws `ElementCodeAlreadyExistsError` — assert two `create` calls and the second code stored; a always-duplicate fake asserts `ElementCodeGenerationFailedError` after exactly 3 |
-| Integration (api) | Schema + backfill | `pg_indexes` has `InspectableElement_code_key` (UNIQUE); `information_schema` says `character varying(10)`, `is_nullable = 'NO'`; zero rows fail `^[2-9A-HJKMNP-Z]{10}$`; `count(distinct code) = count(*)` |
-| Integration (api) | Prisma adapter | Real duplicate insert → `ElementCodeAlreadyExistsError`, not a raw `P2002` |
-| E2E (api) | Contract | `code` on create/list/update responses; two creates differ; `PATCH {code}` leaves the stored value untouched |
-| Unit (web) | QR output | Read `<rect>`s from the DOM → rebuild matrix → rasterize to `ImageData` → `jsQR` decodes **exactly** the code, not a URL |
-| Unit (web) | Label page | Loading/error/not-found states; code + name/location/community rendered; Print calls a spied `window.print`; locales parity |
-| Browser | CLAUDE.md | Print preview on the real dev server: chrome suppressed, QR black-on-white in both OS colour schemes, phone scan yields the code string |
+| Layer             | What              | Approach                                                                                                                                                                                                                                               |
+| ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit (api)        | Generator         | 10,000 codes: length 10, every char in the alphabet, none of `0O1IL`; all distinct                                                                                                                                                                     |
+| Unit (api)        | Retry path        | Fake generator returns a duplicate then a fresh code; in-memory repo throws `ElementCodeAlreadyExistsError` — assert two `create` calls and the second code stored; a always-duplicate fake asserts `ElementCodeGenerationFailedError` after exactly 3 |
+| Integration (api) | Schema + backfill | `pg_indexes` has `InspectableElement_code_key` (UNIQUE); `information_schema` says `character varying(10)`, `is_nullable = 'NO'`; zero rows fail `^[2-9A-HJKMNP-Z]{10}$`; `count(distinct code) = count(*)`                                            |
+| Integration (api) | Prisma adapter    | Real duplicate insert → `ElementCodeAlreadyExistsError`, not a raw `P2002`                                                                                                                                                                             |
+| E2E (api)         | Contract          | `code` on create/list/update responses; two creates differ; `PATCH {code}` leaves the stored value untouched                                                                                                                                           |
+| Unit (web)        | QR output         | Read `<rect>`s from the DOM → rebuild matrix → rasterize to `ImageData` → `jsQR` decodes **exactly** the code, not a URL                                                                                                                               |
+| Unit (web)        | Label page        | Loading/error/not-found states; code + name/location/community rendered; Print calls a spied `window.print`; locales parity                                                                                                                            |
+| Browser           | CLAUDE.md         | Print preview on the real dev server: chrome suppressed, QR black-on-white in both OS colour schemes, phone scan yields the code string                                                                                                                |
 
 ## Migration / Rollout
 
@@ -349,7 +349,7 @@ meaningless, so do not print at scale until the slice is browser-verified
 
 ## Addendum: Supplied-Code Warning Mechanism
 
-Covers only the spec's *Create Inspectable Element Under a Community* rule added
+Covers only the spec's _Create Inspectable Element Under a Community_ rule added
 after Decision 1–9 were written: a create body carrying a `code` key is **not**
 rejected — the element is created with the generated `code` and the 201 response
 additionally carries `warning: { code: 'SUPPLIED_CODE_IGNORED' }`, absent
@@ -367,7 +367,7 @@ read out of the code:
    `@Body(new ZodValidationPipe(createInspectableElementSchema))`.
 2. **`ZodValidationPipe` does not mutate `req.body`.**
    `apps/api/src/shared/presentation/pipes/zod-validation.pipe.ts` calls
-   `this.schema.safeParse(value)` and returns `result.data` — a *new* stripped
+   `this.schema.safeParse(value)` and returns `result.data` — a _new_ stripped
    object. Nest binds that to the handler argument; `req.body` keeps its `code`
    key.
 
@@ -403,12 +403,12 @@ means in the spec.
 
 **Alternatives considered**:
 
-| Option | Why rejected |
-|---|---|
-| Add `code: z.unknown().optional()` (or `.passthrough()`) to `createInspectableElementSchema` | Directly violates the spec — `code` would become a declared/accepted input field, and the shared schema also feeds the web client |
-| A module-local `CreateInspectableElementZodValidationPipe extends ZodValidationPipe` returning `{ ...data, codeSupplied }` (the `MaintenanceCompanyZodValidationPipe` precedent) | That precedent exists to *re-shape a rejection*; here it would smuggle a non-contract field into the Zod-inferred DTO type, breaking ADR-015's "the schema is the type" |
-| `@Req() request` and read `request.body` | Only `auth.controller.ts` injects `@Req()`, and only because it needs session/cookie state. A second `@Body()` is narrower and carries no Express typing into this module |
-| Detect in the use case from a `code` passed through | Nothing to pass — the key is already gone by then. That is exactly the risk the spec flagged |
+| Option                                                                                                                                                                           | Why rejected                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add `code: z.unknown().optional()` (or `.passthrough()`) to `createInspectableElementSchema`                                                                                     | Directly violates the spec — `code` would become a declared/accepted input field, and the shared schema also feeds the web client                                         |
+| A module-local `CreateInspectableElementZodValidationPipe extends ZodValidationPipe` returning `{ ...data, codeSupplied }` (the `MaintenanceCompanyZodValidationPipe` precedent) | That precedent exists to _re-shape a rejection_; here it would smuggle a non-contract field into the Zod-inferred DTO type, breaking ADR-015's "the schema is the type"   |
+| `@Req() request` and read `request.body`                                                                                                                                         | Only `auth.controller.ts` injects `@Req()`, and only because it needs session/cookie state. A second `@Body()` is narrower and carries no Express typing into this module |
+| Detect in the use case from a `code` passed through                                                                                                                              | Nothing to pass — the key is already gone by then. That is exactly the risk the spec flagged                                                                              |
 
 **Rationale**: Nest resolves each `@Body()` parameter independently from
 `req.body` and applies pipes per parameter, so binding order is irrelevant when
@@ -426,7 +426,7 @@ into a 400 and contradict the spec's "never a 4xx validation error".
 
 **Choice**: the warning is produced in the application layer and flows to a
 create-specific response DTO. Domain and infrastructure are **untouched** — no
-entity field, no column, no mapper change; the warning describes a *request*, not
+entity field, no column, no mapper change; the warning describes a _request_, not
 the element.
 
 ```ts
@@ -486,22 +486,22 @@ keeping the shape minimal keeps the Swagger enum authoritative.
 its `type` to `CreateInspectableElementResponseDto`. The warning never reaches
 `mapMutationError` because nothing throws — it is not a `buildCodedError` case and
 gets no entry in `inspectable-element-error-code.ts` (same earning test as
-Decision 3: coded *errors* are for failures, and this is a success).
+Decision 3: coded _errors_ are for failures, and this is a success).
 
 ### Addendum File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `.../application/use-cases/create-inspectable-element.use-case.ts` | Modify | `SuppliedCodeWarning`, `codeSupplied?: boolean` on the input, `warning?` on the result via conditional spread |
-| `.../presentation/dto/create-inspectable-element-response.dto.ts` | Create | `SuppliedCodeWarningDto` + `CreateInspectableElementResponseDto extends InspectableElementResponseDto` |
-| `.../presentation/inspectable-element.controller.ts` | Modify | Unpiped `@Body() rawBody` param, `Object.hasOwn(rawBody, 'code')`, create return type + `@ApiCreatedResponse` type |
-| `apps/api/test/inspectable-element.e2e-spec.ts` | Modify | The three warning scenarios below |
+| File                                                               | Action | Description                                                                                                        |
+| ------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------ |
+| `.../application/use-cases/create-inspectable-element.use-case.ts` | Modify | `SuppliedCodeWarning`, `codeSupplied?: boolean` on the input, `warning?` on the result via conditional spread      |
+| `.../presentation/dto/create-inspectable-element-response.dto.ts`  | Create | `SuppliedCodeWarningDto` + `CreateInspectableElementResponseDto extends InspectableElementResponseDto`             |
+| `.../presentation/inspectable-element.controller.ts`               | Modify | Unpiped `@Body() rawBody` param, `Object.hasOwn(rawBody, 'code')`, create return type + `@ApiCreatedResponse` type |
+| `apps/api/test/inspectable-element.e2e-spec.ts`                    | Modify | The three warning scenarios below                                                                                  |
 
 ### Addendum Testing Strategy
 
-| Layer | What | Approach |
-|---|---|---|
-| Unit (api) | Use case | `codeSupplied: true` → `result.warning.code === 'SUPPLIED_CODE_IGNORED'`; `codeSupplied` false/omitted → `expect('warning' in result).toBe(false)` (absence, not `toBeUndefined`) |
-| E2E (api) | Warned create | POST with a valid body **plus** `code: 'HACKEDCODE'` → **201**, `body.warning.code === 'SUPPLIED_CODE_IGNORED'`, `body.code !== 'HACKEDCODE'` and matches `^[2-9A-HJKMNP-Z]{10}$` |
-| E2E (api) | Clean create | POST without `code` → 201 and `expect(body).not.toHaveProperty('warning')` — this is the regression fence for the two invariants above (a future global whitelisting pipe fails the warned-create test) |
-| E2E (api) | Not a validation error | The warned create is asserted 201, never 4xx, and the row exists afterwards |
+| Layer      | What                   | Approach                                                                                                                                                                                                |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (api) | Use case               | `codeSupplied: true` → `result.warning.code === 'SUPPLIED_CODE_IGNORED'`; `codeSupplied` false/omitted → `expect('warning' in result).toBe(false)` (absence, not `toBeUndefined`)                       |
+| E2E (api)  | Warned create          | POST with a valid body **plus** `code: 'HACKEDCODE'` → **201**, `body.warning.code === 'SUPPLIED_CODE_IGNORED'`, `body.code !== 'HACKEDCODE'` and matches `^[2-9A-HJKMNP-Z]{10}$`                       |
+| E2E (api)  | Clean create           | POST without `code` → 201 and `expect(body).not.toHaveProperty('warning')` — this is the regression fence for the two invariants above (a future global whitelisting pipe fails the warned-create test) |
+| E2E (api)  | Not a validation error | The warned create is asserted 201, never 4xx, and the row exists afterwards                                                                                                                             |

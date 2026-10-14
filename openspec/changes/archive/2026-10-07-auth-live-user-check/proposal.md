@@ -12,6 +12,7 @@ ADR-011 Decision 1 explicitly accepted this staleness. This change reverses that
 ## Scope
 
 ### In Scope
+
 - `AuthenticatedGuard` re-reads the user through the existing `USER_REPOSITORY.findById` (ADR-010 filter). The checks run in order: signature, then denylist, then user lookup.
   - A missing or soft-deleted user gets 401, identical to an invalid token.
   - A DB error gets 401 (fail-closed).
@@ -23,6 +24,7 @@ ADR-011 Decision 1 explicitly accepted this staleness. This change reverses that
 - Docs: an ADR-011 addendum that supersedes the staleness acceptance (Decision 1, ~line 164), and corrections to stale code comments.
 
 ### Out of Scope
+
 - Refresh tokens or rotation, and a per-user epoch (tech-debt #5).
 - Caching.
 - Deduplicating the scope and capability checkers' user reads.
@@ -33,9 +35,11 @@ ADR-011 Decision 1 explicitly accepted this staleness. This change reverses that
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `authentication`:
   - Protected Endpoint Access Control and Session Introspection change: a valid token for a missing or soft-deleted user MUST be denied with 401, and `/auth/me` MUST return the current DB `role` and `email`.
   - The web requirements (Redirect When Unauthenticated, Login page) gain the mid-session 401 handling and the notice. The web login and session UI lives in this spec; `app-navigation` is unaffected.
@@ -46,24 +50,24 @@ Explore approach 1 (reuse `findById`). `AuthModule` already imports `UsersModule
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/api/src/modules/auth/presentation/guards/authenticated.guard.ts` (+ `.spec.ts`) | Modified | Lookup and rebuilt `request.user` |
-| `apps/api/test/auth.e2e-spec.ts` | Modified | Implement fake `findById`; new cases |
-| `permissions.guard.ts`, `types.ts`, `get-current-user.use-case.ts`, `token-issuer.port.ts` | Modified | Comments only |
-| `apps/web/src/api/client.ts`, `AuthProvider.tsx`, login page, locales | Modified | 401 handling, notice, EN/ES/CA strings |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modified | Addendum |
+| Area                                                                                       | Impact   | Description                            |
+| ------------------------------------------------------------------------------------------ | -------- | -------------------------------------- |
+| `apps/api/src/modules/auth/presentation/guards/authenticated.guard.ts` (+ `.spec.ts`)      | Modified | Lookup and rebuilt `request.user`      |
+| `apps/api/test/auth.e2e-spec.ts`                                                           | Modified | Implement fake `findById`; new cases   |
+| `permissions.guard.ts`, `types.ts`, `get-current-user.use-case.ts`, `token-issuer.port.ts` | Modified | Comments only                          |
+| `apps/web/src/api/client.ts`, `AuthProvider.tsx`, login page, locales                      | Modified | 401 handling, notice, EN/ES/CA strings |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`                                 | Modified | Addendum                               |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| One extra PK query per authenticated request | High (accepted) | Indexed PK; the denylist is checked first |
-| Two user reads on manager requests | High (accepted) | Dedupe deferred |
-| The `auth.e2e` fake `findById` throws today | Certain | Implement it first |
-| An e2e suite authenticates a user missing from its fake | Low | Scan all suites during apply |
-| A deleted user's logout now returns 401 | Certain | Harmless: the web clears local state and the token is rejected anyway |
-| A web 401 loop on the login call | Low | Exclude the login call; add a test |
+| Risk                                                    | Likelihood      | Mitigation                                                            |
+| ------------------------------------------------------- | --------------- | --------------------------------------------------------------------- |
+| One extra PK query per authenticated request            | High (accepted) | Indexed PK; the denylist is checked first                             |
+| Two user reads on manager requests                      | High (accepted) | Dedupe deferred                                                       |
+| The `auth.e2e` fake `findById` throws today             | Certain         | Implement it first                                                    |
+| An e2e suite authenticates a user missing from its fake | Low             | Scan all suites during apply                                          |
+| A deleted user's logout now returns 401                 | Certain         | Harmless: the web clears local state and the token is rejected anyway |
+| A web 401 loop on the login call                        | Low             | Exclude the login call; add a test                                    |
 
 ## Rollback Plan
 
@@ -86,5 +90,6 @@ Revert the PR(s). There is no data migration or config change.
 ## Size
 
 About 450-550 changed lines, roughly half of them tests. Suggested chain (stacked-to-main):
+
 1. API guard, tests and ADR (~300 lines).
 2. Web 401 handling and notice (~200 lines).

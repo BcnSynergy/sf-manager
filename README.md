@@ -14,12 +14,14 @@ business features yet, just the toolchain wired end-to-end.
    npm install
    ```
 2. Create `apps/api/.env` (git-ignored, not committed) with:
+
    ```
    DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"
    JWT_SECRET="<a long random string>"
    CORS_ORIGIN="http://localhost:5173"
    NODE_ENV=development
    ```
+
    `apps/api/.env.example` lists every variable the API reads; copy it as a
    starting point. `NODE_ENV=development` is what lets `prisma db seed`
    create the dev accounts below: with it unset (or any other value) the
@@ -28,38 +30,41 @@ business features yet, just the toolchain wired end-to-end.
    On Windows PowerShell, avoid `Out-File -Encoding utf8` — it adds a BOM
    that breaks Prisma's env parsing (`DATABASE_URL` silently "not found").
    Use `-Encoding utf8NoBOM` (PowerShell 7+), or:
+
    ```powershell
    [System.IO.File]::WriteAllText("$PWD\apps\api\.env", 'DATABASE_URL="postgresql://sfmanager:sfmanager@localhost:5432/sfmanager?schema=public"' + "`n", [System.Text.UTF8Encoding]::new($false))
    ```
+
    If Docker Desktop is set to Windows containers, `docker compose up` will
    fail pulling `postgres:17-alpine` (Linux-only image). Switch with
    `docker desktop engine use linux` (or via the Docker Desktop tray icon).
 
    Auth-related env vars (`apps/api`):
-   | Var | Required | Default | Notes |
-   |-----|----------|---------|-------|
-   | `JWT_SECRET` | Yes | — | App throws at boot without it. |
-   | `CORS_ORIGIN` | Yes | — | The web origin allowed to send credentialed requests (e.g. `http://localhost:5173` in dev). App throws at boot without it. |
-   | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
-   | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | No | `10` | Login attempts allowed per client key (IPv4 address or IPv6 /64 prefix) within the window. Must be a positive integer; the app throws at boot otherwise. |
-   | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the login rate-limit window, in seconds. Must be a positive integer. |
-   | `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` | No | `5` | Failed logins allowed per email before it is blocked. Failures are counted per normalized email (trimmed, lowercase) across all client keys, and a successful login resets the count. The attempt that reaches the limit is still answered `401`; the next one gets `429`. Must be a positive integer (at most 2147483647); the app throws at boot otherwise. |
-   | `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the per-email failure window and of the block that follows the limit, in seconds. Must be a positive integer (at most 86400); the app throws at boot otherwise. |
-   | `TRUST_PROXY` | No | off | How many trusted proxy hops sit between the client and the API, for the login rate limit's client IP. Accepted: unset, empty or `false` (off, use the socket address); `true` (one hop); a positive integer N (N hops). Any other value makes the app throw at boot. See the topology table below. |
-   | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
-   | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
-   | `NODE_ENV` | For dev seed data | — | Must be exactly `development` for `prisma db seed` to create the dev accounts. |
+
+   | Var                                     | Required          | Default | Notes                                                                                                                                                                                                                                                                                                                                                         |
+   | --------------------------------------- | ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `JWT_SECRET`                            | Yes               | —       | App throws at boot without it.                                                                                                                                                                                                                                                                                                                                |
+   | `CORS_ORIGIN`                           | Yes               | —       | The web origin allowed to send credentialed requests (e.g. `http://localhost:5173` in dev). App throws at boot without it.                                                                                                                                                                                                                                    |
+   | `JWT_EXPIRES_IN`                        | No                | `2h`    | Access token lifetime, e.g. `30m`, `2h`, `1d`.                                                                                                                                                                                                                                                                                                                |
+   | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`         | No                | `10`    | Login attempts allowed per client key (IPv4 address or IPv6 /64 prefix) within the window. Must be a positive integer; the app throws at boot otherwise.                                                                                                                                                                                                      |
+   | `LOGIN_RATE_LIMIT_WINDOW_SECONDS`       | No                | `900`   | Length of the login rate-limit window, in seconds. Must be a positive integer.                                                                                                                                                                                                                                                                                |
+   | `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES`   | No                | `5`     | Failed logins allowed per email before it is blocked. Failures are counted per normalized email (trimmed, lowercase) across all client keys, and a successful login resets the count. The attempt that reaches the limit is still answered `401`; the next one gets `429`. Must be a positive integer (at most 2147483647); the app throws at boot otherwise. |
+   | `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` | No                | `900`   | Length of the per-email failure window and of the block that follows the limit, in seconds. Must be a positive integer (at most 86400); the app throws at boot otherwise.                                                                                                                                                                                     |
+   | `TRUST_PROXY`                           | No                | off     | How many trusted proxy hops sit between the client and the API, for the login rate limit's client IP. Accepted: unset, empty or `false` (off, use the socket address); `true` (one hop); a positive integer N (N hops). Any other value makes the app throw at boot. See the topology table below.                                                            |
+   | `SEED_ADMIN_EMAIL`                      | Only for seeding  | —       | Used by `prisma db seed` to create/update the admin user.                                                                                                                                                                                                                                                                                                     |
+   | `SEED_ADMIN_PASSWORD`                   | Only for seeding  | —       | Used by `prisma db seed` to create/update the admin user.                                                                                                                                                                                                                                                                                                     |
+   | `NODE_ENV`                              | For dev seed data | —       | Must be exactly `development` for `prisma db seed` to create the dev accounts.                                                                                                                                                                                                                                                                                |
 
    `TRUST_PROXY` must match the real topology; a wrong value either lets a
    client choose its own rate-limit key (too high) or puts every client in one
    bucket (too low):
 
-   | Topology | `TRUST_PROXY` |
-   |----------|---------------|
-   | No proxy (API reachable directly) | unset (off) |
-   | One reverse proxy (e.g. nginx) in front of the API | `true` (or `1`) |
-   | CDN plus a reverse proxy | `2` |
-   | PaaS (e.g. Vercel) | Confirm the platform's documented number of forwarding hops before setting any value; this README asserts none. |
+   | Topology                                           | `TRUST_PROXY`                                                                                                   |
+   | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+   | No proxy (API reachable directly)                  | unset (off)                                                                                                     |
+   | One reverse proxy (e.g. nginx) in front of the API | `true` (or `1`)                                                                                                 |
+   | CDN plus a reverse proxy                           | `2`                                                                                                             |
+   | PaaS (e.g. Vercel)                                 | Confirm the platform's documented number of forwarding hops before setting any value; this README asserts none. |
 
    IPv6 clients are limited per `/64` prefix, and an IPv4-mapped IPv6 address
    (`::ffff:a.b.c.d`) counts as the IPv4 address.
@@ -72,16 +77,19 @@ business features yet, just the toolchain wired end-to-end.
    batches under a 500 ms statement timeout. If the counter write fails, the
    login attempt is refused. The window is fixed, so up to about twice the
    limit can pass around a window boundary.
+
 3. Start Postgres:
    ```
    docker compose up -d
    ```
 4. Generate the Prisma client, run the migration and seed an admin user:
+
    ```
    npm run prisma:generate -w apps/api
    npm exec -w apps/api -- prisma migrate dev
    npm exec -w apps/api -- prisma db seed
    ```
+
    The API doesn't yet expose a dedicated `prisma:migrate`/`prisma:seed`
    npm script (only `prisma:generate`/`prisma:push` exist in
    `apps/api/package.json`), so the Prisma CLI is invoked directly via
@@ -93,14 +101,14 @@ business features yet, just the toolchain wired end-to-end.
    Every one of them shares one public, dev-only password:
    `sf-manager-dev-1`.
 
-   | Account | Role |
-   |---------|------|
-   | `technician@sf-manager.example` | Maintenance technician (Dev Seed Fire Safety A) |
-   | `technician2@sf-manager.example` | Maintenance technician (Dev Seed Fire Safety B) |
-   | `companymgr@sf-manager.example` | Maintenance company manager (Dev Seed Fire Safety A) |
-   | `rep@sf-manager.example` | Community representative |
-   | `manager@sf-manager.example` | Manager with `VIEW_ALL_REVIEWS` |
-   | `manager-nocap@sf-manager.example` | Manager without capabilities |
+   | Account                            | Role                                                 |
+   | ---------------------------------- | ---------------------------------------------------- |
+   | `technician@sf-manager.example`    | Maintenance technician (Dev Seed Fire Safety A)      |
+   | `technician2@sf-manager.example`   | Maintenance technician (Dev Seed Fire Safety B)      |
+   | `companymgr@sf-manager.example`    | Maintenance company manager (Dev Seed Fire Safety A) |
+   | `rep@sf-manager.example`           | Community representative                             |
+   | `manager@sf-manager.example`       | Manager with `VIEW_ALL_REVIEWS`                      |
+   | `manager-nocap@sf-manager.example` | Manager without capabilities                         |
 
    Besides the accounts, the same seed creates two maintenance companies, two
    communities (`Dev Seed Residences North` and `Dev Seed Residences South`,
@@ -116,7 +124,9 @@ business features yet, just the toolchain wired end-to-end.
    already exists. If an account already exists with a different role or
    company, the seed warns and leaves it alone; run `prisma migrate reset`
    then `prisma db seed` (see below) to get a clean one.
+
 5. Run everything:
+
    ```
    npm run dev
    ```
@@ -132,7 +142,7 @@ business features yet, just the toolchain wired end-to-end.
 - `npm run lint` — lint everything, including the ADR-013 Prisma-boundary rule.
   It only reports; `npm run lint:fix -w apps/api` applies the API's auto-fixes.
 - `npm run format` — format the repo with Prettier; `npm run format:check`
-  only reports (CI runs it). Markdown and YAML are not formatted yet (TD-33).
+  only reports (CI runs it).
   Formatting-only commits are listed in `.git-blame-ignore-revs`; run
   `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to skip them
   in `git blame`.
@@ -143,7 +153,7 @@ business features yet, just the toolchain wired end-to-end.
   integration suite (`src/**/*.integration.spec.ts` plus
   `test/app.integration.spec.ts`). Each run gets its own freshly created and
   migrated database, named `sf_manager_test_<8-char timestamp>_<6-char
-  random>` (the timestamp is embedded so stale runs can be aged out), on the
+random>` (the timestamp is embedded so stale runs can be aged out), on the
   docker-compose Postgres instance — never the dev database `sfmanager`. A
   run's database is dropped when it finishes; a database from a run that
   crashed before teardown is swept and dropped automatically by the next

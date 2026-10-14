@@ -12,22 +12,22 @@ Read `openspec/changes/review-export/tasks.md` before starting. All 74 implement
 
 ## Specs Synced
 
-| Capability | Action | Requirements added / modified / removed |
-|---|---|---|
-| `review-document` | Created (new capability, delta was a full spec) | 5 requirements added (Read the Review Document…, Document Visibility Is Exactly the Review-History Scope, Inclusive Name Lookups Run Only Inside the Scope Gate, The Organization Profile Gains One Reader Not a Wider Endpoint, Reference Labels Are Read Live in This Slice, No Server-Generated Document Artifact and No Delivery — 6 requirements, 30 scenarios total) / 0 modified / 0 removed |
-| `review-document-ui` | Created (new capability, delta was a full spec) | 7 requirements added (Document Page Is Gated…, Document Page Content, A Blank or Incomplete Profile Still Prints, Print Through the Browser, Loading and Unreachable States, Exactly One Entry Link Reaches the Document Page, The Document Page Offers No Other Action, Internationalization Coverage — 8 requirements, 28 scenarios) / 0 modified / 0 removed |
-| `authorization` | Updated | 0 added / 2 modified (*The Organization Profile Grants Nothing Beyond Itself* — narrowed to one exception, 4 new scenarios added; *Installation-Wide Review History Scope for a Manager Holding VIEW_ALL_REVIEWS* — extended to cover the document read, 1 new scenario added) / 0 removed |
-| `organization-profile-management` | Updated | 0 added / 1 modified (*An Incomplete Profile Blocks Nothing* — narrowed to exactly one external consumer, 2 new scenarios added) / 0 removed |
-| `review-history-ui` | Updated | 0 added / 3 modified (*Read-Only Historical Session View* — gains the one View document link, 2 new scenarios; *Two Entry Links Reach the Element History Page* — host-page-unchanged scenario updated to name the new link; *No Filtering, Analytics or Adjacent Controls Ship* — narrowed exception for the View document link) / 0 removed |
-| `review-history` | Updated | 1 added (*The Review Document Read Inherits the Session-Level History Guards*, 4 scenarios) / 0 modified / 0 removed |
-| `review-session-management` | Updated | 1 added (*Completion Is the Signing Act*, 5 scenarios) / 1 modified (*Adjacent Review Capabilities Are Not Introduced* — FR-010 row narrowed, 1 scenario reworded, 1 scenario added) / 0 removed |
-| `review-session-ui` | Updated | 0 added / 2 modified (*Complete a Session and Explain Its Gaps* — signing copy, confirm/cancel scenarios, no-document-link scenarios added; *No Offline, History or Scheduling Surface* — field-flow document-link prohibition named explicitly) / 0 removed |
+| Capability                        | Action                                          | Requirements added / modified / removed                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `review-document`                 | Created (new capability, delta was a full spec) | 5 requirements added (Read the Review Document…, Document Visibility Is Exactly the Review-History Scope, Inclusive Name Lookups Run Only Inside the Scope Gate, The Organization Profile Gains One Reader Not a Wider Endpoint, Reference Labels Are Read Live in This Slice, No Server-Generated Document Artifact and No Delivery — 6 requirements, 30 scenarios total) / 0 modified / 0 removed |
+| `review-document-ui`              | Created (new capability, delta was a full spec) | 7 requirements added (Document Page Is Gated…, Document Page Content, A Blank or Incomplete Profile Still Prints, Print Through the Browser, Loading and Unreachable States, Exactly One Entry Link Reaches the Document Page, The Document Page Offers No Other Action, Internationalization Coverage — 8 requirements, 28 scenarios) / 0 modified / 0 removed                                     |
+| `authorization`                   | Updated                                         | 0 added / 2 modified (_The Organization Profile Grants Nothing Beyond Itself_ — narrowed to one exception, 4 new scenarios added; _Installation-Wide Review History Scope for a Manager Holding VIEW_ALL_REVIEWS_ — extended to cover the document read, 1 new scenario added) / 0 removed                                                                                                          |
+| `organization-profile-management` | Updated                                         | 0 added / 1 modified (_An Incomplete Profile Blocks Nothing_ — narrowed to exactly one external consumer, 2 new scenarios added) / 0 removed                                                                                                                                                                                                                                                        |
+| `review-history-ui`               | Updated                                         | 0 added / 3 modified (_Read-Only Historical Session View_ — gains the one View document link, 2 new scenarios; _Two Entry Links Reach the Element History Page_ — host-page-unchanged scenario updated to name the new link; _No Filtering, Analytics or Adjacent Controls Ship_ — narrowed exception for the View document link) / 0 removed                                                       |
+| `review-history`                  | Updated                                         | 1 added (_The Review Document Read Inherits the Session-Level History Guards_, 4 scenarios) / 0 modified / 0 removed                                                                                                                                                                                                                                                                                |
+| `review-session-management`       | Updated                                         | 1 added (_Completion Is the Signing Act_, 5 scenarios) / 1 modified (_Adjacent Review Capabilities Are Not Introduced_ — FR-010 row narrowed, 1 scenario reworded, 1 scenario added) / 0 removed                                                                                                                                                                                                    |
+| `review-session-ui`               | Updated                                         | 0 added / 2 modified (_Complete a Session and Explain Its Gaps_ — signing copy, confirm/cancel scenarios, no-document-link scenarios added; _No Offline, History or Scheduling Surface_ — field-flow document-link prohibition named explicitly) / 0 removed                                                                                                                                        |
 
 All merges preserved every pre-existing requirement not named in the delta. No REMOVED requirements appeared in any of the 8 deltas, so no `(Reason: ...)`/`(Migration: ...)` note was needed.
 
 ### S-3 resolution (deferred SUGGESTION from verify-report)
 
-Verify-report S-3 asked the archive agent to check the merged `review-session-ui` base spec for leftover "Complete session" wording that should read "Sign and close". After applying the delta, the full merged file was inspected: the *Complete a Session and Explain Its Gaps* requirement's body and every one of its scenario titles now read "Sign and close" throughout (e.g. "The completing control reads Sign and close", "Signing asks for a conscious confirmation", "Confirming signs and closes the session"). No leftover "Complete session" wording was found anywhere in the merged file. S-3 is resolved with no further edit.
+Verify-report S-3 asked the archive agent to check the merged `review-session-ui` base spec for leftover "Complete session" wording that should read "Sign and close". After applying the delta, the full merged file was inspected: the _Complete a Session and Explain Its Gaps_ requirement's body and every one of its scenario titles now read "Sign and close" throughout (e.g. "The completing control reads Sign and close", "Signing asks for a conscious confirmation", "Confirming signs and closes the session"). No leftover "Complete session" wording was found anywhere in the merged file. S-3 is resolved with no further edit.
 
 ## Archive Contents
 
@@ -60,12 +60,14 @@ Verify-report S-3 asked the archive agent to check the merged `review-session-ui
 **PASS WITH WARNINGS.** 0 CRITICAL, 5 WARNING, 7 SUGGESTION. All suites, lint, type-check and build were green at the time of verify (main @ e1d0570, worktree `review-export/14-docs` @ 5143dbc — diff limited to docs and `tasks.md`).
 
 ### Accepted warnings carried forward as follow-ups
+
 - **W-1** (TDD evidence for PRs 1–12 not retrievable from Engram) — addressed by the reconstructed table in verify-report.md's addendum; no further action.
 - **W-3** (review-document scenarios with static-only or partial evidence: "Reading the document changes nothing", "Renamed community shows new name", "Updated letterhead appears on an old document", "Element identity may differ", "Recorded record matches history") — accepted; no test debt tracked separately.
 - **W-4** (weak assertions: permission-count lock on a test-local list; es/ca date formatting checked non-empty only) — accepted as a known test-quality gap.
 - **W-2 and W-5 were closed before archive**, not carried forward: W-2 by 3 field-flow regression tests (`fc8de37`); W-5 by moving `reviewHistory.detail.documentLink` into `REQUIRED_REVIEW_DOCUMENT_KEY_PATHS` (`2ec081f`).
 
 ### Accepted suggestions carried forward as follow-ups
+
 - **S-1**: `ParseUUIDPipe` on `review-history`/`review-history` document `:sessionId` routes — not a spec violation (confirmed via `openspec/specs/review-history/spec.md` scope-to-well-formed-identifiers language); deferred as a hygiene follow-up.
 - **S-2**: dev-DB pollution from integration tests — test-infrastructure hygiene, not a spec violation; deferred.
 - **S-3**: resolved during this archive (see above) — no further action.
@@ -78,21 +80,21 @@ Verify-report S-3 asked the archive agent to check the merged `review-session-ui
 
 PR chain #143–#156 (stacked-to-main, per user decision 2026-09-23 to keep the full 14-PR chain including PR 8's characterization matrix):
 
-| PR | Scope |
-|---|---|
-| #143 | PR 1 — Sign copy |
-| #144 | PR 2 — History helper extraction |
-| #145 | PR 3 — Reader + name-directory ports, fakes |
-| #146 | PR 4 — Prisma name directory + integration spec |
-| #147 | PR 5 — Use case core |
-| #148 | PR 6 — Entry/answer ordering |
-| #149 | PR 7 — API wiring + first e2e cases (separate RED commit `2492aa2`) |
-| #150 | PR 8 — E2E scope matrix (characterization, not test-first by design) |
-| #151 | PR 9 — Web helpers |
-| #152 | PR 10 — Page shell |
-| #153 | PR 11 — Header regions |
-| #154 | PR 12 — Record and print |
-| #155 | PR 13 — "View document" link + browser pass (13.5, done 2026-09-24) |
+| PR                                      | Scope                                                                                                                                         |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| #143                                    | PR 1 — Sign copy                                                                                                                              |
+| #144                                    | PR 2 — History helper extraction                                                                                                              |
+| #145                                    | PR 3 — Reader + name-directory ports, fakes                                                                                                   |
+| #146                                    | PR 4 — Prisma name directory + integration spec                                                                                               |
+| #147                                    | PR 5 — Use case core                                                                                                                          |
+| #148                                    | PR 6 — Entry/answer ordering                                                                                                                  |
+| #149                                    | PR 7 — API wiring + first e2e cases (separate RED commit `2492aa2`)                                                                           |
+| #150                                    | PR 8 — E2E scope matrix (characterization, not test-first by design)                                                                          |
+| #151                                    | PR 9 — Web helpers                                                                                                                            |
+| #152                                    | PR 10 — Page shell                                                                                                                            |
+| #153                                    | PR 11 — Header regions                                                                                                                        |
+| #154                                    | PR 12 — Record and print                                                                                                                      |
+| #155                                    | PR 13 — "View document" link + browser pass (13.5, done 2026-09-24)                                                                           |
 | #156 (this PR, `review-export/14-docs`) | PR 14 — Docs (14.1, 14.2), verify report (14.3, with W-1 addendum), W-2/W-5 follow-up commits (`fc8de37`, `2ec081f`), and this archive (14.4) |
 
 ## Deferred Follow-Ups (not part of this change, tracked for future work)

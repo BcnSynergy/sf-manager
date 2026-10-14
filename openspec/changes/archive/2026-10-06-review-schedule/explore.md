@@ -5,6 +5,7 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
 ## 1. Current state
 
 **Data that exists [V]**
+
 - `ReviewSession` (`apps/api/prisma/schema.prisma:364-405`) holds `communityId`, `templateId` (the frozen version row), `performedById`, `status` (`draft` or `completed`), `startedAt` and `completedAt`. It has no `deletedAt`, and `performedByCompanyId` is a snapshot. Indexes exist on `communityId`, `performedById` and `performedByCompanyId`. The composite `(status, completedAt, id)` serves the installation-wide read.
 - `ReviewTemplate` (`schema.prisma:295-305`) holds `elementType`, `frequency` (enum `MONTHLY | QUARTERLY | SEMIANNUAL | ANNUAL`, `schema.prisma:235-240`), `status` (`draft | active | retired`) and `version`. Frequency lives on the template, not on questions or elements. `ChecklistQuestion.frequencies` is only an informational tag (`schema.prisma:252-258`).
 - A session derives its element type and frequency from its template. `docs/architecture/domain-model-inspections.md:355` and `review-session-management/spec.md:84` say so explicitly. `GetReviewScopeUseCase` lists the active templates per element type and frequency.
@@ -19,15 +20,18 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
   It also names FR-009 as the consumer: "This is application-layer logic ... not new persisted state". No interval constants (month counts per frequency) exist anywhere in code.
 
 **Time [V]**
+
 - There is no clock port. `new Date()` is called inline in use cases and adapters (for example `complete-review-session.use-case.ts:90`, `open-review-session.use-case.ts:121`, `record-entry.use-case.ts:111`). The only injectable abstraction nearby is `IdGenerator`.
 - No fake-timer usage exists in `apps/**`. `shared/testing/test-database.ts` takes a `now` parameter, but only for naming databases.
 - A due calculation therefore needs a new `Clock` port. A pure function taking `now` as an argument would also work, with the use case reading `new Date()` once.
 
 **Reminder infrastructure [V]**
+
 - No mail, queue or scheduler dependency exists. Case-insensitive grep for `nodemailer`, `@nestjs/schedule`, `bull(mq)`, `cron` and `smtp` over every `package.json` returned nothing. There is no mail or Redis service in `docker-compose*`, `.env.example` or `app.module.ts`.
 - This confirms that reminders need new infrastructure plus a product decision on channel, cadence and recipients. That justifies deferring them.
 
 **Scoping in review-history [V]**
+
 - `ReviewHistoryAccessService` (`review-history-access.service.ts:52-331`) dispatches on role with an exhaustive `switch` and `actor.role satisfies never`.
   - `MAINTENANCE_TECHNICIAN`: performer-based, with no community check (`:73-74`). This was a deliberate 2026-09-09 reversal.
   - `COMMUNITY_REPRESENTATIVE`: `CommunityScopeChecker.listAssignedCommunityIds`, with an empty set returning `[]`.
@@ -38,6 +42,7 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
 - The community checker's `listAssignedCommunityIds` takes `(userId, role)` and returns `[]` for roles with no assignment kind. It resolves per role and does not return the technician's performed communities.
 
 **Patterns to copy [V]**
+
 - API:
   - `list-review-history.use-case.ts`: access service, then a batched name and email lookup, then DTO rows.
   - `review-history.controller.ts`: `@RequirePermission('reviewSession:read')`, OpenAPI decorators, `mapError`, and the actor taken from `@CurrentUser`.
@@ -54,6 +59,7 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
   - Tests: `ReviewHistoryPage.test.tsx`.
 
 **Existing specs that forbid due logic today [V]**
+
 - `review-session-management/spec.md:531` and scenario `:566-569`: "No scheduling or due-date logic exists" in the shipped code.
 - `review-history/spec.md:1083` and `:1121-1124`: no overdue or due-date computation derived from an element's record, no stored `lastInspectedAt`, and a "second element-keyed surface" ban. Lines `:50` and `:1082` also say history has no list controls or scheduling.
 - `review-history-ui/spec.md:117`: no overdue or due indicator on the element history page. `review-session-ui/spec.md:327` and `:353` ban due-date indicators in the field flow.
@@ -63,6 +69,7 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
 ## 2. What a due list can be derived from, and the unit of due
 
 **Can "due" be computed from existing data? Yes, with no schema change [V/I].**
+
 - `last completed session per (communityId, elementType, frequency)` comes from `ReviewSession WHERE status='completed'` joined to its frozen template row (`templateId` gives `elementType` and `frequency`). A retired template keeps its `elementType` and `frequency`, so replacing a template version does not change lineage membership. A last-completed lookup grouped by `(communityId, template.elementType, template.frequency)` is stable across version replacement.
 - What is expected to exist comes from `(community, elementType)` pairs with at least one active, non-deactivated element, crossed with the frequencies for which an `active` template exists (`ReviewTemplateRepository.findActiveByElementType`).
 - A due date needs an interval rule: `lastCompletedAt + interval(frequency)`. That rule is not in code and has to be introduced as constants, which ADR-008 supports (regulation-defined constants, like the hydrostatic interval in `domain-model-inspections.md:235-238`).
@@ -70,11 +77,11 @@ Method: Read, Grep and Glob only (Bash was unavailable). Statements marked **[V]
 
 **Candidate units**
 
-| Unit | Supported with no schema change? | Cost | Fit |
-|---|---|---|---|
-| A. `(community, elementType, frequency)` | Yes. One aggregate query over `ReviewSession` joined to template, plus the existing community and element lookups. | Low. | Matches the docs' cadence policy and what a session actually covers. |
-| B. Per element | Derivable through `ElementReviewEntry.inspectableElementId` joined to session and template. The entry index exists. | Medium. Many rows per community and a join per element. | Redundant with A because completion enforces full coverage. The one divergence is an element added after the last session, which would be correctly "never reviewed" here but is not a visible gap in A. [I] |
-| C. Template lineage `(elementType, frequency)` only | Yes. | Lowest. | Wrong. It ignores which community was reviewed and hides overdue communities. |
+| Unit                                                | Supported with no schema change?                                                                                    | Cost                                                    | Fit                                                                                                                                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A. `(community, elementType, frequency)`            | Yes. One aggregate query over `ReviewSession` joined to template, plus the existing community and element lookups.  | Low.                                                    | Matches the docs' cadence policy and what a session actually covers.                                                                                                                                         |
+| B. Per element                                      | Derivable through `ElementReviewEntry.inspectableElementId` joined to session and template. The entry index exists. | Medium. Many rows per community and a join per element. | Redundant with A because completion enforces full coverage. The one divergence is an element added after the last session, which would be correctly "never reviewed" here but is not a visible gap in A. [I] |
+| C. Template lineage `(elementType, frequency)` only | Yes.                                                                                                                | Lowest.                                                 | Wrong. It ignores which community was reviewed and hides overdue communities.                                                                                                                                |
 
 Recommended unit is A, per community. Per-element due is a deferred refinement.
 
@@ -82,15 +89,16 @@ Recommended unit is A, per community. Per-element due is a deferred refinement.
 
 ## 3. Approaches
 
-| # | Approach | Pros | Cons | Effort |
-|---|---|---|---|---|
-| 1 | **Unit A, per-frequency, strict.** For each `(community, elementType, frequency)` that has an active template and at least one active element, compare the last completed session's `completedAt` against `now` and fixed intervals (MONTHLY 1 month, QUARTERLY 3, SEMIANNUAL 6, ANNUAL 12). A never-reviewed pair is overdue. | Smallest read-only slice. Needs no schema change. Follows the docs' own cadence unit. | Ignores the ANNUAL-substitutes-for-QUARTERLY rule, so it can over-report. Needs the `Clock` port. | Medium |
-| 2 | **Unit A with ANNUAL substitution.** As 1, but a completed ANNUAL session in the quarter satisfies QUARTERLY. | Matches the documented policy (calendar quarters, 12-month ANNUAL gap). | Needs calendar-quarter logic, which is more than "thinnest", and a product decision on the rule. | Medium-High |
-| 3 | **Per element (B).** | Handles elements added after the last session. | More rows, more joins, and a surface with redundant information. Higher scope and risk. | High |
+| #   | Approach                                                                                                                                                                                                                                                                                                                       | Pros                                                                                  | Cons                                                                                              | Effort      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | **Unit A, per-frequency, strict.** For each `(community, elementType, frequency)` that has an active template and at least one active element, compare the last completed session's `completedAt` against `now` and fixed intervals (MONTHLY 1 month, QUARTERLY 3, SEMIANNUAL 6, ANNUAL 12). A never-reviewed pair is overdue. | Smallest read-only slice. Needs no schema change. Follows the docs' own cadence unit. | Ignores the ANNUAL-substitutes-for-QUARTERLY rule, so it can over-report. Needs the `Clock` port. | Medium      |
+| 2   | **Unit A with ANNUAL substitution.** As 1, but a completed ANNUAL session in the quarter satisfies QUARTERLY.                                                                                                                                                                                                                  | Matches the documented policy (calendar quarters, 12-month ANNUAL gap).               | Needs calendar-quarter logic, which is more than "thinnest", and a product decision on the rule.  | Medium-High |
+| 3   | **Per element (B).**                                                                                                                                                                                                                                                                                                           | Handles elements added after the last session.                                        | More rows, more joins, and a surface with redundant information. Higher scope and risk.           | High        |
 
 **Recommendation: approach 1, with the ANNUAL substitution as an explicit product decision before spec.** It is the thinnest end-to-end read slice and is consistent with ADR-006. The substitution rule is the largest product risk. If it is out, the list will over-report QUARTERLY items for communities that do ANNUAL in a quarter.
 
 **Scope cut for the first slice [I]:** the thinnest correct first cut is the roles whose scope is cheapest to express with the existing checkers.
+
 - `SYSTEM_ADMIN` and a granted `MANAGER`: installation-wide, no scope predicate. Cheapest.
 - `COMMUNITY_REPRESENTATIVE`: `listAssignedCommunityIds`.
 - `MAINTENANCE_TECHNICIAN`: assigned communities via the same checker. Note this differs from history, where the technician sees performer-based scope. A due list is about communities needing work, so an assignment-based scope fits better. This is a product question.

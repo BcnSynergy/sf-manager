@@ -19,15 +19,15 @@ now, tracking the warnings as follow-ups rather than blocking on them.
 
 ## Engram Observation IDs (Source of Truth)
 
-| Artifact | Topic Key | Notes |
-|---|---|---|
-| Proposal | `sdd/label-printing/proposal` | Complete |
-| Specification | `sdd/label-printing/spec` | Complete (3 delta specs) |
-| Design | `sdd/label-printing/design` | Complete (9 decisions + Decision 4a + addendum 10-12) |
-| Tasks | `sdd/label-printing/tasks` | Complete (45/45) |
-| Apply Progress | `sdd/label-printing/apply-progress` (obs #183) | **Degraded** — collapsed to a 4-line summary by successive topic_key upserts; also stated an incorrect "38/38" total. See verify-report W-1. Reconstructed from git history + `tasks.md` for this archive. |
-| Verification Report | `sdd/label-printing/verify-report` (obs #184) | PASS WITH WARNINGS |
-| Archive Report | `sdd/label-printing/archive-report` | This document |
+| Artifact            | Topic Key                                      | Notes                                                                                                                                                                                                      |
+| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal            | `sdd/label-printing/proposal`                  | Complete                                                                                                                                                                                                   |
+| Specification       | `sdd/label-printing/spec`                      | Complete (3 delta specs)                                                                                                                                                                                   |
+| Design              | `sdd/label-printing/design`                    | Complete (9 decisions + Decision 4a + addendum 10-12)                                                                                                                                                      |
+| Tasks               | `sdd/label-printing/tasks`                     | Complete (45/45)                                                                                                                                                                                           |
+| Apply Progress      | `sdd/label-printing/apply-progress` (obs #183) | **Degraded** — collapsed to a 4-line summary by successive topic_key upserts; also stated an incorrect "38/38" total. See verify-report W-1. Reconstructed from git history + `tasks.md` for this archive. |
+| Verification Report | `sdd/label-printing/verify-report` (obs #184)  | PASS WITH WARNINGS                                                                                                                                                                                         |
+| Archive Report      | `sdd/label-printing/archive-report`            | This document                                                                                                                                                                                              |
 
 ## Merged Specifications (OpenSpec)
 
@@ -68,16 +68,17 @@ now, tracking the warnings as follow-ups rather than blocking on them.
      Generic Not-Found Handling, No Server-Message String Coupling,
      Internationalization Coverage, Element Type Label Mapping)
 
-*(`openspec/specs/authorization/spec.md` deliberately NOT touched — this
+_(`openspec/specs/authorization/spec.md` deliberately NOT touched — this
 slice reuses the existing `inspectableElement:read` permission and
 introduces none, confirmed by an empty `git diff` over the authorization
-module across the full PR range.)*
+module across the full PR range.)_
 
 ## Verification Summary
 
 **Verdict**: PASS WITH WARNINGS
 
 ### Test Execution (all re-run live on `main` @ `638bc40`, 7/7 PRs merged)
+
 - API unit: 580/580 pass, 83 suites
 - API e2e: 244/244 pass, 8 suites
 - API integration: 15/16 suites clean-parallel; 16/16 with `--runInBand`
@@ -88,6 +89,7 @@ module across the full PR range.)*
   this change); `no-restricted-imports` (ADR-013) passes
 
 ### Compliance Matrix
+
 - **45/45 Implementation Tasks**: all marked complete, independently
   sampled and verified against current `main` across all 7 phases
 - **44/47 Spec Scenarios COMPLIANT**, 3 PARTIAL (S-2, S-3, W-2/W-4-linked),
@@ -103,6 +105,7 @@ module across the full PR range.)*
   reconstructed for verification, not blocking)
 
 ### Findings
+
 - CRITICAL: 0
 - WARNING: 5 — all non-blocking for archive:
   - W-1: Engram apply-progress mirror lost detailed history (record-keeping)
@@ -121,6 +124,7 @@ module across the full PR range.)*
 ## Archive Contents
 
 ### Files Present in Archive (`openspec/changes/archive/2026-09-05-label-printing/`)
+
 - `proposal.md`
 - `design.md`
 - `tasks.md`
@@ -131,6 +135,7 @@ module across the full PR range.)*
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
+
 - [x] All 8 files present in archive path, written verbatim from the
       source change folder / Engram-mirrored content
 - [x] No unchecked implementation tasks (all 45/45 marked complete)
@@ -201,36 +206,37 @@ directory, before staging.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| Phase 1 | PR 1 | Merged (`f844044`) | `code` column: migration + schema + backfill + transitional bridge |
-| Phase 2 | PR 2 | Merged (`514e147`) | Code generation port + adapter (not wired yet) |
-| Phase 3 | PR 3 | Merged (`0c35f2c`) | Wired generation into create/list/update + retry + bridge cleanup |
-| Phase 4 | PR 4 | Merged (`0182438`) | Supplied-code warning mechanism |
-| Phase 5 | PR 5 | Merged (`17894d6`) | Web QR rendering component |
+| Phase   | PR # | Status             | Details                                                                 |
+| ------- | ---- | ------------------ | ----------------------------------------------------------------------- |
+| Phase 1 | PR 1 | Merged (`f844044`) | `code` column: migration + schema + backfill + transitional bridge      |
+| Phase 2 | PR 2 | Merged (`514e147`) | Code generation port + adapter (not wired yet)                          |
+| Phase 3 | PR 3 | Merged (`0c35f2c`) | Wired generation into create/list/update + retry + bridge cleanup       |
+| Phase 4 | PR 4 | Merged (`0182438`) | Supplied-code warning mechanism                                         |
+| Phase 5 | PR 5 | Merged (`17894d6`) | Web QR rendering component                                              |
 | Phase 6 | PR 6 | Merged (`36823e6`) | Label page + route + list wiring + browser verification + print-CSS fix |
-| Phase 7 | PR 7 | Merged (`638bc40`) | Docs correction + final scope-guard checks |
+| Phase 7 | PR 7 | Merged (`638bc40`) | Docs correction + final scope-guard checks                              |
 
 All 7 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 (7 sequential PRs, last merge `638bc40`).
 
 ## Risks & Mitigations
 
-| Risk | Likelihood | Mitigation | Status |
-|---|---|---|---|
-| Reprint consequence if FR-007 later wants deep-link QR | Med | Accepted deliberately in the proposal; bare-code payload is correct for today's scope | Accepted, documented |
-| Backfill leaves a row without a valid code | Med | One transactional migration: index-first backfill with 10-retry loop, `SET NOT NULL` closes the door; integration test proves every row well-formed and distinct | Mitigated |
-| Code collision via check-then-act race (3rd time in this codebase) | Med | DB unique index + bounded 3-attempt retry, collision-forcing fake test proves the path | Mitigated |
-| `code` becomes mutable by accident | Med | Not in update DTO/schema; e2e proves PATCH-with-code leaves the value untouched; edit form has zero `code` references (grep-verified) | Mitigated |
-| Scope creep into the batch sheet or FR-007's lookup route | High / Med | Explicit non-goals; grep-verified absent across the full PR range | Mitigated |
-| Printed label unusable in practice (QR too small/low-contrast, print margins clip it) | Med | Browser verification performed, but predates the final print-CSS fix and does not cover a phone scan or both OS colour schemes | **Partially mitigated — W-2/W-4, deployment-gating follow-up recommended before printing at scale** |
-| PR1→PR3 transitional-bridge window (any element created live during that window keeps a bridge-generated, non-retried code permanently) | Low | Accepted deliberately (Decision 4a) — this repo's chain merged within one working session, real-world window was hours; bridge function + default confirmed dropped in PR3 | Accepted, documented, verified dropped |
-| No global nav bar (pre-existing gap) | Med | Carried forward unchanged, as in prior slices | Accepted, documented |
-| Incomplete archive (known tooling-gap bug class, same as `checklist-management`) | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder, create a branch, or commit without shell access | See "Known Limitation of This Archive Run" — orchestrator follow-up required | **Partially mitigated — follow-up required** |
+| Risk                                                                                                                                    | Likelihood                                                                                                                                    | Mitigation                                                                                                                                                                 | Status                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Reprint consequence if FR-007 later wants deep-link QR                                                                                  | Med                                                                                                                                           | Accepted deliberately in the proposal; bare-code payload is correct for today's scope                                                                                      | Accepted, documented                                                                                |
+| Backfill leaves a row without a valid code                                                                                              | Med                                                                                                                                           | One transactional migration: index-first backfill with 10-retry loop, `SET NOT NULL` closes the door; integration test proves every row well-formed and distinct           | Mitigated                                                                                           |
+| Code collision via check-then-act race (3rd time in this codebase)                                                                      | Med                                                                                                                                           | DB unique index + bounded 3-attempt retry, collision-forcing fake test proves the path                                                                                     | Mitigated                                                                                           |
+| `code` becomes mutable by accident                                                                                                      | Med                                                                                                                                           | Not in update DTO/schema; e2e proves PATCH-with-code leaves the value untouched; edit form has zero `code` references (grep-verified)                                      | Mitigated                                                                                           |
+| Scope creep into the batch sheet or FR-007's lookup route                                                                               | High / Med                                                                                                                                    | Explicit non-goals; grep-verified absent across the full PR range                                                                                                          | Mitigated                                                                                           |
+| Printed label unusable in practice (QR too small/low-contrast, print margins clip it)                                                   | Med                                                                                                                                           | Browser verification performed, but predates the final print-CSS fix and does not cover a phone scan or both OS colour schemes                                             | **Partially mitigated — W-2/W-4, deployment-gating follow-up recommended before printing at scale** |
+| PR1→PR3 transitional-bridge window (any element created live during that window keeps a bridge-generated, non-retried code permanently) | Low                                                                                                                                           | Accepted deliberately (Decision 4a) — this repo's chain merged within one working session, real-world window was hours; bridge function + default confirmed dropped in PR3 | Accepted, documented, verified dropped                                                              |
+| No global nav bar (pre-existing gap)                                                                                                    | Med                                                                                                                                           | Carried forward unchanged, as in prior slices                                                                                                                              | Accepted, documented                                                                                |
+| Incomplete archive (known tooling-gap bug class, same as `checklist-management`)                                                        | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder, create a branch, or commit without shell access | See "Known Limitation of This Archive Run" — orchestrator follow-up required                                                                                               | **Partially mitigated — follow-up required**                                                        |
 
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-propose**: Proposal question round closed; 4 assumptions stated,
   none blocking
 - **sdd-spec**: 3 delta specs written covering 47 scenarios (1 new
@@ -251,6 +257,7 @@ All 7 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
   execution context
 
 ### Artifacts Persisted
+
 - Engram: 4 observations already existed (proposal, spec, design, tasks) +
   apply-progress (degraded, see W-1) + verify-report (obs #184) + this
   archive-report (new)
@@ -281,6 +288,7 @@ All 7 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 
 This archive report and all supporting artifacts are linked via Engram
 topic keys for cross-session recovery:
+
 - `sdd/label-printing/proposal`
 - `sdd/label-printing/spec`
 - `sdd/label-printing/design`

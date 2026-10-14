@@ -2,7 +2,17 @@
 package-lock.json
 .claude/
 
-# Docs are formatted in a follow-up PR (TD-33); remove these lines there.
-*.md
-*.yaml
-*.yml
+# Not valid YAML (the apply: block mixes a list item with mapping keys), so
+# Prettier cannot parse it. See TD-37.
+openspec/config.yaml
+
+# Prettier's Markdown output is not stable on these archived files (each
+# --write pass changes them again), so they are left as written.
+openspec/changes/archive/2026-08-26-users-minimal-ui/proposal.md
+openspec/changes/archive/2026-09-08-review-session/design.md
+openspec/changes/archive/2026-09-17-nav-menu/tasks.md
+openspec/changes/archive/2026-09-24-review-export/tasks.md
+
+# A code span here wraps onto a line starting with '>', which Prettier reads
+# as a blockquote and rewrites, dropping spaces from the text.
+openspec/changes/archive/2026-09-13-review-history-company-scope/verify-report.md

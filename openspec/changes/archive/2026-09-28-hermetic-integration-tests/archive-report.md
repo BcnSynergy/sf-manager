@@ -22,8 +22,8 @@ Per user approval on 2026-09-28, the following drift between the openspec files 
 
 ## Specs Synced
 
-| Capability | Action | Requirements added / modified / removed |
-|---|---|---|
+| Capability                   | Action                                                                                                                                   | Requirements added / modified / removed                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `integration-test-isolation` | Created (new capability; the change's spec was a full spec, not a delta — no prior `openspec/specs/integration-test-isolation/` existed) | 7 requirements added (Real-DB Test Runs Use Only Their Own Run Database, Per-Run Test Database Preparation, Concurrent Runs Are Isolated, Fail-Fast Target Guard, Teardown Drops Only Its Own Run Database, Unit Test Run Is Unaffected, Concurrency Specs Pass Unmodified, Fixtures Honor Migration-Defined Foreign Keys, Documented Dev-Database Reset and Full-Suite Guidance — 9 requirements, 20 scenarios total) / 0 modified / 0 removed |
 
 No other capability was touched. `Modified Capabilities: None` per the proposal.
@@ -51,7 +51,7 @@ No other capability was touched. `Modified Capabilities: None` per the proposal.
 
 ### Pending user follow-up (not tech debt — an outstanding action)
 
-- **W2 — One-time dev-DB reset not yet run.** The reset (`prisma migrate reset` then `prisma db seed`) is documented in `README.md` but has not been executed. `sfmanager` still holds pre-existing fixture rows (2086 `User` rows) from before this change. This is destructive and was deliberately not run during verify or archive. **The user must run it once** and confirm the seeded admin (`admin@sfmanager.local`) is active afterwards. `CLAUDE.md`'s *Dev data is mostly test fixtures* bullet already describes the post-reset state (QA users gone until `dev-seed-data` lands), so no further doc change is needed once the reset runs.
+- **W2 — One-time dev-DB reset not yet run.** The reset (`prisma migrate reset` then `prisma db seed`) is documented in `README.md` but has not been executed. `sfmanager` still holds pre-existing fixture rows (2086 `User` rows) from before this change. This is destructive and was deliberately not run during verify or archive. **The user must run it once** and confirm the seeded admin (`admin@sfmanager.local`) is active afterwards. `CLAUDE.md`'s _Dev data is mostly test fixtures_ bullet already describes the post-reset state (QA users gone until `dev-seed-data` lands), so no further doc change is needed once the reset runs.
 
 ### Other suggestions carried forward (not re-opened, informational only)
 
@@ -65,11 +65,11 @@ No other capability was touched. `Modified Capabilities: None` per the proposal.
 
 Stacked-to-main, 3 PRs, `ask-on-risk` delivery strategy (user approved size exceptions for PR1 and PR3):
 
-| PR | Scope | Merge |
-|---|---|---|
-| #166 | PR 1 — Pure harness modules (`src/shared/testing`) + unit specs + `tsconfig.build.json` exclusion. ~1883 lines (code ~314 / test ~748 / openspec docs ~821), size:exception. | Merged `5edeae6` |
-| (folded into #167) | PR 2 — FK-violating fixture discovery + fixes. Zero violations found; 14-line docs-only commit `16c9552`. No exception needed. | Folded into #167 |
-| #167 | PR 3 — Harness switch: `globalSetup`/`globalTeardown`, `TestDatabaseEnvironment`, tripwire, `jest-integration.json`, `package.json` wiring, `app.e2e-spec.ts` → `app.integration.spec.ts` rename, README/CLAUDE.md docs. 836 lines total (~271 code / ~165 tests / ~130 docs / ~270 package-lock.json), size:exception, user-accepted (lockfile delta is dependency noise, not logic). | Merged `c833086`, 2026-09-28 |
+| PR                 | Scope                                                                                                                                                                                                                                                                                                                                                                                  | Merge                        |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| #166               | PR 1 — Pure harness modules (`src/shared/testing`) + unit specs + `tsconfig.build.json` exclusion. ~1883 lines (code ~314 / test ~748 / openspec docs ~821), size:exception.                                                                                                                                                                                                           | Merged `5edeae6`             |
+| (folded into #167) | PR 2 — FK-violating fixture discovery + fixes. Zero violations found; 14-line docs-only commit `16c9552`. No exception needed.                                                                                                                                                                                                                                                         | Folded into #167             |
+| #167               | PR 3 — Harness switch: `globalSetup`/`globalTeardown`, `TestDatabaseEnvironment`, tripwire, `jest-integration.json`, `package.json` wiring, `app.e2e-spec.ts` → `app.integration.spec.ts` rename, README/CLAUDE.md docs. 836 lines total (~271 code / ~165 tests / ~130 docs / ~270 package-lock.json), size:exception, user-accepted (lockfile delta is dependency noise, not logic). | Merged `c833086`, 2026-09-28 |
 
 ## Deferred Follow-Ups (not part of this change, tracked for future work)
 
@@ -87,5 +87,6 @@ The change has been fully planned, implemented, verified and archived. `hermetic
 ## Orchestrator Action Required (no Bash access in this agent)
 
 This sub-agent has no Bash tool. The orchestrator must still, outside this agent:
+
 1. Delete the source folder `openspec/changes/hermetic-integration-tests/` (superseded by the archive copy at `openspec/changes/archive/2026-09-28-hermetic-integration-tests/`).
 2. Git-add and commit the archive move (new `openspec/specs/integration-test-isolation/spec.md`, new `openspec/changes/archive/2026-09-28-hermetic-integration-tests/`, deleted `openspec/changes/hermetic-integration-tests/`) on the current branch `hermetic-integration-tests/04-archive`.

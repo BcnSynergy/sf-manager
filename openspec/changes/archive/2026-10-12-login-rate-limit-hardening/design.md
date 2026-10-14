@@ -33,7 +33,7 @@ Facts verified in the installed `@nestjs/throttler` 6.4.0
   (`throttler.service.js:19-24`).
 - **The guard already hashes the key.** `ThrottlerGuard.generateKey` returns
   `sha256(\`${Class}-${handler}-${name}-${tracker}\`)` as hex
-  (`throttler.guard.js:142-145`, `hash.js`). The storage only ever receives a
+(`throttler.guard.js:142-145`, `hash.js`). The storage only ever receives a
   64-character hex string, never the raw tracker.
 - `blockDuration` defaults to `ttl` when unset (`throttler.guard.js:83`).
 - `Retry-After` is set from `timeToBlockExpire` only when `isBlocked` is true
@@ -55,11 +55,11 @@ Facts verified in the installed `@nestjs/throttler` 6.4.0
 
 **Choice**: `getTrustProxySetting(env): false | number`.
 
-| Raw value | Result |
-|---|---|
-| unset, `''`, `'false'` | `false` |
-| `'true'` | `1` |
-| matches `/^[1-9]\d*$/` and `Number.isSafeInteger` | that integer |
+| Raw value                                                                                 | Result                                                |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| unset, `''`, `'false'`                                                                    | `false`                                               |
+| `'true'`                                                                                  | `1`                                                   |
+| matches `/^[1-9]\d*$/` and `Number.isSafeInteger`                                         | that integer                                          |
 | anything else (`'0'`, `'-1'`, `'1.5'`, `'01'`, `' 2'`, `'TRUE'`, `'loopback'`, CIDR, ...) | throws `Error` naming `TRUST_PROXY` and the raw value |
 
 `main.ts` keeps `app.set('trust proxy', getTrustProxySetting(process.env))`.
@@ -97,6 +97,7 @@ guards. `AuthController.login` switches from `@UseGuards(ThrottlerGuard)` to
 "this IP" to "this client".
 
 **Alternatives considered**:
+
 - A module-level `getTracker` option in `forRootAsync`. It works, but it is
   implicit: it would apply to any future `ThrottlerGuard` use, and it is not
   visible at the route.
@@ -183,6 +184,7 @@ pseudonymized, not anonymized. Retention is short: rows are reused or deleted
 after their window ends.
 
 **Alternatives considered**:
+
 - An HMAC with a new secret env var. That adds secret management and grows
   scope; it is recorded as an open question.
 - A row per hit (sliding log). Unbounded writes and more cleanup.
@@ -268,6 +270,7 @@ because an attacker who can degrade the DB would also disable the throttle.
 Login already needs the DB, so availability does not get worse.
 
 **Alternatives considered**:
+
 - Prisma `upsert` with `{ increment: 1 }`. It cannot express the
   conditional window reset or block in one statement, and a
   read-then-write would race.
@@ -319,6 +322,7 @@ The table therefore stays within roughly the live keys plus a backlog that
 drains much faster than it fills.
 
 **Alternatives considered**:
+
 - Cron or `setInterval`. This needs a long-lived process, which is ruled out
   because the deploy may be serverless.
 - A cleanup in a data-modifying CTE inside the upsert. That is one round
@@ -366,6 +370,7 @@ does carry `@Injectable()`, but Nest does not resolve it). Tests use
 integration spec.
 
 **Alternatives considered**:
+
 - `inject: [PrismaThrottlerStorage]` with an extra provider module in
   `imports`. More wiring for the same result.
 - An env switch to select the memory store, such as
@@ -412,6 +417,7 @@ Once the Prisma storage is wired, any e2e login would hit that mock.
   - Leftover rows are harmless, because every run gets a fresh database.
 
 **Alternatives considered**:
+
 - `TRUNCATE "ThrottleCounter"` in hooks. That is a global side effect on a
   shared per-run database and depends on suite order.
 - A shared e2e app-builder helper refactor. Wider churn than the
@@ -446,30 +452,30 @@ POST /auth/login
 
 ## File Changes
 
-| File | Action | PR | Description |
-|------|--------|----|-------------|
-| `apps/api/src/shared/infrastructure/env/trust-proxy.ts` | Modify | 1 | `false \| number`, strict hop-count parsing (Decision 1) |
-| `apps/api/src/shared/infrastructure/env/trust-proxy.spec.ts` | Modify | 1 | Table tests for accepted and rejected values |
-| `apps/api/src/main.ts` | Modify | 1 | Comment only (N hops); call unchanged |
-| `apps/api/src/modules/auth/presentation/guards/client-key.ts` | Create | 1 | Pure `toClientKey` + `UNRESOLVED_CLIENT_KEY` (Decision 3) |
-| `apps/api/src/modules/auth/presentation/guards/client-key.spec.ts` | Create | 1 | Table tests: IPv4, IPv6 forms, mapped, zone id, undefined, garbage |
-| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts` | Create | 1 | `ThrottlerGuard` subclass overriding `getTracker` (Decision 2) |
-| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts` | Create | 1 | `getTracker` delegates; missing `req.ip` resolves without throwing and is still counted |
-| `apps/api/src/modules/auth/presentation/auth.controller.ts` | Modify | 1 | `@UseGuards(LoginThrottlerGuard)`, 429 description wording |
-| `apps/api/test/login-rate-limit.e2e-spec.ts` | Modify | 1, 3 | PR 1: `TRUST_PROXY=2` and spoofed-prefix cases, IPv6 `/64` share and isolate, mapped IPv4. PR 3: `ThrottlerStorage` in-memory override |
-| `README.md` | Modify | 1, 3 | PR 1: `TRUST_PROXY` values and topology table. PR 3: counters persisted in Postgres |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modify | 1, 3 | New addendum: PR 1 answers open questions 2 and 3, with the topology table. PR 3 answers question 4 and records ADR-001/serverless and question 1 as still open |
-| `apps/api/prisma/schema.prisma` | Modify | 2 | `ThrottleCounter` model (Decision 4) |
-| `apps/api/prisma/migrations/<ts>_add_throttle_counter/migration.sql` | Create | 2 | Additive table and index |
-| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts` | Create | 2 | `ThrottlerStorage` implementation (Decisions 5 and 6) |
-| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts` | Create | 2 | Atomicity, window, block, expiry and cleanup against real Postgres |
-| `apps/api/src/modules/auth/auth.module.ts` | Modify | 3 | `forRootAsync` object options with `storage` (Decision 7) |
-| `apps/api/test/*.e2e-spec.ts` (suites that log in) | Modify | 3 | In-memory `ThrottlerStorage` override (Decision 8) |
-| `apps/api/test/login-rate-limit.integration.spec.ts` | Create | 3 | Restart, two instances, concurrent attempts via real `AppModule` and DB |
-| `apps/api/test/test-database/rate-limit-env.setup.ts` | Create | 3 | Raise the login limit for integration suites |
-| `apps/api/test/jest-integration.json` | Modify | 3 | Register the setup file in `setupFiles` |
-| `openspec/specs/authentication/spec.md` | Modify | archive | Delta merged |
-| `docs/technical-debt.md` | Modify | archive | TD-28, TD-29 and TD-30 to Resolved with PR numbers; TD-31 stays open; possible new EN/TD entries (see Open Questions) |
+| File                                                                                                        | Action | PR      | Description                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/shared/infrastructure/env/trust-proxy.ts`                                                     | Modify | 1       | `false \| number`, strict hop-count parsing (Decision 1)                                                                                                        |
+| `apps/api/src/shared/infrastructure/env/trust-proxy.spec.ts`                                                | Modify | 1       | Table tests for accepted and rejected values                                                                                                                    |
+| `apps/api/src/main.ts`                                                                                      | Modify | 1       | Comment only (N hops); call unchanged                                                                                                                           |
+| `apps/api/src/modules/auth/presentation/guards/client-key.ts`                                               | Create | 1       | Pure `toClientKey` + `UNRESOLVED_CLIENT_KEY` (Decision 3)                                                                                                       |
+| `apps/api/src/modules/auth/presentation/guards/client-key.spec.ts`                                          | Create | 1       | Table tests: IPv4, IPv6 forms, mapped, zone id, undefined, garbage                                                                                              |
+| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`                                    | Create | 1       | `ThrottlerGuard` subclass overriding `getTracker` (Decision 2)                                                                                                  |
+| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts`                               | Create | 1       | `getTracker` delegates; missing `req.ip` resolves without throwing and is still counted                                                                         |
+| `apps/api/src/modules/auth/presentation/auth.controller.ts`                                                 | Modify | 1       | `@UseGuards(LoginThrottlerGuard)`, 429 description wording                                                                                                      |
+| `apps/api/test/login-rate-limit.e2e-spec.ts`                                                                | Modify | 1, 3    | PR 1: `TRUST_PROXY=2` and spoofed-prefix cases, IPv6 `/64` share and isolate, mapped IPv4. PR 3: `ThrottlerStorage` in-memory override                          |
+| `README.md`                                                                                                 | Modify | 1, 3    | PR 1: `TRUST_PROXY` values and topology table. PR 3: counters persisted in Postgres                                                                             |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`                                                  | Modify | 1, 3    | New addendum: PR 1 answers open questions 2 and 3, with the topology table. PR 3 answers question 4 and records ADR-001/serverless and question 1 as still open |
+| `apps/api/prisma/schema.prisma`                                                                             | Modify | 2       | `ThrottleCounter` model (Decision 4)                                                                                                                            |
+| `apps/api/prisma/migrations/<ts>_add_throttle_counter/migration.sql`                                        | Create | 2       | Additive table and index                                                                                                                                        |
+| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`                  | Create | 2       | `ThrottlerStorage` implementation (Decisions 5 and 6)                                                                                                           |
+| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts` | Create | 2       | Atomicity, window, block, expiry and cleanup against real Postgres                                                                                              |
+| `apps/api/src/modules/auth/auth.module.ts`                                                                  | Modify | 3       | `forRootAsync` object options with `storage` (Decision 7)                                                                                                       |
+| `apps/api/test/*.e2e-spec.ts` (suites that log in)                                                          | Modify | 3       | In-memory `ThrottlerStorage` override (Decision 8)                                                                                                              |
+| `apps/api/test/login-rate-limit.integration.spec.ts`                                                        | Create | 3       | Restart, two instances, concurrent attempts via real `AppModule` and DB                                                                                         |
+| `apps/api/test/test-database/rate-limit-env.setup.ts`                                                       | Create | 3       | Raise the login limit for integration suites                                                                                                                    |
+| `apps/api/test/jest-integration.json`                                                                       | Modify | 3       | Register the setup file in `setupFiles`                                                                                                                         |
+| `openspec/specs/authentication/spec.md`                                                                     | Modify | archive | Delta merged                                                                                                                                                    |
+| `docs/technical-debt.md`                                                                                    | Modify | archive | TD-28, TD-29 and TD-30 to Resolved with PR numbers; TD-31 stays open; possible new EN/TD entries (see Open Questions)                                           |
 
 ## Interfaces / Contracts
 
@@ -490,8 +496,13 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
 // auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts
 export class PrismaThrottlerStorage implements ThrottlerStorage {
   constructor(prisma: PrismaService);
-  increment(key: string, ttl: number, limit: number, blockDuration: number,
-            throttlerName: string): Promise<ThrottlerStorageRecord>;
+  increment(
+    key: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+    throttlerName: string,
+  ): Promise<ThrottlerStorageRecord>;
 }
 ```
 
@@ -503,14 +514,14 @@ The HTTP contract is unchanged: 429 with the generic message and
 Strict TDD (ADR-016): each row's test is written RED before the production
 change it covers.
 
-| Layer | What to Test | Approach and seam |
-|-------|-------------|----------|
-| Unit | `getTrustProxySetting` | `it.each` accepted: unset, `''`, `'false'` → false; `'true'` → 1; `'1'`, `'2'`, `'10'` → n. Rejected (throws `/TRUST_PROXY/`): `'0'`, `'-1'`, `'1.5'`, `'01'`, `' 2'`, `'2 '`, `'TRUE'`, `'loopback'`, `'10.0.0.0/8'`, `'1,2'`, `'9007199254740993'` |
-| Unit | `toClientKey` | Table: IPv4 passthrough; `2001:db8::1` and `2001:0DB8:0:0:ffff::2` share `2001:db8:0:0::/64`; different `/64` values differ; `::ffff:198.51.100.7` and `::ffff:c633:6407` → `198.51.100.7`; `fe80::1%eth0` → `fe80:0:0:0::/64`; `::1`; `::`; embedded dotted tail that is not mapped (`64:ff9b::1.2.3.4`) → its `/64`; `undefined`, `''`, `42`, `'not-an-ip'` → `'unresolved'`; never throws |
-| Unit | `LoginThrottlerGuard` | Construct with a fake storage and the options array, call `getTracker({})` and `getTracker({ ip: '2001:db8::5' })`. Also run `canActivate` with a stub `ExecutionContext` and no `req.ip`: the storage fake receives a key (counted), and nothing throws |
-| Integration (adapter, real Postgres) | `PrismaThrottlerStorage` | `new PrismaThrottlerStorage(new PrismaService())` with `randomUUID()` keys. (1) First hit: `{1, ≈ttl s, false, 0}`. (2) `limit + 1` hits: the last is `isBlocked` with `timeToBlockExpire ≥ 1`. (3) Hits while blocked are not counted. (4) Window expiry with ttl 1000 ms, wait about 1.2 s → `totalHits` 1. (5) Block expiry → reset to 1, not blocked. (6) **Concurrency**: 50 parallel `increment` calls with limit 1000 → returned `totalHits` values are exactly the set {1..50}, and the row has `hits = 50`. (7) Concurrent `limit + 5` with limit 10 → exactly 10 unblocked results. (8) Cleanup: seed expired rows and one live row with `prisma.throttleCounter.createMany` using past and future dates, increment a new key → expired rows gone (at most 100 per call), live row intact. (9) A hashed key is stored verbatim (no raw IP column exists) |
-| Integration (app, real Postgres) | Spec scenarios on persistence | `test/login-rate-limit.integration.spec.ts`: real `AppModule`, `trust proxy` 1, unique `X-Forwarded-For` per case, limit 3 via env. **Restart**: app A exhausts the key → `close()` → app B on the same DB → 429. **Two instances**: A gets 2 attempts and B gets 1, then the next attempt on either → 429. **Concurrent**: 3 parallel attempts → none 429, the 4th → 429. Failed logins (unknown email, 401) count, so no user seeding is needed |
-| E2E (mocked Prisma, in-memory store) | Tracker and hop logic over HTTP | Existing cases kept. New cases: `TRUST_PROXY=2` with `X-Forwarded-For: client, proxy` keys on `client`; a spoofed prefix `spoof, client, proxy` still keys on `client`; IPv6 same `/64` → 429 on rotation; different `/64` → 200; `::ffff:198.51.100.7` shares with `198.51.100.7` (with `TRUST_PROXY=true`). Startup failure for invalid values stays at the unit level, because `main.ts` is not exercised by e2e |
+| Layer                                | What to Test                    | Approach and seam                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit                                 | `getTrustProxySetting`          | `it.each` accepted: unset, `''`, `'false'` → false; `'true'` → 1; `'1'`, `'2'`, `'10'` → n. Rejected (throws `/TRUST_PROXY/`): `'0'`, `'-1'`, `'1.5'`, `'01'`, `' 2'`, `'2 '`, `'TRUE'`, `'loopback'`, `'10.0.0.0/8'`, `'1,2'`, `'9007199254740993'`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Unit                                 | `toClientKey`                   | Table: IPv4 passthrough; `2001:db8::1` and `2001:0DB8:0:0:ffff::2` share `2001:db8:0:0::/64`; different `/64` values differ; `::ffff:198.51.100.7` and `::ffff:c633:6407` → `198.51.100.7`; `fe80::1%eth0` → `fe80:0:0:0::/64`; `::1`; `::`; embedded dotted tail that is not mapped (`64:ff9b::1.2.3.4`) → its `/64`; `undefined`, `''`, `42`, `'not-an-ip'` → `'unresolved'`; never throws                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Unit                                 | `LoginThrottlerGuard`           | Construct with a fake storage and the options array, call `getTracker({})` and `getTracker({ ip: '2001:db8::5' })`. Also run `canActivate` with a stub `ExecutionContext` and no `req.ip`: the storage fake receives a key (counted), and nothing throws                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Integration (adapter, real Postgres) | `PrismaThrottlerStorage`        | `new PrismaThrottlerStorage(new PrismaService())` with `randomUUID()` keys. (1) First hit: `{1, ≈ttl s, false, 0}`. (2) `limit + 1` hits: the last is `isBlocked` with `timeToBlockExpire ≥ 1`. (3) Hits while blocked are not counted. (4) Window expiry with ttl 1000 ms, wait about 1.2 s → `totalHits` 1. (5) Block expiry → reset to 1, not blocked. (6) **Concurrency**: 50 parallel `increment` calls with limit 1000 → returned `totalHits` values are exactly the set {1..50}, and the row has `hits = 50`. (7) Concurrent `limit + 5` with limit 10 → exactly 10 unblocked results. (8) Cleanup: seed expired rows and one live row with `prisma.throttleCounter.createMany` using past and future dates, increment a new key → expired rows gone (at most 100 per call), live row intact. (9) A hashed key is stored verbatim (no raw IP column exists) |
+| Integration (app, real Postgres)     | Spec scenarios on persistence   | `test/login-rate-limit.integration.spec.ts`: real `AppModule`, `trust proxy` 1, unique `X-Forwarded-For` per case, limit 3 via env. **Restart**: app A exhausts the key → `close()` → app B on the same DB → 429. **Two instances**: A gets 2 attempts and B gets 1, then the next attempt on either → 429. **Concurrent**: 3 parallel attempts → none 429, the 4th → 429. Failed logins (unknown email, 401) count, so no user seeding is needed                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| E2E (mocked Prisma, in-memory store) | Tracker and hop logic over HTTP | Existing cases kept. New cases: `TRUST_PROXY=2` with `X-Forwarded-For: client, proxy` keys on `client`; a spoofed prefix `spoof, client, proxy` still keys on `client`; IPv6 same `/64` → 429 on rotation; different `/64` → 200; `::ffff:198.51.100.7` shares with `198.51.100.7` (with `TRUST_PROXY=true`). Startup failure for invalid values stays at the unit level, because `main.ts` is not exercised by e2e                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 The undefined-IP scenario cannot be produced through supertest (`req.ip` is
 always set). It is covered by the guard unit test above. This seam is the
@@ -541,12 +552,12 @@ values, and they are covered by Decisions 1 and 3 and their tests.
 
 ## PR Slicing (final split is decided in sdd-tasks)
 
-| PR | Branch | Content | Rough lines (code / tests+docs) |
-|---|---|---|---|
-| 1/4 | `login-rate-limit-hardening/01-trust-proxy-hops-ipv6-key` | TD-28 + TD-29: trust-proxy, `client-key`, guard, controller swap, unit and e2e tests, README table, ADR addendum (questions 2 and 3) | ≈ 90 / 220 → **~310** |
-| 2/4 | `login-rate-limit-hardening/02-prisma-throttler-storage` | TD-30 storage: model, migration, adapter, adapter integration spec (not wired) | ≈ 110 / 200 → **~310** |
-| 3/4 | `login-rate-limit-hardening/03-wire-persistent-throttle` | Wiring, e2e storage overrides (≈ 12 suites × 3 lines), app-level integration spec, integration setup file, README and ADR (question 4, ADR-001 note) | ≈ 20 / 230 → **~250** |
-| 4/4 | `login-rate-limit-hardening/04-archive` | Spec merge, TD register moves, archive | docs only |
+| PR  | Branch                                                    | Content                                                                                                                                              | Rough lines (code / tests+docs) |
+| --- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 1/4 | `login-rate-limit-hardening/01-trust-proxy-hops-ipv6-key` | TD-28 + TD-29: trust-proxy, `client-key`, guard, controller swap, unit and e2e tests, README table, ADR addendum (questions 2 and 3)                 | ≈ 90 / 220 → **~310**           |
+| 2/4 | `login-rate-limit-hardening/02-prisma-throttler-storage`  | TD-30 storage: model, migration, adapter, adapter integration spec (not wired)                                                                       | ≈ 110 / 200 → **~310**          |
+| 3/4 | `login-rate-limit-hardening/03-wire-persistent-throttle`  | Wiring, e2e storage overrides (≈ 12 suites × 3 lines), app-level integration spec, integration setup file, README and ADR (question 4, ADR-001 note) | ≈ 20 / 230 → **~250**           |
+| 4/4 | `login-rate-limit-hardening/04-archive`                   | Spec merge, TD register moves, archive                                                                                                               | docs only                       |
 
 This revises the proposal's 3-PR hint. Combining TD-30 into one PR forecasts
 about 560 lines, and the excess would be e2e wiring rather than fixtures, so

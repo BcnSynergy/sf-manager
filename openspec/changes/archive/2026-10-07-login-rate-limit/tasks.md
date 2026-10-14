@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
 | Estimated changed lines | PR 1 ~480 (code ~66, tests ~365, docs ~50) plus openspec artifacts; PR 2 archive only (docs) |
-| 400-line budget risk | High (PR 1 only, excess is tests/docs) |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 (API throttle + web message) then PR 2 (archive) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High (PR 1 only, excess is tests/docs)                                                       |
+| Chained PRs recommended | Yes                                                                                          |
+| Suggested split         | PR 1 (API throttle + web message) then PR 2 (archive)                                        |
+| Delivery strategy       | ask-on-risk                                                                                  |
+| Chain strategy          | stacked-to-main                                                                              |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -20,10 +20,10 @@ Decision needed: PR 1 exceeds 400 lines by ~80. Code is ~66 lines; the rest is t
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Throttle on login, trust proxy, web 429 message, e2e, ADR-011 addendum, README | PR 1/2 | Base: main. Branch `login-rate-limit/01-login-throttle`. Title `feat(auth): PR 1/2 — rate limit on POST /auth/login` |
-| 2 | Archive | PR 2/2 | Base: main (after PR 1 merges). Branch `login-rate-limit/02-archive`. Title `docs(openspec): PR 2/2 — archive login-rate-limit` |
+| Unit | Goal                                                                           | Likely PR | Notes                                                                                                                           |
+| ---- | ------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Throttle on login, trust proxy, web 429 message, e2e, ADR-011 addendum, README | PR 1/2    | Base: main. Branch `login-rate-limit/01-login-throttle`. Title `feat(auth): PR 1/2 — rate limit on POST /auth/login`            |
+| 2    | Archive                                                                        | PR 2/2    | Base: main (after PR 1 merges). Branch `login-rate-limit/02-archive`. Title `docs(openspec): PR 2/2 — archive login-rate-limit` |
 
 Strict TDD (ADR-016): every behavior RED, GREEN, REFACTOR. Apply records a "TDD Cycle Evidence" table in apply-progress (RED command and failure; GREEN command and pass count). Every commit must compile: `npx tsc -b` in apps/web, API build and lint (Vitest does not type-check). PR must pass `ci`.
 

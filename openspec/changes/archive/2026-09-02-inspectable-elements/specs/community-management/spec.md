@@ -25,11 +25,13 @@ representative-deactivation side effect once permission and existence
 checks passed.)
 
 #### Scenario: Admin soft-deletes a community with no active elements
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`, a target active community exists, and it has no non-soft-deleted `InspectableElement` attached
 - WHEN they soft-delete that community
 - THEN the response MUST be 2xx and the community's `deletedAt` MUST be set
 
 #### Scenario: Delete refused while an active element is attached
+
 - GIVEN community C has at least one non-soft-deleted `InspectableElement` with `communityId` pointing at C
 - WHEN a `SYSTEM_ADMIN` attempts to soft-delete C
 - THEN the response MUST be 409 with `code: COMMUNITY_HAS_ACTIVE_ELEMENTS`
@@ -37,26 +39,31 @@ checks passed.)
 - AND no `InspectableElement` record MUST be modified
 
 #### Scenario: Soft-deleted elements do not block deletion
+
 - GIVEN community C has only soft-deleted `InspectableElement` records attached, and no non-soft-deleted one
 - WHEN a `SYSTEM_ADMIN` attempts to soft-delete C
 - THEN the response MUST be 2xx and C's `deletedAt` MUST be set
 
 #### Scenario: Delete succeeds after soft-deleting every active element
+
 - GIVEN community C was previously blocked from deletion by an active `InspectableElement`
 - WHEN that element is soft-deleted and the admin retries the delete
 - THEN the response MUST be 2xx and C's `deletedAt` MUST be set
 
 #### Scenario: Soft-deleting a community deactivates its sole-active representative
+
 - GIVEN community C has representative A currently active, A is not active as representative in any other community, and C has no non-soft-deleted `InspectableElement` attached
 - WHEN an admin soft-deletes community C
 - THEN A's representative assignment for C MUST become deactivated
 
 #### Scenario: Soft-deleting a community leaves an active-elsewhere representative unchanged
+
 - GIVEN community C has representative A currently active, A is also currently active as representative in another community C2, and C has no non-soft-deleted `InspectableElement` attached
 - WHEN an admin soft-deletes community C
 - THEN A's representative assignment for C MUST remain active and unchanged
 
 #### Scenario: Soft-deleting a community has no effect on technician assignments
+
 - GIVEN community C has one or more active or deactivated technician assignments and no non-soft-deleted `InspectableElement` attached
 - WHEN an admin soft-deletes community C
 - THEN no technician assignment for C MUST be created, modified, or deactivated as a result

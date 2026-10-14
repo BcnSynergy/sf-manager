@@ -205,7 +205,7 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
 - **EN-25** (api): Tidy the SQL in
   `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
   The upsert repeats the "new window" condition (`blockedUntil IS NOT NULL OR
-  windowEndsAt <= now()`) four times and the window-end expression five
+windowEndsAt <= now()`) four times and the window-end expression five
   times; computing each once (for example in a CTE or a single anchor) would
   state every rule once. Related to EN-9 and EN-21. Origin:
   `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
@@ -324,6 +324,12 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `apps/api/src/modules/auth/auth.module.ts` (~line 105) throws at startup. The
   "Invalid configuration rejected at startup" scenario is proven only by the
   config unit spec. Origin: `login-account-lockout` sdd-verify, 2026-10-14.
+- **EN-43** (tooling): With `endOfLine: "auto"` (needed for CRLF working
+  trees on Windows), the CI `Format` step no longer checks line endings, so
+  a CRLF file committed from a tree without `core.autocrlf` would pass. Today
+  the whole index is LF. A `.gitattributes` with `* text=auto eol=lf` would
+  keep line endings enforced. Origin: `td-33-prettier-enforced` PR 1 review,
+  2026-10-14.
 
 ## Done
 

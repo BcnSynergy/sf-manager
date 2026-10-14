@@ -23,32 +23,32 @@ Read `tasks.md` before the archive. A.1-A.9, G.1, B.1-B.7 and C.1 are all `[x]` 
 
 ## Specs Synced
 
-| Capability | Action | Requirements |
-|---|---|---|
+| Capability               | Action                                                                     | Requirements                                                                                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `continuous-integration` | Created (new capability; the delta was a full spec, no existing main spec) | 8 requirements: Triggers; Verification tiers; Throwaway database; Least privilege; Stale run cancellation and duration; Documentation; Merge barrier; Rollback ordering |
 
 Main spec file: `openspec/specs/continuous-integration/spec.md` (byte-identical copy of the change spec, made by the orchestrator). No other main spec was touched. No MODIFIED or REMOVED requirements.
 
 ## Delivered PRs (stacked-to-main, single planned PR plus one follow-up)
 
-| PR | Result |
-|---|---|
-| #189 `ci-pipeline/01-ci-workflow` | Merged at `8437978`. Workflow, `turbo.json` `passThroughEnv`, ADR-017, INDEX row, README note, plus the test fix `9a7b69f` (A.9) |
-| #190 `ci-pipeline/zz-barrier-probe` | Throwaway barrier probe with a deliberately failing spec. Closed unmerged, branch deleted |
-| #191 `ci-pipeline/02-tighten-timeout` | Merged at `774a59c`, through the new protection. `timeout-minutes` 30 to 15 (B.7) |
+| PR                                    | Result                                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| #189 `ci-pipeline/01-ci-workflow`     | Merged at `8437978`. Workflow, `turbo.json` `passThroughEnv`, ADR-017, INDEX row, README note, plus the test fix `9a7b69f` (A.9) |
+| #190 `ci-pipeline/zz-barrier-probe`   | Throwaway barrier probe with a deliberately failing spec. Closed unmerged, branch deleted                                        |
+| #191 `ci-pipeline/02-tighten-timeout` | Merged at `774a59c`, through the new protection. `timeout-minutes` 30 to 15 (B.7)                                                |
 
 This archive lands on branch `ci-pipeline/03-archive`.
 
 ## Workflow runs
 
-| Run | Subject | Result |
-|---|---|---|
-| 37502685198 | PR #189 first run | failure, 1/207 integration tests (order-dependent test, fixed by A.9) |
-| 37504191872 | PR #189 head `9a7b69f` | success, job 2m14s |
-| 37505671255 | push main `8437978` | success |
-| 37506363775 | probe PR #190 | failure on Unit only, as intended; Build/Lint/E2E/Integration ran and passed |
-| 37507255249 | PR #191 | success (cache restored) |
-| 37507803314 | push main `774a59c` | success |
+| Run         | Subject                | Result                                                                       |
+| ----------- | ---------------------- | ---------------------------------------------------------------------------- |
+| 37502685198 | PR #189 first run      | failure, 1/207 integration tests (order-dependent test, fixed by A.9)        |
+| 37504191872 | PR #189 head `9a7b69f` | success, job 2m14s                                                           |
+| 37505671255 | push main `8437978`    | success                                                                      |
+| 37506363775 | probe PR #190          | failure on Unit only, as intended; Build/Lint/E2E/Integration ran and passed |
+| 37507255249 | PR #191                | success (cache restored)                                                     |
+| 37507803314 | push main `774a59c`    | success                                                                      |
 
 ## Branch protection state (live on `main`)
 

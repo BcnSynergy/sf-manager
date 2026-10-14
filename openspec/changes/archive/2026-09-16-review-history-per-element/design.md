@@ -21,16 +21,16 @@ and empty".
 
 The slice's rules, each in exactly one place:
 
-| Rule | Where it is enforced | How it is auditable |
-|---|---|---|
-| Caller holds `reviewSession:read` | `PermissionsGuard` + `@RequirePermission`, on `ReviewHistoryController` (Decision 6) | `ROLE_PERMISSIONS` is byte-unchanged; the route is not on `InspectableElementController` |
-| The `:communityId` segment is verified, not decorative | `findByIdInCommunity` runs **first**, before any scope checker (Decision 5) | Wrong-community pairing is indistinguishable from an unknown id |
-| A caller never sees an entry outside their scope | The scope conjunct is a **required parameter of every new port method** and lives in SQL, never in the caller (Decision 1/2) | The port's "no identifier-only read" enumeration test grows by exactly 4 named methods |
-| A technician sees only their own entries | `findCompletedEntriesForElementForPerformer(elementId, performedById)` — `performedById` is in the `WHERE`, not in a post-filter (Decision 2) | E2E: a two-performer element shows exactly one row to each technician |
-| "Unreachable" is never confused with "reachable, no entries" | A **discriminated union**, not `[]` vs `null` (Decision 4) | Type-level; `{ reachable: false }` has no `entries` property to read |
-| Every 404 cause collapses to one code | ONE `throw new InspectableElementNotFoundError()` site in the use case (Decision 5) | Unknown id, foreign community, soft-deleted element, out-of-scope caller and ungranted `MANAGER` are byte-identical responses |
-| The five-role web route does not leak into its admin-only URL family | `ProtectedRoute allowedRoles` declared inline with a naming comment + its own guard test (Decision 7) | `ProtectedRoute.test.tsx` names both the five roles and the family default |
-| The four shipped session-level scopes are untouched | `listForActor`/`loadByRole` and their six methods are byte-unchanged | Five-scope E2E regression matrix, no sampling |
+| Rule                                                                 | Where it is enforced                                                                                                                          | How it is auditable                                                                                                           |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Caller holds `reviewSession:read`                                    | `PermissionsGuard` + `@RequirePermission`, on `ReviewHistoryController` (Decision 6)                                                          | `ROLE_PERMISSIONS` is byte-unchanged; the route is not on `InspectableElementController`                                      |
+| The `:communityId` segment is verified, not decorative               | `findByIdInCommunity` runs **first**, before any scope checker (Decision 5)                                                                   | Wrong-community pairing is indistinguishable from an unknown id                                                               |
+| A caller never sees an entry outside their scope                     | The scope conjunct is a **required parameter of every new port method** and lives in SQL, never in the caller (Decision 1/2)                  | The port's "no identifier-only read" enumeration test grows by exactly 4 named methods                                        |
+| A technician sees only their own entries                             | `findCompletedEntriesForElementForPerformer(elementId, performedById)` — `performedById` is in the `WHERE`, not in a post-filter (Decision 2) | E2E: a two-performer element shows exactly one row to each technician                                                         |
+| "Unreachable" is never confused with "reachable, no entries"         | A **discriminated union**, not `[]` vs `null` (Decision 4)                                                                                    | Type-level; `{ reachable: false }` has no `entries` property to read                                                          |
+| Every 404 cause collapses to one code                                | ONE `throw new InspectableElementNotFoundError()` site in the use case (Decision 5)                                                           | Unknown id, foreign community, soft-deleted element, out-of-scope caller and ungranted `MANAGER` are byte-identical responses |
+| The five-role web route does not leak into its admin-only URL family | `ProtectedRoute allowedRoles` declared inline with a naming comment + its own guard test (Decision 7)                                         | `ProtectedRoute.test.tsx` names both the five roles and the family default                                                    |
+| The four shipped session-level scopes are untouched                  | `listForActor`/`loadByRole` and their six methods are byte-unchanged                                                                          | Five-scope E2E regression matrix, no sampling                                                                                 |
 
 **Verified on `main` before designing, not assumed**:
 
@@ -39,10 +39,10 @@ The slice's rules, each in exactly one place:
   `reviewSessionId`. There is no index on `inspectableElementId`. The FK to
   `InspectableElement(id)` is hand-written and Prisma-invisible, and this
   schema's own standing note — repeated on `User`, `InspectableElement`,
-  `ReviewSession` and `ReviewTemplateQuestion` — is *"Postgres does not
-  auto-index FK columns"*.
+  `ReviewSession` and `ReviewTemplateQuestion` — is _"Postgres does not
+  auto-index FK columns"_.
 - **The review-session FKs are Prisma-invisible (no `@relation`)**, so the
-  adapter *cannot* express a join. `loadEntriesWithAnswers` already loads
+  adapter _cannot_ express a join. `loadEntriesWithAnswers` already loads
   entries and answers as separate queries and assembles them in memory. This
   is not a style preference here; it is a hard constraint on the read shape
   (Decision 2).
@@ -66,8 +66,8 @@ The slice's rules, each in exactly one place:
   regex `/findCompletedAcrossInstallation|findCompletedByIdAcrossInstallation/`.
   The new `findCompletedEntriesForElementAcrossInstallation` does **not**
   match it, so that guard and its file allowlist are unaffected.
-- The shipped *"no repository port method returns a session or a list from an
-  identifier alone"* test enumerates every `find*` on the Prisma adapter
+- The shipped _"no repository port method returns a session or a list from an
+  identifier alone"_ test enumerates every `find*` on the Prisma adapter
   prototype **by name**. It WILL fail unless the four new names are added —
   called out here so `sdd-tasks` budgets for it rather than discovering it as
   a red test.
@@ -152,7 +152,7 @@ refused since `review-session` Decision 4; (b) it would load every
 `QuestionAnswer` row of every matching session to render a page that shows no
 answers — the proposal's own rejected "one snapshot per row" cost, in a
 different disguise; (c) **there is no existing mapping to reuse anyway** —
-every shipped `findCompleted…` *list* method calls
+every shipped `findCompleted…` _list_ method calls
 `ReviewSessionMapper.toDomain(record, [])`, i.e. hydrates no entries. The
 "reuse the existing `ReviewSession` mapping" half of the proposal's tradeoff
 turns out to be worth nothing here.
@@ -177,7 +177,7 @@ are Prisma-invisible and no `include`/`join` is expressible:
 reverse order — resolve the scope's sessions, then fetch entries `WHERE
 inspectableElementId = X AND reviewSessionId IN (…)` — is correct but
 degenerates for the two unscoped branches: `findCompletedEntriesForElementAcrossInstallation`
-would build an `IN` list of *every completed session in the installation* and
+would build an `IN` list of _every completed session in the installation_ and
 ship it to Postgres on every page load. Entry-first bounds step 1 by the
 number of times this one element has ever been reviewed (review frequency ×
 years — tens, maybe low hundreds), and bounds step 2's `IN` list by the same
@@ -220,27 +220,27 @@ model ElementReviewEntry {
 
 **The reasoning, stated so it would survive a planner**:
 
-- *Query 1* is `WHERE "inspectableElementId" = $1`. Available access paths
+- _Query 1_ is `WHERE "inspectableElementId" = $1`. Available access paths
   today: the PK on `id` (useless), and the btree on
   `(reviewSessionId, inspectableElementId)`. Postgres cannot do an index
-  *search* on a non-leading column; the best it can do is a full index-only
+  _search_ on a non-leading column; the best it can do is a full index-only
   scan of every tuple in that index, then a filter — O(all entries ever
-  recorded), growing as *elements × sessions*, on every page load. With the
+  recorded), growing as _elements × sessions_, on every page load. With the
   new index it is a bounded index scan + heap fetch of tens of rows.
-- *Query 2* is `WHERE "id" IN (…) AND "status" = 'completed' AND <scope>`.
+- _Query 2_ is `WHERE "id" IN (…) AND "status" = 'completed' AND <scope>`.
   The `IN` list is on the primary key and is already bounded by query 1's
   result — the most selective access path in the table. **No index is needed
   or added for query 2**, and the shipped `(status, completedAt, id)`
-  composite is irrelevant to it (it exists for the *unfiltered*
+  composite is irrelevant to it (it exists for the _unfiltered_
   installation-wide list, which this query is not).
 - **Why not composite `(inspectableElementId, recordedAt, id)`, mirroring the
   admin-scope precedent?** Two independent reasons, either sufficient. First,
   the precedent does not transfer: `(status, completedAt, id)` was added
-  because the admin list had *no* selective filter at all — seq scan +
+  because the admin list had _no_ selective filter at all — seq scan +
   filesort over the whole table — whereas this filter is extremely selective
   and leaves a few dozen rows to sort. Second, and decisively: **an
   index-provided sort order cannot survive to the response here.** Decision 2
-  makes the final ordering an application-level sort applied *after* the
+  makes the final ordering an application-level sort applied _after_ the
   in-memory join with query 2's result, so covering `recordedAt` in the index
   buys literally nothing while adding write amplification on
   `upsertEntry` — the hottest write path in the app, executed once per
@@ -272,17 +272,16 @@ shipped one should see only the element parameter and the reachability shape.
 // who must not learn that. `{ reachable: false }` has no `entries` property
 // to read at all — the wrong branch does not compile.
 export type ElementHistoryScope =
-  | { reachable: false }
-  | { reachable: true; entries: ElementReviewEntryRow[] };
+  { reachable: false } | { reachable: true; entries: ElementReviewEntryRow[] };
 ```
 
-| Branch | Scope resolution | Repository call | Empty result means |
-|---|---|---|---|
-| `MAINTENANCE_TECHNICIAN` | none (Layer 3 identity, as shipped) | `…ForPerformer(element.id, actor.userId)` | **unreachable** (404) |
-| `COMMUNITY_REPRESENTATIVE` | `listAssignedCommunityIds` — the **same one call** the shipped list branch makes | skipped unless the list contains `element.communityId` | reachable, empty state |
-| `MAINTENANCE_COMPANY_MANAGER` | `resolveCompanyScope`; `null` ⇒ unreachable **before any query** | `…ForCompany(element.id, companyId)` | **unreachable** (404) |
-| `SYSTEM_ADMIN` | none (the role is the scope) | `…AcrossInstallation(element.id)` | reachable, empty state |
-| `MANAGER` | `hasManagerCapability(…, 'VIEW_ALL_REVIEWS')`; ungranted ⇒ unreachable **before any query** | `…AcrossInstallation(element.id)` | reachable, empty state |
+| Branch                        | Scope resolution                                                                            | Repository call                                        | Empty result means     |
+| ----------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------- |
+| `MAINTENANCE_TECHNICIAN`      | none (Layer 3 identity, as shipped)                                                         | `…ForPerformer(element.id, actor.userId)`              | **unreachable** (404)  |
+| `COMMUNITY_REPRESENTATIVE`    | `listAssignedCommunityIds` — the **same one call** the shipped list branch makes            | skipped unless the list contains `element.communityId` | reachable, empty state |
+| `MAINTENANCE_COMPANY_MANAGER` | `resolveCompanyScope`; `null` ⇒ unreachable **before any query**                            | `…ForCompany(element.id, companyId)`                   | **unreachable** (404)  |
+| `SYSTEM_ADMIN`                | none (the role is the scope)                                                                | `…AcrossInstallation(element.id)`                      | reachable, empty state |
+| `MANAGER`                     | `hasManagerCapability(…, 'VIEW_ALL_REVIEWS')`; ungranted ⇒ unreachable **before any query** | `…AcrossInstallation(element.id)`                      | reachable, empty state |
 
 The representative branch, written out because OQ5 asked for it traced rather
 than assumed:
@@ -419,7 +418,8 @@ Distinct loading / empty / error states, every row linking to
 **The route gate is the anomaly, and it is labelled as one in-file:**
 
 ```tsx
-{/* review-history-per-element/design.md Decision 7: DELIBERATELY five
+{
+  /* review-history-per-element/design.md Decision 7: DELIBERATELY five
     roles, unlike EVERY other route in this `inspectable-elements` family,
     which is SYSTEM_ADMIN-only. This is a review-history read that happens
     to be keyed by an element, gated server-side on `reviewSession:read`
@@ -427,11 +427,12 @@ Distinct loading / empty / error states, every row linking to
     so this list matches /review-history*, not its URL neighbours. Do NOT
     "harmonize" it downward to SYSTEM_ADMIN, and do NOT copy it upward
     onto /edit, /label or the element list. ProtectedRoute.test.tsx pins
-    both facts. */}
+    both facts. */
+}
 ```
 
-Two entry links, no second page: a per-row *History* link on
-`CommunityElementsListPage` (the shipped *Print* link's shape verbatim), and
+Two entry links, no second page: a per-row _History_ link on
+`CommunityElementsListPage` (the shipped _Print_ link's shape verbatim), and
 a per-entry link on `ReviewHistoryDetailPage` — the latter is what makes the
 four non-admin scopes reachable in a browser at all. The API client gains one
 function in `apps/web/src/api/review-history.ts`, beside the two shipped
@@ -473,51 +474,51 @@ ones. Real `en`/`es`/`ca` translations for every new key.
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modify | `@@index([inspectableElementId])` on `ElementReviewEntry` + its intent comment (Decision 3). Nothing else. |
-| `apps/api/prisma/migrations/20260915…_add_element_review_entry_inspectable_element_index/migration.sql` | Create | Hand-written `CREATE INDEX`, mirroring `20260913210000_…`'s header and its `migrate dev` warning |
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modify | `ElementReviewEntryRow` + four `findCompletedEntriesForElement…` methods; extend the "no identifier-only read" note to name the installation-scope carve-out for the new method too (Decision 1) |
-| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts` | Modify | The four two-query implementations + `ELEMENT_HISTORY_ORDER_BY` (Decision 2) |
-| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify | Fake parity for the four methods, including the `communityIds = []` false-predicate case |
-| `.../review-session/application/services/review-history-access.service.ts` | Modify | `ElementHistoryScope` + `listElementHistoryForActor` + private role dispatcher (Decision 4); `listForActor`/`loadByRole` **untouched** |
-| `.../review-session/application/use-cases/read-element-review-history.use-case.ts` | Create | Element-first resolution, one throw site, header + scoped ordered rows (Decision 5) |
-| `.../review-session/presentation/review-history.controller.ts` | Modify | One nested `@Get`, `@RequirePermission('reviewSession:read')`, one new `mapError` branch (Decision 6) |
-| `.../review-session/presentation/dto/element-review-history-response.dto.ts` | Create | Header + rows; Swagger annotations mirroring `ReviewHistoryDetailResponseDto` |
-| `.../review-session/review-session.module.ts` | Modify | Provide the new use case. **No new import** — all three dependencies are already imported |
-| `.../inspectable-element/**` | **Untouched** | `findByIdInCommunity` reused verbatim; no new port method, no `GET` by-id route, controller byte-unchanged |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | **Untouched** | No permission table change |
-| `apps/web/src/pages/ElementReviewHistoryPage.tsx` (+ test) | Create | The one new page (Decision 7) |
-| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test) | Modify | Per-row *History* link, the *Print* link's shape |
-| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) | Modify | Per-entry element-history link |
-| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx` | Modify | Depth-5 route, five-role gate, the anomaly comment + its guard test |
-| `apps/web/src/api/review-history.ts` | Modify | `ElementReviewHistory` types + `readElementReviewHistory(communityId, elementId)` |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real translations, parity test-enforced |
-| `.../persistence/prisma-review-session.repository.integration.spec.ts` | Modify | Four new method suites; **the `find*` enumeration test's expected list grows by 4** (it fails otherwise) |
-| `apps/api/test/review-history.e2e-spec.ts` | Modify | Five-scope element-history matrix |
-| `openspec/specs/{review-history,review-history-ui,review-session-management,authorization,inspectable-element-admin-ui}/spec.md` | Modify | Delta specs (owned by `sdd-spec`) |
-| `docs/requirements/functional-requirements.md` | Modify | **FR-008 closes** |
+| File                                                                                                                             | Action        | Description                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/api/prisma/schema.prisma`                                                                                                  | Modify        | `@@index([inspectableElementId])` on `ElementReviewEntry` + its intent comment (Decision 3). Nothing else.                                                                                       |
+| `apps/api/prisma/migrations/20260915…_add_element_review_entry_inspectable_element_index/migration.sql`                          | Create        | Hand-written `CREATE INDEX`, mirroring `20260913210000_…`'s header and its `migrate dev` warning                                                                                                 |
+| `.../review-session/application/ports/review-session.repository.port.ts`                                                         | Modify        | `ElementReviewEntryRow` + four `findCompletedEntriesForElement…` methods; extend the "no identifier-only read" note to name the installation-scope carve-out for the new method too (Decision 1) |
+| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts`                                              | Modify        | The four two-query implementations + `ELEMENT_HISTORY_ORDER_BY` (Decision 2)                                                                                                                     |
+| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts`                                        | Modify        | Fake parity for the four methods, including the `communityIds = []` false-predicate case                                                                                                         |
+| `.../review-session/application/services/review-history-access.service.ts`                                                       | Modify        | `ElementHistoryScope` + `listElementHistoryForActor` + private role dispatcher (Decision 4); `listForActor`/`loadByRole` **untouched**                                                           |
+| `.../review-session/application/use-cases/read-element-review-history.use-case.ts`                                               | Create        | Element-first resolution, one throw site, header + scoped ordered rows (Decision 5)                                                                                                              |
+| `.../review-session/presentation/review-history.controller.ts`                                                                   | Modify        | One nested `@Get`, `@RequirePermission('reviewSession:read')`, one new `mapError` branch (Decision 6)                                                                                            |
+| `.../review-session/presentation/dto/element-review-history-response.dto.ts`                                                     | Create        | Header + rows; Swagger annotations mirroring `ReviewHistoryDetailResponseDto`                                                                                                                    |
+| `.../review-session/review-session.module.ts`                                                                                    | Modify        | Provide the new use case. **No new import** — all three dependencies are already imported                                                                                                        |
+| `.../inspectable-element/**`                                                                                                     | **Untouched** | `findByIdInCommunity` reused verbatim; no new port method, no `GET` by-id route, controller byte-unchanged                                                                                       |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                                                               | **Untouched** | No permission table change                                                                                                                                                                       |
+| `apps/web/src/pages/ElementReviewHistoryPage.tsx` (+ test)                                                                       | Create        | The one new page (Decision 7)                                                                                                                                                                    |
+| `apps/web/src/pages/CommunityElementsListPage.tsx` (+ test)                                                                      | Modify        | Per-row _History_ link, the _Print_ link's shape                                                                                                                                                 |
+| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test)                                                                        | Modify        | Per-entry element-history link                                                                                                                                                                   |
+| `apps/web/src/App.tsx`, `auth/ProtectedRoute.test.tsx`                                                                           | Modify        | Depth-5 route, five-role gate, the anomaly comment + its guard test                                                                                                                              |
+| `apps/web/src/api/review-history.ts`                                                                                             | Modify        | `ElementReviewHistory` types + `readElementReviewHistory(communityId, elementId)`                                                                                                                |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                                                                      | Modify        | Real translations, parity test-enforced                                                                                                                                                          |
+| `.../persistence/prisma-review-session.repository.integration.spec.ts`                                                           | Modify        | Four new method suites; **the `find*` enumeration test's expected list grows by 4** (it fails otherwise)                                                                                         |
+| `apps/api/test/review-history.e2e-spec.ts`                                                                                       | Modify        | Five-scope element-history matrix                                                                                                                                                                |
+| `openspec/specs/{review-history,review-history-ui,review-session-management,authorization,inspectable-element-admin-ui}/spec.md` | Modify        | Delta specs (owned by `sdd-spec`)                                                                                                                                                                |
+| `docs/requirements/functional-requirements.md`                                                                                   | Modify        | **FR-008 closes**                                                                                                                                                                                |
 
 ## Testing Strategy
 
-| Layer | What to test | Approach |
-|---|---|---|
-| Unit (api) | `ReviewHistoryAccessService.listElementHistoryForActor` | Table-driven over all five roles: ungranted `MANAGER`, `null`-company manager and unassigned representative each resolve `{ reachable: false }` **and** the repository mock asserted `not.toHaveBeenCalled()`; assigned representative with `[]` resolves `{ reachable: true, entries: [] }`; technician and company manager with `[]` resolve `{ reachable: false }`; each branch asserted to call **its own** method with **its own** scope argument |
-| Unit (api) | The four shipped session-level branches | Existing `review-history-access.service.spec.ts` re-run **unmodified** — byte-identical behaviour |
-| Unit (api) | `ReadElementReviewHistoryUseCase` | Element lookup runs **before** the access service (mock call order asserted); unknown element ⇒ no scope-checker call at all; every rejection cause produces the identical error instance; header fields come from the element with no second query; `reviewed` derived from `observations`; `communityName`/`performedByEmail` fall back to `''`; ordering `recordedAt DESC, entryId DESC` incl. the equal-timestamp tiebreak |
-| Unit (api) | In-memory fake parity | Same four suites as the Prisma adapter, same fixtures — including `communityIds: []` returning `[]`, never everything |
-| Integration (api) | The four adapter methods, real Postgres | An element reviewed in **two** completed sessions by **two** performers from **two** companies, plus one draft session (must never surface), plus one entry for a *different* element in the same session (must never surface); each method asserted to return exactly its scope's rows |
-| Integration (api) | `reviewed` derivation | `observations === null` agrees with `answers.length > 0` for a reviewed and an unreviewed entry (Decision 5, step 4) |
-| Integration (api) | Migration, real Postgres | `ElementReviewEntry_inspectableElementId_idx` exists in `pg_indexes`; the `@@unique` index, the hand-written CHECK and both hand-written FKs are intact; pre-migration state simulated with `DROP INDEX` inside a transaction, per the `review-session-migration.integration.spec.ts` precedent |
-| Integration (api) | The shipped port-surface guards | The `find*` enumeration test lists exactly the 4 new names beside the 10 shipped ones and still `not.toContain('findById')`; the `…AcrossInstallation` call-site guard's file allowlist is **unchanged** (the new name does not match its regex) |
-| E2E (api) | **Five-scope matrix, no sampling** | Against one element reviewed by two performers from two companies in a community the actor does not own: technician sees exactly **their own** row; representative sees **both** rows for an assigned community and 404 for any other, including a deactivated assignment; company manager sees only their company's row, and a `null`-company manager gets 404 with no repository call; `SYSTEM_ADMIN` and a **granted** `MANAGER` return byte-identical bodies; an **ungranted** `MANAGER` gets 404 on every element |
-| E2E (api) | The 404-vs-empty matrix | Never-reviewed element ⇒ `200` + empty `entries` for admin, granted manager and assigned representative; ⇒ `404` for technician and company manager; decommissioned element ⇒ full history; soft-deleted element ⇒ `404`; wrong `communityId`/`elementId` pairing indistinguishable from an unknown id (same status, same code, same body) |
-| E2E (api) | Scope guards | `ROLE_PERMISSIONS` unchanged and no role holds `inspectableElement:read` beyond `SYSTEM_ADMIN`; no `GET /communities/:c/inspectable-elements/:e` route exists; `InspectableElementRepository` gained no method; no filter/sort/page/search parameter is accepted or honoured; no demo-mode branch |
-| Unit (web) | `ElementReviewHistoryPage` | Loading / empty / error states distinct; element type rendered through the label map, never the raw enum; every row links to `/review-history/:sessionId`; a decommissioned element's badge; no filter/sort control rendered |
-| Unit (web) | Routes | `ProtectedRoute.test.tsx` asserts all five roles reach `/…/:elementId/history` **and** that `/…/:elementId/edit` and `/…/:elementId/label` still admit `SYSTEM_ADMIN` only — the anomaly pinned in both directions |
-| Unit (web) | Entry links | `CommunityElementsListPage` renders the per-row link with the right href; `ReviewHistoryDetailPage` renders the per-entry link and existing assertions pass otherwise unmodified |
-| Unit (web) | i18n | `locales.test.ts` parity for every new key |
-| Browser | CLAUDE.md | Real dev server: a `SYSTEM_ADMIN` from the element list → full history, a never-reviewed element's empty state, a decommissioned element's history; a **technician** from `ReviewHistoryDetailPage`'s per-entry link → exactly their own row on a two-performer element, and a 404 for an element they never reviewed. Seed needs one element in ≥2 completed sessions by 2 performers, one never-reviewed element, one decommissioned element with history, and a technician account |
+| Layer             | What to test                                            | Approach                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (api)        | `ReviewHistoryAccessService.listElementHistoryForActor` | Table-driven over all five roles: ungranted `MANAGER`, `null`-company manager and unassigned representative each resolve `{ reachable: false }` **and** the repository mock asserted `not.toHaveBeenCalled()`; assigned representative with `[]` resolves `{ reachable: true, entries: [] }`; technician and company manager with `[]` resolve `{ reachable: false }`; each branch asserted to call **its own** method with **its own** scope argument                                                                 |
+| Unit (api)        | The four shipped session-level branches                 | Existing `review-history-access.service.spec.ts` re-run **unmodified** — byte-identical behaviour                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Unit (api)        | `ReadElementReviewHistoryUseCase`                       | Element lookup runs **before** the access service (mock call order asserted); unknown element ⇒ no scope-checker call at all; every rejection cause produces the identical error instance; header fields come from the element with no second query; `reviewed` derived from `observations`; `communityName`/`performedByEmail` fall back to `''`; ordering `recordedAt DESC, entryId DESC` incl. the equal-timestamp tiebreak                                                                                         |
+| Unit (api)        | In-memory fake parity                                   | Same four suites as the Prisma adapter, same fixtures — including `communityIds: []` returning `[]`, never everything                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Integration (api) | The four adapter methods, real Postgres                 | An element reviewed in **two** completed sessions by **two** performers from **two** companies, plus one draft session (must never surface), plus one entry for a _different_ element in the same session (must never surface); each method asserted to return exactly its scope's rows                                                                                                                                                                                                                                |
+| Integration (api) | `reviewed` derivation                                   | `observations === null` agrees with `answers.length > 0` for a reviewed and an unreviewed entry (Decision 5, step 4)                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Integration (api) | Migration, real Postgres                                | `ElementReviewEntry_inspectableElementId_idx` exists in `pg_indexes`; the `@@unique` index, the hand-written CHECK and both hand-written FKs are intact; pre-migration state simulated with `DROP INDEX` inside a transaction, per the `review-session-migration.integration.spec.ts` precedent                                                                                                                                                                                                                        |
+| Integration (api) | The shipped port-surface guards                         | The `find*` enumeration test lists exactly the 4 new names beside the 10 shipped ones and still `not.toContain('findById')`; the `…AcrossInstallation` call-site guard's file allowlist is **unchanged** (the new name does not match its regex)                                                                                                                                                                                                                                                                       |
+| E2E (api)         | **Five-scope matrix, no sampling**                      | Against one element reviewed by two performers from two companies in a community the actor does not own: technician sees exactly **their own** row; representative sees **both** rows for an assigned community and 404 for any other, including a deactivated assignment; company manager sees only their company's row, and a `null`-company manager gets 404 with no repository call; `SYSTEM_ADMIN` and a **granted** `MANAGER` return byte-identical bodies; an **ungranted** `MANAGER` gets 404 on every element |
+| E2E (api)         | The 404-vs-empty matrix                                 | Never-reviewed element ⇒ `200` + empty `entries` for admin, granted manager and assigned representative; ⇒ `404` for technician and company manager; decommissioned element ⇒ full history; soft-deleted element ⇒ `404`; wrong `communityId`/`elementId` pairing indistinguishable from an unknown id (same status, same code, same body)                                                                                                                                                                             |
+| E2E (api)         | Scope guards                                            | `ROLE_PERMISSIONS` unchanged and no role holds `inspectableElement:read` beyond `SYSTEM_ADMIN`; no `GET /communities/:c/inspectable-elements/:e` route exists; `InspectableElementRepository` gained no method; no filter/sort/page/search parameter is accepted or honoured; no demo-mode branch                                                                                                                                                                                                                      |
+| Unit (web)        | `ElementReviewHistoryPage`                              | Loading / empty / error states distinct; element type rendered through the label map, never the raw enum; every row links to `/review-history/:sessionId`; a decommissioned element's badge; no filter/sort control rendered                                                                                                                                                                                                                                                                                           |
+| Unit (web)        | Routes                                                  | `ProtectedRoute.test.tsx` asserts all five roles reach `/…/:elementId/history` **and** that `/…/:elementId/edit` and `/…/:elementId/label` still admit `SYSTEM_ADMIN` only — the anomaly pinned in both directions                                                                                                                                                                                                                                                                                                     |
+| Unit (web)        | Entry links                                             | `CommunityElementsListPage` renders the per-row link with the right href; `ReviewHistoryDetailPage` renders the per-entry link and existing assertions pass otherwise unmodified                                                                                                                                                                                                                                                                                                                                       |
+| Unit (web)        | i18n                                                    | `locales.test.ts` parity for every new key                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Browser           | CLAUDE.md                                               | Real dev server: a `SYSTEM_ADMIN` from the element list → full history, a never-reviewed element's empty state, a decommissioned element's history; a **technician** from `ReviewHistoryDetailPage`'s per-entry link → exactly their own row on a two-performer element, and a 404 for an element they never reviewed. Seed needs one element in ≥2 completed sessions by 2 performers, one never-reviewed element, one decommissioned element with history, and a technician account                                  |
 
 ## Migration / Rollout
 
@@ -544,13 +545,12 @@ reachability type, one branch set, one use case, one route, one DTO, one
 page, two links and the i18n keys — nothing else reads any of them, and the
 five shipped session-level scopes are untouched, so reverting cannot regress
 them. Spec amendments and the FR-008 status must revert **with** the code, or
-the specs will claim a surface the code no longer has *and* will have deleted
+the specs will claim a surface the code no longer has _and_ will have deleted
 the guards that keep it unbuilt. Each PR reverts independently.
 
 ## Open Questions
 
-- [x] **OQ1 — shape of the element-keyed port methods**: resolved, Decision 1
-      + 2. **Overrides the proposal's working assumption**: flattened
+- [x] **OQ1 — shape of the element-keyed port methods**: resolved, Decision 1 + 2. **Overrides the proposal's working assumption**: flattened
       projection rows, not sessions-with-nested-entries. The filter moves out
       of the caller and into SQL, no `QuestionAnswer` row is read, and the
       "reuse the existing `ReviewSession` mapping" half of the tradeoff turns
@@ -593,7 +593,7 @@ the guards that keep it unbuilt. Each PR reverts independently.
       session. FR-009's overdue/upcoming computation and any future
       cross-element rollup will want the same access path, and may want the
       composite index this design declined. Named so the next slice
-      re-derives it against *its* query shape rather than inheriting this
+      re-derives it against _its_ query shape rather than inheriting this
       one's conclusion.
 - [ ] **Watch item, not a blocker — a long-lived element's record has no
       bound.** A monthly-reviewed extinguisher accrues ~12 rows a year with

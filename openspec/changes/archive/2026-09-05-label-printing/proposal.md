@@ -42,25 +42,25 @@ ADR-009, ADR-010, ADR-013, ADR-015,
 
 Closed with the product owner before this proposal. Inputs, not open items.
 
-| Decision | Resolution |
-|---|---|
-| **Code type: QR** | Not an open decision — FR-006 mandates it verbatim ("renders the element's `code` as a QR plus the code as plain text"), as does the domain model. Confirmed technically appropriate independently: universal smartphone-camera support with no dedicated scanner (unlike 1D barcodes), error correction that survives a label degrading on a physical unit in a stairwell, and far more capacity than a 10-character payload needs. |
+| Decision                                   | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Code type: QR**                          | Not an open decision — FR-006 mandates it verbatim ("renders the element's `code` as a QR plus the code as plain text"), as does the domain model. Confirmed technically appropriate independently: universal smartphone-camera support with no dedicated scanner (unlike 1D barcodes), error correction that survives a label degrading on a physical unit in a stairwell, and far more capacity than a 10-character payload needs.                                                                                                                                             |
 | **QR payload: the bare `code`, not a URL** | The QR encodes the 10-character `code` as plain text. **Not** `.../elements/{code}`. That route belongs to FR-007 (review session), which has not started; encoding a deep link to a page that 404s would ship a broken promise on a physical, permanent artifact. This **contradicts `docs/architecture/domain-model-inspections.md`**, which currently specifies a URL payload — a source-of-truth correction this slice must make, the same kind of edit `checklist-management` made to the `text`/i18n-key wording. See Risks: the reprint consequence is real and accepted. |
-| **Backfill, not lazy generation** | The migration generates a unique `code` for **every existing `InspectableElement` row** at deploy time. The column ends **`NOT NULL` and `UNIQUE`** — no permanent nullable window, no "generate on first print" path, no unprintable element. Every element is printable the moment this lands. |
-| **Scope: single-element only** | This slice ships **single-element label printing**. FR-006's other named half — the community batch sheet — is **explicitly deferred as a named follow-up**. Multi-label print layout (page breaks, grid consistency across browsers/printers) is its own non-trivial UI problem, and bundling it onto a slice that already carries a migration, a backfill, a generator and a new dependency violates ADR-006. FR-006 therefore stays **deliberately half-satisfied**, exactly as FR-004 does today. |
-| **`code` is immutable** | Assigned once at element registration, never regenerated, never editable — not on the update endpoint, not in the UI. Rationale: the printed label is a durable physical artifact; regenerating a code silently orphans every label already applied to a wall. A lost or damaged label is answered by **reprinting the same code**, which this slice supports natively. *Derived from the physical-artifact constraint, not explicitly stated by the product owner — flagged in the question round below.* |
-| **Generation timing** | At creation, inside `CreateInspectableElementUseCase`, via an injected generator port — never lazily, never the raw `id` UUID. |
-| **Authorization: unchanged** | Printing reuses the existing `inspectableElement:read`. Verified current state: `role-permission.checker.ts` grants `inspectableElement:create\|read\|update\|delete` to `SYSTEM_ADMIN` only; the other four roles are `[]`. **No new permission, no `Permission` union change, no role activation.** The `authorization` capability is untouched by this slice — the first slice in four that leaves it alone. |
-| **`InspectableElement.active` stays out** | Assessed, not inherited. Observation `sdd/review-session/product-decisions` left `active` for "whichever slice first needs it". **Printing does not need it.** Label printing lists and selects non-soft-deleted elements; `deletedAt` (ADR-010) already satisfies that filter completely. `active` means "keeps its history but stops appearing in **new reviews**" — a concept with no referent until `ReviewSession` exists. It stays FR-007's call, per `inspectable-elements`' recorded revisit trigger. |
-| **Print mechanism: browser print** | `window.print()` against a print stylesheet, not a server-generated PDF. No PDF/headless-browser infrastructure exists in the repo; printing a single label does not justify introducing it. Browser print-to-PDF remains available to the user for free. |
-| **Web UI** | In scope, minimal: `code` shown on the existing elements list, a Print action per row, and one print/label view. |
+| **Backfill, not lazy generation**          | The migration generates a unique `code` for **every existing `InspectableElement` row** at deploy time. The column ends **`NOT NULL` and `UNIQUE`** — no permanent nullable window, no "generate on first print" path, no unprintable element. Every element is printable the moment this lands.                                                                                                                                                                                                                                                                                 |
+| **Scope: single-element only**             | This slice ships **single-element label printing**. FR-006's other named half — the community batch sheet — is **explicitly deferred as a named follow-up**. Multi-label print layout (page breaks, grid consistency across browsers/printers) is its own non-trivial UI problem, and bundling it onto a slice that already carries a migration, a backfill, a generator and a new dependency violates ADR-006. FR-006 therefore stays **deliberately half-satisfied**, exactly as FR-004 does today.                                                                            |
+| **`code` is immutable**                    | Assigned once at element registration, never regenerated, never editable — not on the update endpoint, not in the UI. Rationale: the printed label is a durable physical artifact; regenerating a code silently orphans every label already applied to a wall. A lost or damaged label is answered by **reprinting the same code**, which this slice supports natively. _Derived from the physical-artifact constraint, not explicitly stated by the product owner — flagged in the question round below._                                                                       |
+| **Generation timing**                      | At creation, inside `CreateInspectableElementUseCase`, via an injected generator port — never lazily, never the raw `id` UUID.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Authorization: unchanged**               | Printing reuses the existing `inspectableElement:read`. Verified current state: `role-permission.checker.ts` grants `inspectableElement:create\|read\|update\|delete` to `SYSTEM_ADMIN` only; the other four roles are `[]`. **No new permission, no `Permission` union change, no role activation.** The `authorization` capability is untouched by this slice — the first slice in four that leaves it alone.                                                                                                                                                                  |
+| **`InspectableElement.active` stays out**  | Assessed, not inherited. Observation `sdd/review-session/product-decisions` left `active` for "whichever slice first needs it". **Printing does not need it.** Label printing lists and selects non-soft-deleted elements; `deletedAt` (ADR-010) already satisfies that filter completely. `active` means "keeps its history but stops appearing in **new reviews**" — a concept with no referent until `ReviewSession` exists. It stays FR-007's call, per `inspectable-elements`' recorded revisit trigger.                                                                    |
+| **Print mechanism: browser print**         | `window.print()` against a print stylesheet, not a server-generated PDF. No PDF/headless-browser infrastructure exists in the repo; printing a single label does not justify introducing it. Browser print-to-PDF remains available to the user for free.                                                                                                                                                                                                                                                                                                                        |
+| **Web UI**                                 | In scope, minimal: `code` shown on the existing elements list, a Print action per row, and one print/label view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ## Scope
 
 ### In Scope
 
 - **Prisma**: `code` column on `InspectableElement` — fixed-length 10, **`NOT
-  NULL` + `UNIQUE`**. Hand-written unique index in `migration.sql` per ADR-013,
+NULL` + `UNIQUE`**. Hand-written unique index in `migration.sql` per ADR-013,
   following the existing `communityId`-index precedent, plus the
   **backfill step** that assigns a valid unique code to every pre-existing row
   before the constraints are applied.
@@ -159,7 +159,7 @@ waiting for.
 - `inspectable-element-admin-ui`: the elements list shows each element's `code`
   and offers a per-element Print entry point.
 
-*(`authorization` is deliberately **not** modified — see Settled decisions.)*
+_(`authorization` is deliberately **not** modified — see Settled decisions.)_
 
 ## Approach
 
@@ -182,9 +182,9 @@ Four proposal-level choices:
    validated and **adopted**: the API already returns everything a label needs
    once `code` is on the response DTO, so the entire print path is one web
    route with zero new endpoints. Server-side PDF (its alternative) buys
-   pixel-consistent multi-page layout — which only the *deferred* batch sheet
+   pixel-consistent multi-page layout — which only the _deferred_ batch sheet
    needs — at the cost of the repo's first PDF/headless-browser dependency.
-   Wrong trade for a single label. *Adopted with one narrowing*: the exact
+   Wrong trade for a single label. _Adopted with one narrowing_: the exact
    package (a framework-agnostic renderer such as `qrcode` producing an SVG
    string, vs. a React component wrapper) is `sdd-design`'s call, constrained
    to a library that renders deterministically into the print stylesheet and is
@@ -199,12 +199,12 @@ One `stacked-to-main` chain (project convention, CLAUDE.md), each PR merging to
 `main` in order. `sdd-tasks` owns the exact split and must forecast against the
 400-line budget; this is the shape, not a contract.
 
-| PR | Content |
-|---|---|
-| ~1 | Alphabet + format schema (`packages/validation`), generator port + adapter, domain field — with unit tests |
-| ~2 | Migration + backfill + unique index, mapper, create use case wiring, response DTO, E2E |
-| ~3 | QR dependency, label/print view + print stylesheet, list `code` column + Print action, route, i18n |
-| ~4 | Docs correction, browser verification, final checks |
+| PR  | Content                                                                                                    |
+| --- | ---------------------------------------------------------------------------------------------------------- |
+| ~1  | Alphabet + format schema (`packages/validation`), generator port + adapter, domain field — with unit tests |
+| ~2  | Migration + backfill + unique index, mapper, create use case wiring, response DTO, E2E                     |
+| ~3  | QR dependency, label/print view + print stylesheet, list `code` column + Print action, route, i18n         |
+| ~4  | Docs correction, browser verification, final checks                                                        |
 
 PRs ~1–2 are independently shippable: elements carry codes and expose them via
 the API before any UI exists.
@@ -228,27 +228,27 @@ the API before any UI exists.
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma`, `migrations/` | Modified | `code` column (10 chars, `NOT NULL`, `UNIQUE`), hand-written unique index, backfill of existing rows |
-| `.../inspectable-element/domain/inspectable-element.entity.ts` | Modified | `readonly code: string` |
-| `.../inspectable-element/domain/element-code.ts` | New | Alphabet constant + format predicate |
-| `.../inspectable-element/application/ports/element-code-generator.port.ts` | New | Port + `ELEMENT_CODE_GENERATOR` token, mirrors `id-generator.port.ts` |
-| `.../inspectable-element/infrastructure/code/*.generator.ts` | New | Cryptographic RNG adapter over the alphabet |
-| `.../application/use-cases/create-inspectable-element.use-case.ts` | Modified | Generate `code`, bounded collision retry |
-| `.../application/use-cases/testing/in-memory-inspectable-element.repository.ts` | Modified | Reproduce the uniqueness contract |
-| `.../infrastructure/persistence/inspectable-element.mapper.ts` | Modified | Map `code` both ways |
-| `.../presentation/dto/inspectable-element-response.dto.ts` | Modified | `+ code` (+ Swagger) |
-| `.../inspectable-element.module.ts` | Modified | Bind the generator |
-| `packages/validation/src/inspectable-element/**` | Modified | `code` format schema, shared web/API |
-| `apps/web/package.json` | Modified | The repo's first QR dependency |
-| `apps/web/src/pages/InspectableElementLabelPage.tsx` (name TBD) | New | QR + plain-text code + identifying context |
-| `apps/web/src/inspectable-element/**` | Modified/New | Print stylesheet + any label helpers |
-| `apps/web/src/pages/CommunityElementsListPage.tsx` | Modified | `code` column + Print action |
-| `apps/web/src/App.tsx` | Modified | One role-gated route, static-before-dynamic |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Real translations |
-| `apps/api/test/inspectable-element.e2e-spec.ts` | Modified | `code` presence, uniqueness, immutability on update |
-| `docs/architecture/domain-model-inspections.md` | Modified | QR payload = bare `code`; record immutability + batch deferral |
+| Area                                                                            | Impact       | Description                                                                                          |
+| ------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`, `migrations/`                                  | Modified     | `code` column (10 chars, `NOT NULL`, `UNIQUE`), hand-written unique index, backfill of existing rows |
+| `.../inspectable-element/domain/inspectable-element.entity.ts`                  | Modified     | `readonly code: string`                                                                              |
+| `.../inspectable-element/domain/element-code.ts`                                | New          | Alphabet constant + format predicate                                                                 |
+| `.../inspectable-element/application/ports/element-code-generator.port.ts`      | New          | Port + `ELEMENT_CODE_GENERATOR` token, mirrors `id-generator.port.ts`                                |
+| `.../inspectable-element/infrastructure/code/*.generator.ts`                    | New          | Cryptographic RNG adapter over the alphabet                                                          |
+| `.../application/use-cases/create-inspectable-element.use-case.ts`              | Modified     | Generate `code`, bounded collision retry                                                             |
+| `.../application/use-cases/testing/in-memory-inspectable-element.repository.ts` | Modified     | Reproduce the uniqueness contract                                                                    |
+| `.../infrastructure/persistence/inspectable-element.mapper.ts`                  | Modified     | Map `code` both ways                                                                                 |
+| `.../presentation/dto/inspectable-element-response.dto.ts`                      | Modified     | `+ code` (+ Swagger)                                                                                 |
+| `.../inspectable-element.module.ts`                                             | Modified     | Bind the generator                                                                                   |
+| `packages/validation/src/inspectable-element/**`                                | Modified     | `code` format schema, shared web/API                                                                 |
+| `apps/web/package.json`                                                         | Modified     | The repo's first QR dependency                                                                       |
+| `apps/web/src/pages/InspectableElementLabelPage.tsx` (name TBD)                 | New          | QR + plain-text code + identifying context                                                           |
+| `apps/web/src/inspectable-element/**`                                           | Modified/New | Print stylesheet + any label helpers                                                                 |
+| `apps/web/src/pages/CommunityElementsListPage.tsx`                              | Modified     | `code` column + Print action                                                                         |
+| `apps/web/src/App.tsx`                                                          | Modified     | One role-gated route, static-before-dynamic                                                          |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                     | Modified     | Real translations                                                                                    |
+| `apps/api/test/inspectable-element.e2e-spec.ts`                                 | Modified     | `code` presence, uniqueness, immutability on update                                                  |
+| `docs/architecture/domain-model-inspections.md`                                 | Modified     | QR payload = bare `code`; record immutability + batch deferral                                       |
 
 Untouched by design: `modules/community/**`, `modules/maintenance-company/**`,
 `modules/users/**`, `modules/auth/**`, `modules/checklist-question/**`,
@@ -258,18 +258,18 @@ adds no permission and no cross-module guard.
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **Labels printed now are scan-to-text; if FR-007 later wants deep-link QR, every already-applied physical label needs reprinting.** The one genuinely irreversible consequence of this slice — a URL payload can become a bare code silently, but not the reverse | Med | Accepted deliberately (Settled decisions): a QR deep-linking to a 404 is worse than one that scans to text, and the domain model already guarantees the code works as a manually entered lookup value on any surface. Reprint cost is bounded while the deployment is small; **the window closes the day labels go on walls at scale**, so this is called out for explicit confirmation in the question round below |
-| **Backfill leaves a row without a valid, unique `code`** — the migration runs against live data and ends with a `NOT NULL UNIQUE` constraint | Med | Backfill and constraints ship in one migration; an integration test asserts every row has a well-formed code, that the unique index exists (mirroring the shipped migration test), and that the migration is re-runnable from empty |
-| **Code collision handled by a check-then-act pre-check** — the `maintenance-company` PR7 race, third time around | Med | Proposal-level choice 2: DB unique index + bounded retry. `sdd-design` picks the retry bound; a test with a collision-forcing generator fake proves the path, not a vacuous assertion |
-| **`code` becomes mutable by accident** — added to the update DTO or the edit form "for completeness" | Med | Not in `UpdateInspectableElementRequestDto`. E2E asserts a `code` in an update payload does not change the stored value; `sdd-verify` greps the edit form |
-| **A code contains ambiguous characters** and a field technician mistypes `0` for `O` — the exact failure the alphabet exists to prevent | Low | One alphabet declaration, shared via `packages/validation`; a test asserts the excluded characters never appear across a large generated sample |
-| **Scope creep into the batch sheet** — "it's the same page, just N of them" | High | Explicit non-goal. `sdd-verify` asserts no multi-element print route, no page-break CSS, no print-all action |
-| **Scope creep into FR-007** — a code exists, so a lookup route "obviously" follows | Med | Explicit non-goal. `sdd-verify` asserts no by-code lookup route, use case or repository method exists |
-| **The printed label is unusable in practice** — QR too small or low-contrast to scan, or clipped by the browser's print margins | Med | Browser verification includes an actual print preview, not only a rendered page; error-correction level and physical size are named `sdd-design` decisions, not defaults |
-| **The QR library drags in a heavy or React-19-incompatible dependency** — the first runtime dependency added to `apps/web` in this project | Low | `sdd-design` picks the package against explicit constraints (deterministic render into the print stylesheet, jsdom/Vitest-assertable, React 19 compatible); a framework-agnostic renderer is preferred precisely to avoid React-version coupling |
-| ES/CA translations stubbed with English placeholders | Med | Real translations in scope; `locales.test.ts` parity guard extends to the new keys |
+| Risk                                                                                                                                                                                                                                                              | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Labels printed now are scan-to-text; if FR-007 later wants deep-link QR, every already-applied physical label needs reprinting.** The one genuinely irreversible consequence of this slice — a URL payload can become a bare code silently, but not the reverse | Med        | Accepted deliberately (Settled decisions): a QR deep-linking to a 404 is worse than one that scans to text, and the domain model already guarantees the code works as a manually entered lookup value on any surface. Reprint cost is bounded while the deployment is small; **the window closes the day labels go on walls at scale**, so this is called out for explicit confirmation in the question round below |
+| **Backfill leaves a row without a valid, unique `code`** — the migration runs against live data and ends with a `NOT NULL UNIQUE` constraint                                                                                                                      | Med        | Backfill and constraints ship in one migration; an integration test asserts every row has a well-formed code, that the unique index exists (mirroring the shipped migration test), and that the migration is re-runnable from empty                                                                                                                                                                                 |
+| **Code collision handled by a check-then-act pre-check** — the `maintenance-company` PR7 race, third time around                                                                                                                                                  | Med        | Proposal-level choice 2: DB unique index + bounded retry. `sdd-design` picks the retry bound; a test with a collision-forcing generator fake proves the path, not a vacuous assertion                                                                                                                                                                                                                               |
+| **`code` becomes mutable by accident** — added to the update DTO or the edit form "for completeness"                                                                                                                                                              | Med        | Not in `UpdateInspectableElementRequestDto`. E2E asserts a `code` in an update payload does not change the stored value; `sdd-verify` greps the edit form                                                                                                                                                                                                                                                           |
+| **A code contains ambiguous characters** and a field technician mistypes `0` for `O` — the exact failure the alphabet exists to prevent                                                                                                                           | Low        | One alphabet declaration, shared via `packages/validation`; a test asserts the excluded characters never appear across a large generated sample                                                                                                                                                                                                                                                                     |
+| **Scope creep into the batch sheet** — "it's the same page, just N of them"                                                                                                                                                                                       | High       | Explicit non-goal. `sdd-verify` asserts no multi-element print route, no page-break CSS, no print-all action                                                                                                                                                                                                                                                                                                        |
+| **Scope creep into FR-007** — a code exists, so a lookup route "obviously" follows                                                                                                                                                                                | Med        | Explicit non-goal. `sdd-verify` asserts no by-code lookup route, use case or repository method exists                                                                                                                                                                                                                                                                                                               |
+| **The printed label is unusable in practice** — QR too small or low-contrast to scan, or clipped by the browser's print margins                                                                                                                                   | Med        | Browser verification includes an actual print preview, not only a rendered page; error-correction level and physical size are named `sdd-design` decisions, not defaults                                                                                                                                                                                                                                            |
+| **The QR library drags in a heavy or React-19-incompatible dependency** — the first runtime dependency added to `apps/web` in this project                                                                                                                        | Low        | `sdd-design` picks the package against explicit constraints (deterministic render into the print stylesheet, jsdom/Vitest-assertable, React 19 compatible); a framework-agnostic renderer is preferred precisely to avoid React-version coupling                                                                                                                                                                    |
+| ES/CA translations stubbed with English placeholders                                                                                                                                                                                                              | Med        | Real translations in scope; `locales.test.ts` parity guard extends to the new keys                                                                                                                                                                                                                                                                                                                                  |
 
 ## Rollback Plan
 
@@ -360,18 +360,18 @@ assumption — but answers may change the proposal.
 1. **Bare-code QR: do you accept the reprint consequence?** The settled
    decision is correct for today. The cost is that labels applied to walls now
    are scan-to-text forever unless reprinted, should FR-007 later want
-   deep-link QRs. *Assumption*: accepted, and label rollout stays small until
+   deep-link QRs. _Assumption_: accepted, and label rollout stays small until
    FR-007 ships.
 2. **Is `code` immutable, or is regeneration an expected operation?**
-   *Assumption*: immutable; a lost or damaged label is answered by reprinting
+   _Assumption_: immutable; a lost or damaged label is answered by reprinting
    the same code. If an admin should be able to "reissue" a code, that is a new
    use case, endpoint and UI control not currently in scope.
-3. **What else belongs on the physical label?** *Assumption*: element name,
+3. **What else belongs on the physical label?** _Assumption_: element name,
    location and community, plus the QR and the code. If a logo, an installation
    date, or a "report a problem" line is expected, say so — label content is
    cheap to decide now and awkward to retrofit onto printed stock.
 4. **Is browser print acceptable, or is a downloadable/emailable PDF expected
-   from day one?** *Assumption*: browser print, with the user's own
+   from day one?** _Assumption_: browser print, with the user's own
    print-to-PDF as the escape hatch. A required PDF artifact changes the
    approach materially (server-side generation, a new dependency and endpoint).
 

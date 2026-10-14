@@ -77,22 +77,22 @@ record and complete sessions.
 
 ## Affected Areas
 
-| Area | Impact |
-|---|---|
-| `apps/api/prisma/seed.ts` | Modified: invokes the dev dataset |
-| `apps/api/src/shared/seeding/**` | Modified gate; new dataset module and specs |
-| `README.md`, `CLAUDE.md` | Modified: dev credentials, reset, dev data |
-| `apps/api/.env.example` | New: documents `NODE_ENV=development` for local dev |
+| Area                             | Impact                                              |
+| -------------------------------- | --------------------------------------------------- |
+| `apps/api/prisma/seed.ts`        | Modified: invokes the dev dataset                   |
+| `apps/api/src/shared/seeding/**` | Modified gate; new dataset module and specs         |
+| `README.md`, `CLAUDE.md`         | Modified: dev credentials, reset, dev data          |
+| `apps/api/.env.example`          | New: documents `NODE_ENV=development` for local dev |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Rerun duplicates or fails on non-idempotent use cases | High | Skip-if-exists per natural key; run-twice test |
-| A mid-seed failure leaves partial data | Med | Rerun fills the gaps; `migrate reset` as fallback |
-| Seed drifts as the schema evolves | Med | Integration test against the hermetic per-run DB |
-| Dev credentials reach a non-dev DB | Low | Allow-list gate with its own spec |
-| Unset `NODE_ENV` silently skips the dev dataset (and now the technician) | High | Set in `apps/api/.env`, documented in new `apps/api/.env.example` and `README.md`; seed logs the skip |
+| Risk                                                                     | Likelihood | Mitigation                                                                                            |
+| ------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------- |
+| Rerun duplicates or fails on non-idempotent use cases                    | High       | Skip-if-exists per natural key; run-twice test                                                        |
+| A mid-seed failure leaves partial data                                   | Med        | Rerun fills the gaps; `migrate reset` as fallback                                                     |
+| Seed drifts as the schema evolves                                        | Med        | Integration test against the hermetic per-run DB                                                      |
+| Dev credentials reach a non-dev DB                                       | Low        | Allow-list gate with its own spec                                                                     |
+| Unset `NODE_ENV` silently skips the dev dataset (and now the technician) | High       | Set in `apps/api/.env`, documented in new `apps/api/.env.example` and `README.md`; seed logs the skip |
 
 ## Rollback Plan
 

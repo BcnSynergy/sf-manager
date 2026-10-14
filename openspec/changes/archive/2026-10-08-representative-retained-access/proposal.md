@@ -7,6 +7,7 @@ A `COMMUNITY_REPRESENTATIVE` can perform and sign sessions, but once their assig
 ## Scope
 
 ### In Scope
+
 - A representative's own performed `completed` sessions stay in their history list, detail and document, with or without an active assignment.
 - Other performers' sessions still require an active representative assignment.
 - Everything else returns the uniform `404 REVIEW_SESSION_NOT_FOUND`.
@@ -18,6 +19,7 @@ A `COMMUNITY_REPRESENTATIVE` can perform and sign sessions, but once their assig
 API-only is deliberate and user-confirmed. The existing history and document UI renders whatever the API returns, so it needs no web change. It still gets a browser pass.
 
 ### Out of Scope
+
 - The field-flow session page document link.
 - The write surface. It still requires an active assignment.
 - New permissions.
@@ -26,9 +28,11 @@ API-only is deliberate and user-confirmed. The existing history and document UI 
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `authorization`: the representative row of the scope table becomes "active communities ∪ own performed". The L1064-1070 paragraph and its scenarios change.
 - `review-history`: the representative requirement (L84) and the active-assignment exception (L941) change, and possibly the entry-level table (L648, L727-728).
 - `review-document`: the scope text (L127-128) changes, and the scenario at L171-174 is reversed.
@@ -44,20 +48,20 @@ None.
 
 ## Affected Areas
 
-| Area | Impact |
-|------|--------|
-| `apps/api/src/modules/review-session/application/services/review-history-access.service.ts` | Modified |
+| Area                                                                                                                                                                                | Impact                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `apps/api/src/modules/review-session/application/services/review-history-access.service.ts`                                                                                         | Modified                            |
 | `.../ports/review-session.repository.port.ts`, `.../infrastructure/persistence/prisma-review-session.repository.ts`, `.../use-cases/testing/in-memory-review-session.repository.ts` | Modified (if a new method is added) |
-| `apps/api/test/review-history.e2e-spec.ts`, repository `*.integration.spec.ts` | Modified |
-| `docs/adr/ADR-011-...md`, `docs/requirements/functional-requirements.md` | Modified |
+| `apps/api/test/review-history.e2e-spec.ts`, repository `*.integration.spec.ts`                                                                                                      | Modified                            |
+| `docs/adr/ADR-011-...md`, `docs/requirements/functional-requirements.md`                                                                                                            | Modified                            |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| The union leaks other performers' sessions | Med | Unit, integration and e2e negatives |
-| The order differs from the current sort | Low | The OR query keeps `COMPLETED_HISTORY_ORDER_BY` |
-| The detail page's element-history link returns 404 for a deactivated representative | Med | Question 1 below |
+| Risk                                                                                | Likelihood | Mitigation                                      |
+| ----------------------------------------------------------------------------------- | ---------- | ----------------------------------------------- |
+| The union leaks other performers' sessions                                          | Med        | Unit, integration and e2e negatives             |
+| The order differs from the current sort                                             | Low        | The OR query keeps `COMPLETED_HISTORY_ORDER_BY` |
+| The detail page's element-history link returns 404 for a deactivated representative | Med        | Question 1 below                                |
 
 ## Rollback Plan
 

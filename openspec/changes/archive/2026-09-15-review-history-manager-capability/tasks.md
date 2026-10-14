@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                         |
+| ----------------------- | ----------------------------- |
 | Estimated changed lines | ~1200–1600 total across 4 PRs |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 → PR 2 → PR 3 → PR 4 |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High                          |
+| Chained PRs recommended | Yes                           |
+| Suggested split         | PR 1 → PR 2 → PR 3 → PR 4     |
+| Delivery strategy       | ask-on-risk                   |
+| Chain strategy          | stacked-to-main               |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,12 +18,12 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Schema + domain + persistence plumbing for `managerCapabilities` | PR 1 | base `main`; ~250–350 lines |
-| 2 | Capability checker + `ReviewHistoryAccessService` MANAGER branch + permission grant | PR 2 | base `main`, depends on PR 1 merged; ~250–350 lines |
-| 3 | `PATCH /users/:id` write path (schema, policy, use case, DTO, pipe rename) | PR 3 | base `main`, depends on PR 2 merged; ~350–450 lines |
-| 4 | Web toggle + route/link widening + i18n + five-role E2E + docs/ADR + browser verification | PR 4 | base `main`, depends on PR 3 merged; ~350–450 lines |
+| Unit | Goal                                                                                      | Likely PR | Notes                                               |
+| ---- | ----------------------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
+| 1    | Schema + domain + persistence plumbing for `managerCapabilities`                          | PR 1      | base `main`; ~250–350 lines                         |
+| 2    | Capability checker + `ReviewHistoryAccessService` MANAGER branch + permission grant       | PR 2      | base `main`, depends on PR 1 merged; ~250–350 lines |
+| 3    | `PATCH /users/:id` write path (schema, policy, use case, DTO, pipe rename)                | PR 3      | base `main`, depends on PR 2 merged; ~350–450 lines |
+| 4    | Web toggle + route/link widening + i18n + five-role E2E + docs/ADR + browser verification | PR 4      | base `main`, depends on PR 3 merged; ~350–450 lines |
 
 ## PR 1: Data Model & Persistence Plumbing
 

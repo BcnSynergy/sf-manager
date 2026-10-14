@@ -26,16 +26,19 @@ same two operations, the same response shape and the same permissions.
 "nothing consumes this data in this slice, by design".)
 
 #### Scenario: Only the document read consults the profile
+
 - GIVEN the application after this change
 - WHEN every read of the organization profile is enumerated
 - THEN each MUST originate from this capability's own read endpoint or from the `review-document` read, and no other module MUST depend on the profile
 
 #### Scenario: A blank profile does not block the document
+
 - GIVEN the freshly seeded, entirely blank profile
 - WHEN an in-scope caller reads a completed session's review document
 - THEN the read MUST succeed, carrying the six fields as empty strings
 
 #### Scenario: The profile's own endpoints are unchanged
+
 - GIVEN `GET` and `PATCH /organization-profile` before and after this change
 - WHEN their permissions, request and response shapes are compared
 - THEN they MUST be identical, and both MUST remain reachable by `SYSTEM_ADMIN` only

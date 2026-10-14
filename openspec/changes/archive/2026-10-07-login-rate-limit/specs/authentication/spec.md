@@ -17,36 +17,43 @@ limit MUST apply only to the login endpoint; no other endpoint MUST be
 throttled by this requirement.
 
 #### Scenario: Attempt over the limit
+
 - GIVEN one IP has made 10 login attempts within the window
 - WHEN that IP submits an 11th login attempt
 - THEN the response MUST be 429 with a `Retry-After` header
 
 #### Scenario: Successful attempts count
+
 - GIVEN one IP has made 10 login attempts within the window, all with valid credentials
 - WHEN that IP submits another login attempt, even with valid credentials
 - THEN the response MUST be 429
 
 #### Scenario: Limit isolated per IP
+
 - GIVEN one IP has exhausted its login attempts in the window
 - WHEN a different IP submits a login attempt
 - THEN the attempt MUST be processed normally and MUST NOT be rejected with 429
 
 #### Scenario: Other endpoints unaffected
+
 - GIVEN one IP has exhausted its login attempts in the window
 - WHEN that IP calls any other endpoint (public or protected)
 - THEN the call MUST NOT be rejected with 429 by this limit
 
 #### Scenario: Default limits
+
 - GIVEN the limit environment variables are unset
 - WHEN a single IP makes login attempts
 - THEN the 10th attempt in 15 minutes MUST be processed and the 11th MUST get 429
 
 #### Scenario: Configured limits
+
 - GIVEN the limit environment variables set a lower attempt count or a different window
 - WHEN a single IP makes login attempts
 - THEN the configured values MUST apply instead of the defaults
 
 #### Scenario: Window elapsed
+
 - GIVEN an IP was rejected with 429
 - WHEN the window has elapsed
 - THEN a new login attempt from that IP MUST be processed normally
@@ -59,11 +66,13 @@ enabled, it MUST be the client IP taken from the forwarded-for header.
 `TRUST_PROXY` MUST be off when unset.
 
 #### Scenario: TRUST_PROXY off
+
 - GIVEN `TRUST_PROXY` is unset or off
 - WHEN requests carry different forwarded-for header values from the same socket address
 - THEN they MUST share one counter, keyed by the socket address
 
 #### Scenario: TRUST_PROXY on
+
 - GIVEN `TRUST_PROXY` is enabled
 - WHEN requests arrive from the same socket address with different forwarded client IPs
 - THEN each forwarded client IP MUST have its own counter
@@ -82,16 +91,19 @@ message, without a countdown, and MUST remain usable for a later retry.
 error.)
 
 #### Scenario: Empty fields blocked client-side
+
 - GIVEN the login form is empty
 - WHEN the user submits
 - THEN submission MUST be blocked with a required-field message
 
 #### Scenario: Server error shown generically
+
 - GIVEN the server returns 401 with a generic error
 - WHEN the form receives that response
 - THEN the UI MUST show one generic message, not field-specific errors
 
 #### Scenario: Rate-limited message
+
 - GIVEN the server returns 429 for a login attempt
 - WHEN the form receives that response
 - THEN the UI MUST show the rate-limited message
@@ -99,11 +111,13 @@ error.)
 - AND no countdown or retry time MUST be shown
 
 #### Scenario: Form usable after rate limit
+
 - GIVEN the rate-limited message is shown
 - WHEN the user edits the fields and submits again
 - THEN the form MUST send the attempt and MUST show the result of that attempt
 
 #### Scenario: Localized rate-limited message
+
 - GIVEN the UI locale is ES or CA
 - WHEN the rate-limited message is shown
 - THEN it MUST render the corresponding translated string

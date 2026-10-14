@@ -23,12 +23,14 @@ TD-35 (`docs/technical-debt.md`), raised by the `login-rate-limit-hardening` PR 
 ## Scope
 
 In:
+
 - Blocked attempts do not rewrite the row (conditional `DO UPDATE ... WHERE`, plus a read of the blocked row's state).
 - An `expiresAt` column (greatest of `windowEndsAt` and `blockedUntil`) maintained by a `BEFORE INSERT OR UPDATE` trigger (originally by the upsert; changed after the native review, see Progress), indexed, replacing the `windowEndsAt` index; cleanup selects on it. Migration with backfill.
 - A short `statement_timeout` for the cleanup statement only.
 - Docs: README throttle note, TD-35 to Resolved, a note on design Decision 6 if needed.
 
 Out:
+
 - Moving cleanup off the request path (rejected: non-deterministic, contradicts design Decision 6).
 - A separate pool, account lockout (TD-31), EN-12 (503 mapping).
 
@@ -77,19 +79,23 @@ Forecast: about 250-350 authored changed lines (code ~80, migration ~15, tests ~
 ## Verification Evidence
 
 T1:
+
 - RED: new integration test (xmin unchanged on a blocked attempt) failed: `Expected: "117714" Received: "117715"` (tuple rewritten).
 - GREEN: same suite 13/13 passed; unit spec gained the fallback and fail-closed cases.
 
 T1 follow-up:
+
 - RED: unit test "resolves a blocked attempt from one statement" failed with 2 `$queryRaw` calls instead of 1. The race itself has no deterministic RED (it needs a block ending and a cleanup between two statements); the xmin and blocked-state integration tests stay green as the behavioral guard.
 - GREEN: a plain snapshot UNION branch failed the concurrent limit test (stale pre-wait version, isBlocked=false). Final design: `skipped` CTE with `FOR UPDATE` (re-reads the latest locked version) plus one retry when the statement snapshot cannot see a row a concurrent first attempt just inserted (observed as "returned no row"); fail closed after two empty results. Adapter integration 17/17 on 3 consecutive runs.
 
 T2:
+
 - RED: new cleanup tests failed with `column "expiresAt" of relation "ThrottleCounter" does not exist` (42703). The behavior test (150 still-blocked + 30 expired) would also pass on the old predicate; the index assertion is what proves the new access path.
 - Index assertion: `EXPLAIN` inside a transaction with `SET LOCAL enable_seqscan = off` (the table is too small for the planner to choose the index on its own), asserting the plan names `ThrottleCounter_expiresAt_idx`. It proves the predicate can use the index, not that the planner prefers it at small sizes.
 - GREEN: adapter suite 16/16.
 
 T3:
+
 - RED: new unit tests failed (`Expected number of calls: 1 / Received: 0` for `$transaction`; the cleanup-failure spec also failed against the old top-level `$executeRaw`).
 - GREEN: adapter unit spec 6/6; integration adds a no-leak check (`SHOW statement_timeout` is `0` on 5 pooled connections after a cleanup).
 

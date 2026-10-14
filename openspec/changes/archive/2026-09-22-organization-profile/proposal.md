@@ -4,10 +4,10 @@
 
 FR-013 is `identified` and **nothing in the codebase knows this entity
 exists** — no Prisma model, no module, no page. ADR-012 (Accepted) already
-decided *what* it is: the property management company's own corporate data
+decided _what_ it is: the property management company's own corporate data
 (legal name, tax ID, address, contact info, logo) modelled as a **singleton
 domain entity** stored in the database and edited through the app's own
-authenticated flow, explicitly *not* as a config file on the VPS.
+authenticated flow, explicitly _not_ as a config file on the VPS.
 
 The gap this slice closes, and only that gap: the data compliance reports
 will eventually need has **no home and no way to be entered**. Today it
@@ -34,30 +34,30 @@ ADR-009, ADR-006, FR-013,
 
 Closed with the product owner before this proposal. Inputs, not open items.
 
-| Decision | Resolution |
-|---|---|
-| **Who can manage it** | `SYSTEM_ADMIN` only. FR-013's `MANAGER` + `MANAGE_ORGANIZATION_PROFILE` half is **explicitly not activated** here — same two-slice split as FR-001/002/004/005 and, most directly, FR-008 (`review-history-manager-capability` shipped the capability route as its own later chain). ADR-011's own text says the five undeclared `ManagerCapability` members "remain undeclared until their own slices". |
-| **Field set** | Exactly ADR-012's list: `name`, `legalName`, `taxId`, `address`, `phone`, `email`, plus `logoAssetId` (nullable, reserved, inert). **No additional fields.** |
-| **Logo** | **Not in this slice.** `logoAssetId` exists in schema/entity/response as a permanently-`null` reserved column. No object storage, no upload endpoint, no upload UI. ADR-012's own Consequences section already says the field is "reserved now so the entity doesn't need a later migration" — this slice honours that literally. |
-| **`taxId` format** | Free text, non-empty, trimmed. No NIF/CIF checksum validation — same call `maintenance-company` made for the same field. |
-| **Singleton bootstrap** | The row is **created by a database migration** (raw-SQL `INSERT` with a hardcoded UUIDv7 literal), seeded with **blank values**. Not lazily created on first `PATCH`, and **not** via `apps/api/prisma/seed.ts` (production-gated off, so it cannot guarantee the row exists). Consequence: `GET` never 404s and no use case needs a does-it-exist-yet branch. |
-| **Blank-seed semantics** | The seeded row is **valid to read, incomplete to look at**. Each field is `''` on seed; any field *supplied* to `PATCH` must be non-empty and trimmed. The settings page shows a "profile not completed yet" state until the six fields are filled. This grandfathering is deliberate, not an accident of the migration. |
-| **API surface** | `GET /organization-profile` and `PATCH /organization-profile`. **No POST** (nothing to create), **no DELETE** (ADR-010: no `deletedAt`, the row must always exist), **no `:id` param** (one implicit resource). Deliberately unlike every other admin module in the repo. |
-| **Report blocking** | An incomplete profile blocks nothing. There is no report generation yet (no FR-010), so a "reports require a complete profile" rule would guard nothing. Out of scope. |
-| **Web UI** | In scope, minimal: **one** page — view + edit form combined. No list page, no create page, no delete control (there is nothing to list, create or delete). |
+| Decision                 | Resolution                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Who can manage it**    | `SYSTEM_ADMIN` only. FR-013's `MANAGER` + `MANAGE_ORGANIZATION_PROFILE` half is **explicitly not activated** here — same two-slice split as FR-001/002/004/005 and, most directly, FR-008 (`review-history-manager-capability` shipped the capability route as its own later chain). ADR-011's own text says the five undeclared `ManagerCapability` members "remain undeclared until their own slices". |
+| **Field set**            | Exactly ADR-012's list: `name`, `legalName`, `taxId`, `address`, `phone`, `email`, plus `logoAssetId` (nullable, reserved, inert). **No additional fields.**                                                                                                                                                                                                                                             |
+| **Logo**                 | **Not in this slice.** `logoAssetId` exists in schema/entity/response as a permanently-`null` reserved column. No object storage, no upload endpoint, no upload UI. ADR-012's own Consequences section already says the field is "reserved now so the entity doesn't need a later migration" — this slice honours that literally.                                                                        |
+| **`taxId` format**       | Free text, non-empty, trimmed. No NIF/CIF checksum validation — same call `maintenance-company` made for the same field.                                                                                                                                                                                                                                                                                 |
+| **Singleton bootstrap**  | The row is **created by a database migration** (raw-SQL `INSERT` with a hardcoded UUIDv7 literal), seeded with **blank values**. Not lazily created on first `PATCH`, and **not** via `apps/api/prisma/seed.ts` (production-gated off, so it cannot guarantee the row exists). Consequence: `GET` never 404s and no use case needs a does-it-exist-yet branch.                                           |
+| **Blank-seed semantics** | The seeded row is **valid to read, incomplete to look at**. Each field is `''` on seed; any field _supplied_ to `PATCH` must be non-empty and trimmed. The settings page shows a "profile not completed yet" state until the six fields are filled. This grandfathering is deliberate, not an accident of the migration.                                                                                 |
+| **API surface**          | `GET /organization-profile` and `PATCH /organization-profile`. **No POST** (nothing to create), **no DELETE** (ADR-010: no `deletedAt`, the row must always exist), **no `:id` param** (one implicit resource). Deliberately unlike every other admin module in the repo.                                                                                                                                |
+| **Report blocking**      | An incomplete profile blocks nothing. There is no report generation yet (no FR-010), so a "reports require a complete profile" rule would guard nothing. Out of scope.                                                                                                                                                                                                                                   |
+| **Web UI**               | In scope, minimal: **one** page — view + edit form combined. No list page, no create page, no delete control (there is nothing to list, create or delete).                                                                                                                                                                                                                                               |
 
 ## Naming decision (resolved here, do not re-open in spec)
 
 The exploration flagged the ambiguity: ADR-012 names the entity
 `PropertyManagementCompany`; the change slug and FR-013's wording say
-*organization profile*.
+_organization profile_.
 
 Precedent check: `maintenance-company` derives module (`maintenance-company`),
 route (`/maintenance-companies`) and permission (`maintenanceCompany:*`) from
 the entity name, while `user-management-roles` shows the **change slug is not
 the module name** (`User` → `users` → `/users` → `user:*`). So the rule the
-repo actually follows is *one name, derived from the entity; the change slug
-is free*.
+repo actually follows is _one name, derived from the entity; the change slug
+is free_.
 
 **Resolution: one name — `OrganizationProfile` — used everywhere in code**:
 Prisma model `OrganizationProfile`, domain entity `OrganizationProfile`,
@@ -217,27 +217,27 @@ Three proposal-level choices:
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modified | `OrganizationProfile` model, no `deletedAt` |
-| `apps/api/prisma/migrations/<ts>_add_organization_profile/` | New | `CREATE TABLE` + idempotent single-row seed `INSERT` |
-| `apps/api/src/modules/organization-profile/domain/**` | New | Entity (+ any errors) |
-| `apps/api/src/modules/organization-profile/application/**` | New | Port, 2 use cases, in-memory fake |
-| `apps/api/src/modules/organization-profile/infrastructure/persistence/**` | New | Prisma adapter + mapper |
-| `apps/api/src/modules/organization-profile/presentation/**` | New | Controller, DTOs, error codes |
-| `apps/api/src/modules/organization-profile/organization-profile.module.ts` | New | Providers + controller wiring |
-| `apps/api/src/app.module.ts` | Modified | Register the module |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modified | `organizationProfile:read|update` |
-| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified | Grant both to `SYSTEM_ADMIN` only |
-| `packages/validation/src/organization-profile/**` | New | Zod PATCH schema, shared web/API |
-| `apps/web/src/api/organization-profile.ts` | New | `getOrganizationProfile`, `updateOrganizationProfile` |
-| `apps/web/src/pages/OrganizationProfilePage.tsx` | New | View + edit, single page |
-| `apps/web/src/routes/authenticated-routes.tsx` | Modified | One route, `allowedRoles: ['SYSTEM_ADMIN']` |
-| `apps/web/src/layout/nav-items.ts` | Modified | One item on the `SYSTEM_ADMIN` row |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | `organizationProfile.*`, `nav.organizationProfile` |
-| `docs/adr/ADR-012-...md` | Modified | Naming addendum |
-| `docs/requirements/functional-requirements.md` | Modified | FR-013 → `partial` |
-| `apps/api/test/organization-profile.e2e-spec.ts` | New | Auth, authz, GET, PATCH, validation |
+| Area                                                                                | Impact   | Description                                           |
+| ----------------------------------------------------------------------------------- | -------- | ----------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`                                                     | Modified | `OrganizationProfile` model, no `deletedAt`           |
+| `apps/api/prisma/migrations/<ts>_add_organization_profile/`                         | New      | `CREATE TABLE` + idempotent single-row seed `INSERT`  |
+| `apps/api/src/modules/organization-profile/domain/**`                               | New      | Entity (+ any errors)                                 |
+| `apps/api/src/modules/organization-profile/application/**`                          | New      | Port, 2 use cases, in-memory fake                     |
+| `apps/api/src/modules/organization-profile/infrastructure/persistence/**`           | New      | Prisma adapter + mapper                               |
+| `apps/api/src/modules/organization-profile/presentation/**`                         | New      | Controller, DTOs, error codes                         |
+| `apps/api/src/modules/organization-profile/organization-profile.module.ts`          | New      | Providers + controller wiring                         |
+| `apps/api/src/app.module.ts`                                                        | Modified | Register the module                                   |
+| `apps/api/src/shared/application/authorization/permission.ts`                       | Modified | `organizationProfile:read                             | update` |
+| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified | Grant both to `SYSTEM_ADMIN` only                     |
+| `packages/validation/src/organization-profile/**`                                   | New      | Zod PATCH schema, shared web/API                      |
+| `apps/web/src/api/organization-profile.ts`                                          | New      | `getOrganizationProfile`, `updateOrganizationProfile` |
+| `apps/web/src/pages/OrganizationProfilePage.tsx`                                    | New      | View + edit, single page                              |
+| `apps/web/src/routes/authenticated-routes.tsx`                                      | Modified | One route, `allowedRoles: ['SYSTEM_ADMIN']`           |
+| `apps/web/src/layout/nav-items.ts`                                                  | Modified | One item on the `SYSTEM_ADMIN` row                    |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                         | Modified | `organizationProfile.*`, `nav.organizationProfile`    |
+| `docs/adr/ADR-012-...md`                                                            | Modified | Naming addendum                                       |
+| `docs/requirements/functional-requirements.md`                                      | Modified | FR-013 → `partial`                                    |
+| `apps/api/test/organization-profile.e2e-spec.ts`                                    | New      | Auth, authz, GET, PATCH, validation                   |
 
 Untouched by design: `docs/adr/ADR-011-...md` (this slice declares no
 `ManagerCapability` member — the addendum belongs to the follow-up slice, the
@@ -246,17 +246,17 @@ module.
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **The seeded row is missing** in an environment where the migration was skipped or the table was created by hand — every `GET` 500s or returns nothing | Low | Migration `INSERT` is part of the same migration as `CREATE TABLE`, so they cannot diverge; an integration test asserts exactly one row exists after `migrate deploy`, mirroring `maintenance-company-migration.integration.spec.ts` |
-| **A second row appears** (hand-inserted, or a future lazy-create) and the repository silently picks an arbitrary one | Low | No API path creates rows; `sdd-design` decides the deterministic read strategy and whether a DB-level guard is warranted |
-| **Scope creep toward the logo** — "the field is right there, uploading is easy" | High | Explicit non-goal with the ADR quoted; `sdd-verify` asserts no object-storage client, no `docker-compose.yml` service, and no upload endpoint or input exists |
-| **Scope creep toward the `MANAGER` capability** — "declaring one enum member is one line" | Med | Explicit non-goal; `sdd-verify` asserts `ManagerCapability` still declares only `VIEW_ALL_REVIEWS` and the four non-admin `ROLE_PERMISSIONS` rows are still `[]` |
-| **Over-built as a 4-verb CRUD** by pattern-matching `maintenance-company` — a list page, a create form, a delete button for a singleton | Med | Named explicitly in Settled decisions and Approach; `sdd-verify` asserts no `POST`/`DELETE` route, no `:id` param, and exactly one page |
-| **Blank-seed UX ships as a silently empty form**, so the admin cannot tell "nothing entered yet" from "loading failed" | Med | The not-completed-yet state is a success criterion and a browser-verified one, not an implementation detail |
-| **Two names in the tree** (`OrganizationProfile` in code vs `PropertyManagementCompany` in ADR-012) | Med | The ADR-012 addendum is in scope for this slice specifically to close this; `sdd-verify` greps for `PropertyManagementCompany` in `apps/**` and expects zero hits |
-| ES/CA translations stubbed with English placeholders | Med | Real translations in scope; `locales.test.ts` parity covers the new namespace |
-| **Reviewer overload** | Low | Smallest domain slice to date — one migration, two use cases, one page. `sdd-tasks` still forecasts against the 400-line budget |
+| Risk                                                                                                                                                   | Likelihood | Mitigation                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **The seeded row is missing** in an environment where the migration was skipped or the table was created by hand — every `GET` 500s or returns nothing | Low        | Migration `INSERT` is part of the same migration as `CREATE TABLE`, so they cannot diverge; an integration test asserts exactly one row exists after `migrate deploy`, mirroring `maintenance-company-migration.integration.spec.ts` |
+| **A second row appears** (hand-inserted, or a future lazy-create) and the repository silently picks an arbitrary one                                   | Low        | No API path creates rows; `sdd-design` decides the deterministic read strategy and whether a DB-level guard is warranted                                                                                                             |
+| **Scope creep toward the logo** — "the field is right there, uploading is easy"                                                                        | High       | Explicit non-goal with the ADR quoted; `sdd-verify` asserts no object-storage client, no `docker-compose.yml` service, and no upload endpoint or input exists                                                                        |
+| **Scope creep toward the `MANAGER` capability** — "declaring one enum member is one line"                                                              | Med        | Explicit non-goal; `sdd-verify` asserts `ManagerCapability` still declares only `VIEW_ALL_REVIEWS` and the four non-admin `ROLE_PERMISSIONS` rows are still `[]`                                                                     |
+| **Over-built as a 4-verb CRUD** by pattern-matching `maintenance-company` — a list page, a create form, a delete button for a singleton                | Med        | Named explicitly in Settled decisions and Approach; `sdd-verify` asserts no `POST`/`DELETE` route, no `:id` param, and exactly one page                                                                                              |
+| **Blank-seed UX ships as a silently empty form**, so the admin cannot tell "nothing entered yet" from "loading failed"                                 | Med        | The not-completed-yet state is a success criterion and a browser-verified one, not an implementation detail                                                                                                                          |
+| **Two names in the tree** (`OrganizationProfile` in code vs `PropertyManagementCompany` in ADR-012)                                                    | Med        | The ADR-012 addendum is in scope for this slice specifically to close this; `sdd-verify` greps for `PropertyManagementCompany` in `apps/**` and expects zero hits                                                                    |
+| ES/CA translations stubbed with English placeholders                                                                                                   | Med        | Real translations in scope; `locales.test.ts` parity covers the new namespace                                                                                                                                                        |
+| **Reviewer overload**                                                                                                                                  | Low        | Smallest domain slice to date — one migration, two use cases, one page. `sdd-tasks` still forecasts against the 400-line budget                                                                                                      |
 
 ## Rollback Plan
 
@@ -279,7 +279,7 @@ migration PR as the only one carrying schema state.
 - None new. Reuses `IdGenerator` (UUIDv7, ADR-009), `ZodValidationPipe`,
   `buildCodedError`, `AuthenticatedGuard` + `PermissionsGuard` +
   `@RequirePermission`, `apiFetch` / `ApiError`, `ProtectedRoute
-  allowedRoles`, `NotAuthorized`, `AppLayout` nav.
+allowedRoles`, `NotAuthorized`, `AppLayout` nav.
 - Reachable PostgreSQL for the migration.
 - A running dev server (`npm run dev`) and an authenticated `SYSTEM_ADMIN`
   session for the browser verification CLAUDE.md requires.
@@ -329,17 +329,17 @@ migration PR as the only one carrying schema state.
 
 ## Open Questions / Deferred
 
-| # | Question | Status | Owner |
-|---|---|---|---|
-| 1 | **Implementation name** — `OrganizationProfile` (chosen) vs ADR-012's `PropertyManagementCompany`. | **Resolved above**, with an ADR-012 addendum in scope. Worth one product-owner glance before `sdd-spec`, since it pins an identifier across schema, routes and docs. | Resolved |
-| 2 | **Deterministic single-row read** — `findFirst` vs reading the migration's literal id, and whether a DB-level single-row guard (e.g. a `UNIQUE` sentinel column) earns its keep. | **Open — `sdd-design` decides.** | `sdd-design` |
-| 3 | **Value Objects for `email` / `phone` / `taxId`.** | **Open — `sdd-design` decides** per ADR-006's per-slice rule. Proposed direction: plain trimmed strings, consistent with `maintenance-company`. | `sdd-design` |
-| 4 | **`PATCH` edge semantics** — explicit `null`, omitted, `''`, and the no-op update. | **Open — `sdd-spec` decides.** | `sdd-spec` |
-| 5 | **`logoAssetId` in the `GET` response** — exposed as always-null, or omitted until the upload slice. | **Open — `sdd-spec` decides.** Proposed direction: omit from the response DTO, so no client learns to depend on a field that has no meaning yet. | `sdd-spec` |
-| 6 | **`MANAGER` + `MANAGE_ORGANIZATION_PROFILE`** (FR-013's second half). | **Deferred to its own slice**, following `review-history-manager-capability` exactly — including writing the ADR-011 addendum there, not here. | Future slice |
-| 7 | **Logo upload + object storage.** | **Deferred**, per ADR-012's own Consequences. *Revisit trigger*: the first report-rendering slice that actually needs a logo. | Future slice |
-| 8 | **Profile completeness as a precondition for report generation.** | **Deferred** — there is no FR-010/report generation to gate. *Revisit trigger*: the report-generation slice. | Future slice |
-| 9 | **Audit trail of profile edits** (ADR-012's rationale leans on "who changed it and when", which this slice does not actually record). | **Deferred, and flagged honestly** — the slice delivers the auth half of that rationale, not the audit half. No audit infrastructure exists project-wide. | Future slice |
+| #   | Question                                                                                                                                                                         | Status                                                                                                                                                               | Owner        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1   | **Implementation name** — `OrganizationProfile` (chosen) vs ADR-012's `PropertyManagementCompany`.                                                                               | **Resolved above**, with an ADR-012 addendum in scope. Worth one product-owner glance before `sdd-spec`, since it pins an identifier across schema, routes and docs. | Resolved     |
+| 2   | **Deterministic single-row read** — `findFirst` vs reading the migration's literal id, and whether a DB-level single-row guard (e.g. a `UNIQUE` sentinel column) earns its keep. | **Open — `sdd-design` decides.**                                                                                                                                     | `sdd-design` |
+| 3   | **Value Objects for `email` / `phone` / `taxId`.**                                                                                                                               | **Open — `sdd-design` decides** per ADR-006's per-slice rule. Proposed direction: plain trimmed strings, consistent with `maintenance-company`.                      | `sdd-design` |
+| 4   | **`PATCH` edge semantics** — explicit `null`, omitted, `''`, and the no-op update.                                                                                               | **Open — `sdd-spec` decides.**                                                                                                                                       | `sdd-spec`   |
+| 5   | **`logoAssetId` in the `GET` response** — exposed as always-null, or omitted until the upload slice.                                                                             | **Open — `sdd-spec` decides.** Proposed direction: omit from the response DTO, so no client learns to depend on a field that has no meaning yet.                     | `sdd-spec`   |
+| 6   | **`MANAGER` + `MANAGE_ORGANIZATION_PROFILE`** (FR-013's second half).                                                                                                            | **Deferred to its own slice**, following `review-history-manager-capability` exactly — including writing the ADR-011 addendum there, not here.                       | Future slice |
+| 7   | **Logo upload + object storage.**                                                                                                                                                | **Deferred**, per ADR-012's own Consequences. _Revisit trigger_: the first report-rendering slice that actually needs a logo.                                        | Future slice |
+| 8   | **Profile completeness as a precondition for report generation.**                                                                                                                | **Deferred** — there is no FR-010/report generation to gate. _Revisit trigger_: the report-generation slice.                                                         | Future slice |
+| 9   | **Audit trail of profile edits** (ADR-012's rationale leans on "who changed it and when", which this slice does not actually record).                                            | **Deferred, and flagged honestly** — the slice delivers the auth half of that rationale, not the audit half. No audit infrastructure exists project-wide.            | Future slice |
 
 ## Next step
 

@@ -23,8 +23,8 @@ Read `tasks.md` before the archive. A.1-A.11 and B.1-B.9 were `[x]` already. At 
 
 ## Specs Synced
 
-| Capability | Action | Requirements |
-|---|---|---|
+| Capability       | Action                                             | Requirements                   |
+| ---------------- | -------------------------------------------------- | ------------------------------ |
 | `authentication` | Updated (delta merged into the existing main spec) | 2 ADDED, 3 MODIFIED, 0 REMOVED |
 
 - **ADDED**: Live User Check on Authenticated Requests (placed after Session Introspection); Session-Ended Notice (Web) (placed after Redirect When Unauthenticated).
@@ -34,19 +34,19 @@ Main spec file: `openspec/specs/authentication/spec.md`. All other requirements 
 
 ## Delivered PRs (stacked-to-main)
 
-| PR | Result |
-|---|---|
-| #193 `auth-live-user-check/01-guard-live-user-check` | Merged at `d1a44b3` (2026-10-06). Guard live check, e2e suites, ADR-011 addendum, comment fixes. User-accepted size exception (code +53/-28, tests +309/-98, ADR +29, openspec +548) |
-| #194 `auth-live-user-check/02-web-session-ended` | Merged at `96856a8` (2026-10-07). `setUnauthorizedHandler`, `AuthProvider` `sessionEnded` flag, login notice, EN/ES/CA strings. User-accepted size exception (code ~83, tests ~360, openspec ~98) |
-| `auth-live-user-check/03-archive` (PR 3/3) | This archive: delta merge, ADR-011 open question, archive move |
+| PR                                                   | Result                                                                                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #193 `auth-live-user-check/01-guard-live-user-check` | Merged at `d1a44b3` (2026-10-06). Guard live check, e2e suites, ADR-011 addendum, comment fixes. User-accepted size exception (code +53/-28, tests +309/-98, ADR +29, openspec +548)              |
+| #194 `auth-live-user-check/02-web-session-ended`     | Merged at `96856a8` (2026-10-07). `setUnauthorizedHandler`, `AuthProvider` `sessionEnded` flag, login notice, EN/ES/CA strings. User-accepted size exception (code ~83, tests ~360, openspec ~98) |
+| `auth-live-user-check/03-archive` (PR 3/3)           | This archive: delta merge, ADR-011 open question, archive move                                                                                                                                    |
 
 ## Workflow runs
 
-| Run | Subject | Result |
-|---|---|---|
-| 37516717748 | PR #193 | success |
+| Run         | Subject             | Result  |
+| ----------- | ------------------- | ------- |
+| 37516717748 | PR #193             | success |
 | 37517372150 | push main `d1a44b3` | success |
-| 37583375940 | PR #194 | success |
+| 37583375940 | PR #194             | success |
 | 37588733570 | push main `96856a8` | success |
 
 ## ADR updates

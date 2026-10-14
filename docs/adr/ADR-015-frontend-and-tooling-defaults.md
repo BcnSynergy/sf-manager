@@ -1,14 +1,17 @@
 # ADR-015: Frontend and Cross-Cutting Tooling Defaults
 
 ## Status
+
 Accepted
 
 ## Context
+
 A handful of smaller tooling decisions were needed to actually scaffold
 the monorepo, each with a fairly clear default given decisions already
 made elsewhere.
 
 ## Decision
+
 - **Web build tooling**: Vite + React Router, not Next.js — this is an
   authenticated, dashboard-style app with no SSR/SEO requirement; Next.js's
   server-components/routing model would add complexity without a matching
@@ -30,10 +33,12 @@ made elsewhere.
   `package.json` `engines`.
 
 ## Consequences
+
 Conventional, low-risk choices — no significant downsides identified for
 this project's scope.
 
 ## Alternatives Considered
+
 - **Next.js** — rejected: no SSR/SEO need.
 - **class-validator** — rejected: breaks single-source-of-truth validation
   across the multiple TypeScript clients.

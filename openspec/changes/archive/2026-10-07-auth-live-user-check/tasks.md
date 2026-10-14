@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
 | Estimated changed lines | PR 1 ~435 (code ~55, tests ~335, docs ~45) plus openspec artifacts; PR 2 ~292 (code ~60, tests ~232) |
-| 400-line budget risk | High (PR 1 only, excess is tests/docs) |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 (API guard) then PR 2 (web notice) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High (PR 1 only, excess is tests/docs)                                                               |
+| Chained PRs recommended | Yes                                                                                                  |
+| Suggested split         | PR 1 (API guard) then PR 2 (web notice)                                                              |
+| Delivery strategy       | ask-on-risk                                                                                          |
+| Chain strategy          | stacked-to-main                                                                                      |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -20,10 +20,10 @@ Decision needed: PR 1 likely exceeds 400 lines. Code is ~55 lines; the rest is t
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Guard live user check, e2e, ADR-011 addendum, comment fixes | PR 1/2 | Base: main. Branch `auth-live-user-check/01-guard-live-user-check`. Title `fix(auth): PR 1/2 — live user check in AuthenticatedGuard` |
-| 2 | Web 401 hook, session-ended notice, i18n | PR 2/2 | Base: main (after PR 1 merges). Branch `auth-live-user-check/02-web-session-ended`. Title `feat(web): PR 2/2 — session-ended notice on mid-session 401` |
+| Unit | Goal                                                        | Likely PR | Notes                                                                                                                                                   |
+| ---- | ----------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Guard live user check, e2e, ADR-011 addendum, comment fixes | PR 1/2    | Base: main. Branch `auth-live-user-check/01-guard-live-user-check`. Title `fix(auth): PR 1/2 — live user check in AuthenticatedGuard`                   |
+| 2    | Web 401 hook, session-ended notice, i18n                    | PR 2/2    | Base: main (after PR 1 merges). Branch `auth-live-user-check/02-web-session-ended`. Title `feat(web): PR 2/2 — session-ended notice on mid-session 401` |
 
 Strict TDD (ADR-016): every behavior goes RED, GREEN, REFACTOR. Each apply batch records a "TDD Cycle Evidence" table in apply-progress (RED command and how it failed; GREEN command and pass count). Each PR must pass `ci` (ADR-017).
 

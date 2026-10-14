@@ -18,16 +18,19 @@ other 4 roles (`MANAGER`, `MAINTENANCE_COMPANY_MANAGER`,
 holding an active community assignment grants no permission.
 
 #### Scenario: SYSTEM_ADMIN is permitted
+
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
 - WHEN they call a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the request MUST proceed to the endpoint's own logic
 
 #### Scenario: Non-admin role is rejected
+
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the response MUST be 403, regardless of any active community assignment the caller may hold
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute

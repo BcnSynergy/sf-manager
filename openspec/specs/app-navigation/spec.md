@@ -19,8 +19,8 @@ Review schedule item points at a page backed by `GET /review-schedule` and
 itself stays client-only.) In particular the client still never
 learns `managerCapabilities`, so a `MANAGER`'s history item is gated on
 the role alone and an ungranted manager sees the identical link and the
-already-shipped empty state, exactly as ADR-011's *"link visible, empty
-result"* precedent requires.
+already-shipped empty state, exactly as ADR-011's _"link visible, empty
+result"_ precedent requires.
 
 The nav is a **link bar and nothing more**. Out of scope: a sidebar, a
 hamburger/dropdown or any responsive-collapse treatment; breadcrumbs, a
@@ -33,7 +33,7 @@ drill-in to a nav item is likewise out of scope.
 
 > **Recorded, explicitly out of scope — not a requirement of this
 > capability.** The product owner asked to flag that a future change
-> might revisit ADR-011's *"link visible, empty result"* pattern **more
+> might revisit ADR-011's _"link visible, empty result"_ pattern **more
 > broadly across the app**, so that a user is never offered a surface
 > that will be empty for them. Doing so has real consequences — an
 > `/auth/me` contract change, a capability-aware client, and a decision
@@ -64,26 +64,31 @@ MUST flash, and no navigation code path MUST read a role off an absent
 user.
 
 #### Scenario: The navigation renders on a deep authenticated page
+
 - GIVEN a signed-in user on an authenticated route other than the app's entry page
 - WHEN the page renders
 - THEN the navigation MUST be present, identical to the one rendered on the entry page
 
 #### Scenario: The navigation renders on the wrong-role denial view
+
 - GIVEN a signed-in user who navigates to a route their role may not open
 - WHEN the explicit "not authorized" message renders
 - THEN the navigation MUST be rendered alongside it, offering their own role's items
 
 #### Scenario: No navigation on the public login route
+
 - GIVEN an unauthenticated visitor on `/login`
 - WHEN the page renders
 - THEN no navigation MUST be rendered
 
 #### Scenario: No navigation while the session is still resolving
+
 - GIVEN the auth provider has not yet resolved whether a user is signed in
 - WHEN the app renders
 - THEN no navigation MUST be rendered — neither a populated one nor an empty bar — and no role MUST be read off an absent user
 
 #### Scenario: The current page is indicated
+
 - GIVEN a signed-in user on a route that one of their navigation items targets
 - WHEN the navigation renders
 - THEN that item MUST be marked as the current page, and no other item MUST be
@@ -97,13 +102,13 @@ rather than silently produce an empty navigation.
 
 Each role MUST be offered exactly these items and no others:
 
-| Role | Items |
-|---|---|
-| `SYSTEM_ADMIN` | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Review schedule, Organization profile (**9**) |
-| `MAINTENANCE_TECHNICIAN` | Home, Review sessions, Review history, Review schedule (**4**) |
-| `COMMUNITY_REPRESENTATIVE` | Home, Review sessions, Review history, Review schedule (**4**) |
-| `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**) |
-| `MANAGER` | Home, Review history, Review schedule (**3**) |
+| Role                          | Items                                                                                                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SYSTEM_ADMIN`                | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Review schedule, Organization profile (**9**) |
+| `MAINTENANCE_TECHNICIAN`      | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
+| `COMMUNITY_REPRESENTATIVE`    | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
+| `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**)                                                                                                                          |
+| `MANAGER`                     | Home, Review history, Review schedule (**3**)                                                                                                         |
 
 Every item MUST point at its section's **top-level route**: the list
 route for a section that manages a collection, and the page itself for
@@ -122,37 +127,44 @@ profile is filled in or blank.
 and 2 items for the five roles in the order shown.)
 
 #### Scenario: Each of the five roles sees exactly its own item set
+
 - GIVEN a signed-in user of each role in turn
 - WHEN the navigation renders for each
 - THEN the rendered items MUST match that role's row of the table above exactly — none missing and none extra
 
 #### Scenario: The admin reaches all nine sections without typing a URL
+
 - GIVEN a signed-in `SYSTEM_ADMIN` on any authenticated page
 - WHEN they use the navigation
 - THEN all nine sections — Home, the five admin sections, Review history, Review schedule and Organization profile — MUST be reachable in one click, with no hand-typed URL required
-(Previously: the body counted eight sections, without Review schedule. The scenario title and body now count nine.)
+  (Previously: the body counted eight sections, without Review schedule. The scenario title and body now count nine.)
 
 #### Scenario: Only the admin is offered the organization profile
+
 - GIVEN a signed-in user of each of the five roles in turn
 - WHEN the Organization profile item is looked for in the navigation rendered for each
 - THEN it MUST be present for `SYSTEM_ADMIN` only, and absent for the other four roles
 
 #### Scenario: Review schedule is offered to four roles and not to the company manager
+
 - GIVEN a signed-in user of each of the five roles in turn
 - WHEN the Review schedule item is looked for in the navigation rendered for each
 - THEN it MUST be present for `SYSTEM_ADMIN`, `MANAGER`, `COMMUNITY_REPRESENTATIVE` and `MAINTENANCE_TECHNICIAN`, and absent for `MAINTENANCE_COMPANY_MANAGER`
 
 #### Scenario: The organization profile item does not depend on the profile's contents
+
 - GIVEN a signed-in `SYSTEM_ADMIN`, once with a blank seeded profile and once with every field filled
 - WHEN the navigation renders in each case
 - THEN the identical Organization profile item MUST be offered, and the navigation MUST have issued no request for the profile
 
 #### Scenario: A new role cannot ship with an unmapped navigation
+
 - GIVEN a sixth member is added to `Role` without a row in the lookup
 - WHEN the project is type-checked
 - THEN the build MUST fail rather than render an empty navigation for that role
 
 #### Scenario: No CRUD sub-route is offered
+
 - GIVEN the navigation rendered for any role
 - WHEN its item targets are enumerated
 - THEN each MUST be a section's top-level route, and none MUST be a create, detail or edit sub-route
@@ -165,30 +177,34 @@ for, **every** item's target route MUST be one that route's own
 "not authorized" view by activating a navigation item.
 
 #### Scenario: No navigation item leads its own viewer to a denial
+
 - GIVEN a signed-in user of each role in turn
 - WHEN every item the navigation offers them is activated
 - THEN each MUST render its target page, and in no case MUST the "not authorized" view appear
 
 #### Scenario: The item set agrees with the route gates
+
 - GIVEN the navigation's role → items lookup and the application's route declarations
 - WHEN each item's target route is cross-read against that route's `allowedRoles`
 - THEN every item offered to a role MUST appear on a route that admits that role
 
 ### Requirement: The Added Item Preserves the Reachability Invariant
 
-The organization profile item MUST satisfy *Every Navigation Item
-Targets a Route Its Viewer May Open* without exception: the route it
+The organization profile item MUST satisfy _Every Navigation Item
+Targets a Route Its Viewer May Open_ without exception: the route it
 targets MUST admit `SYSTEM_ADMIN` through its own `allowedRoles` gate,
 so activating it MUST never land its viewer on the "not authorized"
 surface. The existing reachability test MUST cover the added item
 rather than being relaxed to accommodate it.
 
 #### Scenario: The new item does not lead its viewer to a denial
+
 - GIVEN a signed-in `SYSTEM_ADMIN`
 - WHEN they activate the Organization profile item
 - THEN the organization profile page MUST render, and the "not authorized" view MUST NOT appear
 
 #### Scenario: The reachability test covers the new item unrelaxed
+
 - GIVEN the navigation's role → items lookup, the route declarations and the reachability test after this change
 - WHEN the test runs
 - THEN it MUST pass with the added item included, and MUST NOT have been weakened, skipped or given an exception for it
@@ -208,11 +224,13 @@ Only `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` MUST be
 offered the Review sessions item.
 
 #### Scenario: The write surface is absent from three roles' navigation
+
 - GIVEN a signed-in `SYSTEM_ADMIN`, `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` in turn
 - WHEN every navigation control rendered for them is enumerated
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
 
 #### Scenario: Only the two field roles are offered review sessions
+
 - GIVEN the navigation rendered for each of the five roles
 - WHEN the Review sessions item is looked for
 - THEN it MUST be present for `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` only
@@ -236,17 +254,20 @@ read "the identical single Review history item", which would now read as the
 manager's only item; it is restated as "the identical Review history item".)
 
 #### Scenario: Granted and ungranted managers see the identical navigation
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
 - WHEN the navigation renders for each
 - THEN both MUST be offered the identical Review history item — its visibility MUST NOT depend on the capability
-(Previously: "the identical single Review history item".)
+  (Previously: "the identical single Review history item".)
 
 #### Scenario: An ungranted manager's item leads to the shipped empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability, in an installation that does contain completed sessions
 - WHEN they activate their Review history item
 - THEN the history surface's already-shipped empty state MUST be rendered — not an error, not a "not authorized" message and not a blank page
 
 #### Scenario: The navigation never learns the capability
+
 - GIVEN the current-user endpoint's response, the client's auth context and the navigation's own code after this change
 - WHEN each is inspected
 - THEN none MUST carry or branch on `managerCapabilities` or `VIEW_ALL_REVIEWS`, and no endpoint MUST have been added to expose it
@@ -267,31 +288,37 @@ The two translation keys those removed links used MUST be deleted from
 every locale file, leaving no dead key behind.
 
 #### Scenario: Logout is reachable from every authenticated page
+
 - GIVEN a signed-in user on any authenticated page, including the wrong-role denial view
 - WHEN the page renders
 - THEN a logout control MUST be present
 
 #### Scenario: Logout survives an unrecognized role
+
 - GIVEN a signed-in user whose role is not one of the five known `Role` values (e.g. a stale client after a server-side role change)
 - WHEN the navigation renders
 - THEN it MUST still render a working logout control, with no navigation items
 
 #### Scenario: Logout still clears the session and returns to login
+
 - GIVEN a signed-in user activates the navigation's logout control
 - WHEN the logout operation succeeds
 - THEN they MUST be redirected to `/login`, exactly as the shipped logout flow already specifies
 
 #### Scenario: The health page renders no link and no logout button
+
 - GIVEN a signed-in user of any role on the health page
 - WHEN its controls are enumerated
 - THEN it MUST show its health-status readout, and MUST render no navigation link and no logout button of its own
 
 #### Scenario: The removed translation keys exist in no locale
+
 - GIVEN the `en`, `es` and `ca` locale files after this change
 - WHEN the two keys that labelled the health page's removed links are looked for
 - THEN they MUST be absent from all three
 
 #### Scenario: Two navigation mechanisms never coexist
+
 - GIVEN the state of the main branch at every commit of this change
 - WHEN the app's navigation controls are enumerated
 - THEN at no point MUST both the health page's role-conditional links and the global navigation be present together
@@ -310,11 +337,13 @@ stay: it is a contextual in-page link, not a competing global
 mechanism, and a shipped requirement depends on it.
 
 #### Scenario: The element history page still has exactly two entry links
+
 - GIVEN the web routes and pages after this change
 - WHEN every navigation entry point to the element history page is enumerated
 - THEN exactly two MUST be found — the element-list row link and the session-detail entry link — and the global navigation MUST NOT be among them
 
 #### Scenario: The review-session surface keeps its own history link
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on `/review-sessions`
 - WHEN the page renders
 - THEN its existing in-page history link MUST still be present and still navigate to the history list
@@ -332,16 +361,19 @@ The shipped review-session page test MUST keep passing **unmodified**
 after the navigation wraps that page.
 
 #### Scenario: No identifier is ambiguous on a page that shows both
+
 - GIVEN the review-session surface rendered inside the navigation for a field role
 - WHEN each of the page's test identifiers is queried
 - THEN each MUST resolve to exactly one element, with no ambiguity between a navigation item and an in-page link
 
 #### Scenario: The shipped review-session test passes unmodified
+
 - GIVEN the review-session page's existing test file, unchanged
 - WHEN the suite runs after the navigation ships
 - THEN it MUST pass with no edit to that file
 
 #### Scenario: Navigation identifiers follow one convention
+
 - GIVEN every test identifier the navigation renders
 - WHEN they are enumerated
 - THEN all MUST share one navigation-specific naming convention and none MUST duplicate an identifier used by any other component
@@ -354,11 +386,13 @@ chrome-suppression requirement has ever had to suppress, so suppression
 MUST be an actual, verified rule rather than a vacuous one.
 
 #### Scenario: The navigation does not print
+
 - GIVEN a signed-in `SYSTEM_ADMIN` on the element label page, with the navigation rendered on screen
 - WHEN the print output is produced
 - THEN the navigation MUST NOT appear in it, and the label content MUST print as it already does
 
 #### Scenario: Print suppression is verified in a browser, not only in tests
+
 - GIVEN the label page rendered inside the navigation on a running dev server
 - WHEN its print preview is inspected
 - THEN the navigation MUST be absent from the preview
@@ -389,17 +423,20 @@ change", unqualified, which is false once the review-schedule change adds the
 `/review-schedule` route. The claims are scoped to the wrapping.)
 
 #### Scenario: Every route's allowed roles are unchanged
+
 - GIVEN the application's route declarations before and after the wrapping
 - WHEN each route's `allowedRoles` array is compared
 - THEN every one MUST be byte-identical, and the wrapping MUST NOT have added or removed any declared route
-(Previously: "before and after this change … the set of declared routes MUST be unchanged".)
+  (Previously: "before and after this change … the set of declared routes MUST be unchanged".)
 
 #### Scenario: Every route's path stays paired with its original component
+
 - GIVEN the application's route declarations before and after the wrapping
 - WHEN each route's `path` is compared against the page component it renders
 - THEN every route's `path` MUST be paired with the same component it was paired with before the wrapping
 
 #### Scenario: The route-protection component and its test are untouched
+
 - GIVEN the route-protection component and its test file before and after the wrapping
 - WHEN they are compared
 - THEN the component MUST be unchanged; the test file's logic and pass/fail conditions MUST be unchanged (a comment-text and test-name update to keep its documentation accurate about a relocated import is permitted); and the test MUST still pass
@@ -413,11 +450,13 @@ by the existing locale parity test. No role, route path or other raw
 value MUST be rendered as visible text.
 
 #### Scenario: Every navigation label is translated in all three locales
+
 - GIVEN the navigation is rendered
 - WHEN the active locale is `en`, `es` or `ca`
 - THEN every visible label MUST come from a translation key with a real value for that locale, not a placeholder or an English fallback
 
 #### Scenario: The locale parity test covers the added and removed keys
+
 - GIVEN the locale files after this change
 - WHEN the parity test runs
 - THEN it MUST pass over the navigation's new keys and over the two removed health-page keys alike
@@ -441,43 +480,49 @@ unqualified, which is false once the review-schedule change adds an API
 endpoint. The claim is scoped to the navigation's introduction.)
 
 #### Scenario: No collapse, menu or dashboard chrome ships
+
 - GIVEN the navigation after the web-locale-switch change
 - WHEN its rendered controls and its state are enumerated
 - THEN none MUST offer a sidebar, hamburger, dropdown (other than the language selector), collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
 
 #### Scenario: The language selector is the only added control
+
 - GIVEN the navigation after the web-locale-switch change
 - WHEN its rendered controls are enumerated
 - THEN they MUST be the links, the logout control and exactly one language selector, and nothing else
 
 #### Scenario: No dependency and no backend change ships
+
 - GIVEN the project's dependency manifests, the API, the database schema and the shared validation package before and after the navigation's introduction
 - WHEN each is compared
 - THEN that introduction MUST have added no dependency and left all three untouched
-(Previously: "before and after this change".)
+  (Previously: "before and after this change".)
 
 ### Requirement: The Manager's Schedule Item Is Gated on the Role Alone
 
 The `MANAGER`'s Review schedule item MUST be conditioned on the role alone
 and MUST NOT be conditioned on the `VIEW_ALL_REVIEWS` capability, on the
-same terms as *The Manager's History Item Is Gated on the Role Alone*. An
+same terms as _The Manager's History Item Is Gated on the Role Alone_. An
 ungranted `MANAGER` MUST see the identical item and reach the page's empty
 state — not a hidden item, not a disabled item, not an error and not a "not
-authorized" message. The new item MUST satisfy *Every Navigation Item
-Targets a Route Its Viewer May Open*: the target route MUST admit every role
+authorized" message. The new item MUST satisfy _Every Navigation Item
+Targets a Route Its Viewer May Open_: the target route MUST admit every role
 offered the item, and the existing reachability test MUST cover it unrelaxed.
 
 #### Scenario: Granted and ungranted managers see the identical schedule item
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
 - WHEN the navigation renders for each
 - THEN both MUST be offered the identical Review schedule item
 
 #### Scenario: An ungranted manager's item leads to the empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability
 - WHEN they activate the Review schedule item
 - THEN the schedule page's empty state MUST be rendered, not an error and not a "not authorized" message
 
 #### Scenario: The new item never leads its viewer to a denial
+
 - GIVEN a signed-in user of each of the four roles offered the item
 - WHEN they activate it
 - THEN the schedule page MUST render and the "not authorized" view MUST NOT appear

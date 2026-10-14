@@ -9,7 +9,7 @@ as `RD-513-2017-RIPCI-consolidado.pdf` / `ripci.txt` in this folder. Retrieved
 > **Convention**: every blockquote in this document is a **verbatim
 > citation** from the official Spanish text, kept untranslated on purpose
 > so it stays checkable word-for-word against the source — each is preceded
-> by a short *italic* locator (article/tabla/página). Everything outside a
+> by a short _italic_ locator (article/tabla/página). Everything outside a
 > blockquote is our own English analysis/summary.
 
 ## Who can perform each tier
@@ -18,7 +18,7 @@ as `RD-513-2017-RIPCI-consolidado.pdf` / `ripci.txt` in this folder. Retrieved
   maintenance company, **or** the installation's owner/occupant's own
   staff. The law does not reserve this tier exclusively to the community —
   our policy of "3 quarters by the community representative, 1 by a
-  technician" is an operational choice made *within* what the law permits,
+  technician" is an operational choice made _within_ what the law permits,
   not a legal mandate.
 - **Tabla II (annual and every five years)**: exclusively the
   manufacturer's specialized staff or a maintenance company's staff. Never
@@ -33,7 +33,8 @@ one shared block of checks; the following are the extinguisher-relevant
 items (exact per-equipment split isn't always textually separable in the
 source table layout, noted where uncertain):
 
-*RIPCI, Anexo II, Tabla I, p. 34-36:*
+_RIPCI, Anexo II, Tabla I, p. 34-36:_
+
 > 1. Que los extintores estén en su lugar asignado y no presenten muestras
 >    aparentes de daños.
 > 2. Que son adecuados conforme al riesgo a proteger.
@@ -60,7 +61,8 @@ ANNUAL]` for any that also apply to the annual visit — see below).
 
 ## Annual (Tabla II, "cada año") — fire extinguishers
 
-*RIPCI, Anexo II, Tabla II, p. 37-38:*
+_RIPCI, Anexo II, Tabla II, p. 37-38:_
+
 > "Realizar las operaciones de mantenimiento según lo establecido en el
 > 'Programa de Mantenimiento Anual' de la norma UNE 23120. En extintores
 > móviles, se comprobará, adicionalmente, el buen estado del sistema de
@@ -77,7 +79,8 @@ community's actual maintenance company, entered through question management
 
 ## Every five years (Tabla II, "cinco años") — hydrostatic test
 
-*RIPCI, Anexo II, Tabla II, p. 37-38:*
+_RIPCI, Anexo II, Tabla II, p. 37-38:_
+
 > "A partir de la fecha de timbrado del extintor (y por tres veces) se
 > procederá al retimbrado del mismo de acuerdo a lo establecido en el anexo
 > III del Reglamento de Equipos a Presión, aprobado por Real Decreto
@@ -90,9 +93,10 @@ in English per the project's naming convention (see
 
 Confirms the hydrostatic test is **not** a community-scheduled, in-situ
 checklist like `ReviewSession`:
+
 - The clock is **per physical extinguisher** (from its own stamp date, not
   per community or calendar quarter).
-- It repeats up to **3 times** at 5-year intervals, governed by a *different*
+- It repeats up to **3 times** at 5-year intervals, governed by a _different_
   regulation (Reglamento de Equipos a Presión, RD 809/2021), not RIPCI's
   Anexo II checklist format.
 - It's a pressure test, typically performed off-site.
@@ -114,8 +118,8 @@ saved locally as `RD-164-2025-modificaciones-RIPCI-consolidado.pdf` /
 ## Open items
 
 - [x] Source the real `ANNUAL` extinguisher questionnaire — resolved:
-  sourced from the community's maintenance company, entered via question
-  management.
+      sourced from the community's maintenance company, entered via question
+      management.
 - [x] Decide whether/how to track the hydrostatic test — resolved:
-  `InspectableElement.lastHydrostaticTestAt` + `hydrostaticTestCount`, see
-  domain model doc.
+      `InspectableElement.lastHydrostaticTestAt` + `hydrostaticTestCount`, see
+      domain model doc.

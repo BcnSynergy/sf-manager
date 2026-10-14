@@ -28,21 +28,25 @@ resume, answer, complete or discard a session MUST be rendered for them
 anywhere in the app.
 
 #### Scenario: The manager reaches history from the app's entry page
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` is signed in and on the app's entry page
 - WHEN they look for their company's past reviews
 - THEN a control MUST be offered there that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The manager's path never crosses the write surface
+
 - GIVEN a signed-in `MAINTENANCE_COMPANY_MANAGER`
 - WHEN every navigation control rendered for them is enumerated
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
 
 #### Scenario: No write control is rendered for the manager
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` viewing the history list and a session's read-only view
 - WHEN the controls on each are enumerated
 - THEN none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other two roles' entry point is unchanged
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
 - WHEN they reach the history list
 - THEN the shipped `/review-sessions` entry point MUST still work exactly as before, unaffected by the manager's new link
@@ -62,31 +66,37 @@ MUST be redirected to `/login`.
 were allowed.)
 
 #### Scenario: A technician reaches the history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_TECHNICIAN`
 - WHEN they navigate to a review-history route
 - THEN the history surface MUST be shown
 
 #### Scenario: A representative reaches the identical history views
+
 - GIVEN the caller is authenticated as `COMMUNITY_REPRESENTATIVE`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced or alternative variant
 
 #### Scenario: A maintenance company manager reaches the identical history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced, alternative or manager-specific variant
 
 #### Scenario: Another role is denied with an explicit message
+
 - GIVEN the caller is authenticated as any role other than the three above
 - WHEN they navigate to any review-history route
 - THEN an explicit "not authorized" message MUST be shown, not a silent redirect
 
 #### Scenario: The manager is still denied the review-session write routes
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to any review-history route
 - THEN they MUST be redirected to `/login`
@@ -111,31 +121,37 @@ NOT be shown.
 with no requirement to identify the performer.)
 
 #### Scenario: Rows are rendered as returned
+
 - GIVEN the scoped history endpoint returns a list of completed sessions
 - WHEN the list view renders
 - THEN every returned row MUST be shown, in the returned order, with no client-side filtering step applied
 
 #### Scenario: A manager's company-wide list is rendered unfiltered
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` whose endpoint returns sessions from several technicians and several communities
 - WHEN the list view renders
 - THEN every returned row MUST be shown, with no client-side narrowing by community, performer or date
 
 #### Scenario: An empty history renders an empty state
+
 - GIVEN the scoped history endpoint returns an empty list
 - WHEN the list view renders
 - THEN a localized empty state MUST be shown, and it MUST NOT be an error state
 
 #### Scenario: Distinct loading and error states
+
 - GIVEN the history request is loading, and separately fails
 - WHEN the list view renders in each case
 - THEN each case MUST show its own distinct state, never a blank screen
 
 #### Scenario: A multi-community caller sees each row's community
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` or `MAINTENANCE_COMPANY_MANAGER` whose result spans more than one community
 - WHEN their history list renders
 - THEN each row MUST show the community the session belongs to
 
 #### Scenario: A multi-performer caller sees who performed each row
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` whose result contains sessions performed by two different technicians
 - WHEN their history list renders
 - THEN each row MUST identify the user who performed that session
@@ -158,21 +174,25 @@ third scope, per the settled decision that the rule stays in force
 unchanged.)
 
 #### Scenario: No list-control ships
+
 - GIVEN the history list view's controls
 - WHEN they are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting or search
 
 #### Scenario: No list-control ships for the manager either
+
 - GIVEN the history list view rendered for a `MAINTENANCE_COMPANY_MANAGER` with a large company-wide result
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-community or per-technician grouping control
 
 #### Scenario: No per-element history view exists
+
 - GIVEN the web routes and pages after this change
 - WHEN they are searched for a view of one inspectable element's past reviews
 - THEN none MUST be found
 
 #### Scenario: No adjacent capability surfaces
+
 - GIVEN every view of the review-history surface
 - WHEN its controls are enumerated
 - THEN none MUST offer signing, export, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications

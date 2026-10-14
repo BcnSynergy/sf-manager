@@ -28,6 +28,7 @@ Date: 2026-10-13. Origin: TD-31 (`docs/technical-debt.md`): account lockout and 
 ## Approaches
 
 **A. Per-email failed-attempt throttle on the existing `ThrottleCounter`.** Key `sha256("login-email:" + normalizedEmail)` (HMAC is EN-6). If the email bucket is blocked, 429 with `Retry-After`; after a failed credential check, increment; after a success, reset. The same path runs for unknown emails.
+
 - Pros: no `User` migration; anti-enumeration holds; rows expire and the existing cleanup handles them; no raw PII; blocking is temporary, so an attacker cannot lock a victim out indefinitely; reuses the db clock, `Retry-After` semantics and the web 429 message.
 - Cons: an attacker can keep a known victim blocked by re-triggering every window (bounded, temporary DoS); the library cannot count failures only, so storage needs a small extension; distinct unknown emails create rows (bounded by the per-IP limit and cleanup, but attacker-driven writes).
 - Effort: Medium.
@@ -35,6 +36,7 @@ Date: 2026-10-13. Origin: TD-31 (`docs/technical-debt.md`): account lockout and 
 **A'. Second named throttler counting all attempts.** Smallest change, but a victim's own logins consume the budget, the header becomes `Retry-After-<name>` unless handled manually, and it cannot reset on success. Effort: Low. Not recommended.
 
 **B. Lockout state on `User` (`failedLoginCount`, `lockedUntil`), auto-unlock plus optional admin unlock.**
+
 - Pros: visible, auditable lock; admin unlock possible; well-understood model.
 - Cons: migration and users-module changes; unknown and soft-deleted emails have no row, so identical behavior needs a parallel counter store anyway (B alone leaks account existence); persistent lock is a stronger DoS lever; needs an admin unlock screen (ADR-006 minimal UI); writes to `User` on every failure.
 - Effort: High.
@@ -44,6 +46,7 @@ Date: 2026-10-13. Origin: TD-31 (`docs/technical-debt.md`): account lockout and 
 ## Recommendation
 
 Approach A:
+
 - The guard (or a small `LoginAttemptPolicy` port) normalizes the email as `String(email).trim().toLowerCase()`, maps non-strings to a fixed `invalid` bucket, and hashes it. The spec states which check wins when both IP and email apply.
 - Count failures only, reset on success. The per-IP rule ("every attempt counts") and the per-email rule ("failures count") are deliberately different, and the spec says so.
 - Proposed defaults: 5 failures per 15 minutes per email, block equal to the window. Env vars `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES`, `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS`, reusing `parsePositiveInteger`.

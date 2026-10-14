@@ -1,9 +1,11 @@
 # ADR-017: CI as a merge barrier on main
 
 ## Status
+
 Accepted
 
 ## Context
+
 Until now nothing ran automatically: lint, unit, e2e and integration
 suites were run by hand before merging. The repository has a single admin
 who is also the only merger, so a mistake or a skipped check goes straight
@@ -12,6 +14,7 @@ creates and drops its own database, see `hermetic-integration-tests`),
 which makes them cheap to run on a clean CI machine.
 
 ## Decision
+
 - A GitHub Actions workflow (`.github/workflows/ci.yml`) runs one job,
   `ci`, on every pull request and on every push to `main`. It runs, in
   order: install, build, lint, unit tests, API e2e tests and API
@@ -34,6 +37,7 @@ which makes them cheap to run on a clean CI machine.
   once, and only with the repository owner's explicit approval.
 
 ## Consequences
+
 - A pull request is NOT required. Because `required_pull_request_reviews`
   is `null`, the admin can still push directly to `main`, but only a
   commit that already has a green `ci` run (for example from a pushed
@@ -52,6 +56,7 @@ which makes them cheap to run on a clean CI machine.
   red `main`. This is detected by the push run, not prevented.
 
 ## Rollback
+
 Order matters: remove branch protection first
 (`gh api -X DELETE repos/BcnSynergy/sf-manager/branches/main/protection`,
 or via Settings), then revert or delete the workflow through a pull
@@ -59,6 +64,7 @@ request. Reverting the workflow first would leave a required check that
 can never be reported, blocking every merge.
 
 ## Alternatives Considered
+
 - **Signal-only CI (no required check)** — rejected: it does not stop a
   broken change from reaching `main`, which is the problem to solve.
 - **Strict mode (branch must be up to date)** — rejected: forces a rebase
