@@ -601,6 +601,92 @@ Still open:
    per-attempt write. This is recorded as a question to revisit if the
    deployment target changes; ADR-001 itself is not revisited here.
 
+## Addendum (2026-10-14): `login-account-lockout` — per-email failed-login limit (TD-31)
+
+Resolves TD-31 (PRs #214, #215 and #216). The per-client-key
+limit (2026-10-07 and 2026-10-12 addenda) cannot stop a distributed attack on
+one account, because the attacker rotates client keys. A second, independent
+limit now keys on the normalized email.
+
+**Decisions.**
+
+1. **Approach A: a counter, not a stored lock.** The limit counts failed
+   attempts per email in the existing `ThrottleCounter` table. No column on
+   `User`, no lock flag, no new table and no migration. A block is the counter
+   state itself and expires on its own, so there is nothing for an admin to
+   unlock (see EN-23).
+2. **Failures only.** Only an `InvalidCredentialsError` outcome counts:
+   a wrong password, an unknown email and a soft-deleted user all take the same
+   path (`recordFailure`), so the limit adds no enumeration signal. Rejected
+   attempts (client-key 429, email 429, validation 400) count nothing.
+3. **Reset on success.** A valid credential check deletes the email's counter
+   and any block. A holder of the correct password is not the threat this limit
+   addresses, so a success that raced a block also clears it.
+4. **Block on reaching the limit.** Unlike the per-client-key limit (block
+   when `hits > limit`), the email counter blocks when `hits >= maxFailures`.
+   With the default of 5, the 5th failure is evaluated and answered `401`, and
+   the 6th attempt is answered `429`. The window is fixed and anchored on the
+   first failure; the block lasts one window. Failures recorded while blocked
+   are not counted and do not extend the block.
+5. **Hashed key.** The row key is `sha256("login-email:" + normalizedEmail)`
+   (hex). The raw email never reaches SQL, a row or a log, and the prefix keeps
+   the namespace apart from the per-client-key rows. This is pseudonymization,
+   not anonymization: anyone who can read the table or the logs can hash
+   candidate emails and learn which accounts were targeted. EN-6 tracks an HMAC
+   for both key families.
+6. **Where it lives.** `LoginUseCase` owns the rule through the
+   `LoginFailureLimiter` port: check first (a blocked email evaluates no
+   credentials), record on every failure, reset on success. The shared
+   `loginEmailSchema` in `@sf-manager/validation` is the only normalization, so
+   the use case and the throttler guard cannot drift. A request whose email
+   fails validation gets `400` and touches no counter.
+7. **Same 429.** The use case throws `LoginBlockedError`; the controller maps
+   it to the library's `ThrottlerException` plus `Retry-After`, so the body is
+   identical to the per-client-key 429 and reveals neither which limit fired
+   nor whether the email exists.
+8. **Combined `Retry-After`.** When the client key blocks, `LoginThrottlerGuard`
+   (which runs first) overrides `throwThrottlingException`, reads the email
+   block for a valid body email and raises `Retry-After` to the larger of the
+   two values. When only the email blocks, the use case answers with the
+   email's value. The read writes nothing, so the cheap blocked path of TD-35
+   is kept.
+9. **Failure policy.** Fail closed on the check and on recording a failure in
+   the use case: a storage error refuses the attempt with `500`. The guard's
+   read in item 8 is advisory (the request is denied anyway), so its storage
+   error logs a `warn` and the client-key `429` is kept. A failing reset logs a `warn`
+   (no email) and the login still succeeds. The block transition is logged once
+   by the adapter with the key hash only.
+10. **Configuration.** `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5, at most
+    2147483647) and `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900, at most
+    86400). Invalid values throw at boot.
+
+**Accepted limitations.**
+
+- **Check-then-verify gap.** `getBlock` runs before the argon2 verify and
+  `recordFailure` after it, and they are separate statements. A concurrent burst
+  from many client keys can therefore evaluate up to
+  `maxFailures + (in-flight requests) - 1` passwords for one email per window
+  before the block takes effect. The per-client-key limit bounds each source.
+  A pessimistic reservation or a serializable transaction around the argon2
+  call would close the gap; both were rejected as costlier than the bounded
+  overshoot.
+- **Targeted lockout DoS.** Anyone who knows an email, including a
+  `SYSTEM_ADMIN` email, can keep it blocked by sending failures from rotating
+  client keys. There is no trusted-device or trusted-network bypass. The denial
+  is bounded (one window per block, at most 24 hours by configuration) and is
+  accepted by design in the proposal's risk table. A persistent lock with an
+  admin unlock (EN-23) and an audit table of blocked logins (EN-24) are
+  deferred, because nothing requires them yet.
+- **Dispersed and slow attacks.** An attacker staying below `maxFailures` per
+  window per email is not limited; that is the usual trade-off of a counter
+  limit, not a regression.
+- **Fixed window.** The same boundary effect as the per-client-key limit applies
+  (up to about 2x the limit around a window boundary).
+
+The 2026-10-12 addendum's remark that per-email keying and lockout remain out
+of scope is superseded by this addendum for the email limit; a persistent
+account lock remains out of scope.
+
 ## Alternatives Considered
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort

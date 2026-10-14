@@ -275,4 +275,61 @@ describe('Login email limit (e2e)', () => {
     await fail(app, '198.51.100.4').expect(401);
     await fail(app, '198.51.100.5').expect(429);
   });
+
+  // login-account-lockout PR 3: when both limits block, the client is told the
+  // larger wait (Decision 5). The client-key window below is 10 s, so any
+  // Retry-After above 10 can only come from the 900 s email block.
+  it('answers the larger Retry-After when the client key and the email are both blocked', async () => {
+    const app = await createApp({
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '3',
+      LOGIN_RATE_LIMIT_WINDOW_SECONDS: '10',
+    });
+
+    // Two failures block the email (900 s) and use 2 of the client key's 3.
+    await fail(app, '198.51.100.1').expect(401);
+    await fail(app, '198.51.100.1').expect(401);
+    // 3rd attempt: the client key still passes, the use case answers with the
+    // email's wait.
+    const emailOnly = await fail(app, '198.51.100.1').expect(429);
+    // 4th attempt: the client key blocks too, and the guard picks the larger.
+    const both = await fail(app, '198.51.100.1').expect(429);
+
+    expect(Number(emailOnly.headers['retry-after'])).toBeGreaterThan(10);
+    expect(Number(both.headers['retry-after'])).toBeGreaterThan(10);
+    expect(Number(both.headers['retry-after'])).toBeLessThanOrEqual(900);
+    expect(both.body).toEqual(emailOnly.body);
+  });
+
+  it('keeps the client key Retry-After when only the client key is blocked', async () => {
+    const app = await createApp({
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '3',
+      LOGIN_RATE_LIMIT_WINDOW_SECONDS: '10',
+    });
+
+    await fail(app, '198.51.100.1', 'a@example.com').expect(401);
+    await fail(app, '198.51.100.1', 'b@example.com').expect(401);
+    await fail(app, '198.51.100.1', 'c@example.com').expect(401);
+    const clientOnly = await fail(app, '198.51.100.1', 'd@example.com').expect(
+      429,
+    );
+
+    expect(Number(clientOnly.headers['retry-after'])).toBeGreaterThanOrEqual(1);
+    expect(Number(clientOnly.headers['retry-after'])).toBeLessThanOrEqual(10);
+  });
+
+  it('adds no email failure for a request rejected by the client-key limit', async () => {
+    const app = await createApp({ LOGIN_RATE_LIMIT_MAX_ATTEMPTS: '3' });
+
+    await fail(app, '198.51.100.1', 'a@example.com').expect(401);
+    await fail(app, '198.51.100.1', 'b@example.com').expect(401);
+    await fail(app, '198.51.100.1', 'c@example.com').expect(401);
+    // Rejected by the client key: it must not count against the admin email.
+    await fail(app, '198.51.100.1').expect(429);
+
+    // Had that request counted, the first failure below would already be the
+    // 2nd one and the next attempt would be blocked one step early.
+    await fail(app, '198.51.100.2').expect(401);
+    await fail(app, '198.51.100.3').expect(401);
+    await fail(app, '198.51.100.4').expect(429);
+  });
 });

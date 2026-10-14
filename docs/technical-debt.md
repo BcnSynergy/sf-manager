@@ -24,12 +24,7 @@ project's Engram memory on 2026-10-09.
 
 ### Medium
 
-- **TD-31**: Account lockout and per-email rate-limit keying are deferred, so
-  a distributed attack on one account is not limited. Evidence:
-  `login-rate-limit` archive-report, open question 5. Origin:
-  `login-rate-limit`.
-  Deferred to its own slice (decided 2026-10-12, at the close of
-  `login-rate-limit-hardening`).
+None.
 
 ### Low
 
@@ -132,6 +127,16 @@ project's Engram memory on 2026-10-09.
   `review-history` ships with web UI and the web app uses react-i18next.
   Evidence: `docs/adr/INDEX.md:30-31` and `:43-46`. Origin: the 2026-10-06
   debt inventory.
+- **TD-36**: `npx tsc --noEmit -p apps/api/tsconfig.json` reports 36 errors
+  (TS2554, "Expected 4 arguments, but got 5"): 29 in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.integration.spec.ts`
+  and 7 in `.../prisma-throttler-storage.adapter.spec.ts`. The specs call
+  `increment()` with five arguments (the throttler name that the library's
+  `ThrottlerStorage` passes), but `PrismaThrottlerStorage.increment` declares
+  four. Jest does not type-check (`isolatedModules`) and `nest build` excludes
+  the specs, so lint, build and the tests stay green. Evidence: the `tsc`
+  command above at `main` `b8c89ca`. Origin: `login-account-lockout` PR 3/4
+  apply, 2026-10-14 (pre-existing, not introduced by that change).
 
 ## Resolved
 
@@ -193,6 +198,14 @@ project's Engram memory on 2026-10-09.
   `expiresAt` column, and it runs under a 500 ms `statement_timeout`
   (`apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`).
   Origin: `login-rate-limit-hardening` PR 2 and PR 3 RDD reviews, 2026-10-12.
+- **TD-31**: Account lockout and per-email rate-limit keying were deferred, so
+  a distributed attack on one account was not limited. Resolved by
+  `login-account-lockout` (#214, #215, #216): failed logins are now counted
+  per normalized email across all client keys, with a hashed key in
+  `ThrottleCounter`, block on reaching the limit, reset on success and a
+  combined `Retry-After` (ADR-011 addendum 2026-10-14). A persistent account
+  lock and an admin unlock stay out of scope (EN-23, EN-24). Origin:
+  `login-rate-limit` archive-report, open question 5.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

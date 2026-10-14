@@ -343,8 +343,10 @@ that path, so the TD-35 cheap-blocked-path property is kept (no tuple
 writes). A rejected request evaluates no credentials and records no email
 failure, as before.
 
-A storage error in that read propagates and becomes a 500. This keeps one
-rule for every email read and write: fail closed.
+That read is advisory: the request is denied either way. A storage error in
+it is logged at `warn` (never with the email) and the response stays the
+client key's 429 with its own `Retry-After`. The email check and the failure
+record in the login use case still fail closed (500).
 
 **Alternatives considered**:
 - *Compute the max on the email 429 by reading the per-client-key bucket.*
@@ -352,9 +354,10 @@ rule for every email read and write: fail closed.
   would never find a block; it computes nothing.
 - *Ignore the case and rely on the client retrying.* Contradicts decision
   answer 9.
-- *Swallow a read error and keep the client key's value.* The request is
-  refused either way, but this creates a second error policy for the same
-  port; rejected for consistency.
+- *Propagate a read error (500).* Considered first for one error policy on
+  the port, but the guard's read is advisory and the request is refused
+  anyway, so failing closed protects nothing and loses the 429 and its
+  `Retry-After`. Changed after the PR 3 review.
 - *Override `handleRequest`.* Re-implements library code that sets headers
   and counts; the protected `throwThrottlingException` hook is narrower.
 
@@ -367,7 +370,8 @@ rule for every email read and write: fail closed.
 | Invalid body | 400 | unchanged | unchanged | no | no |
 | Wrong password / unknown / soft-deleted | 401 | unchanged | unchanged | yes | yes |
 | Success | 200 | unchanged | unchanged | yes | no (reset) |
-| `getBlock` or `recordFailure` storage error | 500 | Nest default | — | `getBlock`: no; `recordFailure`: yes | — |
+| Use case `getBlock` or `recordFailure` storage error | 500 | Nest default | — | `getBlock`: no; `recordFailure`: yes | — |
+| Guard's advisory `getBlock` storage error (client key blocked) | 429 | `ThrottlerException` (library) | `Retry-After` = client key's (`warn` logged) | no | no |
 | `reset` storage error | 200 | unchanged | — | yes | — (`warn` logged) |
 
 `AuthController.login` adds one branch:
@@ -598,10 +602,10 @@ change it covers. Commands: `npm run test --workspace=apps/api`,
 | Unit | `getLoginEmailRateLimitConfig` | Unset/empty → 5 / 900 000 ms; `'3'`, `'60'` accepted; `'0'`, `'-1'`, `'1.5'`, `'abc'` throw naming the variable; `2147483647` failures and `86400` s accepted, `2147483648` failures and `86401` s throw naming the variable and the maximum; the existing `LOGIN_RATE_LIMIT_*` variables reject values above `Number.MAX_SAFE_INTEGER` |
 | Unit | `LoginUseCase` | Mocked port. (1) Blocked → `LoginBlockedError(n)`; `findByEmail`, `verify`, `verifyAgainstDummy`, `recordFailure` not called. (2) Wrong password, unknown email and soft-deleted (repo returns null) each call `recordFailure(email)` once and throw `InvalidCredentialsError`; call sequence identical for unknown and existing. (3) Success calls `reset(email)`, not `recordFailure`. (4) `getBlock` rejects → rejects, no credential evaluation. (5) `recordFailure` rejects → rejects (not `InvalidCredentialsError`). (6) `reset` rejects → login still returns the token, `Logger.prototype.warn` called, message without the email |
 | Unit | `AuthController.login` | `LoginBlockedError(42)` → `ThrottlerException` (429, default message) and `Retry-After: 42` set on the response |
-| Unit | `LoginThrottlerGuard` | Fake storage returning blocked with `timeToBlockExpire` 100. Email blocked 800 → header 800. Email blocked 50 → header stays 100. Not blocked → 100. Invalid or missing body email → `getBlock` not called. Not blocked by key → `getBlock` not called. `getBlock` rejects → rejects (500). Existing tracker tests kept |
+| Unit | `LoginThrottlerGuard` | Fake storage returning blocked with `timeToBlockExpire` 100. Email blocked 800 → header 800. Email blocked 50 → header stays 100. Not blocked → 100. Invalid or missing body email → `getBlock` not called. Not blocked by key → `getBlock` not called. `getBlock` rejects → still `ThrottlerException` (429), `Retry-After` stays the client key's value, a `warn` is logged without the email. Existing tracker tests kept |
 | Integration (adapter, real Postgres) | `PrismaLoginFailureLimiter` | `randomUUID()` emails, small config. (1) Fresh email → not blocked. (2) `maxFailures - 1` failures → not blocked; the next → blocked, `retryAfterSeconds` in `[1, window]`. (3) Failures while blocked: `hits` unchanged and `blockedUntil` unchanged (no rewrite). (4) Window expiry (window 3 s; 1 s raced slow CI runners, see EN-26) → count restarts at 1. (5) Block expiry → not blocked, next failure opens a new window. (6) `reset` deletes the row; reset of a missing key resolves. (7) **Concurrency**: 50 parallel `recordFailure` with max 1000 → `hits = 50`. (8) Parallel `maxFailures + 5` → blocked and exactly one transition `warn`. (9) Stored key is `sha256("login-email:" + email)` hex; no column contains the email; the warn log contains the hash and not the email. (10) `expiresAt` is set by the trigger and an expired email row is removed by `PrismaThrottlerStorage`'s cleanup. (11) Case/whitespace variants only meet in one bucket through `loginEmailSchema` (documented as a schema-level guarantee; the adapter receives normalized input) |
 | Integration (app, real Postgres) | Spec scenarios | `test/login-email-limit.integration.spec.ts`, real `AppModule`, `trust proxy` 1, `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES=3`, a unique email and unique `X-Forwarded-For` client per failure. (1) **Distributed**: 3 failures for one email from 3 client keys → 4th from a 4th key → 429 + `Retry-After`. (2) **Reset**: seeded user (via Prisma, unique email), 2 failures, success, then 2 more failures → 401, not 429. (3) **Successes do not count**: 4 successes → still 200. (4) **Parity**: unknown email vs seeded email, same steps → identical status sequence, bodies and `Retry-After` presence. (5) **Restart and two instances**: block in app A, 429 in app B. (6) **Concurrency**: 3 parallel failures → all 401, next → 429. (7) **Fail closed**: `getBlock` and `recordFailure` spied to reject once → 500; `reset` rejects → 200. (8) Mixed-case/whitespace email variant hits the same bucket |
-| E2E (mocked Prisma, fakes) | HTTP contract | `test/login-email-limit.e2e-spec.ts`, `TRUST_PROXY=true`, email max 2. Block after 2 failures across two `X-Forwarded-For` values; the 429 body equals the per-client-key 429 body from the same app; a request rejected by the email limit does not evaluate credentials (spy on the hasher); the email limit does not block another email. PR 3: both limits blocked (client key max 3 with a 1 s window, email blocked for 900 s) → `Retry-After` > 1. Timing parity is not asserted at e2e (non-deterministic); parity is proven by call-sequence equality in the use-case unit test and status/body equality at integration |
+| E2E (mocked Prisma, fakes) | HTTP contract | `test/login-email-limit.e2e-spec.ts`, `TRUST_PROXY=true`, email max 2. Block after 2 failures across two `X-Forwarded-For` values; the 429 body equals the per-client-key 429 body from the same app; a request rejected by the email limit does not evaluate credentials (spy on the hasher); the email limit does not block another email. PR 3: both limits blocked (client key max 3 with a 10 s window, email blocked for 900 s) → `Retry-After` > 10 (10 s rather than 1 s so the four requests stay inside one window on slow CI; see EN-35). Timing parity is not asserted at e2e (non-deterministic); parity is proven by call-sequence equality in the use-case unit test and status/body equality at integration |
 
 Existing suites (`login-rate-limit.e2e-spec.ts`, `login-rate-limit.integration.spec.ts`,
 `auth.e2e-spec.ts`) stay green; the per-client-key rules are unchanged.
