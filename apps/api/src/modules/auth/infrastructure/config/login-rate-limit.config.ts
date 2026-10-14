@@ -52,12 +52,14 @@ export interface LoginEmailRateLimitConfig {
 const DEFAULT_EMAIL_MAX_FAILURES = 5;
 const DEFAULT_EMAIL_WINDOW_SECONDS = 900;
 
-// Upper bounds that keep the adapter's SQL from failing at runtime instead of
-// at boot: the limit is cast with ::int (int4 maximum), and the window is
-// added to now() as a timestamptz, so an absurd window overflows the
-// timestamp range. One year is far beyond any sensible lockout window.
+// Upper bounds. The limit is cast with ::int in the adapter's SQL, so it
+// cannot exceed the int4 maximum without failing at runtime instead of at boot.
+// The window is capped at 24 hours: a block lasts as long as the window and
+// any third party who knows an email can trigger it, so the cap bounds the
+// account-lockout denial of service a misconfiguration could cause (it also
+// keeps the timestamptz arithmetic in range).
 const MAX_EMAIL_MAX_FAILURES = 2147483647;
-const MAX_EMAIL_WINDOW_SECONDS = 31536000;
+const MAX_EMAIL_WINDOW_SECONDS = 86400;
 
 export function getLoginEmailRateLimitConfig(): LoginEmailRateLimitConfig {
   const maxFailures = parsePositiveInteger(

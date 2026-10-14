@@ -236,24 +236,38 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     expect(logged).not.toContain(email);
   });
 
-  it('keeps the email namespace apart from the unprefixed and per-client-key hashes', async () => {
+  it('stores the email under its own prefixed hash, apart from the unprefixed and per-client-key hashes', async () => {
     const limiter = limiterWith();
-    const text = newEmail();
-
-    await limiter.recordFailure(text);
-
-    const unprefixed = createHash('sha256').update(text).digest('hex');
+    const email = newEmail();
+    // Worst case: a client key whose preimage embeds the very same text.
+    const unprefixed = createHash('sha256').update(email).digest('hex');
     const clientStyle = createHash('sha256')
-      .update(`AuthController-login-default-${text}`)
+      .update(`AuthController-login-default-${email}`)
       .digest('hex');
-    expect(await rowFor(text)).not.toBeNull();
-    expect(unprefixed).not.toBe(keyFor(text));
-    expect(clientStyle).not.toBe(keyFor(text));
-    expect(
-      await prisma.throttleCounter.findMany({
-        where: { key: { in: [unprefixed, clientStyle] } },
-      }),
-    ).toEqual([]);
+    createdKeys.add(unprefixed);
+    createdKeys.add(clientStyle);
+    const storage = new PrismaThrottlerStorage(prisma);
+    await storage.increment(unprefixed, WINDOW_MS, 10, WINDOW_MS, 'default');
+    await storage.increment(clientStyle, WINDOW_MS, 10, WINDOW_MS, 'default');
+
+    await limiter.recordFailure(email);
+
+    const rows = await prisma.throttleCounter.findMany({
+      where: { key: { in: [keyFor(email), unprefixed, clientStyle] } },
+    });
+    expect(rows).toHaveLength(3);
+    // The email failure landed on its own prefixed key and did not touch the
+    // counters of the other two namespaces.
+    expect(rows.map((row) => [row.key, row.hits]).sort()).toEqual(
+      [
+        [keyFor(email), 1],
+        [unprefixed, 1],
+        [clientStyle, 1],
+      ].sort(),
+    );
+    expect(keyFor(email)).toBe(
+      createHash('sha256').update(`login-email:${email}`).digest('hex'),
+    );
   });
 
   describe('expiresAt and cleanup', () => {
@@ -289,14 +303,20 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
       await failTimes(limiterWith(), blockedEmail, config.maxFailures);
       await sleep(1200);
 
-      // A new client key opens a window, which is when the bounded cleanup runs.
-      await new PrismaThrottlerStorage(prisma).increment(
-        randomUUID(),
-        WINDOW_MS,
-        10,
-        WINDOW_MS,
-        'default',
-      );
+      // A new client key opens a window, which is when the bounded cleanup
+      // runs. Cleanup deletes at most 100 expired rows per run, best-effort,
+      // and the table is shared with other suites, so expired rows left by
+      // other runs may come first: keep opening windows until this row is
+      // gone, within a cap.
+      for (let i = 0; i < 100 && (await rowFor(expiredEmail)) !== null; i++) {
+        await new PrismaThrottlerStorage(prisma).increment(
+          randomUUID(),
+          WINDOW_MS,
+          10,
+          WINDOW_MS,
+          'default',
+        );
+      }
 
       expect(await rowFor(expiredEmail)).toBeNull();
       expect(await rowFor(blockedEmail)).not.toBeNull();

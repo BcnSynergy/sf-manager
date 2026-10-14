@@ -54,6 +54,30 @@ describe('getLoginRateLimitConfig', () => {
     },
   );
 
+  // parsePositiveInteger caps every variable at Number.MAX_SAFE_INTEGER by
+  // default, so values that would silently lose precision are rejected.
+  it.each(['9007199254740992', '99999999999999999999'])(
+    'throws naming LOGIN_RATE_LIMIT_MAX_ATTEMPTS when above the safe integer range for "%s"',
+    (value) => {
+      process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = value;
+
+      expect(() => getLoginRateLimitConfig()).toThrow(
+        `LOGIN_RATE_LIMIT_MAX_ATTEMPTS must be at most 9007199254740991, got "${value}"`,
+      );
+    },
+  );
+
+  it.each(['9007199254740992', '99999999999999999999'])(
+    'throws naming LOGIN_RATE_LIMIT_WINDOW_SECONDS when above the safe integer range for "%s"',
+    (value) => {
+      process.env.LOGIN_RATE_LIMIT_WINDOW_SECONDS = value;
+
+      expect(() => getLoginRateLimitConfig()).toThrow(
+        `LOGIN_RATE_LIMIT_WINDOW_SECONDS must be at most 9007199254740991, got "${value}"`,
+      );
+    },
+  );
+
   it.each(['0', '-1', 'abc', '1.5'])(
     'throws naming LOGIN_RATE_LIMIT_WINDOW_SECONDS for %s',
     (value) => {
@@ -157,21 +181,21 @@ describe('getLoginEmailRateLimitConfig', () => {
     },
   );
 
-  it('accepts a window of one year for LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS', () => {
-    process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS = '31536000';
+  it('accepts a window of 24 hours for LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS', () => {
+    process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS = '86400';
 
-    expect(getLoginEmailRateLimitConfig().windowMs).toBe(31536000000);
+    expect(getLoginEmailRateLimitConfig().windowMs).toBe(86400000);
   });
 
   // The adapter adds the window to now() as a timestamptz; an absurd window
   // overflows the timestamp range and would fail every recordFailure.
-  it.each(['31536001', '99999999999999999999'])(
-    'throws naming LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS when above one year for "%s"',
+  it.each(['86401', '99999999999999999999'])(
+    'throws naming LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS when above 24 hours for "%s"',
     (value) => {
       process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS = value;
 
       expect(() => getLoginEmailRateLimitConfig()).toThrow(
-        `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS must be at most 31536000, got "${value}"`,
+        `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS must be at most 86400, got "${value}"`,
       );
     },
   );

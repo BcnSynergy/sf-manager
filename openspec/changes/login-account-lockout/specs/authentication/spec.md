@@ -74,7 +74,7 @@ The web login page MUST show the existing rate-limited message for this
 - THEN the configured values MUST apply instead of the defaults
 
 #### Scenario: Invalid configuration rejected at startup
-- GIVEN `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` or `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is set to zero, a negative number, a non-integer number, or non-numeric text
+- GIVEN `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` or `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is set to zero, a negative number, a non-integer number, or non-numeric text, or `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` is set above 2147483647, or `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is set above 86400 (24 hours, which bounds the lockout a misconfiguration could cause)
 - WHEN the application starts
 - THEN startup MUST fail with an error and the application MUST NOT begin serving requests
 

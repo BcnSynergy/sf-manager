@@ -419,7 +419,16 @@ It reads `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5) and
 `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900) through the existing
 module-private `parsePositiveInteger`: unset or empty uses the default,
 anything else must match `^\d+$` and be at least 1, otherwise boot fails with
-the variable name and raw value. Wiring in `auth.module.ts`:
+the variable name and raw value. Both variables also have an upper bound, so
+a misconfiguration fails at boot instead of at the first failed login:
+`LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` is at most 2147483647 (the adapter casts
+the limit with `::int`, the int4 maximum) and
+`LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is at most 86400 (24 hours). The window
+cap exists because a block lasts as long as the window and any third party who
+knows an email can trigger it, so the cap bounds the account-lockout denial of
+service a misconfiguration could cause; it also keeps the timestamptz
+arithmetic in range. Values above the bound throw `<NAME> must be at most
+<max>, got "<raw>"`. Wiring in `auth.module.ts`:
 
 ```ts
 {
@@ -584,7 +593,7 @@ change it covers. Commands: `npm run test --workspace=apps/api`,
 | Layer | What to Test | Approach and seam |
 |-------|-------------|----------|
 | Unit (Vitest) | `loginEmailSchema` | `'  Admin@Example.COM '` → `'admin@example.com'`; `42`, `undefined`, `''`, `'not-an-email'` fail; `loginRequestSchema` output email equals `loginEmailSchema` output for the same input |
-| Unit | `getLoginEmailRateLimitConfig` | Unset/empty → 5 / 900 000 ms; `'3'`, `'60'` accepted; `'0'`, `'-1'`, `'1.5'`, `'abc'` throw naming the variable |
+| Unit | `getLoginEmailRateLimitConfig` | Unset/empty → 5 / 900 000 ms; `'3'`, `'60'` accepted; `'0'`, `'-1'`, `'1.5'`, `'abc'` throw naming the variable; `2147483647` failures and `86400` s accepted, `2147483648` failures and `86401` s throw naming the variable and the maximum; the existing `LOGIN_RATE_LIMIT_*` variables reject values above `Number.MAX_SAFE_INTEGER` |
 | Unit | `LoginUseCase` | Mocked port. (1) Blocked → `LoginBlockedError(n)`; `findByEmail`, `verify`, `verifyAgainstDummy`, `recordFailure` not called. (2) Wrong password, unknown email and soft-deleted (repo returns null) each call `recordFailure(email)` once and throw `InvalidCredentialsError`; call sequence identical for unknown and existing. (3) Success calls `reset(email)`, not `recordFailure`. (4) `getBlock` rejects → rejects, no credential evaluation. (5) `recordFailure` rejects → rejects (not `InvalidCredentialsError`). (6) `reset` rejects → login still returns the token, `Logger.prototype.warn` called, message without the email |
 | Unit | `AuthController.login` | `LoginBlockedError(42)` → `ThrottlerException` (429, default message) and `Retry-After: 42` set on the response |
 | Unit | `LoginThrottlerGuard` | Fake storage returning blocked with `timeToBlockExpire` 100. Email blocked 800 → header 800. Email blocked 50 → header stays 100. Not blocked → 100. Invalid or missing body email → `getBlock` not called. Not blocked by key → `getBlock` not called. `getBlock` rejects → rejects (500). Existing tracker tests kept |
