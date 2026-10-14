@@ -285,6 +285,7 @@ by prefix.)
 - GIVEN a login request whose client IP cannot be determined
 - WHEN the request is submitted
 - THEN the request MUST still be subject to rate limiting and MUST NOT cause a server error
+
 ### Requirement: Client IP Resolution for Rate Limiting
 
 The IP used for rate limiting MUST be the socket address of the
@@ -477,6 +478,7 @@ The `/login` page MUST render the SF-Manager app logo static asset.
 #### Scenario: Logo visible on login page
 - GIVEN the user navigates to `/login`
 - THEN the page MUST render the app logo asset
+
 ### Requirement: Login Failure Limiting per Email
 
 The system MUST limit the number of failed login attempts per email within
