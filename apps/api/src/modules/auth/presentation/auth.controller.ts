@@ -18,6 +18,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ThrottlerException } from '@nestjs/throttler';
 import { loginRequestSchema } from '@sf-manager/validation';
 import type { Response } from 'express';
 import { Public } from '../../../shared/presentation/decorators/public.decorator';
@@ -26,6 +27,7 @@ import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { InvalidCredentialsError } from '../domain/invalid-credentials.error';
+import { LoginBlockedError } from '../domain/login-blocked.error';
 import type { VerifiedAccessToken } from '../application/ports/token-issuer.port';
 import {
   AUTH_CONFIG,
@@ -67,7 +69,8 @@ export class AuthController {
   @ApiOkResponse({ type: AuthUserResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password.' })
   @ApiTooManyRequestsResponse({
-    description: 'Too many login attempts from this client; see Retry-After.',
+    description:
+      'Too many login attempts from this client or for this email; see Retry-After.',
   })
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequestDto,
@@ -91,6 +94,13 @@ export class AuthController {
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException(error.message);
+      }
+      if (error instanceof LoginBlockedError) {
+        // Same exception type the per-client-key guard throws, so the body
+        // is identical and nothing reveals which limit fired (design.md
+        // Decision 6). Nest keeps headers set before the exception.
+        response.setHeader('Retry-After', String(error.retryAfterSeconds));
+        throw new ThrottlerException();
       }
       throw error;
     }
