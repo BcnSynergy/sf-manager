@@ -190,6 +190,18 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   overwrites. The cleanup's `$transaction` uses Prisma's default `maxWait`
   to acquire a connection, so under pool exhaustion the wait before the
   500 ms statement timeout applies is longer than that timeout suggests.
+- **EN-23** (api): Admin unlock action for a blocked email. Only relevant if a
+  persistent account lock is ever introduced; the current email limit is a
+  counter that expires on its own, so there is nothing to unlock. Evidence:
+  ADR-011 addendum 2026-10-14, decision 1. Origin: `login-account-lockout`
+  proposal, 2026-10-13.
+- **EN-24** (api): Persist blocked logins in a DB audit table, beyond the single
+  `warn` log the adapter writes on the block transition (key hash only, no
+  email). It would let an admin see which accounts are under attack, but needs
+  a retention policy and an answer to the hashed-email enumeration in EN-6.
+  Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
+  Origin: `login-account-lockout` proposal, 2026-10-13.
 - **EN-25** (api): Tidy the SQL in
   `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
   The upsert repeats the "new window" condition (`blockedUntil IS NOT NULL OR
@@ -211,6 +223,50 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   in `in-memory-login-failure-limiter.spec.ts` would prove the fake keeps
   matching the SQL adapter that later e2e suites stand in for. Origin:
   `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
+- **EN-29** (api tests): The in-memory `LOGIN_FAILURE_LIMITER` override (five
+  lines plus three imports) is copied into 13 e2e suites under
+  `apps/api/test/*.e2e-spec.ts`, next to the `ThrottlerStorage` override. A
+  shared test helper that applies both overrides to a `TestingModuleBuilder`
+  would keep the wiring in one place and make the next limiter change a
+  one-file edit. Related to EN-11. Origin: `login-account-lockout` fresh review
+  of PR 2/4 (#215), 2026-10-14.
+- **EN-30** (api tests): In
+  `apps/api/src/modules/auth/application/use-cases/login.use-case.spec.ts`, the
+  parity test's `verifyAgainstDummy` mock records the same `'verify'` label as
+  the real `verify`, so the call-sequence comparison treats the two hasher
+  calls as one step on purpose. Add a comment saying so, so nobody reads it as
+  a gap. Origin: `login-account-lockout` fresh review of PR 2/4 (#215),
+  2026-10-14.
+- **EN-31** (api): `PrismaThrottlerStorage.increment()` retries one empty
+  result silently (`(await run())[0] ?? (await run())[0]`) and only throws when
+  the second statement is also empty. The retry is legitimate (a snapshot
+  that predates a concurrent first insert), but nothing records that it
+  happened, so a rise in retries, which would point at a driver or contention
+  change, cannot be seen. A `debug` log or a counter on the retry path would
+  add that. Related to TD-35 (#213). Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`.
+  Origin: `login-account-lockout` fresh review of PR 2/4 (#215), 2026-10-14.
+- **EN-32** (api): `LoginUseCase` calls `limiter.reset(email)` on every
+  successful login, which is a database `DELETE` even when the email has no
+  counter row. Skipping it (for example by reading the block state first, or
+  by having `reset` report whether a row existed) would save one write per
+  login, at the price of an extra read or a wider port. Decide with real
+  traffic numbers. Evidence:
+  `apps/api/src/modules/auth/application/use-cases/login.use-case.ts`. Origin:
+  `login-account-lockout` fresh review of PR 2/4 (#215), 2026-10-14.
+- **EN-33** (api tests): The "same 429 as per-client-key" case in
+  `apps/api/test/login-email-limit.e2e-spec.ts` compares only the bodies and
+  the content type. Assert the headers too, for example that the email 429
+  carries no `X-RateLimit-*` header the client-key 429 lacks, so a future
+  header cannot reveal which limit fired. Origin: `login-account-lockout` fresh
+  review of PR 2/4 (#215), 2026-10-14.
+- **EN-34** (api tests): The combined `Retry-After` is proven with the in-memory
+  limiter (e2e) and a mocked limiter (guard unit spec) only. An integration case
+  against the real `PrismaLoginFailureLimiter` in
+  `apps/api/test/login-email-limit.integration.spec.ts` (client key blocked and
+  email blocked longer, expect the email's wait) would prove the guard's read
+  against Postgres. The design called this check optional. Origin:
+  `login-account-lockout` PR 3/4, 2026-10-14.
 
 ## Done
 

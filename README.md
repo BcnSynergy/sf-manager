@@ -43,6 +43,8 @@ business features yet, just the toolchain wired end-to-end.
    | `JWT_EXPIRES_IN` | No | `2h` | Access token lifetime, e.g. `30m`, `2h`, `1d`. |
    | `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | No | `10` | Login attempts allowed per client key (IPv4 address or IPv6 /64 prefix) within the window. Must be a positive integer; the app throws at boot otherwise. |
    | `LOGIN_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the login rate-limit window, in seconds. Must be a positive integer. |
+   | `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` | No | `5` | Failed logins allowed per email before it is blocked. Failures are counted per normalized email (trimmed, lowercase) across all client keys, and a successful login resets the count. The attempt that reaches the limit is still answered `401`; the next one gets `429`. Must be a positive integer (at most 2147483647); the app throws at boot otherwise. |
+   | `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` | No | `900` | Length of the per-email failure window and of the block that follows the limit, in seconds. Must be a positive integer (at most 86400); the app throws at boot otherwise. |
    | `TRUST_PROXY` | No | off | How many trusted proxy hops sit between the client and the API, for the login rate limit's client IP. Accepted: unset, empty or `false` (off, use the socket address); `true` (one hop); a positive integer N (N hops). Any other value makes the app throw at boot. See the topology table below. |
    | `SEED_ADMIN_EMAIL` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
    | `SEED_ADMIN_PASSWORD` | Only for seeding | — | Used by `prisma db seed` to create/update the admin user. |
