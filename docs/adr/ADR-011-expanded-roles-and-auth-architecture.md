@@ -650,8 +650,10 @@ limit now keys on the normalized email.
    two values. When only the email blocks, the use case answers with the
    email's value. The read writes nothing, so the cheap blocked path of TD-35
    is kept.
-9. **Failure policy.** Fail closed on the check and on recording a failure: a
-   storage error refuses the attempt with `500`. A failing reset logs a `warn`
+9. **Failure policy.** Fail closed on the check and on recording a failure in
+   the use case: a storage error refuses the attempt with `500`. The guard's
+   read in item 8 is advisory (the request is denied anyway), so its storage
+   error logs a `warn` and the client-key `429` is kept. A failing reset logs a `warn`
    (no email) and the login still succeeds. The block transition is logged once
    by the adapter with the key hash only.
 10. **Configuration.** `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5, at most

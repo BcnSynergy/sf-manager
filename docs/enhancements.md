@@ -267,6 +267,21 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   email blocked longer, expect the email's wait) would prove the guard's read
   against Postgres. The design called this check optional. Origin:
   `login-account-lockout` PR 3/4, 2026-10-14.
+- **EN-35** (api tests): The both-limits case in
+  `apps/api/test/login-email-limit.e2e-spec.ts` (around line 294) does not pin
+  that the 4th request was rejected by the client-key guard. If the 10 s window
+  expires on a slow CI run, the use case answers 429 with the email's wait and
+  the assertions still pass. The guard unit spec covers the branch
+  deterministically. Fix by asserting something only the guard path produces,
+  or by using a longer window. Origin: `login-account-lockout` PR 3/4 review,
+  2026-10-14.
+- **EN-36** (api): Every client-key-rejected request with a valid email now
+  costs one extra database read (`getBlock`) in
+  `LoginThrottlerGuard.throwThrottlingException`, on the cheap blocked path
+  from TD-35. Consider skipping or caching the read if pool pressure appears
+  under attack. Evidence:
+  `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`.
+  Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
 
 ## Done
 

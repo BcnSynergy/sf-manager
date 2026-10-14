@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '@nestjs/common';
+import { Logger, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerException, type ThrottlerStorage } from '@nestjs/throttler';
 import type { LoginFailureLimiter } from '../../application/ports/login-failure-limiter.port';
@@ -184,16 +184,27 @@ describe('LoginThrottlerGuard', () => {
       },
     );
 
-    it('fails closed when the email block cannot be read', async () => {
+    it('keeps the client key 429 and warns when the email block cannot be read', async () => {
       getBlock.mockRejectedValue(new Error('db down'));
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
 
-      const { error } = await rejectWith({
-        email: 'admin@example.com',
-        password: 'x',
-      });
+      try {
+        const { retryAfter, error } = await rejectWith({
+          email: 'admin@example.com',
+          password: 'x',
+        });
 
-      expect(error).toEqual(new Error('db down'));
-      expect(error).not.toBeInstanceOf(ThrottlerException);
+        expect(error).toBeInstanceOf(ThrottlerException);
+        expect(retryAfter).toEqual([CLIENT_BLOCK_SECONDS]);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0][0])).not.toContain(
+          'admin@example.com',
+        );
+      } finally {
+        warn.mockRestore();
+      }
     });
 
     it('writes no email failure on the rejected path', async () => {

@@ -1,4 +1,4 @@
-import { ExecutionContext, Inject, Injectable } from '@nestjs/common';
+import { ExecutionContext, Inject, Injectable, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
   InjectThrottlerOptions,
@@ -27,6 +27,8 @@ import { toClientKey } from './client-key';
 // plus the limiter.
 @Injectable()
 export class LoginThrottlerGuard extends ThrottlerGuard {
+  private readonly logger = new Logger(LoginThrottlerGuard.name);
+
   constructor(
     @InjectThrottlerOptions() options: ThrottlerModuleOptions,
     @InjectThrottlerStorage() storageService: ThrottlerStorage,
@@ -42,8 +44,15 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
   }
 
   // Read-only: the rejected request evaluates no credentials and records no
-  // email failure. A storage error propagates (500), the same fail-closed
-  // policy as every other email read and write.
+  // email failure. The read is advisory: the request is denied either way, so
+  // a storage error is logged at warn (never with the email) and the response
+  // stays the client key's 429. Failing closed here would protect nothing and
+  // lose the 429 and its Retry-After. The email check and the failure record
+  // in the login use case still fail closed.
+  //
+  // The override relies on the library having already set the client key's
+  // Retry-After header before it calls throwThrottlingException, so the larger
+  // value written here replaces it.
   protected override async throwThrottlingException(
     context: ExecutionContext,
     detail: ThrottlerLimitDetail,
@@ -53,11 +62,20 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
     const body = req.body as { email?: unknown } | undefined;
     const email = loginEmailSchema.safeParse(body?.email);
     if (email.success) {
-      const block = await this.failureLimiter.getBlock(email.data);
-      if (block.blocked && block.retryAfterSeconds > detail.timeToBlockExpire) {
-        (res as { header(name: string, value: number): void }).header(
-          'Retry-After',
-          block.retryAfterSeconds,
+      try {
+        const block = await this.failureLimiter.getBlock(email.data);
+        if (
+          block.blocked &&
+          block.retryAfterSeconds > detail.timeToBlockExpire
+        ) {
+          (res as { header(name: string, value: number): void }).header(
+            'Retry-After',
+            block.retryAfterSeconds,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Email block read failed on a rate-limited login: ${error instanceof Error ? error.message : 'unknown error'}`,
         );
       }
     }
