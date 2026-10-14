@@ -319,6 +319,11 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `switchToHttp`) instead of extending the existing `contextFor` helper with a
   response. A later change to what the guard reads from the context must be
   made in both. Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-42** (api tests): No test boots `AppModule` with an invalid
+  `LOGIN_EMAIL_RATE_LIMIT_*` value to prove the factory in
+  `apps/api/src/modules/auth/auth.module.ts` (~line 105) throws at startup. The
+  "Invalid configuration rejected at startup" scenario is proven only by the
+  config unit spec. Origin: `login-account-lockout` sdd-verify, 2026-10-14.
 
 ## Done
 

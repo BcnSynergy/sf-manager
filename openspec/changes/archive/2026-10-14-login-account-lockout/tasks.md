@@ -150,8 +150,8 @@ Branch from `main` after PR 2 merges.
 
 ## Gate PR 3 (orchestrator)
 
-- [ ] G.7 Fresh-context independent review before push; focus: override reads only (no write on the cheap-blocked path), invalid body email skips the read, register IDs and cross-references, ADR addendum accuracy vs the implemented behavior. Fix findings or register them in this PR.
-- [ ] G.8 Ask the user before push, before creating the PR (title `feat(auth): PR 3/4 — combined Retry-After and TD-31 docs`; "not browser-verified, no UI change"), and before merge after `ci` passes.
+- [x] G.7 Fresh-context independent review before push; focus: override reads only (no write on the cheap-blocked path), invalid body email skips the read, register IDs and cross-references, ADR addendum accuracy vs the implemented behavior. Fix findings or register them in this PR.
+- [x] G.8 Ask the user before push, before creating the PR (title `feat(auth): PR 3/4 — combined Retry-After and TD-31 docs`; "not browser-verified, no UI change"), and before merge after `ci` passes.
 
 ## Phase D: Web untouched confirmation (checked in every PR, final check before archive)
 
@@ -162,6 +162,6 @@ Branch from `main` after PR 2 merges.
 
 Docs only; branch from `main` after PR 3 merges. Details are refined at archive time.
 
-- [ ] E.1 `sdd-verify` against every delta spec scenario (map each to its test: PR 1 to PR 3 tasks above); fix or register findings in `docs/technical-debt.md` / `docs/enhancements.md`.
-- [ ] E.2 `sdd-archive`: merge the delta into `openspec/specs/authentication/spec.md` (ADDED "Login Failure Limiting per Email"; MODIFIED "Login Attempt Rate Limiting") and archive the change folder; confirm TD-31 Resolved carries the PR numbers including PR 4/4. Check `git status` after the archive and finish `git mv` plus commit only if the source folder remains.
+- [x] E.1 `sdd-verify` against every delta spec scenario (map each to its test: PR 1 to PR 3 tasks above); fix or register findings in `docs/technical-debt.md` / `docs/enhancements.md`.
+- [x] E.2 `sdd-archive`: merge the delta into `openspec/specs/authentication/spec.md` (ADDED "Login Failure Limiting per Email"; MODIFIED "Login Attempt Rate Limiting") and archive the change folder; confirm TD-31 Resolved carries the PR numbers including PR 4/4. Check `git status` after the archive and finish `git mv` plus commit only if the source folder remains.
 - [ ] E.3 Ask the user before push, PR creation (title `docs(openspec): PR 4/4 — archive login-account-lockout`) and merge. Before reporting the change complete, state which register items were added.
