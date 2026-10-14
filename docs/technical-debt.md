@@ -111,8 +111,9 @@ None.
   only. Evidence: `auth-live-user-check` archive-report S-1. Origin:
   `auth-live-user-check`.
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
-  upload, matrix builds, Dependabot, Playwright, extra caching, a typecheck
-  script, parallel jobs, and SHA-pinned actions. Evidence:
+  upload, matrix builds, Dependabot, Playwright, extra caching, parallel
+  jobs, and SHA-pinned actions. The API typecheck step landed in
+  `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
 - **TD-33**: Prettier is a dependency but is not enforced. `apps/api` has a
@@ -202,9 +203,8 @@ None.
   `td-36-throttler-spec-types` (#218): the specs now type the variable as the
   `ThrottlerStorage` port, as `ThrottlerGuard` calls it. The adapter still
   declares four parameters on purpose: the throttler name is already part of
-  the key that `ThrottlerGuard.generateKey` hashes, so it is ignored. Nothing
-  in CI type-checks the specs yet, so a regression would go unnoticed until
-  TD-32's typecheck script lands.
+  the key that `ThrottlerGuard.generateKey` hashes, so it is ignored. CI
+  type-checks the specs since `td-32-api-typecheck` (#219).
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
