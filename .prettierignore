@@ -12,3 +12,7 @@ openspec/changes/archive/2026-08-26-users-minimal-ui/proposal.md
 openspec/changes/archive/2026-09-08-review-session/design.md
 openspec/changes/archive/2026-09-17-nav-menu/tasks.md
 openspec/changes/archive/2026-09-24-review-export/tasks.md
+
+# A code span here wraps onto a line starting with '>', which Prettier reads
+# as a blockquote and rewrites, dropping spaces from the text.
+openspec/changes/archive/2026-09-13-review-history-company-scope/verify-report.md
