@@ -52,6 +52,12 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`
   (key stored as received from the library). Origin:
   `login-rate-limit-hardening` reviews and `sdd-verify`, 2026-10-12.
+  Extended by `login-account-lockout` (#214, 2026-10-14): the per-email
+  limiter stores `sha256("login-email:" + email)` and logs the same hash on
+  the block transition, so anyone who can read the table or the application
+  logs can hash candidate emails and learn which accounts were targeted. An
+  HMAC should cover both the stored key and the logged value. Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
 - **EN-7** (api tests): Close the client-key and guard test gaps. Add rows for
   `1::`, `1:2:3:4:5:6:7::`, `::2:3:4:5:6:7:8`, uppercase hex, and an IPv4 with
   a zone id (`1.2.3.4%x` is accepted as IPv4). Pin the IPv4-compatible
@@ -190,6 +196,20 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   windowEndsAt <= now()`) four times and the window-end expression five
   times; computing each once (for example in a CTE or a single anchor) would
   state every rule once. Related to EN-9 and EN-21. Origin:
+  `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
+- **EN-27** (api): The in-memory login failure limiter
+  (`apps/api/src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter.ts`)
+  lives in the application layer but imports its config type from
+  `infrastructure/config/login-rate-limit.config.ts`, reversing the port's
+  dependency direction (design Decision 9 accepted this as a type-only
+  import). Defining the config shape next to the port, or passing plain
+  `maxFailures` and `windowMs`, would keep the layering clean. Origin:
+  `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
+- **EN-28** (api tests): The in-memory limiter's unit spec does not cover the
+  re-block that follows an expired block when `maxFailures` is 1. The adapter
+  integration spec covers that path against Postgres; a matching unit case
+  in `in-memory-login-failure-limiter.spec.ts` would prove the fake keeps
+  matching the SQL adapter that later e2e suites stand in for. Origin:
   `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
 
 ## Done
