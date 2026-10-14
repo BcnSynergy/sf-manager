@@ -7,3 +7,7 @@
 // limit explicitly and restores this value afterwards.
 // Mirrors apps/api/test/e2e-env.setup.ts.
 process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = '1000';
+// Suites that fail a login repeatedly with one email (wrong-password cases)
+// would trip the per-email failure limit (default 5). Raise it for every
+// suite; login-email-limit.*-spec.ts set and restore low values explicitly.
+process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES = '1000';

@@ -6,6 +6,7 @@ import type { StringValue } from 'ms';
 import { HashingModule } from '../../shared/infrastructure/hashing/hashing.module';
 import { PrismaService } from '../../shared/infrastructure/persistence/prisma.service';
 import { UsersModule } from '../users/users.module';
+import { LOGIN_FAILURE_LIMITER } from './application/ports/login-failure-limiter.port';
 import { PERMISSION_CHECKER } from './application/ports/permission-checker.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
 import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
@@ -17,7 +18,11 @@ import {
   AUTH_CONFIG,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
-import { getLoginRateLimitConfig } from './infrastructure/config/login-rate-limit.config';
+import {
+  getLoginEmailRateLimitConfig,
+  getLoginRateLimitConfig,
+} from './infrastructure/config/login-rate-limit.config';
+import { PrismaLoginFailureLimiter } from './infrastructure/persistence/prisma-login-failure-limiter.adapter';
 import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
@@ -87,6 +92,18 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },
+    // Per-email failed-login limit (login-account-lockout, TD-31). Counters
+    // live in Postgres next to the per-client-key ones. Fail closed: a
+    // storage error on the block check or the failure record refuses the
+    // login (500). e2e suites that mock PrismaService override this token
+    // with InMemoryLoginFailureLimiter. The factory runs at module compile,
+    // so tests that set the env before compile() see their values.
+    {
+      provide: LOGIN_FAILURE_LIMITER,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) =>
+        new PrismaLoginFailureLimiter(prisma, getLoginEmailRateLimitConfig()),
+    },
     { provide: PERMISSION_CHECKER, useClass: RolePermissionChecker },
     { provide: APP_GUARD, useClass: AuthenticatedGuard },
     // design.md Decision 1: registration order matters — Nest runs APP_GUARD

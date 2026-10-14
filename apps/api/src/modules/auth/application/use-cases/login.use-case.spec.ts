@@ -1,7 +1,10 @@
+import { Logger } from '@nestjs/common';
 import { User } from '../../../users/domain/user.entity';
 import type { UserRepository } from '../../../users/application/ports/user.repository.port';
 import { InvalidCredentialsError } from '../../domain/invalid-credentials.error';
+import { LoginBlockedError } from '../../domain/login-blocked.error';
 import type { PasswordHasher } from '../../../../shared/application/ports/password-hasher.port';
+import type { LoginFailureLimiter } from '../ports/login-failure-limiter.port';
 import type { TokenDenylist } from '../ports/token-denylist.port';
 import type { TokenIssuer } from '../ports/token-issuer.port';
 import { LoginUseCase } from './login.use-case';
@@ -21,6 +24,7 @@ describe('LoginUseCase', () => {
   let passwordHasher: jest.Mocked<PasswordHasher>;
   let tokenIssuer: jest.Mocked<TokenIssuer>;
   let tokenDenylist: jest.Mocked<TokenDenylist>;
+  let loginFailureLimiter: jest.Mocked<LoginFailureLimiter>;
   let useCase: LoginUseCase;
 
   beforeEach(() => {
@@ -51,12 +55,22 @@ describe('LoginUseCase', () => {
       revoke: jest.fn(),
       deleteExpired: jest.fn(),
     };
+    loginFailureLimiter = {
+      getBlock: jest.fn().mockResolvedValue({ blocked: false }),
+      recordFailure: jest.fn().mockResolvedValue(undefined),
+      reset: jest.fn().mockResolvedValue(undefined),
+    };
     useCase = new LoginUseCase(
       userRepository,
       passwordHasher,
       tokenIssuer,
       tokenDenylist,
+      loginFailureLimiter,
     );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('issues an access token for valid credentials', async () => {
@@ -163,5 +177,148 @@ describe('LoginUseCase', () => {
     expect(passwordHasher.verifyAgainstDummy).toHaveBeenCalledWith(
       'any-password',
     );
+  });
+
+  describe('per-email failure limit (login-account-lockout)', () => {
+    it.each(['correct-password', 'wrong-password'])(
+      'rejects a blocked email before any credential evaluation (password %s)',
+      async (password) => {
+        loginFailureLimiter.getBlock.mockResolvedValue({
+          blocked: true,
+          retryAfterSeconds: 42,
+        });
+        userRepository.findByEmail.mockResolvedValue(activeUser);
+        passwordHasher.verify.mockResolvedValue(true);
+
+        const error = await useCase
+          .execute('admin@example.com', password)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(LoginBlockedError);
+        expect((error as LoginBlockedError).retryAfterSeconds).toBe(42);
+        expect(loginFailureLimiter.getBlock).toHaveBeenCalledWith(
+          'admin@example.com',
+        );
+        expect(userRepository.findByEmail).not.toHaveBeenCalled();
+        expect(passwordHasher.verify).not.toHaveBeenCalled();
+        expect(passwordHasher.verifyAgainstDummy).not.toHaveBeenCalled();
+        expect(loginFailureLimiter.recordFailure).not.toHaveBeenCalled();
+        expect(tokenIssuer.sign).not.toHaveBeenCalled();
+      },
+    );
+
+    it('records exactly one failure for a wrong password', async () => {
+      userRepository.findByEmail.mockResolvedValue(activeUser);
+      passwordHasher.verify.mockResolvedValue(false);
+
+      await expect(
+        useCase.execute('admin@example.com', 'wrong-password'),
+      ).rejects.toThrow(InvalidCredentialsError);
+
+      expect(loginFailureLimiter.recordFailure).toHaveBeenCalledTimes(1);
+      expect(loginFailureLimiter.recordFailure).toHaveBeenCalledWith(
+        'admin@example.com',
+      );
+      expect(loginFailureLimiter.reset).not.toHaveBeenCalled();
+    });
+
+    it('records the failure for an unknown or soft-deleted email through the same call sequence as an existing user', async () => {
+      const sequenceFor = async (found: User | null): Promise<string[]> => {
+        const calls: string[] = [];
+        loginFailureLimiter.getBlock.mockImplementation(() => {
+          calls.push('getBlock');
+          return Promise.resolve({ blocked: false });
+        });
+        userRepository.findByEmail.mockImplementation(() => {
+          calls.push('findByEmail');
+          return Promise.resolve(found);
+        });
+        passwordHasher.verify.mockImplementation(() => {
+          calls.push('verify');
+          return Promise.resolve(false);
+        });
+        passwordHasher.verifyAgainstDummy.mockImplementation(() => {
+          calls.push('verify');
+          return Promise.resolve(false);
+        });
+        loginFailureLimiter.recordFailure.mockImplementation(() => {
+          calls.push('recordFailure');
+          return Promise.resolve();
+        });
+
+        await expect(
+          useCase.execute('someone@example.com', 'wrong-password'),
+        ).rejects.toThrow(InvalidCredentialsError);
+        return calls;
+      };
+
+      const existing = await sequenceFor(activeUser);
+      const unknownOrSoftDeleted = await sequenceFor(null);
+
+      expect(existing).toEqual([
+        'getBlock',
+        'findByEmail',
+        'verify',
+        'recordFailure',
+      ]);
+      expect(unknownOrSoftDeleted).toEqual(existing);
+    });
+
+    it('resets the counter on success and does not record a failure', async () => {
+      userRepository.findByEmail.mockResolvedValue(activeUser);
+      passwordHasher.verify.mockResolvedValue(true);
+      tokenIssuer.sign.mockResolvedValue('signed.jwt.token');
+
+      await useCase.execute('admin@example.com', 'correct-password');
+
+      expect(loginFailureLimiter.reset).toHaveBeenCalledTimes(1);
+      expect(loginFailureLimiter.reset).toHaveBeenCalledWith(
+        'admin@example.com',
+      );
+      expect(loginFailureLimiter.recordFailure).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when the block check rejects: no credential evaluation', async () => {
+      const storageError = new Error('storage down');
+      loginFailureLimiter.getBlock.mockRejectedValue(storageError);
+
+      await expect(
+        useCase.execute('admin@example.com', 'correct-password'),
+      ).rejects.toBe(storageError);
+
+      expect(userRepository.findByEmail).not.toHaveBeenCalled();
+      expect(passwordHasher.verify).not.toHaveBeenCalled();
+      expect(passwordHasher.verifyAgainstDummy).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when recording a failure rejects: the storage error surfaces, not InvalidCredentialsError', async () => {
+      const storageError = new Error('storage down');
+      userRepository.findByEmail.mockResolvedValue(activeUser);
+      passwordHasher.verify.mockResolvedValue(false);
+      loginFailureLimiter.recordFailure.mockRejectedValue(storageError);
+
+      await expect(
+        useCase.execute('admin@example.com', 'wrong-password'),
+      ).rejects.toBe(storageError);
+    });
+
+    it('still logs in when the reset rejects, warning without the email', async () => {
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      userRepository.findByEmail.mockResolvedValue(activeUser);
+      passwordHasher.verify.mockResolvedValue(true);
+      tokenIssuer.sign.mockResolvedValue('signed.jwt.token');
+      loginFailureLimiter.reset.mockRejectedValue(new Error('storage down'));
+
+      const result = await useCase.execute(
+        'admin@example.com',
+        'correct-password',
+      );
+
+      expect(result.accessToken).toBe('signed.jwt.token');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).not.toContain('admin@example.com');
+    });
   });
 });

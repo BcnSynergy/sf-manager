@@ -1,10 +1,12 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerException } from '@nestjs/throttler';
 import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { InvalidCredentialsError } from '../domain/invalid-credentials.error';
+import { LoginBlockedError } from '../domain/login-blocked.error';
 import { AUTH_CONFIG, AuthConfig } from '../infrastructure/config/auth.config';
 import { AuthController } from './auth.controller';
 
@@ -26,7 +28,11 @@ describe('AuthController', () => {
   const loginUseCase = { execute: jest.fn() };
   const logoutUseCase = { execute: jest.fn() };
   const getCurrentUserUseCase = { execute: jest.fn() };
-  const response = { cookie: jest.fn(), clearCookie: jest.fn() };
+  const response = {
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+    setHeader: jest.fn(),
+  };
 
   let controller: AuthController;
 
@@ -94,6 +100,36 @@ describe('AuthController', () => {
     ).rejects.toThrow(UnauthorizedException);
 
     expect(response.cookie).not.toHaveBeenCalled();
+  });
+
+  it('maps LoginBlockedError to the library ThrottlerException (same 429 as the per-client-key limit) with Retry-After and no cookie', async () => {
+    loginUseCase.execute.mockRejectedValue(new LoginBlockedError(42));
+
+    const error = await controller
+      .login({ email: 'admin@example.com', password: 'x' }, response as any)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ThrottlerException);
+    expect((error as ThrottlerException).getStatus()).toBe(429);
+    expect((error as ThrottlerException).message).toBe(
+      new ThrottlerException().message,
+    );
+    expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '42');
+    expect(response.cookie).not.toHaveBeenCalled();
+  });
+
+  it('rethrows unexpected login errors unchanged', async () => {
+    const storageError = new Error('storage down');
+    loginUseCase.execute.mockRejectedValue(storageError);
+
+    await expect(
+      controller.login(
+        { email: 'admin@example.com', password: 'x' },
+        response as any,
+      ),
+    ).rejects.toBe(storageError);
+
+    expect(response.setHeader).not.toHaveBeenCalled();
   });
 
   it('logout revokes the cookie token and clears the cookie with matching attributes', async () => {

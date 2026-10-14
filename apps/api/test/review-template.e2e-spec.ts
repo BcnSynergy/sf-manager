@@ -7,6 +7,9 @@ import * as path from 'node:path';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
+import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
+import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter';
+import { getLoginEmailRateLimitConfig } from '../src/modules/auth/infrastructure/config/login-rate-limit.config';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
 import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.repository.port';
@@ -142,6 +145,11 @@ async function buildApp(seed: { users?: User[] }): Promise<{
     .useValue(draftSelectionCleaner)
     .overrideProvider(ThrottlerStorage)
     .useFactory({ factory: () => new ThrottlerStorageService() })
+    .overrideProvider(LOGIN_FAILURE_LIMITER)
+    .useFactory({
+      factory: () =>
+        new InMemoryLoginFailureLimiter(getLoginEmailRateLimitConfig()),
+    })
     .overrideProvider(PrismaService)
     .useValue({
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
@@ -1337,6 +1345,11 @@ describe('Review Templates (e2e)', () => {
         )
         .overrideProvider(ThrottlerStorage)
         .useFactory({ factory: () => new ThrottlerStorageService() })
+        .overrideProvider(LOGIN_FAILURE_LIMITER)
+        .useFactory({
+          factory: () =>
+            new InMemoryLoginFailureLimiter(getLoginEmailRateLimitConfig()),
+        })
         .overrideProvider(PrismaService)
         .useValue({
           $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),

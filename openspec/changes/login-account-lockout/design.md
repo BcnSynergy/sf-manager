@@ -190,8 +190,10 @@ class whose contract is the port.
 **Cleanup**: the sibling runs no cleanup of its own. Every login attempt
 passes the per-client-key guard first, and `PrismaThrottlerStorage` runs the
 bounded cleanup whenever a client key opens a window. That cleanup deletes
-any expired row, email rows included. Email rows live at most
-window + block (30 minutes by default) after their last write.
+any expired row, email rows included. The SQL caps both `windowEndsAt` and
+`blockedUntil` at `now()` + window, so an email row becomes eligible for cleanup
+at most one window (15 minutes by default) after its last write, plus the lag
+until a client key next opens a window.
 
 ### Decision 4: Storage semantics — fixed window, block on reaching the limit, db clock
 
