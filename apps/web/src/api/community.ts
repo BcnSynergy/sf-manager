@@ -68,10 +68,7 @@ export function createCommunity(payload: CreateCommunityPayload): Promise<Commun
   });
 }
 
-export function updateCommunity(
-  id: string,
-  payload: UpdateCommunityPayload,
-): Promise<Community> {
+export function updateCommunity(id: string, payload: UpdateCommunityPayload): Promise<Community> {
   return apiFetch<Community>(`/communities/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
@@ -92,21 +89,17 @@ export function addRepresentative(
   communityId: string,
   userId: string,
 ): Promise<RepresentativeAssignment> {
-  return apiFetch<RepresentativeAssignment>(
-    `/communities/${communityId}/representatives`,
-    { method: 'POST', body: JSON.stringify({ userId }) },
-  );
+  return apiFetch<RepresentativeAssignment>(`/communities/${communityId}/representatives`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
 }
 
 // 204 No Content on success.
-export function deactivateRepresentative(
-  communityId: string,
-  userId: string,
-): Promise<undefined> {
-  return apiFetch<undefined>(
-    `/communities/${communityId}/representatives/${userId}`,
-    { method: 'DELETE' },
-  );
+export function deactivateRepresentative(communityId: string, userId: string): Promise<undefined> {
+  return apiFetch<undefined>(`/communities/${communityId}/representatives/${userId}`, {
+    method: 'DELETE',
+  });
 }
 
 export function reactivateRepresentative(
@@ -132,22 +125,14 @@ export function addTechnician(communityId: string, userId: string): Promise<Assi
 }
 
 // 204 No Content on success.
-export function deactivateTechnician(
-  communityId: string,
-  userId: string,
-): Promise<undefined> {
-  return apiFetch<undefined>(
-    `/communities/${communityId}/technicians/${userId}`,
-    { method: 'DELETE' },
-  );
+export function deactivateTechnician(communityId: string, userId: string): Promise<undefined> {
+  return apiFetch<undefined>(`/communities/${communityId}/technicians/${userId}`, {
+    method: 'DELETE',
+  });
 }
 
-export function reactivateTechnician(
-  communityId: string,
-  userId: string,
-): Promise<Assignment> {
-  return apiFetch<Assignment>(
-    `/communities/${communityId}/technicians/${userId}/reactivate`,
-    { method: 'POST' },
-  );
+export function reactivateTechnician(communityId: string, userId: string): Promise<Assignment> {
+  return apiFetch<Assignment>(`/communities/${communityId}/technicians/${userId}/reactivate`, {
+    method: 'POST',
+  });
 }

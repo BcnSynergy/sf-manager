@@ -12,7 +12,6 @@ vi.mock('../api/client', async (importOriginal) => {
   return { ...actual, setUnauthorizedHandler: vi.fn(actual.setUnauthorizedHandler) };
 });
 
-
 // Renders the raw fields useAuth() exposes so tests can assert on the
 // consumer-visible shape of `user`, including `role` — the field this PR adds.
 function UserProbe() {
@@ -32,11 +31,13 @@ function UserProbe() {
   );
 }
 
-function mockFetch(options: {
-  meRole?: string;
-  meFails?: boolean;
-  loginRole?: string;
-} = {}) {
+function mockFetch(
+  options: {
+    meRole?: string;
+    meFails?: boolean;
+    loginRole?: string;
+  } = {},
+) {
   return vi.fn((url: RequestInfo | URL) => {
     const href = String(url);
     if (href.includes('/auth/me')) {
@@ -278,8 +279,7 @@ describe('AuthProvider — session ended on a mid-session 401', () => {
     let resolve!: () => void;
     const data = () =>
       new Promise<Response>((res) => {
-        resolve = () =>
-          res({ ok: false, status: 401, json: async () => ({}) } as Response);
+        resolve = () => res({ ok: false, status: 401, json: async () => ({}) } as Response);
       });
     return { data, resolve: () => resolve() };
   }

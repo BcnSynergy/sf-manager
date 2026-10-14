@@ -7,9 +7,7 @@ import { apiFetch } from './client';
 // api/community.ts's CommunityErrorCode — an e2e assertion on `body.code` in
 // apps/api/test/inspectable-element.e2e-spec.ts (Phase 10) is the anti-drift
 // guard on the API side.
-export type InspectableElementErrorCode =
-  | 'COMMUNITY_NOT_FOUND'
-  | 'INSPECTABLE_ELEMENT_NOT_FOUND';
+export type InspectableElementErrorCode = 'COMMUNITY_NOT_FOUND' | 'INSPECTABLE_ELEMENT_NOT_FOUND';
 
 // Mirrors apps/api's InspectableElementResponseDto — deletedAt is never
 // returned (design.md "Data Flow — POST /communities/:communityId/
@@ -57,22 +55,18 @@ export type UpdateInspectableElementPayload = {
   deactivated?: boolean;
 };
 
-export function listInspectableElements(
-  communityId: string,
-): Promise<InspectableElement[]> {
-  return apiFetch<InspectableElement[]>(
-    `/communities/${communityId}/inspectable-elements`,
-  );
+export function listInspectableElements(communityId: string): Promise<InspectableElement[]> {
+  return apiFetch<InspectableElement[]>(`/communities/${communityId}/inspectable-elements`);
 }
 
 export function createInspectableElement(
   communityId: string,
   payload: CreateInspectableElementPayload,
 ): Promise<InspectableElement> {
-  return apiFetch<InspectableElement>(
-    `/communities/${communityId}/inspectable-elements`,
-    { method: 'POST', body: JSON.stringify(payload) },
-  );
+  return apiFetch<InspectableElement>(`/communities/${communityId}/inspectable-elements`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function updateInspectableElement(
@@ -91,8 +85,7 @@ export function softDeleteInspectableElement(
   communityId: string,
   elementId: string,
 ): Promise<undefined> {
-  return apiFetch<undefined>(
-    `/communities/${communityId}/inspectable-elements/${elementId}`,
-    { method: 'DELETE' },
-  );
+  return apiFetch<undefined>(`/communities/${communityId}/inspectable-elements/${elementId}`, {
+    method: 'DELETE',
+  });
 }

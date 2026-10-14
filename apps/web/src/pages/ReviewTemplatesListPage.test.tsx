@@ -125,6 +125,8 @@ describe('ReviewTemplatesListPage', () => {
       }
       expect(table.querySelector('[scope="row"]')).toBeNull();
     });
-    expect(new Set(tables.map((table) => table.querySelector('caption')?.textContent)).size).toBe(2);
+    expect(new Set(tables.map((table) => table.querySelector('caption')?.textContent)).size).toBe(
+      2,
+    );
   });
 });

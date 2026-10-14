@@ -8,7 +8,10 @@ import '@testing-library/jest-dom/vitest';
 // the native <dialog> element (design.md Decision 4, ConfirmDialog) are
 // testable under RTL. Only toggles the reflected `open` attribute — jsdom
 // does not need to simulate real focus-trap/modality for component tests.
-if (typeof HTMLDialogElement !== 'undefined' && typeof HTMLDialogElement.prototype.showModal !== 'function') {
+if (
+  typeof HTMLDialogElement !== 'undefined' &&
+  typeof HTMLDialogElement.prototype.showModal !== 'function'
+) {
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute('open', '');
   };

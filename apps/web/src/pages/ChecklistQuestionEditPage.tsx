@@ -228,9 +228,7 @@ export function ChecklistQuestionEditPage() {
           {t('checklistQuestion.edit.submitLabel')}
         </button>
       </form>
-      {deleteError && (
-        <p data-testid="checklist-question-edit-delete-error">{deleteError}</p>
-      )}
+      {deleteError && <p data-testid="checklist-question-edit-delete-error">{deleteError}</p>}
       <button
         type="button"
         data-testid="checklist-question-edit-delete"

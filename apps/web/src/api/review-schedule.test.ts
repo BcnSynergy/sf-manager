@@ -5,7 +5,11 @@ import { listReviewSchedule, type ReviewScheduleRow } from './review-schedule';
 // Mirrors the GET /review-schedule contract (review-schedule design.md
 // Decision 9): no parameters, flat rows in the server's order.
 
-function mockResponse(init: { ok: boolean; status: number; json?: () => Promise<unknown> }): Response {
+function mockResponse(init: {
+  ok: boolean;
+  status: number;
+  json?: () => Promise<unknown>;
+}): Response {
   return {
     ok: init.ok,
     status: init.status,

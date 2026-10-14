@@ -61,19 +61,14 @@ export function advanceSessionEpoch(): void {
 
 // Callers type the success shape via T (e.g. UserResponseDto[]); a 204
 // response resolves to undefined regardless of T (design.md Interfaces).
-export async function apiFetch<T = undefined>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+export async function apiFetch<T = undefined>(path: string, init: RequestInit = {}): Promise<T> {
   const epochAtStart = sessionEpoch;
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: 'include',
-      headers: init.body
-        ? { 'Content-Type': 'application/json', ...init.headers }
-        : init.headers,
+      headers: init.body ? { 'Content-Type': 'application/json', ...init.headers } : init.headers,
     });
   } catch {
     // Network failure (offline, DNS, CORS, aborted, ...) never reaches an

@@ -10,16 +10,13 @@ import { OrganizationProfilePage } from './OrganizationProfilePage';
 
 vi.mock('../api/organization-profile');
 vi.mock('../auth/AuthProvider', async () => {
-  const actual = await vi.importActual<typeof import('../auth/AuthProvider')>(
-    '../auth/AuthProvider',
-  );
+  const actual =
+    await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
   return { ...actual, useAuth: vi.fn() };
 });
 
 const mockedGetOrganizationProfile = vi.mocked(organizationProfileApi.getOrganizationProfile);
-const mockedUpdateOrganizationProfile = vi.mocked(
-  organizationProfileApi.updateOrganizationProfile,
-);
+const mockedUpdateOrganizationProfile = vi.mocked(organizationProfileApi.updateOrganizationProfile);
 const mockedUseAuth = vi.mocked(useAuth);
 
 const blankProfile = {
@@ -201,9 +198,7 @@ describe('OrganizationProfilePage', () => {
     fireEvent.click(screen.getByTestId('organization-profile-submit'));
 
     expect(await screen.findByTestId('organization-profile-error')).toBeInTheDocument();
-    expect(screen.getByTestId('organization-profile-name')).toHaveValue(
-      'Acme Property Management',
-    );
+    expect(screen.getByTestId('organization-profile-name')).toHaveValue('Acme Property Management');
     expect(screen.getByTestId('organization-profile-incomplete')).toBeInTheDocument();
   });
 

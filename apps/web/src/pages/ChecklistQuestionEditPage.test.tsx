@@ -27,7 +27,10 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={[`/checklist-questions/${QUESTION_ID}/edit`]}>
       <Routes>
-        <Route path="/checklist-questions/:questionId/edit" element={<ChecklistQuestionEditPage />} />
+        <Route
+          path="/checklist-questions/:questionId/edit"
+          element={<ChecklistQuestionEditPage />}
+        />
         <Route
           path="/checklist-questions"
           element={<div data-testid="checklist-question-list-sentinel" />}
@@ -91,9 +94,7 @@ describe('ChecklistQuestionEditPage', () => {
         frequencies: ['QUARTERLY'],
       }),
     );
-    expect(
-      await screen.findByTestId('checklist-question-list-sentinel'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('checklist-question-list-sentinel')).toBeInTheDocument();
   });
 
   it('requires confirmation before soft-deleting, and the confirm copy does not imply a blocking dependency (spec: Confirmed Soft-Delete)', async () => {
@@ -118,10 +119,10 @@ describe('ChecklistQuestionEditPage', () => {
     fireEvent.click(await screen.findByTestId('checklist-question-edit-delete'));
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
-    await waitFor(() => expect(mockedSoftDeleteChecklistQuestion).toHaveBeenCalledWith(QUESTION_ID));
-    expect(
-      await screen.findByTestId('checklist-question-list-sentinel'),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockedSoftDeleteChecklistQuestion).toHaveBeenCalledWith(QUESTION_ID),
+    );
+    expect(await screen.findByTestId('checklist-question-list-sentinel')).toBeInTheDocument();
   });
 
   it('shows the generic not-found message when the server rejects with code: CHECKLIST_QUESTION_NOT_FOUND', async () => {

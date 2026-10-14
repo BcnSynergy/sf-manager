@@ -1,0 +1,8 @@
+# Prettier also skips everything in .gitignore (dist, coverage, node_modules...).
+package-lock.json
+.claude/
+
+# Docs are formatted in a follow-up PR (TD-33); remove these lines there.
+*.md
+*.yaml
+*.yml

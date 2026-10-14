@@ -1,11 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ApiError } from './client';
-import {
-  listUsers,
-  createUser,
-  updateUser,
-  deactivateUser,
-} from './users';
+import { listUsers, createUser, updateUser, deactivateUser } from './users';
 
 function mockResponse(init: {
   ok: boolean;
@@ -123,9 +118,7 @@ describe('api/users', () => {
   });
 
   it('deactivateUser() DELETEs /users/:id and resolves to undefined on 204', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(mockResponse({ ok: true, status: 204 }));
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(deactivateUser('1')).resolves.toBeUndefined();

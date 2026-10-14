@@ -24,9 +24,9 @@ describe('mapApiErrorToMessageKey (community)', () => {
   // inspectable-elements/design.md Decision 6/Finding 4: the community
   // delete-guard's 409 cause.
   it('maps COMMUNITY_HAS_ACTIVE_ELEMENTS to community.error.hasActiveElements', () => {
-    expect(
-      mapApiErrorToMessageKey(new ApiError(409, 'COMMUNITY_HAS_ACTIVE_ELEMENTS')),
-    ).toBe('community.error.hasActiveElements');
+    expect(mapApiErrorToMessageKey(new ApiError(409, 'COMMUNITY_HAS_ACTIVE_ELEMENTS'))).toBe(
+      'community.error.hasActiveElements',
+    );
   });
 
   it('the four 409 codes map to four distinct keys', () => {
@@ -66,9 +66,9 @@ describe('mapApiErrorToMessageKey (community)', () => {
     // the 3 known codes per the community-assignments spec delta, but the
     // mapper must not throw or silently pick a wrong specific message if
     // that contract is ever violated.
-    expect(
-      mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never)),
-    ).toBe('common.error.network');
+    expect(mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never))).toBe(
+      'common.error.network',
+    );
   });
 
   it('never branches on error.message text — the mapping only reads status/code', () => {

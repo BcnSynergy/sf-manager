@@ -65,9 +65,7 @@ export function CommunityCreatePage() {
           onChange={(event) => setName(event.target.value)}
           data-testid="community-create-name"
         />
-        <label htmlFor="community-create-address-input">
-          {t('community.create.addressLabel')}
-        </label>
+        <label htmlFor="community-create-address-input">{t('community.create.addressLabel')}</label>
         <input
           id="community-create-address-input"
           type="text"

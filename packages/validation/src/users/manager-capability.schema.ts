@@ -21,11 +21,7 @@ export function applyManagerCapabilitiesNotAllowedRefinement(
   managerCapabilities: readonly ManagerCapability[] | undefined,
   ctx: z.RefinementCtx,
 ): void {
-  if (
-    role !== 'MANAGER' &&
-    managerCapabilities !== undefined &&
-    managerCapabilities.length > 0
-  ) {
+  if (role !== 'MANAGER' && managerCapabilities !== undefined && managerCapabilities.length > 0) {
     ctx.addIssue({
       code: 'custom',
       path: ['managerCapabilities'],

@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Role } from '@sf-manager/validation';
 import { ApiError, advanceSessionEpoch, setUnauthorizedHandler } from '../api/client';
 

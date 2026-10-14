@@ -656,9 +656,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -670,9 +671,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -684,9 +686,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -698,9 +701,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -712,9 +716,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -726,9 +731,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -743,9 +749,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -757,9 +764,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -771,9 +779,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -785,9 +794,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -799,9 +809,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -816,13 +827,19 @@ describe('locale key-set parity (en/es/ca)', () => {
       'es',
       'Puede ver todas las revisiones completadas y el calendario de revisiones de la instalación',
     ],
-    ['ca', 'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació'],
-  ])('%s users.edit.viewAllReviewsLabel names history and schedule exactly', (localeName, expected) => {
-    const tree = locales[localeName as keyof typeof locales];
-    const value = getKeyPathValue(tree, 'users.edit.viewAllReviewsLabel');
-    expect(value).toBe(expected);
-    expect(value).not.toBe('VIEW_ALL_REVIEWS');
-  });
+    [
+      'ca',
+      'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació',
+    ],
+  ])(
+    '%s users.edit.viewAllReviewsLabel names history and schedule exactly',
+    (localeName, expected) => {
+      const tree = locales[localeName as keyof typeof locales];
+      const value = getKeyPathValue(tree, 'users.edit.viewAllReviewsLabel');
+      expect(value).toBe(expected);
+      expect(value).not.toBe('VIEW_ALL_REVIEWS');
+    },
+  );
 
   it.each(REQUIRED_NAV_KEY_PATHS)(
     'every locale defines a real (non-placeholder) value for %s',
@@ -831,9 +848,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -845,9 +863,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -859,9 +878,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );
@@ -873,9 +893,10 @@ describe('locale key-set parity (en/es/ca)', () => {
         const value = getKeyPathValue(tree, keyPath);
         expect(value, `${localeName} is missing "${keyPath}"`).toBeTypeOf('string');
         expect((value as string).length, `${localeName}."${keyPath}" is empty`).toBeGreaterThan(0);
-        expect(value, `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`).not.toBe(
-          keyPath,
-        );
+        expect(
+          value,
+          `${localeName}."${keyPath}" looks like a placeholder (equals its own key path)`,
+        ).not.toBe(keyPath);
       }
     },
   );

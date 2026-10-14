@@ -25,19 +25,18 @@ describe('apiFetch', () => {
   it('returns the parsed body on a successful (200) response', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        mockResponse({ ok: true, status: 200, json: async () => ({ id: '1' }) }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          mockResponse({ ok: true, status: 200, json: async () => ({ id: '1' }) }),
+        ),
     );
 
     await expect(apiFetch('/users')).resolves.toEqual({ id: '1' });
   });
 
   it('resolves to undefined on a 204 No Content response', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 })),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 })));
 
     await expect(apiFetch('/users/1')).resolves.toBeUndefined();
   });
@@ -88,10 +87,7 @@ describe('apiFetch', () => {
   });
 
   it('throws ApiError with status 0 when the network request itself fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 
     const error = await apiFetch('/users').catch((e: unknown) => e);
 
@@ -210,10 +206,7 @@ describe('apiFetch — unauthorized handler', () => {
   });
 
   function stubStatus(status: number) {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(mockResponse({ ok: false, status })),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status })));
   }
 
   it('invokes the registered handler on a 401 and still throws ApiError(401)', async () => {

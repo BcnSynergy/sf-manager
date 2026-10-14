@@ -3,9 +3,7 @@ import { loginEmailSchema, loginRequestSchema } from './login.schema';
 
 describe('loginEmailSchema', () => {
   it('trims and lowercases a valid email', () => {
-    expect(loginEmailSchema.parse('  Admin@Example.COM ')).toBe(
-      'admin@example.com',
-    );
+    expect(loginEmailSchema.parse('  Admin@Example.COM ')).toBe('admin@example.com');
   });
 
   it('leaves an already normalized email unchanged', () => {
@@ -34,9 +32,8 @@ describe('loginRequestSchema', () => {
   });
 
   it('still rejects an empty password', () => {
-    expect(
-      loginRequestSchema.safeParse({ email: 'user@example.com', password: '' })
-        .success,
-    ).toBe(false);
+    expect(loginRequestSchema.safeParse({ email: 'user@example.com', password: '' }).success).toBe(
+      false,
+    );
   });
 });

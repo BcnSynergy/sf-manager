@@ -8,12 +8,8 @@ import { updateInspectableElementSchema } from './inspectable-element.schema';
 // package to extend.
 describe('updateInspectableElementSchema — deactivated field', () => {
   it('accepts a boolean deactivated value', () => {
-    expect(
-      updateInspectableElementSchema.safeParse({ deactivated: true }).success,
-    ).toBe(true);
-    expect(
-      updateInspectableElementSchema.safeParse({ deactivated: false }).success,
-    ).toBe(true);
+    expect(updateInspectableElementSchema.safeParse({ deactivated: true }).success).toBe(true);
+    expect(updateInspectableElementSchema.safeParse({ deactivated: false }).success).toBe(true);
   });
 
   it('accepts an absent deactivated field', () => {
@@ -21,20 +17,14 @@ describe('updateInspectableElementSchema — deactivated field', () => {
   });
 
   it('rejects a string "true" for deactivated', () => {
-    expect(
-      updateInspectableElementSchema.safeParse({ deactivated: 'true' }).success,
-    ).toBe(false);
+    expect(updateInspectableElementSchema.safeParse({ deactivated: 'true' }).success).toBe(false);
   });
 
   it('rejects a number for deactivated', () => {
-    expect(
-      updateInspectableElementSchema.safeParse({ deactivated: 1 }).success,
-    ).toBe(false);
+    expect(updateInspectableElementSchema.safeParse({ deactivated: 1 }).success).toBe(false);
   });
 
   it('rejects null for deactivated', () => {
-    expect(
-      updateInspectableElementSchema.safeParse({ deactivated: null }).success,
-    ).toBe(false);
+    expect(updateInspectableElementSchema.safeParse({ deactivated: null }).success).toBe(false);
   });
 });

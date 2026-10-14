@@ -14,12 +14,14 @@ const keys = {
   ineligible: 'test.section.ineligible',
 };
 
-function makeOps(overrides: Partial<{
-  list: () => Promise<Assignment[]>;
-  assign: (userId: string) => Promise<unknown>;
-  deactivate: (userId: string) => Promise<unknown>;
-  reactivate: (userId: string) => Promise<unknown>;
-}> = {}) {
+function makeOps(
+  overrides: Partial<{
+    list: () => Promise<Assignment[]>;
+    assign: (userId: string) => Promise<unknown>;
+    deactivate: (userId: string) => Promise<unknown>;
+    reactivate: (userId: string) => Promise<unknown>;
+  }> = {},
+) {
   return {
     list: vi.fn<() => Promise<Assignment[]>>().mockResolvedValue([]),
     assign: vi.fn().mockResolvedValue(undefined),
@@ -63,7 +65,11 @@ describe('AssignmentSection', () => {
     const ops = makeOps({
       list: vi.fn().mockResolvedValue([
         { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
-        { communityId: 'c1', userId: 'user-deactivated', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+        {
+          communityId: 'c1',
+          userId: 'user-deactivated',
+          deactivatedAt: '2026-08-01T00:00:00.000Z',
+        },
       ]),
     });
 
@@ -84,7 +90,9 @@ describe('AssignmentSection', () => {
         .fn()
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([{ communityId: 'c1', userId: 'user-new', deactivatedAt: null }]),
-      assign: vi.fn().mockResolvedValue({ communityId: 'c1', userId: 'user-new', deactivatedAt: null }),
+      assign: vi
+        .fn()
+        .mockResolvedValue({ communityId: 'c1', userId: 'user-new', deactivatedAt: null }),
     });
 
     renderSection(ops);
@@ -147,7 +155,9 @@ describe('AssignmentSection', () => {
 
   it('requires confirmation before calling ops.deactivate', async () => {
     const ops = makeOps({
-      list: vi.fn().mockResolvedValue([{ communityId: 'c1', userId: 'user-a', deactivatedAt: null }]),
+      list: vi
+        .fn()
+        .mockResolvedValue([{ communityId: 'c1', userId: 'user-a', deactivatedAt: null }]),
     });
 
     renderSection(ops);
@@ -163,7 +173,9 @@ describe('AssignmentSection', () => {
       list: vi
         .fn()
         .mockResolvedValueOnce([{ communityId: 'c1', userId: 'user-a', deactivatedAt: null }])
-        .mockResolvedValueOnce([{ communityId: 'c1', userId: 'user-a', deactivatedAt: '2026-08-01T00:00:00.000Z' }]),
+        .mockResolvedValueOnce([
+          { communityId: 'c1', userId: 'user-a', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+        ]),
     });
 
     renderSection(ops);
@@ -173,16 +185,16 @@ describe('AssignmentSection', () => {
 
     await waitFor(() => expect(ops.deactivate).toHaveBeenCalledWith('user-a'));
     await waitFor(() =>
-      expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent(
-        'Deactivated',
-      ),
+      expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent('Deactivated'),
     );
     expect(ops.list).toHaveBeenCalledTimes(2);
   });
 
   it('does not deactivate when the confirmation dialog is cancelled', async () => {
     const ops = makeOps({
-      list: vi.fn().mockResolvedValue([{ communityId: 'c1', userId: 'user-a', deactivatedAt: null }]),
+      list: vi
+        .fn()
+        .mockResolvedValue([{ communityId: 'c1', userId: 'user-a', deactivatedAt: null }]),
     });
 
     renderSection(ops);
@@ -209,9 +221,7 @@ describe('AssignmentSection', () => {
 
     await waitFor(() => expect(ops.reactivate).toHaveBeenCalledWith('user-a'));
     await waitFor(() =>
-      expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent(
-        'Active',
-      ),
+      expect(screen.getByTestId('representatives-row-user-a')).toHaveTextContent('Active'),
     );
     expect(ops.list).toHaveBeenCalledTimes(2);
   });
@@ -264,18 +274,16 @@ describe('AssignmentSection', () => {
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent(
-        'Deactivated',
-      ),
+      expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent('Deactivated'),
     );
-    expect(screen.getByTestId('representatives-row-new-active')).toHaveTextContent(
-      'Active',
-    );
+    expect(screen.getByTestId('representatives-row-new-active')).toHaveTextContent('Active');
   });
 
   it('supports a different testIdPrefix without any behavioral prop', async () => {
     const ops = makeOps({
-      list: vi.fn().mockResolvedValue([{ communityId: 'c1', userId: 'tech-a', deactivatedAt: null }]),
+      list: vi
+        .fn()
+        .mockResolvedValue([{ communityId: 'c1', userId: 'tech-a', deactivatedAt: null }]),
     });
 
     renderSection(ops, 'technicians');

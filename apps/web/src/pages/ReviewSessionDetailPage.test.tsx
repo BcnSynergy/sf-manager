@@ -154,7 +154,9 @@ describe('ReviewSessionDetailPage', () => {
   });
 
   it('completes the session after confirmation and reloads it as read-only', async () => {
-    mockedReadReviewSession.mockResolvedValueOnce(draftSession).mockResolvedValueOnce(completedSession);
+    mockedReadReviewSession
+      .mockResolvedValueOnce(draftSession)
+      .mockResolvedValueOnce(completedSession);
     mockedCompleteReviewSession.mockResolvedValue({
       id: SESSION_ID,
       status: 'completed',
@@ -186,7 +188,9 @@ describe('ReviewSessionDetailPage', () => {
   // `window.print()` call to the completed-notice branch, confirming the new
   // assertions failed, then reverting — no production code changed.
   it('offers no document link, print control or window.print call after signing, and stays on the session', async () => {
-    mockedReadReviewSession.mockResolvedValueOnce(draftSession).mockResolvedValueOnce(completedSession);
+    mockedReadReviewSession
+      .mockResolvedValueOnce(draftSession)
+      .mockResolvedValueOnce(completedSession);
     mockedCompleteReviewSession.mockResolvedValue({
       id: SESSION_ID,
       status: 'completed',
@@ -201,12 +205,8 @@ describe('ReviewSessionDetailPage', () => {
 
     expect(await screen.findByTestId('review-session-detail-completed-notice')).toBeInTheDocument();
     expect(screen.queryByText('View document')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: /view document/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`),
-    ).toBeNull();
+    expect(screen.queryByRole('link', { name: /view document/i })).not.toBeInTheDocument();
+    expect(document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`)).toBeNull();
     expect(screen.queryByTestId('review-document-print-button')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
     expect(printSpy).not.toHaveBeenCalled();
@@ -224,9 +224,7 @@ describe('ReviewSessionDetailPage', () => {
     await screen.findByTestId('review-session-detail-code-input');
 
     expect(screen.queryByText('View document')).not.toBeInTheDocument();
-    expect(
-      document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`),
-    ).toBeNull();
+    expect(document.querySelector(`a[href^="/review-history/${SESSION_ID}/document"]`)).toBeNull();
     expect(screen.queryByTestId('review-document-print-button')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /print/i })).not.toBeInTheDocument();
   });
@@ -259,10 +257,7 @@ describe('ReviewSessionDetailPage', () => {
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
     const gapLink = await screen.findByTestId('review-session-detail-gap-link-23456789AB');
-    expect(gapLink).toHaveAttribute(
-      'href',
-      `/review-sessions/${SESSION_ID}/elements/23456789AB`,
-    );
+    expect(gapLink).toHaveAttribute('href', `/review-sessions/${SESSION_ID}/elements/23456789AB`);
     expect(screen.getByTestId('review-session-detail-gap-link-CDEFGHJKMN')).toBeInTheDocument();
   });
 });

@@ -11,8 +11,18 @@ vi.mock('../api/community');
 const mockedListCommunities = vi.mocked(communityApi.listCommunities);
 const mockedUpdateCommunity = vi.mocked(communityApi.updateCommunity);
 
-const communityA = { id: 'community-1', name: 'Sunrise', address: '1 Main St', locale: 'en' as const };
-const communityB = { id: 'community-2', name: 'Harbor View', address: '2 Port Rd', locale: 'es' as const };
+const communityA = {
+  id: 'community-1',
+  name: 'Sunrise',
+  address: '1 Main St',
+  locale: 'en' as const,
+};
+const communityB = {
+  id: 'community-2',
+  name: 'Harbor View',
+  address: '2 Port Rd',
+  locale: 'es' as const,
+};
 
 function renderPage(id: string) {
   return render(
@@ -80,7 +90,9 @@ describe('CommunityEditPage', () => {
     mockedListCommunities.mockResolvedValue([communityA, communityB]);
     renderPage(communityB.id);
 
-    fireEvent.change(await screen.findByTestId('community-edit-name'), { target: { value: '   ' } });
+    fireEvent.change(await screen.findByTestId('community-edit-name'), {
+      target: { value: '   ' },
+    });
     fireEvent.click(screen.getByTestId('community-edit-submit'));
 
     expect(await screen.findByTestId('community-edit-error')).toBeInTheDocument();

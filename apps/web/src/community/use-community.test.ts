@@ -8,8 +8,18 @@ vi.mock('../api/community');
 
 const mockedListCommunities = vi.mocked(communityApi.listCommunities);
 
-const communityA = { id: 'community-1', name: 'Sunrise', address: '1 Main St', locale: 'en' as const };
-const communityB = { id: 'community-2', name: 'Harbor View', address: '2 Port Rd', locale: 'es' as const };
+const communityA = {
+  id: 'community-1',
+  name: 'Sunrise',
+  address: '1 Main St',
+  locale: 'en' as const,
+};
+const communityB = {
+  id: 'community-2',
+  name: 'Harbor View',
+  address: '2 Port Rd',
+  locale: 'es' as const,
+};
 
 describe('useCommunity', () => {
   beforeEach(() => {

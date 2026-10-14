@@ -83,11 +83,7 @@ export function MaintenanceCompanyCreatePage() {
           data-testid="maintenance-company-create-contact-info"
         />
         {error && <p data-testid="maintenance-company-create-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="maintenance-company-create-submit"
-          disabled={submitting}
-        >
+        <button type="submit" data-testid="maintenance-company-create-submit" disabled={submitting}>
           {t('maintenanceCompany.create.submitLabel')}
         </button>
       </form>

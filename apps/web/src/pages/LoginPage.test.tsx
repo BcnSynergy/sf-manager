@@ -31,7 +31,10 @@ function renderLoginPage() {
 
 describe('LoginPage', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch({ ok: true, json: async () => ({ id: '1', email: 'admin@sf-manager.example' }) }));
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({ ok: true, json: async () => ({ id: '1', email: 'admin@sf-manager.example' }) }),
+    );
   });
 
   it('renders the app logo', () => {
@@ -69,13 +72,12 @@ describe('LoginPage', () => {
   });
 
   it('shows one generic error message on invalid credentials, never field-specific', async () => {
-    vi.stubGlobal(
-      'fetch',
-      mockFetch({ ok: false, status: 401 } as Response),
-    );
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 401 } as Response));
     renderLoginPage();
 
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
     fireEvent.click(screen.getByTestId('login-submit'));
 
@@ -91,7 +93,9 @@ describe('LoginPage', () => {
     vi.stubGlobal('fetch', mockFetch({ ok: false, status: 429 } as Response));
     renderLoginPage();
 
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
     fireEvent.click(screen.getByTestId('login-submit'));
 
@@ -106,17 +110,23 @@ describe('LoginPage', () => {
     vi.stubGlobal('fetch', rateLimited);
     renderLoginPage();
 
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
     fireEvent.click(screen.getByTestId('login-submit'));
     await screen.findByText('Too many login attempts. Please try again later.');
 
     const unauthorized = mockFetch({ ok: false, status: 401 } as Response);
     vi.stubGlobal('fetch', unauthorized);
-    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'another-password' } });
+    fireEvent.change(screen.getByTestId('login-password'), {
+      target: { value: 'another-password' },
+    });
     fireEvent.click(screen.getByTestId('login-submit'));
 
-    expect(await screen.findByTestId('login-error')).toHaveTextContent('Invalid email or password.');
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'Invalid email or password.',
+    );
     expect(unauthorized.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
   });
 });
@@ -162,7 +172,9 @@ describe('LoginPage — session-ended notice', () => {
   }
 
   function fillAndSubmit() {
-    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'admin@sf-manager.example' } });
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'some-password' } });
     fireEvent.click(screen.getByTestId('login-submit'));
   }

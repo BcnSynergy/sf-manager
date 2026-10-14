@@ -8,9 +8,7 @@ import { MaintenanceCompanyCreatePage } from './MaintenanceCompanyCreatePage';
 
 vi.mock('../api/maintenance-company');
 
-const mockedCreateMaintenanceCompany = vi.mocked(
-  maintenanceCompanyApi.createMaintenanceCompany,
-);
+const mockedCreateMaintenanceCompany = vi.mocked(maintenanceCompanyApi.createMaintenanceCompany);
 
 function renderPage() {
   return render(
@@ -80,15 +78,11 @@ describe('MaintenanceCompanyCreatePage', () => {
         contactInfo: VALID_CONTACT_INFO,
       }),
     );
-    expect(
-      await screen.findByTestId('maintenance-companies-list-sentinel'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('maintenance-companies-list-sentinel')).toBeInTheDocument();
   });
 
   it('shows the duplicate-taxId message when the server rejects with code: TAX_ID_ALREADY_IN_USE', async () => {
-    mockedCreateMaintenanceCompany.mockRejectedValue(
-      new ApiError(409, 'TAX_ID_ALREADY_IN_USE'),
-    );
+    mockedCreateMaintenanceCompany.mockRejectedValue(new ApiError(409, 'TAX_ID_ALREADY_IN_USE'));
     renderPage();
 
     fireEvent.change(screen.getByTestId('maintenance-company-create-name'), {
@@ -106,9 +100,7 @@ describe('MaintenanceCompanyCreatePage', () => {
     expect(error).toHaveTextContent(
       'This tax ID is already in use by another active maintenance company.',
     );
-    expect(
-      screen.queryByTestId('maintenance-companies-list-sentinel'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
   });
 
   it('shows a mapped error message (not English server prose) for a generic failure', async () => {

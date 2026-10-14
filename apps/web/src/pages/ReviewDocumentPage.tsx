@@ -190,9 +190,7 @@ function RecordEntry({
   const { t } = useTranslation();
 
   return (
-    <li
-      data-testid={`review-document-record-entry-${entry.inspectableElementId}`}
-    >
+    <li data-testid={`review-document-record-entry-${entry.inspectableElementId}`}>
       <p data-testid={`review-document-record-entry-identity-${entry.inspectableElementId}`}>
         {entry.elementCode !== null
           ? `${entry.elementCode} — ${entry.elementName} — ${entry.elementLocation}`
@@ -211,9 +209,7 @@ function RecordEntry({
       ) : (
         <p>
           {t('reviewDocument.record.unreviewedLabel')}{' '}
-          <span
-            data-testid={`review-document-record-entry-reason-${entry.inspectableElementId}`}
-          >
+          <span data-testid={`review-document-record-entry-reason-${entry.inspectableElementId}`}>
             {entry.observations ?? ''}
           </span>
         </p>

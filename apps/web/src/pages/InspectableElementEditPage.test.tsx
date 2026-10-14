@@ -241,10 +241,10 @@ describe('InspectableElementEditPage', () => {
 
       renderPage(elementA.id);
 
-      expect(await screen.findByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
       expect(
-        screen.queryByTestId('inspectable-element-edit-reactivate'),
-      ).not.toBeInTheDocument();
+        await screen.findByTestId('inspectable-element-edit-decommission'),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId('inspectable-element-edit-reactivate')).not.toBeInTheDocument();
       expect(
         screen.queryByTestId('inspectable-element-edit-deactivated-label'),
       ).not.toBeInTheDocument();
@@ -265,12 +265,8 @@ describe('InspectableElementEditPage', () => {
 
       renderPage(elementB.id);
 
-      expect(
-        await screen.findByTestId('inspectable-element-edit-reactivate'),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('inspectable-element-edit-decommission'),
-      ).not.toBeInTheDocument();
+      expect(await screen.findByTestId('inspectable-element-edit-reactivate')).toBeInTheDocument();
+      expect(screen.queryByTestId('inspectable-element-edit-decommission')).not.toBeInTheDocument();
     });
 
     it('requires confirmation before decommissioning and sends no request when dismissed', async () => {
@@ -303,9 +299,7 @@ describe('InspectableElementEditPage', () => {
           deactivated: true,
         }),
       );
-      expect(
-        await screen.findByTestId('inspectable-element-edit-reactivate'),
-      ).toBeInTheDocument();
+      expect(await screen.findByTestId('inspectable-element-edit-reactivate')).toBeInTheDocument();
     });
 
     it('reactivates a decommissioned element without a confirmation dialog', async () => {

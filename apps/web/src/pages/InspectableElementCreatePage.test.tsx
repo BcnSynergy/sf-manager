@@ -8,9 +8,7 @@ import { InspectableElementCreatePage } from './InspectableElementCreatePage';
 
 vi.mock('../api/inspectable-element');
 
-const mockedCreateInspectableElement = vi.mocked(
-  inspectableElementApi.createInspectableElement,
-);
+const mockedCreateInspectableElement = vi.mocked(inspectableElementApi.createInspectableElement);
 
 const COMMUNITY_ID = 'community-1';
 
@@ -104,9 +102,7 @@ describe('InspectableElementCreatePage', () => {
         installedAt: VALID_INSTALLED_AT,
       }),
     );
-    expect(
-      await screen.findByTestId('community-elements-list-sentinel'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('community-elements-list-sentinel')).toBeInTheDocument();
   });
 
   it('shows the generic not-found message when the server rejects with code: COMMUNITY_NOT_FOUND', async () => {
@@ -117,12 +113,8 @@ describe('InspectableElementCreatePage', () => {
     fireEvent.click(screen.getByTestId('inspectable-element-create-submit'));
 
     const error = await screen.findByTestId('inspectable-element-create-error');
-    expect(error).toHaveTextContent(
-      'This community or inspectable element could not be found.',
-    );
-    expect(
-      screen.queryByTestId('community-elements-list-sentinel'),
-    ).not.toBeInTheDocument();
+    expect(error).toHaveTextContent('This community or inspectable element could not be found.');
+    expect(screen.queryByTestId('community-elements-list-sentinel')).not.toBeInTheDocument();
   });
 
   it('shows a mapped error message (not English server prose) for a generic failure', async () => {

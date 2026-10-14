@@ -132,9 +132,7 @@ describe('MaintenanceCompanyEditPage', () => {
     expect(error).toHaveTextContent(
       'This tax ID is already in use by another active maintenance company.',
     );
-    expect(
-      screen.queryByTestId('maintenance-companies-list-sentinel'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
   });
 
   it('requires confirmation before calling softDeleteMaintenanceCompany', async () => {
@@ -193,8 +191,6 @@ describe('MaintenanceCompanyEditPage', () => {
     expect(error).not.toHaveTextContent(
       'This tax ID is already in use by another active maintenance company.',
     );
-    expect(
-      screen.queryByTestId('maintenance-companies-list-sentinel'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
   });
 });

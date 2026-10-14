@@ -1,8 +1,4 @@
-import type {
-  AnswerValue,
-  RecordEntryRequest,
-  ReviewSessionStatus,
-} from '@sf-manager/validation';
+import type { AnswerValue, RecordEntryRequest, ReviewSessionStatus } from '@sf-manager/validation';
 import { apiFetch } from './client';
 
 // Mirrors apps/api/src/modules/review-session/presentation/
@@ -142,10 +138,10 @@ export function recordEntry(
   elementId: string,
   body: RecordEntryRequest,
 ): Promise<RecordEntryResult> {
-  return apiFetch<RecordEntryResult>(
-    `/review-sessions/${sessionId}/entries/${elementId}`,
-    { method: 'PUT', body: JSON.stringify(body) },
-  );
+  return apiFetch<RecordEntryResult>(`/review-sessions/${sessionId}/entries/${elementId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 }
 
 // design.md Decision 2: on 409 UNREVIEWED_ELEMENTS_WITHOUT_REASON, the

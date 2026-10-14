@@ -34,6 +34,4 @@ export const updateOrganizationProfileSchema = z.object({
   // z.object default handling of any other unrecognized property.
 });
 
-export type UpdateOrganizationProfileRequest = z.infer<
-  typeof updateOrganizationProfileSchema
->;
+export type UpdateOrganizationProfileRequest = z.infer<typeof updateOrganizationProfileSchema>;

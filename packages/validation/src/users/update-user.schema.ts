@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  applyMaintenanceCompanyNotAllowedRefinement,
-  roleSchema,
-} from './create-user.schema';
+import { applyMaintenanceCompanyNotAllowedRefinement, roleSchema } from './create-user.schema';
 import {
   applyManagerCapabilitiesNotAllowedRefinement,
   managerCapabilitySchema,
@@ -53,16 +50,8 @@ export const updateUserSchema = z
     // rejectable by both — UserCodedZodValidationPipe (formerly
     // MaintenanceCompanyZodValidationPipe) returns the FIRST tagged issue
     // found in `.superRefine`'s issue array. Fixed order, not incidental.
-    applyMaintenanceCompanyNotAllowedRefinement(
-      data.role,
-      data.maintenanceCompanyId,
-      ctx,
-    );
-    applyManagerCapabilitiesNotAllowedRefinement(
-      data.role,
-      data.managerCapabilities,
-      ctx,
-    );
+    applyMaintenanceCompanyNotAllowedRefinement(data.role, data.maintenanceCompanyId, ctx);
+    applyManagerCapabilitiesNotAllowedRefinement(data.role, data.managerCapabilities, ctx);
   });
 
 export type UpdateUserRequest = z.infer<typeof updateUserSchema>;

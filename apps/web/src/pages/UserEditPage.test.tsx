@@ -12,7 +12,8 @@ import { UserEditPage } from './UserEditPage';
 vi.mock('../api/users');
 vi.mock('../api/maintenance-company');
 vi.mock('../auth/AuthProvider', async () => {
-  const actual = await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
+  const actual =
+    await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
   return { ...actual, useAuth: vi.fn() };
 });
 
@@ -146,7 +147,9 @@ describe('UserEditPage', () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     renderPage(otherUser.id);
 
-    fireEvent.change(await screen.findByTestId('user-edit-email'), { target: { value: 'not-an-email' } });
+    fireEvent.change(await screen.findByTestId('user-edit-email'), {
+      target: { value: 'not-an-email' },
+    });
     fireEvent.click(screen.getByTestId('user-edit-submit'));
 
     expect(await screen.findByTestId('user-edit-error')).toBeInTheDocument();
@@ -199,7 +202,11 @@ describe('UserEditPage', () => {
 
   it('hides the company selector, and omits maintenanceCompanyId from the payload, when the role is changed away from maintenance', async () => {
     mockedListUsers.mockResolvedValue([admin, technician]);
-    mockedUpdateUser.mockResolvedValue({ ...technician, role: 'MANAGER', maintenanceCompanyId: null });
+    mockedUpdateUser.mockResolvedValue({
+      ...technician,
+      role: 'MANAGER',
+      maintenanceCompanyId: null,
+    });
     renderPage(technician.id);
 
     await screen.findByTestId('user-edit-company');
@@ -302,21 +309,27 @@ describe('UserEditPage', () => {
       'es',
       'Puede ver todas las revisiones completadas y el calendario de revisiones de la instalación',
     ],
-    ['ca', 'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació'],
-  ])('labels the capability toggle for a MANAGER with the history-and-schedule text in %s', async (locale, label) => {
-    await i18n.changeLanguage(locale);
-    try {
-      mockedListUsers.mockResolvedValue([admin, otherUser]);
-      renderPage(otherUser.id);
+    [
+      'ca',
+      'Pot veure totes les revisions completades i el calendari de revisions de la instal·lació',
+    ],
+  ])(
+    'labels the capability toggle for a MANAGER with the history-and-schedule text in %s',
+    async (locale, label) => {
+      await i18n.changeLanguage(locale);
+      try {
+        mockedListUsers.mockResolvedValue([admin, otherUser]);
+        renderPage(otherUser.id);
 
-      const toggle = await screen.findByTestId('user-edit-view-all-reviews');
-      expect(screen.getByLabelText(label)).toBe(toggle);
-      expect(screen.queryByText('VIEW_ALL_REVIEWS')).not.toBeInTheDocument();
-      expect(screen.getAllByRole('checkbox')).toHaveLength(1);
-    } finally {
-      await i18n.changeLanguage('en');
-    }
-  });
+        const toggle = await screen.findByTestId('user-edit-view-all-reviews');
+        expect(screen.getByLabelText(label)).toBe(toggle);
+        expect(screen.queryByText('VIEW_ALL_REVIEWS')).not.toBeInTheDocument();
+        expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    },
+  );
 
   it('renders the capability toggle, prefilled checked, for a granted MANAGER row', async () => {
     mockedListUsers.mockResolvedValue([admin, grantedManager]);
@@ -327,7 +340,11 @@ describe('UserEditPage', () => {
 
   it('hides the capability toggle, and omits it from the payload, when the role is changed away from MANAGER', async () => {
     mockedListUsers.mockResolvedValue([admin, grantedManager]);
-    mockedUpdateUser.mockResolvedValue({ ...grantedManager, role: 'SYSTEM_ADMIN', managerCapabilities: [] });
+    mockedUpdateUser.mockResolvedValue({
+      ...grantedManager,
+      role: 'SYSTEM_ADMIN',
+      managerCapabilities: [],
+    });
     renderPage(grantedManager.id);
 
     await screen.findByTestId('user-edit-view-all-reviews');

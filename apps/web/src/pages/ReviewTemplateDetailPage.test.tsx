@@ -26,7 +26,10 @@ function renderPage() {
     <MemoryRouter initialEntries={[`/review-templates/${TEMPLATE_ID}`]}>
       <Routes>
         <Route path="/review-templates/:templateId" element={<ReviewTemplateDetailPage />} />
-        <Route path="/review-templates" element={<div data-testid="review-template-list-sentinel" />} />
+        <Route
+          path="/review-templates"
+          element={<div data-testid="review-template-list-sentinel" />}
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -247,7 +250,11 @@ describe('ReviewTemplateDetailPage', () => {
       });
       mockedListChecklistQuestions.mockResolvedValue([]);
       mockedListReviewTemplates.mockResolvedValue([]);
-      mockedActivateReviewTemplate.mockResolvedValue({ id: TEMPLATE_ID, status: 'active', version: 2 });
+      mockedActivateReviewTemplate.mockResolvedValue({
+        id: TEMPLATE_ID,
+        status: 'active',
+        version: 2,
+      });
 
       renderPage();
 
@@ -255,7 +262,9 @@ describe('ReviewTemplateDetailPage', () => {
       fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
       await waitFor(() => expect(mockedActivateReviewTemplate).toHaveBeenCalledWith(TEMPLATE_ID));
-      expect(await screen.findByTestId('review-template-detail-status')).toHaveTextContent('Active');
+      expect(await screen.findByTestId('review-template-detail-status')).toHaveTextContent(
+        'Active',
+      );
     });
 
     it('shows a specific message on a 409 REVIEW_TEMPLATE_EMPTY activation rejection (spec: Empty-template rejection is explained specifically)', async () => {

@@ -59,9 +59,9 @@ describe('mapApiErrorToMessageKey', () => {
     // Defensive fallback: a 409 must always carry one of the 3 known codes
     // per the user-management spec delta, but the mapper must not throw or
     // silently pick a wrong specific message if that contract is ever violated.
-    expect(
-      mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never)),
-    ).toBe('common.error.network');
+    expect(mapApiErrorToMessageKey(new ApiError(409, 'SOMETHING_UNKNOWN' as never))).toBe(
+      'common.error.network',
+    );
   });
 
   it('never branches on error.message text — the mapping only reads status/code', () => {

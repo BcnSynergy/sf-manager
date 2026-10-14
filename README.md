@@ -131,6 +131,11 @@ business features yet, just the toolchain wired end-to-end.
 - `npm run build` — build all apps/packages (Turborepo).
 - `npm run lint` — lint everything, including the ADR-013 Prisma-boundary rule.
   It only reports; `npm run lint:fix -w apps/api` applies the API's auto-fixes.
+- `npm run format` — format the repo with Prettier; `npm run format:check`
+  only reports (CI runs it). Markdown and YAML are not formatted yet (TD-33).
+  Formatting-only commits are listed in `.git-blame-ignore-revs`; run
+  `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to skip them
+  in `git blame`.
 - `npm run typecheck -w apps/api` — type-check the API including its specs,
   which `nest build` excludes and Jest does not type-check.
 - `npm run test` — run every package's test suite (unit only; needs no database).
@@ -174,9 +179,9 @@ manual and destructive to `sfmanager` — it is never run by
 ## Continuous integration
 
 Every pull request and every push to `main` runs the `ci` job
-(`.github/workflows/ci.yml`) on Node 24: install, build, lint, API
-typecheck, unit tests, API e2e tests and API integration tests, in that
-order. The integration
+(`.github/workflows/ci.yml`) on Node 24: install, build, lint, format
+check, API typecheck, unit tests, API e2e tests and API integration tests,
+in that order. The integration
 tier runs against a throwaway Postgres service container, and the workflow
 uses no secrets and a read-only token.
 

@@ -11,7 +11,8 @@ import { UsersListPage } from './UsersListPage';
 vi.mock('../api/users');
 vi.mock('../api/maintenance-company');
 vi.mock('../auth/AuthProvider', async () => {
-  const actual = await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
+  const actual =
+    await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
   return { ...actual, useAuth: vi.fn() };
 });
 
@@ -187,9 +188,7 @@ describe('UsersListPage', () => {
   });
 
   it('deactivates the user after confirmation and refetches the list', async () => {
-    mockedListUsers
-      .mockResolvedValueOnce([admin, otherUser])
-      .mockResolvedValueOnce([admin]);
+    mockedListUsers.mockResolvedValueOnce([admin, otherUser]).mockResolvedValueOnce([admin]);
     mockedDeactivateUser.mockResolvedValue(undefined);
 
     renderPage();

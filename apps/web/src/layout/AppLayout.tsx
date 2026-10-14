@@ -53,11 +53,7 @@ export function AppLayout() {
               {t(item.labelKey)}
             </NavLink>
           ))}
-          <button
-            type="button"
-            data-testid="nav-logout-button"
-            onClick={() => void handleLogout()}
-          >
+          <button type="button" data-testid="nav-logout-button" onClick={() => void handleLogout()}>
             {t('auth.logoutLabel')}
           </button>
           <LanguageSelector />

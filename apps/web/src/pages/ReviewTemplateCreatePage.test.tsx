@@ -15,7 +15,10 @@ function renderPage() {
     <MemoryRouter initialEntries={['/review-templates/new']}>
       <Routes>
         <Route path="/review-templates/new" element={<ReviewTemplateCreatePage />} />
-        <Route path="/review-templates" element={<div data-testid="review-template-list-sentinel" />} />
+        <Route
+          path="/review-templates"
+          element={<div data-testid="review-template-list-sentinel" />}
+        />
       </Routes>
     </MemoryRouter>,
   );

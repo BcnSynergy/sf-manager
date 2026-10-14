@@ -55,7 +55,9 @@ export function UsersListPage() {
         setLoadErrorKey(null);
       })
       .catch((error: unknown) => {
-        setLoadErrorKey(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
+        setLoadErrorKey(
+          mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+        );
         setLoadState('error');
       });
   }, []);
@@ -77,7 +79,9 @@ export function UsersListPage() {
         if (cancelled) {
           return;
         }
-        setCompanyNamesById(Object.fromEntries(companies.map((company) => [company.id, company.name])));
+        setCompanyNamesById(
+          Object.fromEntries(companies.map((company) => [company.id, company.name])),
+        );
       })
       .catch(() => {
         // Intentionally swallowed — see comment above.
@@ -114,7 +118,9 @@ export function UsersListPage() {
       await deactivateUser(id);
       await loadUsers();
     } catch (error) {
-      setActionErrorKey(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
+      setActionErrorKey(
+        mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+      );
     }
   }
 
@@ -142,9 +148,7 @@ export function UsersListPage() {
       <Link to="/users/new" data-testid="users-list-create-link">
         {t('users.list.createLink')}
       </Link>
-      {actionErrorKey && (
-        <p data-testid="users-list-action-error">{t(actionErrorKey)}</p>
-      )}
+      {actionErrorKey && <p data-testid="users-list-action-error">{t(actionErrorKey)}</p>}
       {users.length === 0 ? (
         <p data-testid="users-list-empty">{t('users.list.empty')}</p>
       ) : (
