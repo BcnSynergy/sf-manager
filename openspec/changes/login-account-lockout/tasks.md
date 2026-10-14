@@ -120,8 +120,8 @@ Branch from `main` after PR 1 merges.
 
 ## Gate PR 2 (orchestrator)
 
-- [ ] G.5 Fresh-context independent review before push; focus: check-before-credentials ordering, identical path for unknown/soft-deleted emails, no raw email in logs or rows, 429 body identity, fail-closed vs reset-warn policy, test-env limit of 1000, no leftover reliance on the fake in integration. Fix findings or register non-blocking ones in the registers in this PR.
-- [ ] G.6 Ask the user before push, then before creating the PR (title `feat(auth): PR 2/4 — limit failed logins per email`; "not browser-verified, no UI change"), then before merge after `ci` passes.
+- [x] G.5 Fresh-context independent review before push; focus: check-before-credentials ordering, identical path for unknown/soft-deleted emails, no raw email in logs or rows, 429 body identity, fail-closed vs reset-warn policy, test-env limit of 1000, no leftover reliance on the fake in integration. Fix findings or register non-blocking ones in the registers in this PR.
+- [x] G.6 Ask the user before push, then before creating the PR (title `feat(auth): PR 2/4 — limit failed logins per email`; "not browser-verified, no UI change"), then before merge after `ci` passes.
 
 ## Phase C: PR 3 — combined Retry-After and docs (branch `login-account-lockout/03-combined-retry-after`)
 
@@ -129,24 +129,24 @@ Branch from `main` after PR 2 merges.
 
 ### Guard override (spec: Both limits blocked uses the larger Retry-After; Request rejected by the client-key limit adds no email failure)
 
-- [ ] C.1 RED: extend `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts`: construct the guard with the four arguments (options, storage, reflector, limiter); with a fake storage that blocks with `timeToBlockExpire` 100: email blocked 800 gives `Retry-After` 800; email blocked 50 keeps 100; email not blocked keeps 100; a body email missing, non-string or invalid does not call `getBlock`; a client key that is not blocked does not call `getBlock`; `getBlock` rejects gives a rejection (500); the guard writes no email failure (`recordFailure` never called). Existing tracker tests kept. RED: constructor and override missing.
-- [ ] C.2 GREEN: `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`: add the constructor re-declaring `@InjectThrottlerOptions()`, `@InjectThrottlerStorage()`, `Reflector` plus `@Inject(LOGIN_FAILURE_LIMITER)`; override `protected async throwThrottlingException(context, detail)` per Decision 5 (parse with `loginEmailSchema.safeParse(req.body?.email)`, raise `Retry-After` only when the email block is larger, then `super.throwThrottlingException`). Verify the guard still resolves under `AuthModule`.
-- [ ] C.3 RED then GREEN (e2e): extend `apps/api/test/login-email-limit.e2e-spec.ts` with the both-limits case: client key max 3 with a short window, email blocked for 900 s, an attempt from the blocked client key for the blocked email returns 429 with `Retry-After` greater than the client key's remaining time; a client-key-blocked request with 0 recorded email failures leaves that email usable from another client key. RED before C.2 lands.
-- [ ] C.4 Mutation check: remove the larger-value branch in the override and confirm C.1 (email 800) and C.3 fail; restore.
-- [ ] C.5 REFACTOR and check: API lint, build, unit, full e2e, full integration. Commit `feat(auth): return the larger Retry-After when both login limits block`.
+- [x] C.1 RED: extend `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.spec.ts`: construct the guard with the four arguments (options, storage, reflector, limiter); with a fake storage that blocks with `timeToBlockExpire` 100: email blocked 800 gives `Retry-After` 800; email blocked 50 keeps 100; email not blocked keeps 100; a body email missing, non-string or invalid does not call `getBlock`; a client key that is not blocked does not call `getBlock`; `getBlock` rejects gives a rejection (500); the guard writes no email failure (`recordFailure` never called). Existing tracker tests kept. RED: constructor and override missing.
+- [x] C.2 GREEN: `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`: add the constructor re-declaring `@InjectThrottlerOptions()`, `@InjectThrottlerStorage()`, `Reflector` plus `@Inject(LOGIN_FAILURE_LIMITER)`; override `protected async throwThrottlingException(context, detail)` per Decision 5 (parse with `loginEmailSchema.safeParse(req.body?.email)`, raise `Retry-After` only when the email block is larger, then `super.throwThrottlingException`). Verify the guard still resolves under `AuthModule`.
+- [x] C.3 RED then GREEN (e2e): extend `apps/api/test/login-email-limit.e2e-spec.ts` with the both-limits case: client key max 3 with a short window, email blocked for 900 s, an attempt from the blocked client key for the blocked email returns 429 with `Retry-After` greater than the client key's remaining time; a client-key-blocked request with 0 recorded email failures leaves that email usable from another client key. RED before C.2 lands.
+- [x] C.4 Mutation check: remove the larger-value branch in the override and confirm C.1 (email 800) and C.3 fail; restore.
+- [x] C.5 REFACTOR and check: API lint, build, unit, full e2e, full integration. Commit `feat(auth): return the larger Retry-After when both login limits block`.
 
 ### Docs and registers (TDD N/A)
 
-- [ ] C.6 `README.md`: document `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5) and `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900), positive integers validated at boot, beside the existing login rate-limit variables; state that failures are counted per normalized email across all client keys and that a success resets the count.
-- [ ] C.7 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`: add a dated addendum recording Approach A, failures only, reset on success, no stored lock, SHA-256 with the `login-email:` prefix (enumerable against known emails, see EN-6), the combined `Retry-After` rule, block on reaching the limit (5th evaluated, 6th rejected), fail closed on check and record with warn-and-continue on reset, the check-then-verify concurrency bound (`maxFailures + in-flight - 1` evaluations per window), and the accepted bounded DoS.
-- [ ] C.8 `docs/technical-debt.md`: move TD-31 to Resolved with change name `login-account-lockout` and PRs 1/4 to 3/4 (PR numbers filled in once known; PR 4/4 added at archive). IDs never reused or renumbered.
-- [ ] C.9 `docs/enhancements.md`: re-read the highest id first (EN-22 at planning time) and use the next free ids. Extend EN-6 so it also covers the email keys. Add one new EN for an admin unlock action (relevant only if a persistent lock is ever introduced; EN-23 at planning time). Add one new EN for a DB audit table of blocked logins beyond the `warn` log (EN-24 at planning time). Add any non-blocking finding from reviews that is not fixed in this PR.
-- [ ] C.10 Commit `docs: resolve TD-31 and record the login email limit decisions`.
+- [x] C.6 `README.md`: document `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5) and `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900), positive integers validated at boot, beside the existing login rate-limit variables; state that failures are counted per normalized email across all client keys and that a success resets the count.
+- [x] C.7 `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`: add a dated addendum recording Approach A, failures only, reset on success, no stored lock, SHA-256 with the `login-email:` prefix (enumerable against known emails, see EN-6), the combined `Retry-After` rule, block on reaching the limit (5th evaluated, 6th rejected), fail closed on check and record with warn-and-continue on reset, the check-then-verify concurrency bound (`maxFailures + in-flight - 1` evaluations per window), and the accepted bounded DoS.
+- [x] C.8 `docs/technical-debt.md`: move TD-31 to Resolved with change name `login-account-lockout` and PRs 1/4 to 3/4 (PR numbers filled in once known; PR 4/4 added at archive). IDs never reused or renumbered.
+- [x] C.9 `docs/enhancements.md`: re-read the highest id first (EN-22 at planning time) and use the next free ids. Extend EN-6 so it also covers the email keys. Add one new EN for an admin unlock action (relevant only if a persistent lock is ever introduced; EN-23 at planning time). Add one new EN for a DB audit table of blocked logins beyond the `warn` log (EN-24 at planning time). Add any non-blocking finding from reviews that is not fixed in this PR.
+- [x] C.10 Commit `docs: resolve TD-31 and record the login email limit decisions`.
 
 ### Verification (PR 3)
 
-- [ ] C.11 Full checks: repo root `npm run lint`, `npm run build`, `npm run test`; API e2e and integration in full.
-- [ ] C.12 `git diff --stat main`: expected ~250 lines; report code vs test vs docs split. Confirm `git diff --stat main -- apps/web apps/api/prisma` is empty.
+- [x] C.11 Full checks: repo root `npm run lint`, `npm run build`, `npm run test`; API e2e and integration in full.
+- [x] C.12 `git diff --stat main`: expected ~250 lines; report code vs test vs docs split. Confirm `git diff --stat main -- apps/web apps/api/prisma` is empty.
 
 ## Gate PR 3 (orchestrator)
 
@@ -155,8 +155,8 @@ Branch from `main` after PR 2 merges.
 
 ## Phase D: Web untouched confirmation (checked in every PR, final check before archive)
 
-- [ ] D.1 After each PR's diff is final, run `git diff --stat main -- apps/web` and confirm it is empty. If a PR touches `apps/web/**` for any reason, STOP: a browser pass becomes mandatory (CLAUDE.md "Verifying UI Changes": golden path plus the rate-limited message, in a real browser, with the user logging in), and the PR description must say what was browser-verified and what was test-verified only.
-- [ ] D.2 Confirm the existing web coverage of the 429 message stays green: `npm run test --workspace=apps/web -- LoginPage` (scenarios "Rate-limited message" and "Form usable after rate limit"). No new web scenario is added.
+- [x] D.1 After each PR's diff is final, run `git diff --stat main -- apps/web` and confirm it is empty. If a PR touches `apps/web/**` for any reason, STOP: a browser pass becomes mandatory (CLAUDE.md "Verifying UI Changes": golden path plus the rate-limited message, in a real browser, with the user logging in), and the PR description must say what was browser-verified and what was test-verified only.
+- [x] D.2 Confirm the existing web coverage of the 429 message stays green: `npm run test --workspace=apps/web -- LoginPage` (scenarios "Rate-limited message" and "Form usable after rate limit"). No new web scenario is added.
 
 ## Phase E: PR 4 — archive (branch `login-account-lockout/04-archive`) — placeholder
 
