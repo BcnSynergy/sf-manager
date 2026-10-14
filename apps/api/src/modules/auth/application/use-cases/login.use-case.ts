@@ -1,14 +1,19 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   USER_REPOSITORY,
   type UserRepository,
 } from '../../../users/application/ports/user.repository.port';
 import type { Role } from '../../../users/domain/role';
 import { InvalidCredentialsError } from '../../domain/invalid-credentials.error';
+import { LoginBlockedError } from '../../domain/login-blocked.error';
 import {
   PASSWORD_HASHER,
   type PasswordHasher,
 } from '../../../../shared/application/ports/password-hasher.port';
+import {
+  LOGIN_FAILURE_LIMITER,
+  type LoginFailureLimiter,
+} from '../ports/login-failure-limiter.port';
 import {
   TOKEN_DENYLIST,
   type TokenDenylist,
@@ -23,14 +28,28 @@ export interface LoginResult {
 // design.md Data Flow (POST /auth/login) + Decisions 7, 9, 10.
 @Injectable()
 export class LoginUseCase {
+  private readonly logger = new Logger(LoginUseCase.name);
+
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly passwordHasher: PasswordHasher,
     @Inject(TOKEN_ISSUER) private readonly tokenIssuer: TokenIssuer,
     @Inject(TOKEN_DENYLIST) private readonly tokenDenylist: TokenDenylist,
+    @Inject(LOGIN_FAILURE_LIMITER)
+    private readonly loginFailureLimiter: LoginFailureLimiter,
   ) {}
 
   async execute(email: string, password: string): Promise<LoginResult> {
+    // Per-email failure limit (login-account-lockout, TD-31): the block is
+    // checked BEFORE any lookup or password verification, so a blocked email
+    // evaluates no credentials (even a correct password is rejected) and an
+    // unknown email costs the same single read as an existing one. A storage
+    // error propagates: fail closed (500).
+    const block = await this.loginFailureLimiter.getBlock(email);
+    if (block.blocked) {
+      throw new LoginBlockedError(block.retryAfterSeconds);
+    }
+
     // Default deletedAt: null filter (ADR-010) already applied by the
     // repository — a soft-deleted user resolves to null here, identical to
     // an unknown email (Decision 7).
@@ -53,7 +72,22 @@ export class LoginUseCase {
     }
 
     if (!user || !isValid) {
+      // Unknown, soft-deleted and wrong-password all take this one path, so
+      // the counter cannot be used to tell them apart. A storage error here
+      // propagates (fail closed, 500) instead of silently uncounting.
+      await this.loginFailureLimiter.recordFailure(email);
       throw new InvalidCredentialsError();
+    }
+
+    // A valid credential clears the email's counter. Unlike the block check
+    // and the failure record, a storage error here must not turn a correct
+    // login into a failure: warn (never with the email) and continue.
+    try {
+      await this.loginFailureLimiter.reset(email);
+    } catch (error) {
+      this.logger.warn(
+        `Login failure counter reset failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
     }
 
     // Only after a successful login — never on a failed attempt, so a
