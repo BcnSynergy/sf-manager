@@ -134,6 +134,11 @@ cascade + representative Prisma adapter`). No issue-linking (`Closes
   merge — confirmed explicitly with the user at each step, not assumed.
   This has repeatedly caught real bugs (DI-bootstrap crashes, error
   misclassification, vacuous concurrency tests) that inline review missed.
+- **Formatting**: run `npm run format` before every commit. CI runs
+  `npm run format:check` and fails on unformatted files, Markdown included.
+  `main` is fully formatted, so `--write` only touches what you changed.
+  Formatting-only commits go in `.git-blame-ignore-revs` (full SHA), and
+  PRs merge with a merge commit so those SHAs survive.
 - **Size exceptions**: a PR over the 400-line budget is acceptable when the
   excess is test fixtures, not logic. Report the code vs test split and
   let the user accept it. Never trim coverage to fit the budget.

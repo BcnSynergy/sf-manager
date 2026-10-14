@@ -324,6 +324,12 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `apps/api/src/modules/auth/auth.module.ts` (~line 105) throws at startup. The
   "Invalid configuration rejected at startup" scenario is proven only by the
   config unit spec. Origin: `login-account-lockout` sdd-verify, 2026-10-14.
+- **EN-43** (tooling): With `endOfLine: "auto"` (needed for CRLF working
+  trees on Windows), the CI `Format` step no longer checks line endings, so
+  a CRLF file committed from a tree without `core.autocrlf` would pass. Today
+  the whole index is LF. A `.gitattributes` with `* text=auto eol=lf` would
+  keep line endings enforced. Origin: `td-33-prettier-enforced` PR 1 review,
+  2026-10-14.
 
 ## Done
 

@@ -142,7 +142,7 @@ business features yet, just the toolchain wired end-to-end.
 - `npm run lint` — lint everything, including the ADR-013 Prisma-boundary rule.
   It only reports; `npm run lint:fix -w apps/api` applies the API's auto-fixes.
 - `npm run format` — format the repo with Prettier; `npm run format:check`
-  only reports (CI runs it). Markdown and YAML are not formatted yet (TD-33).
+  only reports (CI runs it).
   Formatting-only commits are listed in `.git-blame-ignore-revs`; run
   `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to skip them
   in `git blame`.
