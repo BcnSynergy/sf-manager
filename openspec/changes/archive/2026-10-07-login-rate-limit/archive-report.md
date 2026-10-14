@@ -23,8 +23,8 @@ A.1-A.14 were `[x]` before the archive. At archive the orchestrator-owned boxes 
 
 ## Specs Synced
 
-| Capability | Action | Requirements |
-|---|---|---|
+| Capability       | Action                                             | Requirements                   |
+| ---------------- | -------------------------------------------------- | ------------------------------ |
 | `authentication` | Updated (delta merged into the existing main spec) | 2 ADDED, 1 MODIFIED, 0 REMOVED |
 
 - **ADDED**: Login Attempt Rate Limiting; Client IP Resolution for Rate Limiting.

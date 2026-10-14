@@ -30,15 +30,15 @@ reinvented.
 
 ## Engram Observation IDs (Source of Truth)
 
-| Artifact | Topic Key | Notes |
-|---|---|---|
-| Proposal | `sdd/review-history/proposal` | Complete |
-| Specification | `sdd/review-history/spec` | Complete (5 delta specs: `review-history` new, `review-history-ui` new, `authorization` modified, `review-session-management`/`review-session-ui` modified/narrowed) |
-| Design | `sdd/review-history/design` | Complete (7 numbered decisions, an Open Questions section tracking 3 deferred follow-ups plus 2 resolved-in-flight items, corrected at this archive per S-6) |
-| Tasks | `sdd/review-history/tasks` | Complete (40/40 across 6 phases per `tasks.md` on disk — the canonical count; see Known Issue below on Engram mirror drift) |
-| Apply Progress | `sdd/review-history/apply-progress` (obs #211, 16+ revisions) | Full PR1-4 history recorded across successive upserts; per-PR TDD Cycle Evidence detail did not survive to the final revision (verify-report W-2 — same class of loss as `review-session`'s W-1, not yet fixed) |
-| Verification Report | `sdd/review-history/verify-report` | PASS WITH WARNINGS — 0 CRITICAL, 4 WARNING, 6 SUGGESTION |
-| Archive Report | `sdd/review-history/archive-report` | This document |
+| Artifact            | Topic Key                                                     | Notes                                                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal            | `sdd/review-history/proposal`                                 | Complete                                                                                                                                                                                                        |
+| Specification       | `sdd/review-history/spec`                                     | Complete (5 delta specs: `review-history` new, `review-history-ui` new, `authorization` modified, `review-session-management`/`review-session-ui` modified/narrowed)                                            |
+| Design              | `sdd/review-history/design`                                   | Complete (7 numbered decisions, an Open Questions section tracking 3 deferred follow-ups plus 2 resolved-in-flight items, corrected at this archive per S-6)                                                    |
+| Tasks               | `sdd/review-history/tasks`                                    | Complete (40/40 across 6 phases per `tasks.md` on disk — the canonical count; see Known Issue below on Engram mirror drift)                                                                                     |
+| Apply Progress      | `sdd/review-history/apply-progress` (obs #211, 16+ revisions) | Full PR1-4 history recorded across successive upserts; per-PR TDD Cycle Evidence detail did not survive to the final revision (verify-report W-2 — same class of loss as `review-session`'s W-1, not yet fixed) |
+| Verification Report | `sdd/review-history/verify-report`                            | PASS WITH WARNINGS — 0 CRITICAL, 4 WARNING, 6 SUGGESTION                                                                                                                                                        |
+| Archive Report      | `sdd/review-history/archive-report`                           | This document                                                                                                                                                                                                   |
 
 ## Merged Specifications (OpenSpec)
 
@@ -91,7 +91,7 @@ reinvented.
      The narrowed scenario explicitly preserves the shipped
      performer-scoped, status-agnostic `GET /review-sessions/:sessionId`
      read — a fix a PR4 fresh-context review caught (an earlier draft of the
-     narrowing over-claimed that *every* completed-session read moved to
+     narrowing over-claimed that _every_ completed-session read moved to
      `review-history`, which contradicted the still-legitimate shipped
      route) and which is confirmed present in the merged canonical file by
      this verification, not just the delta
@@ -105,14 +105,15 @@ reinvented.
      strengthened in one respect — list filtering/pagination/sorting/search
      is now forbidden **anywhere** in the web app, not only in the field flow
 
-*(No other existing `openspec/specs/**` capability file was touched by this
-change.)*
+_(No other existing `openspec/specs/**` capability file was touched by this
+change.)_
 
 ## Verification Summary
 
 **Verdict**: PASS WITH WARNINGS
 
 ### Test Execution (re-run live on `main` @ `19bb0fd`, 4/4 PRs merged, verified by `sdd-verify`)
+
 - API unit: 773/773 pass, 105 suites
 - API integration: 108/108 pass, 19 suites (one transient run failed on an
   unrelated, pre-existing shared-database flake in `user-management-roles`'s
@@ -127,6 +128,7 @@ change.)*
   direct `git log --name-only` inspection
 
 ### Compliance Matrix
+
 - **40/40 Implementation Tasks**: all marked complete, independently
   cross-checked against current `main` across all 6 phases — not trusted
   from checkboxes
@@ -149,12 +151,13 @@ change.)*
   Engram, not protocol compliance (W-2)
 
 ### Findings
+
 - CRITICAL: 0
 - WARNING: 4 — all non-blocking for archive:
   - W-1: the spec scenario "Multiple assignments produce one flat list" (a
     representative assigned to two communities, both with completed
     sessions) has no covering test at any layer. Not raised to CRITICAL: the
-    underlying multi-element `{ in: [...] }` predicate *is* exercised
+    underlying multi-element `{ in: [...] }` predicate _is_ exercised
     end-to-end by the technician sibling method, which differs by exactly
     one predicate — there is no untested branch, only the scenario's own
     runtime evidence is missing. ~15 lines to close as a follow-up
@@ -187,6 +190,7 @@ change.)*
   correction — applied in this archive, see below (S-6)
 
 ### Findings acted on during this archive
+
 - **S-6** (design.md correction): Decision 6's `communityName` resolution
   cardinality is corrected in the archived `design.md` from "once per
   community in the actor's scope" to "once per distinct community in the
@@ -206,6 +210,7 @@ additionally be polished.
 ## Archive Contents
 
 ### Files Present in Archive (`openspec/changes/archive/2026-09-09-review-history/`)
+
 - `proposal.md`
 - `design.md` (S-6 correction applied at archive)
 - `tasks.md`
@@ -218,6 +223,7 @@ additionally be polished.
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
+
 - [x] All 10 files present in archive path; the 8 carried over from the
       source change folder byte-verified identical (`diff -q`) before the
       source folder was removed, except `design.md`'s deliberate S-6
@@ -236,12 +242,12 @@ additionally be polished.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| Phase 1-3 | PR 1 (`a3673b1`, #98) | Merged | Layer 2 active-community-scope listing; 4 new repository port methods + Prisma/in-memory adapters; `ReviewHistoryAccessService.listForActor` + `ListReviewHistoryUseCase` + `GET /review-history` |
-| Phase 4 | PR 2 (`8f78e33`, #99) | Merged | `loadCompletedForActor` by-id access gate; `ReadReviewHistoryUseCase` (frozen wording + live nullable `elementCode`); `GET /review-history/:sessionId`; full indistinguishable-404 + retroactive-revocation E2E matrix |
-| Phase 5 | PR 3 (`375b398`, #100) | Merged | Web: api client, `ReviewHistoryPage`, `ReviewHistoryDetailPage` (read-only fork), routes, entry-point link, full en/es/ca i18n. A fresh-context review caught and fixed a build-breaking test fixture and a raw-enum-rendered-to-user bug pre-merge |
-| Phase 6 | PR 4 (`19bb0fd`, #101) | Merged | Spec-guard narrowing + delta merge into `openspec/specs/`, full-suite checks, real browser verification (both roles, cross-performer, multi-community, revocation, empty state), follow-ups recorded. A fresh-context review caught and fixed a spec over-narrowing that contradicted the shipped by-id session read |
+| Phase     | PR #                   | Status | Details                                                                                                                                                                                                                                                                                                              |
+| --------- | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1-3 | PR 1 (`a3673b1`, #98)  | Merged | Layer 2 active-community-scope listing; 4 new repository port methods + Prisma/in-memory adapters; `ReviewHistoryAccessService.listForActor` + `ListReviewHistoryUseCase` + `GET /review-history`                                                                                                                    |
+| Phase 4   | PR 2 (`8f78e33`, #99)  | Merged | `loadCompletedForActor` by-id access gate; `ReadReviewHistoryUseCase` (frozen wording + live nullable `elementCode`); `GET /review-history/:sessionId`; full indistinguishable-404 + retroactive-revocation E2E matrix                                                                                               |
+| Phase 5   | PR 3 (`375b398`, #100) | Merged | Web: api client, `ReviewHistoryPage`, `ReviewHistoryDetailPage` (read-only fork), routes, entry-point link, full en/es/ca i18n. A fresh-context review caught and fixed a build-breaking test fixture and a raw-enum-rendered-to-user bug pre-merge                                                                  |
+| Phase 6   | PR 4 (`19bb0fd`, #101) | Merged | Spec-guard narrowing + delta merge into `openspec/specs/`, full-suite checks, real browser verification (both roles, cross-performer, multi-community, revocation, empty state), follow-ups recorded. A fresh-context review caught and fixed a spec over-narrowing that contradicted the shipped by-id session read |
 
 All 4 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 (4 sequential PRs, each accepted a `size:exception` over the 400-line budget
@@ -250,19 +256,20 @@ the user's explicit sign-off), final merge `19bb0fd`.
 
 ## Risks & Mitigations (carried from the proposal, resolved status)
 
-| Risk | Mitigation | Status |
-|---|---|---|
-| A representative could see another community's sessions | `findCompletedInCommunities` requires `communityIds` as a parameter drawn from `listAssignedCommunityIds`, re-read per request, no cache | Mitigated — verified (e2e 506, 1123) |
-| A technician could see another technician's sessions | `findCompletedForPerformerInCommunities` requires `performedById` as a parameter | Mitigated — verified (e2e 444) |
-| Out-of-scope access disclosed via a distinguishable error | One throw site, one mapping; e2e deep-equals the whole body across 4 causes | Mitigated — verified |
-| Deactivating an assignment doesn't revoke history access | `listAssignedCommunityIds` has no cache, re-read every request | Mitigated — verified (e2e 1061, 1123) |
-| The web detail view accidentally exposes a mutation control | Genuine fork, zero button/form/input in the file, non-vacuous test | Mitigated — verified |
-| Scope creep into company-wide/global/per-element history | Explicit non-goals in both new specs; grep-verified no `ManagerCapability` mechanism exists | Mitigated — verified |
-| Slice size overwhelms review | Chained `stacked-to-main`, 4 PRs, each independently fresh-context reviewed, catching 2 real bugs (PR3, PR4) before merge | Mitigated — realized as designed |
+| Risk                                                        | Mitigation                                                                                                                               | Status                                |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| A representative could see another community's sessions     | `findCompletedInCommunities` requires `communityIds` as a parameter drawn from `listAssignedCommunityIds`, re-read per request, no cache | Mitigated — verified (e2e 506, 1123)  |
+| A technician could see another technician's sessions        | `findCompletedForPerformerInCommunities` requires `performedById` as a parameter                                                         | Mitigated — verified (e2e 444)        |
+| Out-of-scope access disclosed via a distinguishable error   | One throw site, one mapping; e2e deep-equals the whole body across 4 causes                                                              | Mitigated — verified                  |
+| Deactivating an assignment doesn't revoke history access    | `listAssignedCommunityIds` has no cache, re-read every request                                                                           | Mitigated — verified (e2e 1061, 1123) |
+| The web detail view accidentally exposes a mutation control | Genuine fork, zero button/form/input in the file, non-vacuous test                                                                       | Mitigated — verified                  |
+| Scope creep into company-wide/global/per-element history    | Explicit non-goals in both new specs; grep-verified no `ManagerCapability` mechanism exists                                              | Mitigated — verified                  |
+| Slice size overwhelms review                                | Chained `stacked-to-main`, 4 PRs, each independently fresh-context reviewed, catching 2 real bugs (PR3, PR4) before merge                | Mitigated — realized as designed      |
 
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-explore / sdd-propose / sdd-spec / sdd-design**: completed in a prior
   session (2026-09-08), producing the proposal, 5 delta specs, and 7 design
   decisions plus an Open Questions section
@@ -291,6 +298,7 @@ the user's explicit sign-off), final merge `19bb0fd`.
   `review-history/05-verify-and-archive` before any commit
 
 ### Artifacts Persisted
+
 - Engram: proposal, spec, design, tasks observations already existed from
   the planning phase; apply-progress (#211, full PR1-4 history across
   revisions); verify-report (new); archive-report (new, topic key
@@ -341,6 +349,7 @@ the user's explicit sign-off), final merge `19bb0fd`.
 
 This archive report and all supporting artifacts are linked via Engram
 topic keys for cross-session recovery:
+
 - `sdd/review-history/proposal`
 - `sdd/review-history/spec`
 - `sdd/review-history/design`

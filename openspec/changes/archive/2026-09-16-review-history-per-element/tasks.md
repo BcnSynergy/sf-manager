@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                      |
+| ----------------------- | ---------------------------------------------------------- |
 | Estimated changed lines | PR1 ~250-350, PR2 ~350-450, PR3 ~350-450 (~950-1250 total) |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR1 -> PR2 -> PR3 (stacked-to-main) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High                                                       |
+| Chained PRs recommended | Yes                                                        |
+| Suggested split         | PR1 -> PR2 -> PR3 (stacked-to-main)                        |
+| Delivery strategy       | ask-on-risk                                                |
+| Chain strategy          | stacked-to-main                                            |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,11 +18,11 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Port + Prisma adapter + fake + index migration + repo integration tests | PR 1 | base `main`; independent, revertable |
-| 2 | Access-service branches + use case + route/DTO + unit + E2E matrix | PR 2 | base = PR1 branch; depends on PR1 |
-| 3 | Web page + entry links + i18n + spec merges + FR-008 close + browser verify | PR 3 | base = PR2 branch; depends on PR2 |
+| Unit | Goal                                                                        | Likely PR | Notes                                |
+| ---- | --------------------------------------------------------------------------- | --------- | ------------------------------------ |
+| 1    | Port + Prisma adapter + fake + index migration + repo integration tests     | PR 1      | base `main`; independent, revertable |
+| 2    | Access-service branches + use case + route/DTO + unit + E2E matrix          | PR 2      | base = PR1 branch; depends on PR1    |
+| 3    | Web page + entry links + i18n + spec merges + FR-008 close + browser verify | PR 3      | base = PR2 branch; depends on PR2    |
 
 ## Phase 1: Data Access (PR 1) — `review-history-per-element/01-port-adapter-migration`
 

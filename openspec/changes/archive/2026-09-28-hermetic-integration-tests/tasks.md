@@ -1,6 +1,7 @@
 # Tasks: Hermetic Integration Tests
 
 ## STATUS: ALL PRs COMPLETE AND MERGED. PR 1 merged to main as PR #166
+
 (merge commit `5edeae6`). PR 2 COMPLETE (6/6 tasks, zero fixture fixes
 needed, docs-only commit `16c9552`, folded into PR #167). PR 3 COMPLETE
 (19/19 tasks), merged to main as PR #167 (merge commit `c833086`,
@@ -8,14 +9,14 @@ needed, docs-only commit `16c9552`, folded into PR #167). PR 3 COMPLETE
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
-| Actual changed lines | PR1 ~1883 (code ~314 / test ~748 / openspec docs ~821), shipped under size:exception; PR2: 14 lines, docs-only, no exception needed; PR3: 836 lines total (~271 code / ~165 tests / ~130 docs / ~270 package-lock.json), shipped under size:exception, user-accepted |
-| 400-line budget risk | High — PR1 and PR3 both exceeded budget; both shipped under user-accepted size exceptions |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 → PR 2 → PR 3, stacked-to-main |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| Field                   | Value                                                                                                                                                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Actual changed lines    | PR1 ~1883 (code ~314 / test ~748 / openspec docs ~821), shipped under size:exception; PR2: 14 lines, docs-only, no exception needed; PR3: 836 lines total (~271 code / ~165 tests / ~130 docs / ~270 package-lock.json), shipped under size:exception, user-accepted |
+| 400-line budget risk    | High — PR1 and PR3 both exceeded budget; both shipped under user-accepted size exceptions                                                                                                                                                                            |
+| Chained PRs recommended | Yes                                                                                                                                                                                                                                                                  |
+| Suggested split         | PR 1 → PR 2 → PR 3, stacked-to-main                                                                                                                                                                                                                                  |
+| Delivery strategy       | ask-on-risk                                                                                                                                                                                                                                                          |
+| Chain strategy          | stacked-to-main                                                                                                                                                                                                                                                      |
 
 Decision needed before apply: Yes (resolved)
 Chained PRs recommended: Yes
@@ -30,11 +31,11 @@ delta is dependency-lockfile noise, not reviewable logic.
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1(a/b) | Pure harness modules (`test-database.ts`, `prepare-test-database.ts`) + unit specs + tsconfig.build exclusion | PR 1 | DONE — merged to main as PR #166 (`5edeae6`) |
-| 2 | FK-violating fixture fixes, found by local discovery run | PR 2 | DONE — zero violations found, docs-only commit `16c9552`, folded into PR #167 |
-| 3 | Harness switch: globalSetup/Teardown, environment, jest-integration.json, package.json wiring, app rename, docs | PR 3 | DONE — merged to main as PR #167 (`c833086`, 2026-09-28) |
+| Unit   | Goal                                                                                                            | Likely PR | Notes                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------- |
+| 1(a/b) | Pure harness modules (`test-database.ts`, `prepare-test-database.ts`) + unit specs + tsconfig.build exclusion   | PR 1      | DONE — merged to main as PR #166 (`5edeae6`)                                  |
+| 2      | FK-violating fixture fixes, found by local discovery run                                                        | PR 2      | DONE — zero violations found, docs-only commit `16c9552`, folded into PR #167 |
+| 3      | Harness switch: globalSetup/Teardown, environment, jest-integration.json, package.json wiring, app rename, docs | PR 3      | DONE — merged to main as PR #167 (`c833086`, 2026-09-28)                      |
 
 ## PR 1: Pure Harness Modules (`src/shared/testing`)
 
@@ -94,7 +95,7 @@ delta is dependency-lockfile noise, not reviewable logic.
 - [x] 3.15 Manual: `npm run test:e2e` passes with Docker/Postgres stopped — 10/10 suites, 440/440 tests, no database needed
 - [x] 3.16 Manual: dev-DB row counts (all 15 tables) and the seeded admin (`admin@sfmanager.local`, active) unchanged before/after a full `test:integration` run (`psql`) — exact match
 - [x] 3.17 Updated `README.md`: run-name scheme, embedded timestamp, 24h stale-DB retention, run commands (including that concurrent/routine full runs are safe), one-time dev reset (`prisma migrate reset` then `prisma db seed`)
-- [x] 3.18 Updated `CLAUDE.md`: rewrote *Dev-DB pollution* bullet (removed "never run the full suite"; states runs are isolated and safe concurrently); updated *Dev data is mostly test fixtures* (QA users gone post-reset until `dev-seed-data`)
+- [x] 3.18 Updated `CLAUDE.md`: rewrote _Dev-DB pollution_ bullet (removed "never run the full suite"; states runs are isolated and safe concurrently); updated _Dev data is mostly test fixtures_ (QA users gone post-reset until `dev-seed-data`)
 - [x] 3.19 **Resolved (user decision):** updated ONLY the comment text in `prisma-user.repository.integration.spec.ts:12-19` and `organization-profile-migration.integration.spec.ts:63-76` to reflect the per-run isolated database; assertions and structural-only strategy unchanged; both comments note live-data checks are now hermetically possible but deferred
 
 ### Manual-check evidence appendix

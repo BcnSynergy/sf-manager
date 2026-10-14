@@ -15,24 +15,24 @@ hope it has to survive. Everything downstream — a `| null`-free port, a
 branch-free `Get` use case, a single-statement `Update`, an in-memory fake
 that structurally cannot hold two rows — falls out of that one decision.
 
-The repo's own instinct applies verbatim: *use the constraint where it fits,
+The repo's own instinct applies verbatim: _use the constraint where it fits,
 use the domain where it does not, and never pretend a mechanism enforces
-something it structurally cannot* (`maintenance-company/design.md`, Technical
+something it structurally cannot_ (`maintenance-company/design.md`, Technical
 Approach). Here the constraint fits.
 
 ## Architecture Decisions
 
 ### Decision 1 (Open Question 2): the singleton is enforced by the database, and that guard is what gives the adapter a unique addressing key
 
-The proposal's stated risk is *"a second row appears (hand-inserted, or a
-future lazy-create) and the repository silently picks an arbitrary one."*
+The proposal's stated risk is _"a second row appears (hand-inserted, or a
+future lazy-create) and the repository silently picks an arbitrary one."_
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `findFirst()`, trusting that only one row exists | Deterministic exactly as long as the assumption holds, and silently wrong the moment it does not — which is precisely the failure mode being mitigated. The mitigation *is* the assumption | **Rejected** |
-| `findUnique({ id: '<literal UUID>' })`, the migration's id duplicated as a TypeScript constant | Deterministic at the read, but prevents nothing: a rogue second row still exists, now unobserved rather than arbitrarily picked. Worse, it plants a magic UUID that must match the migration forever; if it ever drifts, `GET` resolves to nothing and the "does it exist" branch the proposal deleted comes straight back | **Rejected** |
-| Sentinel column `singleton BOOLEAN NOT NULL DEFAULT true`, `UNIQUE("singleton")` + `CHECK ("singleton")` | A second row is **structurally impossible** — `true` collides on the unique index, `false` is refused by the CHECK — regardless of who inserts it (hand-insert, seed script, a future lazy-create bug). And the unique column is a legal Prisma `where`, so the adapter gets typed `findUnique`/`update` with **no literal id in application code** | **Chosen** |
-| `CHECK ("id" = '<literal>'::uuid)` instead of the sentinel | Same structural guarantee with no extra column, but the only unique addressing key is then the id itself — back to the magic constant, or to raw SQL for every write | **Rejected** |
+| Option                                                                                                   | Tradeoff                                                                                                                                                                                                                                                                                                                                            | Verdict      |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `findFirst()`, trusting that only one row exists                                                         | Deterministic exactly as long as the assumption holds, and silently wrong the moment it does not — which is precisely the failure mode being mitigated. The mitigation _is_ the assumption                                                                                                                                                          | **Rejected** |
+| `findUnique({ id: '<literal UUID>' })`, the migration's id duplicated as a TypeScript constant           | Deterministic at the read, but prevents nothing: a rogue second row still exists, now unobserved rather than arbitrarily picked. Worse, it plants a magic UUID that must match the migration forever; if it ever drifts, `GET` resolves to nothing and the "does it exist" branch the proposal deleted comes straight back                          | **Rejected** |
+| Sentinel column `singleton BOOLEAN NOT NULL DEFAULT true`, `UNIQUE("singleton")` + `CHECK ("singleton")` | A second row is **structurally impossible** — `true` collides on the unique index, `false` is refused by the CHECK — regardless of who inserts it (hand-insert, seed script, a future lazy-create bug). And the unique column is a legal Prisma `where`, so the adapter gets typed `findUnique`/`update` with **no literal id in application code** | **Chosen**   |
+| `CHECK ("id" = '<literal>'::uuid)` instead of the sentinel                                               | Same structural guarantee with no extra column, but the only unique addressing key is then the id itself — back to the magic constant, or to raw SQL for every write                                                                                                                                                                                | **Rejected** |
 
 The guard is not merely defensive, which is what earns it its keep: it is the
 thing that makes `update()` a single atomic typed statement instead of a
@@ -56,18 +56,18 @@ Checked before deciding, not assumed: the domain layer contains exactly one
 Value Object, `users/domain/password.ts`'s `PlainPassword`, and it exists
 only for `toString()` redaction over a `#raw` field. There is **no `Email`
 VO to reuse** — `User.email`, the field in this codebase with the strongest
-possible case (format rule *and* normalization *and* a unique index), is a
+possible case (format rule _and_ normalization _and_ a unique index), is a
 plain `string` validated by a shared Zod schema. Not building one here
 duplicates nothing.
 
 Per ADR-006's addendum the conclusion is re-derived per field, not copied:
 
-| Field | Invariant | Behaviour beyond validation? | Verdict |
-|---|---|---|---|
-| `name`, `legalName`, `address` | non-empty, trimmed | None. Never parsed, compared or formatted. `Community.name`/`Community.address` precedent | Plain `string` |
-| `taxId` | non-empty, trimmed, free text | `maintenance-company` deferred format/checksum explicitly, and its one real invariant — uniqueness — was a property of the *set*. With a single row even that argument evaporates: there is no set | Plain `string` |
-| `phone` | non-empty, trimmed | No format rule is settled, and **nothing reads this profile yet** (proposal: "Any use of this data" is out of scope). A `Phone` VO would encapsulate an invariant no caller has asked for | Plain `string` |
-| `email` | non-empty, trimmed, RFC-ish format | The format rule is real, but it is a *validation* rule, and this repo has already routed exactly that rule through `@sf-manager/validation` for the authentication identity. An `Email` VO here would make an inert settings row more strictly typed than the login credential | Plain `string` |
+| Field                          | Invariant                          | Behaviour beyond validation?                                                                                                                                                                                                                                                   | Verdict        |
+| ------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| `name`, `legalName`, `address` | non-empty, trimmed                 | None. Never parsed, compared or formatted. `Community.name`/`Community.address` precedent                                                                                                                                                                                      | Plain `string` |
+| `taxId`                        | non-empty, trimmed, free text      | `maintenance-company` deferred format/checksum explicitly, and its one real invariant — uniqueness — was a property of the _set_. With a single row even that argument evaporates: there is no set                                                                             | Plain `string` |
+| `phone`                        | non-empty, trimmed                 | No format rule is settled, and **nothing reads this profile yet** (proposal: "Any use of this data" is out of scope). A `Phone` VO would encapsulate an invariant no caller has asked for                                                                                      | Plain `string` |
+| `email`                        | non-empty, trimmed, RFC-ish format | The format rule is real, but it is a _validation_ rule, and this repo has already routed exactly that rule through `@sf-manager/validation` for the authentication identity. An `Email` VO here would make an inert settings row more strictly typed than the login credential | Plain `string` |
 
 Two normalization calls this slice makes **differently** from
 `maintenance-company`, deliberately:
@@ -85,7 +85,7 @@ Two normalization calls this slice makes **differently** from
   of an address is case-sensitive by spec and there is no uniqueness to
   protect.
 
-*Revisit trigger*: a VO becomes justified when a field grows behaviour — e.g.
+_Revisit trigger_: a VO becomes justified when a field grows behaviour — e.g.
 the first report-rendering slice needing `phone.formatted()` or
 `taxId.region()`. A stricter format rule alone is a Zod `.refine()`, following
 `email`'s path, not `PlainPassword`'s.
@@ -123,7 +123,7 @@ So: no `organization-profile-error-code.ts`, no mirrored union in
 `apps/web/src/organization-profile/error-messages.ts` — a mapper with no
 `code` dimension and two status branches belongs inline in the page. This
 contradicts the proposal's scope line listing `buildCodedError`; reported as a
-finding below. *Revisit trigger*: the first status with two reachable causes.
+finding below. _Revisit trigger_: the first status with two reachable causes.
 
 ### Decision 5: the incompleteness signal is derived from the **saved** snapshot, never from form state, and never from the server
 
@@ -131,11 +131,11 @@ Proposal choice 3 keeps the signal UI-only, so there is no `isComplete()`
 getter on the entity and no flag on the DTO (both are tempting and both would
 leak a UI concern into the domain and the contract).
 
-On the page it is a *derived* value, not a fourth load state — the fetch
+On the page it is a _derived_ value, not a fourth load state — the fetch
 succeeded, so "not completed yet" is not a load outcome:
 
 ```ts
-type LoadState = 'loading' | 'loaded' | 'error';   // as MaintenanceCompanyEditPage
+type LoadState = 'loading' | 'loaded' | 'error'; // as MaintenanceCompanyEditPage
 const incomplete = REQUIRED_FIELDS.some((field) => saved[field] === '');
 ```
 
@@ -190,8 +190,12 @@ Two further page-level consequences, both deliberate:
 ```ts
 // application/ports/organization-profile.repository.port.ts
 export interface OrganizationProfileChanges {
-  name?: string; legalName?: string; taxId?: string;
-  address?: string; phone?: string; email?: string;
+  name?: string;
+  legalName?: string;
+  taxId?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
   // No logoAssetId: reserved and inert (ADR-012 Consequences). Absent from
   // this type, from the Zod schema and from the DTO, so it is unwritable by
   // construction rather than by a rejection rule.
@@ -225,9 +229,13 @@ export const ORGANIZATION_PROFILE_REPOSITORY = Symbol('ORGANIZATION_PROFILE_REPO
 // No constructor validation, mirroring MaintenanceCompany/Community/User.
 export interface OrganizationProfileProps {
   id: string;
-  name: string; legalName: string; taxId: string;
-  address: string; phone: string; email: string;
-  logoAssetId: string | null;   // permanently null this slice
+  name: string;
+  legalName: string;
+  taxId: string;
+  address: string;
+  phone: string;
+  email: string;
+  logoAssetId: string | null; // permanently null this slice
 }
 ```
 
@@ -281,43 +289,43 @@ ON CONFLICT DO NOTHING;
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modify | `OrganizationProfile` model + comment block flagging the Prisma-invisible CHECK. No `deletedAt`, no timestamps |
-| `apps/api/prisma/migrations/<ts>_add_organization_profile/migration.sql` | Create | Table + sentinel unique index + hand-written CHECK + idempotent blank seed (above) |
-| `.../organization-profile/domain/organization-profile.entity.ts` | Create | Hand-written, zero Prisma, plain fields (Decisions 1–2) |
-| `.../organization-profile/domain/errors/organization-profile-missing.error.ts` | Create | Environment defect only — never mapped to an HTTP status (Decision 1) |
-| `.../organization-profile/application/ports/organization-profile.repository.port.ts` | Create | `get()` / `update()` + token (above) |
-| `.../organization-profile/application/use-cases/get-organization-profile.use-case.ts` | Create | One line, no branch |
-| `.../organization-profile/application/use-cases/update-organization-profile.use-case.ts` | Create | One line, no preliminary read (Decision 3) |
-| `.../application/use-cases/testing/in-memory-organization-profile.repository.ts` | Create | Holds **one field**, not a `Map` — the fake-side expression of the DB guard; seeded blank in the constructor, mirroring the migration |
-| `.../infrastructure/persistence/{prisma-organization-profile.repository,organization-profile.mapper}.ts` | Create | `findUnique`/`update` on `{ singleton: true }`; mapper drops `singleton`. **Not** `extends SoftDeletableRepository` (no `deletedAt`) |
-| `.../infrastructure/persistence/organization-profile-migration.integration.spec.ts` | Create | Exactly-one-row + CHECK + index guards (Testing Strategy) |
-| `.../presentation/{organization-profile.controller.ts,dto/**}` | Create | `GET`/`PATCH` on `/organization-profile`. **No** error-code file, **no** `buildCodedError` (Decision 4) |
-| `.../organization-profile/organization-profile.module.ts` | Create | Controller + 2 use cases + repository binding. **Imports nothing** — no cross-module dependency, no DI cycle risk |
-| `apps/api/src/app.module.ts` | Modify | Register the module |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modify | `organizationProfile:read\|update` — two, not four |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modify | `SYSTEM_ADMIN` row only; the other four stay `[]` |
-| `packages/validation/src/organization-profile/update-organization-profile.schema.ts` + `src/index.ts` | Create/Modify | 6 optional fields; local trim-only `taxId`, no-lower-case `email` (Decision 2); no `logoAssetId` key |
-| `apps/web/src/api/organization-profile.ts` | Create | `getOrganizationProfile`, `updateOrganizationProfile`. No mirrored error-code union (Decision 4) |
-| `apps/web/src/pages/OrganizationProfilePage.tsx` | Create | View + edit in one page; derived incomplete banner; omit-empty payload; no navigate-on-save (Decision 5) |
-| `apps/web/src/routes/authenticated-routes.tsx` | Modify | One static route, `allowedRoles: ['SYSTEM_ADMIN']`. No ordering note needed — no sibling dynamic segment |
-| `apps/web/src/layout/nav-items.ts` | Modify | `ORGANIZATION_PROFILE` appended **last** on the `SYSTEM_ADMIN` row (a settings surface, not a catalog) |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real `organizationProfile.*` + `nav.organizationProfile` |
-| `apps/api/test/organization-profile.e2e-spec.ts` | Create | Auth matrix, GET, PATCH, validation, absent verbs |
-| `docs/adr/ADR-012-...md`, `docs/requirements/functional-requirements.md` | Modify | Naming addendum; FR-013 → `partial` |
+| File                                                                                                     | Action        | Description                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`                                                                          | Modify        | `OrganizationProfile` model + comment block flagging the Prisma-invisible CHECK. No `deletedAt`, no timestamps                        |
+| `apps/api/prisma/migrations/<ts>_add_organization_profile/migration.sql`                                 | Create        | Table + sentinel unique index + hand-written CHECK + idempotent blank seed (above)                                                    |
+| `.../organization-profile/domain/organization-profile.entity.ts`                                         | Create        | Hand-written, zero Prisma, plain fields (Decisions 1–2)                                                                               |
+| `.../organization-profile/domain/errors/organization-profile-missing.error.ts`                           | Create        | Environment defect only — never mapped to an HTTP status (Decision 1)                                                                 |
+| `.../organization-profile/application/ports/organization-profile.repository.port.ts`                     | Create        | `get()` / `update()` + token (above)                                                                                                  |
+| `.../organization-profile/application/use-cases/get-organization-profile.use-case.ts`                    | Create        | One line, no branch                                                                                                                   |
+| `.../organization-profile/application/use-cases/update-organization-profile.use-case.ts`                 | Create        | One line, no preliminary read (Decision 3)                                                                                            |
+| `.../application/use-cases/testing/in-memory-organization-profile.repository.ts`                         | Create        | Holds **one field**, not a `Map` — the fake-side expression of the DB guard; seeded blank in the constructor, mirroring the migration |
+| `.../infrastructure/persistence/{prisma-organization-profile.repository,organization-profile.mapper}.ts` | Create        | `findUnique`/`update` on `{ singleton: true }`; mapper drops `singleton`. **Not** `extends SoftDeletableRepository` (no `deletedAt`)  |
+| `.../infrastructure/persistence/organization-profile-migration.integration.spec.ts`                      | Create        | Exactly-one-row + CHECK + index guards (Testing Strategy)                                                                             |
+| `.../presentation/{organization-profile.controller.ts,dto/**}`                                           | Create        | `GET`/`PATCH` on `/organization-profile`. **No** error-code file, **no** `buildCodedError` (Decision 4)                               |
+| `.../organization-profile/organization-profile.module.ts`                                                | Create        | Controller + 2 use cases + repository binding. **Imports nothing** — no cross-module dependency, no DI cycle risk                     |
+| `apps/api/src/app.module.ts`                                                                             | Modify        | Register the module                                                                                                                   |
+| `apps/api/src/shared/application/authorization/permission.ts`                                            | Modify        | `organizationProfile:read\|update` — two, not four                                                                                    |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                                       | Modify        | `SYSTEM_ADMIN` row only; the other four stay `[]`                                                                                     |
+| `packages/validation/src/organization-profile/update-organization-profile.schema.ts` + `src/index.ts`    | Create/Modify | 6 optional fields; local trim-only `taxId`, no-lower-case `email` (Decision 2); no `logoAssetId` key                                  |
+| `apps/web/src/api/organization-profile.ts`                                                               | Create        | `getOrganizationProfile`, `updateOrganizationProfile`. No mirrored error-code union (Decision 4)                                      |
+| `apps/web/src/pages/OrganizationProfilePage.tsx`                                                         | Create        | View + edit in one page; derived incomplete banner; omit-empty payload; no navigate-on-save (Decision 5)                              |
+| `apps/web/src/routes/authenticated-routes.tsx`                                                           | Modify        | One static route, `allowedRoles: ['SYSTEM_ADMIN']`. No ordering note needed — no sibling dynamic segment                              |
+| `apps/web/src/layout/nav-items.ts`                                                                       | Modify        | `ORGANIZATION_PROFILE` appended **last** on the `SYSTEM_ADMIN` row (a settings surface, not a catalog)                                |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                                              | Modify        | Real `organizationProfile.*` + `nav.organizationProfile`                                                                              |
+| `apps/api/test/organization-profile.e2e-spec.ts`                                                         | Create        | Auth matrix, GET, PATCH, validation, absent verbs                                                                                     |
+| `docs/adr/ADR-012-...md`, `docs/requirements/functional-requirements.md`                                 | Modify        | Naming addendum; FR-013 → `partial`                                                                                                   |
 
 ## Testing Strategy
 
-| Layer | What to test | Approach |
-|---|---|---|
-| Unit (schema) | Each of the 6 fields optional; `''`/whitespace rejected when supplied; `email` format; `taxId` **not** upper-cased; `email` **not** lower-cased; `logoAssetId` in the payload is stripped | `packages/validation` specs, mirroring `update-user.schema.spec.ts` |
-| Unit (use case) | `Get` returns the row with no branch; `Update` calls `update()` **exactly once** and never `get()` first (Decision 3); unsupplied fields untouched | In-memory fake |
-| Unit (mapper/entity) | `singleton` never reaches the entity; `logoAssetId` round-trips as `null` | Plain specs |
-| Integration | After `migrate deploy`: **exactly one row**, all fields `''`, `logoAssetId` null; the CHECK exists in `pg_constraint`; the unique index exists in `pg_indexes`; a second `INSERT` fails **both** with `singleton = true` and with `singleton = false`; pre-existing hand-written objects not dropped | Real Postgres, mirroring `maintenance-company-migration.integration.spec.ts` |
-| E2E | `GET` never 404s; PATCH subset semantics; empty/whitespace field → 400; `POST`/`DELETE`/`/organization-profile/:id` → 404 from the router (route absent); 401 unauthenticated; 403 for all four other roles; `ROLE_PERMISSIONS` non-admin rows still `[]`; `ManagerCapability` still one member | `apps/api/test/organization-profile.e2e-spec.ts` |
-| Component | Blank profile renders the incomplete banner; the banner does **not** clear while typing, only after a successful save; partial fill sends only non-empty fields | Vitest + Testing Library, per the `*Page.test.tsx` precedent |
-| Browser | Every UI success criterion, per CLAUDE.md | `npm run dev` + `claude-in-chrome`; explicitly the blank→filled→reload round trip and the non-admin `NotAuthorized` surface |
+| Layer                | What to test                                                                                                                                                                                                                                                                                         | Approach                                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Unit (schema)        | Each of the 6 fields optional; `''`/whitespace rejected when supplied; `email` format; `taxId` **not** upper-cased; `email` **not** lower-cased; `logoAssetId` in the payload is stripped                                                                                                            | `packages/validation` specs, mirroring `update-user.schema.spec.ts`                                                         |
+| Unit (use case)      | `Get` returns the row with no branch; `Update` calls `update()` **exactly once** and never `get()` first (Decision 3); unsupplied fields untouched                                                                                                                                                   | In-memory fake                                                                                                              |
+| Unit (mapper/entity) | `singleton` never reaches the entity; `logoAssetId` round-trips as `null`                                                                                                                                                                                                                            | Plain specs                                                                                                                 |
+| Integration          | After `migrate deploy`: **exactly one row**, all fields `''`, `logoAssetId` null; the CHECK exists in `pg_constraint`; the unique index exists in `pg_indexes`; a second `INSERT` fails **both** with `singleton = true` and with `singleton = false`; pre-existing hand-written objects not dropped | Real Postgres, mirroring `maintenance-company-migration.integration.spec.ts`                                                |
+| E2E                  | `GET` never 404s; PATCH subset semantics; empty/whitespace field → 400; `POST`/`DELETE`/`/organization-profile/:id` → 404 from the router (route absent); 401 unauthenticated; 403 for all four other roles; `ROLE_PERMISSIONS` non-admin rows still `[]`; `ManagerCapability` still one member      | `apps/api/test/organization-profile.e2e-spec.ts`                                                                            |
+| Component            | Blank profile renders the incomplete banner; the banner does **not** clear while typing, only after a successful save; partial fill sends only non-empty fields                                                                                                                                      | Vitest + Testing Library, per the `*Page.test.tsx` precedent                                                                |
+| Browser              | Every UI success criterion, per CLAUDE.md                                                                                                                                                                                                                                                            | `npm run dev` + `claude-in-chrome`; explicitly the blank→filled→reload round trip and the non-admin `NotAuthorized` surface |
 
 ## Migration / Rollout
 
@@ -340,7 +348,7 @@ purely additive and revert independently.
    `error-messages.ts` module — less surface than the proposal budgeted.
 2. **The schema carries one column ADR-012 does not list** — `singleton`, a
    persistence-only guard with no domain meaning, never mapped onto the
-   entity or any DTO (Decision 1). The *domain* field set is still exactly
+   entity or any DTO (Decision 1). The _domain_ field set is still exactly
    ADR-012's list.
 3. **Non-empty-on-write makes the blank seed one-way.** Once a field is
    filled it can be changed but never emptied, through the API or the UI

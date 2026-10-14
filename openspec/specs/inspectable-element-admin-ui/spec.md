@@ -10,8 +10,8 @@ point into the element's own review-history page, owned and specified
 by `review-history-ui`), create/edit forms, confirmed
 soft-delete, a per-element decommission/reactivate control, element-type
 label rendering, and the `ApiError` → localized-message contract for the
-new error codes. "Active elements" in *List Active Elements For a
-Community* means "not soft-deleted" — decommissioned elements are not
+new error codes. "Active elements" in _List Active Elements For a
+Community_ means "not soft-deleted" — decommissioned elements are not
 soft-deleted and remain listed. Reachable only through a valid community
 id, via the entry point on `CommunityDetailPage` (see
 `community-admin-ui`). No element detail page beyond edit (editing
@@ -32,16 +32,19 @@ an explicit "not authorized" message, not a silent redirect. An
 unauthenticated visitor MUST be redirected to `/login`.
 
 #### Scenario: Admin reaches a community's elements section
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they navigate to a valid community's inspectable-elements route
 - THEN the active-element list MUST be shown
 
 #### Scenario: Non-admin denied with an explicit message
+
 - GIVEN the caller is authenticated but not `SYSTEM_ADMIN`
 - WHEN they navigate to any inspectable-elements route
 - THEN an explicit "not authorized" message MUST be shown, not a silent redirect
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to any inspectable-elements route
 - THEN they MUST be redirected to `/login`
@@ -54,21 +57,25 @@ The system MUST display a community's active elements (`code`,
 error states. Soft-deleted elements MUST NOT appear.
 
 #### Scenario: Admin views a populated list
+
 - GIVEN a community has one or more active elements
 - WHEN the `SYSTEM_ADMIN` opens that community's elements list
 - THEN each element's fields, including its `code`, MUST be shown
 
 #### Scenario: Empty state
+
 - GIVEN a community has no active elements
 - WHEN the `SYSTEM_ADMIN` opens its elements list
 - THEN a distinct empty-state message MUST be shown, not a blank screen
 
 #### Scenario: Error state on fetch failure
+
 - GIVEN the list request fails
 - WHEN the `SYSTEM_ADMIN` opens a community's elements list
 - THEN a distinct error state MUST be shown, not a blank or loading screen
 
 #### Scenario: Soft-deleted elements never shown
+
 - GIVEN a community has a soft-deleted element alongside active ones
 - WHEN the `SYSTEM_ADMIN` opens its elements list
 - THEN the soft-deleted element MUST NOT appear
@@ -83,11 +90,13 @@ before any network request. On success, the new element MUST appear
 in the list without a manual page reload.
 
 #### Scenario: Valid submission creates and lists the element
+
 - GIVEN the `SYSTEM_ADMIN` submits valid required fields for a community
 - WHEN the request succeeds
 - THEN the new element MUST appear in the list without a manual reload
 
 #### Scenario: Invalid submission rejected before any network call
+
 - GIVEN the `SYSTEM_ADMIN` submits a field that fails the shared create schema
 - WHEN they submit the create form
 - THEN the form MUST show a validation error
@@ -104,16 +113,19 @@ submitted as a change. On success, the change MUST be visible on
 return to the list.
 
 #### Scenario: Admin edits an element's fields
+
 - GIVEN the `SYSTEM_ADMIN` opens the edit form for an element already present in the list
 - WHEN the form is shown
 - THEN it MUST be prefilled with that element's current field values
 
 #### Scenario: The edit form has no code input
+
 - GIVEN the `SYSTEM_ADMIN` opens the edit form for an element
 - WHEN the form's inputs are inspected
 - THEN no editable input MUST bind to `code`, and no submitted update payload MUST carry a changed `code`
 
 #### Scenario: Saved edit is visible without a manual reload
+
 - GIVEN the `SYSTEM_ADMIN` submits a valid change to one or more fields
 - WHEN the request succeeds
 - THEN the updated value(s) MUST be visible on the elements list
@@ -125,11 +137,13 @@ an explicit confirmation step. On success, the row MUST disappear from
 the list without a manual page reload.
 
 #### Scenario: Confirmed soft-delete removes the element from the list
+
 - GIVEN the `SYSTEM_ADMIN` triggers soft-delete for an active element and confirms
 - WHEN the soft-delete succeeds
 - THEN that element MUST no longer appear in the list, without a manual reload
 
 #### Scenario: Soft-delete requires confirmation
+
 - GIVEN the `SYSTEM_ADMIN` triggers soft-delete for an element
 - WHEN the confirmation step is shown
 - THEN the deletion MUST NOT proceed until explicitly confirmed
@@ -143,6 +157,7 @@ that no longer exists — covering both `code: COMMUNITY_NOT_FOUND` and
 distinguish the two causes beyond that single message.
 
 #### Scenario: 404 shows a generic message
+
 - GIVEN an action fails with 404 and either `code: COMMUNITY_NOT_FOUND` or `code: INSPECTABLE_ELEMENT_NOT_FOUND`
 - WHEN the failure is shown
 - THEN a single generic "not found" message MUST be shown
@@ -154,6 +169,7 @@ server-supplied English error message string. Cause disambiguation
 MUST rely only on `ApiError.status` and `.code`.
 
 #### Scenario: Error handling does not branch on English message text
+
 - GIVEN any client code path in the inspectable element admin UI that maps an API error to a UI message
 - WHEN that code selects which message or behavior to apply
 - THEN it MUST NOT do so by comparing against an English message string returned by the server
@@ -166,6 +182,7 @@ strings. All user-facing text MUST be sourced from
 (non-placeholder) translations present in `en`, `es`, and `ca`.
 
 #### Scenario: All visible text is translated in every configured locale
+
 - GIVEN the inspectable element admin UI (list, create, edit) is rendered
 - WHEN the active locale is `en`, `es`, or `ca`
 - THEN every visible string MUST come from a translation key with a real value for that locale, not a placeholder or English fallback
@@ -178,6 +195,7 @@ label map, in table cells and `<select>` option labels alike. The raw
 enum value MAY only back `<option value>` attributes and API payloads.
 
 #### Scenario: Element type rendered through a label map
+
 - GIVEN an element with `elementType: EXTINGUISHER` is displayed in the list, a form, or a confirmation dialog
 - WHEN that value is rendered as visible text
 - THEN it MUST show the localized label for that type, not the raw string `EXTINGUISHER`
@@ -190,11 +208,13 @@ elements list, as readable text matching the stored value exactly. The
 list MUST offer to change, regenerate or clear it.
 
 #### Scenario: Admin sees each element's code
+
 - GIVEN community C has active elements
 - WHEN a `SYSTEM_ADMIN` opens C's elements list
 - THEN each row MUST show that element's `code` exactly as stored
 
 #### Scenario: The code is read-only in the list
+
 - GIVEN the `SYSTEM_ADMIN` is viewing an element's row
 - WHEN the available controls are inspected
 - THEN none MUST edit, regenerate or clear the `code`
@@ -207,11 +227,13 @@ element. No list-level action that prints several or all elements MUST
 be offered.
 
 #### Scenario: Print action opens that element's label
+
 - GIVEN a `SYSTEM_ADMIN` is viewing community C's elements list containing active element E
 - WHEN they trigger the print action on E's row
 - THEN the label for E — and no other element — MUST be reached
 
 #### Scenario: No list-level print-all action
+
 - GIVEN the `SYSTEM_ADMIN` is viewing a community's elements list
 - WHEN the list-level actions are inspected
 - THEN no action that prints more than one element MUST be offered
@@ -225,16 +247,19 @@ state MUST be rendered through a localized label, never as a raw field
 value. Soft-deleted elements MUST still never appear.
 
 #### Scenario: Decommissioned elements are listed and distinguishable
+
 - GIVEN community C has both active and decommissioned elements
 - WHEN a `SYSTEM_ADMIN` opens C's elements list
 - THEN both MUST appear, and the decommissioned ones MUST be visually distinguishable from the active ones
 
 #### Scenario: State is rendered through a localized label
+
 - GIVEN an element's state is displayed as visible text
 - WHEN it is rendered
 - THEN it MUST show a localized label, not a raw boolean, timestamp or enum value
 
 #### Scenario: Soft-deleted elements never shown
+
 - GIVEN community C has a soft-deleted element alongside active and decommissioned ones
 - WHEN a `SYSTEM_ADMIN` opens C's elements list
 - THEN the soft-deleted element MUST NOT appear
@@ -251,26 +276,31 @@ NOT ask for a reason and MUST NOT offer a bulk or "decommission all"
 variant.
 
 #### Scenario: Admin decommissions an element from the list
+
 - GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is active
 - WHEN they trigger decommission for E and confirm
 - THEN E MUST be shown as decommissioned when community C's elements list is next viewed
 
 #### Scenario: Admin reactivates a decommissioned element
+
 - GIVEN a `SYSTEM_ADMIN` is viewing element E's edit page and E is decommissioned
 - WHEN they trigger reactivate for E
 - THEN E MUST be shown as active when community C's elements list is next viewed
 
 #### Scenario: Decommission is confirmed before it happens
+
 - GIVEN the `SYSTEM_ADMIN` triggers decommission for element E
 - WHEN they dismiss the confirmation
 - THEN E MUST remain active and no request MUST have been sent
 
 #### Scenario: A failed action is reported and does not change the shown state
+
 - GIVEN the decommission request fails
 - WHEN the failure is shown
 - THEN a distinct error state MUST be shown and E MUST still be displayed as active
 
 #### Scenario: The control is single-element and reason-free
+
 - GIVEN the elements list and edit surfaces after this change
 - WHEN their controls are inspected
 - THEN none MUST offer a bulk decommission action or ask for a decommission reason
@@ -284,11 +314,13 @@ real (non-placeholder) values in `en`, `es` and `ca`, enforced by the
 existing locale parity test.
 
 #### Scenario: All new visible text is translated in every configured locale
+
 - GIVEN the elements list with its state labels and decommission/reactivate controls is rendered
 - WHEN the active locale is `en`, `es` or `ca`
 - THEN every visible string MUST come from a translation key with a real value for that locale, not a placeholder or English fallback
 
 #### Scenario: New error handling does not branch on English message text
+
 - GIVEN the client path mapping a decommission or reactivate failure to a UI message
 - WHEN it selects the message
 - THEN it MUST branch only on `ApiError.status` and `.code`

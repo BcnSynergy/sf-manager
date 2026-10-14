@@ -32,7 +32,7 @@ ADR-016.
 4. Documentation for a one-time dev-DB reset (truncate, then
    `prisma db seed`). Losing manual dev data is accepted.
 5. Removal of the "never run the full suite" warning, with the `CLAUDE.md`
-   *Dev-DB pollution* bullet rewritten to match.
+   _Dev-DB pollution_ bullet rewritten to match.
 
 ### Out of Scope (deferred)
 
@@ -74,21 +74,21 @@ guard in `PrismaService` (ADR-013). The design must resolve three points:
 
 ## Affected Areas
 
-| Area | Impact |
-|---|---|
-| `apps/api/package.json` | Modified: integration and e2e scripts or config |
-| `apps/api/test/**` (setup, guard) | New |
-| `apps/api/test/jest-e2e.json`, `app.e2e-spec.ts` | Modified |
-| `README.md` | Modified: test DB URL, dev reset |
-| `CLAUDE.md` | Modified: *Dev-DB pollution* bullet |
+| Area                                             | Impact                                          |
+| ------------------------------------------------ | ----------------------------------------------- |
+| `apps/api/package.json`                          | Modified: integration and e2e scripts or config |
+| `apps/api/test/**` (setup, guard)                | New                                             |
+| `apps/api/test/jest-e2e.json`, `app.e2e-spec.ts` | Modified                                        |
+| `README.md`                                      | Modified: test DB URL, dev reset                |
+| `CLAUDE.md`                                      | Modified: _Dev-DB pollution_ bullet             |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Test URL does not reach the workers, so tests still hit the dev DB | High | Guard runs in every worker; success criterion 2 |
-| Truncate hits the wrong DB | Med | Guard runs first |
-| Concurrency specs regress | Low | Run them unmodified |
+| Risk                                                               | Likelihood | Mitigation                                      |
+| ------------------------------------------------------------------ | ---------- | ----------------------------------------------- |
+| Test URL does not reach the workers, so tests still hit the dev DB | High       | Guard runs in every worker; success criterion 2 |
+| Truncate hits the wrong DB                                         | Med        | Guard runs first                                |
+| Concurrency specs regress                                          | Low        | Run them unmodified                             |
 
 ## Rollback Plan
 
@@ -169,7 +169,7 @@ item was approved by the user before the design was updated.
   between merges. See `design.md` Migration / Rollout.
 - **Success criterion 2 restated: worker-connection equality, not a
   "points at `sfmanager`" check** (approved 2026-09-25). The dev base URL
-  (the checked-in `.env`) normally *does* point at `sfmanager`, and
+  (the checked-in `.env`) normally _does_ point at `sfmanager`, and
   derivation replaces the database name before any connection is made, so
   a literal "base URL points at `sfmanager` → abort" guard would fire on
   the normal path, not just a misconfiguration. Success criterion 2 above

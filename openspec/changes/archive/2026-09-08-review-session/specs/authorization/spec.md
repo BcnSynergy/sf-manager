@@ -26,21 +26,25 @@ without a valid session MUST receive 401 even when the action would
 otherwise be rejected for role or scope.
 
 #### Scenario: Every review-session endpoint declares a permission requirement
+
 - GIVEN the review-session endpoints after this change
 - WHEN each one's permission metadata is inspected
 - THEN every endpoint MUST require a `reviewSession:*` permission, with no exception
 
 #### Scenario: A permitted role proceeds to the endpoint's own logic
+
 - GIVEN an authenticated `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call a review-session endpoint
 - THEN the role/permission check MUST pass and the request MUST proceed to the endpoint's own logic and scope check
 
 #### Scenario: A role without the permission is rejected
+
 - GIVEN an authenticated caller whose role holds no `reviewSession:*` permission
 - WHEN they call any review-session endpoint
 - THEN the response MUST be 403
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls any review-session endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
@@ -60,31 +64,37 @@ Permission[]>`, and `PermissionChecker.can(role, permission)`'s signature
 MUST be unchanged: the scope dimension is added beside it, not inside it.
 
 #### Scenario: Both performing roles hold the same review-session permissions
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN the `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` entries are read
 - THEN each MUST be non-empty and MUST contain exactly the same `reviewSession:*` members
 
 #### Scenario: The performing roles gain nothing else
+
 - GIVEN the two performing roles' entries after this change
 - WHEN they are read
 - THEN they MUST contain only `reviewSession:*` members — no `user:*`, `community:*`, `maintenanceCompany:*`, `inspectableElement:*`, `checklistQuestion:*` or `reviewTemplate:*` permission
 
 #### Scenario: The two remaining non-admin roles stay inert
+
 - GIVEN `ROLE_PERMISSIONS` after this change
 - WHEN the `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` entries are read
 - THEN each MUST equal `[]`
 
 #### Scenario: SYSTEM_ADMIN's permissions are unchanged
+
 - GIVEN the `SYSTEM_ADMIN` entry before and after this change
 - WHEN they are compared
 - THEN they MUST be identical, with no `reviewSession:*` member added
 
 #### Scenario: The permission table stays exhaustive
+
 - GIVEN a new `Role` value were added to the enum without a `ROLE_PERMISSIONS` entry
 - WHEN the project is type-checked
 - THEN the build MUST fail
 
 #### Scenario: The permission checker's signature is unchanged
+
 - GIVEN `PermissionChecker.can` before and after this change
 - WHEN its signature is compared
 - THEN it MUST still take a role and a permission and MUST NOT take a resource
@@ -124,41 +134,49 @@ community identifier on session creation only; it does not extend to
 above.
 
 #### Scenario: An unassigned holder of the permission is refused
+
 - GIVEN an authenticated `MAINTENANCE_TECHNICIAN` who holds `reviewSession:*` but has no active assignment to community C
 - WHEN they attempt to open, read, resume, record against, discard or complete a session for C
 - THEN every one of those requests MUST be refused and MUST perform no write
 
 #### Scenario: Refusal is proven on every endpoint, not a sample
+
 - GIVEN the full list of review-session endpoints after this change
 - WHEN a correctly authenticated but unassigned caller exercises them
 - THEN each endpoint individually MUST refuse — one assertion per endpoint
 
 #### Scenario: A representative's scope comes from their own assignment kind
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` with an active representative assignment to community C and none to community D
 - WHEN they act on C and then on D
 - THEN the C request MUST be permitted and the D request MUST be refused
 
 #### Scenario: Deactivating an assignment removes access on the next request
+
 - GIVEN a technician actively assigned to community C successfully reads a session for C
 - WHEN their assignment is deactivated and they repeat the same request
 - THEN the request MUST now be refused
 
 #### Scenario: An out-of-scope session or element is indistinguishable from a non-existent one
+
 - GIVEN an authorized caller not assigned to community C
 - WHEN they name a real session or element belonging to C, and separately name a session or element id/code that does not exist anywhere
 - THEN both responses MUST have the identical status, error code and message
 
 #### Scenario: An unassigned or nonexistent community, on open, need not be indistinguishable from "assigned"
+
 - GIVEN an authorized caller opening a new session
 - WHEN they name a community that does not exist, and separately a community that exists but they are not assigned to
 - THEN both MAY return the same distinctive rejection for "not in scope" — this endpoint is exempt from the indistinguishability rule (see above), unlike every session/element-identifying endpoint
 
 #### Scenario: Scope is checked in addition to the permission, not instead of it
+
 - GIVEN a caller who is actively assigned to community C but whose role holds no `reviewSession:*` permission
 - WHEN they call a review-session endpoint for C
 - THEN the response MUST be 403 — the assignment MUST NOT substitute for the permission
 
 #### Scenario: The scope check cannot be silently omitted
+
 - GIVEN the review-session endpoints and their use cases
 - WHEN the scope check's application is inspected
 - THEN it MUST be applied through a single shared mechanism rather than an independently repeated per-endpoint call that an author can forget
@@ -172,11 +190,13 @@ sub-resources, `/maintenance-companies`, `/checklist-questions`,
 `/review-templates`, or the inspectable-element admin endpoints.
 
 #### Scenario: An assigned technician still cannot reach admin endpoints
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` actively assigned to community C
 - WHEN they call any `/users`, `/communities`, `/maintenance-companies`, `/checklist-questions`, `/review-templates` or inspectable-element endpoint, including ones concerning C
 - THEN every response MUST be 403
 
 #### Scenario: An assigned representative still cannot reach admin endpoints
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` actively assigned to community C
 - WHEN they call the same set of endpoints
 - THEN every response MUST be 403
@@ -195,27 +215,31 @@ requested action would otherwise require role rejection (403). The
 `community:*` permissions are granted only on the `SYSTEM_ADMIN` row of
 `ROLE_PERMISSIONS`; no other role MUST hold any of them — holding an
 active community assignment grants no `community:*` permission, and
-confers access only within the review-session surface (see *Resource
-Scope — an Active Assignment Is Required Beyond the Permission*).
+confers access only within the review-session surface (see _Resource
+Scope — an Active Assignment Is Required Beyond the Permission_).
 (Previously: asserted that the other 4 roles' `ROLE_PERMISSIONS` entries
 remain `[]`, which no longer holds for the two performing roles.)
 
 #### Scenario: SYSTEM_ADMIN is permitted
+
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
 - WHEN they call a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the request MUST proceed to the endpoint's own logic
 
 #### Scenario: Non-admin role is rejected
+
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the response MUST be 403, regardless of any active community assignment the caller may hold
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls a `/communities` endpoint or an assignment sub-resource endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
 
 #### Scenario: No role but SYSTEM_ADMIN holds a community permission
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN every non-`SYSTEM_ADMIN` entry is read
 - THEN none MUST contain any `community:*` permission
@@ -226,7 +250,7 @@ Holding a `maintenanceCompanyId` MUST NOT grant
 `MAINTENANCE_COMPANY_MANAGER` or `MAINTENANCE_TECHNICIAN` any API
 permission. `MAINTENANCE_COMPANY_MANAGER` MUST still map to `[]`.
 `MAINTENANCE_TECHNICIAN` now maps to the `reviewSession:*` permissions
-(see *Technician and Representative Become Operational*), but that grant
+(see _Technician and Representative Become Operational_), but that grant
 MUST derive **solely** from the role's review-session activation and
 active community assignments — never from the company association. A
 technician's `maintenanceCompanyId` MUST have no effect on any
@@ -235,21 +259,25 @@ authorization decision.
 activated none of ADR-011's scoped-permission behavior for either role.)
 
 #### Scenario: The company manager role remains permission-less
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` user has a valid `maintenanceCompanyId` set
 - WHEN their `ROLE_PERMISSIONS` entry is inspected
 - THEN it MUST equal `[]`, identical to a user of that role with no `maintenanceCompanyId`
 
 #### Scenario: A technician's permissions do not depend on their company
+
 - GIVEN two `MAINTENANCE_TECHNICIAN` users, one with a `maintenanceCompanyId` and one without
 - WHEN their `ROLE_PERMISSIONS` entries are compared
 - THEN they MUST be identical
 
 #### Scenario: A maintenance-role user cannot access company or user endpoints via their association
+
 - GIVEN an authenticated caller with role `MAINTENANCE_COMPANY_MANAGER` or `MAINTENANCE_TECHNICIAN` and a set `maintenanceCompanyId`
 - WHEN they call `/maintenance-companies` or `/users`
 - THEN the response MUST be 403 for all of them, the same as before this slice
 
 #### Scenario: The company association grants no review-session scope
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` whose maintenance company serves community C, but who holds no active technician assignment to C
 - WHEN they call a review-session endpoint for C
 - THEN the request MUST be refused
@@ -275,26 +303,31 @@ equal `[]`, which no longer holds for the two performing roles; and said
 nothing about decommissioning or by-code resolution.)
 
 #### Scenario: SYSTEM_ADMIN is permitted
+
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
 - WHEN they call an inspectable-elements endpoint
 - THEN the request MUST proceed to the endpoint's own logic
 
 #### Scenario: Non-admin role is rejected
+
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call an inspectable-elements endpoint
 - THEN the response MUST be 403
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls an inspectable-elements endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
 
 #### Scenario: No non-admin role holds an inspectableElement permission
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN the entries for `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, and `COMMUNITY_REPRESENTATIVE` are read
 - THEN none MUST contain any `inspectableElement:*` permission
 
 #### Scenario: Decommission reuses the update permission
+
 - GIVEN the decommission and reactivate endpoints' permission requirements
 - WHEN they are inspected
 - THEN each MUST require `inspectableElement:update`, and no new element permission MUST have been declared
@@ -313,16 +346,19 @@ depends on `User.managerCapabilities`, which is deliberately not built.
 (Previously: asserted all four non-admin roles map to `[]`.)
 
 #### Scenario: The two inert roles stay mapped to no permissions
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN the `MANAGER` and `MAINTENANCE_COMPANY_MANAGER` entries are read
 - THEN each MUST equal `[]`
 
 #### Scenario: No non-admin role holds a checklist or template permission
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN all four non-admin entries are read
 - THEN none MUST contain a `checklistQuestion:*` or `reviewTemplate:*` permission
 
 #### Scenario: No manager capability mechanism is introduced
+
 - GIVEN the shipped user model and authorization code are inspected
 - WHEN they are searched for `managerCapabilities` or `MANAGE_CHECKLIST_CONTENT`
 - THEN neither MUST exist

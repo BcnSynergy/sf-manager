@@ -39,8 +39,8 @@ Consequently, a `MANAGER` **without** the capability MUST reach the
 history list and see the surface's already-shipped **empty state** — not
 an error, not a "not authorized" message, and not a hidden or disabled
 link. Their detail-route access MUST resolve to the surface's existing
-uniform unreachable-session message, per *An Unreachable Session Gets One
-Uniform Message*.
+uniform unreachable-session message, per _An Unreachable Session Gets One
+Uniform Message_.
 
 That navigation path MUST NOT cross the `/review-sessions` write surface
 owned by `review-session-ui`, which this role MUST NOT gain: no
@@ -54,46 +54,55 @@ entry points, same rows, same controls. This change MUST add no new
 user-facing string and therefore no new translation key to this surface.
 
 #### Scenario: The manager reaches history from the app's entry page
+
 - GIVEN a `MANAGER` is signed in and on the app's entry page
 - WHEN they look for the installation's past reviews
 - THEN a control MUST be offered there that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The entry link is shown regardless of the capability
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability, both on the app's entry page
 - WHEN the entry page is rendered for each
 - THEN both MUST be offered the identical history link — its visibility MUST NOT depend on the capability
 
 #### Scenario: A granted manager sees the installation's sessions on the shipped page
+
 - GIVEN a `MANAGER` holding `VIEW_ALL_REVIEWS` and completed sessions across several companies and communities
 - WHEN they open the history list
 - THEN the shipped list page MUST render every session the server returned, with the same row shape a `SYSTEM_ADMIN` sees and no manager-only column, badge, section or control
 
 #### Scenario: An ungranted manager sees the normal empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability, in an installation that does contain completed sessions
 - WHEN they open the history list
 - THEN the surface's already-shipped empty state MUST be rendered — not an error, not a "not authorized" message, and not a blank page
 
 #### Scenario: An ungranted manager opening a session by URL gets the uniform message
+
 - GIVEN a signed-in `MANAGER` holding no capability and the URL of an existing completed session's detail route
 - WHEN they navigate to it directly
 - THEN the surface's existing uniform unreachable-session message MUST be shown, identical to the one shown for a nonexistent session
 
 #### Scenario: The client never learns the capability
+
 - GIVEN the current-user endpoint's response, the client's auth context and the client's route-gating code after this change
 - WHEN each is inspected
 - THEN none MUST carry or branch on `managerCapabilities` or `VIEW_ALL_REVIEWS`, and no endpoint MUST have been added to expose it
 
 #### Scenario: The manager's path never crosses the write surface
+
 - GIVEN a signed-in `MANAGER`, granted or ungranted
 - WHEN every navigation control rendered for them on this surface is enumerated
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view, and none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other four roles' surface is unchanged
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER` and `SYSTEM_ADMIN`
 - WHEN each reaches the history list and a session's read-only view after this change
 - THEN each MUST see exactly what they saw before it — their entry points, rows and controls unaffected by the manager's widening
 
 #### Scenario: This surface gains no new string
+
 - GIVEN the review-history UI's translation keys before and after this change
 - WHEN they are compared
 - THEN they MUST be identical — the widening MUST introduce no new user-facing string here
@@ -108,15 +117,15 @@ users holding `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`,
 reach the identical surface, with no reduced or alternative variant. The
 `MANAGER` gate MUST be the role alone: it MUST NOT be conditioned on the
 `VIEW_ALL_REVIEWS` capability, so a `MANAGER` without it reaches the same
-surface and sees the shipped empty state (see *The Manager Reaches the
-Shipped History Surface, Granted or Not*). An authenticated user of any
+surface and sees the shipped empty state (see _The Manager Reaches the
+Shipped History Surface, Granted or Not_). An authenticated user of any
 other role who reaches such a route MUST see an explicit "not authorized"
 message, not a silent redirect. An unauthenticated visitor MUST be
 redirected to `/login`.
 (Previously: only `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`,
 `MAINTENANCE_COMPANY_MANAGER` and `SYSTEM_ADMIN` were allowed — `MANAGER`
-was refused with the "not authorized" message, and the *"Another role is
-denied with an explicit message"* scenario below was witnessed by
+was refused with the "not authorized" message, and the _"Another role is
+denied with an explicit message"_ scenario below was witnessed by
 `MANAGER`. `Role` has exactly five members, and widening `/review-history*`
 to all five makes "any role other than the five above" the empty set: no
 substitute role exists, and `ProtectedRoute.test.tsx`'s existing
@@ -124,53 +133,62 @@ denial-branch test — which used `role: 'MANAGER'` — has no fix-by-
 substitution available on this route family. That scenario is dropped
 here, not patched with a different role. The deny-branch guarantee itself
 is not lost: `ProtectedRoute`'s deny branch is still implemented and still
-exercised, on route families that still exclude a role — see *The manager
-is still denied the review-session write routes* and *The MANAGER is
-denied the review-session write routes too* below, which exercise it
+exercised, on route families that still exclude a role — see _The manager
+is still denied the review-session write routes_ and _The MANAGER is
+denied the review-session write routes too_ below, which exercise it
 against `/review-sessions*` for `MAINTENANCE_COMPANY_MANAGER`,
 `SYSTEM_ADMIN` and `MANAGER`.)
 
 #### Scenario: A technician reaches the history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_TECHNICIAN`
 - WHEN they navigate to a review-history route
 - THEN the history surface MUST be shown
 
 #### Scenario: A representative reaches the identical history views
+
 - GIVEN the caller is authenticated as `COMMUNITY_REPRESENTATIVE`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced or alternative variant
 
 #### Scenario: A maintenance company manager reaches the identical history views
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate to a review-history route
 - THEN the same surface MUST be shown, with no reduced, alternative or manager-specific variant
 
 #### Scenario: A system admin reaches the identical history views
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they navigate to a review-history route, list or detail
 - THEN the same surface MUST be shown, with no reduced, alternative or admin-specific variant
 
 #### Scenario: A MANAGER reaches the identical history views whether granted or not
+
 - GIVEN the caller is authenticated as `MANAGER`, once holding `VIEW_ALL_REVIEWS` and once holding no capability
 - WHEN they navigate to a review-history route, list or detail
 - THEN in both cases the same surface MUST be shown, with no reduced, alternative or manager-specific variant, and in neither case MUST the "not authorized" message appear
 
 #### Scenario: The manager is still denied the review-session write routes
+
 - GIVEN the caller is authenticated as `MAINTENANCE_COMPANY_MANAGER`
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render
 
 #### Scenario: The admin is denied the review-session write routes too
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render — the history widening MUST NOT extend to the write surface
 
 #### Scenario: The MANAGER is denied the review-session write routes too
+
 - GIVEN the caller is authenticated as `MANAGER`, granted or ungranted
 - WHEN they navigate directly to a `/review-sessions` route by hand-typed URL
 - THEN an explicit "not authorized" message MUST be shown and no session-performing view MUST render
 
 #### Scenario: Unauthenticated visitor redirected to login
+
 - GIVEN the caller is not authenticated
 - WHEN they navigate to any review-history route
 - THEN they MUST be redirected to `/login`
@@ -200,8 +218,8 @@ points, same rows, same controls — and that regression check now covers
 **all four** other roles introduced before this requirement's own slice,
 including `MANAGER`: a `MANAGER`, granted or ungranted, MUST see exactly
 what this and the sibling `review-history-ui` requirements already commit
-this role to (see *The Manager Reaches the Shipped History Surface,
-Granted or Not*), unaffected by anything the admin's own widening does.
+this role to (see _The Manager Reaches the Shipped History Surface,
+Granted or Not_), unaffected by anything the admin's own widening does.
 (Previously: described the pages as shared with "the other three roles"
 and the regression scenario's GIVEN enumerated only
 `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE` and
@@ -211,34 +229,40 @@ below is widened to include `MANAGER`, granted and ungranted, rather than
 left silently uncovering the newest role.)
 
 #### Scenario: The admin reaches history from the app's entry page
+
 - GIVEN a `SYSTEM_ADMIN` is signed in and on the app's entry page
 - WHEN they look for the installation's past reviews
 - THEN a control MUST be offered there that navigates directly to the history list, with no hand-typed URL required
 
 #### Scenario: The admin sees the identical shipped pages
+
 - GIVEN a `SYSTEM_ADMIN` viewing the history list and a session's read-only view
 - WHEN both are compared with what a `MAINTENANCE_COMPANY_MANAGER` sees
 - THEN they MUST be the same pages and the same row shape, with no admin-only column, badge, section or control
 
 #### Scenario: A history row opens its session for the admin
+
 - GIVEN the admin's history list shows at least one completed session
 - WHEN they activate that row
 - THEN the read-only view of that session MUST be shown
 
 #### Scenario: The admin's path never crosses the write surface
+
 - GIVEN a signed-in `SYSTEM_ADMIN`
 - WHEN every navigation control rendered for them on this surface is enumerated
 - THEN none MUST navigate to `/review-sessions` or to any session-performing view
 
 #### Scenario: No write control is rendered for the admin
+
 - GIVEN a `SYSTEM_ADMIN` viewing the history list and a session's read-only view
 - WHEN the controls on each are enumerated
 - THEN none MUST offer to open, resume, answer, record, mark unreviewed, enter an element `code`, complete or discard a session
 
 #### Scenario: The other four roles' surface is unchanged, MANAGER included
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`, `MAINTENANCE_COMPANY_MANAGER`, and a `MANAGER` (once granted `VIEW_ALL_REVIEWS`, once holding no capability)
 - WHEN each reaches the history list and a session's read-only view after this change
-- THEN each MUST see exactly what they were already committed to seeing — their entry points, rows and controls unaffected by the admin's widening, and the granted/ungranted manager's own experience exactly as specified by *The Manager Reaches the Shipped History Surface, Granted or Not*
+- THEN each MUST see exactly what they were already committed to seeing — their entry points, rows and controls unaffected by the admin's widening, and the granted/ungranted manager's own experience exactly as specified by _The Manager Reaches the Shipped History Surface, Granted or Not_
 
 ### Requirement: No Filtering, Analytics or Adjacent Controls Ship
 
@@ -261,31 +285,37 @@ explicit `MANAGER` coverage below, mirroring the existing per-role
 scenarios rather than relying on the role-agnostic opening sentence alone.)
 
 #### Scenario: No list-control ships
+
 - GIVEN the history list view's controls
 - WHEN they are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting or search
 
 #### Scenario: No list-control ships for the company manager either
+
 - GIVEN the history list view rendered for a `MAINTENANCE_COMPANY_MANAGER` with a large company-wide result
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-community or per-technician grouping control
 
 #### Scenario: No list-control ships for the admin either
+
 - GIVEN the history list view rendered for a `SYSTEM_ADMIN` with an installation-wide result spanning several companies and communities
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-company, per-community or per-technician grouping control
 
 #### Scenario: No list-control ships for the manager either
+
 - GIVEN the history list view rendered for a `MANAGER` holding `VIEW_ALL_REVIEWS` with an installation-wide result spanning several companies and communities
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting, search, or a per-company, per-community or per-technician grouping control — mirroring the admin's own guarantee, since a granted manager's result is the identical read
 
 #### Scenario: No per-element history view exists
+
 - GIVEN the web routes and pages after this change
 - WHEN they are searched for a view of one inspectable element's past reviews
 - THEN none MUST be found
 
 #### Scenario: No adjacent capability surfaces
+
 - GIVEN every view of the review-history surface
 - WHEN its controls are enumerated
 - THEN none MUST offer signing, export, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications

@@ -39,6 +39,7 @@
 Option (a): minimal, test-friendly, matches the ADR's own suggestion, keeps the handler contract.
 
 Edge cases the design must cover:
+
 - Stale 401 while logged out: already ignored by the null check; the epoch also makes it a no-op.
 - Stale 401 during login: a request started before the login response advanced the epoch is stale; one started after is current.
 - Concurrent 401s from the same epoch collapse via the epoch advance inside the handler.
@@ -46,11 +47,13 @@ Edge cases the design must cover:
 - The stale request's caller still receives `ApiError(401)`; only the session-ending side effect is suppressed.
 
 Delta-spec shape (MODIFIED, `authentication`):
+
 - "Session-Ended Notice (Web)": only an authenticated API call issued under the current session that returns 401 ends it. New scenario "Stale 401 after re-login does not end the new session": GIVEN a request issued under a previous session, WHEN the user signs in again and then that request returns 401, THEN the new session MUST remain active and no session-ended notice MUST be shown.
 - "Redirect When Unauthenticated (Web)": same constraint on "Session ends mid-session".
 - Possibly one "stale 401 across logout" scenario.
 
 Tests (vitest + testing-library in `apps/web`):
+
 - `client.test.ts`: handler not invoked when the epoch advances between request start and the 401; invoked when unchanged; reset in `beforeEach`.
 - `AuthProvider.test.tsx` with deferred fetch promises: start a data call, log out and in again (or log in over a session), resolve with 401, assert `user` still set and `sessionEnded` false. Optionally the whole-flow test from ADR item 6.
 

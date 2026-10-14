@@ -14,6 +14,7 @@ The production topology is still unknown. The deploy target may be a VPS or a se
 ## Scope
 
 ### In Scope
+
 - **TD-28: `TRUST_PROXY` hop count.**
   - `getTrustProxySetting()` accepts unset, `''` or `'false'` (off), `'true'` (one hop, unchanged), or a positive integer N (trust N hops).
   - Boot fails fast on `0`, negative numbers, non-integers and any other value.
@@ -37,6 +38,7 @@ The production topology is still unknown. The deploy target may be a VPS or a se
 - **Register updates.** TD-28, TD-29 and TD-30 move to Resolved in `docs/technical-debt.md`, with the change name and PR numbers, at the end of the chain. TD-31 stays open.
 
 ### Out of Scope
+
 - **TD-31: per-email keying and account lockout.** These are deferred to a future slice of their own and TD-31 stays open in the register. The reasons: the guard runs before body validation, a per-email limit allows a targeted denial of service on a victim account, it carries a user-enumeration risk, and true lockout needs an unlock flow and UI.
 - **Redis** or any other new infrastructure component.
 - CIDR or named `TRUST_PROXY` values.
@@ -48,9 +50,11 @@ The production topology is still unknown. The deploy target may be a VPS or a se
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `authentication`:
   - **Login Attempt Rate Limiting**:
     - The counter key becomes the "client key": the IPv4 address, or the /64 prefix for IPv6, with IPv4-mapped addresses normalized to IPv4.
@@ -77,39 +81,40 @@ The exploration recommended (b) for TD-28 and the guard override for TD-29. For 
 - **Testing and delivery.** Strict TDD (ADR-016) applies. The e2e suites keep their raised limits through `e2e-env.setup.ts`. Persisted counters must not leak between suites or test cases; design decides between key isolation and truncation.
 
 ### PR slicing hint (final in `sdd-tasks`)
+
 1. **PR 1: TD-28 and TD-29.** Hop-count parsing, the `/64` tracker guard, unit and e2e tests, the README topology table and the spec-facing docs. About 160 to 240 lines, mostly tests.
 2. **PR 2: TD-30.** Prisma model and migration, storage adapter, wiring, and integration and e2e tests. About 300 to 450 lines; it may exceed 400 lines because of test fixtures, which is acceptable under the size-exception rule when the excess is tests.
 3. **PR 3: archive.** Delta merged into `openspec/specs/authentication/spec.md`, the ADR-011 addendum (if not already in the PRs above), and the TD register moves (TD-28, TD-29 and TD-30 to Resolved; TD-31 stays open).
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/api/src/shared/infrastructure/env/trust-proxy.ts` (+ spec) | Modified | Hop-count parsing and validation |
-| `apps/api/src/main.ts` | Modified (maybe) | Only if the return type requires it |
-| `apps/api/src/modules/auth/presentation/` (new guard) and `auth.controller.ts` | New/Modified | `/64` tracker guard on the login route |
-| `apps/api/src/modules/auth/auth.module.ts` | Modified | Guard provider, Postgres storage wiring |
-| `apps/api/src/modules/auth/infrastructure/` (throttle storage adapter) | New | Prisma `ThrottlerStorage` |
-| `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/` | New/Modified | Throttle record model and migration |
-| `apps/api/test/login-rate-limit.e2e-spec.ts`, `apps/api/test/e2e-env.setup.ts`, integration tests | Modified/New | Hop count, IPv6, persistence and concurrency cases |
-| `openspec/specs/authentication/spec.md` (via delta) | Modified | Rate-limiting and client-IP requirements |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`, `README.md` | Modified | Addendum, topology table, env docs |
-| `docs/technical-debt.md` | Modified | TD-28, TD-29 and TD-30 to Resolved; TD-31 unchanged |
+| Area                                                                                              | Impact           | Description                                         |
+| ------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
+| `apps/api/src/shared/infrastructure/env/trust-proxy.ts` (+ spec)                                  | Modified         | Hop-count parsing and validation                    |
+| `apps/api/src/main.ts`                                                                            | Modified (maybe) | Only if the return type requires it                 |
+| `apps/api/src/modules/auth/presentation/` (new guard) and `auth.controller.ts`                    | New/Modified     | `/64` tracker guard on the login route              |
+| `apps/api/src/modules/auth/auth.module.ts`                                                        | Modified         | Guard provider, Postgres storage wiring             |
+| `apps/api/src/modules/auth/infrastructure/` (throttle storage adapter)                            | New              | Prisma `ThrottlerStorage`                           |
+| `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`                                    | New/Modified     | Throttle record model and migration                 |
+| `apps/api/test/login-rate-limit.e2e-spec.ts`, `apps/api/test/e2e-env.setup.ts`, integration tests | Modified/New     | Hop count, IPv6, persistence and concurrency cases  |
+| `openspec/specs/authentication/spec.md` (via delta)                                               | Modified         | Rate-limiting and client-IP requirements            |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`, `README.md`                           | Modified         | Addendum, topology table, env docs                  |
+| `docs/technical-debt.md`                                                                          | Modified         | TD-28, TD-29 and TD-30 to Resolved; TD-31 unchanged |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| The production topology is unknown, so an operator may set the wrong hop count: one shared bucket, or spoofable keys | Med | No default other than off; topology table in README and ADR; strict boot validation. The value stays an explicit deployment decision. |
-| If Vercel or another serverless/shared platform is chosen, ADR-001 (one VPS per company) needs revisiting | Med | Out of scope; recorded as an open question in the ADR-011 addendum. |
-| PaaS forwarding behavior (hop count, header used) is platform-specific and not verified here | Med | The PaaS table row tells the operator to confirm the platform's documented hops before setting the value. |
-| An extra DB write per login attempt adds latency and load, and the DB becomes a dependency of the throttle | Low | Login already requires the DB; one indexed upsert per attempt is minor at this scale. |
-| A non-atomic increment loses hits under concurrency | Med | A single-statement upsert, plus an integration test with parallel increments. |
-| Throttle rows grow without bound | Low | Expired rows are reused in place, plus bounded opportunistic deletion; covered by a test. |
-| Persisted counters leak across e2e suites or test cases and cause flaky 429s | Med | Design defines key isolation or table cleanup; `e2e-env.setup.ts` keeps high limits. |
-| Clients sharing a /64 (same household or office network) share a bucket | Low | Standard practice; 10 attempts per 15 minutes is generous. |
-| Throttle keys contain client IPs (personal data) at rest | Low | Design confirms whether `@nestjs/throttler` already hashes the key. If not, the adapter stores a hash. |
-| A distributed attack on one account remains possible (TD-31) | Med | Explicitly deferred; TD-31 stays open in the register. |
+| Risk                                                                                                                 | Likelihood | Mitigation                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| The production topology is unknown, so an operator may set the wrong hop count: one shared bucket, or spoofable keys | Med        | No default other than off; topology table in README and ADR; strict boot validation. The value stays an explicit deployment decision. |
+| If Vercel or another serverless/shared platform is chosen, ADR-001 (one VPS per company) needs revisiting            | Med        | Out of scope; recorded as an open question in the ADR-011 addendum.                                                                   |
+| PaaS forwarding behavior (hop count, header used) is platform-specific and not verified here                         | Med        | The PaaS table row tells the operator to confirm the platform's documented hops before setting the value.                             |
+| An extra DB write per login attempt adds latency and load, and the DB becomes a dependency of the throttle           | Low        | Login already requires the DB; one indexed upsert per attempt is minor at this scale.                                                 |
+| A non-atomic increment loses hits under concurrency                                                                  | Med        | A single-statement upsert, plus an integration test with parallel increments.                                                         |
+| Throttle rows grow without bound                                                                                     | Low        | Expired rows are reused in place, plus bounded opportunistic deletion; covered by a test.                                             |
+| Persisted counters leak across e2e suites or test cases and cause flaky 429s                                         | Med        | Design defines key isolation or table cleanup; `e2e-env.setup.ts` keeps high limits.                                                  |
+| Clients sharing a /64 (same household or office network) share a bucket                                              | Low        | Standard practice; 10 attempts per 15 minutes is generous.                                                                            |
+| Throttle keys contain client IPs (personal data) at rest                                                             | Low        | Design confirms whether `@nestjs/throttler` already hashes the key. If not, the adapter stores a hash.                                |
+| A distributed attack on one account remains possible (TD-31)                                                         | Med        | Explicitly deferred; TD-31 stays open in the register.                                                                                |
 
 ## Rollback Plan
 

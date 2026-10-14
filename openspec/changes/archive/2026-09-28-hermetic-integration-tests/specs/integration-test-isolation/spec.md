@@ -136,11 +136,11 @@ drop operations; only `prisma migrate deploy` and the test workers connect
 to the run database, and only those connections are subject to check
 (ii).
 
-| Misconfiguration | Outcome |
-|---|---|
-| Base URL is missing or unparseable | Abort before any destructive operation |
-| The generated run database name does not match `^sf_manager_test_([0-9a-z]{8})_([0-9a-f]{6})$` | Abort before any destructive operation |
-| A dotenv override trigger (`DOTENV_CONFIG_OVERRIDE`) is set, so a spec's `dotenv/config` import could overwrite the worker's `DATABASE_URL` | Abort before any destructive operation |
+| Misconfiguration                                                                                                                            | Outcome                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Base URL is missing or unparseable                                                                                                          | Abort before any destructive operation           |
+| The generated run database name does not match `^sf_manager_test_([0-9a-z]{8})_([0-9a-f]{6})$`                                              | Abort before any destructive operation           |
+| A dotenv override trigger (`DOTENV_CONFIG_OVERRIDE`) is set, so a spec's `dotenv/config` import could overwrite the worker's `DATABASE_URL` | Abort before any destructive operation           |
 | A test worker's effective `DATABASE_URL`, database name parsed from the URL, does not equal the run's published `SF_TEST_RUN_DATABASE` name | Abort before that worker executes any spec query |
 
 #### Scenario: Misconfigured run aborts
@@ -222,7 +222,7 @@ or disabled.
 Project documentation MUST describe a one-time dev-database reset
 (`prisma migrate reset`, then run the seed) and the run database naming
 scheme and 24h retention. `CLAUDE.md` MUST NOT forbid running the full
-integration suite; its *Dev-DB pollution* guidance MUST reflect that each
+integration suite; its _Dev-DB pollution_ guidance MUST reflect that each
 real-DB run uses its own uniquely named run database, so concurrent runs
 are isolated and safe to run at the same time.
 

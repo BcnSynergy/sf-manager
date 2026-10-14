@@ -42,16 +42,19 @@ seed MUST be idempotent: re-running the migration MUST NOT produce a
 second row.
 
 #### Scenario: The row exists after migration, with no request made
+
 - GIVEN an empty database
 - WHEN the migrations are deployed and no application request of any kind has been issued
 - THEN exactly one `OrganizationProfile` row MUST exist, with every one of the six text fields blank and `logoAssetId` null
 
 #### Scenario: The seed does not duplicate the row
+
 - GIVEN a database whose `OrganizationProfile` row already exists
 - WHEN the migration's seed statement is applied again
 - THEN exactly one row MUST still exist, unmodified
 
 #### Scenario: No application path creates the row
+
 - GIVEN the application's use cases, repository port and adapter after this change
 - WHEN they are inspected for an insert of an `OrganizationProfile`
 - THEN none MUST exist — reading and updating MUST be the only two operations
@@ -69,21 +72,25 @@ omission or "incomplete" flag of any kind: whether the profile looks
 complete is a presentation judgement, not a server statement.
 
 #### Scenario: The blank seeded profile reads successfully
+
 - GIVEN the freshly seeded profile, with no update ever applied
 - WHEN an authorized caller reads the profile
 - THEN the response MUST be 200 and MUST carry all six text fields as empty strings
 
 #### Scenario: A filled profile reads back its stored values
+
 - GIVEN every field has been given a value
 - WHEN an authorized caller reads the profile
 - THEN the response MUST be 200 and each field MUST equal the stored value
 
 #### Scenario: The read never reports the profile as missing
+
 - GIVEN any lifecycle state of the installation — freshly migrated, partially filled or fully filled
 - WHEN the profile is read
 - THEN the response MUST NOT be 404, and no "not found" error code MUST be reachable on this endpoint
 
 #### Scenario: The response carries no completeness flag
+
 - GIVEN a profile with some fields blank
 - WHEN it is read
 - THEN the response MUST carry the field values only, and no server-computed `complete`, `incomplete` or equivalent flag
@@ -101,21 +108,25 @@ representation — the same shape the read returns — so that no follow-up
 read is required to learn the result.
 
 #### Scenario: A subset is updated and the rest is untouched
+
 - GIVEN a profile whose six fields all hold distinct values
 - WHEN an authorized caller supplies new `name` and `email` only
 - THEN the response MUST be 200, `name` and `email` MUST hold the new values, and `legalName`, `taxId`, `address` and `phone` MUST be unchanged
 
 #### Scenario: Values are stored trimmed
+
 - GIVEN an authorized caller supplies a field with leading and trailing whitespace around a non-blank value
 - WHEN the update succeeds
 - THEN the stored and returned value MUST be the trimmed value
 
 #### Scenario: The update responds with the full profile
+
 - GIVEN any successful update
 - WHEN the response body is inspected
 - THEN it MUST carry the same fields the read returns, reflecting the post-update state
 
 #### Scenario: taxId takes any non-blank text
+
 - GIVEN an authorized caller supplies a `taxId` that is not a valid Spanish NIF or CIF
 - WHEN the update is submitted
 - THEN it MUST be accepted — no format, checksum or uniqueness rule MUST be applied to `taxId`
@@ -135,21 +146,25 @@ A rejected update MUST leave every field, including the fields that
 were valid in the same request, unchanged.
 
 #### Scenario: An empty string is rejected
+
 - GIVEN an authorized caller supplies `name` as `""`
 - WHEN the update is submitted
 - THEN the response MUST be 400 and no field MUST change
 
 #### Scenario: A whitespace-only value is rejected
+
 - GIVEN an authorized caller supplies `legalName` as `"   "`
 - WHEN the update is submitted
 - THEN the response MUST be 400 and no field MUST change
 
 #### Scenario: An explicit null is rejected, not treated as a clear
+
 - GIVEN a profile whose `phone` holds a value, and an authorized caller supplies `phone` as `null`
 - WHEN the update is submitted
 - THEN the response MUST be 400 and `phone` MUST still hold its previous value
 
 #### Scenario: A partially invalid update writes nothing
+
 - GIVEN an authorized caller supplies a valid `name` and a blank `email` in the same request
 - WHEN the update is submitted
 - THEN the response MUST be 400 and **both** `name` and `email` MUST be unchanged
@@ -168,16 +183,19 @@ application already ships elsewhere.
 Unrecognized properties MUST be ignored and MUST NOT be persisted.
 
 #### Scenario: Re-sending the same values succeeds
+
 - GIVEN a filled profile
 - WHEN an authorized caller submits the identical values it already holds
 - THEN the response MUST be 200 and the profile MUST be unchanged
 
 #### Scenario: An empty body succeeds and changes nothing
+
 - GIVEN any profile state
 - WHEN an authorized caller submits an empty update body
 - THEN the response MUST be 200 carrying the current profile, and no field MUST change
 
 #### Scenario: Unrecognized properties are ignored, not persisted
+
 - GIVEN an authorized caller submits a body carrying a property the profile does not define
 - WHEN the update is submitted
 - THEN that property MUST NOT be persisted anywhere, and the response MUST carry only the profile's defined fields
@@ -197,16 +215,19 @@ No object-storage service, client, credential, upload endpoint or
 upload control MUST exist anywhere as a result of this change.
 
 #### Scenario: The field is absent from the read response
+
 - GIVEN any profile state
 - WHEN the profile is read
 - THEN the response MUST NOT carry a `logoAssetId` property in any form — not as `null`, not as an empty string
 
 #### Scenario: Supplying the field writes nothing
+
 - GIVEN an authorized caller submits `logoAssetId` in the update body
 - WHEN the update is processed
 - THEN the stored `logoAssetId` MUST still be `null`
 
 #### Scenario: No upload surface ships
+
 - GIVEN the API, the dependency manifests and the container composition after this change
 - WHEN each is inspected
 - THEN no object-storage service, client or credential MUST exist, and no upload endpoint MUST have been declared
@@ -225,16 +246,19 @@ soft-delete mechanism (ADR-010): the row representing the company
 running this very instance is not a deletable record.
 
 #### Scenario: Only two operations are declared
+
 - GIVEN the organization-profile routes after this change
 - WHEN they are enumerated
 - THEN exactly two MUST exist — the read and the partial update — with no create, delete, list or `:id` variant among them
 
 #### Scenario: A create or delete attempt does not reach a profile operation
+
 - GIVEN an authenticated `SYSTEM_ADMIN`
 - WHEN they issue `POST /organization-profile` and `DELETE /organization-profile`
 - THEN neither MUST create, remove or modify any profile data
 
 #### Scenario: The entity is not soft-deletable
+
 - GIVEN the schema and the domain entity after this change
 - WHEN they are inspected
 - THEN neither MUST declare a `deletedAt`, and the profile repository MUST NOT extend the shared soft-deletable repository
@@ -248,6 +272,7 @@ profile's completeness. Nothing consumes this data in this slice, by
 design.
 
 #### Scenario: No other surface consults the profile
+
 - GIVEN the application after this change
 - WHEN every read of the organization profile is enumerated
 - THEN each MUST originate from this capability's own read endpoint — no other module MUST depend on the profile or on its completeness

@@ -4,15 +4,15 @@ FR-013's first and only slice: the property management company's own corporate d
 
 ## Chain shipped (6 implementation PRs + 1 remediation PR, all merged to `main`)
 
-| PR | Title | Commit / PR # | Content |
-|---|---|---|---|
-| 1/6 | Migration + domain | #134 | `OrganizationProfile` Prisma model, sentinel-unique + CHECK singleton guard, hand-written idempotent blank-seed migration, domain entity, `OrganizationProfileMissingError`, migration integration spec |
-| 2/6 | Application + authorization | #135 | Repository port, 2 use cases (`get`, `update`), in-memory fake, `organizationProfile:read`/`update` permissions on `SYSTEM_ADMIN` only |
-| 3/6 | Infrastructure + presentation + shared schema | #136 | Prisma adapter/mapper, `GET`/`PATCH` controller + DTOs (no `logoAssetId`), `packages/validation` Zod schema, module wiring |
-| 4/6 | E2E | #137 | Full HTTP-contract e2e: auth matrix, PATCH subset/trim/reject semantics, no create/delete/`:id` surface, `logoAssetId` inert |
-| 5/6 | Web core | #138 | `OrganizationProfilePage` (loading/loaded/error), api client, route gated `SYSTEM_ADMIN`, component tests |
-| 6/6 | Web polish + docs | #139 | Nav item, en/es/ca i18n, ADR-012 naming addendum, FR-013 status -> `partial`, browser verification |
-| Remediation | Post-verify fixes | #140 (`4db74d8`) | Hermetic migration-spec fix (CRITICAL-1), stale 6.5 checkbox corrected, 4.5 phantom-assertion claim corrected, Decision 5 success indication implemented, second fresh-context review pass fixes |
+| PR          | Title                                         | Commit / PR #    | Content                                                                                                                                                                                                 |
+| ----------- | --------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1/6         | Migration + domain                            | #134             | `OrganizationProfile` Prisma model, sentinel-unique + CHECK singleton guard, hand-written idempotent blank-seed migration, domain entity, `OrganizationProfileMissingError`, migration integration spec |
+| 2/6         | Application + authorization                   | #135             | Repository port, 2 use cases (`get`, `update`), in-memory fake, `organizationProfile:read`/`update` permissions on `SYSTEM_ADMIN` only                                                                  |
+| 3/6         | Infrastructure + presentation + shared schema | #136             | Prisma adapter/mapper, `GET`/`PATCH` controller + DTOs (no `logoAssetId`), `packages/validation` Zod schema, module wiring                                                                              |
+| 4/6         | E2E                                           | #137             | Full HTTP-contract e2e: auth matrix, PATCH subset/trim/reject semantics, no create/delete/`:id` surface, `logoAssetId` inert                                                                            |
+| 5/6         | Web core                                      | #138             | `OrganizationProfilePage` (loading/loaded/error), api client, route gated `SYSTEM_ADMIN`, component tests                                                                                               |
+| 6/6         | Web polish + docs                             | #139             | Nav item, en/es/ca i18n, ADR-012 naming addendum, FR-013 status -> `partial`, browser verification                                                                                                      |
+| Remediation | Post-verify fixes                             | #140 (`4db74d8`) | Hermetic migration-spec fix (CRITICAL-1), stale 6.5 checkbox corrected, 4.5 phantom-assertion claim corrected, Decision 5 success indication implemented, second fresh-context review pass fixes        |
 
 Verified against `main` @ `96cbdab` (pre-remediation) and again after `4db74d8` (remediation merged). Working tree clean at archive time.
 
@@ -39,7 +39,7 @@ Verified against `main` @ `96cbdab` (pre-remediation) and again after `4db74d8` 
 - R.5 is a second fresh-context review pass on R.1-R.4, fixing a hardcoded ID duplication and collapsing two sequential Prisma queries into one; also traced but deliberately left out of scope (ADR-006 discipline: this slice is `organization-profile` only) the `inspectable-element-migration.integration.spec.ts` sibling carrying the same non-hermetic pattern R.1 fixed here — tracked at Engram `discovery/non-hermetic-migration-integration-specs` (id 299) as a recorded follow-up, not a blocking issue.
 - WARNING-4 (Engram `apply-progress` topic_key upsert history loss) is a process observation about the `engram`-only mode risk, not a code defect; no code remediation applies. Recorded here as the argument for this project's `hybrid` artifact-store choice, already in effect.
 
-All 5 findings that were open before remediation are now closed. Archiving now, per the verify report's own "Next" section: *"Then re-verify -> `sdd-archive`"*.
+All 5 findings that were open before remediation are now closed. Archiving now, per the verify report's own "Next" section: _"Then re-verify -> `sdd-archive`"_.
 
 ### Remaining SUGGESTIONs carried forward (non-blocking, no CRITICAL/WARNING among them)
 
@@ -75,8 +75,8 @@ All 5 design decisions verified as implemented exactly as written:
 
 - `openspec/specs/organization-profile-management/spec.md` (**new** — 8 requirements, singleton existence, read/update contract, non-blank-on-write rule, no create/delete surface, `logoAssetId` inertness, no downstream consumer)
 - `openspec/specs/organization-profile-admin-ui/spec.md` (**new** — 8 requirements, role gating, combined view/edit page, not-completed-yet state, save flow, no logo control, i18n)
-- `openspec/specs/app-navigation/spec.md` (**delta merged** — `SYSTEM_ADMIN` row widened from 7 to 8 items with "Organization profile" as the eighth; every item's target reframed from "top-level list route" to "top-level route" to admit a singleton page with no list; new *The Added Item Preserves the Reachability Invariant* requirement)
-- `openspec/specs/authorization/spec.md` (**delta merged** — two new requirements, *Permission Check on Organization Profile Endpoints* and *The Organization Profile Grants Nothing Beyond Itself*, adding `organizationProfile:read`/`organizationProfile:update` to the `Permission` union, `SYSTEM_ADMIN`-only, confirming the four non-admin rows and the `ManagerCapability` single-member invariant are unchanged)
+- `openspec/specs/app-navigation/spec.md` (**delta merged** — `SYSTEM_ADMIN` row widened from 7 to 8 items with "Organization profile" as the eighth; every item's target reframed from "top-level list route" to "top-level route" to admit a singleton page with no list; new _The Added Item Preserves the Reachability Invariant_ requirement)
+- `openspec/specs/authorization/spec.md` (**delta merged** — two new requirements, _Permission Check on Organization Profile Endpoints_ and _The Organization Profile Grants Nothing Beyond Itself_, adding `organizationProfile:read`/`organizationProfile:update` to the `Permission` union, `SYSTEM_ADMIN`-only, confirming the four non-admin rows and the `ManagerCapability` single-member invariant are unchanged)
 - `docs/adr/ADR-012-...md` (naming addendum, already merged in PR6/#139, confirmed present)
 - `docs/requirements/functional-requirements.md` (FR-013 status -> `partial`, already merged in PR6/#139, confirmed present)
 

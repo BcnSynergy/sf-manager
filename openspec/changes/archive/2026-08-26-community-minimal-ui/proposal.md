@@ -27,7 +27,7 @@ It has two jobs:
 Success looks like: a `SYSTEM_ADMIN` creates a community, opens it, appoints its
 representative, swaps that representative and watches the previous one move to
 the deactivated list, reactivates the original, attaches two technicians at
-once — and is told precisely *why* when the API refuses.
+once — and is told precisely _why_ when the API refuses.
 
 Context: `[[sdd/community-minimal-ui/explore]]` (grounded API + web-foundation
 survey), `openspec/changes/archive/2026-08-25-community/`,
@@ -38,17 +38,17 @@ survey), `openspec/changes/archive/2026-08-25-community/`,
 
 Closed with the product owner. Inputs, not open items.
 
-| Decision | Resolution |
-|---|---|
-| **Assignment targeting UX** | The admin **pastes a `userId` (UUID)** copied from `/users` into a plain text input. No email lookup, no autocomplete, no eligible-user picker — none exists anywhere in the app and building one is a search-UI slice of its own. The server already rejects ineligible and unknown users; the UI reports the refusal. *Explicitly minimal — see Open Questions.* |
-| **Multi-community representative warning** | **Not surfaced in this slice.** `POST`/`reactivate` may return `warning: { code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES', communityCount }`. The original `community` proposal shipped it noting "no web consumer exists yet to break"; this slice deliberately stays that consumer's non-reader. The warning stays a typed, documented, tested API field. |
-| **API error-code scope** | The additive `code` discriminator (mirroring `users-minimal-ui` PR1) is added to **409 responses on the assignment routes only** — `ASSIGNMENT_ALREADY_EXISTS`, `INELIGIBLE_ROLE`, `TRANSACTION_CONFLICT`. Not the three 404 causes. Reasoning below. |
-| **Page set** | `CommunitiesListPage`, `CommunityCreatePage`, `CommunityEditPage` (mirroring `users-minimal-ui`) **plus a new `CommunityDetailPage`** carrying both assignment sections. |
-| **Deactivated *assignments* are visible** | Unlike deactivated *users* (hidden in `users-minimal-ui`), deactivated assignments **are listed**. `GET /communities/:id/{representatives,technicians}` returns both by design, reactivation is a real supported capability, and hiding deactivated rows would make the reactivate action unreachable. |
-| **Deactivated *communities* are hidden** | The list shows active communities only — `GET /communities` already excludes soft-deleted rows server-side (ADR-010). No restore, no toggle. Same as `users`. |
-| **`locale` is a displayed label, not a language switch** | The community's `locale` is rendered and edited as a closed-set field. It does **not** change the admin's UI language — ADR-007 defers per-entity i18n rendering, and `community-management`'s spec says `locale` is stored verbatim with no rendering behavior. |
-| **Non-admin access to `/communities`** | Explicit `NotAuthorized` denial, never a silent redirect. Reused verbatim from `users-minimal-ui`. |
-| **User creation from the community flow** | Not in this slice — inherited non-goal from the original `community` proposal. Assignments target existing users only. |
+| Decision                                                 | Resolution                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Assignment targeting UX**                              | The admin **pastes a `userId` (UUID)** copied from `/users` into a plain text input. No email lookup, no autocomplete, no eligible-user picker — none exists anywhere in the app and building one is a search-UI slice of its own. The server already rejects ineligible and unknown users; the UI reports the refusal. _Explicitly minimal — see Open Questions._ |
+| **Multi-community representative warning**               | **Not surfaced in this slice.** `POST`/`reactivate` may return `warning: { code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES', communityCount }`. The original `community` proposal shipped it noting "no web consumer exists yet to break"; this slice deliberately stays that consumer's non-reader. The warning stays a typed, documented, tested API field.        |
+| **API error-code scope**                                 | The additive `code` discriminator (mirroring `users-minimal-ui` PR1) is added to **409 responses on the assignment routes only** — `ASSIGNMENT_ALREADY_EXISTS`, `INELIGIBLE_ROLE`, `TRANSACTION_CONFLICT`. Not the three 404 causes. Reasoning below.                                                                                                              |
+| **Page set**                                             | `CommunitiesListPage`, `CommunityCreatePage`, `CommunityEditPage` (mirroring `users-minimal-ui`) **plus a new `CommunityDetailPage`** carrying both assignment sections.                                                                                                                                                                                           |
+| **Deactivated _assignments_ are visible**                | Unlike deactivated _users_ (hidden in `users-minimal-ui`), deactivated assignments **are listed**. `GET /communities/:id/{representatives,technicians}` returns both by design, reactivation is a real supported capability, and hiding deactivated rows would make the reactivate action unreachable.                                                             |
+| **Deactivated _communities_ are hidden**                 | The list shows active communities only — `GET /communities` already excludes soft-deleted rows server-side (ADR-010). No restore, no toggle. Same as `users`.                                                                                                                                                                                                      |
+| **`locale` is a displayed label, not a language switch** | The community's `locale` is rendered and edited as a closed-set field. It does **not** change the admin's UI language — ADR-007 defers per-entity i18n rendering, and `community-management`'s spec says `locale` is stored verbatim with no rendering behavior.                                                                                                   |
+| **Non-admin access to `/communities`**                   | Explicit `NotAuthorized` denial, never a silent redirect. Reused verbatim from `users-minimal-ui`.                                                                                                                                                                                                                                                                 |
+| **User creation from the community flow**                | Not in this slice — inherited non-goal from the original `community` proposal. Assignments target existing users only.                                                                                                                                                                                                                                             |
 
 ### Why the error-code scope is narrowed to three 409 causes
 
@@ -60,12 +60,12 @@ status with more than one reachable cause on the same call gets a code**.
 
 Applying that rule to the real routes:
 
-| Status | Causes reachable on one call | Verdict |
-|---|---|---|
-| **409** on `POST` assign | `AssignmentAlreadyExistsError`, `IneligibleRoleError`, `TransactionConflictError` — **all three**, on the same request | **Codes required.** Each demands a different admin action: reactivate instead / fix the user's global role / retry. Indistinguishable without a code. |
-| **409** on `reactivate` | `IneligibleRoleError`, `TransactionConflictError` | **Covered by the same three codes.** |
-| **404** on assign / deactivate / reactivate | `CommunityNotFoundError`, `UserNotFoundError`, `AssignmentNotFoundError` | **No codes.** Effectively unambiguous by context, the same reasoning `users-minimal-ui` used for `POST /users`: the community was just loaded by the page's own route, and on deactivate/reactivate the `userId` comes from a rendered row. A 404 in these flows means "the ID you pasted is unknown, or this page is stale" — one honest message, not three. |
-| **400** | Zod validation only | **No codes.** Single cause. |
+| Status                                      | Causes reachable on one call                                                                                           | Verdict                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **409** on `POST` assign                    | `AssignmentAlreadyExistsError`, `IneligibleRoleError`, `TransactionConflictError` — **all three**, on the same request | **Codes required.** Each demands a different admin action: reactivate instead / fix the user's global role / retry. Indistinguishable without a code.                                                                                                                                                                                                         |
+| **409** on `reactivate`                     | `IneligibleRoleError`, `TransactionConflictError`                                                                      | **Covered by the same three codes.**                                                                                                                                                                                                                                                                                                                          |
+| **404** on assign / deactivate / reactivate | `CommunityNotFoundError`, `UserNotFoundError`, `AssignmentNotFoundError`                                               | **No codes.** Effectively unambiguous by context, the same reasoning `users-minimal-ui` used for `POST /users`: the community was just loaded by the page's own route, and on deactivate/reactivate the `userId` comes from a rendered row. A 404 in these flows means "the ID you pasted is unknown, or this page is stale" — one honest message, not three. |
+| **400**                                     | Zod validation only                                                                                                    | **No codes.** Single cause.                                                                                                                                                                                                                                                                                                                                   |
 
 Adding codes to the 404s would be inventing precision the UI cannot act on
 differently — the exact scope creep ADR-006 forbids. The 404 call is recorded as
@@ -92,7 +92,7 @@ a deferred open question with a named revisit trigger, not as an oversight.
   deactivated rows (`userId`, status), offers an assign-by-`userId` input, and
   per-row deactivate (behind `ConfirmDialog`) / reactivate actions.
 - **Representative lifecycle in the UI** — assign, deactivate, reactivate, with
-  the server's exclusivity rule made *visible*: after assigning or reactivating,
+  the server's exclusivity rule made _visible_: after assigning or reactivating,
   the refetched list shows the previously-active representative as deactivated.
 - **Technician lifecycle in the UI** — assign, deactivate, reactivate, with no
   exclusivity: several technicians stay active simultaneously.
@@ -167,28 +167,28 @@ only where the domain genuinely differs.
 
 ### Reused as-is (zero changes)
 
-| Existing asset | Reused for |
-|---|---|
-| `apps/web/src/api/client.ts` — `apiFetch` / `ApiError` | All 12 community calls. Fully domain-agnostic; still the **only** place that parses an error body |
-| `apps/web/src/auth/ProtectedRoute.tsx` (`allowedRoles`) + `NotAuthorized.tsx` | `allowedRoles={['SYSTEM_ADMIN']}` on all four routes, verbatim |
-| `apps/web/src/components/ConfirmDialog.tsx` | Community soft-delete **and** both assignment deactivations |
-| `apps/web/src/pages/LoginPage.tsx` / `UserCreatePage.tsx` form pattern | Controlled inputs, `noValidate`, Zod `safeParse` before any fetch |
-| `@sf-manager/validation` `createCommunitySchema` / `updateCommunitySchema` / `localeSchema` | Client-side validation, identical to what the API enforces |
-| `apps/web/src/users/role-labels.ts` | Untouched. Not reused — this slice's UI shows `userId`, not roles |
+| Existing asset                                                                              | Reused for                                                                                        |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `apps/web/src/api/client.ts` — `apiFetch` / `ApiError`                                      | All 12 community calls. Fully domain-agnostic; still the **only** place that parses an error body |
+| `apps/web/src/auth/ProtectedRoute.tsx` (`allowedRoles`) + `NotAuthorized.tsx`               | `allowedRoles={['SYSTEM_ADMIN']}` on all four routes, verbatim                                    |
+| `apps/web/src/components/ConfirmDialog.tsx`                                                 | Community soft-delete **and** both assignment deactivations                                       |
+| `apps/web/src/pages/LoginPage.tsx` / `UserCreatePage.tsx` form pattern                      | Controlled inputs, `noValidate`, Zod `safeParse` before any fetch                                 |
+| `@sf-manager/validation` `createCommunitySchema` / `updateCommunitySchema` / `localeSchema` | Client-side validation, identical to what the API enforces                                        |
+| `apps/web/src/users/role-labels.ts`                                                         | Untouched. Not reused — this slice's UI shows `userId`, not roles                                 |
 
 ### New, community-specific parallels
 
-| New file | Mirrors | Difference |
-|---|---|---|
-| `apps/web/src/api/community.ts` | `api/users.ts` | 12 typed calls instead of 4 |
-| `apps/web/src/community/error-messages.ts` | `users/error-messages.ts` | New `CommunityErrorCode` union; same `status`/`code`-only rule |
-| `apps/web/src/community/locale-labels.ts`, `assignment-status-labels.ts` | `users/role-labels.ts` | Enum → i18n key maps, written **with** the pages, not after |
-| `apps/web/src/pages/CommunityDetailPage.tsx` | — | No precedent; structurally required (see above) |
+| New file                                                                 | Mirrors                   | Difference                                                     |
+| ------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------- |
+| `apps/web/src/api/community.ts`                                          | `api/users.ts`            | 12 typed calls instead of 4                                    |
+| `apps/web/src/community/error-messages.ts`                               | `users/error-messages.ts` | New `CommunityErrorCode` union; same `status`/`code`-only rule |
+| `apps/web/src/community/locale-labels.ts`, `assignment-status-labels.ts` | `users/role-labels.ts`    | Enum → i18n key maps, written **with** the pages, not after    |
+| `apps/web/src/pages/CommunityDetailPage.tsx`                             | —                         | No precedent; structurally required (see above)                |
 
 Two deliberate proposal-level choices:
 
 1. **Mutations refetch, they do not patch local state.** Representative
-   exclusivity means one `POST` changes *two* rows server-side. Optimistically
+   exclusivity means one `POST` changes _two_ rows server-side. Optimistically
    patching the clicked row would silently hide the auto-deactivation — the
    single most important behavior this UI exists to validate. Every assignment
    mutation refetches its section's list.
@@ -200,36 +200,36 @@ Two deliberate proposal-level choices:
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/src/modules/community/presentation/community-error-code.ts` | New | `CommunityErrorCode` union (3 values) |
-| `apps/api/src/modules/community/presentation/community.controller.ts` | Modified | `mapAssignmentError` supplies `code` on 409s; Swagger conflict responses document it |
-| `apps/api/test/community.e2e-spec.ts` | Modified | Assert `body.code` per 409 cause (anti-drift guard) |
-| `apps/web/src/api/community.ts` | New | 12 typed calls + mirrored `CommunityErrorCode` |
-| `apps/web/src/community/error-messages.ts` | New | `ApiError` → i18n key map |
-| `apps/web/src/community/*-labels.ts` | New | `locale` and assignment-status enum label maps |
-| `apps/web/src/pages/CommunitiesListPage.tsx` | New | List, states, row actions |
-| `apps/web/src/pages/CommunityCreatePage.tsx` | New | `createCommunitySchema` |
-| `apps/web/src/pages/CommunityEditPage.tsx` | New | `updateCommunitySchema`, prefill from list |
-| `apps/web/src/pages/CommunityDetailPage.tsx` | New | Community info + both assignment sections |
-| `apps/web/src/App.tsx` | Modified | 4 role-gated routes |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Real `community.*` translations, all 3 locales |
-| `apps/web/src/api/client.ts`, `auth/**`, `components/ConfirmDialog.tsx` | Unchanged | Reused as-is — any needed change is a finding to report |
-| `packages/validation/src/community/**` | Unchanged | Read-only reuse |
+| Area                                                                    | Impact    | Description                                                                          |
+| ----------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| `apps/api/src/modules/community/presentation/community-error-code.ts`   | New       | `CommunityErrorCode` union (3 values)                                                |
+| `apps/api/src/modules/community/presentation/community.controller.ts`   | Modified  | `mapAssignmentError` supplies `code` on 409s; Swagger conflict responses document it |
+| `apps/api/test/community.e2e-spec.ts`                                   | Modified  | Assert `body.code` per 409 cause (anti-drift guard)                                  |
+| `apps/web/src/api/community.ts`                                         | New       | 12 typed calls + mirrored `CommunityErrorCode`                                       |
+| `apps/web/src/community/error-messages.ts`                              | New       | `ApiError` → i18n key map                                                            |
+| `apps/web/src/community/*-labels.ts`                                    | New       | `locale` and assignment-status enum label maps                                       |
+| `apps/web/src/pages/CommunitiesListPage.tsx`                            | New       | List, states, row actions                                                            |
+| `apps/web/src/pages/CommunityCreatePage.tsx`                            | New       | `createCommunitySchema`                                                              |
+| `apps/web/src/pages/CommunityEditPage.tsx`                              | New       | `updateCommunitySchema`, prefill from list                                           |
+| `apps/web/src/pages/CommunityDetailPage.tsx`                            | New       | Community info + both assignment sections                                            |
+| `apps/web/src/App.tsx`                                                  | Modified  | 4 role-gated routes                                                                  |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                             | Modified  | Real `community.*` translations, all 3 locales                                       |
+| `apps/web/src/api/client.ts`, `auth/**`, `components/ConfirmDialog.tsx` | Unchanged | Reused as-is — any needed change is a finding to report                              |
+| `packages/validation/src/community/**`                                  | Unchanged | Read-only reuse                                                                      |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **Enum-like values rendered raw again.** `users-minimal-ui` shipped raw `Role` enum text and had to fix it in a PR9 follow-up. This slice has **two** enum-like value sets (`locale`, assignment status) | High | Named as an in-scope deliverable, not a polish item: label-map modules ship **with** their pages, and the success criteria call it out explicitly. `sdd-verify` greps rendered cells for raw enum values |
-| Exclusivity hidden by optimistic local-state updates, so the UI never proves the auto-deactivation happens | Med | Proposal-level choice above: mutations refetch. Success criteria demand the previous representative be *observed* moving to the deactivated list |
-| Client-side re-implementation of exclusivity/eligibility drifts from the domain | Med | Explicit non-goal above; `sdd-verify` should reject any client code deciding assignment outcomes |
-| 409 disambiguation resolved by string-matching the English message | Med | Forbidden by the inherited `user-admin-ui` requirement; guarded by a differential unit test and a `.message` grep, exactly as in `users-minimal-ui` PR9 |
-| Two near-identical assignment sections copy-pasted, or prematurely abstracted into one generic component that hides the exclusivity asymmetry | Med | The original `community` proposal already flagged this at domain level. Named as a `sdd-design` decision with required rationale — neither outcome is assumed |
-| Twelve API calls across four pages multiply the hand-rolled `useEffect` + `useState` pattern; `users-minimal-ui`'s design named *this slice* as the likely trigger to reconsider a data-fetching library | Med | Named as an explicit `sdd-design` question with the prior decision's own stated trigger. Decide with evidence, not habit |
-| ES/CA translations stubbed with English placeholders | Med | Real translations are in scope; the existing `locales.test.ts` key-set parity test extends to `community.*` |
-| Slice grows toward user search / cross-community views because the paste-a-UUID UX feels crude | Med | Explicit non-goals; recorded as a deferred question with a named future home |
-| Reviewer overload — 4 pages, 12 API calls, 1 API change in one PR | High | `sdd-tasks` must forecast against the 400-line budget; chained PRs are the expected outcome (`stacked-to-main`, as in both prior chains) |
+| Risk                                                                                                                                                                                                     | Likelihood | Mitigation                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Enum-like values rendered raw again.** `users-minimal-ui` shipped raw `Role` enum text and had to fix it in a PR9 follow-up. This slice has **two** enum-like value sets (`locale`, assignment status) | High       | Named as an in-scope deliverable, not a polish item: label-map modules ship **with** their pages, and the success criteria call it out explicitly. `sdd-verify` greps rendered cells for raw enum values |
+| Exclusivity hidden by optimistic local-state updates, so the UI never proves the auto-deactivation happens                                                                                               | Med        | Proposal-level choice above: mutations refetch. Success criteria demand the previous representative be _observed_ moving to the deactivated list                                                         |
+| Client-side re-implementation of exclusivity/eligibility drifts from the domain                                                                                                                          | Med        | Explicit non-goal above; `sdd-verify` should reject any client code deciding assignment outcomes                                                                                                         |
+| 409 disambiguation resolved by string-matching the English message                                                                                                                                       | Med        | Forbidden by the inherited `user-admin-ui` requirement; guarded by a differential unit test and a `.message` grep, exactly as in `users-minimal-ui` PR9                                                  |
+| Two near-identical assignment sections copy-pasted, or prematurely abstracted into one generic component that hides the exclusivity asymmetry                                                            | Med        | The original `community` proposal already flagged this at domain level. Named as a `sdd-design` decision with required rationale — neither outcome is assumed                                            |
+| Twelve API calls across four pages multiply the hand-rolled `useEffect` + `useState` pattern; `users-minimal-ui`'s design named _this slice_ as the likely trigger to reconsider a data-fetching library | Med        | Named as an explicit `sdd-design` question with the prior decision's own stated trigger. Decide with evidence, not habit                                                                                 |
+| ES/CA translations stubbed with English placeholders                                                                                                                                                     | Med        | Real translations are in scope; the existing `locales.test.ts` key-set parity test extends to `community.*`                                                                                              |
+| Slice grows toward user search / cross-community views because the paste-a-UUID UX feels crude                                                                                                           | Med        | Explicit non-goals; recorded as a deferred question with a named future home                                                                                                                             |
+| Reviewer overload — 4 pages, 12 API calls, 1 API change in one PR                                                                                                                                        | High       | `sdd-tasks` must forecast against the 400-line budget; chained PRs are the expected outcome (`stacked-to-main`, as in both prior chains)                                                                 |
 
 ## Rollback Plan
 
@@ -257,87 +257,87 @@ its own, since old clients ignore an unknown response field.
 ## Success Criteria
 
 1. [x] A `SYSTEM_ADMIN` sees a list of active communities (`name`, `address`,
-   `locale`) with distinct loading, empty and error states. — PR4, browser-verified.
+       `locale`) with distinct loading, empty and error states. — PR4, browser-verified.
 2. [x] Soft-deleted communities never appear in the list, and a soft-delete
-   performed from the UI removes the row without a manual page reload. — PR4, browser-verified.
+       performed from the UI removes the row without a manual page reload. — PR4, browser-verified.
 3. [x] A `SYSTEM_ADMIN` creates a community with `name`, `address` and `locale`;
-   it appears in the list without a manual reload. Client-side validation uses
-   `createCommunitySchema` from `@sf-manager/validation` and blocks the request
-   before any network call when invalid. — PR5, browser-verified.
+       it appears in the list without a manual reload. Client-side validation uses
+       `createCommunitySchema` from `@sf-manager/validation` and blocks the request
+       before any network call when invalid. — PR5, browser-verified.
 4. [x] A `SYSTEM_ADMIN` edits a community's `name`, `address` and/or `locale`
-   (validated with `updateCommunitySchema`); the change is visible on return to
-   the list. — PR6, browser-verified.
+       (validated with `updateCommunitySchema`); the change is visible on return to
+       the list. — PR6, browser-verified.
 5. [x] Soft-deleting a community requires an explicit confirmation step
-   (`ConfirmDialog`, reused unmodified). — PR4, browser-verified.
+       (`ConfirmDialog`, reused unmodified). — PR4, browser-verified.
 6. [x] `CommunityDetailPage` shows the community's fields plus two clearly
-   separated sections — Representatives and Technicians — each listing **active
-   and deactivated** rows with a visible status. — PR7, browser-verified.
+       separated sections — Representatives and Technicians — each listing **active
+       and deactivated** rows with a visible status. — PR7, browser-verified.
 7. [x] A `SYSTEM_ADMIN` assigns a representative by pasting a `userId`; the new
-   representative appears active without a manual reload. — PR7/PR8, browser-verified.
+       representative appears active without a manual reload. — PR7/PR8, browser-verified.
 8. [x] Assigning a **second** representative to the same community shows the
-   previously-active one **moved to deactivated** (not removed) in the same
-   refreshed section — the exclusivity rule is observable in the UI. — PR7/PR8, browser-verified.
+       previously-active one **moved to deactivated** (not removed) in the same
+       refreshed section — the exclusivity rule is observable in the UI. — PR7/PR8, browser-verified.
 9. [x] Deactivating a representative requires confirmation and moves the row to
-   deactivated rather than removing it. — PR7, browser-verified.
+       deactivated rather than removing it. — PR7, browser-verified.
 10. [x] Reactivating a deactivated representative makes it active **and** shows
-    whoever was active at that moment as deactivated. — PR8, browser-verified.
+        whoever was active at that moment as deactivated. — PR8, browser-verified.
 11. [x] Two technicians are active in the same community simultaneously —
-    assigning the second does **not** deactivate the first (no exclusivity, no
-    warning surface). — PR7, browser-verified.
+        assigning the second does **not** deactivate the first (no exclusivity, no
+        warning surface). — PR7, browser-verified.
 12. [x] A technician can be deactivated (with confirmation) and reactivated,
-    with no effect on any other technician's status. — PR7, browser-verified.
+        with no effect on any other technician's status. — PR7, browser-verified.
 13. [x] Assigning a user whose global role is wrong shows a **specific**
-    ineligible-role message, distinguishable from the already-assigned message. — PR8, browser-verified.
+        ineligible-role message, distinguishable from the already-assigned message. — PR8, browser-verified.
 14. [x] Assigning a user who already has an assignment (active **or**
-    deactivated) shows a **specific** message telling the admin to reactivate the
-    existing record instead of a generic conflict. — PR8, browser-verified.
+        deactivated) shows a **specific** message telling the admin to reactivate the
+        existing record instead of a generic conflict. — PR8, browser-verified.
 15. [x] A `TransactionConflictError` on a representative operation shows a
-    distinct "please try again" message, with **no automatic retry** anywhere in
-    the web app. — verified by code inspection + differential unit test (not
-    deterministically reproducible through manual UI alone; requires a genuine
-    concurrent-write race).
+        distinct "please try again" message, with **no automatic retry** anywhere in
+        the web app. — verified by code inspection + differential unit test (not
+        deterministically reproducible through manual UI alone; requires a genuine
+        concurrent-write race).
 16. [x] No client code compares against a server-supplied English message string;
-    `community/error-messages.ts` reads only `ApiError.status` and `.code`,
-    guarded by a differential unit test and a `.message` grep over
-    `apps/web/src`. — PR8 static guard, clean.
+        `community/error-messages.ts` reads only `ApiError.status` and `.code`,
+        guarded by a differential unit test and a `.message` grep over
+        `apps/web/src`. — PR8 static guard, clean.
 17. [x] Zero hardcoded UI strings: `community.*` keys exist with real
-    translations in `en`, `es` **and** `ca`, and locale-file key-set parity is
-    test-enforced. — PR8, `locales.test.ts` extended with a full key-existence guard.
+        translations in `en`, `es` **and** `ca`, and locale-file key-set parity is
+        test-enforced. — PR8, `locales.test.ts` extended with a full key-existence guard.
 18. [x] **No enum-like value is rendered raw.** `locale` and assignment status
-    are displayed through i18n label maps (`role-labels.ts` pattern) in every
-    surface — table cells and `<select>` option labels alike; the raw enum value
-    only ever backs `<option value>` and API payloads. — delivered incrementally
-    in PR3/PR4/PR7 (label maps), PR8 static guard confirms no regression; not a
-    late PR9-style patch.
+        are displayed through i18n label maps (`role-labels.ts` pattern) in every
+        surface — table cells and `<select>` option labels alike; the raw enum value
+        only ever backs `<option value>` and API payloads. — delivered incrementally
+        in PR3/PR4/PR7 (label maps), PR8 static guard confirms no regression; not a
+        late PR9-style patch.
 19. [x] An authenticated non-`SYSTEM_ADMIN` reaching any `/communities` route
-    sees the explicit `NotAuthorized` surface, not a silent redirect; an
-    unauthenticated visitor is redirected to `/login`. — unauthenticated half
-    browser-verified in PR8; non-admin half reuses `ProtectedRoute`, already
-    verified in `users-minimal-ui`.
+        sees the explicit `NotAuthorized` surface, not a silent redirect; an
+        unauthenticated visitor is redirected to `/login`. — unauthenticated half
+        browser-verified in PR8; non-admin half reuses `ProtectedRoute`, already
+        verified in `users-minimal-ui`.
 20. [x] Assignment 409 responses carry `code`
-    (`ASSIGNMENT_ALREADY_EXISTS` / `INELIGIBLE_ROLE` / `TRANSACTION_CONFLICT`)
-    with `statusCode`, `error` and `message` unchanged; asserted in
-    `community.e2e-spec.ts`. 404 and 400 bodies are untouched. — PR1.
+        (`ASSIGNMENT_ALREADY_EXISTS` / `INELIGIBLE_ROLE` / `TRANSACTION_CONFLICT`)
+        with `statusCode`, `error` and `message` unchanged; asserted in
+        `community.e2e-spec.ts`. 404 and 400 bodies are untouched. — PR1.
 21. [x] Web and API suites, lint and build pass
-    (`npm run test --workspace=apps/web`, `npm run test --workspace=apps/api`,
-    `npm run lint --workspace=apps/web`, `npm run build`). — PR8: 213/213 web,
-    279/279 api, lint clean, build succeeds.
+        (`npm run test --workspace=apps/web`, `npm run test --workspace=apps/api`,
+        `npm run lint --workspace=apps/web`, `npm run build`). — PR8: 213/213 web,
+        279/279 api, lint clean, build succeeds.
 22. [x] Every UI criterion above is **browser-verified** against a running dev
-    server (`npm run dev`), not only test-verified — per CLAUDE.md's "Verifying
-    UI Changes" rule. — this checklist's own evidence trail.
+        server (`npm run dev`), not only test-verified — per CLAUDE.md's "Verifying
+        UI Changes" rule. — this checklist's own evidence trail.
 
 ## Open Questions / Deferred
 
-| # | Question | Status | Owner |
-|---|---|---|---|
-| 1 | **Multi-community representative warning.** `POST`/`reactivate` may return `warning: { code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES', communityCount }`. Should the admin see an inline banner when an activation makes someone a representative of N communities? | **Deferred beyond this slice** — settled with the product owner. The original `community` proposal shipped the field noting no web consumer existed; this slice stays that non-consumer. The field remains typed, documented and e2e-tested, so adding the banner later is UI-only. *Revisit trigger*: the first report of an unnoticed multi-community representative. | Future slice |
-| 2 | **404 disambiguation on assignment routes.** `CommunityNotFoundError` / `UserNotFoundError` / `AssignmentNotFoundError` all return an undiscriminated 404. This slice adds `code` to 409s only. | **Deferred, deliberately** — see "Why the error-code scope is narrowed". A 404 in these flows is effectively unambiguous by context and maps to one honest message. *Revisit trigger*: if browser verification (criterion 22) shows an admin cannot tell a mistyped UUID from a stale page, add `USER_NOT_FOUND` / `COMMUNITY_NOT_FOUND` as a follow-up — the mechanism will already exist. | Future slice |
-| 3 | **User-targeting UX.** Pasting a UUID is deliberately crude. Alternatives: email input resolved server-side, or a picker filtered by eligible global role. Each implies real API surface (user lookup by email, or a filtered list endpoint). | **Deferred beyond this slice** — settled. Do not solve here. | Future slice |
-| 4 | **Error-code contract location.** `users-minimal-ui`'s design mirrored `UserErrorCode` as a literal union in web code and named an explicit rule-of-three trigger: *"hoist a shared error-code contract when `community` adds its own codes"*. **This slice is that trigger.** Hoist into `@sf-manager/validation` (ADR-015), or mirror again? | **Open — `sdd-design` decides**, and must address the trigger explicitly rather than silently repeating the mirror. | `sdd-design` |
-| 5 | **Data-fetching approach.** `users-minimal-ui`'s design deferred TanStack Query with the trigger *"two or more collections whose mutations invalidate each other — `community` is the likely first real case"*. This slice has three collections per detail page and mutations that change rows the client did not touch. **Also that trigger.** | **Open — `sdd-design` decides** with evidence. Keeping `apiFetch` + refetch is a legitimate answer; making it by default is not. | `sdd-design` |
-| 6 | **Two assignment sections: one shared component or two?** They share a shape but not their rules (exclusivity, warning, and `TransactionConflictError` apply to representatives only). The original `community` proposal already flagged premature generic abstraction as a domain-level risk. | **Open — `sdd-design` decides**, with rationale. Neither duplication nor abstraction is assumed. | `sdd-design` |
-| 7 | **Detail/edit page data source.** There is no `GET /communities/:id`; direction is set (fetch the list and select by `:id`, mirroring `users-minimal-ui` Decision 5), but the detail page needs the community *and* two assignment lists — up to three requests per navigation. | **Direction set, bounded** — no new endpoint; this slice validates the existing contract and must *surface* the missing endpoint as evidence, not paper over it. Design owns request sequencing and the not-found state. | `sdd-design` (bounded) |
-| 8 | **No navigation entry point.** `apps/web` has no nav bar; `users-minimal-ui` added no `/` → `/users` link either. `/communities` will be equally unreachable without typing the URL. | **Pre-existing gap, out of scope** — flagged, not introduced here. *Revisit trigger*: it now affects two sections, so the next UI slice should either add a minimal nav or record why not. | Future slice |
+| #   | Question                                                                                                                                                                                                                                                                                                                                         | Status                                                                                                                                                                                                                                                                                                                                                                                      | Owner                  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Multi-community representative warning.** `POST`/`reactivate` may return `warning: { code: 'REPRESENTATIVE_IN_MULTIPLE_COMMUNITIES', communityCount }`. Should the admin see an inline banner when an activation makes someone a representative of N communities?                                                                              | **Deferred beyond this slice** — settled with the product owner. The original `community` proposal shipped the field noting no web consumer existed; this slice stays that non-consumer. The field remains typed, documented and e2e-tested, so adding the banner later is UI-only. _Revisit trigger_: the first report of an unnoticed multi-community representative.                     | Future slice           |
+| 2   | **404 disambiguation on assignment routes.** `CommunityNotFoundError` / `UserNotFoundError` / `AssignmentNotFoundError` all return an undiscriminated 404. This slice adds `code` to 409s only.                                                                                                                                                  | **Deferred, deliberately** — see "Why the error-code scope is narrowed". A 404 in these flows is effectively unambiguous by context and maps to one honest message. _Revisit trigger_: if browser verification (criterion 22) shows an admin cannot tell a mistyped UUID from a stale page, add `USER_NOT_FOUND` / `COMMUNITY_NOT_FOUND` as a follow-up — the mechanism will already exist. | Future slice           |
+| 3   | **User-targeting UX.** Pasting a UUID is deliberately crude. Alternatives: email input resolved server-side, or a picker filtered by eligible global role. Each implies real API surface (user lookup by email, or a filtered list endpoint).                                                                                                    | **Deferred beyond this slice** — settled. Do not solve here.                                                                                                                                                                                                                                                                                                                                | Future slice           |
+| 4   | **Error-code contract location.** `users-minimal-ui`'s design mirrored `UserErrorCode` as a literal union in web code and named an explicit rule-of-three trigger: _"hoist a shared error-code contract when `community` adds its own codes"_. **This slice is that trigger.** Hoist into `@sf-manager/validation` (ADR-015), or mirror again?   | **Open — `sdd-design` decides**, and must address the trigger explicitly rather than silently repeating the mirror.                                                                                                                                                                                                                                                                         | `sdd-design`           |
+| 5   | **Data-fetching approach.** `users-minimal-ui`'s design deferred TanStack Query with the trigger _"two or more collections whose mutations invalidate each other — `community` is the likely first real case"_. This slice has three collections per detail page and mutations that change rows the client did not touch. **Also that trigger.** | **Open — `sdd-design` decides** with evidence. Keeping `apiFetch` + refetch is a legitimate answer; making it by default is not.                                                                                                                                                                                                                                                            | `sdd-design`           |
+| 6   | **Two assignment sections: one shared component or two?** They share a shape but not their rules (exclusivity, warning, and `TransactionConflictError` apply to representatives only). The original `community` proposal already flagged premature generic abstraction as a domain-level risk.                                                   | **Open — `sdd-design` decides**, with rationale. Neither duplication nor abstraction is assumed.                                                                                                                                                                                                                                                                                            | `sdd-design`           |
+| 7   | **Detail/edit page data source.** There is no `GET /communities/:id`; direction is set (fetch the list and select by `:id`, mirroring `users-minimal-ui` Decision 5), but the detail page needs the community _and_ two assignment lists — up to three requests per navigation.                                                                  | **Direction set, bounded** — no new endpoint; this slice validates the existing contract and must _surface_ the missing endpoint as evidence, not paper over it. Design owns request sequencing and the not-found state.                                                                                                                                                                    | `sdd-design` (bounded) |
+| 8   | **No navigation entry point.** `apps/web` has no nav bar; `users-minimal-ui` added no `/` → `/users` link either. `/communities` will be equally unreachable without typing the URL.                                                                                                                                                             | **Pre-existing gap, out of scope** — flagged, not introduced here. _Revisit trigger_: it now affects two sections, so the next UI slice should either add a minimal nav or record why not.                                                                                                                                                                                                  | Future slice           |
 
 ## Next step
 

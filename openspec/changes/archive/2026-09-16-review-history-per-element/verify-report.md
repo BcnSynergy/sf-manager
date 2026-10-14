@@ -14,12 +14,12 @@ needed to clear it — one spec amendment is.
 
 ## 1. Completeness — tasks
 
-| Phase | Tasks | Checked `[x]` | Verified against files |
-|---|---|---|---|
-| Phase 1 (PR1 #121) | 8 (1.1-1.7 + 1.5a) | 8 | 8 |
-| Phase 2 (PR2 #122) | 7 (2.1-2.7) | 7 | 7 |
-| Phase 3 (PR3 #123) | 9 (3.1-3.9) | 9 | 9 |
-| **Total** | **24** | **all** | **all** |
+| Phase              | Tasks              | Checked `[x]` | Verified against files |
+| ------------------ | ------------------ | ------------- | ---------------------- |
+| Phase 1 (PR1 #121) | 8 (1.1-1.7 + 1.5a) | 8             | 8                      |
+| Phase 2 (PR2 #122) | 7 (2.1-2.7)        | 7             | 7                      |
+| Phase 3 (PR3 #123) | 9 (3.1-3.9)        | 9             | 9                      |
+| **Total**          | **24**             | **all**       | **all**                |
 
 No unchecked task. Spot-check evidence (sampled against files, not trusted from the checkbox):
 
@@ -39,15 +39,15 @@ No unchecked task. Spot-check evidence (sampled against files, not trusted from 
 
 ## 2. Build, tests, runtime evidence
 
-| Command | Result |
-|---|---|
-| `npm run test --workspace=apps/api` | **PASS** — 111 suites, 909 tests, 12.3 s |
-| `npm run test:e2e --workspace=apps/api` | **PASS** — 10 suites, 349 tests, 15.2 s |
-| `npm run test --workspace=apps/web` | **PASS** — 48 files, 739 tests, 39.7 s |
+| Command                                                                                            | Result                                                                                                                   |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `npm run test --workspace=apps/api`                                                                | **PASS** — 111 suites, 909 tests, 12.3 s                                                                                 |
+| `npm run test:e2e --workspace=apps/api`                                                            | **PASS** — 10 suites, 349 tests, 15.2 s                                                                                  |
+| `npm run test --workspace=apps/web`                                                                | **PASS** — 48 files, 739 tests, 39.7 s                                                                                   |
 | `npm run test:integration --workspace=apps/api` (real Postgres, `prisma migrate deploy` run first) | **1 FAIL / 139 PASS**, 22 suites — see W-6; the failure is environmental and lives in a module this change never touched |
-| `npx jest --testRegex=".*\.integration\.spec\.ts$" -t "ForElement"` | **PASS** — 6/6 |
-| `npm run lint` | **PASS** — 0 errors (4 pre-existing warnings in the untouched `auth.controller.spec.ts`) |
-| `npm run build` | **PASS** — 4/4 turbo tasks |
+| `npx jest --testRegex=".*\.integration\.spec\.ts$" -t "ForElement"`                                | **PASS** — 6/6                                                                                                           |
+| `npm run lint`                                                                                     | **PASS** — 0 errors (4 pre-existing warnings in the untouched `auth.controller.spec.ts`)                                 |
+| `npm run build`                                                                                    | **PASS** — 4/4 turbo tasks                                                                                               |
 
 Postgres reachable (`sf-manager-postgres-1`, up 4 h); migrations deployed before the run.
 
@@ -57,41 +57,41 @@ Postgres reachable (`sf-manager-postgres-1`, up 4 h); migrations deployed before
 
 ### `review-history` (4 ADDED, 2 MODIFIED requirements)
 
-| Requirement | Status | Runtime evidence |
-|---|---|---|
-| One Inspectable Element's Completed Review History | **PASS** | e2e `review-history.e2e-spec.ts:2816/2829/2845/2861` (cross-session, cross-performer); header fields at `:3025`; draft exclusion at integration `:1610`; answers absent from `ElementReviewHistoryRowDto` |
-| The Five Visibility Scopes Apply at Entry Level | **PASS** | unit `review-history-access.service.spec.ts:705-950` (11 branch tests); e2e `:2816-2881` five-scope matrix |
-| Element Reachability Decides 404 Versus an Empty History | **PASS** | e2e `:2904` (empty state: admin / granted MANAGER / assigned rep), `:2929` (404: technician + company manager), `:2966`, `:2990`, `:3025` |
-| An Element Belongs to Exactly One Community for Its Lifetime | **PASS** | `apps/api/src/modules/inspectable-element/**` byte-unchanged across `7c7d617..fa40bce`; no reassignment path exists |
+| Requirement                                                         | Status      | Runtime evidence                                                                                                                                                                                                        |
+| ------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One Inspectable Element's Completed Review History                  | **PASS**    | e2e `review-history.e2e-spec.ts:2816/2829/2845/2861` (cross-session, cross-performer); header fields at `:3025`; draft exclusion at integration `:1610`; answers absent from `ElementReviewHistoryRowDto`               |
+| The Five Visibility Scopes Apply at Entry Level                     | **PASS**    | unit `review-history-access.service.spec.ts:705-950` (11 branch tests); e2e `:2816-2881` five-scope matrix                                                                                                              |
+| Element Reachability Decides 404 Versus an Empty History            | **PASS**    | e2e `:2904` (empty state: admin / granted MANAGER / assigned rep), `:2929` (404: technician + company manager), `:2966`, `:2990`, `:3025`                                                                               |
+| An Element Belongs to Exactly One Community for Its Lifetime        | **PASS**    | `apps/api/src/modules/inspectable-element/**` byte-unchanged across `7c7d617..fa40bce`; no reassignment path exists                                                                                                     |
 | History Scope Is Carried by the Query, Not by the Caller (MODIFIED) | **PARTIAL** | enumeration guard integration `:760-779` covers the "exactly two unscoped reads" count; the "reachable only from the admin and granted-manager paths, no sampling" half is enforced for the session pair only — see W-3 |
-| The Deferred Review Visibility Scopes Are Not Built (MODIFIED) | **PASS** | e2e `:3108` (ROLE_PERMISSIONS), `:3127` (no GET by-id), `:3140` (element port gained nothing), `:3098` (no list-control params) |
+| The Deferred Review Visibility Scopes Are Not Built (MODIFIED)      | **PASS**    | e2e `:3108` (ROLE_PERMISSIONS), `:3127` (no GET by-id), `:3140` (element port gained nothing), `:3098` (no list-control params)                                                                                         |
 
 ### `review-history-ui` (3 ADDED, 3 MODIFIED)
 
-| Requirement | Status | Runtime evidence |
-|---|---|---|
-| An Element's Own Review History Page | **PASS** | `ElementReviewHistoryPage.test.tsx` — loading / empty / error states, label-map type rendering, per-row session links, no controls |
-| Two Entry Links Reach the Element History Page | **PASS** | `CommunityElementsListPage.test.tsx:146`; `ReviewHistoryDetailPage.test.tsx:172` (positive, `e1`) plus the negative case asserting no link for the null-`elementCode` fixture `e2` |
-| The Element History Route Is Gated on the Five History Roles... | **PARTIAL** | `ProtectedRoute.test.tsx:326-400` asserts the five-role allowance and an admin-only sibling, but is not bound to `App.tsx`'s actual route — see W-4 |
-| Role-Gated Route Access for the History Views (MODIFIED) | **PASS** | same block plus the pre-existing `/review-history*` family block |
-| Internationalization Coverage (MODIFIED) | **PASS** | `locales.test.ts` +42 lines of parity assertions; `en`/`es`/`ca` all carry real, non-placeholder values for the 13 `reviewHistory.elementHistory.*` keys plus `detail.elementHistoryLink` and `inspectableElement.list.historyLink` |
-| No Filtering, Analytics or Adjacent Controls Ship (MODIFIED) | **PASS** | e2e `:3098` (query params have no effect); the page renders no control beyond its links |
+| Requirement                                                     | Status      | Runtime evidence                                                                                                                                                                                                                    |
+| --------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An Element's Own Review History Page                            | **PASS**    | `ElementReviewHistoryPage.test.tsx` — loading / empty / error states, label-map type rendering, per-row session links, no controls                                                                                                  |
+| Two Entry Links Reach the Element History Page                  | **PASS**    | `CommunityElementsListPage.test.tsx:146`; `ReviewHistoryDetailPage.test.tsx:172` (positive, `e1`) plus the negative case asserting no link for the null-`elementCode` fixture `e2`                                                  |
+| The Element History Route Is Gated on the Five History Roles... | **PARTIAL** | `ProtectedRoute.test.tsx:326-400` asserts the five-role allowance and an admin-only sibling, but is not bound to `App.tsx`'s actual route — see W-4                                                                                 |
+| Role-Gated Route Access for the History Views (MODIFIED)        | **PASS**    | same block plus the pre-existing `/review-history*` family block                                                                                                                                                                    |
+| Internationalization Coverage (MODIFIED)                        | **PASS**    | `locales.test.ts` +42 lines of parity assertions; `en`/`es`/`ca` all carry real, non-placeholder values for the 13 `reviewHistory.elementHistory.*` keys plus `detail.elementHistoryLink` and `inspectableElement.list.historyLink` |
+| No Filtering, Analytics or Adjacent Controls Ship (MODIFIED)    | **PASS**    | e2e `:3098` (query params have no effect); the page renders no control beyond its links                                                                                                                                             |
 
 ### `authorization` (2 ADDED, 1 MODIFIED)
 
-| Requirement | Status | Runtime evidence |
-|---|---|---|
+| Requirement                                                       | Status   | Runtime evidence                                                                                                                                                         |
+| ----------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Gated on `reviewSession:read`, Never on `inspectableElement:read` | **PASS** | `review-history.controller.ts:96`; e2e `:3108` (ROLE_PERMISSIONS unchanged), `:3155` (element-management surface not widened), `:3121` (401 before permission and scope) |
-| Entry-Level Resource Scope for the Element-Keyed Read | **PASS** | unit + e2e five-scope matrix as above |
-| The Deferred Review Visibility Scopes Grant Nothing (MODIFIED) | **PASS** | `apps/api/src/modules/auth/**` and `packages/**` byte-unchanged across the whole change range |
+| Entry-Level Resource Scope for the Element-Keyed Read             | **PASS** | unit + e2e five-scope matrix as above                                                                                                                                    |
+| The Deferred Review Visibility Scopes Grant Nothing (MODIFIED)    | **PASS** | `apps/api/src/modules/auth/**` and `packages/**` byte-unchanged across the whole change range                                                                            |
 
 ### Live-spec merge integrity (structural re-verification on `main`)
 
-| Capability | Requirements before -> after | Scenarios before -> after | Requirements lost | Scenarios lost without a narrowed replacement |
-|---|---|---|---|---|
-| `review-history` | 14 -> 18 | 83 -> 115 | **0** | **0** (7 renamed / narrowed, each traced to its successor) |
-| `review-history-ui` | 10 -> 13 | 51 -> 78 | **0** | **0** (1 renamed: *No per-element history view exists* -> *Exactly one per-element history view exists, reachable from exactly two links*) |
-| `authorization` | 24 -> 26 | 123 -> 140 | **0** | **0** (2 renamed) |
+| Capability          | Requirements before -> after | Scenarios before -> after | Requirements lost | Scenarios lost without a narrowed replacement                                                                                              |
+| ------------------- | ---------------------------- | ------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `review-history`    | 14 -> 18                     | 83 -> 115                 | **0**             | **0** (7 renamed / narrowed, each traced to its successor)                                                                                 |
+| `review-history-ui` | 10 -> 13                     | 51 -> 78                  | **0**             | **0** (1 renamed: _No per-element history view exists_ -> _Exactly one per-element history view exists, reachable from exactly two links_) |
+| `authorization`     | 24 -> 26                     | 123 -> 140                | **0**             | **0** (2 renamed)                                                                                                                          |
 
 Every "removed" scenario title maps to a narrowed successor named in the corresponding
 delta's `(Previously: ...)` note. No pre-existing requirement was dropped or corrupted.
@@ -100,16 +100,16 @@ delta's `(Previously: ...)` note. No pre-existing requirement was dropped or cor
 
 ## 4. Design coherence
 
-| Design decision | Shipped as designed? |
-|---|---|
-| D1 — four flattened-row port methods, scope in every signature | **Yes** |
-| D2 — entry-first two-query join, in-memory narrowing step | **Yes** (`prisma-review-session.repository.ts:418-457`) |
-| D3 — single-column `@@index([inspectableElementId])`, own migration, own PR | **Yes** (verified in real Postgres) |
-| D4 — discriminated union on `ReviewHistoryAccessService`, fail-closed before any repository call | **Yes** |
+| Design decision                                                                                  | Shipped as designed?                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1 — four flattened-row port methods, scope in every signature                                   | **Yes**                                                                                                                                                                                                                                                                                     |
+| D2 — entry-first two-query join, in-memory narrowing step                                        | **Yes** (`prisma-review-session.repository.ts:418-457`)                                                                                                                                                                                                                                     |
+| D3 — single-column `@@index([inspectableElementId])`, own migration, own PR                      | **Yes** (verified in real Postgres)                                                                                                                                                                                                                                                         |
+| D4 — discriminated union on `ReviewHistoryAccessService`, fail-closed before any repository call | **Yes**                                                                                                                                                                                                                                                                                     |
 | D5 — element first, one throw site, `reviewed` derived, one community + one batched email lookup | **Yes**, with one omission: `completedAt` exists on `ElementReviewEntryRow` but is not carried into `ReadElementReviewHistoryRow` or the DTO. The design's data-flow sketch listed it; no spec requirement names it (the spec's "when" is `recordedAt`) and the UI does not use it. Benign. |
-| D6 — route on `ReviewHistoryController`, one coded 404 | **Yes** |
-| D7 — one page, anomalous five-role gate + in-file comment, two entry links | **Yes** |
-| D1's "shared adapter constant applied by the use case" | **Deviated** — see W-2 |
+| D6 — route on `ReviewHistoryController`, one coded 404                                           | **Yes**                                                                                                                                                                                                                                                                                     |
+| D7 — one page, anomalous five-role gate + in-file comment, two entry links                       | **Yes**                                                                                                                                                                                                                                                                                     |
+| D1's "shared adapter constant applied by the use case"                                           | **Deviated** — see W-2                                                                                                                                                                                                                                                                      |
 
 ---
 
@@ -133,18 +133,18 @@ and use case returning one inspectable element's past reviews", and a search of 
 routes / pages / use cases / repository queries **does** find them.
 
 Scenario `:500` is deliberately **unqualified** — its two immediate neighbours at `:480` and
-`:495` both say "*this capability's* own routes...", so the absence of that qualifier here is
+`:495` both say "_this capability's_ own routes...", so the absence of that qualifier here is
 authored intent, not an oversight. Line `:475`'s row header also still reads
 "FR-008 (**remaining half**)" while FR-008 is closed.
 
 The proposal committed to fixing exactly this:
 
-- `proposal.md:124-127` — *"Narrowing (not deleting) the shipped guards this slice makes false: `review-history`'s **and `review-session-management`'s** 'No per-element review history surface exists' scenarios..."*
-- `proposal.md:189-191` — Modified Capabilities lists `review-session-management`: *"narrow its FR-008 deferral row and its 'No per-element review history surface exists' scenario."*
+- `proposal.md:124-127` — _"Narrowing (not deleting) the shipped guards this slice makes false: `review-history`'s **and `review-session-management`'s** 'No per-element review history surface exists' scenarios..."_
+- `proposal.md:189-191` — Modified Capabilities lists `review-session-management`: _"narrow its FR-008 deferral row and its 'No per-element review history surface exists' scenario."_
 
 `sdd-spec` produced no delta for that capability, and `tasks.md:56` (task 3.7) recorded the
-gap as an observation — *"those two names in the original task line were not backed by an
-actual delta"* — rather than escalating it. The equivalent guards in `review-history` and
+gap as an observation — _"those two names in the original task line were not backed by an
+actual delta"_ — rather than escalating it. The equivalent guards in `review-history` and
 `review-history-ui` **were** correctly narrowed; only this one was left standing.
 
 **Impact**: documentation-only, zero runtime effect. But `main` now carries a merged spec
@@ -153,7 +153,7 @@ archiving in this state would record a self-contradicting spec set as the projec
 
 **Remediation** (no code change): amend `review-session-management/spec.md` the same way
 `review-history`'s guard was amended — narrow row `:475` and scenario `:500-503` to bound
-them to *this* capability's own surface, with a `(Previously: ...)` note, and drop the
+them to _this_ capability's own surface, with a `(Previously: ...)` note, and drop the
 "remaining half" framing now that FR-008 is closed.
 
 ---
@@ -164,20 +164,20 @@ them to *this* capability's own surface, with a `(Previously: ...)` note, and dr
 
 **File**: `openspec/specs/review-history/spec.md:36-38`
 
-> *"No new scope, no new permission, no new authorization primitive and **no schema change** ships"*
+> _"No new scope, no new permission, no new authorization primitive and **no schema change** ships"_
 
 The change shipped `@@index([inspectableElementId])` on `ElementReviewEntry` plus migration
 `20260915120000_add_element_review_entry_inspectable_element_index`. The claim is inherited
 verbatim from the delta's Purpose amendment, which was written from the **proposal's**
-premise (`proposal.md:31` — *"no schema change, no migration"*), a premise `sdd-design`
-explicitly overrode at `design.md:11-14` (*"There is **one** schema object this design does
-add, and the proposal explicitly left the call here"*) and again in OQ3 at `design.md:566-573`.
+premise (`proposal.md:31` — _"no schema change, no migration"_), a premise `sdd-design`
+explicitly overrode at `design.md:11-14` (_"There is **one** schema object this design does
+add, and the proposal explicitly left the call here"_) and again in OQ3 at `design.md:566-573`.
 `sdd-spec` did not carry the override into the Purpose prose.
 
-Related, same file `:1079`: *"the `ManagerCapability` enum and the `User.managerCapabilities`
-column MUST remain the only additive schema objects the history slices introduced"* — an
+Related, same file `:1079`: _"the `ManagerCapability` enum and the `User.managerCapabilities`
+column MUST remain the only additive schema objects the history slices introduced"_ — an
 index is an additive schema object, so this clause is now literally false too. The scenario's
-enumerated prohibition (*no table, no column, no enum, no backfill, no data migration*) still
+enumerated prohibition (_no table, no column, no enum, no backfill, no data migration_) still
 holds, and the very next scenario at `:1081-1084` explicitly sanctions a measured index, so
 there is no behavioural conflict — only prose contradicting the shipped migration.
 
@@ -185,14 +185,14 @@ there is no behavioural conflict — only prose contradicting the shipped migrat
 
 **Files**: `prisma-review-session.repository.ts:30-46` and `read-element-review-history.use-case.ts:44-59`
 
-`ELEMENT_HISTORY_ORDER_BY` is exported from the adapter with the comment *"Exported so the
-use case (Phase 2) applies it ONCE after the in-memory join"* — but nothing imports it.
+`ELEMENT_HISTORY_ORDER_BY` is exported from the adapter with the comment _"Exported so the
+use case (Phase 2) applies it ONCE after the in-memory join"_ — but nothing imports it.
 `grep -rn "ELEMENT_HISTORY_ORDER_BY" apps/` returns only its own declaration and a mention in
 the port's comment at `:186`. The use case instead carries a byte-identical private copy
 named `elementHistoryOrder`.
 
 Root cause is a design decision that is unimplementable as literally written: `design.md`
-Decision 1 called for *"a new shared adapter constant ... applied by the use case"*, but
+Decision 1 called for _"a new shared adapter constant ... applied by the use case"_, but
 ADR-013 / `no-restricted-imports` forbid the application layer importing from
 `infrastructure/persistence/**`. The pragmatic resolution taken is correct; what was not done
 is deleting the now-orphaned adapter copy and correcting its comment.
@@ -211,14 +211,14 @@ that `findCompletedAcrossInstallation|findCompletedByIdAcrossInstallation` appea
 three** production files. `findCompletedEntriesForElementAcrossInstallation` — the second
 actor-unscoped read this change introduces — has **no** equivalent guard.
 
-`design.md:65-68` anticipated the regex mismatch and framed it as a non-issue (*"does not
-match it, so that guard and its file allowlist are unaffected"*), which is true of the
+`design.md:65-68` anticipated the regex mismatch and framed it as a non-issue (_"does not
+match it, so that guard and its file allowlist are unaffected"_), which is true of the
 existing guard but leaves the new method unprotected. The merged spec now promises more than
 the suite delivers:
 
-> `openspec/specs/review-history/spec.md` — *"Scenario: The actor-unscoped reads are reachable
+> `openspec/specs/review-history/spec.md` — _"Scenario: The actor-unscoped reads are reachable
 > only from the admin and granted-manager paths / ... WHEN every one of them is enumerated —
-> **no sampling**"*
+> **no sampling**"_
 
 A second production caller of the element-keyed unscoped read would break no test today. The
 current state is correct — verified by grep: port, Prisma adapter, access service, plus the
@@ -235,8 +235,8 @@ prove that the element-history route carries that array. Narrowing `App.tsx:195-
 against — would fail no test in the repo. Confirmed: no test file references `App.tsx`'s route
 table, and there is no `App.test.tsx`.
 
-`App.tsx:186` asserts *"ProtectedRoute.test.tsx pins both facts"*, and the spec scenario *"The
-divergence is documented and gate-tested"* is satisfied only in letter. The same decoupling
+`App.tsx:186` asserts _"ProtectedRoute.test.tsx pins both facts"_, and the spec scenario _"The
+divergence is documented and gate-tested"_ is satisfied only in letter. The same decoupling
 exists in the pre-existing `/review-history*` block directly above it, so this follows
 precedent rather than introducing a new pattern — but the anomalous route is precisely the one
 where a real binding would be worth most.
@@ -245,13 +245,13 @@ where a real binding would be worth most.
 
 **File**: `openspec/specs/inspectable-element-admin-ui/spec.md:5-20`
 
-The Purpose still describes the element list as carrying *"a per-element Print entry point into
-`element-label-printing`"* and nothing else, but `CommunityElementsListPage.tsx:160` now also
+The Purpose still describes the element list as carrying _"a per-element Print entry point into
+`element-label-printing`"_ and nothing else, but `CommunityElementsListPage.tsx:160` now also
 renders a per-row History link. `proposal.md:194-195` listed `inspectable-element-admin-ui`
 under Modified Capabilities for exactly this; no delta was written (same root cause as C-1).
 
-Lower severity than C-1 because nothing in this capability *forbids* the link, and the link
-**is** specified — by `review-history-ui`'s *Two Entry Links Reach the Element History Page*,
+Lower severity than C-1 because nothing in this capability _forbids_ the link, and the link
+**is** specified — by `review-history-ui`'s _Two Entry Links Reach the Element History Page_,
 which explicitly owns the element-list row link. This is an incomplete cross-reference, not a
 contradiction.
 
@@ -272,7 +272,7 @@ database. The offending row:
     deactivatedAt  2026-09-16 09:00:08.179
 
 That is the decommissioned-element fixture seeded for task 3.9's browser verification
-(`tasks.md:58` — *"decommissioned-element badge with preserved history"*), timestamped the same
+(`tasks.md:58` — _"decommissioned-element badge with preserved history"_), timestamped the same
 morning.
 
 **Not a code defect**: the spec file was last modified by PR #88, long before this change, and
@@ -282,7 +282,7 @@ change never touched that module. All element-history integration suites pass
 
 Recorded anyway because it is real and reproducible: this change's own verification step left
 the shared dev database in a state that breaks `npm run test:integration`, and the underlying
-test's whole-database assertion means *any* decommissioned element — a legitimate domain state
+test's whole-database assertion means _any_ decommissioned element — a legitimate domain state
 this app supports — breaks it. Clearing the fixture row restores a green run; the brittle
 assertion deserves a separate look.
 
@@ -315,14 +315,14 @@ dependency in a comment.
 Each has a session-level counterpart that **is** e2e-tested; the element-keyed variant is
 structurally guaranteed but unexercised end to end:
 
-- *A technician's own entry survives their assignment's deactivation* — the technician branch
+- _A technician's own entry survives their assignment's deactivation_ — the technician branch
   (`review-history-access.service.ts:248-257`) consults no assignment checker at all, pinned by
   `review-history-access.service.spec.ts:739` (`not.toHaveBeenCalled()`). Session-level version:
   `review-history.e2e-spec.ts:1400`.
-- *Attribution survives the performer's transfer on the element read too* — identical
+- _Attribution survives the performer's transfer on the element read too_ — identical
   `performedByCompanyId` predicate (`prisma-review-session.repository.ts:489`). Session-level
   version: `prisma-review-session.repository.integration.spec.ts:1094`.
-- *Revoking the capability removes element history on the next request* — the capability is
+- _Revoking the capability removes element history on the next request_ — the capability is
   resolved per request with no cache (`review-history-access.service.ts:310-317`), and granted
   and ungranted MANAGER are both e2e-tested (`:2861`, `:2881`), but there is no
   revoke-then-repeat case.
@@ -333,18 +333,18 @@ structurally guaranteed but unexercised end to end:
 
 `git diff 7c7d617 fa40bce --stat -- apps/api/src/modules/auth/ apps/api/src/modules/inspectable-element/ packages/` -> **empty output**.
 
-| Guard | Result |
-|---|---|
-| `ROLE_PERMISSIONS` byte-unchanged; no role gained `inspectableElement:read` | **Confirmed** (`auth/` untouched) |
-| `InspectableElementRepository` gained no method | **Confirmed** (`inspectable-element/` untouched) |
-| No `GET` by-id inspectable-element endpoint | **Confirmed** (controller untouched; e2e `:3127`) |
-| `Permission` union and `PermissionChecker.can` signature unchanged | **Confirmed** (`packages/` untouched) |
-| `SessionAccessService` and the whole write path untouched | **Confirmed** (absent from the diffstat) |
-| `listForActor` / `loadByRole` unchanged | **Confirmed** (only additive hunks in the access service) |
-| The only schema change is the one additive index | **Confirmed** (one migration dir; `schema.prisma` +12 lines, all index + comment) |
-| No filter / sort / page / search control on any history surface | **Confirmed** (e2e `:3098`; the page renders none) |
-| No demo-mode branch added | **Confirmed** (no `demo` reference anywhere in the change's diff) |
-| Every new port method carries a scope except the one documented carve-out | **Confirmed** (port `:192-219`) |
+| Guard                                                                       | Result                                                                            |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `ROLE_PERMISSIONS` byte-unchanged; no role gained `inspectableElement:read` | **Confirmed** (`auth/` untouched)                                                 |
+| `InspectableElementRepository` gained no method                             | **Confirmed** (`inspectable-element/` untouched)                                  |
+| No `GET` by-id inspectable-element endpoint                                 | **Confirmed** (controller untouched; e2e `:3127`)                                 |
+| `Permission` union and `PermissionChecker.can` signature unchanged          | **Confirmed** (`packages/` untouched)                                             |
+| `SessionAccessService` and the whole write path untouched                   | **Confirmed** (absent from the diffstat)                                          |
+| `listForActor` / `loadByRole` unchanged                                     | **Confirmed** (only additive hunks in the access service)                         |
+| The only schema change is the one additive index                            | **Confirmed** (one migration dir; `schema.prisma` +12 lines, all index + comment) |
+| No filter / sort / page / search control on any history surface             | **Confirmed** (e2e `:3098`; the page renders none)                                |
+| No demo-mode branch added                                                   | **Confirmed** (no `demo` reference anywhere in the change's diff)                 |
+| Every new port method carries a scope except the one documented carve-out   | **Confirmed** (port `:192-219`)                                                   |
 
 ---
 
@@ -377,15 +377,15 @@ docs-only, no source change, no tests affected:
 
 - **C-1** — `openspec/specs/review-session-management/spec.md`: the `Deferred to` table row
   (was `FR-008 (remaining half)`) now reads `FR-008 (closed — per-element history shipped in
-  \`review-history\` / \`review-history-ui\`)`, and the *No per-element review history surface
-  exists* scenario is renamed *The per-element review history read lives in review-history, not
-  here* and scoped to "this capability's own routes, pages, use cases and repository queries"
-  (mirroring its sibling scenarios), with a `(Previously: ...)` note explaining the narrowing.
+\`review-history\` / \`review-history-ui\`)`, and the *No per-element review history surface
+exists* scenario is renamed *The per-element review history read lives in review-history, not
+here* and scoped to "this capability's own routes, pages, use cases and repository queries"
+(mirroring its sibling scenarios), with a `(Previously: ...)` note explaining the narrowing.
 - **W-1** — `openspec/specs/review-history/spec.md`: the Purpose section's "no schema change
   ships" claim is corrected to name the one additive index on
   `ElementReviewEntry.inspectableElementId`, consistent with `design.md`'s OQ3/Decision 3. The
-  *"the ManagerCapability enum and the User.managerCapabilities column MUST remain the only
-  additive schema objects"* scenario at (was) `:1079` is corrected the same way — title and THEN
+  _"the ManagerCapability enum and the User.managerCapabilities column MUST remain the only
+  additive schema objects"_ scenario at (was) `:1079` is corrected the same way — title and THEN
   clause now name the index alongside the enum/column as the additive schema objects the history
   slices introduced.
 - **W-5** — `openspec/specs/inspectable-element-admin-ui/spec.md`: the Purpose section's
@@ -452,15 +452,15 @@ the actual files rather than trusted from the addenda.
 
 ## R1. Test, build and lint evidence (all executed this pass)
 
-| Command | Result |
-|---|---|
-| `npm run test --workspace=apps/api` | **PASS** — 111 suites, 909 tests, 65.5 s |
-| `npm run test:e2e --workspace=apps/api` | **PASS** — 10 suites, 349 tests, 16.2 s |
-| `npm run test --workspace=apps/web` | **PASS** — 48 files, 740 tests, 35.6 s |
-| `npm run test:integration --workspace=apps/api` (real Postgres, `prisma migrate deploy` first — "No pending migrations") | **140 PASS / 1 FAIL**, 22 suites, 141 tests — the single failure is W-6, unchanged (see R4) |
-| `npx jest --testRegex=".*\.integration\.spec\.ts$" --testPathIgnorePatterns=/node_modules/ -t "findCompletedEntriesForElement"` | **PASS** — 7/7 (was 6/6 before W-3's new guard; the guard executes and passes) |
-| `npm run lint` | **PASS** — 5/5 turbo tasks, **0 errors**, 4 pre-existing warnings in the untouched `auth.controller.spec.ts`. `eslint --fix` left the tree clean (`git status --porcelain` empty afterwards) |
-| `npm run build` (`prisma generate && nest build` for api; `tsc -b && vite build` for web) | **PASS** — 4/4 turbo tasks |
+| Command                                                                                                                         | Result                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test --workspace=apps/api`                                                                                             | **PASS** — 111 suites, 909 tests, 65.5 s                                                                                                                                                     |
+| `npm run test:e2e --workspace=apps/api`                                                                                         | **PASS** — 10 suites, 349 tests, 16.2 s                                                                                                                                                      |
+| `npm run test --workspace=apps/web`                                                                                             | **PASS** — 48 files, 740 tests, 35.6 s                                                                                                                                                       |
+| `npm run test:integration --workspace=apps/api` (real Postgres, `prisma migrate deploy` first — "No pending migrations")        | **140 PASS / 1 FAIL**, 22 suites, 141 tests — the single failure is W-6, unchanged (see R4)                                                                                                  |
+| `npx jest --testRegex=".*\.integration\.spec\.ts$" --testPathIgnorePatterns=/node_modules/ -t "findCompletedEntriesForElement"` | **PASS** — 7/7 (was 6/6 before W-3's new guard; the guard executes and passes)                                                                                                               |
+| `npm run lint`                                                                                                                  | **PASS** — 5/5 turbo tasks, **0 errors**, 4 pre-existing warnings in the untouched `auth.controller.spec.ts`. `eslint --fix` left the tree clean (`git status --porcelain` empty afterwards) |
+| `npm run build` (`prisma generate && nest build` for api; `tsc -b && vite build` for web)                                       | **PASS** — 4/4 turbo tasks                                                                                                                                                                   |
 
 **Two environmental false alarms encountered and resolved — recorded for honesty, not as findings:**
 
@@ -502,38 +502,38 @@ checkbox. Spot evidence re-confirmed on `4227204`:
 
 ## R3. Status of every finding from the original pass
 
-| ID | Original severity | Status now | Evidence re-checked this pass |
-|---|---|---|---|
-| **C-1** | CRITICAL | **CLOSED** | `openspec/specs/review-session-management/spec.md:475` now reads `FR-008 (closed — per-element history shipped in review-history / review-history-ui)` and scopes the row to "**this** capability's own routes, use cases or repository reads"; `:500` renamed *The per-element review history read lives in review-history, not here* with a `(Previously: ...)` note at `:504`. Requirement/scenario counts for that capability are **14 to 14** and **62 to 62** across `7c7d617..4227204` — narrowed in place, nothing deleted. |
-| **W-1** | WARNING | **CLOSED** | `openspec/specs/review-history/spec.md:36-39` now states "the only additive schema object is a single-column index on `ElementReviewEntry.inspectableElementId`"; `:1079-1082` renamed *The capability column and the element-index stay the only additive schema changes*, THEN clause names the index alongside the enum and column. |
-| **W-2** | WARNING | **CLOSED** (one residual, see N-1) | `grep -rn "ELEMENT_HISTORY_ORDER_BY" apps/ --include=*.ts` returns **no match anywhere**. The port's cross-reference at `:186-188` now correctly points at "the use case's own private `elementHistoryOrder` comparator". |
-| **W-3** | WARNING | **CLOSED** | `prisma-review-session.repository.integration.spec.ts:859-891` — a real file-scan guard mirroring the shipped installation-wide one: same `**/testing/**` + `*.spec.ts` exclusions, `toHaveLength(3)` plus a per-suffix assertion for port / Prisma adapter / `ReviewHistoryAccessService`. Not vacuous: it asserts an exact count, so a 4th production caller fails it. **Executed and green** this pass (targeted run 7/7). |
-| **W-4** | WARNING | **CLOSED for the failure mode it named** (residual, see N-3) | `apps/web/src/auth/element-history-route.roles.ts:17` is the single definition; `App.tsx:3` and `ProtectedRoute.test.tsx:5` both import it. `ProtectedRoute.test.tsx:338` pins the array's exact contents and `:365` drives `it.each` from it. Narrowing the shared constant now fails the suite — the exact regression W-4 described. |
-| **W-5** | WARNING | **CLOSED** | `openspec/specs/inspectable-element-admin-ui/spec.md:4-12` Purpose now names "a per-element History entry point into the element's own review-history page, owned and specified by `review-history-ui`". Counts **14 to 14** requirements, **32 to 32** scenarios. |
-| **W-6** | WARNING | **OPEN — reproduced, root cause re-confirmed directly** | See R4. |
-| **S-1** | SUGGESTION | **OPEN** | `ElementReviewHistoryPage.tsx:139` still renders `<span>{entry.recordedAt}</span>` raw. |
-| **S-2** | SUGGESTION | **OPEN** | `ElementReviewHistoryPage.tsx:136-137` still keys rows on `entry.reviewSessionId`; the DTO still exposes no `entryId`. |
-| **S-3** | SUGGESTION | **OPEN** | The 17 element-history e2e titles contain no revoke-then-repeat case, no element-level assignment-deactivation case and no element-level performer-transfer case. Structural arguments unchanged and still sound. |
+| ID      | Original severity | Status now                                                   | Evidence re-checked this pass                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------- | ----------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **C-1** | CRITICAL          | **CLOSED**                                                   | `openspec/specs/review-session-management/spec.md:475` now reads `FR-008 (closed — per-element history shipped in review-history / review-history-ui)` and scopes the row to "**this** capability's own routes, use cases or repository reads"; `:500` renamed _The per-element review history read lives in review-history, not here_ with a `(Previously: ...)` note at `:504`. Requirement/scenario counts for that capability are **14 to 14** and **62 to 62** across `7c7d617..4227204` — narrowed in place, nothing deleted. |
+| **W-1** | WARNING           | **CLOSED**                                                   | `openspec/specs/review-history/spec.md:36-39` now states "the only additive schema object is a single-column index on `ElementReviewEntry.inspectableElementId`"; `:1079-1082` renamed _The capability column and the element-index stay the only additive schema changes_, THEN clause names the index alongside the enum and column.                                                                                                                                                                                              |
+| **W-2** | WARNING           | **CLOSED** (one residual, see N-1)                           | `grep -rn "ELEMENT_HISTORY_ORDER_BY" apps/ --include=*.ts` returns **no match anywhere**. The port's cross-reference at `:186-188` now correctly points at "the use case's own private `elementHistoryOrder` comparator".                                                                                                                                                                                                                                                                                                           |
+| **W-3** | WARNING           | **CLOSED**                                                   | `prisma-review-session.repository.integration.spec.ts:859-891` — a real file-scan guard mirroring the shipped installation-wide one: same `**/testing/**` + `*.spec.ts` exclusions, `toHaveLength(3)` plus a per-suffix assertion for port / Prisma adapter / `ReviewHistoryAccessService`. Not vacuous: it asserts an exact count, so a 4th production caller fails it. **Executed and green** this pass (targeted run 7/7).                                                                                                       |
+| **W-4** | WARNING           | **CLOSED for the failure mode it named** (residual, see N-3) | `apps/web/src/auth/element-history-route.roles.ts:17` is the single definition; `App.tsx:3` and `ProtectedRoute.test.tsx:5` both import it. `ProtectedRoute.test.tsx:338` pins the array's exact contents and `:365` drives `it.each` from it. Narrowing the shared constant now fails the suite — the exact regression W-4 described.                                                                                                                                                                                              |
+| **W-5** | WARNING           | **CLOSED**                                                   | `openspec/specs/inspectable-element-admin-ui/spec.md:4-12` Purpose now names "a per-element History entry point into the element's own review-history page, owned and specified by `review-history-ui`". Counts **14 to 14** requirements, **32 to 32** scenarios.                                                                                                                                                                                                                                                                  |
+| **W-6** | WARNING           | **OPEN — reproduced, root cause re-confirmed directly**      | See R4.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **S-1** | SUGGESTION        | **OPEN**                                                     | `ElementReviewHistoryPage.tsx:139` still renders `<span>{entry.recordedAt}</span>` raw.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **S-2** | SUGGESTION        | **OPEN**                                                     | `ElementReviewHistoryPage.tsx:136-137` still keys rows on `entry.reviewSessionId`; the DTO still exposes no `entryId`.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **S-3** | SUGGESTION        | **OPEN**                                                     | The 17 element-history e2e titles contain no revoke-then-repeat case, no element-level assignment-deactivation case and no element-level performer-transfer case. Structural arguments unchanged and still sound.                                                                                                                                                                                                                                                                                                                   |
 
 ### Live-spec merge integrity — re-measured, not copied
 
-| Capability | Requirements `7c7d617` to `4227204` | Scenarios `7c7d617` to `4227204` |
-|---|---|---|
-| `review-history` | 14 to 18 | 83 to 115 |
-| `review-history-ui` | 10 to 13 | 51 to 78 |
-| `authorization` | 24 to 26 | 123 to 140 |
-| `review-session-management` | 14 to 14 | 62 to 62 |
-| `inspectable-element-admin-ui` | 14 to 14 | 32 to 32 |
+| Capability                     | Requirements `7c7d617` to `4227204` | Scenarios `7c7d617` to `4227204` |
+| ------------------------------ | ----------------------------------- | -------------------------------- |
+| `review-history`               | 14 to 18                            | 83 to 115                        |
+| `review-history-ui`            | 10 to 13                            | 51 to 78                         |
+| `authorization`                | 24 to 26                            | 123 to 140                       |
+| `review-session-management`    | 14 to 14                            | 62 to 62                         |
+| `inspectable-element-admin-ui` | 14 to 14                            | 32 to 32                         |
 
 The two capabilities touched by the C-1/W-5 remediation lost **nothing** — both were edited in
 place. No requirement or scenario was dropped anywhere.
 
 ### Spec compliance — the two scenarios previously scored PARTIAL
 
-| Requirement / Scenario | Then | Now | Runtime evidence |
-|---|---|---|---|
-| `review-history` — *History Scope Is Carried by the Query...* > *The actor-unscoped reads are reachable only from the admin and granted-manager paths ... no sampling* | PARTIAL (W-3) | **COMPLIANT** | Both file-scan guards execute and pass (targeted 7/7; full integration run 140 pass) |
-| `review-history-ui` — *The Element History Route Is Gated on the Five History Roles...* > *The divergence is documented and gate-tested* | PARTIAL (W-4) | **COMPLIANT** | The scenario requires (a) an explicit comment naming the five roles and the family default — `App.tsx:177-191` plus `element-history-route.roles.ts:3-16`; and (b) a gate test asserting both the five-role allowance and the admin-only sibling — `ProtectedRoute.test.tsx:336-409`, now driven by the same constant `App.tsx` consumes. Web suite green. |
+| Requirement / Scenario                                                                                                                                                 | Then          | Now           | Runtime evidence                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `review-history` — _History Scope Is Carried by the Query..._ > _The actor-unscoped reads are reachable only from the admin and granted-manager paths ... no sampling_ | PARTIAL (W-3) | **COMPLIANT** | Both file-scan guards execute and pass (targeted 7/7; full integration run 140 pass)                                                                                                                                                                                                                                                                       |
+| `review-history-ui` — _The Element History Route Is Gated on the Five History Roles..._ > _The divergence is documented and gate-tested_                               | PARTIAL (W-4) | **COMPLIANT** | The scenario requires (a) an explicit comment naming the five roles and the family default — `App.tsx:177-191` plus `element-history-route.roles.ts:3-16`; and (b) a gate test asserting both the five-role allowance and the admin-only sibling — `ProtectedRoute.test.tsx:336-409`, now driven by the same constant `App.tsx` consumes. Web suite green. |
 
 Everything else in the original compliance matrix re-verified as PASS; nothing regressed.
 
@@ -665,37 +665,37 @@ three remain non-blocking.
 
 Scanned all ten test files created or modified by this change.
 
-| Check | Result |
-|---|---|
-| Tautologies (`expect(true).toBe(true)`, `expect(1).toBe(1)`) | **0** across `apps/api/src`, `apps/api/test`, `apps/web/src` |
-| Ghost loops (assertions inside a loop over a possibly-empty collection) | **0** — the only `queryAll*` uses are `toHaveLength(0)` negative controls asserting the *absence* of controls, which is the intent, and each sits in a test that also asserts positive rendered content |
-| Assertions with no production-code call | **0** |
-| Smoke-test-only (render + `toBeInTheDocument` with no behavioural assertion) | **0** |
-| Mock-heavy files (mocks > 2x assertions) | **0** — worst ratio is 1 mock : 22 assertions |
-| Type-only assertions used alone | **0** — the 6 `toBeDefined()` in the integration spec and 1 in the e2e spec are each paired with value assertions |
+| Check                                                                        | Result                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tautologies (`expect(true).toBe(true)`, `expect(1).toBe(1)`)                 | **0** across `apps/api/src`, `apps/api/test`, `apps/web/src`                                                                                                                                            |
+| Ghost loops (assertions inside a loop over a possibly-empty collection)      | **0** — the only `queryAll*` uses are `toHaveLength(0)` negative controls asserting the _absence_ of controls, which is the intent, and each sits in a test that also asserts positive rendered content |
+| Assertions with no production-code call                                      | **0**                                                                                                                                                                                                   |
+| Smoke-test-only (render + `toBeInTheDocument` with no behavioural assertion) | **0**                                                                                                                                                                                                   |
+| Mock-heavy files (mocks > 2x assertions)                                     | **0** — worst ratio is 1 mock : 22 assertions                                                                                                                                                           |
+| Type-only assertions used alone                                              | **0** — the 6 `toBeDefined()` in the integration spec and 1 in the e2e spec are each paired with value assertions                                                                                       |
 
-| File | `expect(` count | mocks |
-|---|---|---|
-| `review-history-access.service.spec.ts` | 77 | 0 |
-| `read-element-review-history.use-case.spec.ts` | 14 (across 9 `it`) | 0 |
-| `prisma-review-session.repository.integration.spec.ts` | 64 | 0 |
-| `review-history.e2e-spec.ts` | 343 | 0 |
-| `ElementReviewHistoryPage.test.tsx` | 24 | 1 |
-| `CommunityElementsListPage.test.tsx` | 23 | 1 |
-| `ReviewHistoryDetailPage.test.tsx` | 22 | 1 |
-| `ProtectedRoute.test.tsx` | 27 | 1 |
-| `locales.test.ts` | 35 | 0 |
+| File                                                   | `expect(` count    | mocks |
+| ------------------------------------------------------ | ------------------ | ----- |
+| `review-history-access.service.spec.ts`                | 77                 | 0     |
+| `read-element-review-history.use-case.spec.ts`         | 14 (across 9 `it`) | 0     |
+| `prisma-review-session.repository.integration.spec.ts` | 64                 | 0     |
+| `review-history.e2e-spec.ts`                           | 343                | 0     |
+| `ElementReviewHistoryPage.test.tsx`                    | 24                 | 1     |
+| `CommunityElementsListPage.test.tsx`                   | 23                 | 1     |
+| `ReviewHistoryDetailPage.test.tsx`                     | 22                 | 1     |
+| `ProtectedRoute.test.tsx`                              | 27                 | 1     |
+| `locales.test.ts`                                      | 35                 | 0     |
 
 **Assertion quality**: all assertions verify real behaviour. 0 CRITICAL, 0 WARNING.
 
 ### Test layer distribution (this change own tests)
 
-| Layer | Coverage |
-|---|---|
-| Unit (api, jest) | access-service five-role branch table, use-case call-order / throw-site / `reviewed` derivation / ordering tiebreak, in-memory fake incl. the empty-scope fail-closed case |
-| Unit + component (web, vitest + testing-library) | page loading/empty/error states, both entry links, route gate, locale parity |
-| Integration (api, real Postgres) | four element-keyed repository scopes, draft and sibling-element exclusion, index existence and `DROP INDEX` rollback, two call-site guards, `find*` enumeration guard |
-| E2E (api, supertest) | 17 element-history cases — five-scope matrix, 404-vs-empty matrix, 401-before-scope, list-control no-op, four scope guards |
+| Layer                                            | Coverage                                                                                                                                                                   |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (api, jest)                                 | access-service five-role branch table, use-case call-order / throw-site / `reviewed` derivation / ordering tiebreak, in-memory fake incl. the empty-scope fail-closed case |
+| Unit + component (web, vitest + testing-library) | page loading/empty/error states, both entry links, route gate, locale parity                                                                                               |
+| Integration (api, real Postgres)                 | four element-keyed repository scopes, draft and sibling-element exclusion, index existence and `DROP INDEX` rollback, two call-site guards, `find*` enumeration guard      |
+| E2E (api, supertest)                             | 17 element-history cases — five-scope matrix, 404-vs-empty matrix, 401-before-scope, list-control no-op, four scope guards                                                 |
 
 All four layers present and exercised. No layer relies on a tool absent from the project capabilities.
 

@@ -28,7 +28,7 @@ The system MUST allow an authenticated `SYSTEM_ADMIN` to create an
 community exists and is not soft-deleted before creating the element;
 otherwise the request MUST be rejected with 404 `code:
 COMMUNITY_NOT_FOUND` and no element row created. The system MUST
-generate the `id` (UUIDv7), generate the `code` (see *Element Code*),
+generate the `id` (UUIDv7), generate the `code` (see _Element Code_),
 and initialize `deletedAt` to `null`.
 
 `code` MUST NOT be part of the create request contract: it MUST NOT be
@@ -44,38 +44,45 @@ object with `code: SUPPLIED_CODE_IGNORED` (following the existing
 `code` key was supplied, never `null` and never `false`.
 
 #### Scenario: Admin creates an element under an existing community
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and community C is active
 - WHEN they submit a valid `elementType`, `name`, `location`, and `installedAt` under C
 - THEN the response MUST be 2xx and MUST include the generated `id` and the generated `code`
 - AND the response MUST NOT include a `warning` field
 
 #### Scenario: The create contract does not accept a code
+
 - GIVEN the create request schema and its published documentation after this change
 - WHEN they are inspected
 - THEN `code` MUST NOT appear as an accepted or documented create input field
 
 #### Scenario: A supplied code is ignored and warned about
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and community C is active
 - WHEN they submit a valid create payload whose raw body also carries a `code` key
 - THEN the response MUST be 2xx and the stored element's `code` MUST be the application-generated one, not the submitted value
 - AND the response MUST include a `warning` whose code is `SUPPLIED_CODE_IGNORED`
 
 #### Scenario: A supplied code is never a validation failure
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and community C is active
 - WHEN they submit an otherwise valid create payload carrying a `code` key
 - THEN the response MUST NOT be a 4xx validation error and the element MUST have been created
 
 #### Scenario: Missing required field rejected
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and community C is active
 - WHEN they submit a request missing `elementType`, `name`, `location`, or `installedAt`
 - THEN the response MUST be a 4xx validation error and no element MUST be created
 
 #### Scenario: Non-existent community rejected
+
 - GIVEN a `communityId` that does not correspond to any community
 - WHEN an admin attempts to create an element under it
 - THEN the response MUST be 404 with `code: COMMUNITY_NOT_FOUND` and no element MUST be created
 
 #### Scenario: Soft-deleted community rejected
+
 - GIVEN a `communityId` that corresponds to a soft-deleted community
 - WHEN an admin attempts to create an element under it
 - THEN the response MUST be 404 with `code: COMMUNITY_NOT_FOUND` and no element MUST be created
@@ -90,21 +97,25 @@ created under one community MUST NOT appear in another community's
 list.
 
 #### Scenario: Admin lists elements for an existing community
+
 - GIVEN community C is active and has one or more elements
 - WHEN a `SYSTEM_ADMIN` calls the list endpoint for C
 - THEN the response MUST be 2xx with an array of C's active elements
 
 #### Scenario: Elements are scoped strictly per community
+
 - GIVEN element E was created under community A
 - WHEN a `SYSTEM_ADMIN` lists elements for community B
 - THEN E MUST NOT appear in B's list
 
 #### Scenario: Soft-deleted elements excluded from the list
+
 - GIVEN community C has a soft-deleted element alongside active ones
 - WHEN a `SYSTEM_ADMIN` lists elements for C
 - THEN the response MUST NOT include the soft-deleted element
 
 #### Scenario: Non-existent or soft-deleted community rejected
+
 - GIVEN a `communityId` that does not exist or is soft-deleted
 - WHEN an admin attempts to list its elements
 - THEN the response MUST be 404 with `code: COMMUNITY_NOT_FOUND`
@@ -124,26 +135,31 @@ soft-deleted, and belongs to that exact `communityId` (otherwise 404
 is enforced, not decorative.
 
 #### Scenario: Admin updates an element's fields
+
 - GIVEN community C is active and has an active element E
 - WHEN a `SYSTEM_ADMIN` submits updated fields for E under C
 - THEN the response MUST be 2xx and E's fields MUST be updated
 
 #### Scenario: Code is not updatable
+
 - GIVEN community C is active and has an active element E with `code` X
 - WHEN a `SYSTEM_ADMIN` submits an update for E under C whose payload includes a different `code`
 - THEN E's stored `code` MUST still be X
 
 #### Scenario: Update targets a non-existent element id
+
 - GIVEN an element id that does not correspond to any element
 - WHEN an admin attempts to update it under an existing community
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
 
 #### Scenario: Update targets a soft-deleted element
+
 - GIVEN element E under community C is soft-deleted
 - WHEN an admin attempts to update E under C
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
 
 #### Scenario: Update targets an element belonging to a different community
+
 - GIVEN element E was created under community A
 - WHEN an admin attempts to update E using community B's id in the path
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
@@ -158,11 +174,13 @@ or wrong-community element id returns 404 `code:
 INSPECTABLE_ELEMENT_NOT_FOUND`.
 
 #### Scenario: Admin soft-deletes an element
+
 - GIVEN community C is active and has an active element E
 - WHEN a `SYSTEM_ADMIN` soft-deletes E under C
 - THEN the response MUST be 2xx and E's `deletedAt` MUST be set
 
 #### Scenario: Delete targets an element that is missing, soft-deleted, or in a different community
+
 - GIVEN an element id that either does not exist, is already soft-deleted, or belongs to a different community than the one in the path
 - WHEN an admin attempts to soft-delete it
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
@@ -175,11 +193,13 @@ The system MUST NOT enforce uniqueness on `name`, `location`, or
 as a lookup key.
 
 #### Scenario: Two elements share the same name and location
+
 - GIVEN community C has an active element with `name` "Extintor pasillo" and `location` "Planta baja"
 - WHEN a `SYSTEM_ADMIN` creates a second element under C with the identical `name` and `location`
 - THEN the response MUST be 2xx and both elements MUST coexist
 
 #### Scenario: serialNumber may be omitted or duplicated
+
 - GIVEN one active element under community C already has `serialNumber` "SN-001"
 - WHEN a `SYSTEM_ADMIN` creates or updates another element under C with `serialNumber` "SN-001" or with no `serialNumber` at all
 - THEN the response MUST be 2xx and no uniqueness error MUST occur
@@ -194,22 +214,26 @@ not per community — and MUST NOT be derived from the element's `id`.
 The persisted column MUST be `NOT NULL` and `UNIQUE`.
 
 #### Scenario: A created element carries a well-formed code
+
 - GIVEN a `SYSTEM_ADMIN` creates an element under an active community
 - WHEN the creation succeeds
 - THEN the element MUST have a `code` of exactly 10 characters
 - AND every character MUST belong to the unambiguous alphabet
 
 #### Scenario: Generated codes never contain ambiguous characters
+
 - GIVEN a large sample of generated codes
 - WHEN each code is inspected
 - THEN no code MUST contain `0`, `O`, `1`, `I` or `L`
 
 #### Scenario: Codes are globally unique across communities
+
 - GIVEN elements exist under two different communities
 - WHEN their codes are compared
 - THEN no two elements MUST share the same `code`
 
 #### Scenario: Code is not derived from the element id
+
 - GIVEN an element with a generated `id` and `code`
 - WHEN the two values are compared
 - THEN the `code` MUST NOT be the `id`, a substring of it, or a deterministic transformation of it
@@ -226,17 +250,20 @@ created — never a silently duplicated code and never an unhandled
 error on the first collision.
 
 #### Scenario: A collision on insert is retried and resolved
+
 - GIVEN code generation is forced to produce a code that already exists, then a free one
 - WHEN a `SYSTEM_ADMIN` creates an element
 - THEN the response MUST be 2xx and the stored element MUST carry the free code
 
 #### Scenario: Exhausted retries fail deterministically
+
 - GIVEN code generation is forced to always produce an already-existing code
 - WHEN a `SYSTEM_ADMIN` creates an element
 - THEN the request MUST fail with a deterministic, identifiable error
 - AND no element row MUST be created
 
 #### Scenario: Uniqueness is not established by a pre-read
+
 - GIVEN the element creation path
 - WHEN its persistence interaction is inspected
 - THEN uniqueness MUST NOT depend on reading existing codes before the write; the database constraint MUST be the authority
@@ -251,21 +278,25 @@ release its `code`. A lost or damaged label MUST be answered by
 reprinting the same `code`.
 
 #### Scenario: An update request carrying a code does not change it
+
 - GIVEN active element E has stored `code` X
 - WHEN a `SYSTEM_ADMIN` submits an update for E whose payload includes a different `code`
 - THEN E's stored `code` MUST still be X after the request
 
 #### Scenario: No regeneration or reassignment operation exists
+
 - GIVEN the application's API surface and use cases after this change
 - WHEN they are inspected
 - THEN none MUST regenerate, reissue or reassign an existing element's `code`
 
 #### Scenario: Soft-delete leaves the code intact
+
 - GIVEN active element E has stored `code` X
 - WHEN a `SYSTEM_ADMIN` soft-deletes E
 - THEN E's stored `code` MUST still be X
 
 #### Scenario: Reprinting yields the same code
+
 - GIVEN element E has been printed once
 - WHEN E is printed again at any later time
 - THEN the printed `code` MUST be identical to the one printed before
@@ -282,27 +313,32 @@ representative existing rows, and MUST also succeed against an empty
 one.
 
 #### Scenario: Every pre-existing row ends with a valid unique code
+
 - GIVEN a database holding several `InspectableElement` rows created before this change
 - WHEN the migration has run
 - THEN every one of those rows MUST have a 10-character `code` over the unambiguous alphabet
 - AND no two rows MUST share a `code`
 
 #### Scenario: No row is left without a code
+
 - GIVEN the schema after the migration
 - WHEN the `code` column is inspected
 - THEN it MUST be `NOT NULL` and MUST carry a unique constraint, and no row MUST hold a null `code`
 
 #### Scenario: The unique index survives the migration
+
 - GIVEN the migrated database
 - WHEN its indexes and constraints are inspected
 - THEN the unique index on `code` MUST be present
 
 #### Scenario: Migration succeeds against an empty database
+
 - GIVEN a database with no `InspectableElement` rows
 - WHEN the migration runs
 - THEN it MUST complete successfully and produce the same final schema
 
 #### Scenario: No lazy generation path exists
+
 - GIVEN any element that existed before the change
 - WHEN it is read immediately after deploy, before any print
 - THEN it MUST already carry its `code`, and no read or print path MUST generate one
@@ -314,11 +350,13 @@ Every response that returns an `InspectableElement` MUST include its
 list-by-community response is the source.
 
 #### Scenario: Listing a community's elements returns each code
+
 - GIVEN community C has active elements
 - WHEN a `SYSTEM_ADMIN` lists C's elements
 - THEN every returned element MUST include its `code`
 
 #### Scenario: No new endpoint is added for codes
+
 - GIVEN the API surface before and after this change
 - WHEN the routes are compared
 - THEN no route MUST have been added
@@ -342,26 +380,31 @@ deleted, and deleted is not merely decommissioned. It is stored as
 `CommunityTechnician`/`CommunityRepresentative` precedent.
 
 #### Scenario: A newly created element is active
+
 - GIVEN a `SYSTEM_ADMIN` creates an element under an active community
 - WHEN the creation succeeds
 - THEN the element MUST be active
 
 #### Scenario: Decommissioning preserves the row, the code and the history
+
 - GIVEN active element E with `code` X, referenced by an existing review record
 - WHEN a `SYSTEM_ADMIN` decommissions E
 - THEN E MUST still exist with `code` X, its `deletedAt` MUST still be null, and the review record MUST still reference it
 
 #### Scenario: Decommissioning is reversible
+
 - GIVEN element E is decommissioned
 - WHEN a `SYSTEM_ADMIN` reactivates it
 - THEN E MUST be active again, with `code` X unchanged
 
 #### Scenario: Decommissioned and deleted are distinct states
+
 - GIVEN one decommissioned element and one soft-deleted element
 - WHEN their states are inspected
 - THEN the decommissioned one MUST NOT have `deletedAt` set, and neither state MUST be inferable from the other
 
 #### Scenario: A decommissioned element is not expected in a new session
+
 - GIVEN element E of community C and element type T is decommissioned, and all of C's active elements of type T are reviewed
 - WHEN a user completes a session for C and T
 - THEN completion MUST succeed and MUST NOT require a reason for E
@@ -379,21 +422,25 @@ decommission action, a decommission reason field, or a decommission
 history.
 
 #### Scenario: Admin decommissions and reactivates an element
+
 - GIVEN community C is active and has an active element E
 - WHEN a `SYSTEM_ADMIN` decommissions E and then reactivates it
 - THEN both responses MUST be 2xx and E's state MUST follow each action
 
 #### Scenario: Decommission targets a missing, soft-deleted or wrong-community element
+
 - GIVEN an element id that does not exist, is soft-deleted, or belongs to a different community than the one in the path
 - WHEN an admin attempts to decommission or reactivate it
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
 
 #### Scenario: Repeating the same transition is not an error path with side effects
+
 - GIVEN element E is already decommissioned
 - WHEN a `SYSTEM_ADMIN` decommissions it again
 - THEN E MUST remain decommissioned with every other field unchanged
 
 #### Scenario: No bulk action, reason or history ships
+
 - GIVEN the API surface, schema and use cases after this change
 - WHEN they are inspected
 - THEN no bulk decommission operation, decommission reason field, or decommission history record MUST exist
@@ -408,21 +455,25 @@ database holding representative existing rows and MUST also succeed
 against an empty one.
 
 #### Scenario: Every pre-existing row is active
+
 - GIVEN a database holding several `InspectableElement` rows created before this change
 - WHEN the migration has run
 - THEN every one of those rows MUST be active
 
 #### Scenario: No row is left indeterminate
+
 - GIVEN the schema after the migration
 - WHEN the state column is inspected
 - THEN no row MUST hold a value from which the element's active state cannot be determined
 
 #### Scenario: Migration succeeds against an empty database
+
 - GIVEN a database with no `InspectableElement` rows
 - WHEN the migration runs
 - THEN it MUST complete successfully and produce the same final schema
 
 #### Scenario: No lazy state assignment path exists
+
 - GIVEN any element that existed before the change
 - WHEN it is read immediately after deploy
 - THEN it MUST already carry its state, and no read path MUST assign one
@@ -436,11 +487,13 @@ admin must be able to see and reactivate them. Soft-deleted elements MUST
 still be excluded.
 
 #### Scenario: Listing a community's elements returns each element's state
+
 - GIVEN community C has active and decommissioned elements
 - WHEN a `SYSTEM_ADMIN` lists C's elements
 - THEN the response MUST include both, each carrying its state
 
 #### Scenario: Soft-deleted elements remain excluded
+
 - GIVEN community C has a soft-deleted element alongside active and decommissioned ones
 - WHEN a `SYSTEM_ADMIN` lists C's elements
 - THEN the soft-deleted element MUST NOT appear
@@ -454,19 +507,22 @@ element by `code` MUST be constrained by a community and an element type,
 and MUST return an element only when that element is active and not
 soft-deleted. A resolution that fails any of those constraints MUST be
 rejected identically to a `code` that matches no element at all — see
-`review-session-management` → *Rejected Codes Are Indistinguishable*.
+`review-session-management` → _Rejected Codes Are Indistinguishable_.
 
 #### Scenario: An in-scope code resolves
+
 - GIVEN active element E of community C and element type T has `code` X
 - WHEN a by-code resolution constrained to C and T is performed for X
 - THEN it MUST return E
 
 #### Scenario: An out-of-scope code does not resolve
+
 - GIVEN element E has `code` X but belongs to another community, is of another element type, is decommissioned, or is soft-deleted
 - WHEN a by-code resolution constrained to community C and element type T is performed for X
 - THEN it MUST NOT return E
 
 #### Scenario: No unconstrained by-code operation is exposed
+
 - GIVEN the API surface and application use cases after this change
 - WHEN they are inspected
 - THEN none MUST accept a `code` alone and return an element without a community-and-element-type constraint

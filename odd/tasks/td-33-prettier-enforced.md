@@ -16,6 +16,7 @@ Prettier is a dependency but nothing enforces it (TD-33). `main` fails `prettier
 ## Scope
 
 PR 1 (code):
+
 - `endOfLine: "auto"` in `.prettierrc.json` and `apps/api/.prettierrc` (matches the API ESLint `prettier/prettier` option).
 - `.prettierignore`: build output, generated files, and, for now, `*.md`, `*.yaml`, `*.yml`.
 - Root scripts `format` and `format:check`; CI step `Format` after Lint.
@@ -23,6 +24,7 @@ PR 1 (code):
 - README: document the scripts and the CI order.
 
 PR 2 (docs):
+
 - Remove the Markdown/YAML exclusions, fix or ignore `openspec/config.yaml`, format the rest in one formatting-only commit (also in `.git-blame-ignore-revs`).
 - Confirm the formatted OpenSpec files still work with the SDD tooling (archive compose).
 - TD-33 to Resolved.

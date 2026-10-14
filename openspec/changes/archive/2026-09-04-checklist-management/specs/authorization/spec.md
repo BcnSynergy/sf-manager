@@ -15,16 +15,19 @@ even if the requested action would otherwise require role rejection
 `ROLE_PERMISSIONS`.
 
 #### Scenario: SYSTEM_ADMIN is permitted
+
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
 - WHEN they call a checklist-questions endpoint
 - THEN the request MUST proceed to the endpoint's own logic
 
 #### Scenario: Non-admin role is rejected
+
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call a checklist-questions endpoint
 - THEN the response MUST be 403
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls a checklist-questions endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
@@ -45,21 +48,25 @@ transition with a side effect on a sibling version — not an ordinary
 edit.
 
 #### Scenario: SYSTEM_ADMIN is permitted
+
 - GIVEN an authenticated caller with role `SYSTEM_ADMIN`
 - WHEN they call a review-templates endpoint, including the activate action
 - THEN the request MUST proceed to the endpoint's own logic
 
 #### Scenario: Non-admin role is rejected
+
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN`, or `COMMUNITY_REPRESENTATIVE`
 - WHEN they call a review-templates endpoint
 - THEN the response MUST be 403
 
 #### Scenario: Unauthenticated caller is rejected before role check
+
 - GIVEN no valid session (no cookie, expired, or tampered token)
 - WHEN the caller calls a review-templates endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
 
 #### Scenario: Activate requires its own permission
+
 - GIVEN the activate endpoint's permission requirement is inspected
 - WHEN it is compared to the update endpoint's
 - THEN activate MUST require `reviewTemplate:activate`, not `reviewTemplate:update`
@@ -71,6 +78,7 @@ review template. Retirement MUST occur only as a side effect of
 `reviewTemplate:activate`.
 
 #### Scenario: No retire permission exists
+
 - GIVEN the `Permission` union is inspected after this change
 - WHEN it is searched for a retire permission
 - THEN none MUST exist
@@ -88,11 +96,13 @@ checklist-content permissions in this slice: the
 `User.managerCapabilities`, which is deliberately not built here.
 
 #### Scenario: Non-admin roles stay mapped to no permissions
+
 - GIVEN `ROLE_PERMISSIONS` is inspected after this change
 - WHEN the entries for the four non-admin roles are read
 - THEN each MUST equal `[]`
 
 #### Scenario: No manager capability mechanism is introduced
+
 - GIVEN the shipped user model and authorization code are inspected
 - WHEN they are searched for `managerCapabilities` or `MANAGE_CHECKLIST_CONTENT`
 - THEN neither MUST exist

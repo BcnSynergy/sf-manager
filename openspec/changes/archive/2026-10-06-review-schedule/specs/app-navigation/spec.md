@@ -1,6 +1,6 @@
 # Delta for App Navigation
 
-> The main spec's *Purpose* paragraph says the navigation has "**no**
+> The main spec's _Purpose_ paragraph says the navigation has "**no**
 > backend change of any kind" (main `:13-16`). It is not a requirement and
 > cannot be modified by a delta. It describes the navigation change itself,
 > which stays client-only. The archive step MUST scope that sentence to the
@@ -18,13 +18,13 @@ rather than silently produce an empty navigation.
 
 Each role MUST be offered exactly these items and no others:
 
-| Role | Items |
-|---|---|
-| `SYSTEM_ADMIN` | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Review schedule, Organization profile (**9**) |
-| `MAINTENANCE_TECHNICIAN` | Home, Review sessions, Review history, Review schedule (**4**) |
-| `COMMUNITY_REPRESENTATIVE` | Home, Review sessions, Review history, Review schedule (**4**) |
-| `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**) |
-| `MANAGER` | Home, Review history, Review schedule (**3**) |
+| Role                          | Items                                                                                                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SYSTEM_ADMIN`                | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Review schedule, Organization profile (**9**) |
+| `MAINTENANCE_TECHNICIAN`      | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
+| `COMMUNITY_REPRESENTATIVE`    | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
+| `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**)                                                                                                                          |
+| `MANAGER`                     | Home, Review history, Review schedule (**3**)                                                                                                         |
 
 Every item MUST point at its section's **top-level route**: the list
 route for a section that manages a collection, and the page itself for
@@ -43,37 +43,44 @@ profile is filled in or blank.
 and 2 items for the five roles in the order shown.)
 
 #### Scenario: Each of the five roles sees exactly its own item set
+
 - GIVEN a signed-in user of each role in turn
 - WHEN the navigation renders for each
 - THEN the rendered items MUST match that role's row of the table above exactly — none missing and none extra
 
 #### Scenario: The admin reaches all nine sections without typing a URL
+
 - GIVEN a signed-in `SYSTEM_ADMIN` on any authenticated page
 - WHEN they use the navigation
 - THEN all nine sections — Home, the five admin sections, Review history, Review schedule and Organization profile — MUST be reachable in one click, with no hand-typed URL required
-(Previously: the body counted eight sections, without Review schedule. The scenario title and body now count nine.)
+  (Previously: the body counted eight sections, without Review schedule. The scenario title and body now count nine.)
 
 #### Scenario: Only the admin is offered the organization profile
+
 - GIVEN a signed-in user of each of the five roles in turn
 - WHEN the Organization profile item is looked for in the navigation rendered for each
 - THEN it MUST be present for `SYSTEM_ADMIN` only, and absent for the other four roles
 
 #### Scenario: Review schedule is offered to four roles and not to the company manager
+
 - GIVEN a signed-in user of each of the five roles in turn
 - WHEN the Review schedule item is looked for in the navigation rendered for each
 - THEN it MUST be present for `SYSTEM_ADMIN`, `MANAGER`, `COMMUNITY_REPRESENTATIVE` and `MAINTENANCE_TECHNICIAN`, and absent for `MAINTENANCE_COMPANY_MANAGER`
 
 #### Scenario: The organization profile item does not depend on the profile's contents
+
 - GIVEN a signed-in `SYSTEM_ADMIN`, once with a blank seeded profile and once with every field filled
 - WHEN the navigation renders in each case
 - THEN the identical Organization profile item MUST be offered, and the navigation MUST have issued no request for the profile
 
 #### Scenario: A new role cannot ship with an unmapped navigation
+
 - GIVEN a sixth member is added to `Role` without a row in the lookup
 - WHEN the project is type-checked
 - THEN the build MUST fail rather than render an empty navigation for that role
 
 #### Scenario: No CRUD sub-route is offered
+
 - GIVEN the navigation rendered for any role
 - WHEN its item targets are enumerated
 - THEN each MUST be a section's top-level route, and none MUST be a create, detail or edit sub-route
@@ -97,17 +104,20 @@ read "the identical single Review history item", which would now read as the
 manager's only item; it is restated as "the identical Review history item".)
 
 #### Scenario: Granted and ungranted managers see the identical navigation
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
 - WHEN the navigation renders for each
 - THEN both MUST be offered the identical Review history item — its visibility MUST NOT depend on the capability
-(Previously: "the identical single Review history item".)
+  (Previously: "the identical single Review history item".)
 
 #### Scenario: An ungranted manager's item leads to the shipped empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability, in an installation that does contain completed sessions
 - WHEN they activate their Review history item
 - THEN the history surface's already-shipped empty state MUST be rendered — not an error, not a "not authorized" message and not a blank page
 
 #### Scenario: The navigation never learns the capability
+
 - GIVEN the current-user endpoint's response, the client's auth context and the navigation's own code after this change
 - WHEN each is inspected
 - THEN none MUST carry or branch on `managerCapabilities` or `VIEW_ALL_REVIEWS`, and no endpoint MUST have been added to expose it
@@ -138,17 +148,20 @@ change", unqualified, which is false once the review-schedule change adds the
 `/review-schedule` route. The claims are scoped to the wrapping.)
 
 #### Scenario: Every route's allowed roles are unchanged
+
 - GIVEN the application's route declarations before and after the wrapping
 - WHEN each route's `allowedRoles` array is compared
 - THEN every one MUST be byte-identical, and the wrapping MUST NOT have added or removed any declared route
-(Previously: "before and after this change … the set of declared routes MUST be unchanged".)
+  (Previously: "before and after this change … the set of declared routes MUST be unchanged".)
 
 #### Scenario: Every route's path stays paired with its original component
+
 - GIVEN the application's route declarations before and after the wrapping
 - WHEN each route's `path` is compared against the page component it renders
 - THEN every route's `path` MUST be paired with the same component it was paired with before the wrapping
 
 #### Scenario: The route-protection component and its test are untouched
+
 - GIVEN the route-protection component and its test file before and after the wrapping
 - WHEN they are compared
 - THEN the component MUST be unchanged; the test file's logic and pass/fail conditions MUST be unchanged (a comment-text and test-name update to keep its documentation accurate about a relocated import is permitted); and the test MUST still pass
@@ -169,15 +182,17 @@ unqualified, which is false once the review-schedule change adds an API
 endpoint. The claim is scoped to the navigation's introduction.)
 
 #### Scenario: No collapse, menu or dashboard chrome ships
+
 - GIVEN the navigation after this change
 - WHEN its rendered controls and its state are enumerated
 - THEN none MUST offer a sidebar, hamburger, dropdown, collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
 
 #### Scenario: No dependency and no backend change ships
+
 - GIVEN the project's dependency manifests, the API, the database schema and the shared validation package before and after the navigation's introduction
 - WHEN each is compared
 - THEN that introduction MUST have added no dependency and left all three untouched
-(Previously: "before and after this change".)
+  (Previously: "before and after this change".)
 
 ## ADDED Requirements
 
@@ -185,24 +200,27 @@ endpoint. The claim is scoped to the navigation's introduction.)
 
 The `MANAGER`'s Review schedule item MUST be conditioned on the role alone
 and MUST NOT be conditioned on the `VIEW_ALL_REVIEWS` capability, on the
-same terms as *The Manager's History Item Is Gated on the Role Alone*. An
+same terms as _The Manager's History Item Is Gated on the Role Alone_. An
 ungranted `MANAGER` MUST see the identical item and reach the page's empty
 state — not a hidden item, not a disabled item, not an error and not a "not
-authorized" message. The new item MUST satisfy *Every Navigation Item
-Targets a Route Its Viewer May Open*: the target route MUST admit every role
+authorized" message. The new item MUST satisfy _Every Navigation Item
+Targets a Route Its Viewer May Open_: the target route MUST admit every role
 offered the item, and the existing reachability test MUST cover it unrelaxed.
 
 #### Scenario: Granted and ungranted managers see the identical schedule item
+
 - GIVEN two signed-in `MANAGER` users, one holding `VIEW_ALL_REVIEWS` and one holding no capability
 - WHEN the navigation renders for each
 - THEN both MUST be offered the identical Review schedule item
 
 #### Scenario: An ungranted manager's item leads to the empty state
+
 - GIVEN a signed-in `MANAGER` holding no capability
 - WHEN they activate the Review schedule item
 - THEN the schedule page's empty state MUST be rendered, not an error and not a "not authorized" message
 
 #### Scenario: The new item never leads its viewer to a denial
+
 - GIVEN a signed-in user of each of the four roles offered the item
 - WHEN they activate it
 - THEN the schedule page MUST render and the "not authorized" view MUST NOT appear

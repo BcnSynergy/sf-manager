@@ -7,6 +7,7 @@ None of the 9 web tables has a `<caption>` or `scope` on its header cells (tech-
 ## Scope
 
 ### In Scope
+
 - All 9 tables in `apps/web/src/pages/`: ChecklistQuestionsList, CommunitiesList, CommunityElementsList, MaintenanceCompaniesList, ReviewHistory, ReviewSchedule, ReviewTemplatesList, ReviewSessions, UsersList. A grep found no other `<table>` in `apps/web/src`, and no `<th>` in any `<tbody>`.
 - A visually hidden `<caption>` on each table, using a new `visually-hidden` utility in `apps/web/src/index.css` (the standard clip pattern, still exposed to assistive tech).
 - The caption repeats the nearest heading through its existing i18n call, so there are no new strings:
@@ -16,6 +17,7 @@ None of the 9 web tables has a `<caption>` or `scope` on its header cells (tech-
 - `scope="col"` on every `<thead>` `<th>`, including the empty action-column headers.
 
 ### Out of Scope
+
 - `scope="row"`, because no tbody `<th>` exists.
 - Changes to empty, loading or error states, column layout or styling.
 - A wider accessibility audit (forms, landmarks, focus).
@@ -24,9 +26,11 @@ None of the 9 web tables has a `<caption>` or `scope` on its header cells (tech-
 ## Capabilities
 
 ### New Capabilities
+
 - `web-table-accessibility`: every web data table has an accessible name equal to its nearest heading, provided by a visually hidden caption, and every column header has `scope="col"`. The spec lists the 9 tables.
 
 ### Modified Capabilities
+
 - None. The 9 owning `*-ui` specs do not specify table markup. Changing each one would mean copying 9 full `### Requirement:` blocks for one cross-cutting rule. A single new capability is the thinnest option (ADR-006).
 
 ## Approach
@@ -35,19 +39,19 @@ Edit the markup in place. No shared table component, because extracting one is b
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/web/src/index.css` | Modified | `visually-hidden` utility |
+| Area                                                                                 | Impact   | Description                    |
+| ------------------------------------------------------------------------------------ | -------- | ------------------------------ |
+| `apps/web/src/index.css`                                                             | Modified | `visually-hidden` utility      |
 | `apps/web/src/pages/*{ListPage,HistoryPage,SchedulePage,SessionsPage}.tsx` (9 files) | Modified | `<caption>` plus `scope="col"` |
-| matching `*.test.tsx` | Modified | Accessible-name assertions |
+| matching `*.test.tsx`                                                                | Modified | Accessible-name assertions     |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| A caption duplicates the heading for screen-reader users | Low | Accepted: a table name is announced in a different context than a heading |
-| The utility is mis-written and the caption shows | Low | Browser check confirms it is invisible but present in the accessibility tree |
-| Tests break when the visible text appears twice (`getByText`) | Med | Scope the queries or switch them to role queries |
+| Risk                                                          | Likelihood | Mitigation                                                                   |
+| ------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| A caption duplicates the heading for screen-reader users      | Low        | Accepted: a table name is announced in a different context than a heading    |
+| The utility is mis-written and the caption shows              | Low        | Browser check confirms it is invisible but present in the accessibility tree |
+| Tests break when the visible text appears twice (`getByText`) | Med        | Scope the queries or switch them to role queries                             |
 
 ## Rollback Plan
 

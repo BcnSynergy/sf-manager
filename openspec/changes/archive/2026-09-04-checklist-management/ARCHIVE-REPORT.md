@@ -20,14 +20,14 @@ complete. Change is ready for archival and closure.
 All artifacts captured in persistent Engram memory with the following topic
 keys and observation IDs:
 
-| Artifact | Topic Key | Engram ID | Status |
-|---|---|---|---|
-| Proposal | `sdd/checklist-management/proposal` | 165 | Complete |
-| Specification | `sdd/checklist-management/spec` | 166 | Complete |
-| Design | `sdd/checklist-management/design` | 167 | Complete |
-| Tasks | `sdd/checklist-management/tasks` | 168 | Complete (65/65) |
-| Apply Progress | `sdd/checklist-management/apply-progress` | 169 | Complete (incl. PR 12 TDD evidence table) |
-| Verification Report | `sdd/checklist-management/verify-report` | 172 | PASS (supersedes an earlier PASS-WITH-ISSUES / 1-CRITICAL version) |
+| Artifact            | Topic Key                                 | Engram ID | Status                                                             |
+| ------------------- | ----------------------------------------- | --------- | ------------------------------------------------------------------ |
+| Proposal            | `sdd/checklist-management/proposal`       | 165       | Complete                                                           |
+| Specification       | `sdd/checklist-management/spec`           | 166       | Complete                                                           |
+| Design              | `sdd/checklist-management/design`         | 167       | Complete                                                           |
+| Tasks               | `sdd/checklist-management/tasks`          | 168       | Complete (65/65)                                                   |
+| Apply Progress      | `sdd/checklist-management/apply-progress` | 169       | Complete (incl. PR 12 TDD evidence table)                          |
+| Verification Report | `sdd/checklist-management/verify-report`  | 172       | PASS (supersedes an earlier PASS-WITH-ISSUES / 1-CRITICAL version) |
 
 ## Merged Specifications (OpenSpec)
 
@@ -76,6 +76,7 @@ Delta specifications have been merged into the main spec files as follows:
 **Verdict**: PASS (re-verified post-PR-12)
 
 ### Re-verification Scope
+
 PR 12 (`checklist-management/12-activation-conflict-deadlock-mapping`) was a
 scoped remediation of the single CRITICAL finding (C-1: a Postgres deadlock
 SQLSTATE `40P01` escaped the activation-conflict mapping and surfaced as an
@@ -83,29 +84,31 @@ unmapped 500 instead of 409 `REVIEW_TEMPLATE_ACTIVATION_CONFLICT`). This pass
 verified that fix and re-compiled the full open/resolved ledger; it did not
 re-review the original 11 PRs from scratch.
 
-| Finding | Status |
-|---|---|
-| C-1 deadlock 40P01 escapes activation-conflict mapping | RESOLVED |
+| Finding                                                      | Status                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| C-1 deadlock 40P01 escapes activation-conflict mapping       | RESOLVED                                                            |
 | W-1 TDD evidence table not fully retrievable across PRs 1-11 | PARTIALLY RESOLVED — non-blocking (process note for future changes) |
-| W-2 no HTTP-level test for the 409 | RESOLVED |
-| W-3 error-mapping tests mirror the implementation | STILL OPEN — non-blocking pattern note |
-| S-1 vacuous-pass risk in no-review-session guard | STILL OPEN — suggestion |
-| S-2 web bundle exceeds Vite 500 kB warning | STILL OPEN — pre-existing |
-| N-1 flaky `countActiveByRole` integration test | OUT OF SCOPE — belongs to `user-management-roles` |
-| S-3 class-40 SQLSTATEs enumerated, not prefix-matched | NEW — suggestion |
+| W-2 no HTTP-level test for the 409                           | RESOLVED                                                            |
+| W-3 error-mapping tests mirror the implementation            | STILL OPEN — non-blocking pattern note                              |
+| S-1 vacuous-pass risk in no-review-session guard             | STILL OPEN — suggestion                                             |
+| S-2 web bundle exceeds Vite 500 kB warning                   | STILL OPEN — pre-existing                                           |
+| N-1 flaky `countActiveByRole` integration test               | OUT OF SCOPE — belongs to `user-management-roles`                   |
+| S-3 class-40 SQLSTATEs enumerated, not prefix-matched        | NEW — suggestion                                                    |
 
 ### Test Execution (all re-run live on `main` @ `8c858a6`, 12/12 PRs merged)
+
 - API unit: 572/572 pass, 82 suites
 - API e2e: 240/240 pass, 8 suites
 - Web (Vitest + RTL): 492/492 pass, 36 files
 - API integration (real Postgres): 72/72 on 5 of 8 full-suite runs; 71/72 on
   3 runs, always the same unrelated N-1 flake (not this change's defect)
 - Targeted C-1 stress: the concurrency spec run 20/20 clean (12 isolated runs
-  + 8 full-suite runs)
+  - 8 full-suite runs)
 - Build: clean, 4 tasks, exit 0. Lint (`--no-fix`, read-only on PR-12-touched
   files): 0 errors, 0 warnings
 
 ### Compliance Matrix
+
 - **65/65 Implementation Tasks**: all marked complete in
   `sdd/checklist-management/tasks` (62 original + 3 added by PR 12)
 - **58/58 Spec Scenarios**: all compliant across 5 delta specs (was 57/58
@@ -117,6 +120,7 @@ re-review the original 11 PRs from scratch.
 - **Strict TDD**: 17/17 TDD-designated tasks have covering, passing tests
 
 ### Findings
+
 - CRITICAL: 0 (C-1 resolved and independently re-verified)
 - WARNING: 2 (both non-blocking: W-1 evidence retention, W-3 test-design
   pattern)
@@ -126,6 +130,7 @@ re-review the original 11 PRs from scratch.
 ## Archive Contents
 
 ### Files Present in Archive
+
 - `proposal.md` (Engram ID 165)
 - `design.md` (Engram ID 167)
 - `tasks.md` (Engram ID 168)
@@ -144,6 +149,7 @@ Summary section above, with the full report retrievable from Engram
 observation #172 for anyone needing the complete text.
 
 ### Verification Checklist
+
 - All 9 files present in archive path
 - No unchecked implementation tasks (all 65/65 marked complete)
 - Main specs merged into `openspec/specs/` (source of truth updated): 4 new
@@ -158,6 +164,7 @@ observation #172 for anyone needing the complete text.
 This archive was performed with explicit attention to the documented
 "duplicate-folder" bug from the prior `maintenance-company` and
 `inspectable-elements` archives:
+
 - Verified all 9 source files exist and are non-empty before archiving
 - All files copied verbatim (byte-for-byte) into the new archive destination,
   not paraphrased or regenerated from summary
@@ -171,6 +178,7 @@ session had no shell/Bash tool available — only `Read`/`Write`/`Edit`/`Glob`
 and Engram MCP tools. It could therefore **create** the new archive files at
 `openspec/changes/archive/2026-09-04-checklist-management/` and **overwrite**
 the main specs, but it could **not**:
+
 1. Delete the original `openspec/changes/checklist-management/` folder
    (a true `git mv`/`rm` requires shell access this session did not have).
 2. Run `git add` to stage the changes.
@@ -195,41 +203,42 @@ gap in this pass**, not a silent partial archive.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| A.1 | PR 1 | Merged | `ReviewFrequency` enum + `ChecklistQuestion` migration |
-| A.2 | PR 2 | Merged | `checklist-question` domain (entity, review-frequency, errors) |
-| A.3 | PR 3 | Merged | `checklist-question` application + validation (4 use cases) |
-| A.4 | PR 4 | Merged | `checklist-question` infra + presentation + permissions |
-| A.5 | PR 5 | Merged | Web question pool (list/create/edit) + i18n + E2E |
-| B.6 | PR 6 | Merged | `ReviewTemplateStatus` enum + `ReviewTemplate`/`ReviewTemplateQuestion` migration |
-| B.7 | PR 7 | Merged | `review-template` domain + `DraftSelectionCleaner` cascade |
-| B.8 | PR 8 | Merged | `review-template` application + validation (6 use cases) |
-| B.9 | PR 9 | Merged | `review-template` infra (atomic activation transaction) + presentation |
-| B.10 | PR 10 | Merged | Web review templates (list/create/builder/activate) + i18n |
-| B.11 | PR 11 | Merged | E2E both modules, docs correction, browser verification, final checks |
-| Remediation | PR 12 | Merged | sdd-verify C-1 fix: SQLSTATE 40P01 deadlock mapping + HTTP-level 409 test |
+| Phase       | PR #  | Status | Details                                                                           |
+| ----------- | ----- | ------ | --------------------------------------------------------------------------------- |
+| A.1         | PR 1  | Merged | `ReviewFrequency` enum + `ChecklistQuestion` migration                            |
+| A.2         | PR 2  | Merged | `checklist-question` domain (entity, review-frequency, errors)                    |
+| A.3         | PR 3  | Merged | `checklist-question` application + validation (4 use cases)                       |
+| A.4         | PR 4  | Merged | `checklist-question` infra + presentation + permissions                           |
+| A.5         | PR 5  | Merged | Web question pool (list/create/edit) + i18n + E2E                                 |
+| B.6         | PR 6  | Merged | `ReviewTemplateStatus` enum + `ReviewTemplate`/`ReviewTemplateQuestion` migration |
+| B.7         | PR 7  | Merged | `review-template` domain + `DraftSelectionCleaner` cascade                        |
+| B.8         | PR 8  | Merged | `review-template` application + validation (6 use cases)                          |
+| B.9         | PR 9  | Merged | `review-template` infra (atomic activation transaction) + presentation            |
+| B.10        | PR 10 | Merged | Web review templates (list/create/builder/activate) + i18n                        |
+| B.11        | PR 11 | Merged | E2E both modules, docs correction, browser verification, final checks             |
+| Remediation | PR 12 | Merged | sdd-verify C-1 fix: SQLSTATE 40P01 deadlock mapping + HTTP-level 409 test         |
 
 All 12 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 (12 sequential PRs, last merge `8c858a6`).
 
 ## Risks & Mitigations
 
-| Risk | Likelihood | Mitigation | Status |
-|---|---|---|---|
-| Scope creep toward FR-007 (`ReviewSession`) | Low | Explicit non-goal; grep-verified absent | Mitigated |
-| Two new modules + 6 pages exceeds 400-line PR budget | Realized (High forecast) | Two-phase `stacked-to-main` chain, 12 PRs; each PR independently reviewed | Mitigated |
-| Activation race leaves two `active` versions | Low (mechanism sound) / Realized narrowly (C-1 edge case) | Serializable transaction + partial unique index by construction; the one gap (40P01 SQLSTATE) found by verify and closed by PR 12, independently re-verified 20/20 | Mitigated (post-remediation) |
-| Frozen version missing its wording snapshot | Low | `questionText NOT NULL` on rows that exist only for frozen versions — structurally unrepresentable | Mitigated |
-| Frozen read path silently joins live pool | Low | Dedicated `findFrozenWithSnapshot` query never references `ChecklistQuestion`; edit-after-freeze e2e proves byte-identical | Mitigated |
-| `ReviewFrequency` / `ReviewTemplateStatus` drift across TS/Postgres/Zod | Low | Parity integration specs for both, cloned from `element-type.ts` precedent | Mitigated |
-| Raw enum values rendered in UI | Low | Label maps shipped with pages; grep-checked | Mitigated |
-| No global nav bar (6th URL-only admin section) | Med | Pre-existing gap, explicitly carried forward and named as its own future slice | Accepted, documented |
-| Incomplete archive (known bug class) | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder without shell access | See "Known limitation of this archive run" above — orchestrator follow-up required | **Partially mitigated — follow-up required** |
+| Risk                                                                    | Likelihood                                                                                                        | Mitigation                                                                                                                                                         | Status                                       |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| Scope creep toward FR-007 (`ReviewSession`)                             | Low                                                                                                               | Explicit non-goal; grep-verified absent                                                                                                                            | Mitigated                                    |
+| Two new modules + 6 pages exceeds 400-line PR budget                    | Realized (High forecast)                                                                                          | Two-phase `stacked-to-main` chain, 12 PRs; each PR independently reviewed                                                                                          | Mitigated                                    |
+| Activation race leaves two `active` versions                            | Low (mechanism sound) / Realized narrowly (C-1 edge case)                                                         | Serializable transaction + partial unique index by construction; the one gap (40P01 SQLSTATE) found by verify and closed by PR 12, independently re-verified 20/20 | Mitigated (post-remediation)                 |
+| Frozen version missing its wording snapshot                             | Low                                                                                                               | `questionText NOT NULL` on rows that exist only for frozen versions — structurally unrepresentable                                                                 | Mitigated                                    |
+| Frozen read path silently joins live pool                               | Low                                                                                                               | Dedicated `findFrozenWithSnapshot` query never references `ChecklistQuestion`; edit-after-freeze e2e proves byte-identical                                         | Mitigated                                    |
+| `ReviewFrequency` / `ReviewTemplateStatus` drift across TS/Postgres/Zod | Low                                                                                                               | Parity integration specs for both, cloned from `element-type.ts` precedent                                                                                         | Mitigated                                    |
+| Raw enum values rendered in UI                                          | Low                                                                                                               | Label maps shipped with pages; grep-checked                                                                                                                        | Mitigated                                    |
+| No global nav bar (6th URL-only admin section)                          | Med                                                                                                               | Pre-existing gap, explicitly carried forward and named as its own future slice                                                                                     | Accepted, documented                         |
+| Incomplete archive (known bug class)                                    | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder without shell access | See "Known limitation of this archive run" above — orchestrator follow-up required                                                                                 | **Partially mitigated — follow-up required** |
 
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-init**: Project context and testing capabilities detected (`strict_tdd: true`)
 - **sdd-propose**: Proposal question round closed 2026-09-02; 4 settled decisions confirmed by product owner (Engram ID 165)
 - **sdd-spec**: 5 delta specs written covering 58 scenarios (Engram ID 166)
@@ -242,6 +251,7 @@ All 12 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 - **sdd-archive**: This report and spec merges (completion of cycle) — **with the file-deletion/git-staging step flagged as a required orchestrator follow-up** due to lack of shell tooling in this execution context
 
 ### Artifacts Persisted
+
 - Engram: 6 observations (proposal, spec, design, tasks, apply-progress, verify-report) + this archive-report
 - OpenSpec: 5 main spec files created/updated in `openspec/specs/` (4 new capabilities + 1 delta merge into `authorization`)
 - OpenSpec: 1 archive folder created at `openspec/changes/archive/2026-09-04-checklist-management/` (9 files, verbatim copies)
@@ -264,6 +274,7 @@ All 12 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 
 This archive report and all supporting artifacts are linked via Engram topic
 keys for cross-session recovery:
+
 - `sdd/checklist-management/proposal` → Engram ID 165
 - `sdd/checklist-management/spec` → Engram ID 166
 - `sdd/checklist-management/design` → Engram ID 167

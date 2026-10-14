@@ -10,13 +10,13 @@ signature rather than a caller-side `if` — the same structural move
 
 Four rules must be auditable at a glance. Each one lives in exactly one place:
 
-| Rule (non-negotiable per proposal Risks) | Where it is enforced | How it is auditable |
-|---|---|---|
-| Caller holds `reviewSession:read` | `PermissionsGuard` + `@RequirePermission` (Layer 1, unchanged) | Route decorator |
-| Actor's community set = **currently active** assignments only | `CommunityScopeChecker.listAssignedCommunityIds` (Layer 2), fail-closed exhaustive `switch`, no cache | One adapter, table-driven over all 5 roles |
-| Technician sees only own; representative sees any performer in scope | The **port method name and its `WHERE`** — `…ForPerformerInCommunities` vs `…InCommunities` | 4 methods, 4 trivial `WHERE` clauses |
-| Completed-only | Same `WHERE` — `status = 'completed'` appears in all four | Method names all start `findCompleted…` |
-| Indistinguishable 404 | `null` ⇒ `ReviewSessionNotFoundError` ⇒ `REVIEW_SESSION_NOT_FOUND` | One throw site, one mapping |
+| Rule (non-negotiable per proposal Risks)                             | Where it is enforced                                                                                  | How it is auditable                        |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Caller holds `reviewSession:read`                                    | `PermissionsGuard` + `@RequirePermission` (Layer 1, unchanged)                                        | Route decorator                            |
+| Actor's community set = **currently active** assignments only        | `CommunityScopeChecker.listAssignedCommunityIds` (Layer 2), fail-closed exhaustive `switch`, no cache | One adapter, table-driven over all 5 roles |
+| Technician sees only own; representative sees any performer in scope | The **port method name and its `WHERE`** — `…ForPerformerInCommunities` vs `…InCommunities`           | 4 methods, 4 trivial `WHERE` clauses       |
+| Completed-only                                                       | Same `WHERE` — `status = 'completed'` appears in all four                                             | Method names all start `findCompleted…`    |
+| Indistinguishable 404                                                | `null` ⇒ `ReviewSessionNotFoundError` ⇒ `REVIEW_SESSION_NOT_FOUND`                                    | One throw site, one mapping                |
 
 Verified before designing, not assumed: `ReviewSessionRepository` has no bare
 `findById`; `SessionAccessService.loadForActor` is performer-scoped and
@@ -48,19 +48,19 @@ performer, completed-only) on the same class leaves the two one autocomplete
 entry apart, and the failure mode is a mutating use case calling the permissive
 method. That is precisely the "bare `findById` in disguise" risk the proposal
 rates **High**. The two services also have genuinely different invariants:
-*"may this actor ACT on this draft"* versus *"may this actor READ this completed
-record"* — different status filter, different scope predicate, different
+_"may this actor ACT on this draft"_ versus _"may this actor READ this completed
+record"_ — different status filter, different scope predicate, different
 return shape.
 
 **The binding invariant is preserved, and it is preserved by the port, not by
 the service count.** Approach choice 3's property is stated in `review-session`
-design Decision 4 as *"`ReviewSessionRepository` exposes no `findById(id)` at
-all, so a use case that forgets the scope check has nothing to call."* That is a
+design Decision 4 as _"`ReviewSessionRepository` exposes no `findById(id)` at
+all, so a use case that forgets the scope check has nothing to call."_ That is a
 property of the **port surface**. After this change the port still exposes no
 identifier-only read: all four new methods carry a performer and/or community
 scope as a required parameter. Two doors, each with its own lock, and no
 unlocked wall. `sdd-verify` asserts it by enumerating the port's methods
-(spec: *"No unscoped session read exists"*).
+(spec: _"No unscoped session read exists"_).
 
 **Durable enough to record**: this makes the module's access-service count two,
 which is a departure from Decision 4's "one door" phrasing. Per
@@ -82,12 +82,12 @@ fail-closed `switch`** it already uses: `MAINTENANCE_TECHNICIAN` →
 `technicianRepository.findActiveByUser`, `COMMUNITY_REPRESENTATIVE` →
 `representativeRepository.findActiveByUser`, every other role → `[]`, `default`
 → `role satisfies never; return []`. Both repository methods **already ship**;
-no community-module port changes (proposal Dependencies: *"no new method is
-anticipated"*). `isAssignedTo` is untouched.
+no community-module port changes (proposal Dependencies: _"no new method is
+anticipated"_). `isAssignedTo` is untouched.
 
 **This is the mechanism the resolved product decision demanded.** Confirmed
-2026-09-08 and written into the spec (*"History Access Requires a Currently
-Active Community Assignment, Including for One's Own Sessions"*): a technician
+2026-09-08 and written into the spec (_"History Access Requires a Currently
+Active Community Assignment, Including for One's Own Sessions"_): a technician
 whose assignment is deactivated loses their **own** history for that community,
 retroactively. It is enforced by making `communityIds` a **required parameter of
 the technician's own-history queries** —
@@ -137,7 +137,7 @@ findCompletedByIdInCommunities(
 
 Both list methods order **`completedAt DESC, id DESC`** — a single ordering
 constant shared by both adapters, because the spec requires the two lists'
-direction to be *identical* and *deterministic* (`id` is a UUIDv7, so it is a
+direction to be _identical_ and _deterministic_ (`id` is a UUIDv7, so it is a
 time-ordered tiebreak, ADR-009).
 
 **Alternatives considered**: one list + one by-id method taking a
@@ -155,9 +155,9 @@ deliberately split in two, for the same reason the list pair is split. The
 technician's performer filter is a **narrowing** of the community filter, so a
 single `findCompletedByIdInCommunities` shared by both roles would need a
 caller-side `session.performedById === actor.userId` check for the technician,
-and omitting it would leak the whole community. Spec *"History Scope Is Carried
-by the Query, Not by the Caller"* — scenario *"Scope is never applied after the
-fact"* — forbids exactly that caller-side narrowing, so the split is demanded by
+and omitting it would leak the whole community. Spec _"History Scope Is Carried
+by the Query, Not by the Caller"_ — scenario _"Scope is never applied after the
+fact"_ — forbids exactly that caller-side narrowing, so the split is demanded by
 a written requirement, not chosen as a preference.
 
 **Empty-scope footgun, made explicit**: an actor with no active assignment gets
@@ -171,10 +171,10 @@ design.
 
 **Choice**: two routes on a **new** `presentation/review-history.controller.ts`:
 
-| Method | Route | Permission | Returns |
-|---|---|---|---|
-| GET | `/review-history` | `reviewSession:read` | `ReviewHistoryRowDto[]` |
-| GET | `/review-history/:sessionId` | `reviewSession:read` | `ReviewHistoryDetailResponseDto` |
+| Method | Route                        | Permission           | Returns                          |
+| ------ | ---------------------------- | -------------------- | -------------------------------- |
+| GET    | `/review-history`            | `reviewSession:read` | `ReviewHistoryRowDto[]`          |
+| GET    | `/review-history/:sessionId` | `reviewSession:read` | `ReviewHistoryDetailResponseDto` |
 
 Scope is resolved **server-side from the actor's role** (proposal's working
 assumption); no `communityId` is ever accepted from the client, so the caller
@@ -186,7 +186,7 @@ segment `history` would be a sibling of the shipped `@Get('review-sessions/:sess
 registers handlers on the Express router in declaration order and Express
 matches first-registered-first, with **no** static-before-param specificity
 sorting (Fastify's radix router would sort it; Express does not). So the literal
-route works *only while it is declared above* the param route — one reordering
+route works _only while it is declared above_ the param route — one reordering
 or one merge from silent breakage. `review-session` design Decision 10 already
 settled the house response to this exact trap ("sidestepping the trap beats
 commenting on it") by putting `/review-scope` at top level. Same move here.
@@ -260,7 +260,7 @@ plus a link).
 
 **Detail record** — `ReviewHistoryDetailResponseDto` is a **superset** of the
 shipped `ReviewSessionDetailResponseDto`, because the spec requires the
-read-back to be *"paired with the template snapshot's wording"* and the shipped
+read-back to be _"paired with the template snapshot's wording"_ and the shipped
 DTO deliberately omits it (Decision 11 fetches the question set per element, via
 a `reviewSession:perform` route that is a draft-walk affordance and must not be
 reused for a completed record). So the history detail use case additionally
@@ -296,11 +296,10 @@ mean parameterising both the fetch and the render — a page with two modes, whi
 
 The proposal's stated risk (reuse dragging complete/discard/code-entry onto a
 completed record) is the second reason, not the first: those controls are today
-gated behind `isDraft &&`, so they would *happen* to be hidden — a correctness
+gated behind `isDraft &&`, so they would _happen_ to be hidden — a correctness
 that survives only until someone edits that condition. The fork removes them
 from the file entirely. The read-only page drops nine `useState` hooks, the
-`ConfirmDialog` import, and both mutation handlers — roughly 80 lines against
-310. A test asserts **no mutation control renders** on the history detail page.
+`ConfirmDialog` import, and both mutation handlers — roughly 80 lines against 310. A test asserts **no mutation control renders** on the history detail page.
 
 Routes: `/review-history` and `/review-history/:sessionId`, both under
 `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN','COMMUNITY_REPRESENTATIVE']}`.
@@ -344,31 +343,31 @@ in `apps/web/src/api/review-history.ts`, mirroring `review-session.ts`.
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/src/shared/application/authorization/community-scope.checker.port.ts` | Modify | `listAssignedCommunityIds` (Decision 2); `isAssignedTo` untouched |
-| `.../community/infrastructure/authorization/assignment-community-scope.checker.ts` | Modify | Implement it with the same fail-closed exhaustive `switch`; reuses shipped `findActiveByUser` |
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modify | Four `findCompleted…` methods (Decision 3); **still no `findById`** |
-| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts` | Modify | Four queries; shared ordering constant; `{ in: [] }` fail-closed |
-| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify | Same four, same ordering, same empty-scope behaviour |
-| `.../review-session/application/services/review-history-access.service.ts` | Create | The sibling gate (Decision 1) — two methods, two exhaustive switches |
-| `.../review-session/application/use-cases/list-review-history.use-case.ts` | Create | Scope → rows + community-name map (Decision 6) |
-| `.../review-session/application/use-cases/read-review-history.use-case.ts` | Create | Scoped record + frozen questions + live element codes |
-| `.../review-session/presentation/review-history.controller.ts` | Create | Two routes, `reviewSession:read`, own 3-line `mapError` |
-| `.../review-session/presentation/dto/review-history-row.dto.ts` | Create | List row |
-| `.../review-session/presentation/dto/review-history-detail-response.dto.ts` | Create | Superset of the shipped detail DTO + `questions`, `elementCode` |
-| `.../review-session/review-session.module.ts` | Modify | Register the controller, the service and the two use cases |
-| `.../review-session/application/services/session-access.service.ts` | **Unchanged** | Decision 1 — deliberately not touched |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | **Unchanged** | Decision 5 — no new permission |
-| `apps/api/prisma/**` | **Unchanged** | No schema change, no migration |
-| `apps/web/src/api/review-history.ts` | Create | `apiFetch` client + response types |
-| `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test) | Create | Flat table: Community, Completed at, open link |
-| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) | Create | Read-only record; no mutation control (Decision 7) |
-| `apps/web/src/pages/ReviewSessionsPage.tsx` | Modify | Entry-point `Link` to `/review-history` |
-| `apps/web/src/App.tsx` | Modify | Two `ProtectedRoute` routes for the two non-admin roles |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real translations, parity-enforced |
-| `openspec/specs/review-session-management/spec.md`, `review-session-ui/spec.md` | Modify | **Narrow** the FR-008 rows; keep FR-009/FR-010 intact |
-| `apps/api/test/review-history.e2e-spec.ts` | Create | Full visibility matrix |
+| File                                                                                      | Action        | Description                                                                                   |
+| ----------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| `apps/api/src/shared/application/authorization/community-scope.checker.port.ts`           | Modify        | `listAssignedCommunityIds` (Decision 2); `isAssignedTo` untouched                             |
+| `.../community/infrastructure/authorization/assignment-community-scope.checker.ts`        | Modify        | Implement it with the same fail-closed exhaustive `switch`; reuses shipped `findActiveByUser` |
+| `.../review-session/application/ports/review-session.repository.port.ts`                  | Modify        | Four `findCompleted…` methods (Decision 3); **still no `findById`**                           |
+| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts`       | Modify        | Four queries; shared ordering constant; `{ in: [] }` fail-closed                              |
+| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify        | Same four, same ordering, same empty-scope behaviour                                          |
+| `.../review-session/application/services/review-history-access.service.ts`                | Create        | The sibling gate (Decision 1) — two methods, two exhaustive switches                          |
+| `.../review-session/application/use-cases/list-review-history.use-case.ts`                | Create        | Scope → rows + community-name map (Decision 6)                                                |
+| `.../review-session/application/use-cases/read-review-history.use-case.ts`                | Create        | Scoped record + frozen questions + live element codes                                         |
+| `.../review-session/presentation/review-history.controller.ts`                            | Create        | Two routes, `reviewSession:read`, own 3-line `mapError`                                       |
+| `.../review-session/presentation/dto/review-history-row.dto.ts`                           | Create        | List row                                                                                      |
+| `.../review-session/presentation/dto/review-history-detail-response.dto.ts`               | Create        | Superset of the shipped detail DTO + `questions`, `elementCode`                               |
+| `.../review-session/review-session.module.ts`                                             | Modify        | Register the controller, the service and the two use cases                                    |
+| `.../review-session/application/services/session-access.service.ts`                       | **Unchanged** | Decision 1 — deliberately not touched                                                         |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                        | **Unchanged** | Decision 5 — no new permission                                                                |
+| `apps/api/prisma/**`                                                                      | **Unchanged** | No schema change, no migration                                                                |
+| `apps/web/src/api/review-history.ts`                                                      | Create        | `apiFetch` client + response types                                                            |
+| `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test)                                       | Create        | Flat table: Community, Completed at, open link                                                |
+| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test)                                 | Create        | Read-only record; no mutation control (Decision 7)                                            |
+| `apps/web/src/pages/ReviewSessionsPage.tsx`                                               | Modify        | Entry-point `Link` to `/review-history`                                                       |
+| `apps/web/src/App.tsx`                                                                    | Modify        | Two `ProtectedRoute` routes for the two non-admin roles                                       |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                               | Modify        | Real translations, parity-enforced                                                            |
+| `openspec/specs/review-session-management/spec.md`, `review-session-ui/spec.md`           | Modify        | **Narrow** the FR-008 rows; keep FR-009/FR-010 intact                                         |
+| `apps/api/test/review-history.e2e-spec.ts`                                                | Create        | Full visibility matrix                                                                        |
 
 ## Interfaces / Contracts
 
@@ -401,23 +400,23 @@ export interface CommunityScopeChecker {
 
 ## Testing Strategy
 
-| Layer | What to test | Approach |
-|---|---|---|
-| Unit (api) | `AssignmentCommunityScopeChecker.listAssignedCommunityIds` | Table-driven over all 5 roles × {no row, deactivated row, active rows}; every non-operational role returns `[]`; deactivated rows never appear |
-| Unit (api) | `ReviewHistoryAccessService` role dispatch | Technician hits the `ForPerformer` method, representative the community one, every other role reaches **no** repository call and yields `[]` / `ReviewSessionNotFoundError` |
-| Unit (api) | Empty scope | `communityIds = []` ⇒ empty list and `null` by id — asserted against **both** the fake and (integration) the Prisma adapter, since `{ in: [] }` is the silent-catastrophe case |
-| Unit (api) | `SessionAccessService` regression | Its existing suite must pass **unmodified** — proof Decision 1 changed nothing on the write path |
-| Unit (api) | Read-history use case | Frozen questions come from `findFrozenWithSnapshot`; a decommissioned element yields `elementCode: null` rather than dropping the entry |
-| Integration (api) | Port surface guard | Enumerate `ReviewSessionRepository`'s methods: none returns a session (or list) from an identifier alone — spec *"No unscoped session read exists"* |
-| Integration (api) | Ordering parity | Both list methods return `completedAt DESC, id DESC`; identical direction, deterministic on equal timestamps |
-| E2E (api) | Visibility matrix, one test per route, no sampling | technician sees none of another technician's; representative sees none of another community's; representative **does** see a technician-performed session in scope |
-| E2E (api) | Drafts excluded | Draft absent from both lists; draft by id ⇒ 404; completing it makes it appear |
-| E2E (api) | Indistinguishable 404 | Deep-equal status **and** whole response body for: unknown id, draft, other performer's, other community's, since-deactivated assignment |
-| E2E (api) | Retroactive own-history revocation | Technician reads own completed session; assignment deactivated; identical request ⇒ absent from list **and** 404 by id, on the very next request |
-| E2E (api) | Scope guards | `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` still `[]`; `SYSTEM_ADMIN` 403 on both routes; no `ManagerCapability`; no query/sort/page parameter accepted; no new migration |
-| Unit (web) | Pages | Both pages × loading/error/empty/loaded; history detail renders **no** complete, discard or code-entry control; list applies no client-side filtering |
-| Unit (web) | i18n | `locales.test.ts` parity across `en`/`es`/`ca` for the new keys |
-| Browser | CLAUDE.md | Real dev server; log in as **each** in-scope role; technician own history + drill-in; representative cross-performer history + drill-in; deactivate an assignment and re-load; empty state |
+| Layer             | What to test                                               | Approach                                                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit (api)        | `AssignmentCommunityScopeChecker.listAssignedCommunityIds` | Table-driven over all 5 roles × {no row, deactivated row, active rows}; every non-operational role returns `[]`; deactivated rows never appear                                             |
+| Unit (api)        | `ReviewHistoryAccessService` role dispatch                 | Technician hits the `ForPerformer` method, representative the community one, every other role reaches **no** repository call and yields `[]` / `ReviewSessionNotFoundError`                |
+| Unit (api)        | Empty scope                                                | `communityIds = []` ⇒ empty list and `null` by id — asserted against **both** the fake and (integration) the Prisma adapter, since `{ in: [] }` is the silent-catastrophe case             |
+| Unit (api)        | `SessionAccessService` regression                          | Its existing suite must pass **unmodified** — proof Decision 1 changed nothing on the write path                                                                                           |
+| Unit (api)        | Read-history use case                                      | Frozen questions come from `findFrozenWithSnapshot`; a decommissioned element yields `elementCode: null` rather than dropping the entry                                                    |
+| Integration (api) | Port surface guard                                         | Enumerate `ReviewSessionRepository`'s methods: none returns a session (or list) from an identifier alone — spec _"No unscoped session read exists"_                                        |
+| Integration (api) | Ordering parity                                            | Both list methods return `completedAt DESC, id DESC`; identical direction, deterministic on equal timestamps                                                                               |
+| E2E (api)         | Visibility matrix, one test per route, no sampling         | technician sees none of another technician's; representative sees none of another community's; representative **does** see a technician-performed session in scope                         |
+| E2E (api)         | Drafts excluded                                            | Draft absent from both lists; draft by id ⇒ 404; completing it makes it appear                                                                                                             |
+| E2E (api)         | Indistinguishable 404                                      | Deep-equal status **and** whole response body for: unknown id, draft, other performer's, other community's, since-deactivated assignment                                                   |
+| E2E (api)         | Retroactive own-history revocation                         | Technician reads own completed session; assignment deactivated; identical request ⇒ absent from list **and** 404 by id, on the very next request                                           |
+| E2E (api)         | Scope guards                                               | `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` still `[]`; `SYSTEM_ADMIN` 403 on both routes; no `ManagerCapability`; no query/sort/page parameter accepted; no new migration                     |
+| Unit (web)        | Pages                                                      | Both pages × loading/error/empty/loaded; history detail renders **no** complete, discard or code-entry control; list applies no client-side filtering                                      |
+| Unit (web)        | i18n                                                       | `locales.test.ts` parity across `en`/`es`/`ca` for the new keys                                                                                                                            |
+| Browser           | CLAUDE.md                                                  | Real dev server; log in as **each** in-scope role; technician own history + drill-in; representative cross-performer history + drill-in; deactivate an assignment and re-load; empty state |
 
 ## Migration / Rollout
 

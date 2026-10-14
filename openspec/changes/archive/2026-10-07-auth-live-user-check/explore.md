@@ -1,6 +1,7 @@
 ## Exploration: auth-live-user-check
 
 ### Current State
+
 - **Guard flow.** `AuthenticatedGuard` is the global APP_GUARD. It reads cookie `sf_access_token`, calls `tokenIssuer.verify`, then calls `tokenDenylist.isRevoked(jti)`. Any failure throws 401, including a DB error (fail-closed). It then sets `request.user = payload`, typed `VerifiedAccessToken` (`sub, email, role, jti, exp`). It never re-reads the user.
 - **Consumers of `request.user`.** All of them read only `sub` and/or `role`. None read `email`, `maintenanceCompanyId` or `managerCapabilities`.
   - `PermissionsGuard` reads `request.user.role` only (checked against `permissionChecker.can`).
@@ -19,6 +20,7 @@
   - The nav and role in `AuthProvider` refresh only on reload or login, so a changed role takes effect in the UI after a reload. The API enforces the new role immediately regardless.
 
 ### Affected Areas
+
 - `apps/api/src/modules/auth/presentation/guards/authenticated.guard.ts`: inject `USER_REPOSITORY`, add the lookup, rebuild `request.user`.
 - `apps/api/src/modules/auth/presentation/guards/authenticated.guard.spec.ts`: the constructor gains a 5th dependency; new cases.
 - `apps/api/test/auth.e2e-spec.ts`: its local `InMemoryUserRepository.findById()` currently throws "Not used" and must be implemented (lookup by id). New e2e cases go here.
@@ -29,6 +31,7 @@
 - Web (conditional, see UI flag): `apps/web/src/api/client.ts` and/or `AuthProvider.tsx`.
 
 ### Approaches
+
 1. **Reuse `USER_REPOSITORY.findById` in the guard (recommended)**
    - Pros: zero new ports, adapters or modules; the ADR-010 filter is built in; matches the `LoginUseCase` precedent; every e2e suite already provides an in-memory fake, so no new overrides are needed.
    - Cons: returns the full `User`, including `passwordHash`, so the guard must copy only `sub, email, role` into `request.user` and never retain the entity. `GET /auth/me` for a manager and the scope checkers issue duplicate `findById` calls (accepted).
@@ -40,6 +43,7 @@
 3. **Per-user epoch / refresh-token rotation**: rejected by the user; belongs to tech-debt #5. Same per-request read with more moving parts.
 
 ### Recommendation
+
 Approach 1.
 
 - **Guard sequence:** `verify(token)`, then `isRevoked(jti)`, then `userRepository.findById(payload.sub)`. If the result is null, throw 401. Otherwise set `request.user = { ...payload, email: user.email, role: user.role }`.
@@ -58,6 +62,7 @@ Approach 1.
   - Web: a test for the 401 handling if the UI is included.
 
 ### Risks
+
 - **Performance.** One extra PK query per authenticated request, on top of the denylist query. Acceptable at this scale.
 - **Duplicate reads.** For a `MANAGER` or `MAINTENANCE_COMPANY_MANAGER` request, the scope and capability checkers also read the user (2 user reads per request). Dedupe is deferred.
 - **Auth-e2e fake.** `InMemoryUserRepository.findById` in `auth.e2e-spec.ts` throws today; a missed implementation fails every authenticated e2e in that file.
@@ -69,4 +74,5 @@ Approach 1.
 - **Out of scope.** Refresh tokens and rotation (#5), a per-user epoch, caching, deduping the checker reads, dropping `role` and `email` from the JWT claims, a `/auth/me` polling or refetch strategy in the web client.
 
 ### Ready for Proposal
+
 Yes, after the user decides whether the minimal web 401 handling is in this slice.

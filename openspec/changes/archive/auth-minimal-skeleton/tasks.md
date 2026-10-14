@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
 | Estimated changed lines | ~1200-1800 (≈35 files, 2 new Nest modules, shared infra, migration, web auth, tests per Strict TDD) |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 → PR 6 (see Suggested Work Units) |
-| Delivery strategy | ask-on-risk — resolved: chained PRs |
-| Chain strategy | stacked-to-main (each PR merges to main in order) |
+| 400-line budget risk    | High                                                                                                |
+| Chained PRs recommended | Yes                                                                                                 |
+| Suggested split         | PR 1 → PR 6 (see Suggested Work Units)                                                              |
+| Delivery strategy       | ask-on-risk — resolved: chained PRs                                                                 |
+| Chain strategy          | stacked-to-main (each PR merges to main in order)                                                   |
 
 Decision needed before apply: Resolved
 Chained PRs: Yes — 6 units, stacked-to-main
@@ -17,14 +17,14 @@ Chained PRs: Yes — 6 units, stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Spike + shared infra + Prisma schema/migration/seed | PR 1 | No runtime behavior change yet; safe standalone merge |
-| 2 | `users` module (entity/port/adapter/mapper) | PR 2 | Depends on PR 1 (IdGenerator, SoftDeletableRepository) |
-| 3 | `auth` module (application+infra+presentation) | PR 3 | Depends on PR 2 (`UserRepository`); largest unit |
-| 4 | App wiring (`app.module.ts`, `main.ts`, health `@Public()`) + API E2E | PR 4 | Depends on PR 3; first point auth is reachable |
-| 5 | Web auth (LoginPage, AuthProvider, ProtectedRoute, i18n, logo) | PR 5 | Depends on PR 4 (API contract live) |
-| 6 | Docs (README, ADR-011 addendum) | PR 6 | Can fold into PR 5 if kept small |
+| Unit | Goal                                                                  | Likely PR | Notes                                                  |
+| ---- | --------------------------------------------------------------------- | --------- | ------------------------------------------------------ |
+| 1    | Spike + shared infra + Prisma schema/migration/seed                   | PR 1      | No runtime behavior change yet; safe standalone merge  |
+| 2    | `users` module (entity/port/adapter/mapper)                           | PR 2      | Depends on PR 1 (IdGenerator, SoftDeletableRepository) |
+| 3    | `auth` module (application+infra+presentation)                        | PR 3      | Depends on PR 2 (`UserRepository`); largest unit       |
+| 4    | App wiring (`app.module.ts`, `main.ts`, health `@Public()`) + API E2E | PR 4      | Depends on PR 3; first point auth is reachable         |
+| 5    | Web auth (LoginPage, AuthProvider, ProtectedRoute, i18n, logo)        | PR 5      | Depends on PR 4 (API contract live)                    |
+| 6    | Docs (README, ADR-011 addendum)                                       | PR 6      | Can fold into PR 5 if kept small                       |
 
 Chain strategy confirmed: `stacked-to-main` — each PR merges to `main` in order before the next starts.
 

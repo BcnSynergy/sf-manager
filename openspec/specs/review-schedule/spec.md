@@ -10,14 +10,14 @@ It stores nothing, sends nothing and adds no schema.
 
 Terms used below:
 
-| Term | Meaning |
-|---|---|
-| Pair | A community plus an element type, per *A Pair Exists Only While the Community Has a Live Element of the Type* |
-| Quarter | A calendar quarter (Q1 Jan-Mar, Q2 Apr-Jun, Q3 Jul-Sep, Q4 Oct-Dec). Every date, quarter and deadline is judged on `Europe/Madrid` calendar dates, including "today" |
-| Covering session | A session in status `completed` whose frozen template frequency is `QUARTERLY` or `ANNUAL` |
-| Session date | The `Europe/Madrid` calendar date on which the session was completed |
-| Current quarter / previous quarter | The quarter containing today / the one immediately before it |
-| Annual deadline | The date of the pair's most recent `ANNUAL` covering session plus 12 months, inclusive: a review dated exactly on the anniversary is on time. An anniversary of 29 Feb in a non-leap year is 28 Feb |
+| Term                               | Meaning                                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pair                               | A community plus an element type, per _A Pair Exists Only While the Community Has a Live Element of the Type_                                                                                       |
+| Quarter                            | A calendar quarter (Q1 Jan-Mar, Q2 Apr-Jun, Q3 Jul-Sep, Q4 Oct-Dec). Every date, quarter and deadline is judged on `Europe/Madrid` calendar dates, including "today"                                |
+| Covering session                   | A session in status `completed` whose frozen template frequency is `QUARTERLY` or `ANNUAL`                                                                                                          |
+| Session date                       | The `Europe/Madrid` calendar date on which the session was completed                                                                                                                                |
+| Current quarter / previous quarter | The quarter containing today / the one immediately before it                                                                                                                                        |
+| Annual deadline                    | The date of the pair's most recent `ANNUAL` covering session plus 12 months, inclusive: a review dated exactly on the anniversary is on time. An anniversary of 29 Feb in a non-leap year is 28 Feb |
 
 Scenarios assume today is **15 November 2026** (current quarter Q4 2026,
 previous quarter Q3 2026) unless stated. Dates and deadlines are calendar
@@ -121,11 +121,11 @@ reset coverage.
 A pair that has at least one covering session MUST be judged for the quarter
 rules as follows.
 
-| Condition | Quarterly result |
-|---|---|
+| Condition                                                                                                                                                    | Quarterly result                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | The previous quarter is uncovered, **and** the pair has a covering session dated before the previous quarter, **and** the current quarter is not yet covered | `OVERDUE`; deadline is the last day of the previous quarter |
-| Not overdue and the current quarter is uncovered | `UPCOMING`; deadline is the last day of the current quarter |
-| Otherwise | satisfied |
+| Not overdue and the current quarter is uncovered                                                                                                             | `UPCOMING`; deadline is the last day of the current quarter |
+| Otherwise                                                                                                                                                    | satisfied                                                   |
 
 Known history starts at the first covering session. Quarters before it
 MUST NOT be judged, and quarters two or more back MUST NOT be judged at all.
@@ -188,12 +188,12 @@ be computed from the date of the most recent `ANNUAL` covering session only;
 `QUARTERLY` sessions MUST NOT move it, and earlier `ANNUAL` sessions MUST be
 ignored. The annual result MUST be:
 
-| Condition | Annual result |
-|---|---|
-| The annual deadline is before today | `OVERDUE` with that deadline |
-| The deadline is today or later but not after the last day of the current quarter | `UPCOMING` with that deadline |
-| The deadline is after the last day of the current quarter | satisfied |
-| No `ANNUAL` session exists | `UPCOMING` with the last day of the current quarter as deadline |
+| Condition                                                                        | Annual result                                                   |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| The annual deadline is before today                                              | `OVERDUE` with that deadline                                    |
+| The deadline is today or later but not after the last day of the current quarter | `UPCOMING` with that deadline                                   |
+| The deadline is after the last day of the current quarter                        | satisfied                                                       |
+| No `ANNUAL` session exists                                                       | `UPCOMING` with the last day of the current quarter as deadline |
 
 #### Scenario: Deadline already passed
 
@@ -395,14 +395,14 @@ success response.
 
 ### Requirement: Scope Follows the Caller's Role
 
-| Caller | Scope |
-|---|---|
-| `SYSTEM_ADMIN` | every pair |
-| `MANAGER` holding `VIEW_ALL_REVIEWS` | every pair |
-| `MANAGER` without it | none: success with an empty list, never `403` |
-| `COMMUNITY_REPRESENTATIVE` | pairs of communities they are actively assigned to |
-| `MAINTENANCE_TECHNICIAN` | pairs of communities they are actively assigned to, whether or not they performed any session there |
-| `MAINTENANCE_COMPANY_MANAGER` | refused with `403` |
+| Caller                               | Scope                                                                                               |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `SYSTEM_ADMIN`                       | every pair                                                                                          |
+| `MANAGER` holding `VIEW_ALL_REVIEWS` | every pair                                                                                          |
+| `MANAGER` without it                 | none: success with an empty list, never `403`                                                       |
+| `COMMUNITY_REPRESENTATIVE`           | pairs of communities they are actively assigned to                                                  |
+| `MAINTENANCE_TECHNICIAN`             | pairs of communities they are actively assigned to, whether or not they performed any session there |
+| `MAINTENANCE_COMPANY_MANAGER`        | refused with `403`                                                                                  |
 
 An unauthenticated caller MUST be refused with `401` before any role or scope
 check. The capability MUST be resolved on every request. A capability that

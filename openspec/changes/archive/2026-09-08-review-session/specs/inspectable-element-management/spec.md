@@ -29,26 +29,31 @@ deleted, and deleted is not merely decommissioned. Its exact persisted
 shape is a `sdd-design` decision.
 
 #### Scenario: A newly created element is active
+
 - GIVEN a `SYSTEM_ADMIN` creates an element under an active community
 - WHEN the creation succeeds
 - THEN the element MUST be active
 
 #### Scenario: Decommissioning preserves the row, the code and the history
+
 - GIVEN active element E with `code` X, referenced by an existing review record
 - WHEN a `SYSTEM_ADMIN` decommissions E
 - THEN E MUST still exist with `code` X, its `deletedAt` MUST still be null, and the review record MUST still reference it
 
 #### Scenario: Decommissioning is reversible
+
 - GIVEN element E is decommissioned
 - WHEN a `SYSTEM_ADMIN` reactivates it
 - THEN E MUST be active again, with `code` X unchanged
 
 #### Scenario: Decommissioned and deleted are distinct states
+
 - GIVEN one decommissioned element and one soft-deleted element
 - WHEN their states are inspected
 - THEN the decommissioned one MUST NOT have `deletedAt` set, and neither state MUST be inferable from the other
 
 #### Scenario: A decommissioned element is not expected in a new session
+
 - GIVEN element E of community C and element type T is decommissioned, and all of C's active elements of type T are reviewed
 - WHEN a user completes a session for C and T
 - THEN completion MUST succeed and MUST NOT require a reason for E
@@ -66,21 +71,25 @@ decommission action, a decommission reason field, or a decommission
 history.
 
 #### Scenario: Admin decommissions and reactivates an element
+
 - GIVEN community C is active and has an active element E
 - WHEN a `SYSTEM_ADMIN` decommissions E and then reactivates it
 - THEN both responses MUST be 2xx and E's state MUST follow each action
 
 #### Scenario: Decommission targets a missing, soft-deleted or wrong-community element
+
 - GIVEN an element id that does not exist, is soft-deleted, or belongs to a different community than the one in the path
 - WHEN an admin attempts to decommission or reactivate it
 - THEN the response MUST be 404 with `code: INSPECTABLE_ELEMENT_NOT_FOUND`
 
 #### Scenario: Repeating the same transition is not an error path with side effects
+
 - GIVEN element E is already decommissioned
 - WHEN a `SYSTEM_ADMIN` decommissions it again
 - THEN E MUST remain decommissioned with every other field unchanged
 
 #### Scenario: No bulk action, reason or history ships
+
 - GIVEN the API surface, schema and use cases after this change
 - WHEN they are inspected
 - THEN no bulk decommission operation, decommission reason field, or decommission history record MUST exist
@@ -95,21 +104,25 @@ database holding representative existing rows and MUST also succeed
 against an empty one.
 
 #### Scenario: Every pre-existing row is active
+
 - GIVEN a database holding several `InspectableElement` rows created before this change
 - WHEN the migration has run
 - THEN every one of those rows MUST be active
 
 #### Scenario: No row is left indeterminate
+
 - GIVEN the schema after the migration
 - WHEN the state column is inspected
 - THEN no row MUST hold a value from which the element's active state cannot be determined
 
 #### Scenario: Migration succeeds against an empty database
+
 - GIVEN a database with no `InspectableElement` rows
 - WHEN the migration runs
 - THEN it MUST complete successfully and produce the same final schema
 
 #### Scenario: No lazy state assignment path exists
+
 - GIVEN any element that existed before the change
 - WHEN it is read immediately after deploy
 - THEN it MUST already carry its state, and no read path MUST assign one
@@ -123,11 +136,13 @@ admin must be able to see and reactivate them. Soft-deleted elements MUST
 still be excluded.
 
 #### Scenario: Listing a community's elements returns each element's state
+
 - GIVEN community C has active and decommissioned elements
 - WHEN a `SYSTEM_ADMIN` lists C's elements
 - THEN the response MUST include both, each carrying its state
 
 #### Scenario: Soft-deleted elements remain excluded
+
 - GIVEN community C has a soft-deleted element alongside active and decommissioned ones
 - WHEN a `SYSTEM_ADMIN` lists C's elements
 - THEN the soft-deleted element MUST NOT appear
@@ -141,19 +156,22 @@ element by `code` MUST be constrained by a community and an element type,
 and MUST return an element only when that element is active and not
 soft-deleted. A resolution that fails any of those constraints MUST be
 rejected identically to a `code` that matches no element at all — see
-`review-session-management` → *Rejected Codes Are Indistinguishable*.
+`review-session-management` → _Rejected Codes Are Indistinguishable_.
 
 #### Scenario: An in-scope code resolves
+
 - GIVEN active element E of community C and element type T has `code` X
 - WHEN a by-code resolution constrained to C and T is performed for X
 - THEN it MUST return E
 
 #### Scenario: An out-of-scope code does not resolve
+
 - GIVEN element E has `code` X but belongs to another community, is of another element type, is decommissioned, or is soft-deleted
 - WHEN a by-code resolution constrained to community C and element type T is performed for X
 - THEN it MUST NOT return E
 
 #### Scenario: No unconstrained by-code operation is exposed
+
 - GIVEN the API surface and application use cases after this change
 - WHEN they are inspected
 - THEN none MUST accept a `code` alone and return an element without a community-and-element-type constraint
@@ -166,11 +184,11 @@ rejected identically to a `code` that matches no element at all — see
 `InspectableElement` because, at the time, "keeps its history but stops
 appearing in new reviews" had no referent — `ReviewSession` did not
 exist. FR-007 creates that referent, and the requirement now contradicts
-*Element Active State*.)
+_Element Active State_.)
 
-(Migration: replaced by *Element Active State*, *Decommission and
-Reactivate an Element*, and *Pre-Existing Elements Are Active After the
-Migration*. Listing and printing continue to exclude soft-deleted
+(Migration: replaced by _Element Active State_, _Decommission and
+Reactivate an Element_, and _Pre-Existing Elements Are Active After the
+Migration_. Listing and printing continue to exclude soft-deleted
 elements via `deletedAt`; the new state additionally excludes
 decommissioned elements from **review sessions** only, and any test
 asserting that no `active` concept exists must be replaced by the

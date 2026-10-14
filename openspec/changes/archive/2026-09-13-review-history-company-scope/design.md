@@ -8,13 +8,13 @@ on the session**, not a join to the performer's current employment.
 
 The slice's five auditable rules, each in exactly one place:
 
-| Rule | Where it is enforced | How it is auditable |
-|---|---|---|
-| Caller holds `reviewSession:read` | `PermissionsGuard` + `@RequirePermission` (Layer 1) | Route decorator; `ROLE_PERMISSIONS` gains one entry |
-| A manager's scope is **their own company id**, re-read per request | `CompanyScopeChecker.resolveCompanyScope` (Layer 2, new sibling port), fail-closed exhaustive `switch`, no cache | One adapter, table-driven over all 5 roles |
-| Attribution never drifts | `ReviewSession.performedByCompanyId`, written at INSERT, never updated | No port method can write it after creation |
-| A technician always sees their **own** performed sessions, and only those | The port method name and its `WHERE` — `…ForPerformer` (no community conjunct) | 6 history methods, 6 trivial `WHERE` clauses |
-| Null company ⇒ nothing, never everything | Branch returns `[]`/`null` **before** any repository call | One `if` per side, unit-asserted |
+| Rule                                                                      | Where it is enforced                                                                                             | How it is auditable                                 |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Caller holds `reviewSession:read`                                         | `PermissionsGuard` + `@RequirePermission` (Layer 1)                                                              | Route decorator; `ROLE_PERMISSIONS` gains one entry |
+| A manager's scope is **their own company id**, re-read per request        | `CompanyScopeChecker.resolveCompanyScope` (Layer 2, new sibling port), fail-closed exhaustive `switch`, no cache | One adapter, table-driven over all 5 roles          |
+| Attribution never drifts                                                  | `ReviewSession.performedByCompanyId`, written at INSERT, never updated                                           | No port method can write it after creation          |
+| A technician always sees their **own** performed sessions, and only those | The port method name and its `WHERE` — `…ForPerformer` (no community conjunct)                                   | 6 history methods, 6 trivial `WHERE` clauses        |
+| Null company ⇒ nothing, never everything                                  | Branch returns `[]`/`null` **before** any repository call                                                        | One `if` per side, unit-asserted                    |
 
 **Verified before designing, not assumed** (all read on `main` at 2026-09-09):
 `AccessTokenPayload` is exactly `{ sub, email, role }` — no `maintenanceCompanyId`,
@@ -90,7 +90,7 @@ UPDATE "ReviewSession" rs
 ```
 
 **Rationale for backfilling drafts too** — this is the non-obvious part.
-Decision 1 writes the column at *creation*; a draft that already exists when
+Decision 1 writes the column at _creation_; a draft that already exists when
 this migration runs was created before that code shipped, so if the backfill
 filtered `WHERE status = 'completed'` that draft would be **permanently
 unattributed** once completed, with no path to ever fix it. Filtering by status
@@ -119,24 +119,24 @@ addendum already accepted.
 
 **Rationale — and the security implication of both sides, stated explicitly**:
 
-- *If it were a claim*: the token becomes a **bearer of tenant scope**. A
+- _If it were a claim_: the token becomes a **bearer of tenant scope**. A
   manager moved from company A to company B, or detached from a company
   entirely, keeps reading company A's complete RIPCI compliance history for up
   to the full access-token lifetime (2h, `auth-minimal-skeleton` addendum) with
   **no revocation path** — the deny-list is keyed on `jti`, there is no `userId`
   column to bulk-invalidate by, and `User.sessionsValidFrom` is still an
   unbuilt ADR-011 follow-up. That is categorically worse than the accepted
-  `role` staleness: a stale `role` narrows or widens *which endpoints* a person
+  `role` staleness: a stale `role` narrows or widens _which endpoints_ a person
   reaches inside one already-authorized installation, whereas a stale company
   claim crosses a **customer boundary** and exposes another maintenance
   company's records. It would also create a second source of truth for
   `maintenanceCompanyId` — one in the DB, one in the token — which is precisely
   the "which company does this belong to?" ambiguity `performedByCompanyId`
   exists to remove.
-- *Per-request read*: costs one indexed primary-key lookup on two read-only
+- _Per-request read_: costs one indexed primary-key lookup on two read-only
   endpoints, and it is the contract the whole `authorization` spec is already
   written against — `CommunityScopeChecker` deliberately re-reads with no
-  cache so *"deactivating an assignment removes access on the next request"*.
+  cache so _"deactivating an assignment removes access on the next request"_.
   Detaching a manager from a company revokes their history on the very next
   request, by the same mechanism, with nothing new to reason about.
 
@@ -174,7 +174,7 @@ assignment tables; `User.maintenanceCompanyId` is owned by `users`.
 rejected by proposal Approach choice 3, and it would corrupt that port's one
 question; (b) a review-session-local port — rejected: ADR-011 Decision 1 gives
 `MAINTENANCE_COMPANY_MANAGER` two more company-scoped powers (scoped CRUD on
-their technicians, onboarding/disabling), so the *next* consumer of "what
+their technicians, onboarding/disabling), so the _next_ consumer of "what
 company scopes this actor" is already named in an accepted ADR, and a
 module-local answer would force a second, independently-maintained fail-closed
 role dispatch. The file count is identical either way (one port + one adapter);
@@ -255,7 +255,7 @@ established marker for a history read; the two are distinguished by it and by an
 integration test asserting the new one never returns a draft. Reusing
 `findByIdForPerformer` plus a caller-side `status === 'completed'` check is
 rejected outright — that is caller-side narrowing, which the shipped spec
-requirement *"History Scope Is Carried by the Query, Not by the Caller"* forbids.
+requirement _"History Scope Is Carried by the Query, Not by the Caller"_ forbids.
 
 ### Decision 7 — the technician-own-history reversal: scope resolution moves **inside** the role branches
 
@@ -308,12 +308,12 @@ still collapse to one indistinguishable 404.
 
 **Why this is the precise shape of the reversal, and where it could go wrong**:
 
-| Must hold | Enforced by |
-|---|---|
-| A deactivated technician still sees their own sessions | The technician branch makes **no** Layer 2 call, so the deleted early-return can no longer swallow it |
-| A technician sees **no one else's** sessions, deactivated or not | `findCompletedForPerformer`'s `WHERE performedById = :self` — unchanged, and the *only* filter, so it cannot be widened by omission |
-| A representative's rule is untouched | Their branch is the shipped code, moved verbatim, including the empty-scope early return |
-| The old rule cannot come back by accident | The two `…ForPerformerInCommunities` methods are deleted from the port (Decision 6) |
+| Must hold                                                        | Enforced by                                                                                                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| A deactivated technician still sees their own sessions           | The technician branch makes **no** Layer 2 call, so the deleted early-return can no longer swallow it                               |
+| A technician sees **no one else's** sessions, deactivated or not | `findCompletedForPerformer`'s `WHERE performedById = :self` — unchanged, and the _only_ filter, so it cannot be widened by omission |
+| A representative's rule is untouched                             | Their branch is the shipped code, moved verbatim, including the empty-scope early return                                            |
+| The old rule cannot come back by accident                        | The two `…ForPerformerInCommunities` methods are deleted from the port (Decision 6)                                                 |
 
 The mistake this design is deliberately shaped against: simply deleting the
 pre-`switch` early return while leaving the technician calling
@@ -332,24 +332,24 @@ company-wide list can span many technicians). Unresolvable ⇒ `''`, and both
 pages render a localized placeholder, exactly as `reviewHistory.list.communityUnknown`
 already does for a soft-deleted community. Both pages render a Performer column
 for every role — **no role-conditional variant**, per the shipped
-`review-history-ui` rule *"the same surface, with no reduced or alternative
-variant"*.
+`review-history-ui` rule _"the same surface, with no reduced or alternative
+variant"_.
 
 **Alternatives considered**: ship `performedById` and render the UUID
 (rejected — a compliance record whose reader cannot attribute it to a person is
-not a compliance record, and success criterion *"Each row identifies who
-performed the session"* would be met only on a technicality); render the column
+not a compliance record, and success criterion _"Each row identifies who
+performed the session"_ would be met only on a technicality); render the column
 only for the manager (rejected by the shipped no-variant requirement).
 
 **Note**: `User` has no name field, so `email` **is** the identity this app can
-show today. This closes the archived design's own *"Performer identity in the
-representative's view"* open question rather than adding a new one.
+show today. This closes the archived design's own _"Performer identity in the
+representative's view"_ open question rather than adding a new one.
 
 ### Decision 9 — the manager's scope ANDs with **nothing** (open question 6)
 
 **Choice**: `WHERE performedByCompanyId = :companyId AND status = 'completed'`.
 Full stop. Explicitly **not** conjoined with: any community assignment or
-`CommunityScopeChecker` call; the performer's *current* employment; the
+`CommunityScopeChecker` call; the performer's _current_ employment; the
 performer's `deletedAt`; the community's `deletedAt`; the template's status.
 
 **Rationale**: every one of those conjuncts would silently subtract sessions the
@@ -400,20 +400,20 @@ design). It MUST state, and needs no further product input to write:
 3. **`MAINTENANCE_COMPANY_MANAGER` becomes operational** — `ROLE_PERMISSIONS`
    maps it to `['reviewSession:read']`, its first non-empty entry since the
    2026-08-22 addendum declared all four roles inert, and it delivers ADR-011
-   Decision 1's promised *"read access to every ReviewSession performed by any
-   technician of their company"*. `MANAGER` stays `[]`; `SYSTEM_ADMIN` still
+   Decision 1's promised _"read access to every ReviewSession performed by any
+   technician of their company"_. `MANAGER` stays `[]`; `SYSTEM_ADMIN` still
    holds no `reviewSession:*`; Decision 1's other two manager powers (scoped
    technician CRUD, onboarding/disabling) and Decision 2's `ManagerCapability`
    mechanism remain unbuilt.
 4. **Attribution is frozen, not derived** — `ReviewSession.performedByCompanyId`
-   snapshots the performer's company at creation. Decision 1's phrase *"performed
-   by any technician of their company"* is therefore implemented as *"performed
-   **on behalf of** their company"*: a technician who transfers does not move
+   snapshots the performer's company at creation. Decision 1's phrase _"performed
+   by any technician of their company"_ is therefore implemented as _"performed
+   **on behalf of** their company"_: a technician who transfers does not move
    their past reviews. Backfill of pre-existing rows is best-effort from current
    employment (stated, accepted limitation).
 5. **Rejected, with the reason**: adding `maintenanceCompanyId` to the access
    token. Record Decision 3's staleness/blast-radius argument in two sentences,
-   and note that this is a *deliberate divergence* from how `role` is handled —
+   and note that this is a _deliberate divergence_ from how `role` is handled —
    so a future reader does not "harmonize" the two without re-deciding.
 
 `sdd-apply` writes this file; no product input remains.
@@ -441,59 +441,59 @@ design). It MUST state, and needs no further product input to write:
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modify | `performedByCompanyId String? @db.Uuid` + `@@index`; FK comment block per ADR-013 |
-| `apps/api/prisma/migrations/2026…_add_review_session_performed_by_company/migration.sql` | Create | Column, index, hand-written FK, all-rows backfill (Decision 2) |
-| `.../review-session/domain/review-session.entity.ts` | Modify | `performedByCompanyId: string \| null`, readonly, no setter |
-| `.../review-session/infrastructure/persistence/review-session.mapper.ts` | Modify | Map the column both directions |
-| `apps/api/src/shared/application/authorization/company-scope.checker.port.ts` | Create | Layer 2 sibling port (Decision 4) |
-| `.../users/infrastructure/authorization/user-company-scope.checker.ts` | Create | Adapter: exhaustive fail-closed `switch`, soft-delete-excluding read |
-| `.../users/users.module.ts` | Modify | Bind + **export** `COMPANY_SCOPE_CHECKER` |
-| `.../review-session/application/ports/user-directory.port.ts` | Create | Module-local, non-authorizing (Decision 5) |
-| `.../review-session/infrastructure/persistence/prisma-user-directory.ts` | Create | Reads `PrismaService` directly; email read includes soft-deleted |
-| `.../review-session/application/use-cases/testing/in-memory-user-directory.ts` | Create | Fake for unit tests |
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modify | +4 methods, −2 (Decision 6); **still no unscoped `findById`** |
-| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts` | Modify | Four queries, shared `COMPLETED_HISTORY_ORDER_BY`; two deleted |
-| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts` | Modify | Same four/two, same ordering |
-| `.../review-session/application/services/review-history-access.service.ts` | Modify | Scope resolution moves inside the branches (Decision 7) |
-| `.../review-session/application/services/session-access.service.ts` | **Unchanged** | Write-path gate, deliberately untouched |
-| `.../review-session/application/use-cases/open-review-session.use-case.ts` | Modify | Snapshot the performer's company at creation (Decision 1) |
-| `.../review-session/application/use-cases/list-review-history.use-case.ts` | Modify | Batch performer-email resolution (Decision 8) |
-| `.../review-session/application/use-cases/read-review-history.use-case.ts` | Modify | Same, for the single performer |
-| `.../review-session/presentation/dto/review-history-row.dto.ts`, `…-detail-response.dto.ts` | Modify | `performedByEmail` |
-| `.../review-session/review-session.module.ts` | Modify | Import `UsersModule`; bind `USER_DIRECTORY` |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modify | `MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read']` — nothing else |
-| `apps/web/src/api/review-history.ts` | Modify | `performedByEmail` on both response types |
-| `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test) | Modify | Performer column + placeholder fallback |
-| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test) | Modify | Performer line |
-| `apps/web/src/pages/HealthPage.tsx` (+ test) | Modify | Manager entry link (Decision 10) |
-| `apps/web/src/App.tsx` | Modify | Widen the two `/review-history*` routes only |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | `health.reviewHistoryLink`, `reviewHistory.*.columnPerformer`, `performerUnknown` |
-| `.../review-session/infrastructure/persistence/review-session-migration.integration.spec.ts` | Modify | Column/index/FK + row-level backfill assertions |
-| `apps/api/test/review-history.e2e-spec.ts` | Modify | Three-role matrix, both null cases, transfer case, deactivation-reversal case |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modify | The addendum (Decision 11) |
-| `docs/requirements/functional-requirements.md` | Modify | FR-008: three of four scopes shipped |
+| File                                                                                         | Action        | Description                                                                       |
+| -------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`                                                              | Modify        | `performedByCompanyId String? @db.Uuid` + `@@index`; FK comment block per ADR-013 |
+| `apps/api/prisma/migrations/2026…_add_review_session_performed_by_company/migration.sql`     | Create        | Column, index, hand-written FK, all-rows backfill (Decision 2)                    |
+| `.../review-session/domain/review-session.entity.ts`                                         | Modify        | `performedByCompanyId: string \| null`, readonly, no setter                       |
+| `.../review-session/infrastructure/persistence/review-session.mapper.ts`                     | Modify        | Map the column both directions                                                    |
+| `apps/api/src/shared/application/authorization/company-scope.checker.port.ts`                | Create        | Layer 2 sibling port (Decision 4)                                                 |
+| `.../users/infrastructure/authorization/user-company-scope.checker.ts`                       | Create        | Adapter: exhaustive fail-closed `switch`, soft-delete-excluding read              |
+| `.../users/users.module.ts`                                                                  | Modify        | Bind + **export** `COMPANY_SCOPE_CHECKER`                                         |
+| `.../review-session/application/ports/user-directory.port.ts`                                | Create        | Module-local, non-authorizing (Decision 5)                                        |
+| `.../review-session/infrastructure/persistence/prisma-user-directory.ts`                     | Create        | Reads `PrismaService` directly; email read includes soft-deleted                  |
+| `.../review-session/application/use-cases/testing/in-memory-user-directory.ts`               | Create        | Fake for unit tests                                                               |
+| `.../review-session/application/ports/review-session.repository.port.ts`                     | Modify        | +4 methods, −2 (Decision 6); **still no unscoped `findById`**                     |
+| `.../review-session/infrastructure/persistence/prisma-review-session.repository.ts`          | Modify        | Four queries, shared `COMPLETED_HISTORY_ORDER_BY`; two deleted                    |
+| `.../review-session/application/use-cases/testing/in-memory-review-session.repository.ts`    | Modify        | Same four/two, same ordering                                                      |
+| `.../review-session/application/services/review-history-access.service.ts`                   | Modify        | Scope resolution moves inside the branches (Decision 7)                           |
+| `.../review-session/application/services/session-access.service.ts`                          | **Unchanged** | Write-path gate, deliberately untouched                                           |
+| `.../review-session/application/use-cases/open-review-session.use-case.ts`                   | Modify        | Snapshot the performer's company at creation (Decision 1)                         |
+| `.../review-session/application/use-cases/list-review-history.use-case.ts`                   | Modify        | Batch performer-email resolution (Decision 8)                                     |
+| `.../review-session/application/use-cases/read-review-history.use-case.ts`                   | Modify        | Same, for the single performer                                                    |
+| `.../review-session/presentation/dto/review-history-row.dto.ts`, `…-detail-response.dto.ts`  | Modify        | `performedByEmail`                                                                |
+| `.../review-session/review-session.module.ts`                                                | Modify        | Import `UsersModule`; bind `USER_DIRECTORY`                                       |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                           | Modify        | `MAINTENANCE_COMPANY_MANAGER: ['reviewSession:read']` — nothing else              |
+| `apps/web/src/api/review-history.ts`                                                         | Modify        | `performedByEmail` on both response types                                         |
+| `apps/web/src/pages/ReviewHistoryPage.tsx` (+ test)                                          | Modify        | Performer column + placeholder fallback                                           |
+| `apps/web/src/pages/ReviewHistoryDetailPage.tsx` (+ test)                                    | Modify        | Performer line                                                                    |
+| `apps/web/src/pages/HealthPage.tsx` (+ test)                                                 | Modify        | Manager entry link (Decision 10)                                                  |
+| `apps/web/src/App.tsx`                                                                       | Modify        | Widen the two `/review-history*` routes only                                      |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                                  | Modify        | `health.reviewHistoryLink`, `reviewHistory.*.columnPerformer`, `performerUnknown` |
+| `.../review-session/infrastructure/persistence/review-session-migration.integration.spec.ts` | Modify        | Column/index/FK + row-level backfill assertions                                   |
+| `apps/api/test/review-history.e2e-spec.ts`                                                   | Modify        | Three-role matrix, both null cases, transfer case, deactivation-reversal case     |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`                                   | Modify        | The addendum (Decision 11)                                                        |
+| `docs/requirements/functional-requirements.md`                                               | Modify        | FR-008: three of four scopes shipped                                              |
 
 ## Testing Strategy
 
-| Layer | What to test | Approach |
-|---|---|---|
-| Unit (api) | `UserCompanyScopeChecker` | Table-driven over all 5 roles × {no company, company, soft-deleted user}; only `MAINTENANCE_COMPANY_MANAGER` ever non-null |
-| Unit (api) | `ReviewHistoryAccessService` dispatch | Technician reaches `findCompletedForPerformer` and **never** the scope checker; representative's path byte-identical to shipped; manager with `null` company reaches **no** repository call |
-| Unit (api) | The reversal, explicitly | Technician with zero active assignments still gets their own sessions (list **and** by id); the same technician still gets `[]`/404 for another performer's session |
-| Unit (api) | `OpenReviewSessionUseCase` | Every created session carries the performer's company; a performer with none creates a `null`-attributed session |
-| Unit (api) | Email resolution | One `findEmailsByIds` call regardless of row count; soft-deleted performer still resolves; unresolvable ⇒ `''` |
-| Integration (api) | Port surface guard | Enumerate `ReviewSessionRepository`: no identifier-only read; the two `…ForPerformerInCommunities` methods are **gone** |
-| Integration (api) | Migration | Column, index, FK present; `ReviewSession_open_draft_key` and all 7 FKs intact; backfill attributes each row to its performer's company; down-migration clean |
-| Integration (api) | Company queries | `findCompletedForCompany` never returns another company's or a `null`-company row; ordering identical to the other two list methods |
-| E2E (api) | Three-role visibility matrix, no sampling | Manager sees all own-company sessions across technicians and communities; none of another company's; both null cases (manager without company, session without company) ⇒ empty/404 |
-| E2E (api) | Attribution survives transfer | Complete a session, move the technician to company B, assert it stays with A's manager and never appears for B's |
-| E2E (api) | Reversal | Technician completes a session, assignment deactivated, identical request ⇒ still present **and** still readable by id; a community-mate's session ⇒ 404 before and after |
-| E2E (api) | Scope guards | `MANAGER` still `[]`; `SYSTEM_ADMIN` 403; no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol; no query/sort/page parameter accepted; manager 403 on every `/review-sessions*` route |
-| Unit (web) | Pages | All three roles render the same surface; performer column + placeholder; manager link on `/` and only for that role; no filtering control |
-| Unit (web) | i18n | `locales.test.ts` parity for the new keys |
-| Browser | CLAUDE.md | Real dev server; log in as `MAINTENANCE_COMPANY_MANAGER` (plus regression passes for the other two roles); company-wide list at realistic volume, drill-in, empty state, entry point |
+| Layer             | What to test                              | Approach                                                                                                                                                                                    |
+| ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (api)        | `UserCompanyScopeChecker`                 | Table-driven over all 5 roles × {no company, company, soft-deleted user}; only `MAINTENANCE_COMPANY_MANAGER` ever non-null                                                                  |
+| Unit (api)        | `ReviewHistoryAccessService` dispatch     | Technician reaches `findCompletedForPerformer` and **never** the scope checker; representative's path byte-identical to shipped; manager with `null` company reaches **no** repository call |
+| Unit (api)        | The reversal, explicitly                  | Technician with zero active assignments still gets their own sessions (list **and** by id); the same technician still gets `[]`/404 for another performer's session                         |
+| Unit (api)        | `OpenReviewSessionUseCase`                | Every created session carries the performer's company; a performer with none creates a `null`-attributed session                                                                            |
+| Unit (api)        | Email resolution                          | One `findEmailsByIds` call regardless of row count; soft-deleted performer still resolves; unresolvable ⇒ `''`                                                                              |
+| Integration (api) | Port surface guard                        | Enumerate `ReviewSessionRepository`: no identifier-only read; the two `…ForPerformerInCommunities` methods are **gone**                                                                     |
+| Integration (api) | Migration                                 | Column, index, FK present; `ReviewSession_open_draft_key` and all 7 FKs intact; backfill attributes each row to its performer's company; down-migration clean                               |
+| Integration (api) | Company queries                           | `findCompletedForCompany` never returns another company's or a `null`-company row; ordering identical to the other two list methods                                                         |
+| E2E (api)         | Three-role visibility matrix, no sampling | Manager sees all own-company sessions across technicians and communities; none of another company's; both null cases (manager without company, session without company) ⇒ empty/404         |
+| E2E (api)         | Attribution survives transfer             | Complete a session, move the technician to company B, assert it stays with A's manager and never appears for B's                                                                            |
+| E2E (api)         | Reversal                                  | Technician completes a session, assignment deactivated, identical request ⇒ still present **and** still readable by id; a community-mate's session ⇒ 404 before and after                   |
+| E2E (api)         | Scope guards                              | `MANAGER` still `[]`; `SYSTEM_ADMIN` 403; no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol; no query/sort/page parameter accepted; manager 403 on every `/review-sessions*` route           |
+| Unit (web)        | Pages                                     | All three roles render the same surface; performer column + placeholder; manager link on `/` and only for that role; no filtering control                                                   |
+| Unit (web)        | i18n                                      | `locales.test.ts` parity for the new keys                                                                                                                                                   |
+| Browser           | CLAUDE.md                                 | Real dev server; log in as `MAINTENANCE_COMPANY_MANAGER` (plus regression passes for the other two roles); company-wide list at realistic volume, drill-in, empty state, entry point        |
 
 ## Migration / Rollout
 

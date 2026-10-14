@@ -38,13 +38,13 @@ ADR-014, `docs/requirements/functional-requirements.md` FR-008.
 Closed with the product owner before this proposal. **Inputs, not open items —
 do not re-litigate in `sdd-spec`/`sdd-design`.**
 
-| Decision | Resolution |
-|---|---|
-| **Two of FR-008's four visibility scopes only** | In: a `MAINTENANCE_TECHNICIAN` sees **their own** completed sessions; a `COMMUNITY_REPRESENTATIVE` sees **their community's**. Out: `MAINTENANCE_COMPANY_MANAGER` company-wide, and `SYSTEM_ADMIN`/`MANAGER` + `VIEW_ALL_REVIEWS` global. |
-| **Why that cut** | The two in-scope visibilities reuse the **already shipped** Layer 2 `CommunityScopeChecker` — the only two roles its exhaustive switch resolves. The two deferred ones need infrastructure that does not exist: `ManagerCapability` / `User.managerCapabilities` from ADR-011 Decision 2 was **never implemented anywhere in code** (verified against `user.entity.ts`), and company scope needs a `ReviewSession → User.maintenanceCompanyId` join no port supports. Building either is a separate, larger prerequisite slice — ADR-006 discipline. |
-| **Flat chronological list, no filter-by-element** | FR-008's wording is "per element and per community". This slice delivers the **per-community** (and per-performer) half. Narrowing a history list to one element's past reviews is deferred, deliberately and explicitly. |
-| **Drill-in shows the full record** | Opening one historical session shows its recorded answers and observations — the same read-back FR-007 already built, extended with a scope path for viewing a session you did not perform (the representative case). |
-| **Completed sessions only** | The open draft stays exclusively in `review-session`'s existing resume flow (`GET /review-sessions`). Drafts never appear in history. |
+| Decision                                          | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Two of FR-008's four visibility scopes only**   | In: a `MAINTENANCE_TECHNICIAN` sees **their own** completed sessions; a `COMMUNITY_REPRESENTATIVE` sees **their community's**. Out: `MAINTENANCE_COMPANY_MANAGER` company-wide, and `SYSTEM_ADMIN`/`MANAGER` + `VIEW_ALL_REVIEWS` global.                                                                                                                                                                                                                                                                                                            |
+| **Why that cut**                                  | The two in-scope visibilities reuse the **already shipped** Layer 2 `CommunityScopeChecker` — the only two roles its exhaustive switch resolves. The two deferred ones need infrastructure that does not exist: `ManagerCapability` / `User.managerCapabilities` from ADR-011 Decision 2 was **never implemented anywhere in code** (verified against `user.entity.ts`), and company scope needs a `ReviewSession → User.maintenanceCompanyId` join no port supports. Building either is a separate, larger prerequisite slice — ADR-006 discipline. |
+| **Flat chronological list, no filter-by-element** | FR-008's wording is "per element and per community". This slice delivers the **per-community** (and per-performer) half. Narrowing a history list to one element's past reviews is deferred, deliberately and explicitly.                                                                                                                                                                                                                                                                                                                            |
+| **Drill-in shows the full record**                | Opening one historical session shows its recorded answers and observations — the same read-back FR-007 already built, extended with a scope path for viewing a session you did not perform (the representative case).                                                                                                                                                                                                                                                                                                                                |
+| **Completed sessions only**                       | The open draft stays exclusively in `review-session`'s existing resume flow (`GET /review-sessions`). Drafts never appear in history.                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## Scope
 
@@ -59,7 +59,7 @@ do not re-litigate in `sdd-spec`/`sdd-design`.**
 - Use cases for "my completed history" and "my community's completed history",
   and a **read path for a completed session the actor did not perform**.
 - New route(s) for the list, and a scoped detail read. Route shape is
-  `sdd-design`'s call (see *Open questions*).
+  `sdd-design`'s call (see _Open questions_).
 - All reads exclude drafts and respect the shipped rejection matrix: an
   unreachable `sessionId` stays `404 REVIEW_SESSION_NOT_FOUND`, indistinguishable
   from nonexistent.
@@ -81,10 +81,10 @@ do not re-litigate in `sdd-spec`/`sdd-design`.**
   `ReviewSessionsPage.tsx`'s documented precedent).
 - A read-only historical-session view rendering entries, answers and
   observations. Whether it reuses or forks `ReviewSessionDetailPage.tsx` is
-  `sdd-design`'s call — that page is a *draft-walk* page (code entry, complete,
+  `sdd-design`'s call — that page is a _draft-walk_ page (code entry, complete,
   discard), so a read-only view is not a free reuse.
 - Routes under `ProtectedRoute allowedRoles={['MAINTENANCE_TECHNICIAN',
-  'COMMUNITY_REPRESENTATIVE']}` and a reachable entry point from the existing
+'COMMUNITY_REPRESENTATIVE']}` and a reachable entry point from the existing
   `/review-sessions` surface.
 
 **Cross-cutting**
@@ -177,12 +177,12 @@ Four proposal-level choices:
    with no cache to invalidate.
 
 3. **The non-performer detail read gets its own scope-carrying path — it does
-   not loosen `SessionAccessService`.** That service exists *because*
+   not loosen `SessionAccessService`.** That service exists _because_
    `ReviewSessionRepository` has no bare `findById`, so no use case can skip the
    check. Whatever ships must preserve that property: the new read carries its
    scope in the port signature (e.g. by community), exactly as
    `findByIdForPerformer` does. **Extend vs. sibling service is `sdd-design`'s
-   call** (see *Open questions*) — the invariant is not.
+   call** (see _Open questions_) — the invariant is not.
 
 4. **Trust the server-scoped endpoint on the client.** The history list renders
    whatever the scoped endpoint returns, with zero client-side filtering —
@@ -196,27 +196,27 @@ One `stacked-to-main` chain (CLAUDE.md), branches `review-history/<NN>-<slug>`,
 titles `feat(review-history): PR N/M — ...`. Materially smaller than
 `review-session`'s eight; `sdd-tasks` owns the split and the 400-line forecast.
 
-| PR | Content |
-|---|---|
-| ~1 | Read-side ports + adapters + the two list use cases + list route |
-| ~2 | Scoped historical-session detail read (the non-performer path) + E2E scope matrix |
-| ~3 | Web: history list + read-only detail, routes, i18n |
-| ~4 | Spec-guard amendments, docs, browser verification, final checks |
+| PR  | Content                                                                           |
+| --- | --------------------------------------------------------------------------------- |
+| ~1  | Read-side ports + adapters + the two list use cases + list route                  |
+| ~2  | Scoped historical-session detail read (the non-performer path) + E2E scope matrix |
+| ~3  | Web: history list + read-only detail, routes, i18n                                |
+| ~4  | Spec-guard amendments, docs, browser verification, final checks                   |
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `.../review-session/application/ports/review-session.repository.port.ts` | Modified | Two scoped completed-history queries + a scoped by-id read |
-| `.../review-session/infrastructure/persistence/**` (Prisma + in-memory fake) | Modified | Adapters for the new methods |
-| `.../review-session/application/services/session-access.service.ts` | Modified/Sibling | The non-performer read path — shape is `sdd-design`'s |
-| `.../review-session/application/use-cases/**` | New | List own history, list community history, read one historical session |
-| `.../review-session/presentation/review-session.controller.ts` + `dto/**` | Modified | New read route(s) |
-| `apps/web/src/pages/ReviewHistory*.tsx` (names TBD) | New | List + read-only detail |
-| `apps/web/src/api/review-session.ts`, `App.tsx` | Modified | Client calls, routes, entry point |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Real translations |
-| `openspec/specs/review-session-management/spec.md`, `review-session-ui/spec.md` | Modified | Narrow the FR-008 scope guards |
-| `apps/api/test/*.e2e-spec.ts` | New/Modified | Visibility matrix, drafts-excluded, rejection parity |
+| Area                                                                            | Impact           | Description                                                           |
+| ------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------- |
+| `.../review-session/application/ports/review-session.repository.port.ts`        | Modified         | Two scoped completed-history queries + a scoped by-id read            |
+| `.../review-session/infrastructure/persistence/**` (Prisma + in-memory fake)    | Modified         | Adapters for the new methods                                          |
+| `.../review-session/application/services/session-access.service.ts`             | Modified/Sibling | The non-performer read path — shape is `sdd-design`'s                 |
+| `.../review-session/application/use-cases/**`                                   | New              | List own history, list community history, read one historical session |
+| `.../review-session/presentation/review-session.controller.ts` + `dto/**`       | Modified         | New read route(s)                                                     |
+| `apps/web/src/pages/ReviewHistory*.tsx` (names TBD)                             | New              | List + read-only detail                                               |
+| `apps/web/src/api/review-session.ts`, `App.tsx`                                 | Modified         | Client calls, routes, entry point                                     |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                     | Modified         | Real translations                                                     |
+| `openspec/specs/review-session-management/spec.md`, `review-session-ui/spec.md` | Modified         | Narrow the FR-008 scope guards                                        |
+| `apps/api/test/*.e2e-spec.ts`                                                   | New/Modified     | Visibility matrix, drafts-excluded, rejection parity                  |
 
 **No schema change and no migration** — every field this slice reads already
 exists. Untouched: `modules/users/**`, `modules/maintenance-company/**`,
@@ -225,16 +225,16 @@ exists. Untouched: `modules/users/**`, `modules/maintenance-company/**`,
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **A history query leaks another community's or performer's sessions.** This is the first cross-session read in the codebase; a missing `WHERE` returns other people's compliance records | High | Scope lives in the port signature, never in caller-side filtering; E2E asserts the full visibility matrix — technician sees none of another technician's, representative sees none of another community's — one test per route, no sampling |
-| **The non-performer read path becomes a bare `findById` in disguise**, quietly destroying the "no use case can skip the check" property `SessionAccessService` was built to guarantee | High | Approach choice 3 states the invariant as binding; `sdd-verify` asserts no unscoped `findById` exists on the repository port after the change |
-| **Drafts leak into history** — a missing `status = completed` filter puts a half-finished walk in a compliance list | Med | Completed-only asserted as a spec requirement with its own scenario, not left to the query |
-| **Scope creep into the deferred visibilities.** "While we're here, let a manager see everything" is one `ROLE_PERMISSIONS` line away, and would silently pull in ADR-011 Decision 2 | High | Explicit non-goal; `sdd-verify` asserts `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` are still `[]` and that no `ManagerCapability` type exists |
-| **The shipped scope guards get deleted instead of narrowed**, losing the FR-009/FR-010 protections along with the FR-008 one | Med | Named as in-scope work with an explicit instruction: narrow the FR-008 row, keep the rest |
-| **Reusing `ReviewSessionDetailPage.tsx` drags draft-only controls (complete, discard, code entry) onto a completed record** | Med | Read-only view treated as its own requirement; `sdd-design` decides reuse vs. fork deliberately, and a test asserts no mutation control renders for a completed session |
-| **A technician loses access to their own past work** when an assignment is deactivated, because the shipped Layer 3 ANDs performer with *current* assignment | Med | Flagged as an open product question below with a stated working assumption — must be settled in `sdd-spec`, not discovered in code |
-| ES/CA translations stubbed with English placeholders | Med | Real translations in scope; `locales.test.ts` parity guard extends to the new keys |
+| Risk                                                                                                                                                                                     | Likelihood | Mitigation                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A history query leaks another community's or performer's sessions.** This is the first cross-session read in the codebase; a missing `WHERE` returns other people's compliance records | High       | Scope lives in the port signature, never in caller-side filtering; E2E asserts the full visibility matrix — technician sees none of another technician's, representative sees none of another community's — one test per route, no sampling |
+| **The non-performer read path becomes a bare `findById` in disguise**, quietly destroying the "no use case can skip the check" property `SessionAccessService` was built to guarantee    | High       | Approach choice 3 states the invariant as binding; `sdd-verify` asserts no unscoped `findById` exists on the repository port after the change                                                                                               |
+| **Drafts leak into history** — a missing `status = completed` filter puts a half-finished walk in a compliance list                                                                      | Med        | Completed-only asserted as a spec requirement with its own scenario, not left to the query                                                                                                                                                  |
+| **Scope creep into the deferred visibilities.** "While we're here, let a manager see everything" is one `ROLE_PERMISSIONS` line away, and would silently pull in ADR-011 Decision 2      | High       | Explicit non-goal; `sdd-verify` asserts `MANAGER`/`MAINTENANCE_COMPANY_MANAGER` are still `[]` and that no `ManagerCapability` type exists                                                                                                  |
+| **The shipped scope guards get deleted instead of narrowed**, losing the FR-009/FR-010 protections along with the FR-008 one                                                             | Med        | Named as in-scope work with an explicit instruction: narrow the FR-008 row, keep the rest                                                                                                                                                   |
+| **Reusing `ReviewSessionDetailPage.tsx` drags draft-only controls (complete, discard, code entry) onto a completed record**                                                              | Med        | Read-only view treated as its own requirement; `sdd-design` decides reuse vs. fork deliberately, and a test asserts no mutation control renders for a completed session                                                                     |
+| **A technician loses access to their own past work** when an assignment is deactivated, because the shipped Layer 3 ANDs performer with _current_ assignment                             | Med        | Flagged as an open product question below with a stated working assumption — must be settled in `sdd-spec`, not discovered in code                                                                                                          |
+| ES/CA translations stubbed with English placeholders                                                                                                                                     | Med        | Real translations in scope; `locales.test.ts` parity guard extends to the new keys                                                                                                                                                          |
 
 ## Rollback Plan
 
@@ -259,8 +259,8 @@ direction. Each PR in the sketched chain reverts independently.
   and `CommunityTechnicianRepository.findActiveByUser` already exist; no new
   method is anticipated.
 - **No new runtime dependency.** Reuses `AuthenticatedGuard` + `PermissionsGuard`
-  + `@RequirePermission`, `buildCodedError`, `apiFetch`/`ApiError`,
-  `ProtectedRoute allowedRoles`.
+  - `@RequirePermission`, `buildCodedError`, `apiFetch`/`ApiError`,
+    `ProtectedRoute allowedRoles`.
 - For browser verification: a running dev server plus seeded data — at least one
   **completed** session, a technician who performed it, a second technician who
   did not, and a representative assigned to that community.
@@ -321,29 +321,29 @@ next phases from starting.
    representative plus an own-history variant. ADR-014 and design Decision 10's
    flat `/review-sessions` precedent both bear on it, as does `GET /review-scope`'s
    warning about Express declaration-order collisions with `@Get(':sessionId')`.
-   *Working assumption*: one route, scope resolved server-side.
+   _Working assumption_: one route, scope resolved server-side.
 2. **Extend `SessionAccessService` or add a read-only sibling** for the
    non-performer detail read. A real architectural call with security stakes —
    the invariant in Approach choice 3 constrains the answer but does not pick it.
    `sdd-design` owns this; it is the biggest single decision in the slice.
 3. **Permission reuse.** `reviewSession:read` for the history routes with scope
    doing the narrowing, versus a distinct `reviewSession:readHistory`.
-   *Working assumption*: reuse `reviewSession:read` — the scope, not the
+   _Working assumption_: reuse `reviewSession:read` — the scope, not the
    permission, is what differs.
 4. **Does a technician keep access to their own completed sessions after their
    community assignment is deactivated?** The shipped Layer 3 ANDs performer with
    current assignment, so today the answer would be no. For a compliance record
-   authored by that technician, that is arguably wrong. *Working assumption*:
+   authored by that technician, that is arguably wrong. _Working assumption_:
    inherit the shipped semantics (current assignment required) — but state it
    explicitly as a requirement either way, rather than letting the existing code
    decide by default. **A product answer here changes a spec requirement.**
 5. **What one history row shows** — started/completed timestamps, community,
    element type, coverage counts, performer name (a cross-module read into
-   `users` for the representative's view, which no port supports today). *Working
-   assumption*: only fields already reachable from the session aggregate; no new
+   `users` for the representative's view, which no port supports today). _Working
+   assumption_: only fields already reachable from the session aggregate; no new
    cross-module read.
 6. **Whether the representative's list groups or labels by community** when they
-   are assigned to more than one. *Working assumption*: a flat list with a
+   are assigned to more than one. _Working assumption_: a flat list with a
    community column.
 
 ## Next step

@@ -74,30 +74,30 @@ add rule-table rows and scope fields without reshaping the seam.
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma`, `migrations/` | Modified | `Role` enum + `User.role` |
-| `apps/api/prisma/seed.ts` | Modified | Seeded admin gets `SYSTEM_ADMIN` |
-| `apps/api/src/modules/users/domain/user.entity.ts`, `infrastructure/.../user.mapper.ts` | Modified | New `role` field |
-| `apps/api/src/modules/users/application/ports/user.repository.port.ts` | Modified | `findById`, `findAll`, update-by-id, soft delete |
-| `apps/api/src/modules/users/{application/use-cases,presentation}/**` | New | 4 use cases, controller, DTOs |
-| `apps/api/src/modules/users/users.module.ts` | Modified | Controller + use-case providers |
-| `apps/api/src/modules/auth/**` (`permission-checker.port.ts`, guard/decorator) | New | Authorization seam |
-| `apps/api/src/modules/auth/**` (`token-issuer.port.ts`, `login.use-case.ts`, `jwt-token.issuer.ts`, `get-current-user.use-case.ts`, `auth-user-response.dto.ts`) | Modified | Carry/expose `role` |
-| `openspec/specs/authentication/spec.md` | Modified | Delta for `/auth/me` shape |
-| `apps/web/src/auth/AuthProvider.tsx` | Modified | `AuthUser` gains `role` |
-| `packages/validation/src/users/**` | New | Create/update schemas |
+| Area                                                                                                                                                             | Impact   | Description                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
+| `apps/api/prisma/schema.prisma`, `migrations/`                                                                                                                   | Modified | `Role` enum + `User.role`                        |
+| `apps/api/prisma/seed.ts`                                                                                                                                        | Modified | Seeded admin gets `SYSTEM_ADMIN`                 |
+| `apps/api/src/modules/users/domain/user.entity.ts`, `infrastructure/.../user.mapper.ts`                                                                          | Modified | New `role` field                                 |
+| `apps/api/src/modules/users/application/ports/user.repository.port.ts`                                                                                           | Modified | `findById`, `findAll`, update-by-id, soft delete |
+| `apps/api/src/modules/users/{application/use-cases,presentation}/**`                                                                                             | New      | 4 use cases, controller, DTOs                    |
+| `apps/api/src/modules/users/users.module.ts`                                                                                                                     | Modified | Controller + use-case providers                  |
+| `apps/api/src/modules/auth/**` (`permission-checker.port.ts`, guard/decorator)                                                                                   | New      | Authorization seam                               |
+| `apps/api/src/modules/auth/**` (`token-issuer.port.ts`, `login.use-case.ts`, `jwt-token.issuer.ts`, `get-current-user.use-case.ts`, `auth-user-response.dto.ts`) | Modified | Carry/expose `role`                              |
+| `openspec/specs/authentication/spec.md`                                                                                                                          | Modified | Delta for `/auth/me` shape                       |
+| `apps/web/src/auth/AuthProvider.tsx`                                                                                                                             | Modified | `AuthUser` gains `role`                          |
+| `packages/validation/src/users/**`                                                                                                                               | New      | Create/update schemas                            |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Role staleness in JWT — a demoted/deactivated user keeps privileges until token expiry (no refresh/revocation beyond logout deny-list) | Med | Documented, bounded by the 2h lifetime; deactivation already blocks re-login. Revisit when refresh tokens land. Optionally extend the existing `TokenDenylist` on role change — decide in `sdd-design` |
-| `/auth/me` contract break drifts web and API | Med | Single coordinated slice: delta spec + `AuthUser` + tests in the same PR |
-| Last-admin lockout | High if unguarded | Explicit application-layer check on update/deactivate; e2e test asserting rejection |
-| Enum declares 4 inert roles — looks like dead code, invites premature use | Med | `sdd-design` must state "declared, not operational"; guard rejects any non-`SYSTEM_ADMIN` actor |
-| Repository shifts from upsert-by-email to update-by-id; seed idempotency depends on the old path | Low | Keep `save` upsert for the seed; add a distinct update-by-id method |
-| Password policy is unspecified (only `min(1)` in seed) | Med | Define a minimum-strength rule in `sdd-spec` |
+| Risk                                                                                                                                   | Likelihood        | Mitigation                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Role staleness in JWT — a demoted/deactivated user keeps privileges until token expiry (no refresh/revocation beyond logout deny-list) | Med               | Documented, bounded by the 2h lifetime; deactivation already blocks re-login. Revisit when refresh tokens land. Optionally extend the existing `TokenDenylist` on role change — decide in `sdd-design` |
+| `/auth/me` contract break drifts web and API                                                                                           | Med               | Single coordinated slice: delta spec + `AuthUser` + tests in the same PR                                                                                                                               |
+| Last-admin lockout                                                                                                                     | High if unguarded | Explicit application-layer check on update/deactivate; e2e test asserting rejection                                                                                                                    |
+| Enum declares 4 inert roles — looks like dead code, invites premature use                                                              | Med               | `sdd-design` must state "declared, not operational"; guard rejects any non-`SYSTEM_ADMIN` actor                                                                                                        |
+| Repository shifts from upsert-by-email to update-by-id; seed idempotency depends on the old path                                       | Low               | Keep `save` upsert for the seed; add a distinct update-by-id method                                                                                                                                    |
+| Password policy is unspecified (only `min(1)` in seed)                                                                                 | Med               | Define a minimum-strength rule in `sdd-spec`                                                                                                                                                           |
 
 ## Rollback Plan
 

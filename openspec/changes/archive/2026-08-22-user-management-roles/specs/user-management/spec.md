@@ -17,16 +17,19 @@ The system MUST allow an authenticated `SYSTEM_ADMIN` to create a new
 in use by an active user.
 
 #### Scenario: Admin creates a user
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they submit a valid email, a password meeting the strength policy, and a role
 - THEN the response MUST be 2xx and MUST NOT include the password hash
 
 #### Scenario: Duplicate email rejected
+
 - GIVEN an active user already exists with a given email
 - WHEN an admin attempts to create another user with that email
 - THEN the response MUST be a 4xx validation error
 
 #### Scenario: Non-admin caller rejected
+
 - GIVEN the caller is authenticated but not `SYSTEM_ADMIN`
 - WHEN they attempt to create a user
 - THEN the response MUST be 403
@@ -40,11 +43,13 @@ reject non-conforming passwords with a 4xx validation error before
 any hashing or persistence occurs.
 
 #### Scenario: Weak password rejected
+
 - GIVEN an admin submits a password shorter than 10 characters, or one without both a letter and a digit
 - WHEN the create-user request is processed
 - THEN the response MUST be a 4xx validation error and no user record MUST be created
 
 #### Scenario: Conforming password accepted
+
 - GIVEN an admin submits a password of at least 10 characters containing at least one letter and one digit
 - WHEN the create-user request is processed
 - THEN the password MUST pass validation and the user MUST be created
@@ -57,16 +62,19 @@ users MUST be excluded by default; no pagination is required in this
 slice.
 
 #### Scenario: Admin lists users
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN`
 - WHEN they call the list-users endpoint
 - THEN the response MUST be 2xx with an array of users, none containing a password hash
 
 #### Scenario: Soft-deleted users excluded from the list
+
 - GIVEN a soft-deleted user exists alongside active users
 - WHEN an admin calls the list-users endpoint
 - THEN the response MUST NOT include the soft-deleted user
 
 #### Scenario: Non-admin caller rejected
+
 - GIVEN the caller is authenticated but not `SYSTEM_ADMIN`
 - WHEN they call the list-users endpoint
 - THEN the response MUST be 403
@@ -79,11 +87,13 @@ Updating a user's role to any value other than `SYSTEM_ADMIN` is
 subject to the Last-Admin Lockout invariant below.
 
 #### Scenario: Admin updates a user's email
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and a target user id exists
 - WHEN they submit a new email for that user id
 - THEN the response MUST be 2xx and the user's email MUST be updated
 
 #### Scenario: Update targets a non-existent user
+
 - GIVEN a user id that does not correspond to an existing user
 - WHEN an admin attempts to update it
 - THEN the response MUST be a 4xx error (not found)
@@ -96,6 +106,7 @@ Deactivated users MUST NOT be able to authenticate (see
 `authentication` spec, "Soft-Deleted User Login Rejected").
 
 #### Scenario: Admin deactivates a user
+
 - GIVEN the caller is authenticated as `SYSTEM_ADMIN` and a target active user exists
 - WHEN they deactivate that user
 - THEN the response MUST be 2xx and the user's `deletedAt` MUST be set
@@ -107,16 +118,19 @@ away from `SYSTEM_ADMIN` — that would leave zero active
 `SYSTEM_ADMIN` users.
 
 #### Scenario: Deactivating the last admin is rejected
+
 - GIVEN exactly one active `SYSTEM_ADMIN` user exists
 - WHEN an admin attempts to deactivate that user
 - THEN the response MUST be a 4xx error and the user MUST remain active
 
 #### Scenario: Demoting the last admin is rejected
+
 - GIVEN exactly one active `SYSTEM_ADMIN` user exists
 - WHEN an admin attempts to change that user's role away from `SYSTEM_ADMIN`
 - THEN the response MUST be a 4xx error and the role MUST remain unchanged
 
 #### Scenario: Deactivating an admin when others remain is allowed
+
 - GIVEN two or more active `SYSTEM_ADMIN` users exist
 - WHEN an admin deactivates one of them
 - THEN the response MUST be 2xx

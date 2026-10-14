@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------- |
 | Estimated changed lines | ~1030 total: PR1 ~400 (170 code / 230 test), PR2 ~300 (150/150), PR3 ~300 (120/180) |
-| 400-line budget risk | Medium (PR1 at the limit; excess is test fixtures) |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 -> PR 2 -> PR 3 (design split validated) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | Medium (PR1 at the limit; excess is test fixtures)                                  |
+| Chained PRs recommended | Yes                                                                                 |
+| Suggested split         | PR 1 -> PR 2 -> PR 3 (design split validated)                                       |
+| Delivery strategy       | ask-on-risk                                                                         |
+| Chain strategy          | stacked-to-main                                                                     |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,11 +18,11 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Gate, host log, runDevSeed, companies, users, `.env.example`, README env/accounts | PR 1 | Base main. Branch `dev-seed-data/01-gate-companies-users`. Also commits the untracked `openspec/changes/dev-seed-data/`. Acceptance: user runs `prisma migrate reset` then `prisma db seed` (needs `NODE_ENV=development` in local `apps/api/.env`, set by the user). |
-| 2 | Profile, communities, assignments, elements, questions, template | PR 2 | Base main after PR 1. Branch `dev-seed-data/02-catalog`. |
-| 3 | Sessions, guard, scope assertions, README reset, CLAUDE.md | PR 3 | Base main after PR 2. Branch `dev-seed-data/03-sessions-docs`. |
+| Unit | Goal                                                                              | Likely PR | Notes                                                                                                                                                                                                                                                                 |
+| ---- | --------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Gate, host log, runDevSeed, companies, users, `.env.example`, README env/accounts | PR 1      | Base main. Branch `dev-seed-data/01-gate-companies-users`. Also commits the untracked `openspec/changes/dev-seed-data/`. Acceptance: user runs `prisma migrate reset` then `prisma db seed` (needs `NODE_ENV=development` in local `apps/api/.env`, set by the user). |
+| 2    | Profile, communities, assignments, elements, questions, template                  | PR 2      | Base main after PR 1. Branch `dev-seed-data/02-catalog`.                                                                                                                                                                                                              |
+| 3    | Sessions, guard, scope assertions, README reset, CLAUDE.md                        | PR 3      | Base main after PR 2. Branch `dev-seed-data/03-sessions-docs`.                                                                                                                                                                                                        |
 
 Each PR: fresh-context review before push and merge. Integration specs must not assume lineage state (leftover EXTINGUISHER x MONTHLY templates); use `buildDataset(suffix)`.
 

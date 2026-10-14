@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
+| Field                   | Value                                                           |
+| ----------------------- | --------------------------------------------------------------- |
 | Estimated changed lines | ~155 (workflow ~65, ADR ~60, README ~15, INDEX 1, turbo.json 1) |
-| 400-line budget risk | Low |
-| Chained PRs recommended | No |
-| Suggested split | Single PR |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main (not exercised: single PR) |
+| 400-line budget risk    | Low                                                             |
+| Chained PRs recommended | No                                                              |
+| Suggested split         | Single PR                                                       |
+| Delivery strategy       | ask-on-risk                                                     |
+| Chain strategy          | stacked-to-main (not exercised: single PR)                      |
 
 Decision needed before apply: No
 Chained PRs recommended: No
@@ -18,9 +18,9 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | Workflow, turbo.json line, ADR-017, INDEX row, README | PR 1/1 | Base: main. Branch `ci-pipeline/01-ci-workflow`. Title `ci(workflow): PR 1/1 — CI workflow, ADR-017 and README note` |
+| Unit | Goal                                                  | Likely PR | Notes                                                                                                                |
+| ---- | ----------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1    | Workflow, turbo.json line, ADR-017, INDEX row, README | PR 1/1    | Base: main. Branch `ci-pipeline/01-ci-workflow`. Title `ci(workflow): PR 1/1 — CI workflow, ADR-017 and README note` |
 
 Strict TDD: N/A for every task (config/docs, no app code). apply-progress "TDD Cycle Evidence" records N/A rows with the verification command used.
 

@@ -1,9 +1,11 @@
 # ADR-002: Backend — NestJS, Modular Monolith, Clean Architecture
 
 ## Status
+
 Accepted
 
 ## Context
+
 This project is explicitly also a vehicle to learn/practice a set of
 technologies: Node.js + TypeScript backend, Clean Architecture, a modular
 monolith organized by domain, and Spec Driven Development. A related prior
@@ -13,6 +15,7 @@ Clean Architecture + modular-monolith host, using module-first
 structure.
 
 ## Decision
+
 Backend is built with **NestJS**, organized as a **modular monolith**:
 one module per business domain (communities, maintenance companies,
 users, inspectable elements, review types, checklist questions,
@@ -24,6 +27,7 @@ boundary enforcement) are covered separately in
 [ADR-013](ADR-013-orm-prisma-strict-boundary.md).
 
 ## Consequences
+
 - NestJS's built-in dependency injection removes the need for a manual
   composition root.
 - Reusing a validated framework choice from RM-Manager narrows the "new
@@ -35,6 +39,7 @@ boundary enforcement) are covered separately in
   redesigning its internals, only its transport.
 
 ## Alternatives Considered
+
 - **Fastify/Express + manual DI** — rejected: more scaffolding effort spent
   on wiring instead of on the architectural boundaries that are the actual
   learning goal here.

@@ -1,14 +1,17 @@
 # ADR-005: Authorization Model — Role-Based Access Control, Scoped by Resource
 
 ## Status
+
 Superseded by [ADR-011](ADR-011-expanded-roles-and-auth-architecture.md) —
 the 3-role model below was replaced by a 5-role model with capability
 flags and an explicit authentication/authorization architecture. Kept for
-historical record; the scoped-resource-access *principle* established here
+historical record; the scoped-resource-access _principle_ established here
 still holds under ADR-011.
 
 ## Context
+
 Three user roles were identified:
+
 - **Property management company employee** — manages every community and
   every maintenance company registered in the instance.
 - **Community representative** — the original user from the initial
@@ -23,9 +26,11 @@ a subset of communities, and that subset is dynamic for technicians (it
 changes as their company's assignments change).
 
 ## Decision
+
 Authorization combines **role** (which actions a role may perform) with a
 **resolved resource scope** (which communities/companies a given user may
 see), rather than a flat permission matrix:
+
 - Admin role (property management employee) → global scope (all
   communities, all maintenance companies).
 - Representative role → fixed scope: exactly one community.
@@ -37,6 +42,7 @@ authorization policy/guard applied uniformly to every community/company-
 scoped query), not scattered ad hoc checks per endpoint.
 
 ## Consequences
+
 - Every query that touches community- or company-scoped data must run
   through scope resolution, not just a role check — this needs to be
   designed once and reused, not reimplemented per module.
@@ -47,6 +53,7 @@ scoped query), not scattered ad hoc checks per endpoint.
   constraint to be captured in a future security NFR.
 
 ## Alternatives Considered
+
 - **Flat RBAC without scoping** — rejected: cannot satisfy "a representative
   only sees their own community" or "a technician only sees their company's
   assigned communities."

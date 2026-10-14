@@ -1,9 +1,11 @@
 # ADR-007: Internationalization — Multi-language UI from Day One (EN/ES/CA), English-only Codebase
 
 ## Status
+
 Accepted
 
 ## Context
+
 End users are primarily Spanish- and Catalan-speaking people complying with
 Spanish fire-safety regulation (RIPCI), but the product should not be locked
 to a single language. Separately, the project follows an English-by-default
@@ -11,6 +13,7 @@ convention for everything code-related (see ADR project convention):
 domain entity names, database columns, API contracts, code comments.
 
 ## Decision
+
 - The UI is internationalized from the **first walking-skeleton slice**, not
   retrofitted later — every user-facing string goes through an i18n layer
   from day one.
@@ -23,6 +26,7 @@ domain entity names, database columns, API contracts, code comments.
   messages, and generated documents.
 
 ## Consequences
+
 - Needs an i18n mechanism per platform (web/mobile/desktop from ADR-004) —
   the specific libraries are a design-phase decision, not fixed here.
 - The backend (NestJS) also needs to localize any user-facing message it
@@ -41,6 +45,7 @@ domain entity names, database columns, API contracts, code comments.
   detail.
 
 ## Alternatives Considered
+
 - **English-only UI, i18n as future work** — rejected explicitly: real end
   users (community representatives) need Spanish/Catalan for the tool to be
   usable in practice, not just as a translation nice-to-have added later.

@@ -15,12 +15,12 @@ delete-block guard), which is the same Nest DI cycle
 Four invariants carry the slice, each with a deliberately different enforcement
 mechanism depending on what can actually express it:
 
-| Invariant | Where it can live | Mechanism |
-|---|---|---|
-| An element always belongs to a **live** community | Not the FK — it guards hard deletes this project never performs, and cannot see `deletedAt` | Application guard: `COMMUNITY_REPOSITORY.findById` (ADR-010 filter is free) in all 4 use cases (Decision 5) |
-| An element is addressable **only** through its own community | Yes — a single scoped read | `findByIdInCommunity(communityId, elementId)` on the port; the parent id is part of the read, not a caller-discipline check (Decision 5) |
-| A community with active elements cannot be soft-deleted | Not a constraint — cross-table + `deletedAt` predicate | Pure domain policy + a `NOT EXISTS` guard inside the community's own soft-delete `UPDATE` (Decision 6) |
-| `ElementType` means the same thing in Postgres, the domain and Zod | Partly — the type system closes two of the three edges | Three compile-time gates, one runtime parity spec (Decision 1) |
+| Invariant                                                          | Where it can live                                                                           | Mechanism                                                                                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| An element always belongs to a **live** community                  | Not the FK — it guards hard deletes this project never performs, and cannot see `deletedAt` | Application guard: `COMMUNITY_REPOSITORY.findById` (ADR-010 filter is free) in all 4 use cases (Decision 5)                              |
+| An element is addressable **only** through its own community       | Yes — a single scoped read                                                                  | `findByIdInCommunity(communityId, elementId)` on the port; the parent id is part of the read, not a caller-discipline check (Decision 5) |
+| A community with active elements cannot be soft-deleted            | Not a constraint — cross-table + `deletedAt` predicate                                      | Pure domain policy + a `NOT EXISTS` guard inside the community's own soft-delete `UPDATE` (Decision 6)                                   |
+| `ElementType` means the same thing in Postgres, the domain and Zod | Partly — the type system closes two of the three edges                                      | Three compile-time gates, one runtime parity spec (Decision 1)                                                                           |
 
 Everything else is flat CRUD that clones the archived module.
 
@@ -29,7 +29,7 @@ Everything else is flat CRUD that clones the archived module.
 ### Decision 1: the `ElementType` three-way-declaration seam
 
 The proposal settles that the TypeScript union is authoritative and the Postgres
-enum is its persistence projection (choice 4). It does not settle *how* drift is
+enum is its persistence projection (choice 4). It does not settle _how_ drift is
 caught. Note the hard constraint: `packages/validation` cannot import from
 `apps/api` (dependency direction is `apps/web`/`apps/api` → `@sf-manager/validation`),
 so the Zod enum can never literally `import` the domain union.
@@ -62,17 +62,17 @@ export type ElementType = z.infer<typeof elementTypeSchema>;
 
 **How each edge is closed — four gates, three of them free:**
 
-| Edge | Gate | Fails the build when |
-|---|---|---|
-| Prisma ⇄ domain | `InspectableElementMapper`'s **direct assignment** `elementType: record.elementType` (`toDomain`) and `elementType: element.elementType` (`toPersistence`) — no cast, exactly as `CommunityMapper` does for `Locale` | Either side gains or loses a value |
-| Zod → domain | `CreateInspectableElementRequest['elementType']` flows through the controller into the use-case input typed `ElementType` | Zod gains a value the domain lacks |
-| domain → Zod | `as const satisfies readonly ValidatedElementType[]` above | The domain gains a value Zod lacks |
-| domain → UI | `Record<ElementType, string>` in `apps/web/src/inspectable-element/element-type-labels.ts` (mirrors `locale-labels.ts`) | A new value ships with no i18n label |
+| Edge            | Gate                                                                                                                                                                                                                 | Fails the build when                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Prisma ⇄ domain | `InspectableElementMapper`'s **direct assignment** `elementType: record.elementType` (`toDomain`) and `elementType: element.elementType` (`toPersistence`) — no cast, exactly as `CommunityMapper` does for `Locale` | Either side gains or loses a value   |
+| Zod → domain    | `CreateInspectableElementRequest['elementType']` flows through the controller into the use-case input typed `ElementType`                                                                                            | Zod gains a value the domain lacks   |
+| domain → Zod    | `as const satisfies readonly ValidatedElementType[]` above                                                                                                                                                           | The domain gains a value Zod lacks   |
+| domain → UI     | `Record<ElementType, string>` in `apps/web/src/inspectable-element/element-type-labels.ts` (mirrors `locale-labels.ts`)                                                                                              | A new value ships with no i18n label |
 
-| Option for the mapper | Tradeoff | Verdict |
-|---|---|---|
-| An **exhaustive `switch`** with a `default: never` arm | The task's default instinct, but it is gratuitous divergence: `CommunityMapper`/`UserMapper` translate `Locale`/`Role` by direct assignment because the value sets are *identical strings*, and structural assignability already fails the build in **both** directions. A switch adds a hand-maintained arm per value that can only ever be `case 'X': return 'X'` | **Rejected** |
-| **Direct assignment**, no cast, no switch | Follows the two shipped mappers verbatim; the compile error appears at the assignment, which is where the drift actually is | **Chosen** |
+| Option for the mapper                                  | Tradeoff                                                                                                                                                                                                                                                                                                                                                            | Verdict      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| An **exhaustive `switch`** with a `default: never` arm | The task's default instinct, but it is gratuitous divergence: `CommunityMapper`/`UserMapper` translate `Locale`/`Role` by direct assignment because the value sets are _identical strings_, and structural assignability already fails the build in **both** directions. A switch adds a hand-maintained arm per value that can only ever be `case 'X': return 'X'` | **Rejected** |
+| **Direct assignment**, no cast, no switch              | Follows the two shipped mappers verbatim; the compile error appears at the assignment, which is where the drift actually is                                                                                                                                                                                                                                         | **Chosen**   |
 
 Plus one runtime parity spec —
 `inspectable-element/infrastructure/persistence/element-type-parity.integration.spec.ts`
@@ -81,7 +81,7 @@ without violating ADR-013's `no-restricted-imports` rule) asserting
 `[...ELEMENT_TYPES].sort()` equals `Object.values($Enums.ElementType).sort()`
 equals `[...elementTypeSchema.options].sort()`. This is the proposal's stated
 mitigation ("a test asserts all three agree") and it is the only gate that
-catches a *generated-client-out-of-date* mismatch, which the type system cannot
+catches a _generated-client-out-of-date_ mismatch, which the type system cannot
 see.
 
 ### Decision 2: `name`, `location`, `description` and `serialNumber` are all plain fields — no Value Objects
@@ -92,14 +92,14 @@ field becomes a Value Object when it carries **behaviour beyond validation**.
 `PlainPassword` is still the only VO in the repo, and only for `toString()`
 redaction.
 
-| Field | Invariant | Behaviour beyond validation? | Verdict |
-|---|---|---|---|
-| `name` | non-empty, trimmed, **not unique** (settled) | None. Never parsed, compared or formatted | Plain `string` |
-| `location` | non-empty, trimmed, **not unique** (settled) | None. Free text — "ground-floor corridor". A future structured location (floor/zone) would be an *entity or a composite*, not a string wrapper | Plain `string` |
-| `description` | optional, trimmed-non-empty-if-present | None | `string \| null` |
-| `serialNumber` | optional, **informational only** — not a lookup key, not unique, no format rule (settled) | This is the one field that *looks* like it wants a VO, and the settled decision is precisely what disqualifies it: a `SerialNumber` VO would exist to own a format/checksum rule the proposal explicitly refuses to add. Wrapping it now builds the scaffolding for a rule that does not exist | `string \| null` |
+| Field          | Invariant                                                                                 | Behaviour beyond validation?                                                                                                                                                                                                                                                                   | Verdict          |
+| -------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `name`         | non-empty, trimmed, **not unique** (settled)                                              | None. Never parsed, compared or formatted                                                                                                                                                                                                                                                      | Plain `string`   |
+| `location`     | non-empty, trimmed, **not unique** (settled)                                              | None. Free text — "ground-floor corridor". A future structured location (floor/zone) would be an _entity or a composite_, not a string wrapper                                                                                                                                                 | Plain `string`   |
+| `description`  | optional, trimmed-non-empty-if-present                                                    | None                                                                                                                                                                                                                                                                                           | `string \| null` |
+| `serialNumber` | optional, **informational only** — not a lookup key, not unique, no format rule (settled) | This is the one field that _looks_ like it wants a VO, and the settled decision is precisely what disqualifies it: a `SerialNumber` VO would exist to own a format/checksum rule the proposal explicitly refuses to add. Wrapping it now builds the scaffolding for a rule that does not exist | `string \| null` |
 
-*Revisit trigger*: if `serialNumber` ever becomes a lookup key or gains a
+_Revisit trigger_: if `serialNumber` ever becomes a lookup key or gains a
 manufacturer-format rule, it follows `taxId`'s path — a Zod `.refine()` first,
 a VO only if it grows real behaviour (`manufacturer()`, formatted display).
 
@@ -111,14 +111,14 @@ shared Zod schema (ADR-015).
 
 There is **no date-only precedent in this schema** — every existing temporal
 column (`createdAt`, `updatedAt`, `deletedAt`, `deactivatedAt`, `expiresAt`) is
-a `TIMESTAMP(3)`. All of them are *instants* the server writes. `installedAt` is
+a `TIMESTAMP(3)`. All of them are _instants_ the server writes. `installedAt` is
 the first **calendar date a human types**, which is a different thing.
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `DateTime` → `TIMESTAMP(3)`, wire format ISO-8601 instant | Mirrors the existing columns, but an admin who types `2026-03-15` in a UTC+2 browser can see `2026-03-14` rendered back after a round trip. A pure timezone-shift bug class, invisible in tests that run in UTC and reported by users months later | **Rejected** |
-| `String` column holding `'YYYY-MM-DD'` | No timezone semantics at all, but throws away date arithmetic Postgres gives for free — and FR-009's overdue-check math (deferred, but the column outlives this slice) would have to cast it back | **Rejected** |
-| `DateTime @db.Date` → Postgres `DATE`, wire format `'YYYY-MM-DD'` | Postgres physically cannot store a time component, so the drift is impossible at the storage layer rather than merely avoided by convention. Domain field stays a `Date`; both boundary conversions are pinned to UTC midnight in one place | **Chosen** |
+| Option                                                            | Tradeoff                                                                                                                                                                                                                                           | Verdict      |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `DateTime` → `TIMESTAMP(3)`, wire format ISO-8601 instant         | Mirrors the existing columns, but an admin who types `2026-03-15` in a UTC+2 browser can see `2026-03-14` rendered back after a round trip. A pure timezone-shift bug class, invisible in tests that run in UTC and reported by users months later | **Rejected** |
+| `String` column holding `'YYYY-MM-DD'`                            | No timezone semantics at all, but throws away date arithmetic Postgres gives for free — and FR-009's overdue-check math (deferred, but the column outlives this slice) would have to cast it back                                                  | **Rejected** |
+| `DateTime @db.Date` → Postgres `DATE`, wire format `'YYYY-MM-DD'` | Postgres physically cannot store a time component, so the drift is impossible at the storage layer rather than merely avoided by convention. Domain field stays a `Date`; both boundary conversions are pinned to UTC midnight in one place        | **Chosen**   |
 
 Conversions live in two pure domain functions — not a VO (Decision 2), mirroring
 the pure-function shape of `last-admin.policy.ts` /
@@ -126,8 +126,12 @@ the pure-function shape of `last-admin.policy.ts` /
 
 ```ts
 // domain/installed-at.ts
-export function parseInstalledAt(iso: string): Date { return new Date(`${iso}T00:00:00.000Z`); }
-export function formatInstalledAt(value: Date): string { return value.toISOString().slice(0, 10); }
+export function parseInstalledAt(iso: string): Date {
+  return new Date(`${iso}T00:00:00.000Z`);
+}
+export function formatInstalledAt(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
 ```
 
 Zod validates the wire shape with `z.iso.date()` (Zod 4, already the version in
@@ -136,7 +140,7 @@ plain 400 before any use case runs.
 
 **Future installation dates are allowed, deliberately.** A scheduled
 installation is legitimately registered before the extinguisher is physically
-mounted, and nothing in this slice *reads* `installedAt` for a compliance clock
+mounted, and nothing in this slice _reads_ `installedAt` for a compliance clock
 (hydrostatic tracking is deferred). A rejection rule would enforce nothing while
 blocking a valid workflow, and day-granularity "is it in the future" checks
 against a server clock are exactly where off-by-one rejections come from.
@@ -158,11 +162,11 @@ same problem `maintenance-company/design.md` Decision 4 solved, and its verdict
 table applies unchanged (`forwardRef()` rejected on evidence: this repo has been
 bitten by DI-bootstrap crashes; hoisting into `shared/` inverts the boundary).
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `forwardRef()` on both modules | Encodes the cycle instead of removing it; already rejected once in this codebase on evidence | **Rejected** |
-| Invert: `CommunityModule` imports `InspectableElementModule` and injects `INSPECTABLE_ELEMENT_REPOSITORY` (the literal mirror of `maintenance-company → users`), with `inspectable-element` owning a narrow `CommunityLookup` | Cycle-free and symmetric with the sibling slice, but contradicts the proposal's **settled** choice 2, and costs **two** new adapters: a `CommunityLookup` probe *and* nothing reused, because `COMMUNITY_REPOSITORY` is already exported and already applies ADR-010's filter | **Rejected** |
-| `inspectable-element` imports `CommunityModule` (reuses the exported port, zero new read code); `community` owns a narrow, one-method counter port + its own ~12-line adapter | Honours settled choice 2, one new boundary crossing, **one** new adapter total, no `forwardRef`, no `shared/` inversion | **Chosen** |
+| Option                                                                                                                                                                                                                        | Tradeoff                                                                                                                                                                                                                                                                      | Verdict      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `forwardRef()` on both modules                                                                                                                                                                                                | Encodes the cycle instead of removing it; already rejected once in this codebase on evidence                                                                                                                                                                                  | **Rejected** |
+| Invert: `CommunityModule` imports `InspectableElementModule` and injects `INSPECTABLE_ELEMENT_REPOSITORY` (the literal mirror of `maintenance-company → users`), with `inspectable-element` owning a narrow `CommunityLookup` | Cycle-free and symmetric with the sibling slice, but contradicts the proposal's **settled** choice 2, and costs **two** new adapters: a `CommunityLookup` probe _and_ nothing reused, because `COMMUNITY_REPOSITORY` is already exported and already applies ADR-010's filter | **Rejected** |
+| `inspectable-element` imports `CommunityModule` (reuses the exported port, zero new read code); `community` owns a narrow, one-method counter port + its own ~12-line adapter                                                 | Honours settled choice 2, one new boundary crossing, **one** new adapter total, no `forwardRef`, no `shared/` inversion                                                                                                                                                       | **Chosen**   |
 
 ```ts
 // modules/community/application/ports/inspectable-element-counter.port.ts
@@ -187,7 +191,7 @@ shared ownership.
 
 **Deviation from the task brief, stated so it is not mistaken for drift**: the
 brief proposed `countActiveByCommunity` **on `InspectableElementRepositoryPort`**.
-That placement is what creates the cycle. The method is therefore *not* added to
+That placement is what creates the cycle. The method is therefore _not_ added to
 `InspectableElementRepositoryPort` at all — no in-module caller needs it, and
 adding unreachable port surface is the same dead-weight the sibling design
 rejected when it dropped `TRANSACTION_CONFLICT`.
@@ -200,8 +204,8 @@ All four use cases resolve the community first:
 communityRepository.findById(communityId)  →  null ⇒ CommunityNotFoundError (404 COMMUNITY_NOT_FOUND)
 ```
 
-`findById` already carries ADR-010's `deletedAt: null` filter, so *"soft-deleted
-community behaves as non-existent"* is satisfied with no extra predicate — the
+`findById` already carries ADR-010's `deletedAt: null` filter, so _"soft-deleted
+community behaves as non-existent"_ is satisfied with no extra predicate — the
 same "for free" property `countActiveByMaintenanceCompany` relies on.
 
 For update / soft-delete the element read is **community-scoped by
@@ -211,10 +215,10 @@ construction**:
 findByIdInCommunity(communityId: string, elementId: string): Promise<InspectableElement | null>
 ```
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `findById(elementId)` then compare `element.communityId !== communityId` in each use case | Works, but the success criterion *"the parent id in the path is enforced, not decorative"* becomes a per-caller discipline rule that a fifth use case can silently forget | **Rejected** |
-| `findByIdInCommunity(communityId, elementId)` — one query, `where: { id, communityId, deletedAt: null }` | The scope is a property of the port. Wrong-community, unknown-id and soft-deleted all collapse to `null` ⇒ one indistinguishable 404, which is exactly what the criterion asks for | **Chosen** |
+| Option                                                                                                   | Tradeoff                                                                                                                                                                           | Verdict      |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `findById(elementId)` then compare `element.communityId !== communityId` in each use case                | Works, but the success criterion _"the parent id in the path is enforced, not decorative"_ becomes a per-caller discipline rule that a fifth use case can silently forget          | **Rejected** |
+| `findByIdInCommunity(communityId, elementId)` — one query, `where: { id, communityId, deletedAt: null }` | The scope is a property of the port. Wrong-community, unknown-id and soft-deleted all collapse to `null` ⇒ one indistinguishable 404, which is exactly what the criterion asks for | **Chosen**   |
 
 Writes stay keyed by `elementId` alone (`updateById`, `softDeleteById`), mirroring
 `maintenance-company`'s findById→updateById flow: the scoped read is the
@@ -222,7 +226,7 @@ enforcement point, and `communityId` is immutable (never in the update changes),
 so no write can escape the scope its read established.
 
 **Ordering is fixed**: community check first, element check second. A request
-against an unknown community *and* an unknown element deterministically returns
+against an unknown community _and_ an unknown element deterministically returns
 `COMMUNITY_NOT_FOUND`, never a coin flip.
 
 ### Decision 6: the community delete guard — mirror the **final** shipped shape (atomic), not the superseded check-then-act
@@ -235,11 +239,11 @@ check-then-act across two repositories was a documented TOCTOU. Repeating the
 superseded shape here would knowingly re-ship a bug this codebase already paid to
 fix.
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| Count → `assert` → `softDeleteById(): Promise<void>` (the PR7 shape the proposal's risk row describes) | Smallest diff, but a concurrent element creation between the count and the write leaves an active element under a soft-deleted community — an orphan the elements list can no longer reach, since the community is gone from `GET /communities` | **Rejected** |
-| A cross-repository transaction / `UnitOfWork` | The seam does not exist, and `maintenance-company` Decision 6 already refused to invent it for one invariant | **Rejected** |
-| `CommunityRepository.softDeleteById` becomes atomic and returns `boolean`, exactly as `MaintenanceCompanyRepository.softDeleteById` does | The invariant check and the write are one Postgres statement. Cost: the port signature, the Prisma adapter, and the in-memory fake — three mechanical edits inside `community`, on top of the one guard the proposal already sanctions | **Chosen** |
+| Option                                                                                                                                   | Tradeoff                                                                                                                                                                                                                                        | Verdict      |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Count → `assert` → `softDeleteById(): Promise<void>` (the PR7 shape the proposal's risk row describes)                                   | Smallest diff, but a concurrent element creation between the count and the write leaves an active element under a soft-deleted community — an orphan the elements list can no longer reach, since the community is gone from `GET /communities` | **Rejected** |
+| A cross-repository transaction / `UnitOfWork`                                                                                            | The seam does not exist, and `maintenance-company` Decision 6 already refused to invent it for one invariant                                                                                                                                    | **Rejected** |
+| `CommunityRepository.softDeleteById` becomes atomic and returns `boolean`, exactly as `MaintenanceCompanyRepository.softDeleteById` does | The invariant check and the write are one Postgres statement. Cost: the port signature, the Prisma adapter, and the in-memory fake — three mechanical edits inside `community`, on top of the one guard the proposal already sanctions          | **Chosen**   |
 
 ```sql
 UPDATE "Community"
@@ -262,7 +266,7 @@ Supporting pieces, each a one-for-one mirror:
   `assertNoActiveElementsAttached(count)` — pure, no ports, no I/O, mirroring
   `maintenance-company-deletion.policy.ts`.
 - `community/domain/errors/community-has-active-elements.error.ts` — carries
-  `activeElementCount` so the 409 message says *how many* elements must be
+  `activeElementCount` so the 409 message says _how many_ elements must be
   removed first, mirroring `MaintenanceCompanyHasActiveUsersError`.
 - The counter read is demoted to fast path + accurate message; the `UPDATE` is
   authoritative. On `false`, the use case re-checks with `findById` as the sole
@@ -296,8 +300,8 @@ because `CommunitiesListPage.tsx` already renders `actionErrorKey` from
 
 `InspectableElementErrorCode = 'COMMUNITY_NOT_FOUND' | 'INSPECTABLE_ELEMENT_NOT_FOUND'`.
 Both are **404s on the same call**, which is exactly the coded-error
-convention's earning test (*"only a status with more than one reachable cause on
-the same call gets a code"*) — without codes, the edit page cannot tell "this
+convention's earning test (_"only a status with more than one reachable cause on
+the same call gets a code"_) — without codes, the edit page cannot tell "this
 community is gone" from "this element is gone", and those need different copy.
 
 This requires widening `buildCodedError`'s `CodedErrorStatus` (today
@@ -310,18 +314,18 @@ no behaviour change for existing callers, already guarded by
 
 **API** — `@Controller('communities/:communityId/inspectable-elements')`:
 
-| Method | Path | Permission | Result |
-|---|---|---|---|
-| `POST` | `/communities/:communityId/inspectable-elements` | `inspectableElement:create` | 201 · 404 `COMMUNITY_NOT_FOUND` |
-| `GET` | `/communities/:communityId/inspectable-elements` | `inspectableElement:read` | 200 (that community's active elements only) · 404 `COMMUNITY_NOT_FOUND` |
-| `PATCH` | `.../inspectable-elements/:elementId` | `inspectableElement:update` | 200 · 404 `COMMUNITY_NOT_FOUND` \| `INSPECTABLE_ELEMENT_NOT_FOUND` |
-| `DELETE` | `.../inspectable-elements/:elementId` | `inspectableElement:delete` | 204 · 404 (same two codes) |
+| Method   | Path                                             | Permission                  | Result                                                                  |
+| -------- | ------------------------------------------------ | --------------------------- | ----------------------------------------------------------------------- |
+| `POST`   | `/communities/:communityId/inspectable-elements` | `inspectableElement:create` | 201 · 404 `COMMUNITY_NOT_FOUND`                                         |
+| `GET`    | `/communities/:communityId/inspectable-elements` | `inspectableElement:read`   | 200 (that community's active elements only) · 404 `COMMUNITY_NOT_FOUND` |
+| `PATCH`  | `.../inspectable-elements/:elementId`            | `inspectableElement:update` | 200 · 404 `COMMUNITY_NOT_FOUND` \| `INSPECTABLE_ELEMENT_NOT_FOUND`      |
+| `DELETE` | `.../inspectable-elements/:elementId`            | `inspectableElement:delete` | 204 · 404 (same two codes)                                              |
 
 Four permissions, not one, mirroring `community:*` / `maintenanceCompany:*`
 granularity so the deferred `MANAGER` slice can grant read without delete. All
 four go to the `SYSTEM_ADMIN` row only; the other four rows stay `[]`.
 
-*Ordering, verified not assumed*: this controller has **no static sub-path**, so
+_Ordering, verified not assumed_: this controller has **no static sub-path**, so
 there is no intra-controller static/dynamic contest. Across controllers,
 `CommunityController` declares no `@Get(':id')` at all, and its
 `@Delete(':id')` / `@Patch(':id')` are depth-2 while every element route is
@@ -334,10 +338,10 @@ does not "fix" a non-problem.
 **Web routes use the same `inspectable-elements` segment, not a shorter
 `elements`.**
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `/communities/:communityId/elements/...` | Shorter, and closer to FR-006's sketched `/elements/{code}` | **Rejected** — every existing web route mirrors its API path segment verbatim (`/users`, `/communities`, `/maintenance-companies`). Forking here creates two names for one concept *and* pre-empts the `/elements` namespace with a *different* meaning (a community-scoped list, not a global code lookup), which is precisely the inconsistency Open Question 3 exists to prevent |
-| `/communities/:communityId/inspectable-elements/...` | Verbose; verbosity is not a cost worth a naming fork | **Chosen** |
+| Option                                               | Tradeoff                                                    | Verdict                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/communities/:communityId/elements/...`             | Shorter, and closer to FR-006's sketched `/elements/{code}` | **Rejected** — every existing web route mirrors its API path segment verbatim (`/users`, `/communities`, `/maintenance-companies`). Forking here creates two names for one concept _and_ pre-empts the `/elements` namespace with a _different_ meaning (a community-scoped list, not a global code lookup), which is precisely the inconsistency Open Question 3 exists to prevent |
+| `/communities/:communityId/inspectable-elements/...` | Verbose; verbosity is not a cost worth a naming fork        | **Chosen**                                                                                                                                                                                                                                                                                                                                                                          |
 
 Three routes, all `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`:
 
@@ -347,7 +351,7 @@ Three routes, all `ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}`:
 /communities/:communityId/inspectable-elements/:elementId/edit → InspectableElementEditPage
 ```
 
-*React Router ordering note* (written into `App.tsx` in the same comment style
+_React Router ordering note_ (written into `App.tsx` in the same comment style
 the existing `/communities/new` and `/maintenance-companies/new` blocks use):
 the static `new` segment ranks above a dynamic segment regardless of declaration
 order, and here the two are not even the same depth — `.../new` is 4 segments
@@ -378,23 +382,23 @@ encode the scope difference rather than being inconsistent by accident.
 The edit page inlines its list-and-select (`listInspectableElements(communityId)`
 then `.find(e => e.id === elementId)`) rather than extracting a hook, mirroring
 `MaintenanceCompanyEditPage.tsx`'s single-caller precedent — `useCommunity` was
-extracted only because *two* pages needed the identical guardrail. Load states
+extracted only because _two_ pages needed the identical guardrail. Load states
 are the same four: `loading | loaded | not-found | error`.
 
 ## Where the settled policies live in code
 
-| Policy (already settled) | Location |
-|---|---|
-| Element belongs to a live community | `COMMUNITY_REPOSITORY.findById` in all 4 use cases → `CommunityNotFoundError` → **404 `COMMUNITY_NOT_FOUND`** |
-| Wrong-community / unknown / soft-deleted element are indistinguishable | **No branching code.** `findByIdInCommunity(communityId, elementId)` returns `null` for all three → **404 `INSPECTABLE_ELEMENT_NOT_FOUND`** |
-| Soft-deleted elements invisible everywhere | **No new code.** `PrismaInspectableElementRepository extends SoftDeletableRepository`; `withDefaultFilter` covers both reads |
-| No uniqueness on `name` / `location` | Enforced by **absence** — no index, no read-check. Locked in by an e2e creating two identical elements in one community |
-| `serialNumber` informational only | Enforced by absence — no unique index, no `findBySerialNumber` on the port |
-| Community delete blocked by active elements | `community/domain/community-deletion.policy.ts` + the `NOT EXISTS` guard in `PrismaCommunityRepository.softDeleteById` → **409 `COMMUNITY_HAS_ACTIVE_ELEMENTS`** (Decision 6) |
-| Soft-deleted elements do not block community deletion | **No new code.** `deletedAt IS NULL` in both the counter's `where` and the `NOT EXISTS` subquery |
-| No cascade of community delete to its elements | Enforced by absence — `SoftDeleteCommunityUseCase` never touches the element repository beyond the count (settled: block-only) |
-| Roles stay inert | `role-permission.checker.ts` gains entries on the `SYSTEM_ADMIN` row **only**; the four other rows stay `[]`, asserted by e2e. `PermissionChecker.can`'s signature is untouched |
-| `elementType` never rendered raw | `Record<ElementType, string>` label map (`element-type-labels.ts`) — a missing entry is a compile error |
+| Policy (already settled)                                               | Location                                                                                                                                                                        |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Element belongs to a live community                                    | `COMMUNITY_REPOSITORY.findById` in all 4 use cases → `CommunityNotFoundError` → **404 `COMMUNITY_NOT_FOUND`**                                                                   |
+| Wrong-community / unknown / soft-deleted element are indistinguishable | **No branching code.** `findByIdInCommunity(communityId, elementId)` returns `null` for all three → **404 `INSPECTABLE_ELEMENT_NOT_FOUND`**                                     |
+| Soft-deleted elements invisible everywhere                             | **No new code.** `PrismaInspectableElementRepository extends SoftDeletableRepository`; `withDefaultFilter` covers both reads                                                    |
+| No uniqueness on `name` / `location`                                   | Enforced by **absence** — no index, no read-check. Locked in by an e2e creating two identical elements in one community                                                         |
+| `serialNumber` informational only                                      | Enforced by absence — no unique index, no `findBySerialNumber` on the port                                                                                                      |
+| Community delete blocked by active elements                            | `community/domain/community-deletion.policy.ts` + the `NOT EXISTS` guard in `PrismaCommunityRepository.softDeleteById` → **409 `COMMUNITY_HAS_ACTIVE_ELEMENTS`** (Decision 6)   |
+| Soft-deleted elements do not block community deletion                  | **No new code.** `deletedAt IS NULL` in both the counter's `where` and the `NOT EXISTS` subquery                                                                                |
+| No cascade of community delete to its elements                         | Enforced by absence — `SoftDeleteCommunityUseCase` never touches the element repository beyond the count (settled: block-only)                                                  |
+| Roles stay inert                                                       | `role-permission.checker.ts` gains entries on the `SYSTEM_ADMIN` row **only**; the four other rows stay `[]`, asserted by e2e. `PermissionChecker.can`'s signature is untouched |
+| `elementType` never rendered raw                                       | `Record<ElementType, string>` label map (`element-type-labels.ts`) — a missing entry is a compile error                                                                         |
 
 ## Data Flow — `POST /communities/:communityId/inspectable-elements`
 
@@ -451,47 +455,47 @@ previously always succeeded.
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modify | `enum ElementType`; `InspectableElement` model with `@@index([communityId])`; comment block flagging the Prisma-invisible FK |
-| `apps/api/prisma/migrations/<ts>_add_inspectable_element/migration.sql` | Create | `CREATE TYPE` + `CREATE TABLE` + Prisma-visible index + **hand-written FK** to `Community(id)` `ON DELETE RESTRICT` |
-| `.../inspectable-element/domain/element-type.ts` | Create | `ELEMENT_TYPES` + `ElementType` (Decision 1) |
-| `.../inspectable-element/domain/inspectable-element.entity.ts` | Create | Hand-written, zero Prisma (ADR-013); plain fields (Decision 2); no constructor validation |
-| `.../inspectable-element/domain/installed-at.ts` | Create | `parseInstalledAt` / `formatInstalledAt` (Decision 3) |
-| `.../inspectable-element/domain/errors/inspectable-element-not-found.error.ts` | Create | Mirrors `MaintenanceCompanyNotFoundError` |
-| `.../inspectable-element/application/ports/inspectable-element.repository.port.ts` | Create | `Symbol` token; **no** `transactional()`, **no** `countActiveByCommunity` (Decision 4) |
-| `.../inspectable-element/application/use-cases/**` | Create | create / list-by-community / update / soft-delete, each with the parent guard |
-| `.../inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository.ts` | Create | Fake with scoping parity — `findByIdInCommunity` must reproduce the community filter |
-| `.../inspectable-element/infrastructure/persistence/**` | Create | Adapter (`extends SoftDeletableRepository`) + mapper + `element-type-parity.integration.spec.ts` + migration guard spec |
-| `.../inspectable-element/presentation/**` | Create | Controller, DTOs, `inspectable-element-error-code.ts` (2 values) |
-| `.../inspectable-element/inspectable-element.module.ts` | Create | Imports `CommunityModule` for `COMMUNITY_REPOSITORY` (Decision 4) |
-| `apps/api/src/app.module.ts` | Modify | Register `InspectableElementModule` |
-| `apps/api/src/shared/presentation/http/coded-error.ts` | **Modify (reported finding)** | Widen `CodedErrorStatus` with `NOT_FOUND` (Decision 7) |
-| `.../community/application/ports/inspectable-element-counter.port.ts` | Create | `countActiveByCommunity` + `INSPECTABLE_ELEMENT_COUNTER` token (Decision 4) |
-| `.../community/infrastructure/persistence/prisma-inspectable-element-counter.repository.ts` | Create | ~12-line count probe; `PrismaService` via `@Global()` `PrismaModule` |
-| `.../community/application/ports/community.repository.port.ts` | Modify | `softDeleteById(): Promise<boolean>` + doc comment on the atomic guarantee |
-| `.../community/infrastructure/persistence/prisma-community.repository.ts` | Modify | `softDeleteById` becomes the atomic `$executeRaw` with `NOT EXISTS` (Decision 6) |
-| `.../community/application/use-cases/testing/in-memory-community.repository.ts` | Modify | Fake reproduces the boolean contract |
-| `.../community/domain/community-deletion.policy.ts` | Create | `assertNoActiveElementsAttached` — pure |
-| `.../community/domain/errors/community-has-active-elements.error.ts` | Create | Carries `activeElementCount` |
-| `.../community/application/use-cases/soft-delete-community.use-case.ts` | Modify | Guard + re-check; cascade gated on `wasDeleted` |
-| `.../community/presentation/community.controller.ts` | Modify | One new `mapMutationError` branch + `@ApiConflictResponse` on DELETE |
-| `.../community/presentation/community-error-code.ts` | Modify | `+ COMMUNITY_HAS_ACTIVE_ELEMENTS` |
-| `.../community/community.module.ts` | Modify | Bind `INSPECTABLE_ELEMENT_COUNTER`. **Imports nothing new** |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modify | `inspectableElement:create\|read\|update\|delete` |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modify | `SYSTEM_ADMIN` row only; other four stay `[]` |
-| `packages/validation/src/inspectable-element/inspectable-element.schema.ts` + `src/index.ts` | Create/Modify | `elementTypeSchema`, create/update schemas |
-| `apps/web/src/api/inspectable-element.ts` | Create | Typed calls + mirrored `InspectableElementErrorCode` |
-| `apps/web/src/api/community.ts` | Modify | Mirrored `CommunityErrorCode` gains the new value |
-| `apps/web/src/community/error-messages.ts` | Modify | New key — **forced** by `Record<CommunityErrorCode, string>` |
-| `apps/web/src/inspectable-element/{error-messages,element-type-labels}.ts` | Create | `status`/`code`-only map; `Record<ElementType, string>` label map |
-| `apps/web/src/pages/CommunityElementsListPage.tsx` | Create | Clones `MaintenanceCompaniesListPage.tsx` |
-| `apps/web/src/pages/InspectableElement{Create,Edit}Page.tsx` | Create | Clone the `MaintenanceCompany{Create,Edit}Page` siblings |
-| `apps/web/src/pages/CommunityDetailPage.tsx` | Modify | **One `<Link>`** to the community's elements |
-| `apps/web/src/App.tsx` | Modify | 3 role-gated nested routes + ordering comments (Decision 8) |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real `inspectableElement.*` + `community.error.hasActiveElements` |
-| `apps/api/test/inspectable-element.e2e-spec.ts` | Create | Full lifecycle + auth matrix |
-| `apps/api/test/community.e2e-spec.ts` | Modify | Delete-block scenarios |
+| File                                                                                                | Action                        | Description                                                                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`                                                                     | Modify                        | `enum ElementType`; `InspectableElement` model with `@@index([communityId])`; comment block flagging the Prisma-invisible FK |
+| `apps/api/prisma/migrations/<ts>_add_inspectable_element/migration.sql`                             | Create                        | `CREATE TYPE` + `CREATE TABLE` + Prisma-visible index + **hand-written FK** to `Community(id)` `ON DELETE RESTRICT`          |
+| `.../inspectable-element/domain/element-type.ts`                                                    | Create                        | `ELEMENT_TYPES` + `ElementType` (Decision 1)                                                                                 |
+| `.../inspectable-element/domain/inspectable-element.entity.ts`                                      | Create                        | Hand-written, zero Prisma (ADR-013); plain fields (Decision 2); no constructor validation                                    |
+| `.../inspectable-element/domain/installed-at.ts`                                                    | Create                        | `parseInstalledAt` / `formatInstalledAt` (Decision 3)                                                                        |
+| `.../inspectable-element/domain/errors/inspectable-element-not-found.error.ts`                      | Create                        | Mirrors `MaintenanceCompanyNotFoundError`                                                                                    |
+| `.../inspectable-element/application/ports/inspectable-element.repository.port.ts`                  | Create                        | `Symbol` token; **no** `transactional()`, **no** `countActiveByCommunity` (Decision 4)                                       |
+| `.../inspectable-element/application/use-cases/**`                                                  | Create                        | create / list-by-community / update / soft-delete, each with the parent guard                                                |
+| `.../inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository.ts` | Create                        | Fake with scoping parity — `findByIdInCommunity` must reproduce the community filter                                         |
+| `.../inspectable-element/infrastructure/persistence/**`                                             | Create                        | Adapter (`extends SoftDeletableRepository`) + mapper + `element-type-parity.integration.spec.ts` + migration guard spec      |
+| `.../inspectable-element/presentation/**`                                                           | Create                        | Controller, DTOs, `inspectable-element-error-code.ts` (2 values)                                                             |
+| `.../inspectable-element/inspectable-element.module.ts`                                             | Create                        | Imports `CommunityModule` for `COMMUNITY_REPOSITORY` (Decision 4)                                                            |
+| `apps/api/src/app.module.ts`                                                                        | Modify                        | Register `InspectableElementModule`                                                                                          |
+| `apps/api/src/shared/presentation/http/coded-error.ts`                                              | **Modify (reported finding)** | Widen `CodedErrorStatus` with `NOT_FOUND` (Decision 7)                                                                       |
+| `.../community/application/ports/inspectable-element-counter.port.ts`                               | Create                        | `countActiveByCommunity` + `INSPECTABLE_ELEMENT_COUNTER` token (Decision 4)                                                  |
+| `.../community/infrastructure/persistence/prisma-inspectable-element-counter.repository.ts`         | Create                        | ~12-line count probe; `PrismaService` via `@Global()` `PrismaModule`                                                         |
+| `.../community/application/ports/community.repository.port.ts`                                      | Modify                        | `softDeleteById(): Promise<boolean>` + doc comment on the atomic guarantee                                                   |
+| `.../community/infrastructure/persistence/prisma-community.repository.ts`                           | Modify                        | `softDeleteById` becomes the atomic `$executeRaw` with `NOT EXISTS` (Decision 6)                                             |
+| `.../community/application/use-cases/testing/in-memory-community.repository.ts`                     | Modify                        | Fake reproduces the boolean contract                                                                                         |
+| `.../community/domain/community-deletion.policy.ts`                                                 | Create                        | `assertNoActiveElementsAttached` — pure                                                                                      |
+| `.../community/domain/errors/community-has-active-elements.error.ts`                                | Create                        | Carries `activeElementCount`                                                                                                 |
+| `.../community/application/use-cases/soft-delete-community.use-case.ts`                             | Modify                        | Guard + re-check; cascade gated on `wasDeleted`                                                                              |
+| `.../community/presentation/community.controller.ts`                                                | Modify                        | One new `mapMutationError` branch + `@ApiConflictResponse` on DELETE                                                         |
+| `.../community/presentation/community-error-code.ts`                                                | Modify                        | `+ COMMUNITY_HAS_ACTIVE_ELEMENTS`                                                                                            |
+| `.../community/community.module.ts`                                                                 | Modify                        | Bind `INSPECTABLE_ELEMENT_COUNTER`. **Imports nothing new**                                                                  |
+| `apps/api/src/shared/application/authorization/permission.ts`                                       | Modify                        | `inspectableElement:create\|read\|update\|delete`                                                                            |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                                  | Modify                        | `SYSTEM_ADMIN` row only; other four stay `[]`                                                                                |
+| `packages/validation/src/inspectable-element/inspectable-element.schema.ts` + `src/index.ts`        | Create/Modify                 | `elementTypeSchema`, create/update schemas                                                                                   |
+| `apps/web/src/api/inspectable-element.ts`                                                           | Create                        | Typed calls + mirrored `InspectableElementErrorCode`                                                                         |
+| `apps/web/src/api/community.ts`                                                                     | Modify                        | Mirrored `CommunityErrorCode` gains the new value                                                                            |
+| `apps/web/src/community/error-messages.ts`                                                          | Modify                        | New key — **forced** by `Record<CommunityErrorCode, string>`                                                                 |
+| `apps/web/src/inspectable-element/{error-messages,element-type-labels}.ts`                          | Create                        | `status`/`code`-only map; `Record<ElementType, string>` label map                                                            |
+| `apps/web/src/pages/CommunityElementsListPage.tsx`                                                  | Create                        | Clones `MaintenanceCompaniesListPage.tsx`                                                                                    |
+| `apps/web/src/pages/InspectableElement{Create,Edit}Page.tsx`                                        | Create                        | Clone the `MaintenanceCompany{Create,Edit}Page` siblings                                                                     |
+| `apps/web/src/pages/CommunityDetailPage.tsx`                                                        | Modify                        | **One `<Link>`** to the community's elements                                                                                 |
+| `apps/web/src/App.tsx`                                                                              | Modify                        | 3 role-gated nested routes + ordering comments (Decision 8)                                                                  |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                                         | Modify                        | Real `inspectableElement.*` + `community.error.hasActiveElements`                                                            |
+| `apps/api/test/inspectable-element.e2e-spec.ts`                                                     | Create                        | Full lifecycle + auth matrix                                                                                                 |
+| `apps/api/test/community.e2e-spec.ts`                                                               | Modify                        | Delete-block scenarios                                                                                                       |
 
 ## Interfaces
 
@@ -610,15 +614,15 @@ ALTER TABLE "InspectableElement" ADD CONSTRAINT "InspectableElement_communityId_
 
 ## Testing Strategy
 
-| Layer | What | How |
-|---|---|---|
-| Unit (domain) | `assertNoActiveElementsAttached` (0 / 1 / n); `parseInstalledAt`/`formatInstalledAt` round-trip incl. a DST-boundary date and a UTC-offset-sensitive one; entity holds values verbatim with no validation | Pure, table-driven, mirroring `maintenance-company-deletion.policy.spec.ts` |
-| Unit (schema) | `elementTypeSchema` rejects unknown values; trims; `description`/`serialNumber` optional **and** explicitly nullable on update; `installedAt` rejects `'2026-3-1'`, `'not-a-date'`, `'2026-02-30'`; a future date is **accepted** | `packages/validation` tests |
-| Unit (use case) | Parent guard fires before any write (assert `create` **never called**); community check precedes element check; `findByIdInCommunity` with a foreign `communityId` yields 404; update never mutates `communityId`/`elementType`; **community delete blocked before `softDeleteById` is called**; cascade **not** run when `softDeleteById` returns `false` | Hermetic, in-memory fakes; the element fake must reproduce the community scoping |
-| Integration | The hand-written FK is in `pg_constraint` with `ON DELETE RESTRICT`; the `communityId` index is in `pg_indexes`; the 5 pre-existing FKs survive; `installedAt` column type is `date`; **three-way `ElementType` parity** (`ELEMENT_TYPES` / `$Enums.ElementType` / `elementTypeSchema.options`); atomic `softDeleteById` returns `false` with an active element present | Real Postgres, mirroring `maintenance-company-migration.integration.spec.ts` |
-| E2E | Full lifecycle; element under A never listed under B; create under unknown/soft-deleted community ⇒ 404 `COMMUNITY_NOT_FOUND` **and no row written**; PATCH/DELETE cross-community ⇒ 404 `INSPECTABLE_ELEMENT_NOT_FOUND`; two identical name+location accepted; duplicate/absent `serialNumber` accepted; soft-deleted element absent from list; **community delete blocked ⇒ 409 `COMMUNITY_HAS_ACTIVE_ELEMENTS`, `deletedAt` still null, elements untouched**; delete succeeds with only soft-deleted elements; 401/403 on all 4 routes; the four non-admin rows still `[]`; `body.code` asserted per cause | `apps/api/test/inspectable-element.e2e-spec.ts` + community e2e additions |
-| Component (web) | List loading/empty/error/rows; create + edit forms; `not-found` on an unknown `elementId`; element type rendered via the label map (**assert the raw string `EXTINGUISHER` is absent from the DOM**); confirmed delete; `error-messages.ts` differential test proving `.message` is never read; locale key-set parity | Vitest + RTL, mirroring `MaintenanceCompan*Page.test.tsx`; `locales.test.ts` extends to `inspectableElement.*` |
-| Browser | Every UI success criterion, per CLAUDE.md "Verifying UI Changes" | `npm run dev` + `claude-in-chrome`; explicitly incl. the blocked-community-delete message and the date field round-tripping the same day in a non-UTC browser |
+| Layer           | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | How                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (domain)   | `assertNoActiveElementsAttached` (0 / 1 / n); `parseInstalledAt`/`formatInstalledAt` round-trip incl. a DST-boundary date and a UTC-offset-sensitive one; entity holds values verbatim with no validation                                                                                                                                                                                                                                                                                                                                                                                                     | Pure, table-driven, mirroring `maintenance-company-deletion.policy.spec.ts`                                                                                   |
+| Unit (schema)   | `elementTypeSchema` rejects unknown values; trims; `description`/`serialNumber` optional **and** explicitly nullable on update; `installedAt` rejects `'2026-3-1'`, `'not-a-date'`, `'2026-02-30'`; a future date is **accepted**                                                                                                                                                                                                                                                                                                                                                                             | `packages/validation` tests                                                                                                                                   |
+| Unit (use case) | Parent guard fires before any write (assert `create` **never called**); community check precedes element check; `findByIdInCommunity` with a foreign `communityId` yields 404; update never mutates `communityId`/`elementType`; **community delete blocked before `softDeleteById` is called**; cascade **not** run when `softDeleteById` returns `false`                                                                                                                                                                                                                                                    | Hermetic, in-memory fakes; the element fake must reproduce the community scoping                                                                              |
+| Integration     | The hand-written FK is in `pg_constraint` with `ON DELETE RESTRICT`; the `communityId` index is in `pg_indexes`; the 5 pre-existing FKs survive; `installedAt` column type is `date`; **three-way `ElementType` parity** (`ELEMENT_TYPES` / `$Enums.ElementType` / `elementTypeSchema.options`); atomic `softDeleteById` returns `false` with an active element present                                                                                                                                                                                                                                       | Real Postgres, mirroring `maintenance-company-migration.integration.spec.ts`                                                                                  |
+| E2E             | Full lifecycle; element under A never listed under B; create under unknown/soft-deleted community ⇒ 404 `COMMUNITY_NOT_FOUND` **and no row written**; PATCH/DELETE cross-community ⇒ 404 `INSPECTABLE_ELEMENT_NOT_FOUND`; two identical name+location accepted; duplicate/absent `serialNumber` accepted; soft-deleted element absent from list; **community delete blocked ⇒ 409 `COMMUNITY_HAS_ACTIVE_ELEMENTS`, `deletedAt` still null, elements untouched**; delete succeeds with only soft-deleted elements; 401/403 on all 4 routes; the four non-admin rows still `[]`; `body.code` asserted per cause | `apps/api/test/inspectable-element.e2e-spec.ts` + community e2e additions                                                                                     |
+| Component (web) | List loading/empty/error/rows; create + edit forms; `not-found` on an unknown `elementId`; element type rendered via the label map (**assert the raw string `EXTINGUISHER` is absent from the DOM**); confirmed delete; `error-messages.ts` differential test proving `.message` is never read; locale key-set parity                                                                                                                                                                                                                                                                                         | Vitest + RTL, mirroring `MaintenanceCompan*Page.test.tsx`; `locales.test.ts` extends to `inspectableElement.*`                                                |
+| Browser         | Every UI success criterion, per CLAUDE.md "Verifying UI Changes"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `npm run dev` + `claude-in-chrome`; explicitly incl. the blocked-community-delete message and the date field round-tripping the same day in a non-UTC browser |
 
 ## Migration / Rollout
 
@@ -639,8 +643,8 @@ carries no schema state.
 
 ## Open Questions
 
-- [x] **Open Question 3 — URL segment naming.** Resolved as *no conflict, and
-      no fork*: this slice uses `inspectable-elements` on **both** the API and
+- [x] **Open Question 3 — URL segment naming.** Resolved as _no conflict, and
+      no fork_: this slice uses `inspectable-elements` on **both** the API and
       the web, so there is exactly one name for the concept. FR-006's
       `/elements/{code}` is a globally-unique, inherently un-nested lookup and
       will therefore add a flat route regardless of what this slice does.
@@ -658,10 +662,10 @@ carries no schema state.
       parity spec reads the top-level generated `ElementType` const instead; the
       three compile-time gates (Decision 1) are unaffected either way.
 - [ ] **`sdd-spec` owns the future-`installedAt` product rule.** Designed as
-      *allowed* (Decision 3). The stricter answer costs one `.refine()` on the
+      _allowed_ (Decision 3). The stricter answer costs one `.refine()` on the
       shared schema and one spec scenario — no structural change.
 - [ ] **`sdd-spec` owns whether `PATCH` may clear `description`/`serialNumber`.**
-      Designed as *yes, via explicit `null`* because otherwise a mistyped serial
+      Designed as _yes, via explicit `null`_ because otherwise a mistyped serial
       number is unremovable. If spec says no, drop `.nullable()` from both
       fields and `| null` from `updateById`'s `changes`.
 
@@ -673,8 +677,8 @@ carries no schema state.
    behaviour change, already covered by `coded-error.spec.ts`. Reported per the
    proposal's own instruction (Decision 7).
 2. **The proposal's Risks row describing `maintenance-company`'s delete guard is
-   out of date.** It says the concurrent-create race is *"documented as an
-   accepted anomaly there too"* — that was PR 7. Phase 8 **closed** it with an
+   out of date.** It says the concurrent-create race is _"documented as an
+   accepted anomaly there too"_ — that was PR 7. Phase 8 **closed** it with an
    atomic `UPDATE … NOT EXISTS`. This design mirrors the shipped final shape, so
    `CommunityRepository.softDeleteById` changes from `Promise<void>` to
    `Promise<boolean>` and `PrismaCommunityRepository` gains raw SQL — three
@@ -694,19 +698,19 @@ carries no schema state.
 
 ## Rules Applied
 
-| Rule | Where it is honoured |
-|---|---|
-| **ADR-006** walking skeleton — design per slice, defer the rest | No `code`, `imageUrl`, `active`, hydrostatic fields, typed details, or second enum value anywhere in this design. VO call re-derived per field (Decision 2), not copied. Forward-compat observations are one-liners, never structures |
-| **ADR-006 addendum** — every domain slice ships its own minimal UI | Decision 9: three pages, one `<Link>` on `CommunityDetailPage`, nothing more |
-| **ADR-007 / ADR-008** — closed catalogs as hand-written unions | Decision 1: `ElementType` is a TS union first, a Postgres enum second, mirroring `Locale`/`Role` |
-| **ADR-009** — UUIDv7 from the app | `idGenerator.generate()` in the create use case; `@db.Uuid`, no DB default |
-| **ADR-010** — soft delete only | `extends SoftDeletableRepository` everywhere; `deletedAt IS NULL` in the counter and the `NOT EXISTS` subquery; `deletedAt` never in a response DTO |
-| **ADR-011** — permissions in the rule table, not scattered | Four `inspectableElement:*` permissions on the `SYSTEM_ADMIN` row only; `PermissionChecker.can` signature untouched |
-| **ADR-013** — domain has zero Prisma; `@prisma/client` confined to `infrastructure/persistence/**` | Hand-written entity + mapper; the parity spec is deliberately placed under `infrastructure/persistence/` so it may import `$Enums`; no `@relation`, hence the hand-written FK |
-| **ADR-015** — `@sf-manager/validation` is the single validation source | One schema file consumed by the pipe, the DTO types and all three web forms |
-| **Coded-error convention** (`maintenance-company` Decision 1) | Per-module local union; `buildCodedError`; a code only where a status has >1 reachable cause on the same call — which is exactly why the two 404 codes are earned and why no 201/204 gets one |
-| **`forwardRef()` is not an answer** (`maintenance-company` Decision 4) | Decision 4: one precedented import direction + one narrow consumer-owned port |
-| **Prefer an atomic DB statement over application-level locking** (Decisions 2/6 of the sibling design) | Decision 6: the delete block is a `NOT EXISTS` inside the write, not a check-then-act |
-| **Follow the existing pattern unless the change addresses it** (sdd-design rule) | Direct-assignment mapper over an exhaustive switch (Decision 1); inlined list-and-select over a premature hook (Decision 9); `mapMutationError` gains a branch rather than being generalised |
-| **CLAUDE.md — Git & PR conventions** | `stacked-to-main`; branches `inspectable-elements/<NN>-<slug>`; PR titles `type(scope): PR N/M — …`; every PR gets an independent fresh-context review |
-| **CLAUDE.md — Verifying UI changes** | Browser row in the Testing Strategy is mandatory, not optional; test-only verification must be stated explicitly if it happens |
+| Rule                                                                                                   | Where it is honoured                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADR-006** walking skeleton — design per slice, defer the rest                                        | No `code`, `imageUrl`, `active`, hydrostatic fields, typed details, or second enum value anywhere in this design. VO call re-derived per field (Decision 2), not copied. Forward-compat observations are one-liners, never structures |
+| **ADR-006 addendum** — every domain slice ships its own minimal UI                                     | Decision 9: three pages, one `<Link>` on `CommunityDetailPage`, nothing more                                                                                                                                                          |
+| **ADR-007 / ADR-008** — closed catalogs as hand-written unions                                         | Decision 1: `ElementType` is a TS union first, a Postgres enum second, mirroring `Locale`/`Role`                                                                                                                                      |
+| **ADR-009** — UUIDv7 from the app                                                                      | `idGenerator.generate()` in the create use case; `@db.Uuid`, no DB default                                                                                                                                                            |
+| **ADR-010** — soft delete only                                                                         | `extends SoftDeletableRepository` everywhere; `deletedAt IS NULL` in the counter and the `NOT EXISTS` subquery; `deletedAt` never in a response DTO                                                                                   |
+| **ADR-011** — permissions in the rule table, not scattered                                             | Four `inspectableElement:*` permissions on the `SYSTEM_ADMIN` row only; `PermissionChecker.can` signature untouched                                                                                                                   |
+| **ADR-013** — domain has zero Prisma; `@prisma/client` confined to `infrastructure/persistence/**`     | Hand-written entity + mapper; the parity spec is deliberately placed under `infrastructure/persistence/` so it may import `$Enums`; no `@relation`, hence the hand-written FK                                                         |
+| **ADR-015** — `@sf-manager/validation` is the single validation source                                 | One schema file consumed by the pipe, the DTO types and all three web forms                                                                                                                                                           |
+| **Coded-error convention** (`maintenance-company` Decision 1)                                          | Per-module local union; `buildCodedError`; a code only where a status has >1 reachable cause on the same call — which is exactly why the two 404 codes are earned and why no 201/204 gets one                                         |
+| **`forwardRef()` is not an answer** (`maintenance-company` Decision 4)                                 | Decision 4: one precedented import direction + one narrow consumer-owned port                                                                                                                                                         |
+| **Prefer an atomic DB statement over application-level locking** (Decisions 2/6 of the sibling design) | Decision 6: the delete block is a `NOT EXISTS` inside the write, not a check-then-act                                                                                                                                                 |
+| **Follow the existing pattern unless the change addresses it** (sdd-design rule)                       | Direct-assignment mapper over an exhaustive switch (Decision 1); inlined list-and-select over a premature hook (Decision 9); `mapMutationError` gains a branch rather than being generalised                                          |
+| **CLAUDE.md — Git & PR conventions**                                                                   | `stacked-to-main`; branches `inspectable-elements/<NN>-<slug>`; PR titles `type(scope): PR N/M — …`; every PR gets an independent fresh-context review                                                                                |
+| **CLAUDE.md — Verifying UI changes**                                                                   | Browser row in the Testing Strategy is mandatory, not optional; test-only verification must be stated explicitly if it happens                                                                                                        |

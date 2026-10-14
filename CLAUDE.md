@@ -119,8 +119,8 @@ and `community` PR chains — do not re-derive or improvise these:
   chain, branched from `main`.
 - **PR title**: `type(scope): PR N/M — short description` (Conventional
   Commits type + scope, e.g. `feat(community): PR 7/11 — soft-delete
-  cascade + representative Prisma adapter`). No issue-linking (`Closes
-  #N`), no `type:*`/`status:*` labels, no PR template exists.
+cascade + representative Prisma adapter`). No issue-linking (`Closes
+#N`), no `type:*`/`status:*` labels, no PR template exists.
 - **Chain strategy default**: `stacked-to-main` — each PR in a change's
   chain merges to `main` in order; there is no long-lived feature/tracker
   branch.
@@ -171,7 +171,7 @@ Practicalities learned so far:
     `technician@`, `technician2@`, `companymgr@`, `rep@`, `manager@`
     (`VIEW_ALL_REVIEWS`) and `manager-nocap@sf-manager.example`.
   - Two companies (`Dev Seed Fire Safety A`/`B`), two communities (`Dev Seed
-    Residences North`/`South`, two extinguishers each), one active
+Residences North`/`South`, two extinguishers each), one active
     EXTINGUISHER x QUARTERLY template and one active EXTINGUISHER x ANNUAL
     template, four completed sessions (three QUARTERLY, one ANNUAL in North)
     and one draft.

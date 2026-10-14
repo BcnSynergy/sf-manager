@@ -1,6 +1,6 @@
 # Delta for Review Session UI
 
-> The main spec's *Purpose* paragraph lists "due-date or overdue indicators"
+> The main spec's _Purpose_ paragraph lists "due-date or overdue indicators"
 > as out of scope for the field flow. It is not a requirement and cannot be
 > modified by a delta; it describes the field flow's own views, which this
 > change leaves untouched. The archive step MUST add a clause naming the global
@@ -49,39 +49,46 @@ flow's pages and the schedule page is neither a list of sessions nor a
 review view.)
 
 #### Scenario: No offline infrastructure is added
+
 - GIVEN the web app after this change
 - WHEN it is inspected for a service worker, offline cache, local queue or sync logic
 - THEN none MUST be found
 
 #### Scenario: The field flow adds no history view of its own
+
 - GIVEN every view belonging to the review-session field flow — session start, code entry, answering, completion, draft list and draft detail
 - WHEN its own controls and rendered data are enumerated, the global navigation's items excluded
 - THEN none MUST add a list of completed sessions, nor any read of a session the caller did not perform — the shipped performer-scoped, status-agnostic by-id detail view stays unchanged apart from the **Sign and close** relabel and its confirmation copy — and the flow's only permitted reference to history MUST be a navigation control leading to the `review-history-ui` surface
-(Previously: "WHEN its controls and rendered data are enumerated", with no exclusion of the global navigation.)
+  (Previously: "WHEN its controls and rendered data are enumerated", with no exclusion of the global navigation.)
 
 #### Scenario: No scheduling, signing or attachment control exists in the field flow
+
 - GIVEN every view of the review-session field flow
 - WHEN its own controls are enumerated, the global navigation's items excluded
 - THEN none MUST offer due dates, overdue lists, a signing control other than **Sign and close**, export, print, download, send, a link to the review document, photos or attachments
-(Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
+  (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
 
 #### Scenario: The global navigation's Review schedule item is permitted on field-flow pages
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on any field-flow page
 - WHEN the global navigation's items are enumerated
 - THEN the Review schedule item MUST be present and MUST lead to the schedule page, and no view of the field flow itself MUST contain a due date, an overdue indicator or a schedule list
 
 #### Scenario: No per-element, company-wide or global review view exists anywhere
+
 - GIVEN the web app's routes and pages after this change
 - WHEN they are searched for one element's past reviews, for a company-wide list of reviews or sessions and for a global "all reviews" list of sessions
 - THEN none MUST be found — the Review schedule page, which lists per-pair obligations and no session or review, is not one of them
-(Previously: "for a company-wide review view and for a global 'all reviews' view".)
+  (Previously: "for a company-wide review view and for a global 'all reviews' view".)
 
 #### Scenario: No review list control ships anywhere
+
 - GIVEN every list of reviews rendered by the web app after this change
 - WHEN its controls are enumerated
 - THEN none MUST offer pagination, infinite scroll, a date-range filter, sorting or search
 
 #### Scenario: A completed session still offers no mutating control
+
 - GIVEN a session has been completed
 - WHEN the user views it, in the field flow or in the history surface
 - THEN no control MUST offer to edit, reopen, answer, discard or delete it

@@ -5,7 +5,7 @@
 > one in-page navigation entry point into `review-history-ui` that it
 > already renders on `/review-sessions`; that link is a contextual
 > in-page control, not a competing global mechanism, and it stays exactly
-> as shipped. What changes is where the *entry point into this flow*
+> as shipped. What changes is where the _entry point into this flow_
 > comes from — see the modified requirement below.
 
 ## MODIFIED Requirements
@@ -41,26 +41,31 @@ in terms of the navigation and gains scenarios for the two roles it
 serves and for the three it must not.)
 
 #### Scenario: A non-admin lands somewhere usable after login
+
 - GIVEN a user with either non-admin role logs in successfully
 - WHEN the post-login landing view is rendered
 - THEN it MUST NOT be a "not authorized" screen, and the global navigation rendered on it MUST offer an item leading into the review-session flow
 
 #### Scenario: The flow is enterable from any authenticated page
+
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE` on any authenticated page, including the wrong-role denial view
 - WHEN the page renders
 - THEN a navigation item leading into the review-session flow MUST be present, with no hand-typed URL required
 
 #### Scenario: The entry page no longer carries the link
+
 - GIVEN a signed-in user of either role on the app's entry page after this change
 - WHEN that page's own controls are enumerated
 - THEN it MUST render its health-status readout only — no role-conditional review-session link and no logout button of its own
 
 #### Scenario: No other role is offered a path into the flow
+
 - GIVEN a signed-in `SYSTEM_ADMIN`, `MANAGER` or `MAINTENANCE_COMPANY_MANAGER`
 - WHEN every navigation control rendered for them is enumerated
 - THEN none MUST lead into the review-session flow
 
 #### Scenario: The route gate is unchanged
+
 - GIVEN every review-session route before and after this change
 - WHEN each route's allowed roles are compared
 - THEN they MUST be identical — still `MAINTENANCE_TECHNICIAN` and `COMMUNITY_REPRESENTATIVE` only

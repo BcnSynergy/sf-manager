@@ -27,15 +27,15 @@ state) rather than by per-caller discipline, per design.md's stated intent.
 
 ## Engram Observation IDs (Source of Truth)
 
-| Artifact | Topic Key | Notes |
-|---|---|---|
-| Proposal | `sdd/review-session/proposal` | Complete |
-| Specification | `sdd/review-session/spec` | Complete (6 delta specs: `review-session-management` new, `review-session-ui` new, `authorization`/`inspectable-element-management`/`inspectable-element-admin-ui`/`review-template-management` modified) |
-| Design | `sdd/review-session/design` | Complete (11 numbered decisions + a 2026-09-06 confirmation + a 2026-09-07 correction to Decision 4) |
-| Tasks | `sdd/review-session/tasks` | Complete (63/63 across 8 phases) |
-| Apply Progress | `sdd/review-session/apply-progress` (obs #198) | **Degraded** — 28 `topic_key` upserts collapsed it to a one-paragraph status note; its own header's "Full PR1-8 history preserved verbatim" claim is false (verify-report W-1). Reconstructed from git history + `tasks.md` for this archive. |
-| Verification Report | `sdd/review-session/verify-report` (obs #203) | PASS WITH WARNINGS |
-| Archive Report | `sdd/review-session/archive-report` | This document |
+| Artifact            | Topic Key                                      | Notes                                                                                                                                                                                                                                         |
+| ------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal            | `sdd/review-session/proposal`                  | Complete                                                                                                                                                                                                                                      |
+| Specification       | `sdd/review-session/spec`                      | Complete (6 delta specs: `review-session-management` new, `review-session-ui` new, `authorization`/`inspectable-element-management`/`inspectable-element-admin-ui`/`review-template-management` modified)                                     |
+| Design              | `sdd/review-session/design`                    | Complete (11 numbered decisions + a 2026-09-06 confirmation + a 2026-09-07 correction to Decision 4)                                                                                                                                          |
+| Tasks               | `sdd/review-session/tasks`                     | Complete (63/63 across 8 phases)                                                                                                                                                                                                              |
+| Apply Progress      | `sdd/review-session/apply-progress` (obs #198) | **Degraded** — 28 `topic_key` upserts collapsed it to a one-paragraph status note; its own header's "Full PR1-8 history preserved verbatim" claim is false (verify-report W-1). Reconstructed from git history + `tasks.md` for this archive. |
+| Verification Report | `sdd/review-session/verify-report` (obs #203)  | PASS WITH WARNINGS                                                                                                                                                                                                                            |
+| Archive Report      | `sdd/review-session/archive-report`            | This document                                                                                                                                                                                                                                 |
 
 ## Merged Specifications (OpenSpec)
 
@@ -121,7 +121,7 @@ state) rather than by per-caller discipline, per design.md's stated intent.
      Session Consumption Reads the Frozen Snapshot, Template Authoring Is
      Unchanged by Session Consumption (3 new requirements, ~13 new
      scenarios)
-   - REMOVED: No Review Session Surface (superseded — this change *is* the
+   - REMOVED: No Review Session Surface (superseded — this change _is_ the
      FR-007 consumer that requirement was reserving room for)
    - All other existing requirements preserved verbatim (Create Draft
      Template, Replace a Draft's Ordered Question Selection, Activation
@@ -130,20 +130,21 @@ state) rather than by per-caller discipline, per design.md's stated intent.
      Retirement Only Follows Activation, Version Numbers Are Gapless Audit
      Facts, List and Read Templates, Only Drafts May Be Soft-Deleted)
 
-*(No other existing `openspec/specs/**` capability file was touched by this
+_(No other existing `openspec/specs/**` capability file was touched by this
 change — `community-management`, `community-admin-ui`,
 `community-assignments`, `user-management`, `user-admin-ui`,
 `maintenance-company-management`, `maintenance-company-admin-ui`,
 `checklist-question-management`, `checklist-question-admin-ui`,
 `element-label-printing`, `authentication` are all unaffected, confirmed by
 this change's own File Changes table in design.md and by the proposal's
-explicit "Untouched by design" list.)*
+explicit "Untouched by design" list.)_
 
 ## Verification Summary
 
 **Verdict**: PASS WITH WARNINGS
 
 ### Test Execution (re-run live on `main` @ `eb2ea79`, 8/8 PRs merged, verified by `sdd-verify`)
+
 - API unit: 727/727 pass, 102 suites
 - API integration: 104/104 pass, 19 suites
 - API e2e: 271/271 pass, 9 suites
@@ -154,6 +155,7 @@ explicit "Untouched by design" list.)*
   change); `no-restricted-imports` (ADR-013) passes
 
 ### Compliance Matrix
+
 - **63/63 Implementation Tasks**: all marked complete, independently
   cross-checked against current `main` across all 8 phases — not trusted
   from checkboxes
@@ -177,6 +179,7 @@ explicit "Untouched by design" list.)*
   — W-1, reconstructed for verification, not blocking)
 
 ### Findings
+
 - CRITICAL: 0
 - WARNING: 4 — all non-blocking for archive, all evidence/retention gaps
   rather than behavior defects:
@@ -205,6 +208,7 @@ explicit "Untouched by design" list.)*
 ## Archive Contents
 
 ### Files Present in Archive (`openspec/changes/archive/2026-09-08-review-session/`)
+
 - `proposal.md`
 - `design.md`
 - `tasks.md`
@@ -218,6 +222,7 @@ explicit "Untouched by design" list.)*
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
+
 - [x] All 11 files present in archive path, written verbatim from the
       source change folder's content
 - [x] No unchecked implementation tasks (all 63/63 marked complete)
@@ -307,41 +312,42 @@ before merge, confirmed with the user at each step.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| Phase 1 | PR 1 | Merged | `InspectableElement` active state: migration (no backfill needed — nullable `ADD COLUMN` defaults every existing row to active), entity, mapper, DTO, admin decommission/reactivate control |
-| Phase 2 | PR 2 | Merged | Scoped-authorization foundation: 5 new `reviewSession:*` permissions, role activation, `CommunityScopeChecker` port + adapter, `findActiveByUser` on both assignment ports |
-| Phase 3 | PR 3 | Merged | Review-session schema (3 tables, 2 enums, 6 hand-written FKs, partial unique draft index, `observations` CHECK) + domain entities and invariants |
-| Phase 4 | PR 4 | Merged | Open/resume/list/discard use cases + `SessionAccess` service + template `findActiveByElementType` query + 5 endpoints |
-| Phase 5 | PR 5 | Merged | By-code resolution (scope-checked) + record-answer/mark-unreviewed use cases + 2 more endpoints — includes a fresh-context-review CRITICAL fix (`findReviewableById` closing a cross-community write bug) |
-| Phase 6 | PR 6 | Merged | Complete-session use case + immutability enforcement + full e2e suite (scope matrix, indistinguishability, immutability x2, frozen snapshot, scope guards, discard cascade, partial completion) |
-| Phase 7 | PR 7 | Merged | Web flow: api client, 4 pages (Sessions/New/Detail/Element), first non-`SYSTEM_ADMIN` routes, `HealthPage` entry link, i18n |
-| Phase 8 | PR 8 | Merged (`eb2ea79`) | Docs correction (`domain-model-inspections.md`), browser verification (both non-admin roles + admin decommission round-trip), final checks |
+| Phase   | PR # | Status             | Details                                                                                                                                                                                                   |
+| ------- | ---- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 | PR 1 | Merged             | `InspectableElement` active state: migration (no backfill needed — nullable `ADD COLUMN` defaults every existing row to active), entity, mapper, DTO, admin decommission/reactivate control               |
+| Phase 2 | PR 2 | Merged             | Scoped-authorization foundation: 5 new `reviewSession:*` permissions, role activation, `CommunityScopeChecker` port + adapter, `findActiveByUser` on both assignment ports                                |
+| Phase 3 | PR 3 | Merged             | Review-session schema (3 tables, 2 enums, 6 hand-written FKs, partial unique draft index, `observations` CHECK) + domain entities and invariants                                                          |
+| Phase 4 | PR 4 | Merged             | Open/resume/list/discard use cases + `SessionAccess` service + template `findActiveByElementType` query + 5 endpoints                                                                                     |
+| Phase 5 | PR 5 | Merged             | By-code resolution (scope-checked) + record-answer/mark-unreviewed use cases + 2 more endpoints — includes a fresh-context-review CRITICAL fix (`findReviewableById` closing a cross-community write bug) |
+| Phase 6 | PR 6 | Merged             | Complete-session use case + immutability enforcement + full e2e suite (scope matrix, indistinguishability, immutability x2, frozen snapshot, scope guards, discard cascade, partial completion)           |
+| Phase 7 | PR 7 | Merged             | Web flow: api client, 4 pages (Sessions/New/Detail/Element), first non-`SYSTEM_ADMIN` routes, `HealthPage` entry link, i18n                                                                               |
+| Phase 8 | PR 8 | Merged (`eb2ea79`) | Docs correction (`domain-model-inspections.md`), browser verification (both non-admin roles + admin decommission round-trip), final checks                                                                |
 
 All 8 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 (8 sequential PRs, final merge `eb2ea79`).
 
 ## Risks & Mitigations (carried from the proposal, resolved status)
 
-| Risk | Likelihood | Mitigation | Status |
-|---|---|---|---|
-| The scope check is bypassed on one path | High | `SessionAccess` is the sole session-load path; port exposes no `findById`; e2e scope matrix hits all 8 routes, no sampling | Mitigated — verified |
-| Cross-community leakage through by-code lookup | High | `findReviewableByCode` requires `communityId`+`elementType` in the signature, never in the request; indistinguishable rejection proven by e2e deep-equal | Mitigated — verified |
-| Slice size overwhelms review | High | Chained `stacked-to-main`, 8 PRs, each independently reviewed; PRs 1-2 shipped independently first | Mitigated — realized as designed |
-| `ReviewSession` immutability leaks | Med | Domain-layer guard on all 4 mutators; no `updateById`/status setter on the repository; e2e proves both the permission-gate (403) and domain-guard (409) paths | Mitigated — verified |
-| Draft sessions accumulate with no discard path | Med | Discard shipped (Phase 4/6); partial unique index scoped to `draft` frees the pair | Resolved — shipped |
-| `observations` gets decided by accident | Med | Design Decision 1 settled it explicitly (on `ElementReviewEntry`, answers XOR observations, 3-layer enforcement) before `sdd-tasks` started | Resolved — decided deliberately |
-| The frozen snapshot is bypassed | Med | `findFrozenWithSnapshot` is the sole read path; e2e proves a live-pool edit does not change an open session's rendered wording | Mitigated — verified (post-completion readback W-3, non-blocking) |
-| Non-admin users land in a dead app | Med | `HealthPage` role-conditional entry link shipped; browser-verified for both roles | Mitigated — verified |
-| `active` ships unsettable | Med | Admin decommission/reactivate control shipped in PR 1 | Resolved — shipped |
-| Scope creep into FR-008/FR-009/FR-010 | High | Explicit non-goals; e2e 6.10 + independent grep assert no history route, no scheduling, no `signed`, no export | Mitigated — verified |
-| The domain-model doc drifts a fifth time | High | Doc correction shipped in PR 8 | Resolved — shipped |
-| ES/CA translations stubbed with English placeholders | Med | 67 real `reviewSession.*` keys in all 3 locales; parity-enforced | Mitigated — verified |
-| Incomplete archive (tooling-gap bug class) | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder, stage, or commit without shell access | See "Known Limitation of This Archive Run" — orchestrator follow-up required | **Partially mitigated — follow-up required** |
+| Risk                                                 | Likelihood                                                                                                                          | Mitigation                                                                                                                                                    | Status                                                            |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| The scope check is bypassed on one path              | High                                                                                                                                | `SessionAccess` is the sole session-load path; port exposes no `findById`; e2e scope matrix hits all 8 routes, no sampling                                    | Mitigated — verified                                              |
+| Cross-community leakage through by-code lookup       | High                                                                                                                                | `findReviewableByCode` requires `communityId`+`elementType` in the signature, never in the request; indistinguishable rejection proven by e2e deep-equal      | Mitigated — verified                                              |
+| Slice size overwhelms review                         | High                                                                                                                                | Chained `stacked-to-main`, 8 PRs, each independently reviewed; PRs 1-2 shipped independently first                                                            | Mitigated — realized as designed                                  |
+| `ReviewSession` immutability leaks                   | Med                                                                                                                                 | Domain-layer guard on all 4 mutators; no `updateById`/status setter on the repository; e2e proves both the permission-gate (403) and domain-guard (409) paths | Mitigated — verified                                              |
+| Draft sessions accumulate with no discard path       | Med                                                                                                                                 | Discard shipped (Phase 4/6); partial unique index scoped to `draft` frees the pair                                                                            | Resolved — shipped                                                |
+| `observations` gets decided by accident              | Med                                                                                                                                 | Design Decision 1 settled it explicitly (on `ElementReviewEntry`, answers XOR observations, 3-layer enforcement) before `sdd-tasks` started                   | Resolved — decided deliberately                                   |
+| The frozen snapshot is bypassed                      | Med                                                                                                                                 | `findFrozenWithSnapshot` is the sole read path; e2e proves a live-pool edit does not change an open session's rendered wording                                | Mitigated — verified (post-completion readback W-3, non-blocking) |
+| Non-admin users land in a dead app                   | Med                                                                                                                                 | `HealthPage` role-conditional entry link shipped; browser-verified for both roles                                                                             | Mitigated — verified                                              |
+| `active` ships unsettable                            | Med                                                                                                                                 | Admin decommission/reactivate control shipped in PR 1                                                                                                         | Resolved — shipped                                                |
+| Scope creep into FR-008/FR-009/FR-010                | High                                                                                                                                | Explicit non-goals; e2e 6.10 + independent grep assert no history route, no scheduling, no `signed`, no export                                                | Mitigated — verified                                              |
+| The domain-model doc drifts a fifth time             | High                                                                                                                                | Doc correction shipped in PR 8                                                                                                                                | Resolved — shipped                                                |
+| ES/CA translations stubbed with English placeholders | Med                                                                                                                                 | 67 real `reviewSession.*` keys in all 3 locales; parity-enforced                                                                                              | Mitigated — verified                                              |
+| Incomplete archive (tooling-gap bug class)           | Low (mitigated by this report) / **Escalated**: this pass could not delete the source folder, stage, or commit without shell access | See "Known Limitation of This Archive Run" — orchestrator follow-up required                                                                                  | **Partially mitigated — follow-up required**                      |
 
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-propose**: 5 product questions closed with stated working
   assumptions, none blocking; two upstream dependencies (element `code`,
   resource-scoped authorization) resolved as CLOSED/OPEN-closed-here
@@ -373,6 +379,7 @@ All 8 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
   `label-printing` before it
 
 ### Artifacts Persisted
+
 - Engram: proposal, spec, design, tasks observations already existed;
   apply-progress (degraded, see W-1); verify-report (obs #203); this
   archive-report (new, topic key `sdd/review-session/archive-report`)
@@ -411,6 +418,7 @@ All 8 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`
 
 This archive report and all supporting artifacts are linked via Engram
 topic keys for cross-session recovery:
+
 - `sdd/review-session/proposal`
 - `sdd/review-session/spec`
 - `sdd/review-session/design`

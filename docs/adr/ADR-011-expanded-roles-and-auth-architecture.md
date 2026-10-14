@@ -1,13 +1,16 @@
 # ADR-011: Expanded User Roles and Authentication/Authorization Architecture
 
 ## Status
+
 Accepted — Supersedes [ADR-005](ADR-005-authorization-model-scoped-rbac.md)
 
 ## Context
+
 ADR-005 defined three roles (`ADMIN`, `COMMUNITY_REPRESENTATIVE`,
 `MAINTENANCE_TECHNICIAN`) with resource-scope resolution, but no
 permission granularity within a role. Further requirements gathering
 revealed richer real-world structure:
+
 - The property management company side has two distinct trust levels: a
   system administrator with unrestricted access, and managers whose exact
   capabilities should be configurable per person based on trust/training.
@@ -26,6 +29,7 @@ revealed richer real-world structure:
 ## Decision
 
 ### 1. Expanded role enum
+
 `SYSTEM_ADMIN | MANAGER | MAINTENANCE_COMPANY_MANAGER |
 MAINTENANCE_TECHNICIAN | COMMUNITY_REPRESENTATIVE`, replacing ADR-005's
 `ADMIN | COMMUNITY_REPRESENTATIVE | MAINTENANCE_TECHNICIAN`.
@@ -40,7 +44,7 @@ MAINTENANCE_TECHNICIAN | COMMUNITY_REPRESENTATIVE`, replacing ADR-005's
   a technician who has performed reviews). Read access to every
   `ReviewSession` performed by any technician of their company.
 - **`MAINTENANCE_TECHNICIAN`**: scoped to their `maintenanceCompanyId` for
-  company membership; *performing* reviews is scoped per-technician via a
+  company membership; _performing_ reviews is scoped per-technician via a
   direct `(communityId, userId)` assignment (**corrected 2026-09-08** — see
   the addendum below; not a company-wide assignment inherited from
   `maintenanceCompanyId`) — but review **visibility** is narrower: only
@@ -49,8 +53,10 @@ MAINTENANCE_TECHNICIAN | COMMUNITY_REPRESENTATIVE`, replacing ADR-005's
   their own community's data, performs quarterly reviews.
 
 ### 2. MANAGER capability flags — small named set, not a full permission matrix
+
 `User.managerCapabilities?: ManagerCapability[]` (meaningful only when
 `role = MANAGER`), a fixed, small, code-level enum:
+
 - `MANAGE_COMMUNITIES` (FR-001)
 - `MANAGE_MAINTENANCE_COMPANIES` (FR-002)
 - `MANAGE_CHECKLIST_CONTENT` (FR-005 pool + FR-005b templates, bundled —
@@ -66,6 +72,7 @@ set — creating/modifying other users' access stays `SYSTEM_ADMIN`-only,
 since it's privilege-escalation-sensitive, not data-management.
 
 ### 3. Authorization architecture — isolate the permission decision
+
 Every authorization check goes through a single application-layer port,
 `PermissionChecker`, invoked via a permission-named guard/decorator (e.g.
 `@RequirePermission('checklistQuestion:write')`) — never a scattered
@@ -79,6 +86,7 @@ separate, composable check layered on top, per ADR-005's original
 scope-resolution model.
 
 ### 4. Authentication
+
 JWT access token (short-lived, ~15 min) + rotating refresh token, via
 NestJS + Passport (`passport-jwt`). Password hashing: **argon2id** (not
 bcrypt) — stronger against GPU/ASIC cracking, current OWASP
@@ -89,11 +97,13 @@ Native, `safeStorage` via Electron) for mobile/desktop — never plain
 brute force.
 
 ### 5. Sensitive-data follow-ups (not blocking the walking skeleton)
+
 Audit logging of authentication events and `SYSTEM_ADMIN`/`MANAGER`
 writes; MFA for `SYSTEM_ADMIN` accounts specifically. Tracked as future
 FRs, not designed here.
 
 ## Consequences
+
 - Role enum grows from 3 to 5 values; every existing ADR-005/domain-model
   reference to the old roles is updated in this pass.
 - `MAINTENANCE_TECHNICIAN` review visibility is now narrower than ADR-005
@@ -184,7 +194,7 @@ extends them with the design decisions made for this slice.
    `COMMUNITY_REPRESENTATIVE`) are declared in the `Role` enum and the
    `PermissionChecker`'s rule table, but carry zero operational
    permissions in this slice.** `ROLE_PERMISSIONS: Record<Role,
-   Permission[]>` maps each of the four to `[]` explicitly — not omitted,
+Permission[]>` maps each of the four to `[]` explicitly — not omitted,
    not defaulted, not inferred — so the exhaustive `Record` type forces
    every future permission or role addition to reconsider each one
    instead of silently forgetting it. Only `SYSTEM_ADMIN` can reach
@@ -215,13 +225,15 @@ place). Full rationale and alternatives:
 
 1. **Resource scope is three composable layers, none of them inside
    `PermissionChecker`.**
+
    ```
    Layer 1  role → permission        PermissionsGuard + @RequirePermission   (unchanged, per Decision 3)
    Layer 2  user → community          CommunityScopeChecker port             (new, shared/application/authorization)
    Layer 3  user → this session       SessionAccess application service      (new, review-session module-local)
    ```
+
    `CommunityScopeChecker.isAssignedTo(userId, role, communityId):
-   Promise<boolean>`
+Promise<boolean>`
    (`shared/application/authorization/community-scope.checker.port.ts`) is
    the reusable Layer 2 primitive Decision 3 promised but did not design:
    any future resource that needs "is this user actively assigned to this
@@ -273,7 +285,7 @@ place). Full rationale and alternatives:
    `COMMUNITY_REPRESENTATIVE` mirroring it exactly via the sibling
    `CommunityRepresentative`/`CommunityRepresentativeRepository` pair.
    There is **no** company-to-community assignment at all: a technician's
-   scope is the set of communities *that technician* is individually
+   scope is the set of communities _that technician_ is individually
    assigned to, never inherited from their `MaintenanceCompany`.
    `CommunityScopeChecker.isAssignedTo` reuses the same
    `findByCommunityAndUser` lookup at request time, returning `true` iff a
@@ -291,12 +303,14 @@ is not `CommunityScopeChecker`. Full rationale: `openspec/changes/archive/`
 
 1. **Layer 2 now has two ports, not one.** Extend the shipped three-layer
    table from the 2026-09-08 addendum above:
+
    ```
    Layer 2  user → community          CommunityScopeChecker port   (community module adapter)
    Layer 2  user → own company        CompanyScopeChecker port     (users module adapter)
    ```
+
    `CompanyScopeChecker.resolveCompanyScope(userId, role): Promise<string |
-   null>` (`shared/application/authorization/company-scope.checker.port.ts`)
+null>` (`shared/application/authorization/company-scope.checker.port.ts`)
    is a sibling to `CommunityScopeChecker`, not a third branch of it — both
    are fail-closed, exhaustive on `Role`, and re-read per request with no
    cache. A `MAINTENANCE_COMPANY_MANAGER` resolves through the second and
@@ -323,8 +337,8 @@ is not `CommunityScopeChecker`. Full rationale: `openspec/changes/archive/`
 3. **`MAINTENANCE_COMPANY_MANAGER` becomes operational** — `ROLE_PERMISSIONS`
    maps it to `['reviewSession:read']`, its first non-empty entry since the
    2026-08-22 addendum declared all four non-admin roles inert, and it
-   delivers this ADR's Decision 1 promise of *"read access to every
-   `ReviewSession` performed by any technician of their company"*. `MANAGER`
+   delivers this ADR's Decision 1 promise of _"read access to every
+   `ReviewSession` performed by any technician of their company"_. `MANAGER`
    stays `[]`; `SYSTEM_ADMIN` still holds no `reviewSession:*`; Decision 1's
    other two `MAINTENANCE_COMPANY_MANAGER` powers (scoped technician CRUD,
    onboarding/disabling) and Decision 2's `ManagerCapability` mechanism
@@ -332,9 +346,9 @@ is not `CommunityScopeChecker`. Full rationale: `openspec/changes/archive/`
 
 4. **Attribution is frozen, not derived** — `ReviewSession.performedByCompanyId`
    snapshots the performer's maintenance company at creation, written once,
-   with no update path. Decision 1's phrase *"performed by any technician of
-   their company"* is therefore implemented as *"performed **on behalf of**
-   their company"*: a technician who transfers does not move their past
+   with no update path. Decision 1's phrase _"performed by any technician of
+   their company"_ is therefore implemented as _"performed **on behalf of**
+   their company"_: a technician who transfers does not move their past
    reviews to the new company, nor lose them from the old one. Backfill of
    pre-existing rows is best-effort from current employment at migration
    time — stated, accepted limitation, not a mechanism this ADR promises to
@@ -381,14 +395,14 @@ its own. Full rationale: `openspec/changes/archive/`
    database read, unchanged by this slice. The capability is instead
    resolved by a **separate Layer 2 port**,
    `ManagerCapabilityChecker.hasManagerCapability(userId, role,
-   capability): Promise<boolean>`
+capability): Promise<boolean>`
    (`shared/application/authorization/manager-capability.checker.port.ts`),
    a sibling of `CompanyScopeChecker` and `CommunityScopeChecker` from the
    2026-09-08/2026-09-09 addenda above — fail-closed, exhaustive on
    `Role`, re-read per request, no cache. `ReviewHistoryAccessService`
    consults it directly in its `MANAGER` branch; `PermissionChecker` never
    sees it. This is the authoritative, current text: any future reader
-   who finds Decision 3's original sentence should treat *this* addendum
+   who finds Decision 3's original sentence should treat _this_ addendum
    as controlling for the capability-resolution shape.
 
 3. **Why a boolean return, parameterized by the capability — not a list.**
@@ -399,7 +413,7 @@ its own. Full rationale: `openspec/changes/archive/`
    instead of `if (caps.includes(X))` would fail **open** — exactly the
    risk this slice names as its top one (an inert role becoming the
    largest unscoped reader in the system). The boolean return closes that
-   failure direction structurally; ADR-011's array *shape* is preserved by
+   failure direction structurally; ADR-011's array _shape_ is preserved by
    the `capability` **parameter**, not by the return type — each future
    capability is a new enum member and a new argument, never a second
    checker or a signature change.
@@ -556,12 +570,12 @@ padded values) throws at boot, so a typo fails fast instead of silently
 sharing or spoofing keys. The default stays off; no production value is
 assumed.
 
-| Topology | `TRUST_PROXY` |
-|----------|---------------|
-| No proxy | unset (off) |
-| One reverse proxy | `true` or `1` |
-| CDN plus reverse proxy | `2` |
-| PaaS (e.g. Vercel) | confirm the platform's documented forwarding hops first; no value is asserted here |
+| Topology               | `TRUST_PROXY`                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| No proxy               | unset (off)                                                                        |
+| One reverse proxy      | `true` or `1`                                                                      |
+| CDN plus reverse proxy | `2`                                                                                |
+| PaaS (e.g. Vercel)     | confirm the platform's documented forwarding hops first; no value is asserted here |
 
 **Open question 3 (IPv6).** The login throttle key is now derived from
 `req.ip` by `toClientKey`: IPv4 as is, IPv4-mapped IPv6 (`::ffff:a.b.c.d`) as
@@ -656,8 +670,7 @@ limit now keys on the normalized email.
    error logs a `warn` and the client-key `429` is kept. A failing reset logs a `warn`
    (no email) and the login still succeeds. The block transition is logged once
    by the adapter with the key hash only.
-10. **Configuration.** `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5, at most
-    2147483647) and `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900, at most
+10. **Configuration.** `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` (default 5, at most 2147483647) and `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` (default 900, at most
     86400). Invalid values throw at boot.
 
 **Accepted limitations.**
@@ -688,6 +701,7 @@ of scope is superseded by this addendum for the email limit; a persistent
 account lock remains out of scope.
 
 ## Alternatives Considered
+
 - **Full granular resource×action permission matrix, admin-configurable
   roles** — not rejected outright, deferred: more implementation effort
   for a need that, at current scale (one property management company, a

@@ -21,17 +21,20 @@ unqualified, which is false once the review-schedule change adds an API
 endpoint. The claim is scoped to the navigation's introduction.)
 
 #### Scenario: No collapse, menu or dashboard chrome ships
+
 - GIVEN the navigation after the web-locale-switch change
 - WHEN its rendered controls and its state are enumerated
 - THEN none MUST offer a sidebar, hamburger, dropdown (other than the language selector), collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
 
 #### Scenario: The language selector is the only added control
+
 - GIVEN the navigation after the web-locale-switch change
 - WHEN its rendered controls are enumerated
 - THEN they MUST be the links, the logout control and exactly one language selector, and nothing else
 
 #### Scenario: No dependency and no backend change ships
+
 - GIVEN the project's dependency manifests, the API, the database schema and the shared validation package before and after the navigation's introduction
 - WHEN each is compared
 - THEN that introduction MUST have added no dependency and left all three untouched
-(Previously: "before and after this change".)
+  (Previously: "before and after this change".)

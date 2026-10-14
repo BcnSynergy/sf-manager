@@ -13,31 +13,33 @@ Read `openspec/changes/review-schedule/tasks.md` before any merge. Tasks 1.1-9.3
 
 ## Specs Synced
 
-| Capability | Action | Requirements added / modified / removed |
-|---|---|---|
-| `review-schedule` | Created (new capability, delta was a full spec) | 10 requirements (A Pair Exists Only While the Community Has a Live Element of the Type; What Covers a Quarter; The Quarterly Obligation; The Annual Obligation; NEVER_REVIEWED Is Exclusive and Makes No Overdue Claim; One Combined Status per Pair; Every Pair in Scope Is Listed, Worst First; Scope Follows the Caller's Role; The Schedule Is Read-Only and Computed on Read; Community Names Are Resolved Without Per-Row Lookups) |
-| `review-schedule-ui` | Created (new capability, delta was a full spec) | 7 requirements (One Schedule Page Behind One Route; The Page Renders Loading, Empty, Error and Table States; Each Row Shows Status, One-Line Reason and Last Review; The Page Offers No Controls Beyond Reading; Navigation Placement for the Four Roles; Internationalization Coverage; The Page Is Verified in a Real Browser) |
-| `authorization` | Updated | 1 added (*Permission and Scope Check on the Review Schedule Endpoint*, 7 scenarios) / 11 modified (see below) / 0 removed; Purpose hand-edited |
-| `app-navigation` | Updated | 1 added (*The Manager's Schedule Item Is Gated on the Role Alone*, 3 scenarios) / 4 modified (*The Role → Navigation Items Map Is Exhaustive and Fixed* — table now 9/4/4/2/3, plus one added scenario; *The Manager's History Item Is Gated on the Role Alone*; *Route Gating Is Unchanged by the Wrapping*; *The Navigation Stays a Link Bar and Nothing More*) / 0 removed; Purpose sentence scoped to the navigation's introduction |
-| `dev-seed-data` | Updated | 1 added (*Review Schedule Visibility*, 2 scenarios) / 3 modified (*Dev Dataset Contents* + 2 scenarios; *Idempotent Additive Seeding* + 3 scenarios, one reworded; *Fail-Soft on Conflicting State*, MONTHLY → QUARTERLY in two scenarios + 1 ANNUAL scenario) / 0 removed |
-| `review-history` | Updated | 0 added / 2 modified (*The Deferred Review Visibility Scopes Are Not Built* — three rows narrowed for review-schedule, 2 scenarios added, 2 reworded; *The Review Document Read Inherits the Session-Level History Guards* — reconciling note updated) / 0 removed |
-| `review-history-ui` | Updated | 0 added / 2 modified (*No Filtering, Analytics or Adjacent Controls Ship* — schedule page and nav item named as permitted, 1 scenario added, 2 restated; *The System Admin Reaches the Shipped History Surface Unchanged* — stale item counts removed); Purpose clause added |
-| `review-session-management` | Updated | 0 added / 1 modified (*Adjacent Review Capabilities Are Not Introduced* — FR-008 and FR-009 rows narrowed, 2 scenarios reworded) / 0 removed |
-| `review-session-ui` | Updated | 0 added / 1 modified (*No Offline, History or Scheduling Surface* — nav item permitted, 1 scenario added, 3 restated); Purpose clause added |
-| `review-document` | Updated | 0 added / 1 modified (*Document Visibility Is Exactly the Review-History Scope* — "added by this read" scoping, 1 scenario rewritten) / 0 removed |
-| `user-admin-ui` | Updated | 1 added (*The Capability Toggle Label Names Every Surface It Gates*, 2 scenarios) / 0 modified / 0 removed |
+| Capability                  | Action                                          | Requirements added / modified / removed                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `review-schedule`           | Created (new capability, delta was a full spec) | 10 requirements (A Pair Exists Only While the Community Has a Live Element of the Type; What Covers a Quarter; The Quarterly Obligation; The Annual Obligation; NEVER_REVIEWED Is Exclusive and Makes No Overdue Claim; One Combined Status per Pair; Every Pair in Scope Is Listed, Worst First; Scope Follows the Caller's Role; The Schedule Is Read-Only and Computed on Read; Community Names Are Resolved Without Per-Row Lookups) |
+| `review-schedule-ui`        | Created (new capability, delta was a full spec) | 7 requirements (One Schedule Page Behind One Route; The Page Renders Loading, Empty, Error and Table States; Each Row Shows Status, One-Line Reason and Last Review; The Page Offers No Controls Beyond Reading; Navigation Placement for the Four Roles; Internationalization Coverage; The Page Is Verified in a Real Browser)                                                                                                         |
+| `authorization`             | Updated                                         | 1 added (_Permission and Scope Check on the Review Schedule Endpoint_, 7 scenarios) / 11 modified (see below) / 0 removed; Purpose hand-edited                                                                                                                                                                                                                                                                                           |
+| `app-navigation`            | Updated                                         | 1 added (_The Manager's Schedule Item Is Gated on the Role Alone_, 3 scenarios) / 4 modified (_The Role → Navigation Items Map Is Exhaustive and Fixed_ — table now 9/4/4/2/3, plus one added scenario; _The Manager's History Item Is Gated on the Role Alone_; _Route Gating Is Unchanged by the Wrapping_; _The Navigation Stays a Link Bar and Nothing More_) / 0 removed; Purpose sentence scoped to the navigation's introduction  |
+| `dev-seed-data`             | Updated                                         | 1 added (_Review Schedule Visibility_, 2 scenarios) / 3 modified (_Dev Dataset Contents_ + 2 scenarios; _Idempotent Additive Seeding_ + 3 scenarios, one reworded; _Fail-Soft on Conflicting State_, MONTHLY → QUARTERLY in two scenarios + 1 ANNUAL scenario) / 0 removed                                                                                                                                                               |
+| `review-history`            | Updated                                         | 0 added / 2 modified (_The Deferred Review Visibility Scopes Are Not Built_ — three rows narrowed for review-schedule, 2 scenarios added, 2 reworded; _The Review Document Read Inherits the Session-Level History Guards_ — reconciling note updated) / 0 removed                                                                                                                                                                       |
+| `review-history-ui`         | Updated                                         | 0 added / 2 modified (_No Filtering, Analytics or Adjacent Controls Ship_ — schedule page and nav item named as permitted, 1 scenario added, 2 restated; _The System Admin Reaches the Shipped History Surface Unchanged_ — stale item counts removed); Purpose clause added                                                                                                                                                             |
+| `review-session-management` | Updated                                         | 0 added / 1 modified (_Adjacent Review Capabilities Are Not Introduced_ — FR-008 and FR-009 rows narrowed, 2 scenarios reworded) / 0 removed                                                                                                                                                                                                                                                                                             |
+| `review-session-ui`         | Updated                                         | 0 added / 1 modified (_No Offline, History or Scheduling Surface_ — nav item permitted, 1 scenario added, 3 restated); Purpose clause added                                                                                                                                                                                                                                                                                              |
+| `review-document`           | Updated                                         | 0 added / 1 modified (_Document Visibility Is Exactly the Review-History Scope_ — "added by this read" scoping, 1 scenario rewritten) / 0 removed                                                                                                                                                                                                                                                                                        |
+| `user-admin-ui`             | Updated                                         | 1 added (_The Capability Toggle Label Names Every Surface It Gates_, 2 scenarios) / 0 modified / 0 removed                                                                                                                                                                                                                                                                                                                               |
 
-`authorization` MODIFIED requirements (11): *The Organization Profile Grants Nothing Beyond Itself*; *Non-Admin Roles Remain Inert After the Checklist Permissions Are Added* (+1 scenario *The company manager holds no schedule permission*); *Technician and Representative Become Operational*; *The Maintenance Company Manager Becomes Operational*; *The System Admin Becomes Operational on Review History Reads*; *The Manager Becomes Operational on Review History Reads, Gated by a Granted Capability*; *Installation-Wide Review History Scope for a Manager Holding VIEW_ALL_REVIEWS*; *The Element-Keyed Review History Read Is Gated on reviewSession:read, Never on inspectableElement:read*; *Permission Check on Community and Assignment Endpoints*; *Assignments Confer No Permission Outside the Review-Session Surface*; *The Deferred Review Visibility Scopes Grant Nothing* (+1 scenario *The schedule's installation-wide result is reachable from the same two paths*).
+`authorization` MODIFIED requirements (11): _The Organization Profile Grants Nothing Beyond Itself_; _Non-Admin Roles Remain Inert After the Checklist Permissions Are Added_ (+1 scenario _The company manager holds no schedule permission_); _Technician and Representative Become Operational_; _The Maintenance Company Manager Becomes Operational_; _The System Admin Becomes Operational on Review History Reads_; _The Manager Becomes Operational on Review History Reads, Gated by a Granted Capability_; _Installation-Wide Review History Scope for a Manager Holding VIEW_ALL_REVIEWS_; _The Element-Keyed Review History Read Is Gated on reviewSession:read, Never on inspectableElement:read_; _Permission Check on Community and Assignment Endpoints_; _Assignments Confer No Permission Outside the Review-Session Surface_; _The Deferred Review Visibility Scopes Grant Nothing_ (+1 scenario _The schedule's installation-wide result is reachable from the same two paths_).
 
 All merges preserved every requirement not named in a delta. No REMOVED requirements appeared in any of the 11 deltas, so no `(Reason: ...)` / `(Migration: ...)` note was needed. Where a delta restated a requirement's "(Previously: ...)" note, the delta's note replaced the older one, as the delta block is the new text of the whole requirement. The two new main specs use the titles `# Review Schedule` and `# Review Schedule UI` (the delta files were headed "... Specification"), matching the main-spec title convention; the archived delta copies keep the original headings.
 
 ### Main spec files changed
 
 New:
+
 - `openspec/specs/review-schedule/spec.md`
 - `openspec/specs/review-schedule-ui/spec.md`
 
 Updated:
+
 - `openspec/specs/authorization/spec.md`
 - `openspec/specs/app-navigation/spec.md`
 - `openspec/specs/dev-seed-data/spec.md`
@@ -73,7 +75,7 @@ Not touched, as instructed: the PR 1 `README.md` and `CLAUDE.md` edits and the P
 
 ## Verification of the merge
 
-Each touched main spec was re-checked after merging. Every ADDED requirement and every MODIFIED requirement named in a delta now carries the delta's text, including every scenario listed there (new scenarios added in place: *The company manager holds no schedule permission*, *The schedule's installation-wide result is reachable from the same two paths*, *The schedule read leaves the review-session port's bound intact*, *The capability gates only the history reads and the schedule's installation-wide scope*, *The schedule page's per-pair date is not a per-element rollup*, *The global navigation's Review schedule item is permitted on field-flow pages*, *Review schedule is offered to four roles and not to the company manager*). Requirements not named in a delta (for example *Company-Wide Review History Scope for a Maintenance Company Manager*, *Entry-Level Resource Scope for the Element-Keyed Review History Read*, *Resource Scope for Review History Reads* in `authorization`) are unchanged.
+Each touched main spec was re-checked after merging. Every ADDED requirement and every MODIFIED requirement named in a delta now carries the delta's text, including every scenario listed there (new scenarios added in place: _The company manager holds no schedule permission_, _The schedule's installation-wide result is reachable from the same two paths_, _The schedule read leaves the review-session port's bound intact_, _The capability gates only the history reads and the schedule's installation-wide scope_, _The schedule page's per-pair date is not a per-element rollup_, _The global navigation's Review schedule item is permitted on field-flow pages_, _Review schedule is offered to four roles and not to the company manager_). Requirements not named in a delta (for example _Company-Wide Review History Scope for a Maintenance Company Manager_, _Entry-Level Resource Scope for the Element-Keyed Review History Read_, _Resource Scope for Review History Reads_ in `authorization`) are unchanged.
 
 ## Archive Contents
 
@@ -98,7 +100,7 @@ Each touched main spec was re-checked after merging. Every ADDED requirement and
 ## Accepted warnings carried forward
 
 - **W-1 (accepted by the user, non-blocking)**: apply-progress (#415) has no "TDD Cycle Evidence" table, and RED/GREEN order is not provable from git because implementation and spec landed in the same commits. The strict module treats a missing table as CRITICAL; sdd-verify downgraded it because `tasks.md` encodes RED-before-GREEN for every task, every referenced test file exists and passes, and each PR got a fresh-context review. No reconstruction was made at archive time.
-- **W-2**: the scenario "Pairs are per element type" (*A Pair Exists…*) has no test, because only `EXTINGUISHER` exists as an element type. Tracked as a design follow-up; the reader groups by `(communityId, elementType)`, so the behaviour is structural.
+- **W-2**: the scenario "Pairs are per element type" (_A Pair Exists…_) has no test, because only `EXTINGUISHER` exists as an element type. Tracked as a design follow-up; the reader groups by `(communityId, elementType)`, so the behaviour is structural.
 - **W-3**: the e2e guard in `review-session.e2e-spec.ts` exempts the schedule surface by exact relative path. Every other file is still scanned (mutation-checked in task 9.2). It is a hand-maintained allowlist.
 
 ### Accepted suggestions
@@ -122,17 +124,17 @@ Related, from the proposal's open questions: company-manager scope (needs a comp
 
 PR chain #177–#185 (stacked-to-main, delivery strategy ask-on-risk; `size:exception` accepted for PR 1 and PR 6, and for PRs 3, 4, 5 and 8 where test tables pushed them over, per #414):
 
-| PR | Scope |
-|---|---|
+| PR   | Scope                                                                               |
+| ---- | ----------------------------------------------------------------------------------- |
 | #177 | PR 1 — Seed: QUARTERLY + ANNUAL templates, S4, README/CLAUDE.md, planning artifacts |
-| #178 | PR 2 — `Clock`, `ClockModule`, `FixedClock`, Madrid calendar helpers |
-| #179 | PR 3 — Pure due policy (`evaluateReviewDue`) |
-| #180 | PR 4 — Reader port, fake, Prisma adapter, integration spec |
-| #181 | PR 5 — `reviewSchedule:read`, `compareScheduleRows`, use case |
-| #182 | PR 6 — DTO, controller, module, `AppModule`, e2e, wiring integration |
-| #183 | PR 7 — Web client, labels helper, i18n keys |
-| #184 | PR 8 — Page, route, nav, Decision 12 label, browser pass (8.10, done 2026-10-06) |
-| #185 | PR 9 — FR-009 docs (`partial`), final check, archive prep |
+| #178 | PR 2 — `Clock`, `ClockModule`, `FixedClock`, Madrid calendar helpers                |
+| #179 | PR 3 — Pure due policy (`evaluateReviewDue`)                                        |
+| #180 | PR 4 — Reader port, fake, Prisma adapter, integration spec                          |
+| #181 | PR 5 — `reviewSchedule:read`, `compareScheduleRows`, use case                       |
+| #182 | PR 6 — DTO, controller, module, `AppModule`, e2e, wiring integration                |
+| #183 | PR 7 — Web client, labels helper, i18n keys                                         |
+| #184 | PR 8 — Page, route, nav, Decision 12 label, browser pass (8.10, done 2026-10-06)    |
+| #185 | PR 9 — FR-009 docs (`partial`), final check, archive prep                           |
 
 ## Source folder removal and commit (resolved)
 

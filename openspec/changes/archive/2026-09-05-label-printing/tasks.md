@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|-------|-------|
-| Estimated changed lines | ~950-1250 |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR1 -> PR2 -> PR3 -> PR4 -> PR5 -> PR6 -> PR7 |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| Field                   | Value                                         |
+| ----------------------- | --------------------------------------------- |
+| Estimated changed lines | ~950-1250                                     |
+| 400-line budget risk    | High                                          |
+| Chained PRs recommended | Yes                                           |
+| Suggested split         | PR1 -> PR2 -> PR3 -> PR4 -> PR5 -> PR6 -> PR7 |
+| Delivery strategy       | ask-on-risk                                   |
+| Chain strategy          | stacked-to-main                               |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,15 +18,15 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Notes |
-|------|------|-----------|-------|
-| 1 | `code` column: migration + schema | PR 1 | base=main; standalone, migration integration spec only |
-| 2 | Code generation port + adapter | PR 2 | base=main; not wired yet, unit tests only |
-| 3 | Wire generation into create/list/update + retry | PR 3 | base=main; depends on PR1+PR2 merged |
-| 4 | Supplied-code warning mechanism | PR 4 | base=main; depends on PR3 |
-| 5 | Web QR rendering component | PR 5 | base=main; depends on PR3 (code in list response) |
-| 6 | Web label page + route + list wiring | PR 6 | base=main; depends on PR5 |
-| 7 | Docs correction + final scope-guard checks | PR 7 | base=main; depends on all prior |
+| Unit | Goal                                            | Likely PR | Notes                                                  |
+| ---- | ----------------------------------------------- | --------- | ------------------------------------------------------ |
+| 1    | `code` column: migration + schema               | PR 1      | base=main; standalone, migration integration spec only |
+| 2    | Code generation port + adapter                  | PR 2      | base=main; not wired yet, unit tests only              |
+| 3    | Wire generation into create/list/update + retry | PR 3      | base=main; depends on PR1+PR2 merged                   |
+| 4    | Supplied-code warning mechanism                 | PR 4      | base=main; depends on PR3                              |
+| 5    | Web QR rendering component                      | PR 5      | base=main; depends on PR3 (code in list response)      |
+| 6    | Web label page + route + list wiring            | PR 6      | base=main; depends on PR5                              |
+| 7    | Docs correction + final scope-guard checks      | PR 7      | base=main; depends on all prior                        |
 
 ## Phase 1 (PR 1): `code` Column — Migration + Schema
 

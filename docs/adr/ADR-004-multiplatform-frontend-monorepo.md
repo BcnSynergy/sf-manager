@@ -1,11 +1,14 @@
 # ADR-004: Multiplatform Frontend — React + React Native + Electron in a Shared Monorepo
 
 ## Status
+
 Accepted
 
 ## Context
+
 Three distinct client surfaces were identified during requirements
 discussion:
+
 1. **Web** — mainly for property management company employees: consulting
    review details across communities, listing overdue/missing reviews to
    send reminders, managing communities/companies/users.
@@ -15,6 +18,7 @@ discussion:
 3. **Desktop**.
 
 ## Decision
+
 Three separate UI codebases — **React** (web), **React Native**
 (mobile/tablet), **Electron** (desktop) — sharing business logic, the API
 client, and TypeScript types/contracts through internal packages in a
@@ -32,6 +36,7 @@ packages present from the very first walking-skeleton slice (not something
 that grows in "later"), that orchestration problem exists from day one.
 
 ## Consequences
+
 - Full native capability per platform (camera, offline storage, push
   notifications on mobile) — important for the field-checklist use case.
 - Cost: three UI implementations instead of one, partially offset by shared
@@ -41,6 +46,7 @@ that grows in "later"), that orchestration problem exists from day one.
   don't drift.
 
 ## Alternatives Considered
+
 - **React + Capacitor (mobile) + Tauri (desktop)** wrapping a single web
   codebase — less UI duplication, but weaker native capability for a
   field-checklist app that will likely need offline support and camera

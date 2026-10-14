@@ -32,21 +32,25 @@ REVIEW_TEMPLATE_DRAFT_EXISTS` and no row created. Soft-deleting or
 activating the existing draft MUST free the lineage for a new one.
 
 #### Scenario: Admin creates the first draft for a lineage
+
 - GIVEN no `draft` exists for `(EXTINGUISHER, QUARTERLY)`
 - WHEN a `SYSTEM_ADMIN` creates a template for that pair with a valid `name`
 - THEN the response MUST be 2xx, `status` MUST be `draft`, and its selection MUST be empty
 
 #### Scenario: Second draft for the same lineage rejected
+
 - GIVEN a `draft` already exists for `(EXTINGUISHER, QUARTERLY)`
 - WHEN a `SYSTEM_ADMIN` attempts to create another for the same pair
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_DRAFT_EXISTS` and no template MUST be created
 
 #### Scenario: A draft may coexist with an active version in the same lineage
+
 - GIVEN `(EXTINGUISHER, QUARTERLY)` already has an `active` version
 - WHEN a `SYSTEM_ADMIN` creates a draft for that same pair
 - THEN the response MUST be 2xx — an `active` version MUST NOT block drafting its successor
 
 #### Scenario: A draft for a different lineage is unaffected
+
 - GIVEN a `draft` exists for `(EXTINGUISHER, QUARTERLY)`
 - WHEN a `SYSTEM_ADMIN` creates a draft for `(EXTINGUISHER, ANNUAL)`
 - THEN the response MUST be 2xx
@@ -65,26 +69,31 @@ different `ReviewFrequency` MUST be selectable — `frequencies` is a
 suggestion, not a constraint.
 
 #### Scenario: Admin sets and reorders a draft's questions
+
 - GIVEN a `draft` template and three active pool questions
 - WHEN a `SYSTEM_ADMIN` submits the three ids in a given order, then resubmits them in a different order
 - THEN each request MUST be 2xx and reading the draft MUST return the most recently submitted order
 
 #### Scenario: Replacing the selection is a full replace, not a merge
+
 - GIVEN a `draft` whose selection is questions A, B and C
 - WHEN a `SYSTEM_ADMIN` submits a selection containing only B
 - THEN reading the draft MUST return exactly B, with A and C removed
 
 #### Scenario: Cross-frequency question may be selected
+
 - GIVEN a `draft` for `(EXTINGUISHER, ANNUAL)` and a question tagged only `QUARTERLY`
 - WHEN a `SYSTEM_ADMIN` includes that question in the selection
 - THEN the response MUST be 2xx and the question MUST be part of the draft's selection
 
 #### Scenario: Unknown or soft-deleted question id rejected
+
 - GIVEN a `draft` template
 - WHEN a `SYSTEM_ADMIN` submits a selection containing an id that does not exist or is soft-deleted
 - THEN the response MUST be 404 with `code: CHECKLIST_QUESTION_NOT_FOUND` and the draft's selection MUST be unchanged
 
 #### Scenario: Unknown template id rejected
+
 - GIVEN a template id that does not exist or is soft-deleted
 - WHEN a `SYSTEM_ADMIN` attempts to set its questions
 - THEN the response MUST be 404 with `code: REVIEW_TEMPLATE_NOT_FOUND`
@@ -111,27 +120,32 @@ and editable at request time; the conflict is with the other request's
 outcome, not with the template's own state.
 
 #### Scenario: Admin activates the first version of a lineage
+
 - GIVEN a `draft` for `(EXTINGUISHER, QUARTERLY)` with at least one selected question and no prior `active` version
 - WHEN a `SYSTEM_ADMIN` activates it
 - THEN the response MUST be 2xx, its `status` MUST be `active`, and its `version` MUST be 1
 
 #### Scenario: Activation retires the previous active version
+
 - GIVEN `(EXTINGUISHER, QUARTERLY)` has an `active` version V1 and a `draft` with at least one question
 - WHEN a `SYSTEM_ADMIN` activates the draft
 - THEN the draft MUST become `active` with `version` 2
 - AND V1 MUST become `retired` in the same operation
 
 #### Scenario: Concurrent activations leave exactly one active version
+
 - GIVEN two activation requests for the same `(elementType, frequency)` lineage are issued concurrently
 - WHEN both are processed
 - THEN after both complete the lineage MUST contain exactly one `active` version, and the losing request MUST fail with 409 `code: REVIEW_TEMPLATE_ACTIVATION_CONFLICT` rather than produce a second `active` version
 
 #### Scenario: Activating an empty template rejected without consuming a version
+
 - GIVEN a `draft` with zero selected questions
 - WHEN a `SYSTEM_ADMIN` attempts to activate it
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_EMPTY`, the template MUST remain a `draft`, and no version number MUST be consumed
 
 #### Scenario: Activating an already-active or retired template rejected
+
 - GIVEN a template whose `status` is `active` or `retired`
 - WHEN a `SYSTEM_ADMIN` attempts to activate it
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_NOT_EDITABLE`
@@ -151,18 +165,21 @@ empty snapshot, and there MUST be no path that re-snapshots, back-fills,
 repairs or "syncs" a frozen version's wording after activation.
 
 #### Scenario: Editing a question after activation does not change the frozen template
+
 - GIVEN an `active` template that froze question Q with text "Original"
 - WHEN a `SYSTEM_ADMIN` edits Q's `text` to "Changed"
 - THEN reading the `active` template MUST still show "Original", byte for byte
 - AND the pool list MUST show "Changed"
 
 #### Scenario: Soft-deleting a question does not change the frozen template
+
 - GIVEN an `active` template that froze question Q
 - WHEN a `SYSTEM_ADMIN` soft-deletes Q
 - THEN reading the `active` template MUST still show Q's frozen wording and order
 - AND that read MUST NOT bypass the pool repository's default exclusion of soft-deleted questions — it MUST NOT read the pool row at all
 
 #### Scenario: A frozen version always has its wording
+
 - GIVEN any template whose `status` is `active` or `retired`
 - WHEN its selection is inspected
 - THEN every entry MUST carry a non-empty persisted wording snapshot
@@ -177,11 +194,13 @@ responses MUST make it unambiguous whether the wording being returned is
 live draft text or a frozen snapshot; a client MUST NOT have to guess.
 
 #### Scenario: A draft reflects a later question edit
+
 - GIVEN a `draft` whose selection includes question Q with text "Original"
 - WHEN a `SYSTEM_ADMIN` edits Q's `text` to "Changed"
 - THEN reading the draft MUST show "Changed"
 
 #### Scenario: Draft and frozen reads are distinguishable
+
 - GIVEN the same question is selected by a `draft` and frozen into an `active` version with different wording
 - WHEN each template is read
 - THEN each response MUST identify its own `status`, so the consumer can tell live text from frozen text
@@ -196,16 +215,19 @@ REVIEW_TEMPLATE_NOT_EDITABLE`. `retired` is terminal: a retired version
 MUST NOT return to `active` by any path.
 
 #### Scenario: Setting questions on an active template rejected by the API
+
 - GIVEN an `active` template
 - WHEN a client sends a request replacing its question selection
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_NOT_EDITABLE` and the selection MUST be unchanged
 
 #### Scenario: Setting questions on a retired template rejected
+
 - GIVEN a `retired` template
 - WHEN a client sends a request replacing its question selection
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_NOT_EDITABLE`
 
 #### Scenario: Retired is terminal
+
 - GIVEN a `retired` template
 - WHEN any request attempts to return it to `active`
 - THEN the request MUST be rejected and the template MUST remain `retired`
@@ -219,11 +241,13 @@ MUST leave `active` if and only if a successor for the same
 ever had an `active` version MUST always have exactly one.
 
 #### Scenario: No standalone retire surface exists
+
 - GIVEN the shipped API routes, use cases, `Permission` union and UI controls are inspected
 - WHEN they are searched for a retire action
 - THEN none MUST exist that transitions a template to `retired` without activating a successor
 
 #### Scenario: A lineage cannot be emptied
+
 - GIVEN `(EXTINGUISHER, QUARTERLY)` has an `active` version
 - WHEN any sequence of supported operations is performed on that lineage
 - THEN it MUST still have exactly one `active` version
@@ -237,11 +261,13 @@ soft-deleted or that fails activation MUST NOT consume a number, so an
 activated lineage's version sequence MUST have no gaps.
 
 #### Scenario: Discarded draft leaves no gap
+
 - GIVEN `(EXTINGUISHER, QUARTERLY)` has an `active` version 1
 - WHEN a `SYSTEM_ADMIN` creates a draft, soft-deletes it, then creates and activates another draft
 - THEN the newly activated version MUST be 2, not 3
 
 #### Scenario: Versions increment per lineage, independently
+
 - GIVEN `(EXTINGUISHER, QUARTERLY)` is at version 2
 - WHEN a `SYSTEM_ADMIN` activates the first template for `(EXTINGUISHER, ANNUAL)`
 - THEN that template's `version` MUST be 1
@@ -255,21 +281,25 @@ with its ordered questions. A non-existent or soft-deleted template id
 MUST be rejected with 404 `code: REVIEW_TEMPLATE_NOT_FOUND`.
 
 #### Scenario: Admin lists templates across lineages and statuses
+
 - GIVEN templates exist in `draft`, `active` and `retired` status
 - WHEN a `SYSTEM_ADMIN` lists templates
 - THEN the response MUST be 2xx and MUST include all three, each with its `version` and `status`
 
 #### Scenario: Admin reads a template with its ordered questions
+
 - GIVEN a template with a non-empty selection
 - WHEN a `SYSTEM_ADMIN` reads it
 - THEN the response MUST include its questions in their stored `order`
 
 #### Scenario: Soft-deleted drafts excluded
+
 - GIVEN a soft-deleted draft exists
 - WHEN a `SYSTEM_ADMIN` lists templates
 - THEN it MUST NOT appear
 
 #### Scenario: Unknown template id rejected
+
 - GIVEN a template id that does not exist or is soft-deleted
 - WHEN a `SYSTEM_ADMIN` reads it
 - THEN the response MUST be 404 with `code: REVIEW_TEMPLATE_NOT_FOUND`
@@ -284,11 +314,13 @@ historical records (ADR-010). Restoring a soft-deleted draft is out of
 scope.
 
 #### Scenario: Admin soft-deletes a draft
+
 - GIVEN a `draft` template
 - WHEN a `SYSTEM_ADMIN` soft-deletes it
 - THEN the response MUST be 2xx, its `deletedAt` MUST be set, and the lineage MUST accept a new draft
 
 #### Scenario: Soft-deleting a frozen template rejected
+
 - GIVEN an `active` or `retired` template
 - WHEN a `SYSTEM_ADMIN` attempts to soft-delete it
 - THEN the response MUST be 409 with `code: REVIEW_TEMPLATE_NOT_EDITABLE` and the template MUST remain visible
@@ -300,6 +332,7 @@ or `QuestionAnswer` table, model, route, use case or page in this
 slice. Templates are authored here and consumed in the FR-007 slice.
 
 #### Scenario: No session artifacts exist
+
 - GIVEN the shipped schema, routes and pages are inspected
 - WHEN they are searched for `ReviewSession`, `ElementReviewEntry` or `QuestionAnswer`
 - THEN none MUST be found

@@ -18,6 +18,7 @@ The system MUST verify credentials against the seeded admin user and,
 when valid, MUST issue one JWT access token in an httpOnly cookie.
 
 #### Scenario: Valid credentials
+
 - GIVEN the seeded admin user exists
 - WHEN the client POSTs valid credentials to the login endpoint
 - THEN status MUST be 2xx and an httpOnly access-token cookie MUST be set
@@ -29,6 +30,7 @@ The system MUST reject invalid credentials with an identical, generic
 401 regardless of whether the email exists or the password is wrong.
 
 #### Scenario: Wrong password or non-existent user
+
 - GIVEN either a wrong password for an existing email, or an email with no matching user
 - WHEN the client submits login credentials
 - THEN the response MUST be 401 with the same generic error in both cases
@@ -42,16 +44,19 @@ exists and is not soft-deleted, and MUST deny access otherwise.
 (Previously: validity of the token alone sufficed.)
 
 #### Scenario: Valid session
+
 - GIVEN a valid access-token cookie from a successful login, for an existing user
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 2xx
 
 #### Scenario: Missing or invalid session
+
 - GIVEN no cookie, an expired token, or a tampered token
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 401
 
 #### Scenario: Valid token, user missing or soft-deleted
+
 - GIVEN a valid token whose user no longer exists or is soft-deleted
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 401
@@ -66,26 +71,31 @@ be the user's current stored values, not the token claims.
 (Previously: `role` and `email` were taken from the token claims.)
 
 #### Scenario: Valid session
+
 - GIVEN a valid access-token cookie from a successful login
 - WHEN the client calls `GET /auth/me`
 - THEN the response MUST be 2xx with a body containing `{ id, email, role }`
 
 #### Scenario: No or invalid session
+
 - GIVEN no cookie, an expired token, or a tampered token
 - WHEN the client calls `GET /auth/me`
 - THEN the response MUST be 401
 
 #### Scenario: Access token carries role
+
 - GIVEN a user with a given role successfully logs in
 - WHEN the resulting access token is decoded
 - THEN it MUST contain that user's `role` alongside the existing claims
 
 #### Scenario: Role changed after login
+
 - GIVEN a user's stored role changed after the token was issued
 - WHEN the client calls `GET /auth/me`
 - THEN the body MUST show the new role
 
 #### Scenario: Soft-deleted user
+
 - GIVEN a valid token whose user was soft-deleted
 - WHEN the client calls `GET /auth/me`
 - THEN the response MUST be 401
@@ -102,26 +112,31 @@ user's `role` and `email` MUST be the current stored values, not the
 token claims. Public endpoints MUST NOT be affected.
 
 #### Scenario: Soft-deleted user's existing token
+
 - GIVEN a valid, unexpired token whose user was soft-deleted after login
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 401, identical to an invalid-token response
 
 #### Scenario: Demoted user acts with current role
+
 - GIVEN a user whose stored role was lowered after the token was issued
 - WHEN the client calls a route requiring a permission the new role lacks
 - THEN the response MUST be 403
 
 #### Scenario: User lookup fails
+
 - GIVEN a valid token and a user lookup that errors
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 401
 
 #### Scenario: Revoked token needs no lookup
+
 - GIVEN a token that was revoked by logout
 - WHEN the client calls a protected endpoint
 - THEN the response MUST be 401 and no user lookup MUST occur
 
 #### Scenario: Public endpoints unaffected
+
 - GIVEN no cookie
 - WHEN the client calls `/health` or the login endpoint
 - THEN no user lookup MUST occur and the call MUST NOT be blocked
@@ -132,6 +147,7 @@ The system MUST provide a logout action that clears the access-token
 cookie.
 
 #### Scenario: Logout clears cookie
+
 - GIVEN an authenticated session
 - WHEN the client calls the logout endpoint
 - THEN the cookie MUST be cleared/expired
@@ -143,6 +159,7 @@ The system MUST support marking endpoints public, exempt from the
 guard, and MUST mark `/health` and the login endpoint public.
 
 #### Scenario: Health and login stay reachable
+
 - GIVEN no access-token cookie
 - WHEN the client calls `/health` or the login endpoint
 - THEN neither call MUST be blocked by the guard
@@ -155,6 +172,7 @@ protected) reachable from the web app, not just the public-opt-out
 endpoints above.
 
 #### Scenario: Cross-origin request receives CORS headers
+
 - GIVEN a request from the configured web origin (`CORS_ORIGIN`)
 - WHEN the client calls the API cross-origin with credentials
 - THEN the response MUST include the expected `Access-Control-Allow-Origin`
@@ -168,6 +186,7 @@ authenticate. Resolved by `sdd-design`: the repository's default
 not exist.
 
 #### Scenario: Soft-deleted user attempts login
+
 - GIVEN a user record has `deletedAt` set
 - WHEN that user submits otherwise-valid credentials
 - THEN the response MUST be 401 with the same generic error as an
@@ -207,81 +226,97 @@ restart, not shared across instances), and IPv6 clients were not grouped
 by prefix.)
 
 #### Scenario: Attempt over the limit
+
 - GIVEN one client key has made 10 login attempts within the window
 - WHEN that client key submits an 11th login attempt
 - THEN the response MUST be 429 with a `Retry-After` header
 
 #### Scenario: Successful attempts count
+
 - GIVEN one client key has made 10 login attempts within the window, all with valid credentials
 - WHEN that client key submits another login attempt, even with valid credentials
 - THEN the response MUST be 429
 
 #### Scenario: Limit isolated per client key
+
 - GIVEN one client key has exhausted its login attempts in the window
 - WHEN a different client key submits a login attempt for an email that is not blocked by the per-email limit
 - THEN the attempt MUST be processed normally and MUST NOT be rejected with 429 by the per-client-key limit
 
 #### Scenario: Other endpoints unaffected
+
 - GIVEN one client key has exhausted its login attempts in the window
 - WHEN that client calls any other endpoint (public or protected)
 - THEN the call MUST NOT be rejected with 429 by this limit
 
 #### Scenario: Default limits
+
 - GIVEN the limit environment variables are unset
 - WHEN a single client key makes login attempts
 - THEN the 10th attempt in 15 minutes MUST be processed and the 11th MUST get 429
 
 #### Scenario: Configured limits
+
 - GIVEN the limit environment variables set a lower attempt count or a different window
 - WHEN a single client key makes login attempts
 - THEN the configured values MUST apply instead of the defaults
 
 #### Scenario: Window elapsed
+
 - GIVEN a client key was rejected with 429
 - WHEN the window has elapsed
 - THEN a new login attempt from that client key MUST be processed normally
 
 #### Scenario: IPv6 addresses in the same /64 share a counter
+
 - GIVEN two IPv6 addresses that share the same /64 prefix and differ only in the low 64 bits
 - WHEN the first address has exhausted its login attempts in the window and the second address submits a login attempt
 - THEN the second attempt MUST be rejected with 429
 
 #### Scenario: Rotating the low 64 bits does not reset the limit
+
 - GIVEN a client has made 10 login attempts within the window from one IPv6 address
 - WHEN it submits an 11th attempt from a different IPv6 address in the same /64 prefix
 - THEN the response MUST be 429
 
 #### Scenario: IPv6 addresses in different /64 prefixes are isolated
+
 - GIVEN two IPv6 addresses in different /64 prefixes
 - WHEN the first address has exhausted its login attempts in the window and the second address submits a login attempt
 - THEN the second attempt MUST be processed normally and MUST NOT be rejected with 429
 
 #### Scenario: IPv4 clients are unchanged
+
 - GIVEN two different IPv4 addresses
 - WHEN one has exhausted its login attempts in the window
 - THEN each IPv4 address MUST have its own counter and the other IPv4 address MUST NOT be rejected with 429
 
 #### Scenario: IPv4-mapped IPv6 shares the IPv4 counter
+
 - GIVEN the IPv4 address `a.b.c.d` has exhausted its login attempts in the window
 - WHEN a login attempt arrives from the IPv4-mapped form `::ffff:a.b.c.d`
 - THEN the attempt MUST be rejected with 429
 
 #### Scenario: Counters survive an API restart
+
 - GIVEN a client key has exhausted its login attempts in the window
 - WHEN the API is restarted against the same database and that client key submits a login attempt within the window
 - THEN the response MUST be 429
 
 #### Scenario: Counters shared across instances
+
 - GIVEN two API instances use the same database
 - WHEN one client key makes 6 login attempts through the first instance and 5 through the second within the window
 - THEN the 11th attempt MUST be rejected with 429, regardless of the instance that receives it
 
 #### Scenario: Concurrent attempts are all counted
+
 - GIVEN a client key with no attempts in the window
 - WHEN 10 login attempts from that client key are submitted concurrently
 - THEN all 10 MUST be counted, and the next attempt MUST be rejected with 429
 
 #### Scenario: Client IP cannot be determined
+
 - GIVEN a login request whose client IP cannot be determined
 - WHEN the request is submitted
 - THEN the request MUST still be subject to rate limiting and MUST NOT cause a server error
@@ -302,31 +337,37 @@ fail with an error. No production default other than off applies.
 (Previously: `TRUST_PROXY` was either off or enabled for exactly one hop; a hop count and startup validation of invalid values were not specified.)
 
 #### Scenario: TRUST_PROXY off
+
 - GIVEN `TRUST_PROXY` is unset or off
 - WHEN requests carry different forwarded-for header values from the same socket address
 - THEN they MUST share one counter, keyed by the socket address
 
 #### Scenario: TRUST_PROXY on
+
 - GIVEN `TRUST_PROXY` is enabled with `true`
 - WHEN requests arrive from the same socket address with different forwarded client IPs
 - THEN each forwarded client IP MUST have its own counter
 
 #### Scenario: TRUST_PROXY with a hop count
+
 - GIVEN `TRUST_PROXY` is set to `2`
 - WHEN requests arrive from the same socket address through two trusted proxies, with different client IPs two hops back in the forwarded-for chain
 - THEN each client IP two hops back MUST have its own counter
 
 #### Scenario: Hop count ignores client-supplied extra entries
+
 - GIVEN `TRUST_PROXY` is set to `2`
 - WHEN a client prepends additional, spoofed entries to the forwarded-for chain
 - THEN the spoofed entries MUST NOT determine the client IP, and the client IP MUST remain the address two hops back from the socket address
 
 #### Scenario: TRUST_PROXY empty or false
+
 - GIVEN `TRUST_PROXY` is set to the empty string or to `false`
 - WHEN the application starts
 - THEN it MUST start with proxy trust off
 
 #### Scenario: Invalid TRUST_PROXY value rejected at startup
+
 - GIVEN `TRUST_PROXY` is set to `0`, `-1`, `1.5`, `loopback`, a CIDR list, or any other value outside the accepted set
 - WHEN the application starts
 - THEN startup MUST fail with an error and the application MUST NOT begin serving requests
@@ -343,16 +384,19 @@ message, without a countdown, and MUST remain usable for a later retry.
 error.)
 
 #### Scenario: Empty fields blocked client-side
+
 - GIVEN the login form is empty
 - WHEN the user submits
 - THEN submission MUST be blocked with a required-field message
 
 #### Scenario: Server error shown generically
+
 - GIVEN the server returns 401 with a generic error
 - WHEN the form receives that response
 - THEN the UI MUST show one generic message, not field-specific errors
 
 #### Scenario: Rate-limited message
+
 - GIVEN the server returns 429 for a login attempt
 - WHEN the form receives that response
 - THEN the UI MUST show the rate-limited message
@@ -360,11 +404,13 @@ error.)
 - AND no countdown or retry time MUST be shown
 
 #### Scenario: Form usable after rate limit
+
 - GIVEN the rate-limited message is shown
 - WHEN the user edits the fields and submits again
 - THEN the form MUST send the attempt and MUST show the result of that attempt
 
 #### Scenario: Localized rate-limited message
+
 - GIVEN the UI locale is ES or CA
 - WHEN the rate-limited message is shown
 - THEN it MUST render the corresponding translated string
@@ -380,16 +426,19 @@ the current session.
 regardless of which session issued the call.)
 
 #### Scenario: Unauthenticated visit redirected
+
 - GIVEN no valid session
 - WHEN the user navigates to a protected route
 - THEN the app MUST redirect to `/login`
 
 #### Scenario: Session ends mid-session
+
 - GIVEN a signed-in user on a protected route
 - WHEN an authenticated API call (not login) issued under the current session returns 401
 - THEN the local session MUST be cleared and the app MUST redirect to `/login`
 
 #### Scenario: Current-session 401 ends the session and redirects
+
 - GIVEN a signed-in user on a protected route who sent an authenticated API call under the current session
 - WHEN that call returns 401
 - THEN the local session MUST be cleared
@@ -397,6 +446,7 @@ regardless of which session issued the call.)
 - AND the session-ended notice MUST be shown
 
 #### Scenario: Stale 401 after re-login keeps the new session
+
 - GIVEN an authenticated API call was sent under an earlier session
 - AND the user then signs in again, starting a new session
 - WHEN the earlier call returns 401
@@ -420,22 +470,26 @@ the session and showed the notice, regardless of which session issued
 the call.)
 
 #### Scenario: Mid-session 401
+
 - GIVEN a signed-in user whose session is no longer accepted by the API
 - WHEN any authenticated API call issued under the current session returns 401
 - THEN the app MUST land on `/login` showing the session-ended notice
 - AND the notice MUST NOT state why the session ended
 
 #### Scenario: Failed login shows no session-ended notice
+
 - GIVEN the login form
 - WHEN the login call returns 401
 - THEN the generic login error MUST be shown and the session-ended notice MUST NOT
 
 #### Scenario: Localized notice
+
 - GIVEN the UI locale is ES or CA
 - WHEN the notice is shown
 - THEN it MUST render the corresponding translated string
 
 #### Scenario: Stale 401 after re-login does not end the new session
+
 - GIVEN an authenticated API call was sent under an earlier session
 - AND the user then signs in again, starting a new session
 - WHEN the earlier call returns 401
@@ -444,12 +498,14 @@ the call.)
 - AND the caller of the earlier call MUST still receive the 401 error
 
 #### Scenario: Stale 401 across logout raises no notice
+
 - GIVEN an authenticated API call was sent before the user logged out
 - WHEN the call returns 401 after the logout
 - THEN the session-ended notice MUST NOT be shown
 - AND the caller of that call MUST still receive the 401 error
 
 #### Scenario: Stale 401 across logout and new login keeps the new session
+
 - GIVEN an authenticated API call was sent before the user logged out
 - AND the user then signs in again, starting a new session
 - WHEN the earlier call returns 401
@@ -457,6 +513,7 @@ the call.)
 - AND the session-ended notice MUST NOT be shown
 
 #### Scenario: Current-session 401 still shows the notice
+
 - GIVEN a signed-in user who sent an authenticated API call under the current session
 - WHEN that call returns 401
 - THEN the local session MUST end, the app MUST land on `/login`, and the session-ended notice MUST be shown
@@ -467,6 +524,7 @@ The web app MUST trigger the logout endpoint and redirect to `/login`
 once the session is cleared.
 
 #### Scenario: Logout redirects
+
 - GIVEN an authenticated session
 - WHEN the user triggers logout
 - THEN the app MUST call the logout endpoint and redirect to `/login`
@@ -476,6 +534,7 @@ once the session is cleared.
 The `/login` page MUST render the SF-Manager app logo static asset.
 
 #### Scenario: Logo visible on login page
+
 - GIVEN the user navigates to `/login`
 - THEN the page MUST render the app logo asset
 
@@ -529,144 +588,171 @@ The web login page MUST show the existing rate-limited message for this
 429; no distinct message and no countdown MUST be shown.
 
 #### Scenario: Email blocked after the failure limit
+
 - GIVEN an existing email has had 5 failed login attempts within the window
 - WHEN a 6th login attempt is submitted for that email
 - THEN the response MUST be 429 with a `Retry-After` header
 - AND the credentials MUST NOT be evaluated
 
 #### Scenario: Fewer failures than the limit are processed
+
 - GIVEN an existing email has had 4 failed login attempts within the window
 - WHEN a login attempt with valid credentials is submitted for that email
 - THEN the login MUST succeed
 
 #### Scenario: Default limits
+
 - GIVEN the email limit environment variables are unset
 - WHEN failed login attempts are submitted for one email
 - THEN the 5th failed attempt in 15 minutes MUST be answered 401 and the next attempt MUST get 429
 - AND the `Retry-After` value MUST NOT exceed 900 seconds
 
 #### Scenario: Configured limits
+
 - GIVEN the email limit environment variables set a different failure count or window
 - WHEN failed login attempts are submitted for one email
 - THEN the configured values MUST apply instead of the defaults
 
 #### Scenario: Invalid configuration rejected at startup
+
 - GIVEN `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` or `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is set to zero, a negative number, a non-integer number, or non-numeric text, or `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES` is set above 2147483647, or `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS` is set above 86400 (24 hours, which bounds the lockout a misconfiguration could cause)
 - WHEN the application starts
 - THEN startup MUST fail with an error and the application MUST NOT begin serving requests
 
 #### Scenario: Only failed attempts count
+
 - GIVEN an existing email has had many successful logins within the window
 - WHEN a login attempt with valid credentials is submitted for that email
 - THEN the login MUST succeed and the successful logins MUST NOT have counted toward the email limit
 
 #### Scenario: Successful login resets the counter
+
 - GIVEN an existing email has had 4 failed login attempts within the window
 - WHEN a login with valid credentials succeeds, followed by 4 more failed attempts for that email
 - THEN the following attempt MUST be processed normally and MUST NOT be rejected with 429
 
 #### Scenario: Distributed attempts from many client keys are counted
+
 - GIVEN 5 failed login attempts for one email were submitted from 5 different client keys within the window
 - WHEN a 6th attempt for that email is submitted from a sixth client key
 - THEN the response MUST be 429 with a `Retry-After` header
 - AND the credentials MUST NOT be evaluated
 
 #### Scenario: Blocking one email does not affect another email
+
 - GIVEN one email is blocked
 - WHEN a login attempt for a different email is submitted from any client key not blocked by the per-client-key limit
 - THEN the attempt MUST be processed normally and MUST NOT be rejected with 429
 
 #### Scenario: Email variants share one counter
-- GIVEN failed attempts were submitted for `User@Example.com`, ` user@example.com ` and `USER@EXAMPLE.COM`, 5 in total within the window
+
+- GIVEN failed attempts were submitted for `User@Example.com`, `user@example.com` and `USER@EXAMPLE.COM`, 5 in total within the window
 - WHEN another attempt is submitted for `user@example.com`
 - THEN the response MUST be 429
 
 #### Scenario: Invalid email is rejected before the limit
+
 - GIVEN a login request whose email is missing or not a string
 - WHEN it is submitted
 - THEN the response MUST be 400
 - AND it MUST NOT count as a failed attempt for any email
 
 #### Scenario: Unknown email behaves like an existing email
+
 - GIVEN one email belongs to an existing user and another email belongs to no user
 - WHEN the same sequence of failed attempts is submitted for each, up to and including the blocked attempt
 - THEN the status, body, message and `Retry-After` presence MUST be identical for both at every step
 
 #### Scenario: Soft-deleted email behaves like an existing email
+
 - GIVEN an email belongs to a soft-deleted user
 - WHEN 5 failed attempts and then a 6th attempt are submitted for that email
 - THEN the responses MUST be identical to those for an existing email at every step, including the 429 on the 6th attempt
 
 #### Scenario: Blocked response identical to the per-client-key response
+
 - GIVEN an email is blocked by the email limit and no client key is blocked
 - WHEN a login attempt for that email is submitted
 - THEN the response status, body and message MUST be identical to the 429 returned by the per-client-key limit
 
 #### Scenario: Valid credentials rejected while the email is blocked
+
 - GIVEN an existing email is blocked
 - WHEN a login attempt with the correct password is submitted for that email
 - THEN the response MUST be 429 and no session MUST be established
 
 #### Scenario: Window elapsed
+
 - GIVEN an email was blocked
 - WHEN the window has elapsed
 - THEN a new login attempt for that email MUST be processed normally
 
 #### Scenario: Both limits blocked uses the larger Retry-After
+
 - GIVEN a client key and an email are both blocked, with different remaining times
 - WHEN a login attempt from that client key for that email is submitted
 - THEN the response MUST be 429
 - AND the `Retry-After` value MUST be the larger of the two remaining times
 
 #### Scenario: Request rejected by the client-key limit adds no email failure
+
 - GIVEN a client key is blocked by the per-client-key limit and an email has 0 recorded failures
 - WHEN 5 login attempts for that email are submitted from that client key and rejected with 429
 - THEN the email MUST NOT be blocked
 - AND a login attempt for that email from a different, unblocked client key MUST be processed normally
 
 #### Scenario: Counters survive an API restart
+
 - GIVEN an email is blocked
 - WHEN the API is restarted against the same database and a login attempt for that email is submitted within the window
 - THEN the response MUST be 429
 
 #### Scenario: Counters shared across instances
+
 - GIVEN two API instances use the same database
 - WHEN 3 failed attempts for one email are submitted through the first instance and 2 through the second within the window
 - THEN the next attempt for that email MUST be rejected with 429, regardless of the instance that receives it
 
 #### Scenario: Concurrent failures are all counted
+
 - GIVEN an email with no failures in the window
 - WHEN 5 failed login attempts for that email are submitted concurrently
 - THEN all 5 MUST be counted, and the next attempt for that email MUST be rejected with 429
 
 #### Scenario: Raw email not stored or logged
+
 - GIVEN failed login attempts were submitted for an email
 - WHEN the stored throttling data and the application logs are inspected
 - THEN neither MUST contain the raw email, and the email MUST appear only as a one-way hash
 
 #### Scenario: Block is logged once with the hash only
+
 - GIVEN an email has had 4 failed login attempts within the window
 - WHEN the 5th failed attempt makes the email blocked
 - THEN exactly one warning MUST be logged for the block, identified by the hash and not by the raw email
 - AND further rejected attempts in the same window MUST NOT log additional block warnings
 
 #### Scenario: Storage error when checking the block state fails closed
+
 - GIVEN the throttling storage is unavailable
 - WHEN a login attempt is submitted
 - THEN the response MUST be 500 and the login MUST be refused
 
 #### Scenario: Storage error when recording a failure fails closed
+
 - GIVEN the credentials are wrong and recording the failure fails because the throttling storage errors
 - WHEN the login attempt is processed
 - THEN the response MUST be 500 and the login MUST be refused
 
 #### Scenario: Reset failure after a valid login does not block the login
+
 - GIVEN valid credentials and the counter reset fails because the throttling storage errors
 - WHEN the login attempt is processed
 - THEN the login MUST succeed
 - AND a warning MUST be logged
 
 #### Scenario: Web shows the existing rate-limited message
+
 - GIVEN the login page and a login call that returns 429 because the email is blocked
 - WHEN the response is received
 - THEN the existing rate-limited message MUST be shown, with no countdown and no distinct message for the email limit

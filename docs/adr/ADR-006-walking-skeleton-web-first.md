@@ -1,15 +1,18 @@
 # ADR-006: Delivery Strategy — Walking Skeleton, Web First
 
 ## Status
+
 Accepted
 
 ## Context
+
 Full scope is large for a solo project: three client platforms (ADR-004),
 scoped RBAC (ADR-011), and several management domains (questions, review
 types, inspectable elements, communities, users, maintenance companies),
 with more requirements expected to surface as work progresses.
 
 ## Decision
+
 Build a **walking skeleton** first: the thinnest possible end-to-end slice
 (API + one client) covering the core flow, then grow both breadth (more
 domains) and platform surface (mobile, desktop) incrementally — the
@@ -21,6 +24,7 @@ review-type management) with the least platform-specific complexity — no
 native packaging, no offline requirements yet.
 
 ## Consequences
+
 - Mobile (the actual field-checklist use case) and desktop are deliberately
   deferred until the walking skeleton has validated the architecture
   (NestJS modules, scoped auth, PostgreSQL schema, API contracts) end to
@@ -32,12 +36,14 @@ native packaging, no offline requirements yet.
   slice.
 
 ## Alternatives Considered
+
 - **Mobile first** — rejected for the walking skeleton phase: the field
   checklist depends on the not-yet-designed generic inspectable-elements
   model and will likely need offline support, both of which would slow
   down validating the core architecture end to end.
 
 ## Addendum: Tactical DDD Design Timing
+
 Value Objects, application-layer use cases, and detailed domain-entity
 behavior (invariants, methods) are **not** designed exhaustively for the
 whole domain upfront — that would be Big Design Up Front, the opposite of
@@ -53,6 +59,7 @@ alphabet/uniqueness rules) becomes a real Value Object with a validating
 factory when — and only when — the slice that needs it is specced.
 
 ## Addendum: Course Correction — UI Fell Behind (2026-08-25)
+
 After `auth-minimal-skeleton` validated the end-to-end architecture via
 web (login flow), the next two slices (`user-management-roles`,
 `community`) were built API-only — the only web change was propagating

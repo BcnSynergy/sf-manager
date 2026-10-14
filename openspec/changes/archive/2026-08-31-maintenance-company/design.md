@@ -14,11 +14,11 @@ Three invariants carry the slice, and each gets a deliberately different
 enforcement mechanism depending on whether a database constraint can actually
 express it:
 
-| Invariant | Can the DB express it? | Mechanism |
-|---|---|---|
-| `taxId` unique **among active companies** | Yes — partial unique index | Index is the *only* enforcement; `P2002` → `TaxIdAlreadyInUseError`. Race-free by construction (Decision 2) |
-| A company with active users cannot be soft-deleted | No — cross-table + `deletedAt` predicate; the FK guards *hard* deletes this project never performs | Pure domain policy + a count through `UserRepository` (Decision 4) |
-| `maintenanceCompanyId` required iff role is maintenance-side | No — cross-column `CHECK` Postgres would need, and the app owns the message anyway | Shared Zod refinement (web + API) + a pure domain policy at the write path only (Decision 5) |
+| Invariant                                                    | Can the DB express it?                                                                             | Mechanism                                                                                                   |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `taxId` unique **among active companies**                    | Yes — partial unique index                                                                         | Index is the _only_ enforcement; `P2002` → `TaxIdAlreadyInUseError`. Race-free by construction (Decision 2) |
+| A company with active users cannot be soft-deleted           | No — cross-table + `deletedAt` predicate; the FK guards _hard_ deletes this project never performs | Pure domain policy + a count through `UserRepository` (Decision 4)                                          |
+| `maintenanceCompanyId` required iff role is maintenance-side | No — cross-column `CHECK` Postgres would need, and the app owns the message anyway                 | Shared Zod refinement (web + API) + a pure domain policy at the write path only (Decision 5)                |
 
 That table is the design in one screen: use the constraint where it fits, use
 the domain where it does not, and never pretend a mechanism enforces something
@@ -32,7 +32,7 @@ This is the third consumer, and the trigger was pre-designed by
 `community-minimal-ui` design.md Decision 1 precisely so nobody re-litigates
 it at n=3:
 
-> *Extraction trigger (mechanical, pre-designed so nobody re-litigates it)*: at
+> _Extraction trigger (mechanical, pre-designed so nobody re-litigates it)_: at
 > the **third** module needing coded conflicts, create
 > `apps/api/src/shared/presentation/http/coded-conflict.ts` exporting
 > `buildCodedConflict(message, code)`, and migrate **all** existing callers in
@@ -42,12 +42,12 @@ it at n=3:
 The trigger separates two things the original `users-minimal-ui` wording
 conflated. They resolve differently.
 
-| What is duplicated | Option | Tradeoff | Verdict |
-|---|---|---|---|
-| **The code union** (n=3) | Hoist into `@sf-manager/validation` | ADR-015 charters that package as *"shared validation: Zod, single source of truth for backend validation and frontend forms"* — error taxonomy is not validation. Worse, the three unions still share exactly **one** value (`TRANSACTION_CONFLICT`, and after Decision 6 this module does not even have it): a shared home becomes a god-union coupling every module's presentation layer, or per-module files in a package that would then import each module's presentation concepts — an inverted boundary | **Rejected (third time, on unchanged and now stronger evidence)** |
-| **The code union** | `modules/maintenance-company/presentation/maintenance-company-error-code.ts`, mirrored as a literal union in `apps/web/src/api/maintenance-company.ts` | File-for-file with `users` and `community`. Drift guarded by the proven mechanism: an e2e assertion on `body.code` per cause | **Chosen** |
-| **The `{statusCode, error, message, code}` envelope builder** (n=3) | Keep a third private copy | The pre-designed trigger fires here, and its **only** stated blocker at n=2 was scope: *"the proposal fences `users` API as unchanged, so `UsersController` cannot be migrated in this chain."* That blocker is **gone** — this proposal already modifies `apps/api/src/modules/users/presentation/**`. Deferring a third time would require a technical reason, and there is none | **Rejected** |
-| **The envelope builder** | `apps/api/src/shared/presentation/http/coded-error.ts`, **all three** callers migrated in one mechanical PR | Zero behaviour change; both existing modules already have e2e assertions on `body.code` per cause, so the migration is guarded by tests that already exist | **Chosen** |
+| What is duplicated                                                  | Option                                                                                                                                                 | Tradeoff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Verdict                                                           |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **The code union** (n=3)                                            | Hoist into `@sf-manager/validation`                                                                                                                    | ADR-015 charters that package as _"shared validation: Zod, single source of truth for backend validation and frontend forms"_ — error taxonomy is not validation. Worse, the three unions still share exactly **one** value (`TRANSACTION_CONFLICT`, and after Decision 6 this module does not even have it): a shared home becomes a god-union coupling every module's presentation layer, or per-module files in a package that would then import each module's presentation concepts — an inverted boundary | **Rejected (third time, on unchanged and now stronger evidence)** |
+| **The code union**                                                  | `modules/maintenance-company/presentation/maintenance-company-error-code.ts`, mirrored as a literal union in `apps/web/src/api/maintenance-company.ts` | File-for-file with `users` and `community`. Drift guarded by the proven mechanism: an e2e assertion on `body.code` per cause                                                                                                                                                                                                                                                                                                                                                                                   | **Chosen**                                                        |
+| **The `{statusCode, error, message, code}` envelope builder** (n=3) | Keep a third private copy                                                                                                                              | The pre-designed trigger fires here, and its **only** stated blocker at n=2 was scope: _"the proposal fences `users` API as unchanged, so `UsersController` cannot be migrated in this chain."_ That blocker is **gone** — this proposal already modifies `apps/api/src/modules/users/presentation/**`. Deferring a third time would require a technical reason, and there is none                                                                                                                             | **Rejected**                                                      |
+| **The envelope builder**                                            | `apps/api/src/shared/presentation/http/coded-error.ts`, **all three** callers migrated in one mechanical PR                                            | Zero behaviour change; both existing modules already have e2e assertions on `body.code` per cause, so the migration is guarded by tests that already exist                                                                                                                                                                                                                                                                                                                                                     | **Chosen**                                                        |
 
 **Two deliberate deviations from the pre-designed trigger, stated so they are
 not mistaken for drift:**
@@ -56,7 +56,7 @@ not mistaken for drift:**
    becomes `buildCodedError(status, message, code): HttpException`, in
    `coded-error.ts` not `coded-conflict.ts`. Decision 5 introduces the first
    coded **400** (`MAINTENANCE_COMPANY_NOT_FOUND`); a conflict-only helper
-   would need a near-identical sibling *within this same slice*, which is the
+   would need a near-identical sibling _within this same slice_, which is the
    exact duplication the extraction exists to remove. The `code` parameter is
    generic (`<TCode extends string>`) rather than the pre-designed `code: string`,
    so each call site keeps its own union narrowed at zero cost.
@@ -64,9 +64,9 @@ not mistaken for drift:**
 2. **It touches `community`.** The proposal fences
    `apps/api/src/modules/community/**` as untouched by design. Migrating only
    two of three callers would leave a "shared" helper with a stale identical
-   private copy next door — the state the prior design called *"worse than two
-   honest copies."* Reported as a finding per the `community-minimal-ui`
-   precedent (*"any needed change is a finding to report"*), and confined to a
+   private copy next door — the state the prior design called _"worse than two
+   honest copies."_ Reported as a finding per the `community-minimal-ui`
+   precedent (_"any needed change is a finding to report"_), and confined to a
    **standalone mechanical PR** that deletes two private methods and changes
    their call sites, with no behavioural diff.
 
@@ -80,7 +80,7 @@ not mistaken for drift:**
 > that module's e2e spec; the web mirror is a literal union in
 > `apps/web/src/api/{domain}.ts`.
 >
-> *Next extraction trigger*: none pending. The unions stay per-module until a
+> _Next extraction trigger_: none pending. The unions stay per-module until a
 > consumer outside `apps/api` + `apps/web` needs them (e.g. a second client or
 > a public API contract), at which point the hoist target is a new
 > `@sf-manager/api-contract` package, **not** `@sf-manager/validation`.
@@ -117,11 +117,11 @@ Exact precedent:
 its warning block, and lines 63–80 of the same file for the hand-written FK
 style this project uses because Prisma models carry no `@relation` (ADR-013).
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| Read-check `findActiveByTaxId()` in the use case, then insert | Nice error message, but TOCTOU: two concurrent creates both read "free", one gets a raw `P2002` → **500**. A check that is wrong under exactly the condition it exists for | **Rejected** |
-| Partial unique index only; adapter maps `P2002` → `TaxIdAlreadyInUseError` | Atomic and race-free by construction. Identical in shape to `PrismaUserRepository.create`'s `P2002` → `EmailAlreadyInUseError` (`prisma-user.repository.ts:91-105`) | **Chosen** |
-| Plain `@@unique([taxId])` in `schema.prisma` | Prisma-visible, but reserves a soft-deleted company's tax id forever — contradicts the settled product decision that a re-onboarded company reuses its CIF | **Rejected** |
+| Option                                                                     | Tradeoff                                                                                                                                                                   | Verdict      |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Read-check `findActiveByTaxId()` in the use case, then insert              | Nice error message, but TOCTOU: two concurrent creates both read "free", one gets a raw `P2002` → **500**. A check that is wrong under exactly the condition it exists for | **Rejected** |
+| Partial unique index only; adapter maps `P2002` → `TaxIdAlreadyInUseError` | Atomic and race-free by construction. Identical in shape to `PrismaUserRepository.create`'s `P2002` → `EmailAlreadyInUseError` (`prisma-user.repository.ts:91-105`)        | **Chosen**   |
+| Plain `@@unique([taxId])` in `schema.prisma`                               | Prisma-visible, but reserves a soft-deleted company's tax id forever — contradicts the settled product decision that a re-onboarded company reuses its CIF                 | **Rejected** |
 
 **Migration** — `apps/api/prisma/migrations/<ts>_add_maintenance_company/migration.sql`:
 
@@ -197,17 +197,17 @@ The `users` precedent is precise and `community` design.md Decision 5 already
 applied it: a field becomes a Value Object when it carries **behaviour beyond
 validation**. `PlainPassword` is this codebase's only VO, and only because of
 `toString()` redaction over a `#raw` field. `email` — which has a real format
-rule *and* a normalization rule *and* a uniqueness constraint — stayed a plain
+rule _and_ a normalization rule _and_ a uniqueness constraint — stayed a plain
 `string`, because Zod expresses the rule and the shared package makes it
 available to both sides (ADR-015).
 
 Per CLAUDE.md, the conclusion is re-derived per field rather than copied:
 
-| Field | Invariant | Behaviour beyond validation? | Verdict |
-|---|---|---|---|
-| `name` | non-empty, trimmed | None. Never parsed, compared or formatted | Plain `string` — same as `Community.name` |
-| `contactInfo` | non-empty, trimmed free text | None **and knowably temporary**: the confirmed direction is a shared `ContactInfo` **entity** (Engram #132), a different construct at a different layer. A VO built now is scaffolding that must be deleted or moved when that lands | Plain `string` — same as `Community.address` |
-| `taxId` | non-empty, trimmed, **unique among active companies** | Uniqueness is *not* an intrinsic property of the value — it is a property of the set, and a VO structurally cannot see other rows. Format/checksum behaviour, the one thing a `TaxId` VO could legitimately own, was explicitly deferred by the proposal | Plain `string` |
+| Field         | Invariant                                             | Behaviour beyond validation?                                                                                                                                                                                                                             | Verdict                                      |
+| ------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `name`        | non-empty, trimmed                                    | None. Never parsed, compared or formatted                                                                                                                                                                                                                | Plain `string` — same as `Community.name`    |
+| `contactInfo` | non-empty, trimmed free text                          | None **and knowably temporary**: the confirmed direction is a shared `ContactInfo` **entity** (Engram #132), a different construct at a different layer. A VO built now is scaffolding that must be deleted or moved when that lands                     | Plain `string` — same as `Community.address` |
+| `taxId`       | non-empty, trimmed, **unique among active companies** | Uniqueness is _not_ an intrinsic property of the value — it is a property of the set, and a VO structurally cannot see other rows. Format/checksum behaviour, the one thing a `TaxId` VO could legitimately own, was explicitly deferred by the proposal | Plain `string`                               |
 
 `taxId` is the genuinely different field and it still lands on "plain", but it
 forces a decision the others do not: **canonicalization**. A unique index on
@@ -226,11 +226,11 @@ uppercase; the value is case-insensitive alphanumeric either way.
 
 **Accepted exposure**: normalization lives in the schema, not the column, so a
 writer that bypasses the schema (seed, raw SQL) could insert a non-canonical
-duplicate. This is the *same* exposure `email` already carries in production
+duplicate. This is the _same_ exposure `email` already carries in production
 (`schema.prisma:27` — "stored lowercase-normalized"), so it is symmetric with
 the shipped precedent, not a new class of risk.
 
-*Revisit trigger*: when CIF/NIF checksum validation lands, it is a Zod
+_Revisit trigger_: when CIF/NIF checksum validation lands, it is a Zod
 `.refine()` first — following `email`'s path, not `PlainPassword`'s.
 `taxId` becomes a VO only if it grows real behaviour (e.g. `region()`,
 formatted display), not merely a stricter format rule.
@@ -250,7 +250,7 @@ export function assertNoActiveUsersAttached(activeUserCount: number): void {
 }
 ```
 
-The count is carried on the error so the 409 message can say *how many* users
+The count is carried on the error so the 409 message can say _how many_ users
 must be reassigned first — the actionable half of the success criterion.
 
 **The port method** goes on the existing `users` port, mirroring
@@ -263,16 +263,16 @@ countActiveByMaintenanceCompany(maintenanceCompanyId: string): Promise<number>;
 
 Adapter: `this.prisma.user.count({ where: this.withDefaultFilter({ maintenanceCompanyId }) })`.
 `withDefaultFilter` supplies `deletedAt: null` by construction (ADR-010), so
-*"soft-deleted users do not block a company's deletion"* is satisfied for free
+_"soft-deleted users do not block a company's deletion"_ is satisfied for free
 — no extra predicate, nothing to forget.
 
 **Call site and ordering** — `SoftDeleteMaintenanceCompanyUseCase`:
 `findById` (404) → `countActiveByMaintenanceCompany` → `assertNoActiveUsersAttached`
 → `softDeleteById`. The check precedes the write, which is the opposite of
 `SoftDeleteCommunityUseCase` (`soft-delete-community.use-case.ts:39-59`, which
-deletes first and *then* cascades). The inversion is required, not stylistic:
+deletes first and _then_ cascades). The inversion is required, not stylistic:
 community's side effect always succeeds, so ordering is free; here the check
-can **refuse**, and *"no user is modified by the attempt"* also implies no
+can **refuse**, and _"no user is modified by the attempt"_ also implies no
 company is modified. Delete-first-then-undo would need a transaction to roll
 back and would briefly make the company disappear from `GET`.
 
@@ -283,12 +283,12 @@ point in opposite directions:
 - `users → maintenance-company` — user create/update needs a company liveness
   check (Decision 5).
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `forwardRef()` on both modules | Nest supports it, but it is a known bootstrap-fragility smell and this repo has already been bitten by DI-bootstrap crashes (CLAUDE.md, Git & PR Conventions). It also *encodes* the cycle instead of removing it | **Rejected** |
-| Both modules read the other's table from their own infrastructure | Symmetric and cycle-free, but doubles the boundary crossings and discards the `CommunityModule` precedent of consuming `USER_REPOSITORY` | **Rejected** |
-| Hoist a `MaintenanceCompanyLookup` port into `shared/application/ports/` | `shared` would own a module-specific read contract. `permission.ts` carries module-specific *strings*, which is a much lighter coupling than a repository-shaped port | **Rejected** |
-| **One precedented direction + one narrow, `users`-owned lookup** (below) | One new boundary crossing, no cycle, no `forwardRef`, no `shared` inversion | **Chosen** |
+| Option                                                                   | Tradeoff                                                                                                                                                                                                          | Verdict      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `forwardRef()` on both modules                                           | Nest supports it, but it is a known bootstrap-fragility smell and this repo has already been bitten by DI-bootstrap crashes (CLAUDE.md, Git & PR Conventions). It also _encodes_ the cycle instead of removing it | **Rejected** |
+| Both modules read the other's table from their own infrastructure        | Symmetric and cycle-free, but doubles the boundary crossings and discards the `CommunityModule` precedent of consuming `USER_REPOSITORY`                                                                          | **Rejected** |
+| Hoist a `MaintenanceCompanyLookup` port into `shared/application/ports/` | `shared` would own a module-specific read contract. `permission.ts` carries module-specific _strings_, which is a much lighter coupling than a repository-shaped port                                             | **Rejected** |
+| **One precedented direction + one narrow, `users`-owned lookup** (below) | One new boundary crossing, no cycle, no `forwardRef`, no `shared` inversion                                                                                                                                       | **Chosen**   |
 
 - `MaintenanceCompanyModule` **imports `UsersModule`** and injects
   `USER_REPOSITORY` — verbatim the `CommunityModule` pattern
@@ -312,12 +312,12 @@ Adapter `PrismaMaintenanceCompanyLookup` lives in
 so it resolves `PrismaService` with no module import at all.
 
 **Why this is a lookup and not a repository**: `users` does not own
-`MaintenanceCompany` and never writes it. It owns one question — *"is this
-company id live?"* — and Clean Architecture says the consumer owns the contract
+`MaintenanceCompany` and never writes it. It owns one question — _"is this
+company id live?"_ — and Clean Architecture says the consumer owns the contract
 it needs. Injecting `MAINTENANCE_COMPANY_REPOSITORY` instead would couple
-`users`' application layer to another module's full port *and* re-create the
+`users`' application layer to another module's full port _and_ re-create the
 cycle. Two adapters touching one table is the smaller price, and it is a
-read-only single-column probe, not shared ownership. *Rule-of-three note*: if
+read-only single-column probe, not shared ownership. _Rule-of-three note_: if
 a second cross-module liveness lookup appears, revisit with a
 `shared/application/ports/entity-liveness.port.ts` generalization — not
 before.
@@ -348,7 +348,7 @@ statement — the invariant check and the write happen inside the same atomic
 operation, so there is no window for a concurrent insert to slip in between
 them. `softDeleteById` now returns `Promise<boolean>` (`true` iff it actually
 flipped `deletedAt`) instead of `Promise<void>`; the port doc comment records
-this as the *authoritative* guarantee. `SoftDeleteMaintenanceCompanyUseCase`
+this as the _authoritative_ guarantee. `SoftDeleteMaintenanceCompanyUseCase`
 keeps its original `countActiveByMaintenanceCompany` read — now demoted to a
 fast path / accurate error message only — and re-checks on a `false` return to
 report `MaintenanceCompanyHasActiveUsersError` (a user was concurrently
@@ -362,14 +362,14 @@ statement rather than reaching for application-level locking.
 
 Three violation shapes, three answers:
 
-| # | Violation | Status | Code | Where it is caught |
-|---|---|---|---|---|
-| 1 | Maintenance role, **no** `maintenanceCompanyId` | **400** | none | `createUserSchema` refinement (web form *and* `ZodValidationPipe`); domain policy as backstop |
-| 2 | Non-maintenance role, `maintenanceCompanyId` **present** | **400** | none | same |
-| 3 | `maintenanceCompanyId` references a missing **or soft-deleted** company | **400** | `MAINTENANCE_COMPANY_NOT_FOUND` | `CreateUserUseCase` / `UpdateUserUseCase` via `MaintenanceCompanyLookup.existsActive` |
+| #   | Violation                                                               | Status  | Code                            | Where it is caught                                                                            |
+| --- | ----------------------------------------------------------------------- | ------- | ------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | Maintenance role, **no** `maintenanceCompanyId`                         | **400** | none                            | `createUserSchema` refinement (web form _and_ `ZodValidationPipe`); domain policy as backstop |
+| 2   | Non-maintenance role, `maintenanceCompanyId` **present**                | **400** | none                            | same                                                                                          |
+| 3   | `maintenanceCompanyId` references a missing **or soft-deleted** company | **400** | `MAINTENANCE_COMPANY_NOT_FOUND` | `CreateUserUseCase` / `UpdateUserUseCase` via `MaintenanceCompanyLookup.existsActive`         |
 
 **Shapes 1 and 2 follow the `password` precedent, not the `email` one** —
-enforced in *both* layers, deliberately:
+enforced in _both_ layers, deliberately:
 
 - **Shared Zod** (`packages/validation`): a `.superRefine` on
   `createUserSchema` / `updateUserSchema` keyed off an exported
@@ -392,7 +392,7 @@ enforced in *both* layers, deliberately:
 > row read from the database. A grandfathered pre-existing maintenance-role
 > user with `maintenanceCompanyId = NULL` (proposal Risks, Open Question 2)
 > would then throw **on read**, turning `GET /users` into a 500. The invariant
-> is a *write* rule; putting it in the constructor would silently convert it
+> is a _write_ rule; putting it in the constructor would silently convert it
 > into a read rule. This is the single most dangerous shortcut available in
 > this slice and it is ruled out explicitly.
 
@@ -405,27 +405,27 @@ enforced in *both* layers, deliberately:
   all runs**.
 
 That last rule is not an optimization — it is what keeps settled decision 3
-true. Validating the *resulting pair* instead would reject a bare
+true. Validating the _resulting pair_ instead would reject a bare
 technician→`MANAGER` demotion (stale company still set = shape 2), directly
-contradicting *"left untouched; no auto-clear, no rejection."* Restated
+contradicting _"left untouched; no auto-clear, no rejection."_ Restated
 precisely: **the invariant constrains the payload's own coherence, never the
-post-state.** A regression e2e asserting the demotion succeeds *and* leaves
+post-state.** A regression e2e asserting the demotion succeeds _and_ leaves
 `maintenanceCompanyId` unchanged locks this in.
 
 > **Handoff to `sdd-spec` (Open Question 2).** This call site accommodates the
 > proposal's "grandfather, leave alone" direction as designed. If `sdd-spec`
-> chooses the stricter *"any edit must supply a company"*, the only change is
+> chooses the stricter _"any edit must supply a company"_, the only change is
 > one added condition at the `UpdateUserUseCase` call site — the policy
 > function, the port, the errors and the schemas are unaffected either way.
 
 **Why shape 3 is a 400 with a code, and not a 404** — the one place this
 design departs from `community`:
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| **404**, mirroring `POST /communities/:id/representatives` → `UserNotFoundError` | In `community` the body's `userId` is *half the addressed resource*: `(communityId, userId)` is the assignment's identity. Here the company is an **attribute value** of the user being written. Worse, `PATCH /users/:id` already 404s for "user not found" — a second cause would make that status ambiguous with no way for the UI to tell them apart | **Rejected** |
-| **409** | Not a state conflict; the request is simply referencing something that is not there | **Rejected** |
-| **400 + `MAINTENANCE_COMPANY_NOT_FOUND`** | Keeps 404 on `/users/:id` single-cause. The code is *earned*: shapes 1 and 2 are caught client-side by the shared schema, so in practice a 400 from `/users` means either a schema-drift bug or exactly this stale-company case — and "check your input" is actively misleading when the real cause is "the company you picked was deleted in another tab." One union member, one controller branch | **Chosen** |
+| Option                                                                           | Tradeoff                                                                                                                                                                                                                                                                                                                                                                                            | Verdict      |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **404**, mirroring `POST /communities/:id/representatives` → `UserNotFoundError` | In `community` the body's `userId` is _half the addressed resource_: `(communityId, userId)` is the assignment's identity. Here the company is an **attribute value** of the user being written. Worse, `PATCH /users/:id` already 404s for "user not found" — a second cause would make that status ambiguous with no way for the UI to tell them apart                                            | **Rejected** |
+| **409**                                                                          | Not a state conflict; the request is simply referencing something that is not there                                                                                                                                                                                                                                                                                                                 | **Rejected** |
+| **400 + `MAINTENANCE_COMPANY_NOT_FOUND`**                                        | Keeps 404 on `/users/:id` single-cause. The code is _earned_: shapes 1 and 2 are caught client-side by the shared schema, so in practice a 400 from `/users` means either a schema-drift bug or exactly this stale-company case — and "check your input" is actively misleading when the real cause is "the company you picked was deleted in another tab." One union member, one controller branch | **Chosen**   |
 
 `apps/web/src/api/client.ts` already parses `code` from **any** non-OK body
 (`client.ts:45-54`), so a coded 400 needs zero client changes — only the stale
@@ -437,17 +437,15 @@ Resulting unions:
 ```ts
 // apps/api/src/modules/users/presentation/user-error-code.ts (extended)
 export type UserErrorCode =
-  | 'EMAIL_ALREADY_IN_USE'          // 409
-  | 'LAST_SYSTEM_ADMIN'             // 409
-  | 'TRANSACTION_CONFLICT'          // 409
-  | 'MAINTENANCE_COMPANY_NOT_FOUND' // 400 — new
-;
+  | 'EMAIL_ALREADY_IN_USE' // 409
+  | 'LAST_SYSTEM_ADMIN' // 409
+  | 'TRANSACTION_CONFLICT' // 409
+  | 'MAINTENANCE_COMPANY_NOT_FOUND'; // 400 — new
 
 // apps/api/src/modules/maintenance-company/presentation/maintenance-company-error-code.ts
 export type MaintenanceCompanyErrorCode =
-  | 'TAX_ID_ALREADY_IN_USE'               // 409
-  | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS' // 409
-;
+  | 'TAX_ID_ALREADY_IN_USE' // 409
+  | 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS'; // 409
 ```
 
 `InvalidMaintenanceCompanyAssignmentError` (shapes 1/2) maps to a **plain**
@@ -467,7 +465,7 @@ for a structural reason and a proportionality reason.
 **Structural — the existing seam physically cannot see this write skew.**
 `PrismaUserRepository.transactional()` (`prisma-user.repository.ts:140-165`)
 hands the callback a repository bound to the tx client: `work(new PrismaUserRepository(tx))`.
-`transactional()` on the company port would do the same for *its* type. The
+`transactional()` on the company port would do the same for _its_ type. The
 two ports do not compose — there is no way to run
 `maintenanceCompanyRepo.softDeleteById` and `userRepo.countActive…` inside one
 Postgres transaction without a **cross-module `UnitOfWork` seam that does not
@@ -479,30 +477,30 @@ no mitigation: it is a false guarantee that a future reader will trust.
 **Proportionality — the anomaly is not in the same class as the one the seam
 was built for.**
 
-| Invariant | Consequence if violated | Recovery | Mechanism |
-|---|---|---|---|
-| Last admin remains (`users`) | **Permanent lockout of every user** | DB surgery | `SERIALIZABLE` — justified |
-| One active representative (`community`) | Core assignment model breaks; every read is ambiguous | Manual repair | `SERIALIZABLE` + partial index — justified |
-| No active user on a deleted company (**here**) | One user row points at a dead company. That user is **functionally inert** — both maintenance roles keep `[]` permissions (settled decision). No security impact, no data loss, no cascade | Admin edits the user (must supply a live company) or deletes it — through the normal UI | Accepted anomaly |
+| Invariant                                      | Consequence if violated                                                                                                                                                                    | Recovery                                                                                | Mechanism                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Last admin remains (`users`)                   | **Permanent lockout of every user**                                                                                                                                                        | DB surgery                                                                              | `SERIALIZABLE` — justified                 |
+| One active representative (`community`)        | Core assignment model breaks; every read is ambiguous                                                                                                                                      | Manual repair                                                                           | `SERIALIZABLE` + partial index — justified |
+| No active user on a deleted company (**here**) | One user row points at a dead company. That user is **functionally inert** — both maintenance roles keep `[]` permissions (settled decision). No security impact, no data loss, no cascade | Admin edits the user (must supply a live company) or deletes it — through the normal UI | Accepted anomaly                           |
 
 **Traffic**: `SYSTEM_ADMIN`-only administrative CRUD. Hitting the window needs
 two admins issuing conflicting mutations within the same few milliseconds.
 
 **Decision**: accept the anomaly, minimize the window (count → soft-delete, one
-round trip apart), and make the anomaly *harmless in the UI* rather than
+round trip apart), and make the anomaly _harmless in the UI_ rather than
 merely rare — Decision 7's id→name map renders an unknown company id as a
 neutral localized label, never a raw UUID or a crash. Also: `TRANSACTION_CONFLICT`
 is **dropped** from `MaintenanceCompanyErrorCode` (the proposal listed it in
 scope). With no `transactional()` in this module there is no `P2034` path, so
 the code would be unreachable dead surface. Reported as a finding.
 
-*Revisit trigger (concrete, not vague)*: the moment a **second** cross-aggregate
+_Revisit trigger (concrete, not vague)_: the moment a **second** cross-aggregate
 invariant needs atomicity, introduce a shared `UnitOfWork` seam in
 `shared/application/ports/` and bring this rule under it in the same change.
 One such rule does not justify the seam; two do.
 
 Note the deliberate contrast with Decision 2, which is the same design question
-with the opposite answer: where a DB constraint *can* express the invariant
+with the opposite answer: where a DB constraint _can_ express the invariant
 (`taxId`), it is used and atomicity is free; where it cannot (cross-table +
 soft-delete), the anomaly is named and accepted instead of faked.
 
@@ -510,10 +508,10 @@ soft-delete), the anomaly is named and accepted instead of faked.
 
 The success criterion forbids rendering a raw UUID.
 
-| Option | Tradeoff | Verdict |
-|---|---|---|
-| `UserResponseDto` gains `maintenanceCompanyName` | Requires the `users` read path to join another module's table on every list — an N+1 or a batch read, plus a new reason for `users` to know company *attributes* rather than just liveness (Decision 4's boundary widens) | **Rejected** |
-| Web fetches `GET /maintenance-companies` and builds an `id → name` map | Zero API change. The user **forms already need that exact call** for the selector, so the list page is the only added fetch. Reuses `users-minimal-ui` Decision 5's fetch-the-list-and-select shape | **Chosen** |
+| Option                                                                 | Tradeoff                                                                                                                                                                                                                  | Verdict      |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `UserResponseDto` gains `maintenanceCompanyName`                       | Requires the `users` read path to join another module's table on every list — an N+1 or a batch read, plus a new reason for `users` to know company _attributes_ rather than just liveness (Decision 4's boundary widens) | **Rejected** |
+| Web fetches `GET /maintenance-companies` and builds an `id → name` map | Zero API change. The user **forms already need that exact call** for the selector, so the list page is the only added fetch. Reuses `users-minimal-ui` Decision 5's fetch-the-list-and-select shape                       | **Chosen**   |
 
 `UserResponseDto` therefore gains only `maintenanceCompanyId: string | null`.
 
@@ -529,25 +527,25 @@ depends on the other's result.
 
 ## Where the settled policies live in code
 
-| Policy (already decided) | Location |
-|---|---|
-| `taxId` unique among active companies | Partial unique index in `migration.sql`; `PrismaMaintenanceCompanyRepository.create`/`updateById` map `P2002` → `TaxIdAlreadyInUseError` → **409 `TAX_ID_ALREADY_IN_USE`**. No use-case read-check (Decision 2) |
-| Soft-deleted company frees its `taxId` | Free consequence of `WHERE "deletedAt" IS NULL`. Proven by an e2e: create → delete → re-create with the same `taxId` → 201 |
-| Soft-deleted companies invisible everywhere | **No new code.** `PrismaMaintenanceCompanyRepository extends SoftDeletableRepository`; `withDefaultFilter` (ADR-010) covers `findById`, `findAll`, and therefore the list page and the form selector alike |
-| Delete blocked while users are attached | `domain/maintenance-company-deletion.policy.ts` → `assertNoActiveUsersAttached(count)`, called by `SoftDeleteMaintenanceCompanyUseCase` **before** `softDeleteById`. Throws `MaintenanceCompanyHasActiveUsersError` → **409 `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS`** (same class as `LastSystemAdminError`) |
-| Soft-deleted users do not block deletion | **No new code.** `countActiveByMaintenanceCompany` uses `withDefaultFilter` (`deletedAt: null`) |
-| Company required iff maintenance role | `users/domain/maintenance-company-assignment.policy.ts` → `assertCompanyMatchesRole(role, companyId)`, called by `CreateUserUseCase` and (payload-scoped) `UpdateUserUseCase`. Mirrored as a `.superRefine` in `@sf-manager/validation` so the web form enforces the same rule pre-flight. **Never in the `User` constructor** (Decision 5) |
-| Company must be live | `MaintenanceCompanyLookup.existsActive(id)` (port owned by `users`) → `MaintenanceCompanyNotFoundError` → **400 `MAINTENANCE_COMPANY_NOT_FOUND`** |
-| Bare role change leaves `maintenanceCompanyId` untouched | Enforced by **absence**: `UpdateUserUseCase` runs no company check when the field is absent from the body. Locked in by a regression e2e asserting the value survives a demotion |
-| Roles stay inert | Enforced by absence: `role-permission.checker.ts` gains entries on the `SYSTEM_ADMIN` row **only**; the four other rows stay `[]`, asserted by e2e |
+| Policy (already decided)                                 | Location                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `taxId` unique among active companies                    | Partial unique index in `migration.sql`; `PrismaMaintenanceCompanyRepository.create`/`updateById` map `P2002` → `TaxIdAlreadyInUseError` → **409 `TAX_ID_ALREADY_IN_USE`**. No use-case read-check (Decision 2)                                                                                                                             |
+| Soft-deleted company frees its `taxId`                   | Free consequence of `WHERE "deletedAt" IS NULL`. Proven by an e2e: create → delete → re-create with the same `taxId` → 201                                                                                                                                                                                                                  |
+| Soft-deleted companies invisible everywhere              | **No new code.** `PrismaMaintenanceCompanyRepository extends SoftDeletableRepository`; `withDefaultFilter` (ADR-010) covers `findById`, `findAll`, and therefore the list page and the form selector alike                                                                                                                                  |
+| Delete blocked while users are attached                  | `domain/maintenance-company-deletion.policy.ts` → `assertNoActiveUsersAttached(count)`, called by `SoftDeleteMaintenanceCompanyUseCase` **before** `softDeleteById`. Throws `MaintenanceCompanyHasActiveUsersError` → **409 `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS`** (same class as `LastSystemAdminError`)                                 |
+| Soft-deleted users do not block deletion                 | **No new code.** `countActiveByMaintenanceCompany` uses `withDefaultFilter` (`deletedAt: null`)                                                                                                                                                                                                                                             |
+| Company required iff maintenance role                    | `users/domain/maintenance-company-assignment.policy.ts` → `assertCompanyMatchesRole(role, companyId)`, called by `CreateUserUseCase` and (payload-scoped) `UpdateUserUseCase`. Mirrored as a `.superRefine` in `@sf-manager/validation` so the web form enforces the same rule pre-flight. **Never in the `User` constructor** (Decision 5) |
+| Company must be live                                     | `MaintenanceCompanyLookup.existsActive(id)` (port owned by `users`) → `MaintenanceCompanyNotFoundError` → **400 `MAINTENANCE_COMPANY_NOT_FOUND`**                                                                                                                                                                                           |
+| Bare role change leaves `maintenanceCompanyId` untouched | Enforced by **absence**: `UpdateUserUseCase` runs no company check when the field is absent from the body. Locked in by a regression e2e asserting the value survives a demotion                                                                                                                                                            |
+| Roles stay inert                                         | Enforced by absence: `role-permission.checker.ts` gains entries on the `SYSTEM_ADMIN` row **only**; the four other rows stay `[]`, asserted by e2e                                                                                                                                                                                          |
 
 ## Routes
 
-| Method | Path | Permission | Result |
-|---|---|---|---|
-| `POST` | `/maintenance-companies` | `maintenanceCompany:create` | 201 · 409 `TAX_ID_ALREADY_IN_USE` |
-| `GET` | `/maintenance-companies` | `maintenanceCompany:read` | 200 (active only) |
-| `PATCH` | `/maintenance-companies/:id` | `maintenanceCompany:update` | 200 · 404 · 409 `TAX_ID_ALREADY_IN_USE` |
+| Method   | Path                         | Permission                  | Result                                                 |
+| -------- | ---------------------------- | --------------------------- | ------------------------------------------------------ |
+| `POST`   | `/maintenance-companies`     | `maintenanceCompany:create` | 201 · 409 `TAX_ID_ALREADY_IN_USE`                      |
+| `GET`    | `/maintenance-companies`     | `maintenanceCompany:read`   | 200 (active only)                                      |
+| `PATCH`  | `/maintenance-companies/:id` | `maintenanceCompany:update` | 200 · 404 · 409 `TAX_ID_ALREADY_IN_USE`                |
 | `DELETE` | `/maintenance-companies/:id` | `maintenanceCompany:delete` | 204 · 404 · 409 `MAINTENANCE_COMPANY_HAS_ACTIVE_USERS` |
 
 Four permissions rather than one, mirroring `community:*`'s granularity so a
@@ -640,47 +638,47 @@ closed in this slice — see Decision 6 for why the existing seam cannot close i
 
 ## File Changes
 
-| File | Action | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modify | `MaintenanceCompany` model; `User.maintenanceCompanyId` + `@@index`; comment block flagging the Prisma-invisible index and FK |
-| `apps/api/prisma/migrations/<ts>_add_maintenance_company/migration.sql` | Create | Table + column + **hand-written partial unique index and FK** (Decision 2) |
-| `.../maintenance-company/domain/maintenance-company.entity.ts` | Create | Hand-written, zero Prisma (ADR-013); plain fields (Decision 3) |
-| `.../maintenance-company/domain/maintenance-company-deletion.policy.ts` | Create | `assertNoActiveUsersAttached` — pure, mirroring `last-admin.policy.ts` |
-| `.../maintenance-company/domain/errors/*.error.ts` | Create | `TaxIdAlreadyInUse`, `MaintenanceCompanyHasActiveUsers`, `MaintenanceCompanyNotFound`. **No** `TransactionConflictError` (Decision 6) |
-| `.../maintenance-company/application/ports/maintenance-company.repository.port.ts` | Create | `Symbol` token; **no** `transactional()` |
-| `.../maintenance-company/application/use-cases/**` | Create | create / list / update / soft-delete |
-| `.../maintenance-company/application/use-cases/testing/in-memory-maintenance-company.repository.ts` | Create | Fake with invariant parity — must reproduce the *partial* uniqueness (active rows only) |
-| `.../maintenance-company/infrastructure/persistence/**` | Create | Adapter (`extends SoftDeletableRepository`, `P2002` mapping) + mapper |
-| `.../maintenance-company/presentation/**` | Create | Controller, DTOs, `maintenance-company-error-code.ts` (2 values) |
-| `.../maintenance-company/maintenance-company.module.ts` | Create | Imports `UsersModule` for `USER_REPOSITORY` (Decision 4) |
-| `apps/api/src/app.module.ts` | Modify | Register `MaintenanceCompanyModule` |
-| `apps/api/src/shared/presentation/http/coded-error.ts` | Create | `buildCodedError(status, message, code)` — the n=3 extraction (Decision 1) |
-| `.../users/presentation/users.controller.ts` | Modify | Delete private `buildConflictException`; use the shared helper; map the new 400 cause |
-| `.../community/presentation/community.controller.ts` | **Modify (reported finding)** | Same mechanical migration — proposal fences this module as untouched (Decision 1, deviation 2) |
-| `.../users/domain/maintenance-company-assignment.policy.ts` | Create | `assertCompanyMatchesRole` — pure |
-| `.../users/domain/user.entity.ts` | Modify | `maintenanceCompanyId: string \| null` prop. **No constructor validation** (Decision 5) |
-| `.../users/domain/errors/*.error.ts` | Create | `InvalidMaintenanceCompanyAssignmentError`, `MaintenanceCompanyNotFoundError` (users-side) |
-| `.../users/application/ports/user.repository.port.ts` | Modify | `countActiveByMaintenanceCompany`; `updateById` changes gain the field |
-| `.../users/application/ports/maintenance-company-lookup.port.ts` | Create | `existsActive` + `MAINTENANCE_COMPANY_LOOKUP` token (Decision 4) |
-| `.../users/infrastructure/persistence/prisma-maintenance-company-lookup.repository.ts` | Create | ~15-line existence probe; `PrismaService` resolves via `@Global()` `PrismaModule` |
-| `.../users/infrastructure/persistence/prisma-user.repository.ts` + `user.mapper.ts` | Modify | New column, new count method |
-| `.../users/application/use-cases/{create,update}-user.use-case.ts` | Modify | Policy + liveness call sites (Decision 5) |
-| `.../users/users.module.ts` | Modify | Bind `MAINTENANCE_COMPANY_LOOKUP`. **Imports nothing new** |
-| `.../users/presentation/{user-error-code.ts,dto/**}` | Modify | `MAINTENANCE_COMPANY_NOT_FOUND`; `maintenanceCompanyId` on request/response DTOs |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modify | `maintenanceCompany:create\|read\|update\|delete` |
-| `.../auth/infrastructure/authorization/role-permission.checker.ts` | Modify | `SYSTEM_ADMIN` row only; other four stay `[]` |
-| `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts` | Create/Modify | `taxIdSchema`, create/update schemas |
-| `packages/validation/src/users/{create,update}-user.schema.ts` | Modify | `maintenanceCompanyId` + `.superRefine`; export `isMaintenanceRole` |
-| `apps/web/src/api/client.ts` | Modify | **Comment only** — `code` is no longer 409-exclusive (`client.ts:9-11`) |
-| `apps/web/src/api/maintenance-company.ts` | Create | Typed calls + mirrored `MaintenanceCompanyErrorCode` |
-| `apps/web/src/api/users.ts` | Modify | Mirrored `UserErrorCode` gains the new value |
-| `apps/web/src/maintenance-company/error-messages.ts` | Create | `status`/`code`-only map, mirroring `community/error-messages.ts` |
-| `apps/web/src/pages/MaintenanceCompan{iesListPage,yCreatePage,yEditPage}.tsx` | Create | Clone the `Community*Page` siblings |
-| `apps/web/src/pages/User{sList,Create,Edit}Page.tsx` | Modify | Role-conditional selector; id → name map (Decision 7) |
-| `apps/web/src/App.tsx` | Modify | 3 role-gated routes, static-before-dynamic ordering |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modify | Real `maintenanceCompany.*` translations, incl. `maintenanceCompany.unknown` |
-| `apps/api/test/maintenance-company.e2e-spec.ts` | Create | Full lifecycle + auth matrix |
-| `apps/api/test/users.e2e-spec.ts` | Modify | Shapes 1–3, reassignment, demotion-drift regression |
+| File                                                                                                | Action                        | Description                                                                                                                           |
+| --------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`                                                                     | Modify                        | `MaintenanceCompany` model; `User.maintenanceCompanyId` + `@@index`; comment block flagging the Prisma-invisible index and FK         |
+| `apps/api/prisma/migrations/<ts>_add_maintenance_company/migration.sql`                             | Create                        | Table + column + **hand-written partial unique index and FK** (Decision 2)                                                            |
+| `.../maintenance-company/domain/maintenance-company.entity.ts`                                      | Create                        | Hand-written, zero Prisma (ADR-013); plain fields (Decision 3)                                                                        |
+| `.../maintenance-company/domain/maintenance-company-deletion.policy.ts`                             | Create                        | `assertNoActiveUsersAttached` — pure, mirroring `last-admin.policy.ts`                                                                |
+| `.../maintenance-company/domain/errors/*.error.ts`                                                  | Create                        | `TaxIdAlreadyInUse`, `MaintenanceCompanyHasActiveUsers`, `MaintenanceCompanyNotFound`. **No** `TransactionConflictError` (Decision 6) |
+| `.../maintenance-company/application/ports/maintenance-company.repository.port.ts`                  | Create                        | `Symbol` token; **no** `transactional()`                                                                                              |
+| `.../maintenance-company/application/use-cases/**`                                                  | Create                        | create / list / update / soft-delete                                                                                                  |
+| `.../maintenance-company/application/use-cases/testing/in-memory-maintenance-company.repository.ts` | Create                        | Fake with invariant parity — must reproduce the _partial_ uniqueness (active rows only)                                               |
+| `.../maintenance-company/infrastructure/persistence/**`                                             | Create                        | Adapter (`extends SoftDeletableRepository`, `P2002` mapping) + mapper                                                                 |
+| `.../maintenance-company/presentation/**`                                                           | Create                        | Controller, DTOs, `maintenance-company-error-code.ts` (2 values)                                                                      |
+| `.../maintenance-company/maintenance-company.module.ts`                                             | Create                        | Imports `UsersModule` for `USER_REPOSITORY` (Decision 4)                                                                              |
+| `apps/api/src/app.module.ts`                                                                        | Modify                        | Register `MaintenanceCompanyModule`                                                                                                   |
+| `apps/api/src/shared/presentation/http/coded-error.ts`                                              | Create                        | `buildCodedError(status, message, code)` — the n=3 extraction (Decision 1)                                                            |
+| `.../users/presentation/users.controller.ts`                                                        | Modify                        | Delete private `buildConflictException`; use the shared helper; map the new 400 cause                                                 |
+| `.../community/presentation/community.controller.ts`                                                | **Modify (reported finding)** | Same mechanical migration — proposal fences this module as untouched (Decision 1, deviation 2)                                        |
+| `.../users/domain/maintenance-company-assignment.policy.ts`                                         | Create                        | `assertCompanyMatchesRole` — pure                                                                                                     |
+| `.../users/domain/user.entity.ts`                                                                   | Modify                        | `maintenanceCompanyId: string \| null` prop. **No constructor validation** (Decision 5)                                               |
+| `.../users/domain/errors/*.error.ts`                                                                | Create                        | `InvalidMaintenanceCompanyAssignmentError`, `MaintenanceCompanyNotFoundError` (users-side)                                            |
+| `.../users/application/ports/user.repository.port.ts`                                               | Modify                        | `countActiveByMaintenanceCompany`; `updateById` changes gain the field                                                                |
+| `.../users/application/ports/maintenance-company-lookup.port.ts`                                    | Create                        | `existsActive` + `MAINTENANCE_COMPANY_LOOKUP` token (Decision 4)                                                                      |
+| `.../users/infrastructure/persistence/prisma-maintenance-company-lookup.repository.ts`              | Create                        | ~15-line existence probe; `PrismaService` resolves via `@Global()` `PrismaModule`                                                     |
+| `.../users/infrastructure/persistence/prisma-user.repository.ts` + `user.mapper.ts`                 | Modify                        | New column, new count method                                                                                                          |
+| `.../users/application/use-cases/{create,update}-user.use-case.ts`                                  | Modify                        | Policy + liveness call sites (Decision 5)                                                                                             |
+| `.../users/users.module.ts`                                                                         | Modify                        | Bind `MAINTENANCE_COMPANY_LOOKUP`. **Imports nothing new**                                                                            |
+| `.../users/presentation/{user-error-code.ts,dto/**}`                                                | Modify                        | `MAINTENANCE_COMPANY_NOT_FOUND`; `maintenanceCompanyId` on request/response DTOs                                                      |
+| `apps/api/src/shared/application/authorization/permission.ts`                                       | Modify                        | `maintenanceCompany:create\|read\|update\|delete`                                                                                     |
+| `.../auth/infrastructure/authorization/role-permission.checker.ts`                                  | Modify                        | `SYSTEM_ADMIN` row only; other four stay `[]`                                                                                         |
+| `packages/validation/src/maintenance-company/maintenance-company.schema.ts` + `src/index.ts`        | Create/Modify                 | `taxIdSchema`, create/update schemas                                                                                                  |
+| `packages/validation/src/users/{create,update}-user.schema.ts`                                      | Modify                        | `maintenanceCompanyId` + `.superRefine`; export `isMaintenanceRole`                                                                   |
+| `apps/web/src/api/client.ts`                                                                        | Modify                        | **Comment only** — `code` is no longer 409-exclusive (`client.ts:9-11`)                                                               |
+| `apps/web/src/api/maintenance-company.ts`                                                           | Create                        | Typed calls + mirrored `MaintenanceCompanyErrorCode`                                                                                  |
+| `apps/web/src/api/users.ts`                                                                         | Modify                        | Mirrored `UserErrorCode` gains the new value                                                                                          |
+| `apps/web/src/maintenance-company/error-messages.ts`                                                | Create                        | `status`/`code`-only map, mirroring `community/error-messages.ts`                                                                     |
+| `apps/web/src/pages/MaintenanceCompan{iesListPage,yCreatePage,yEditPage}.tsx`                       | Create                        | Clone the `Community*Page` siblings                                                                                                   |
+| `apps/web/src/pages/User{sList,Create,Edit}Page.tsx`                                                | Modify                        | Role-conditional selector; id → name map (Decision 7)                                                                                 |
+| `apps/web/src/App.tsx`                                                                              | Modify                        | 3 role-gated routes, static-before-dynamic ordering                                                                                   |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                                         | Modify                        | Real `maintenanceCompany.*` translations, incl. `maintenanceCompany.unknown`                                                          |
+| `apps/api/test/maintenance-company.e2e-spec.ts`                                                     | Create                        | Full lifecycle + auth matrix                                                                                                          |
+| `apps/api/test/users.e2e-spec.ts`                                                                   | Modify                        | Shapes 1–3, reassignment, demotion-drift regression                                                                                   |
 
 ## Interfaces
 
@@ -746,15 +744,15 @@ export function isMaintenanceRole(role: Role): boolean {
 
 ## Testing Strategy
 
-| Layer | What | How |
-|---|---|---|
-| Unit (domain) | `assertNoActiveUsersAttached` (0 / 1 / n); `assertCompanyMatchesRole` — all 5 roles × company present/absent | Pure, table-driven, like `last-admin.policy.spec.ts` |
-| Unit (schema) | `.superRefine` shapes 1 & 2 per role; `taxId` trim + upper-case normalization | `packages/validation` tests |
-| Unit (use case) | Delete blocked before any write (assert `softDeleteById` **never called**); delete allowed at 0; **PATCH with no `maintenanceCompanyId` runs no company check** | In-memory fakes; the fake must reproduce *partial* taxId uniqueness |
-| Integration | `P2002` → `TaxIdAlreadyInUseError`; **the partial index exists in `pg_indexes`**; the FK exists; two active rows with the same `taxId` are rejected while an active + soft-deleted pair is accepted | Real Postgres, mirroring `prisma-user.repository.integration.spec.ts` |
-| E2E | Full lifecycle; delete blocked → reassign → delete succeeds; soft-deleted user does not block; taxId reusable after soft-delete; all 3 conditional shapes; demotion leaves `maintenanceCompanyId` untouched; 401/403 on every route; non-admin rows still `[]`; **`body.code` asserted for each of the 3 new codes**; 404 on `PATCH /users/:id` still carries no `code` | `apps/api/test/maintenance-company.e2e-spec.ts` + users e2e additions |
-| Regression (Decision 1) | Existing `users` and `community` e2e `body.code` assertions must pass **unchanged** after the builder extraction | No new tests — the guard already exists, which is why the migration is safe |
-| Browser | Every UI success criterion, per CLAUDE.md "Verifying UI Changes" | `npm run dev` + `claude-in-chrome`; explicitly incl. the role-change show/hide and the blocked-delete message |
+| Layer                   | What                                                                                                                                                                                                                                                                                                                                                                    | How                                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Unit (domain)           | `assertNoActiveUsersAttached` (0 / 1 / n); `assertCompanyMatchesRole` — all 5 roles × company present/absent                                                                                                                                                                                                                                                            | Pure, table-driven, like `last-admin.policy.spec.ts`                                                          |
+| Unit (schema)           | `.superRefine` shapes 1 & 2 per role; `taxId` trim + upper-case normalization                                                                                                                                                                                                                                                                                           | `packages/validation` tests                                                                                   |
+| Unit (use case)         | Delete blocked before any write (assert `softDeleteById` **never called**); delete allowed at 0; **PATCH with no `maintenanceCompanyId` runs no company check**                                                                                                                                                                                                         | In-memory fakes; the fake must reproduce _partial_ taxId uniqueness                                           |
+| Integration             | `P2002` → `TaxIdAlreadyInUseError`; **the partial index exists in `pg_indexes`**; the FK exists; two active rows with the same `taxId` are rejected while an active + soft-deleted pair is accepted                                                                                                                                                                     | Real Postgres, mirroring `prisma-user.repository.integration.spec.ts`                                         |
+| E2E                     | Full lifecycle; delete blocked → reassign → delete succeeds; soft-deleted user does not block; taxId reusable after soft-delete; all 3 conditional shapes; demotion leaves `maintenanceCompanyId` untouched; 401/403 on every route; non-admin rows still `[]`; **`body.code` asserted for each of the 3 new codes**; 404 on `PATCH /users/:id` still carries no `code` | `apps/api/test/maintenance-company.e2e-spec.ts` + users e2e additions                                         |
+| Regression (Decision 1) | Existing `users` and `community` e2e `body.code` assertions must pass **unchanged** after the builder extraction                                                                                                                                                                                                                                                        | No new tests — the guard already exists, which is why the migration is safe                                   |
+| Browser                 | Every UI success criterion, per CLAUDE.md "Verifying UI Changes"                                                                                                                                                                                                                                                                                                        | `npm run dev` + `claude-in-chrome`; explicitly incl. the role-change show/hide and the blocked-delete message |
 
 ## Migration / Rollout
 

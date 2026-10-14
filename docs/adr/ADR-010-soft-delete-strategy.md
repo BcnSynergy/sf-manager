@@ -1,9 +1,11 @@
 # ADR-010: Soft Delete Strategy — Split by Data Kind
 
 ## Status
+
 Accepted
 
 ## Context
+
 Given the compliance nature of this data, deletion needs to be handled
 deliberately rather than defaulting to hard delete everywhere. Verified
 against [RIPCI Anexo II](../compliance/ripci-extinguisher-maintenance-program.md)
@@ -13,6 +15,7 @@ five years**. Careless hard deletion of review history would risk violating
 that legal minimum.
 
 ## Decision
+
 Two distinct policies, not one uniform rule:
 
 **1. Reference/master data** (`Community`, `MaintenanceCompany`, `User`,
@@ -35,6 +38,7 @@ left to UI convention or discipline. `draft` sessions may be hard-deleted,
 since they aren't real compliance records yet.
 
 ## Consequences
+
 - Every repository/query for master-data entities must filter
   `deletedAt IS NULL` by default — a shared repository-base concern (e.g. a
   common repository interface/base class), not reimplemented per module,
@@ -48,6 +52,7 @@ since they aren't real compliance records yet.
   minimum.
 
 ## Alternatives Considered
+
 - **Boolean `isDeleted`, or reusing `active` for everything** — rejected:
   loses the "when" a timestamp gives for free, and conflates domain state
   with administrative correction for entities that need both.

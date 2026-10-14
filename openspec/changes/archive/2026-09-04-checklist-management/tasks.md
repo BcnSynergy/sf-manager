@@ -2,14 +2,14 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|---|---|
+| Field                   | Value                                                                                                                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Estimated changed lines | ~3400-3900 (2 migrations, 2 new API modules across 4 layers each incl. a 10-use-case state machine + atomic activation transaction, a cross-module cleaner port, 2 validation sub-packages, 4th three-way enum declaration, 6 web pages, 3 locale files, full e2e + concurrency coverage, 1 docs correction) |
-| 400-line budget risk | High (as a single PR); each chained slice below stays under budget |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 -> PR 11 (see Suggested Work Units) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | stacked-to-main |
+| 400-line budget risk    | High (as a single PR); each chained slice below stays under budget                                                                                                                                                                                                                                           |
+| Chained PRs recommended | Yes                                                                                                                                                                                                                                                                                                          |
+| Suggested split         | PR 1 -> PR 11 (see Suggested Work Units)                                                                                                                                                                                                                                                                     |
+| Delivery strategy       | ask-on-risk                                                                                                                                                                                                                                                                                                  |
+| Chain strategy          | stacked-to-main                                                                                                                                                                                                                                                                                              |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -18,31 +18,34 @@ Chain strategy: stacked-to-main
 
 ### Suggested Work Units
 
-| Unit | Goal | Likely PR | Est. lines | Notes |
-|---|---|---|---|---|
-| 1 | Migration: `ReviewFrequency` enum + `ChecklistQuestion` table | PR 1 | ~110 | Mechanical; unblocks Phase A |
-| 2 | `checklist-question` domain: entity, `ReviewFrequency` union, errors | PR 2 | ~140 | Depends on PR 1 (types only); zero Prisma |
-| 3 | `checklist-question` application + validation: port, 4 use cases, fake, Zod schemas | PR 3 | ~260 | Depends on PR 2 |
-| 4 | `checklist-question` infra + presentation + permissions: adapter, mapper, controller, DTOs, error codes, module, parity spec, `Permission` union + `SYSTEM_ADMIN` row | PR 4 | ~340 | Depends on PR 3; independently shippable end of Phase A |
-| 5 | Web: question pool list/create/edit pages, api client, labels, i18n, routes, E2E | PR 5 | ~420 | Depends on PR 4. Phase A complete and independently useful |
-| 6 | Migration: `ReviewTemplateStatus` enum + `ReviewTemplate` + `ReviewTemplateQuestion` tables, 3 unique indexes, FK | PR 6 | ~160 | Depends on PR 1 (FK target); unblocks Phase B |
-| 7 | `review-template` domain: entity + status guards, `ReviewTemplateStatus` union, errors; `checklist-question` gains `DraftSelectionCleaner` port + Prisma adapter + gated cleanup wiring in soft-delete use case | PR 7 | ~220 | Depends on PR 6 (table must exist) and PR 3 (soft-delete use case to gate) |
-| 8 | `review-template` application + validation: port, 6 use cases, fake, Zod schemas; `reviewTemplate:*` permissions | PR 8 | ~330 | Depends on PR 7 |
-| 9 | `review-template` infra + presentation: atomic `activate()` transaction, two read paths, controller, DTOs, 6 error codes, module (imports `ChecklistQuestionModule`), parity + migration guard specs | PR 9 | ~420 | Depends on PR 8; the highest-risk unit (concurrency) |
-| 10 | Web: templates list/create/builder pages, api client, labels, i18n, routes | PR 10 | ~440 | Depends on PR 9 |
-| 11 | E2E both modules incl. concurrency + docs correction + browser verification + final checks | PR 11 | ~340 | Depends on PR 5, PR 10 |
+| Unit | Goal                                                                                                                                                                                                            | Likely PR | Est. lines | Notes                                                                      |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | -------------------------------------------------------------------------- |
+| 1    | Migration: `ReviewFrequency` enum + `ChecklistQuestion` table                                                                                                                                                   | PR 1      | ~110       | Mechanical; unblocks Phase A                                               |
+| 2    | `checklist-question` domain: entity, `ReviewFrequency` union, errors                                                                                                                                            | PR 2      | ~140       | Depends on PR 1 (types only); zero Prisma                                  |
+| 3    | `checklist-question` application + validation: port, 4 use cases, fake, Zod schemas                                                                                                                             | PR 3      | ~260       | Depends on PR 2                                                            |
+| 4    | `checklist-question` infra + presentation + permissions: adapter, mapper, controller, DTOs, error codes, module, parity spec, `Permission` union + `SYSTEM_ADMIN` row                                           | PR 4      | ~340       | Depends on PR 3; independently shippable end of Phase A                    |
+| 5    | Web: question pool list/create/edit pages, api client, labels, i18n, routes, E2E                                                                                                                                | PR 5      | ~420       | Depends on PR 4. Phase A complete and independently useful                 |
+| 6    | Migration: `ReviewTemplateStatus` enum + `ReviewTemplate` + `ReviewTemplateQuestion` tables, 3 unique indexes, FK                                                                                               | PR 6      | ~160       | Depends on PR 1 (FK target); unblocks Phase B                              |
+| 7    | `review-template` domain: entity + status guards, `ReviewTemplateStatus` union, errors; `checklist-question` gains `DraftSelectionCleaner` port + Prisma adapter + gated cleanup wiring in soft-delete use case | PR 7      | ~220       | Depends on PR 6 (table must exist) and PR 3 (soft-delete use case to gate) |
+| 8    | `review-template` application + validation: port, 6 use cases, fake, Zod schemas; `reviewTemplate:*` permissions                                                                                                | PR 8      | ~330       | Depends on PR 7                                                            |
+| 9    | `review-template` infra + presentation: atomic `activate()` transaction, two read paths, controller, DTOs, 6 error codes, module (imports `ChecklistQuestionModule`), parity + migration guard specs            | PR 9      | ~420       | Depends on PR 8; the highest-risk unit (concurrency)                       |
+| 10   | Web: templates list/create/builder pages, api client, labels, i18n, routes                                                                                                                                      | PR 10     | ~440       | Depends on PR 9                                                            |
+| 11   | E2E both modules incl. concurrency + docs correction + browser verification + final checks                                                                                                                      | PR 11     | ~340       | Depends on PR 5, PR 10                                                     |
 
 ## Phase 1: Checklist Question Migration (PR 1) — mechanical, no TDD
+
 - [x] 1.1 `apps/api/prisma/schema.prisma`: add `enum ReviewFrequency { MONTHLY QUARTERLY SEMIANNUAL ANNUAL }` + `ChecklistQuestion` model (`id @db.Uuid`, `elementType`, `frequencies ReviewFrequency[]`, `text`, `deletedAt?`) (spec: checklist-question-management "Review Frequency Enumeration").
 - [x] 1.2 Hand-written `migrations/<ts>_add_checklist_question/migration.sql`: `CREATE TYPE`, `CREATE TABLE` (design File Changes).
 - [x] 1.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` emitted for existing FKs/indexes; regenerate client.
 
 ## Phase 2: Checklist Question Domain (PR 2) — Strict TDD
+
 - [x] 2.1 RED/GREEN `domain/review-frequency.ts` — `REVIEW_FREQUENCIES` const, `as const satisfies readonly ValidatedReviewFrequency[]` (design Decision 1).
 - [x] 2.2 RED/GREEN `domain/checklist-question.entity.ts` — plain fields, zero Prisma, no constructor validation (design Decision 7).
 - [x] 2.3 `domain/errors/checklist-question-not-found.error.ts` — mechanical.
 
 ## Phase 3: Checklist Question Application + Validation (PR 3) — Strict TDD
+
 - [x] 3.1 `application/ports/checklist-question.repository.port.ts` — token + `create`/`findById`/`findAll`/`updateById`/`softDeleteById`.
 - [x] 3.2 RED/GREEN `create-checklist-question.use-case.ts` (spec: "Create Checklist Question", empty-`frequencies`/missing-field scenarios).
 - [x] 3.3 RED/GREEN `list-checklist-questions.use-case.ts` — excludes soft-deleted, empty pool valid (spec: "List Checklist Questions", "The Pool Ships Empty").
@@ -52,6 +55,7 @@ Chain strategy: stacked-to-main
 - [x] 3.7 `packages/validation/src/checklist-question/**` + `src/index.ts` — `reviewFrequencySchema`, create/update schemas, `.min(1)` on `frequencies`.
 
 ## Phase 4: Checklist Question Infra + Presentation + Permissions (PR 4) — mechanical + integration specs
+
 - [x] 4.1 `infrastructure/persistence/prisma-checklist-question.repository.ts` (extends `SoftDeletableRepository`) + mapper.
 - [x] 4.2 Integration: `review-frequency-parity.integration.spec.ts` — TS union / Postgres enum / Zod schema agree (spec: "The three declarations agree").
 - [x] 4.3 `presentation/checklist-question.controller.ts` + DTOs + Swagger; `checklist-question-error-code.ts` (`CHECKLIST_QUESTION_NOT_FOUND`); `checklist-question.module.ts` exporting the repository token.
@@ -61,6 +65,7 @@ Chain strategy: stacked-to-main
   - **Decision (PR 4)**: kept the guard; mapped `InvalidChecklistQuestionInputError` to a plain `BadRequestException` (no `code` field) in `ChecklistQuestionController.mapMutationError`, matching the Zod pipe's own uncoded 400 shape rather than wrapping it in `buildCodedError` — there is no second REACHABLE 400 cause on this route (the guard is unreachable through HTTP; ZodValidationPipe rejects the same shapes first), so a `code` would imply a client-distinguishable case that doesn't exist. `update-checklist-question.use-case.ts` gets NO symmetric guard: `updateChecklistQuestionSchema.frequencies` is already `z.array(...).min(1).optional()`, so "update to an empty frequencies set" is already a 400 at the Zod boundary — confirmed by reading the schema, not assumed.
 
 ## Phase 5: Web — Question Pool (PR 5)
+
 - [x] 5.1 `apps/web/src/api/checklist-question.ts` — typed calls + error-code union.
 - [x] 5.2 `apps/web/src/checklist-question/error-messages.ts`, `review-frequency-labels.ts`, `element-type-labels.ts` (reused).
 - [x] 5.3 `apps/web/src/pages/ChecklistQuestionsListPage.tsx` — grouped by `elementType`, frequency tags, verbatim `text`, empty/loading/error states (spec: checklist-question-admin-ui "List the Question Pool", "Question Text Is Rendered Verbatim").
@@ -71,11 +76,13 @@ Chain strategy: stacked-to-main
 - [x] 5.8 `apps/api/test/checklist-question.e2e-spec.ts` — full lifecycle, empty-pool, dup text allowed, RBAC matrix (401/403 on all 4 routes, 4 non-admin roles), soft-delete never blocked.
 
 ## Phase 6: Review Template Migration (PR 6) — mechanical, no TDD
+
 - [x] 6.1 `schema.prisma`: `enum ReviewTemplateStatus { draft active retired }`, `ReviewTemplate` (`draftQuestionIds String[] @db.Uuid`, `version Int?`), `ReviewTemplateQuestion` (`questionText String` NOT NULL) + `@@index([templateId])` (design Decisions 1-3, Interfaces).
 - [x] 6.2 Hand-written `migrations/<ts>_add_review_template/migration.sql`: enum + 2 tables, 3 hand-written unique indexes (one-active-per-lineage, one-draft-per-lineage, lineage-version-key), FK `ReviewTemplateQuestion.templateId → ReviewTemplate(id)` (design Decision 3 SQL block).
 - [x] 6.3 Apply in dev; confirm no `DropForeignKey`/`DropIndex` for the 6 pre-existing hand-written FKs/indexes; regenerate client.
 
 ## Phase 7: Review Template Domain + Cleaner (PR 7) — Strict TDD
+
 - [x] 7.1 RED/GREEN `review-template/domain/review-template-status.ts` — `as const satisfies` gate (design Decision 1).
   - **Decision (PR 7)**: the `satisfies` gate is **deferred**, not wired — `packages/validation` has no `review-template` sub-package yet (Phase 8, tasks.md 8.8, is what creates `reviewTemplateStatusSchema`). This exactly mirrors `review-frequency.ts`'s own history: Phase 2 shipped it domain-only (plain `as const`), and only Phase 3, once `@sf-manager/validation` exported the type, wired the gate. `review-template-status.ts` carries a comment flagging Phase 8 as the follow-up that must add the gate.
 - [x] 7.2 RED/GREEN `review-template/domain/review-template.entity.ts` + status guards (`assertActivatable`, `assertEditable`) — `draft→active` ok, `active`/`retired` reject every mutation and re-activation (design Decision 7; spec: "Frozen Templates Are Immutable").
@@ -85,6 +92,7 @@ Chain strategy: stacked-to-main
 - [x] 7.5 Wire the cleaner into `soft-delete-checklist-question.use-case.ts`, gated on `wasDeleted === true` (spec: "Deletion removes the question from drafts").
 
 ## Phase 8: Review Template Application + Validation (PR 8) — Strict TDD
+
 - [x] 8.1 `application/ports/review-template.repository.port.ts` — `create`/`findById`/`findAll`/`findDraftWithLiveQuestions`/`findFrozenWithSnapshot`/`replaceDraftQuestions`/`activate`/`softDeleteDraftById` (design Decision 5, Interfaces).
 - [x] 8.2 RED/GREEN `create-draft-review-template.use-case.ts` — one-draft-per-lineage guard, 409 `DRAFT_EXISTS` (spec: "Create Draft Template").
 - [x] 8.3 RED/GREEN `set-review-template-questions.use-case.ts` — full-replace semantics, unknown/soft-deleted id → 404, frozen → 409, cross-frequency allowed (spec: "Replace a Draft's Ordered Question Selection").
@@ -96,6 +104,7 @@ Chain strategy: stacked-to-main
 - [x] 8.9 `permission.ts` — add `reviewTemplate:create|read|update|delete|activate`; `role-permission.checker.ts` — `SYSTEM_ADMIN` row only (spec: authorization "Permission Check on Review Template Endpoints", "No Standalone Retire Permission"). Completed as part of PR 9's scope.
 
 ## Phase 9: Review Template Infra + Presentation (PR 9) — Strict TDD (activate) + integration specs
+
 - [x] 9.1 RED/GREEN `infrastructure/persistence/prisma-review-template.repository.ts::activate()` — Serializable `$transaction`: assign version, `INSERT…SELECT` snapshot (design Decision 4 SQL), retire predecessor **before** flipping to active (statement order load-bearing), map `P2034`/`P2002` → `TransactionConflictError` (design Decision 3, Data Flow).
 - [x] 9.2 `findDraftWithLiveQuestions` / `findFrozenWithSnapshot` — frozen query does not reference `"ChecklistQuestion"` (design Decision 5).
 - [x] 9.3 Integration: two-connection concurrent `activate()` race — exactly one succeeds, one `TransactionConflictError`, exactly one `active` row remains (spec: "Concurrent activations leave exactly one active version").
@@ -104,6 +113,7 @@ Chain strategy: stacked-to-main
   - **Note**: `POST .../activate`'s response (`ActivateReviewTemplateResponseDto`) is `{id, status, version}` only, not the full `ReviewTemplateResponseDto` (with `questions`) that design.md's Data Flow diagram labels the response as. spec.md's own activation scenario only asserts `status`/`version` in the response, and composing a second read to include `questions` would be unrequested scope per ADR-006 — the client can call `GET .../:id` right after if it needs the frozen snapshot. Fair, spec-compliant reading per fresh-context review of PR 9; documented here since it diverges from design.md's literal diagram.
 
 ## Phase 10: Web — Review Templates (PR 10)
+
 - [x] 10.1 `apps/web/src/api/review-template.ts` — typed calls + error-code union.
 - [x] 10.2 `apps/web/src/review-template/error-messages.ts`, `template-status-labels.ts` (`review-frequency-labels.ts` reused).
 - [x] 10.3 `apps/web/src/pages/ReviewTemplatesListPage.tsx` — grouped by `elementType`+`frequency`, version/status badge, empty/loading/error states (spec: review-template-admin-ui "List Templates With Version and Status").
@@ -114,6 +124,7 @@ Chain strategy: stacked-to-main
 - [x] 10.8 `App.tsx` — 3 routes, static-before-dynamic ordering; `i18n/locales/{en,es,ca}.json` — real `reviewTemplate.*` keys + label maps; extend `locales.test.ts`.
 
 ## Phase 11: E2E, Docs Correction, Browser Verification, Final Checks (PR 11)
+
 - [x] 11.1 `apps/api/test/review-template.e2e-spec.ts` — full lifecycle; second draft 409; activate empty 409 + no version consumed; discarded draft leaves no version gap; `PUT`/`activate` on frozen 409 `NOT_EDITABLE`; post-activation question edit → frozen response byte-identical; soft-delete a referenced question → frozen still renders, draft drops it; cross-frequency pick accepted; RBAC matrix on all 6 routes (spec: review-template-management, all requirements).
 - [x] 11.2 Grep-confirm no `ReviewSession`/`ElementReviewEntry`/`QuestionAnswer` table, model, route or page exists (spec: "No Review Session Surface").
 - [x] 11.3 `docs/architecture/domain-model-inspections.md` — fix `text` (i18n key → free text) wording; close the wording-change open question with snapshot-on-freeze; document `draftQuestionIds`/`questionText`; record the `active`-flag deferral.
@@ -121,11 +132,13 @@ Chain strategy: stacked-to-main
 - [x] 11.5 Full API + web suites, lint, build pass; `no-restricted-imports` passes.
 
 ## Phase 12: Activation Conflict Deadlock Mapping Remediation (PR 12) — Strict TDD, sdd-verify C-1 fix
+
 - [x] 12.1 RED/GREEN `infrastructure/persistence/prisma-review-template.repository.ts::isActivationConflict()` — add SQLSTATE `40P01` (`deadlock_detected`) alongside `40001`/`23505` so a real Postgres deadlock under concurrent `activate()` calls maps to `TransactionConflictError` → 409 `REVIEW_TEMPLATE_ACTIVATION_CONFLICT`, not an unmapped 500 (sdd-verify C-1; deterministically reproduced: 78/80 losing requests escaped in a 40-iteration x 3-concurrent race before this fix). Unit test added: `prisma-review-template.repository.spec.ts`.
 - [x] 12.2 HTTP-level test closing sdd-verify W-2 (no e2e previously asserted the conflict status code): `apps/api/test/review-template.e2e-spec.ts` — new "Activation conflict HTTP mapping" describe block, repository double that rejects `activate()` with `TransactionConflictError`, asserts the real HTTP pipeline (guard → use case → `mapError` → NestJS exception rendering) returns `409 { code: 'REVIEW_TEMPLATE_ACTIVATION_CONFLICT' }`.
 - [x] 12.3 Concurrency confirmation under real Postgres: the existing two-connection concurrency integration test (`prisma-review-template-activation.integration.spec.ts`, tasks.md 9.3) run 18 consecutive times against the running Docker Postgres instance, all clean. A permanent 40-iteration x 3-concurrent stress test (the shape the verifier used to reproduce C-1) was NOT added to the suite — cost/runtime and flakiness risk on a shared, non-isolated dev DB outweigh the benefit given the deterministic unit test (12.1) and existing 2-way integration test already cover the SQLSTATE-mapping regression directly.
 
 ## Rules Applied
+
 - Strict TDD: RED/GREEN on entities, status guards, use cases, the activation transaction, mappers where non-trivial. Migrations/DTOs/module wiring/schema files/error-code enums are mechanical.
 - Phases 1 and 6 (migrations) are isolated and mechanical, no business logic alongside.
 - Phase 7's cleaner ships with the domain PR because it depends on the Phase 6 table and modifies Phase 3's soft-delete use case — a genuine behavior change per design Decision 6, not split further.

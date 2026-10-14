@@ -28,7 +28,7 @@ native `fetch`.
 `VITE_API_BASE_URL`, `data-testid`) is the template a `LoginPage` should
 follow. i18n keys live in `en/es/ca.json`.
 
-**Relevant ADRs** — ADR-011 (accepted) already decided the *eventual* auth
+**Relevant ADRs** — ADR-011 (accepted) already decided the _eventual_ auth
 shape: JWT access token (~15min) + rotating refresh token via
 NestJS+Passport, argon2id (not bcrypt), refresh as
 httpOnly+Secure+SameSite cookie, throttled login — full 5-role RBAC is out
@@ -55,7 +55,7 @@ entity + repository port, Prisma only in infrastructure.
 - `apps/web/src/App.tsx`, new `apps/web/src/pages/LoginPage.tsx`,
   `apps/web/src/i18n/locales/{en,es,ca}.json`.
 - New module tree `apps/api/src/modules/auth/{domain,application,
-  infrastructure,presentation}/` per ADR-002 — module boundary (`auth`
+infrastructure,presentation}/` per ADR-002 — module boundary (`auth`
   alone vs `users`+`auth`) is an open question.
 
 ## Approaches Considered (token/session delivery for this slice)

@@ -7,6 +7,7 @@ The web UI ships complete EN/ES/CA translations, but `apps/web/src/i18n/index.ts
 ## Scope
 
 ### In Scope
+
 - A language selector on `LoginPage` and in `AppLayout`. It offers fixed endonyms "English / Español / Català", whatever the active language.
 - Initial language, in this order:
   1. a valid stored choice;
@@ -21,6 +22,7 @@ The web UI ships complete EN/ES/CA translations, but `apps/web/src/i18n/index.ts
   - The CLAUDE.md "Locale" bullet is updated.
 
 ### Out of Scope
+
 - A per-user backend preference (needs a migration, an API and validation; deferred).
 - Translating messages that originate in the API.
 - Adding locales.
@@ -30,9 +32,11 @@ Web-only is deliberate: this is a client UI concern with no backend change.
 ## Capabilities
 
 ### New Capabilities
+
 - `web-locale-selection`: selector placement and options, initial-language resolution, persistence, invalid-value handling, `<html lang>`.
 
 ### Modified Capabilities
+
 - `app-navigation`: "The Navigation Stays a Link Bar and Nothing More" currently forbids "a language switcher" and dropdowns. That requirement must permit exactly this selector and still forbid everything else.
 
 ## Approach
@@ -41,23 +45,23 @@ Hand-rolled, with no new dependency (no `i18next-browser-languagedetector`). A s
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/web/src/i18n/index.ts` | Modified | Resolved initial language |
-| `apps/web/src/i18n/locale-preference.ts` | New | Initial-language resolution and guarded persistence |
-| `apps/web/src/components/LanguageSelector.tsx` | New | Shared selector component |
-| `apps/web/src/layout/AppLayout.tsx`, `apps/web/src/pages/LoginPage.tsx` | Modified | Host the selector |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Selector label, browser-pass fixes |
-| `docs/adr/ADR-007-i18n-multilanguage-ui-english-codebase.md`, `CLAUDE.md` | Modified | Addendum and open question, Locale note |
+| Area                                                                      | Impact   | Description                                         |
+| ------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| `apps/web/src/i18n/index.ts`                                              | Modified | Resolved initial language                           |
+| `apps/web/src/i18n/locale-preference.ts`                                  | New      | Initial-language resolution and guarded persistence |
+| `apps/web/src/components/LanguageSelector.tsx`                            | New      | Shared selector component                           |
+| `apps/web/src/layout/AppLayout.tsx`, `apps/web/src/pages/LoginPage.tsx`   | Modified | Host the selector                                   |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                               | Modified | Selector label, browser-pass fixes                  |
+| `docs/adr/ADR-007-i18n-multilanguage-ui-english-codebase.md`, `CLAUDE.md` | Modified | Addendum and open question, Locale note             |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| ES/CA strings overflow or are missing in real layouts | Med | Browser pass in all three languages, with fixes in scope |
-| `localStorage` is unavailable (privacy mode) | Low | Guarded access; falls back to rule 2 |
-| Existing tests assume `en` at init | Med | Tests pin the language explicitly |
-| Users expect the choice to follow them across devices | Low | Documented as deferred in ADR-007 |
+| Risk                                                  | Likelihood | Mitigation                                               |
+| ----------------------------------------------------- | ---------- | -------------------------------------------------------- |
+| ES/CA strings overflow or are missing in real layouts | Med        | Browser pass in all three languages, with fixes in scope |
+| `localStorage` is unavailable (privacy mode)          | Low        | Guarded access; falls back to rule 2                     |
+| Existing tests assume `en` at init                    | Med        | Tests pin the language explicitly                        |
+| Users expect the choice to follow them across devices | Low        | Documented as deferred in ADR-007                        |
 
 ## Rollback Plan
 

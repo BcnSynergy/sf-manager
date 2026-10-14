@@ -56,36 +56,36 @@ It is a first step toward FR-011/ADR-011, not its completion.
 ## Approach
 
 Exploration option 3: a single access token delivered via httpOnly cookie.
-This keeps ADR-011's eventual *delivery mechanism* while skipping rotation
+This keeps ADR-011's eventual _delivery mechanism_ while skipping rotation
 machinery, and avoids `localStorage`. Later slices extend rather than
 replace: add a refresh endpoint, shorten access expiry, layer roles onto the
 existing guard.
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma` | Modified | First `User` model + migration |
-| `apps/api/prisma/seed.ts` | New | Seeds one admin user |
-| `apps/api/src/modules/auth/**` | New | Four-layer auth module |
-| `apps/api/src/app.module.ts` | Modified | Import auth module; guard wiring |
-| `apps/api/src/main.ts` | Modified | cookie-parser, CORS credentials |
-| `apps/api/src/modules/health/**` | Modified | Marked public |
-| `apps/api/package.json` | Modified | JWT lib, argon2, UUIDv7 lib, cookie-parser |
-| `apps/web/src/pages/LoginPage.tsx`, `App.tsx` | New/Modified | Login route + guarded routing |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Login keys |
+| Area                                          | Impact       | Description                                |
+| --------------------------------------------- | ------------ | ------------------------------------------ |
+| `apps/api/prisma/schema.prisma`               | Modified     | First `User` model + migration             |
+| `apps/api/prisma/seed.ts`                     | New          | Seeds one admin user                       |
+| `apps/api/src/modules/auth/**`                | New          | Four-layer auth module                     |
+| `apps/api/src/app.module.ts`                  | Modified     | Import auth module; guard wiring           |
+| `apps/api/src/main.ts`                        | Modified     | cookie-parser, CORS credentials            |
+| `apps/api/src/modules/health/**`              | Modified     | Marked public                              |
+| `apps/api/package.json`                       | Modified     | JWT lib, argon2, UUIDv7 lib, cookie-parser |
+| `apps/web/src/pages/LoginPage.tsx`, `App.tsx` | New/Modified | Login route + guarded routing              |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`   | Modified     | Login keys                                 |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| argon2 native bindings fail on Windows dev | Med | Verify prebuilt binary early in apply; swap to a library with broader prebuilt-binary platform coverage (`@node-rs/argon2`, Rust napi prebuilds), still argon2id |
-| Guard pattern is new; over-generalizing it | Med | One boolean check only; no role parameterization |
-| Cookie/CORS misconfig blocks localhost login | Med | E2E test covering login → protected call, including asserting CORS response headers |
-| Single non-rotating token is a weaker posture | Low | Documented, time-boxed; short expiry; revisit when refresh lands |
-| Production web/API domain topology is undecided by any ADR | Med | Design's prod cookie choice (`sameSite:'strict'`) assumes a shared registrable domain; documented fallback to `sameSite:'none'` + `secure` if web and API end up on different registrable domains; revisit when a deployment/infra ADR fixes the topology |
-| No rate limiting on login (ADR-011 §4 deferred) | Med | Accepted, time-boxed brute-force exposure window for this slice; revisit when `@nestjs/throttler` lands |
-| Per-request deny-list check (`TokenDenylist.isRevoked`) couples every protected endpoint's availability to DB reachability — previously a stateless JWT needed no DB round-trip to validate | Low | Accepted tradeoff: it is the minimum-viable revocation this slice needs (see `sdd-design` Decision 9); revisit if DB reachability becomes a measured availability problem |
+| Risk                                                                                                                                                                                        | Likelihood | Mitigation                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| argon2 native bindings fail on Windows dev                                                                                                                                                  | Med        | Verify prebuilt binary early in apply; swap to a library with broader prebuilt-binary platform coverage (`@node-rs/argon2`, Rust napi prebuilds), still argon2id                                                                                          |
+| Guard pattern is new; over-generalizing it                                                                                                                                                  | Med        | One boolean check only; no role parameterization                                                                                                                                                                                                          |
+| Cookie/CORS misconfig blocks localhost login                                                                                                                                                | Med        | E2E test covering login → protected call, including asserting CORS response headers                                                                                                                                                                       |
+| Single non-rotating token is a weaker posture                                                                                                                                               | Low        | Documented, time-boxed; short expiry; revisit when refresh lands                                                                                                                                                                                          |
+| Production web/API domain topology is undecided by any ADR                                                                                                                                  | Med        | Design's prod cookie choice (`sameSite:'strict'`) assumes a shared registrable domain; documented fallback to `sameSite:'none'` + `secure` if web and API end up on different registrable domains; revisit when a deployment/infra ADR fixes the topology |
+| No rate limiting on login (ADR-011 §4 deferred)                                                                                                                                             | Med        | Accepted, time-boxed brute-force exposure window for this slice; revisit when `@nestjs/throttler` lands                                                                                                                                                   |
+| Per-request deny-list check (`TokenDenylist.isRevoked`) couples every protected endpoint's availability to DB reachability — previously a stateless JWT needed no DB round-trip to validate | Low        | Accepted tradeoff: it is the minimum-viable revocation this slice needs (see `sdd-design` Decision 9); revisit if DB reachability becomes a measured availability problem                                                                                 |
 
 ## Rollback Plan
 

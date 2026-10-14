@@ -11,8 +11,8 @@ Adds the `web-table-accessibility` capability: every one of the 9 web data table
 
 ## Specs Synced
 
-| Domain | Action | Details |
-|--------|--------|---------|
+| Domain                  | Action  | Details                                                                                                                                                                                                                 |
+| ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | web-table-accessibility | Created | New capability; 4 requirements (Table Accessible Name, Caption Visually Hidden but Exposed, Column Header Scope, Scope Limits), all scenarios preserved. Main spec at `openspec/specs/web-table-accessibility/spec.md`. |
 
 The delta was a full spec for a new domain. The only textual change versus the delta is the section heading `## ADDED Requirements` -> `## Requirements` (main-spec format); the delta already carried a Purpose section. Line endings were normalized from CRLF to LF to match the other main specs. `diff --strip-trailing-cr` between delta and main spec shows only that heading line.
@@ -52,11 +52,11 @@ The apply agent's original "TDD Cycle Evidence" table was overwritten in Engram 
 
 ### TDD Cycle Evidence (restored, as reported by the apply agent at completion)
 
-| Task | RED | GREEN | Notes |
-|------|-----|-------|-------|
-| A.1 | n/a | n/a | CSS-only (jsdom ignores CSS); verified in G.1 |
+| Task    | RED                                                                                       | GREEN                     | Notes                                                                           |
+| ------- | ----------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------- |
+| A.1     | n/a                                                                                       | n/a                       | CSS-only (jsdom ignores CSS); verified in G.1                                   |
 | B.1-B.5 | 8 failures: "Unable to find role=table and name ..." across the 7 single-table page tests | 83/83 in those test files | The empty-state no-caption test is a regression guard (passes before and after) |
-| C.1-C.4 | 2 failures (same reason) | 18/18 | Grouped pages |
+| C.1-C.4 | 2 failures (same reason)                                                                  | 18/18                     | Grouped pages                                                                   |
 
 Safety net: existing tests in the touched files passed before any edits.
 

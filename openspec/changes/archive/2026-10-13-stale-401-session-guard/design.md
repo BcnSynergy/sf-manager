@@ -51,6 +51,7 @@ The comparison and the handler call are in one synchronous segment, with no
 reliably makes every later 401 check from the same epoch fail.
 
 **Alternatives considered**:
+
 - (b) Compare the token sent with the current token. Not feasible: the
   access token is an httpOnly cookie, invisible to JS
   (`AuthProvider.tsx:36-38`).
@@ -86,12 +87,12 @@ needs absolute values, adding a reset is a one-line change.
 
 ### Decision 3: Advance points and their ordering (pinned)
 
-| Where | Exact position | Purpose |
-|---|---|---|
-| `login()` | Immediately after the `!response.ok` check, before `await response.json()`, `setSessionEnded(false)` and `updateUser(data)` | Requests issued under the previous session (or while logged out) become stale |
-| `logout()` | First statement, next to `userRef.current = null`, before `await fetch('/auth/logout')` | Requests issued before logout become stale |
-| Unauthorized handler | After the `userRef.current === null` early return, before `updateUser(null)` and `setSessionEnded(true)` | The session it ends is over; concurrent 401s from the same epoch collapse |
-| Mount `/auth/me` | Not advanced | `userRef` is null while it is in flight and a page load leaves no prior request in flight (gap answer 5) |
+| Where                | Exact position                                                                                                              | Purpose                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `login()`            | Immediately after the `!response.ok` check, before `await response.json()`, `setSessionEnded(false)` and `updateUser(data)` | Requests issued under the previous session (or while logged out) become stale                            |
+| `logout()`           | First statement, next to `userRef.current = null`, before `await fetch('/auth/logout')`                                     | Requests issued before logout become stale                                                               |
+| Unauthorized handler | After the `userRef.current === null` early return, before `updateUser(null)` and `setSessionEnded(true)`                    | The session it ends is over; concurrent 401s from the same epoch collapse                                |
+| Mount `/auth/me`     | Not advanced                                                                                                                | `userRef` is null while it is in flight and a page load leaves no prior request in flight (gap answer 5) |
 
 **Why ordering matters**: the guard only works if the epoch advances no
 later than the new session becomes visible to the handler, which happens
@@ -143,6 +144,7 @@ and imports `../i18n` as `LoginPage.test.tsx` does. Fetch is stubbed:
 `/auth/me` returns a user, any data call returns 401.
 
 **Alternatives considered**:
+
 - `AuthProvider.test.tsx`, as listed in the proposal's Affected Areas. That
   file is a provider unit test with a probe component and a
   `setUnauthorizedHandler` mock wrapper; adding the router, `LoginPage` and
@@ -183,16 +185,16 @@ epoch 1           POST /auth/login ok → advance → updateUser(B)    0 ≠ 1 �
 
 ## File Changes
 
-| File | Action | Description |
-|------|--------|-------------|
-| `apps/web/src/api/client.ts` | Modify | `sessionEpoch`, `advanceSessionEpoch()`, capture at entry, epoch check on 401; comment referencing this design |
-| `apps/web/src/auth/AuthProvider.tsx` | Modify | Three `advanceSessionEpoch()` calls (Decision 3) with ordering comments |
-| `apps/web/src/api/client.test.ts` | Modify | Epoch tests in the "unauthorized handler" describe |
-| `apps/web/src/auth/AuthProvider.test.tsx` | Modify | Deferred data response option in `sessionFetch`; stale-after-relogin and stale-across-logout tests |
-| `apps/web/src/auth/session-ended-flow.test.tsx` | Create | Whole-flow test (Decision 5) |
-| `openspec/changes/stale-401-session-guard/specs/authentication/spec.md` | Create (sdd-spec) | Delta spec |
-| `docs/technical-debt.md` | Modify | TD-25 to Resolved with change name and PR number |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modify | Resolution note on addendum 2026-10-06 item 6 (epoch guard and whole-flow test) |
+| File                                                                    | Action            | Description                                                                                                    |
+| ----------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/api/client.ts`                                            | Modify            | `sessionEpoch`, `advanceSessionEpoch()`, capture at entry, epoch check on 401; comment referencing this design |
+| `apps/web/src/auth/AuthProvider.tsx`                                    | Modify            | Three `advanceSessionEpoch()` calls (Decision 3) with ordering comments                                        |
+| `apps/web/src/api/client.test.ts`                                       | Modify            | Epoch tests in the "unauthorized handler" describe                                                             |
+| `apps/web/src/auth/AuthProvider.test.tsx`                               | Modify            | Deferred data response option in `sessionFetch`; stale-after-relogin and stale-across-logout tests             |
+| `apps/web/src/auth/session-ended-flow.test.tsx`                         | Create            | Whole-flow test (Decision 5)                                                                                   |
+| `openspec/changes/stale-401-session-guard/specs/authentication/spec.md` | Create (sdd-spec) | Delta spec                                                                                                     |
+| `docs/technical-debt.md`                                                | Modify            | TD-25 to Resolved with change name and PR number                                                               |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`              | Modify            | Resolution note on addendum 2026-10-06 item 6 (epoch guard and whole-flow test)                                |
 
 Unaffected: the API, `LoginPage.tsx`, `ProtectedRoute.tsx`, i18n files.
 
@@ -215,15 +217,15 @@ Strict TDD: each test below is written and observed RED before the
 production line it covers. Runner: vitest + Testing Library in `apps/web`
 (`npm run test --workspace=apps/web`).
 
-| Layer | What to Test | Approach |
-|-------|-------------|----------|
-| Unit (`client.test.ts`) | Handler skipped when the epoch advances between request start and the 401; caller still gets `ApiError(401)` | `fetch` stub returns a deferred promise; call `apiFetch`, call `advanceSessionEpoch()`, resolve with 401; assert handler not called and error status 401 |
-| Unit (`client.test.ts`) | Handler invoked when the epoch advanced before the request started | `advanceSessionEpoch()` then `apiFetch` with an immediate 401; handler called once (triangulates "captured at start", not "never changed") |
-| Unit (`client.test.ts`) | Existing invoke / 403 / 500 / no handler / cleared handler cases | Unchanged, must stay green |
-| Provider (`AuthProvider.test.tsx`) | Stale 401 after re-login does not end the new session | Logged in via `/auth/me`; start `apiFetch('/users')` with a deferred 401; click login and wait for the user; resolve the 401; assert user still set, `probe-ended` false, and the call rejected with `ApiError(401)` |
-| Provider (`AuthProvider.test.tsx`) | Stale 401 across logout raises no notice | Logged in; start a deferred data call; logout, then login; resolve the 401; assert user set and `probe-ended` false |
-| Provider (`AuthProvider.test.tsx`) | Current-session 401, collapse of two 401s, 401 during logout, flag cleared on login | Existing tests, unchanged; they now pass through the epoch path as well |
-| Flow (`session-ended-flow.test.tsx`) | Mid-session 401 → redirect to `/login` → notice (ADR-011 item 6) | Real `AuthProvider` + `MemoryRouter` + `ProtectedRoute` + `LoginPage`; wait for the protected probe; `apiFetch` returns 401; assert the probe is gone, `LoginPage` is rendered and `login-session-ended` is shown |
+| Layer                                | What to Test                                                                                                 | Approach                                                                                                                                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit (`client.test.ts`)              | Handler skipped when the epoch advances between request start and the 401; caller still gets `ApiError(401)` | `fetch` stub returns a deferred promise; call `apiFetch`, call `advanceSessionEpoch()`, resolve with 401; assert handler not called and error status 401                                                             |
+| Unit (`client.test.ts`)              | Handler invoked when the epoch advanced before the request started                                           | `advanceSessionEpoch()` then `apiFetch` with an immediate 401; handler called once (triangulates "captured at start", not "never changed")                                                                           |
+| Unit (`client.test.ts`)              | Existing invoke / 403 / 500 / no handler / cleared handler cases                                             | Unchanged, must stay green                                                                                                                                                                                           |
+| Provider (`AuthProvider.test.tsx`)   | Stale 401 after re-login does not end the new session                                                        | Logged in via `/auth/me`; start `apiFetch('/users')` with a deferred 401; click login and wait for the user; resolve the 401; assert user still set, `probe-ended` false, and the call rejected with `ApiError(401)` |
+| Provider (`AuthProvider.test.tsx`)   | Stale 401 across logout raises no notice                                                                     | Logged in; start a deferred data call; logout, then login; resolve the 401; assert user set and `probe-ended` false                                                                                                  |
+| Provider (`AuthProvider.test.tsx`)   | Current-session 401, collapse of two 401s, 401 during logout, flag cleared on login                          | Existing tests, unchanged; they now pass through the epoch path as well                                                                                                                                              |
+| Flow (`session-ended-flow.test.tsx`) | Mid-session 401 → redirect to `/login` → notice (ADR-011 item 6)                                             | Real `AuthProvider` + `MemoryRouter` + `ProtectedRoute` + `LoginPage`; wait for the protected probe; `apiFetch` returns 401; assert the probe is gone, `LoginPage` is rendered and `login-session-ended` is shown    |
 
 `sessionFetch` gets an optional `data?: () => Promise<Response>` so a test can
 hold the data response open, mirroring the existing `logout` option. The

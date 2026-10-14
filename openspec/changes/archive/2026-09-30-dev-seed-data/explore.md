@@ -22,13 +22,13 @@ Prisma is infrastructure-only (ADR-013); cross-module FKs and partial unique ind
 
 ## Role Visibility (`apps/web/src/layout/nav-items.ts`)
 
-| Role | Nav |
-|---|---|
-| SYSTEM_ADMIN | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Organization profile |
-| MANAGER | Home, Review history |
-| MAINTENANCE_COMPANY_MANAGER | Home, Review history |
-| MAINTENANCE_TECHNICIAN | Home, Review sessions, Review history |
-| COMMUNITY_REPRESENTATIVE | Home, Review sessions, Review history |
+| Role                        | Nav                                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| SYSTEM_ADMIN                | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Organization profile |
+| MANAGER                     | Home, Review history                                                                                                         |
+| MAINTENANCE_COMPANY_MANAGER | Home, Review history                                                                                                         |
+| MAINTENANCE_TECHNICIAN      | Home, Review sessions, Review history                                                                                        |
+| COMMUNITY_REPRESENTATIVE    | Home, Review sessions, Review history                                                                                        |
 
 Review history scope differs per role (own / company / assigned communities / all with capability / admin installation-wide). Making each scope browser-checkable needs completed sessions by at least 2 companies and 2 communities, with representatives and technicians assigned asymmetrically.
 
@@ -40,11 +40,11 @@ None are idempotent: `CreateUser` rejects duplicate email, `CreateDraftReviewTem
 
 ## Approaches
 
-| # | Approach | Pros | Cons | Effort |
-|---|---|---|---|---|
-| 1 | Extend `seed.ts` with raw Prisma upserts and fixed UUIDs | Idempotent by construction; can backdate history | Prisma outside infrastructure (ADR-013 spirit); bypasses domain invariants, can seed states the app can never produce | Medium |
-| 2 | Separate dev-only dataset module going through use cases/repositories, invoked after the admin bootstrap | Invariants honored; separates prod-safe bootstrap from public-credential data; consistent with current seed | Needs natural-key skip-if-exists guards; timestamps all "now"; needs an Actor for record/complete | Medium-High |
-| 3 | Extend `seed.ts` in place with use cases behind `shouldSeedDevAccount` | One command; `migrate reset` auto-populates | Public credentials stay in the prod-capable file; gate stays `!production`; `seed.ts` grows | Medium |
+| #   | Approach                                                                                                 | Pros                                                                                                        | Cons                                                                                                                  | Effort      |
+| --- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Extend `seed.ts` with raw Prisma upserts and fixed UUIDs                                                 | Idempotent by construction; can backdate history                                                            | Prisma outside infrastructure (ADR-013 spirit); bypasses domain invariants, can seed states the app can never produce | Medium      |
+| 2   | Separate dev-only dataset module going through use cases/repositories, invoked after the admin bootstrap | Invariants honored; separates prod-safe bootstrap from public-credential data; consistent with current seed | Needs natural-key skip-if-exists guards; timestamps all "now"; needs an Actor for record/complete                     | Medium-High |
+| 3   | Extend `seed.ts` in place with use cases behind `shouldSeedDevAccount`                                   | One command; `migrate reset` auto-populates                                                                 | Public credentials stay in the prod-capable file; gate stays `!production`; `seed.ts` grows                           | Medium      |
 
 ## Recommendation
 

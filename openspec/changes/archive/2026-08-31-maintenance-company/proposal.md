@@ -7,12 +7,13 @@
 **nothing in the codebase knows it exists** — zero matches for "Maintenance"
 in `apps/api/prisma/schema.prisma`, no module, no page. Because of that
 absence, ADR-011's two maintenance-side roles are stuck: `Role` (Postgres enum
-+ `apps/api/src/modules/users/domain/role.ts`) has accepted
-`MAINTENANCE_COMPANY_MANAGER` and `MAINTENANCE_TECHNICIAN` since
-`user-management-roles`, `POST /users` will happily create them — and there is
-**no way to record which company they work for**. `User` has no
-`maintenanceCompanyId` column at all. The domain doc's role-dependent field
-list is target state, not schema.
+
+- `apps/api/src/modules/users/domain/role.ts`) has accepted
+  `MAINTENANCE_COMPANY_MANAGER` and `MAINTENANCE_TECHNICIAN` since
+  `user-management-roles`, `POST /users` will happily create them — and there is
+  **no way to record which company they work for**. `User` has no
+  `maintenanceCompanyId` column at all. The domain doc's role-dependent field
+  list is target state, not schema.
 
 That is the gap this slice closes, and only that gap. It makes two things true
 end-to-end for the first time:
@@ -40,21 +41,21 @@ ADR-011, `docs/requirements/functional-requirements.md` FR-002/FR-003.
 
 Closed with the product owner before this proposal. Inputs, not open items.
 
-| Decision | Resolution |
-|---|---|
-| **Entity shape** | `MaintenanceCompany` = `id`, `name`, `taxId`, `contactInfo`, `deletedAt` (ADR-010). Matches the domain doc's field list, plus soft delete. |
-| **`taxId` uniqueness** | **Enforced**, not advisory, among active companies. Partial unique index (`WHERE "deletedAt" IS NULL`, same technique as `CommunityRepresentative`'s exclusivity backstop) — a soft-deleted company's tax id becomes reusable, since re-onboarding the same real company (same legal CIF) after a mistaken or temporary removal must not be permanently blocked. |
-| **`taxId` format** | Free text, non-empty, trimmed. No Spanish CIF/NIF checksum validation in this slice — a real compliance decision, deferred. |
-| **`contactInfo` shape** | Single free-text field for now. Confirmed direction: a future iteration introduces a dedicated `ContactInfo` entity shared by `Community` and `MaintenanceCompany` for structured contact data — noted as a forward signal, not built here (walking skeleton discipline). |
-| **Role change away from a maintenance role** | `maintenanceCompanyId` is left untouched — mirrors `community`'s accepted eligibility drift (enforced by absence, not code). It only changes if the admin explicitly edits it in the same or a later request; a bare role change never touches it. |
-| **Who can manage companies** | `SYSTEM_ADMIN` only. FR-002's `MANAGER` + `MANAGE_MAINTENANCE_COMPANIES` half is **explicitly not activated** here — `managerCapabilities` does not exist as a field and building it is its own slice. |
-| **Delete with people attached** | **Blocked**, not cascaded. Soft-deleting a company that still has non-deleted users pointing at it is refused with a 409-class domain error, the same shape as `LastSystemAdminError` in `user-management`. The admin must reassign or delete those users first. |
-| **Warn-and-choose delete UX** | **Not this slice.** A future "N users will be orphaned — cascade or cancel?" flow is deliberately deferred; this slice ships the hard block only. |
-| **`User.maintenanceCompanyId`** | New field on `User`. **Required** when `role` is `MAINTENANCE_COMPANY_MANAGER` or `MAINTENANCE_TECHNICIAN`; not applicable to the other three roles. Must reference an **existing, non-soft-deleted** company. |
-| **Reassignment** | **Editable after creation.** A `SYSTEM_ADMIN` may move a user to a different maintenance company at any time. The domain doc calls this "fixed scope" — that wording is superseded by this decision; it means *scope derives from the company*, not *the company is immutable*. |
-| **Role permissions** | Unchanged. `MAINTENANCE_COMPANY_MANAGER` and `MAINTENANCE_TECHNICIAN` stay at `[]` in `role-permission.checker.ts` after this slice. Storing a company id confers **zero** API access. |
-| **Company↔community link** | **Not this slice** (see Out of Scope). `CommunityMaintenanceAssignment` is its own follow-up change. |
-| **Web UI** | In scope, minimal: list / create / edit pages for companies (mirroring `Community*Page`), plus a role-conditional company field on the existing user create/edit forms. |
+| Decision                                     | Resolution                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entity shape**                             | `MaintenanceCompany` = `id`, `name`, `taxId`, `contactInfo`, `deletedAt` (ADR-010). Matches the domain doc's field list, plus soft delete.                                                                                                                                                                                                                       |
+| **`taxId` uniqueness**                       | **Enforced**, not advisory, among active companies. Partial unique index (`WHERE "deletedAt" IS NULL`, same technique as `CommunityRepresentative`'s exclusivity backstop) — a soft-deleted company's tax id becomes reusable, since re-onboarding the same real company (same legal CIF) after a mistaken or temporary removal must not be permanently blocked. |
+| **`taxId` format**                           | Free text, non-empty, trimmed. No Spanish CIF/NIF checksum validation in this slice — a real compliance decision, deferred.                                                                                                                                                                                                                                      |
+| **`contactInfo` shape**                      | Single free-text field for now. Confirmed direction: a future iteration introduces a dedicated `ContactInfo` entity shared by `Community` and `MaintenanceCompany` for structured contact data — noted as a forward signal, not built here (walking skeleton discipline).                                                                                        |
+| **Role change away from a maintenance role** | `maintenanceCompanyId` is left untouched — mirrors `community`'s accepted eligibility drift (enforced by absence, not code). It only changes if the admin explicitly edits it in the same or a later request; a bare role change never touches it.                                                                                                               |
+| **Who can manage companies**                 | `SYSTEM_ADMIN` only. FR-002's `MANAGER` + `MANAGE_MAINTENANCE_COMPANIES` half is **explicitly not activated** here — `managerCapabilities` does not exist as a field and building it is its own slice.                                                                                                                                                           |
+| **Delete with people attached**              | **Blocked**, not cascaded. Soft-deleting a company that still has non-deleted users pointing at it is refused with a 409-class domain error, the same shape as `LastSystemAdminError` in `user-management`. The admin must reassign or delete those users first.                                                                                                 |
+| **Warn-and-choose delete UX**                | **Not this slice.** A future "N users will be orphaned — cascade or cancel?" flow is deliberately deferred; this slice ships the hard block only.                                                                                                                                                                                                                |
+| **`User.maintenanceCompanyId`**              | New field on `User`. **Required** when `role` is `MAINTENANCE_COMPANY_MANAGER` or `MAINTENANCE_TECHNICIAN`; not applicable to the other three roles. Must reference an **existing, non-soft-deleted** company.                                                                                                                                                   |
+| **Reassignment**                             | **Editable after creation.** A `SYSTEM_ADMIN` may move a user to a different maintenance company at any time. The domain doc calls this "fixed scope" — that wording is superseded by this decision; it means _scope derives from the company_, not _the company is immutable_.                                                                                  |
+| **Role permissions**                         | Unchanged. `MAINTENANCE_COMPANY_MANAGER` and `MAINTENANCE_TECHNICIAN` stay at `[]` in `role-permission.checker.ts` after this slice. Storing a company id confers **zero** API access.                                                                                                                                                                           |
+| **Company↔community link**                   | **Not this slice** (see Out of Scope). `CommunityMaintenanceAssignment` is its own follow-up change.                                                                                                                                                                                                                                                             |
+| **Web UI**                                   | In scope, minimal: list / create / edit pages for companies (mirroring `Community*Page`), plus a role-conditional company field on the existing user create/edit forms.                                                                                                                                                                                          |
 
 ## Scope
 
@@ -72,7 +73,7 @@ Closed with the product owner before this proposal. Inputs, not open items.
   / update / soft-delete), plus the company-existence + not-deleted check
   consumed by user create/update.
 - **`user-management` extension**: `maintenanceCompanyId` accepted on `POST
-  /users` and `PATCH /users/:id`, conditionally required by role, validated
+/users` and `PATCH /users/:id`, conditionally required by role, validated
   against a live company.
 - **Presentation**: REST endpoints for `/maintenance-companies` with Zod
   validation via `shared/presentation/pipes/zod-validation.pipe.ts`, Swagger
@@ -96,7 +97,7 @@ Closed with the product owner before this proposal. Inputs, not open items.
 - **Web UI — users**: `UserCreatePage` / `UserEditPage` gain a company
   `<select>` that appears and becomes required **only** when the selected role
   is one of the two maintenance roles, populated from `GET
-  /maintenance-companies`.
+/maintenance-companies`.
 - **i18n**: real `maintenanceCompany.*` translations in all three locale files
   (`en`, `es`, `ca`), key-set parity enforced by the existing `locales.test.ts`.
 - Unit, integration and E2E tests matching the `community` /
@@ -124,7 +125,7 @@ Closed with the product owner before this proposal. Inputs, not open items.
   deferred; this slice ships the block only.
 - **A global nav bar** — pre-existing, separately tracked gap
   (`community-minimal-ui` Open Question 8). Not introduced or closed here.
-- Company↔user *listing* from the company side ("show me this company's
+- Company↔user _listing_ from the company side ("show me this company's
   technicians"). Not required by any success criterion below.
 - Pagination, filtering, search, audit logging, restore of soft-deleted
   companies.
@@ -133,7 +134,7 @@ Closed with the product owner before this proposal. Inputs, not open items.
 ### Why this scope and not more (ADR-006)
 
 The tempting move is to build the company **and** its community assignments in
-one go, because ADR-011 describes technician scope as resolving *through*
+one go, because ADR-011 describes technician scope as resolving _through_
 `CommunityMaintenanceAssignment`. The walking-skeleton rule says otherwise: the
 `community` change itself split `community-management` from
 `community-assignments`, and that split is the precedent here — stretched
@@ -144,8 +145,8 @@ few extra endpoints.
 `MaintenanceCompany` + `User.maintenanceCompanyId` is **independently useful
 today**: it is the difference between "you can create a technician user" and
 "you can create a technician user that means something". Technician
-review-scoping stays unresolved after this slice — but it is unresolved *right
-now* too, so nothing regresses.
+review-scoping stays unresolved after this slice — but it is unresolved _right
+now_ too, so nothing regresses.
 
 The UI is in scope because ADR-006's addendum makes it non-negotiable for a new
 domain slice. It stays minimal — no company detail page, no technician roster
@@ -182,17 +183,17 @@ reviewed, archived reference implementation of this project's Clean
 Architecture layering, and it is itself a mirror of `users`. Cloning it is
 cheaper and safer than inventing a third style.
 
-| `apps/api/src/modules/community/**` | → mirrored under `apps/api/src/modules/maintenance-company/**` |
-|---|---|
-| `domain/community.entity.ts` (no Prisma, ADR-013) | `domain/maintenance-company.entity.ts` |
-| `domain/errors/*.error.ts` | `TaxIdAlreadyInUseError`, `MaintenanceCompanyHasActiveUsersError`, `MaintenanceCompanyNotFoundError` |
-| `application/ports/*.repository.port.ts` (`Symbol` token) | `MaintenanceCompanyRepositoryPort` |
-| `application/use-cases/*.use-case.ts` | create / list / update / soft-delete |
-| `application/use-cases/testing/in-memory-*.repository.ts` | in-memory fake with invariant parity |
-| `infrastructure/persistence/prisma-*.repository.ts` (extends `soft-deletable.repository.ts`) | same default `deletedAt: null` filter (ADR-010) |
-| `infrastructure/persistence/*.mapper.ts` | persistence ↔ domain mapper |
-| `presentation/*.controller.ts` + `dto/**` + `*-error-code.ts` | controller, DTOs, `MaintenanceCompanyErrorCode` |
-| `community.module.ts` | `maintenance-company.module.ts` |
+| `apps/api/src/modules/community/**`                                                          | → mirrored under `apps/api/src/modules/maintenance-company/**`                                       |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `domain/community.entity.ts` (no Prisma, ADR-013)                                            | `domain/maintenance-company.entity.ts`                                                               |
+| `domain/errors/*.error.ts`                                                                   | `TaxIdAlreadyInUseError`, `MaintenanceCompanyHasActiveUsersError`, `MaintenanceCompanyNotFoundError` |
+| `application/ports/*.repository.port.ts` (`Symbol` token)                                    | `MaintenanceCompanyRepositoryPort`                                                                   |
+| `application/use-cases/*.use-case.ts`                                                        | create / list / update / soft-delete                                                                 |
+| `application/use-cases/testing/in-memory-*.repository.ts`                                    | in-memory fake with invariant parity                                                                 |
+| `infrastructure/persistence/prisma-*.repository.ts` (extends `soft-deletable.repository.ts`) | same default `deletedAt: null` filter (ADR-010)                                                      |
+| `infrastructure/persistence/*.mapper.ts`                                                     | persistence ↔ domain mapper                                                                          |
+| `presentation/*.controller.ts` + `dto/**` + `*-error-code.ts`                                | controller, DTOs, `MaintenanceCompanyErrorCode`                                                      |
+| `community.module.ts`                                                                        | `maintenance-company.module.ts`                                                                      |
 
 On the web side, `apps/web/src/maintenance-company/` mirrors
 `apps/web/src/community/` (`error-messages.ts` + any label maps) and the three
@@ -202,7 +203,7 @@ static-before-dynamic route-ordering comments in `App.tsx`.
 Four deliberate proposal-level choices:
 
 1. **The delete block is a domain policy, not an FK.** The hand-written FK
-   (`ON DELETE RESTRICT`) protects against *hard* deletes, which this project
+   (`ON DELETE RESTRICT`) protects against _hard_ deletes, which this project
    never performs — every delete is `deletedAt = now()`. So the FK cannot
    enforce this rule; a policy object in the domain layer must, reading the
    user side through the existing `users` repository port. Same shape as
@@ -217,7 +218,7 @@ Four deliberate proposal-level choices:
    and `community-minimal-ui` had to retrofit `code` discriminators onto
    already-shipped 409s. This slice is the first to have the benefit of that
    hindsight; it pays the cost up front.
-4. **The UI never re-implements the conditional requirement's *authority*.**
+4. **The UI never re-implements the conditional requirement's _authority_.**
    The form shows/hides and requires the company field client-side for UX, but
    the server is the only place that decides. No client-side company-liveness
    check, no client-side orphan counting.
@@ -238,28 +239,28 @@ Four deliberate proposal-level choices:
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|---|---|---|
-| `apps/api/prisma/schema.prisma`, `migrations/` | Modified | `MaintenanceCompany` model + `User.maintenanceCompanyId` + hand-written FK |
-| `apps/api/src/modules/maintenance-company/domain/**` | New | Entity, delete-block policy, errors |
-| `apps/api/src/modules/maintenance-company/application/**` | New | Port, CRUD use cases, in-memory fake |
-| `apps/api/src/modules/maintenance-company/infrastructure/persistence/**` | New | Prisma adapter (extends `soft-deletable.repository.ts`), mapper |
-| `apps/api/src/modules/maintenance-company/presentation/**` | New | Controller, DTOs, `maintenance-company-error-code.ts` |
-| `apps/api/src/modules/maintenance-company/maintenance-company.module.ts` | New | Providers + controller wiring |
-| `apps/api/src/modules/users/domain/user.entity.ts` | Modified | `maintenanceCompanyId` prop + role-conditional invariant |
-| `apps/api/src/modules/users/application/use-cases/{create,update}-user.use-case.ts` | Modified | Validate company reference and role/company consistency |
-| `apps/api/src/modules/users/presentation/**` | Modified | DTOs + `UserErrorCode` gain the new causes |
-| `apps/api/src/shared/application/authorization/permission.ts` | Modified | Extend `Permission` union |
-| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified | Grant `maintenanceCompany:*` to `SYSTEM_ADMIN` only |
-| `packages/validation/src/maintenance-company/**` | New | Zod schemas shared web/API |
-| `packages/validation/src/users/{create,update}-user.schema.ts` | Modified | Optional `maintenanceCompanyId` + role-conditional refinement |
-| `apps/web/src/api/maintenance-company.ts` | New | Typed calls + mirrored error-code union |
-| `apps/web/src/maintenance-company/**` | New | `error-messages.ts`, label maps |
-| `apps/web/src/pages/MaintenanceCompan{iesListPage,yCreatePage,yEditPage}.tsx` | New | List, create, edit |
-| `apps/web/src/pages/User{Create,Edit}Page.tsx` | Modified | Role-conditional company selector |
-| `apps/web/src/App.tsx` | Modified | 3 role-gated routes, static-before-dynamic |
-| `apps/web/src/i18n/locales/{en,es,ca}.json` | Modified | Real `maintenanceCompany.*` translations |
-| `apps/api/test/**` | New/Modified | `maintenance-company.e2e-spec.ts` + user e2e additions |
+| Area                                                                                | Impact       | Description                                                                |
+| ----------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------- |
+| `apps/api/prisma/schema.prisma`, `migrations/`                                      | Modified     | `MaintenanceCompany` model + `User.maintenanceCompanyId` + hand-written FK |
+| `apps/api/src/modules/maintenance-company/domain/**`                                | New          | Entity, delete-block policy, errors                                        |
+| `apps/api/src/modules/maintenance-company/application/**`                           | New          | Port, CRUD use cases, in-memory fake                                       |
+| `apps/api/src/modules/maintenance-company/infrastructure/persistence/**`            | New          | Prisma adapter (extends `soft-deletable.repository.ts`), mapper            |
+| `apps/api/src/modules/maintenance-company/presentation/**`                          | New          | Controller, DTOs, `maintenance-company-error-code.ts`                      |
+| `apps/api/src/modules/maintenance-company/maintenance-company.module.ts`            | New          | Providers + controller wiring                                              |
+| `apps/api/src/modules/users/domain/user.entity.ts`                                  | Modified     | `maintenanceCompanyId` prop + role-conditional invariant                   |
+| `apps/api/src/modules/users/application/use-cases/{create,update}-user.use-case.ts` | Modified     | Validate company reference and role/company consistency                    |
+| `apps/api/src/modules/users/presentation/**`                                        | Modified     | DTOs + `UserErrorCode` gain the new causes                                 |
+| `apps/api/src/shared/application/authorization/permission.ts`                       | Modified     | Extend `Permission` union                                                  |
+| `apps/api/src/modules/auth/infrastructure/authorization/role-permission.checker.ts` | Modified     | Grant `maintenanceCompany:*` to `SYSTEM_ADMIN` only                        |
+| `packages/validation/src/maintenance-company/**`                                    | New          | Zod schemas shared web/API                                                 |
+| `packages/validation/src/users/{create,update}-user.schema.ts`                      | Modified     | Optional `maintenanceCompanyId` + role-conditional refinement              |
+| `apps/web/src/api/maintenance-company.ts`                                           | New          | Typed calls + mirrored error-code union                                    |
+| `apps/web/src/maintenance-company/**`                                               | New          | `error-messages.ts`, label maps                                            |
+| `apps/web/src/pages/MaintenanceCompan{iesListPage,yCreatePage,yEditPage}.tsx`       | New          | List, create, edit                                                         |
+| `apps/web/src/pages/User{Create,Edit}Page.tsx`                                      | Modified     | Role-conditional company selector                                          |
+| `apps/web/src/App.tsx`                                                              | Modified     | 3 role-gated routes, static-before-dynamic                                 |
+| `apps/web/src/i18n/locales/{en,es,ca}.json`                                         | Modified     | Real `maintenanceCompany.*` translations                                   |
+| `apps/api/test/**`                                                                  | New/Modified | `maintenance-company.e2e-spec.ts` + user e2e additions                     |
 
 Untouched by design: `apps/web/src/community/**`, `apps/web/src/api/client.ts`,
 `components/ConfirmDialog.tsx`, `auth/**` (reused as-is — any needed change is
@@ -279,19 +280,19 @@ resolution and Risk 1 for the full reasoning and mitigation (isolated PR).
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| **Pre-existing maintenance-role users have no company.** `POST /users` already accepts both roles; any such row violates the new invariant the moment the migration lands | Med | The column is nullable, so the migration itself cannot fail. Open Question 2 settles whether existing rows are grandfathered (readable, but any edit must supply a company) or backfilled/blocked. `sdd-spec` writes the chosen answer as an explicit scenario, not an accident |
-| **Role change away from a maintenance role leaves a stale `maintenanceCompanyId`** — the mirror image of the `community` slice's accepted eligibility drift | Med | **Resolved** (see Settled product decisions): left untouched, matching `community`'s accepted-drift precedent. `sdd-spec` writes it as an explicit non-behavior, asserted by a regression test |
-| **`taxId` uniqueness collides with soft delete** — deleting a company then re-creating it with the same tax id fails with a confusing "already in use" | Med | **Resolved** (see Settled product decisions): partial unique index chosen. `sdd-spec`/`sdd-design` write an explicit e2e scenario proving a soft-deleted company's tax id becomes reusable |
-| **Scope creep toward the company↔community join** — "the company exists now, let's assign it to communities" | High | Explicit non-goal with a stated sizing rationale. `sdd-verify` should assert no `CommunityMaintenanceAssignment` schema, endpoint or page exists |
-| **Scope creep toward activating the two roles** — "the technician has a company now, let's scope their reviews" | High | Explicit non-goal. `sdd-verify` asserts `ROLE_PERMISSIONS` still maps all four non-admin roles to `[]` |
-| **The delete block is implemented in the controller instead of the domain**, or leaks a raw Prisma count into the use case | Med | Named as proposal-level choice 1 with `last-admin.policy.ts` as the concrete template; `no-restricted-imports` already guards the Prisma half (ADR-013) |
-| **The conditional company field is enforced client-side only**, so a direct API call bypasses it | Med | Named as proposal-level choice 4; the invariant lives in the domain and is asserted by an e2e test that posts a maintenance-role user with no company |
-| **Race between deleting a company and creating a user pointing at it** — both read "valid" and both commit | Low | Reuse the `transactional()` + `SERIALIZABLE` + `TransactionConflictError` seam already established in `users`; `sdd-design` decides whether this slice needs it or the FK plus a re-read suffices |
-| **Enum-like / id-like values rendered raw** — `users-minimal-ui` shipped raw `Role` text and had to patch it; a `maintenanceCompanyId` UUID rendered in the users list would be the same mistake | Med | The users list/detail must render the company **name**, not its id; called out in the success criteria and grep-checked by `sdd-verify` |
-| **Reviewer overload** — new API module + `users` changes + 3 new pages + 2 modified pages + migration in one PR | High | `sdd-tasks` must forecast against the 400-line budget; chained PRs (`stacked-to-main`, as in all three prior chains) are the expected outcome |
-| ES/CA translations stubbed with English placeholders | Med | Real translations in scope; `locales.test.ts` parity guard extends to `maintenanceCompany.*` |
+| Risk                                                                                                                                                                                             | Likelihood | Mitigation                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pre-existing maintenance-role users have no company.** `POST /users` already accepts both roles; any such row violates the new invariant the moment the migration lands                        | Med        | The column is nullable, so the migration itself cannot fail. Open Question 2 settles whether existing rows are grandfathered (readable, but any edit must supply a company) or backfilled/blocked. `sdd-spec` writes the chosen answer as an explicit scenario, not an accident |
+| **Role change away from a maintenance role leaves a stale `maintenanceCompanyId`** — the mirror image of the `community` slice's accepted eligibility drift                                      | Med        | **Resolved** (see Settled product decisions): left untouched, matching `community`'s accepted-drift precedent. `sdd-spec` writes it as an explicit non-behavior, asserted by a regression test                                                                                  |
+| **`taxId` uniqueness collides with soft delete** — deleting a company then re-creating it with the same tax id fails with a confusing "already in use"                                           | Med        | **Resolved** (see Settled product decisions): partial unique index chosen. `sdd-spec`/`sdd-design` write an explicit e2e scenario proving a soft-deleted company's tax id becomes reusable                                                                                      |
+| **Scope creep toward the company↔community join** — "the company exists now, let's assign it to communities"                                                                                     | High       | Explicit non-goal with a stated sizing rationale. `sdd-verify` should assert no `CommunityMaintenanceAssignment` schema, endpoint or page exists                                                                                                                                |
+| **Scope creep toward activating the two roles** — "the technician has a company now, let's scope their reviews"                                                                                  | High       | Explicit non-goal. `sdd-verify` asserts `ROLE_PERMISSIONS` still maps all four non-admin roles to `[]`                                                                                                                                                                          |
+| **The delete block is implemented in the controller instead of the domain**, or leaks a raw Prisma count into the use case                                                                       | Med        | Named as proposal-level choice 1 with `last-admin.policy.ts` as the concrete template; `no-restricted-imports` already guards the Prisma half (ADR-013)                                                                                                                         |
+| **The conditional company field is enforced client-side only**, so a direct API call bypasses it                                                                                                 | Med        | Named as proposal-level choice 4; the invariant lives in the domain and is asserted by an e2e test that posts a maintenance-role user with no company                                                                                                                           |
+| **Race between deleting a company and creating a user pointing at it** — both read "valid" and both commit                                                                                       | Low        | Reuse the `transactional()` + `SERIALIZABLE` + `TransactionConflictError` seam already established in `users`; `sdd-design` decides whether this slice needs it or the FK plus a re-read suffices                                                                               |
+| **Enum-like / id-like values rendered raw** — `users-minimal-ui` shipped raw `Role` text and had to patch it; a `maintenanceCompanyId` UUID rendered in the users list would be the same mistake | Med        | The users list/detail must render the company **name**, not its id; called out in the success criteria and grep-checked by `sdd-verify`                                                                                                                                         |
+| **Reviewer overload** — new API module + `users` changes + 3 new pages + 2 modified pages + migration in one PR                                                                                  | High       | `sdd-tasks` must forecast against the 400-line budget; chained PRs (`stacked-to-main`, as in all three prior chains) are the expected outcome                                                                                                                                   |
+| ES/CA translations stubbed with English placeholders                                                                                                                                             | Med        | Real translations in scope; `locales.test.ts` parity guard extends to `maintenanceCompany.*`                                                                                                                                                                                    |
 
 ## Rollback Plan
 
@@ -376,17 +377,17 @@ migration PR as the only one carrying schema state.
 
 ## Open Questions / Deferred
 
-| # | Question | Status | Owner |
-|---|---|---|---|
-| 1 | **`taxId` uniqueness vs. soft delete.** A plain unique index keeps a soft-deleted company's tax id reserved forever (the shipped `User.email` behavior); a partial index `WHERE "deletedAt" IS NULL` frees it for reuse but allows two rows with the same tax id to coexist in history. | **Resolved.** Partial unique index (`WHERE "deletedAt" IS NULL`) — a soft-deleted company's tax id is reusable by a re-onboarded instance of the same company. | Resolved |
-| 2 | **Existing maintenance-role users with no company.** `POST /users` has accepted both roles since `user-management-roles`. Are pre-existing rows grandfathered (readable, but any edit must supply a company), backfilled to a placeholder, or is the migration gated on there being none? | **Open — `sdd-spec` decides.** The column is nullable so the migration is safe either way; this is a product rule, not a schema problem. Proposed direction: grandfather and require on next write, since these users are functionally inert today. | `sdd-spec` |
-| 3 | **Role change away from a maintenance role.** When `PATCH /users/:id` changes a technician to `MANAGER`, is the stale `maintenanceCompanyId` cleared automatically, or is the change rejected unless the caller clears it explicitly? | **Resolved.** Left untouched — mirrors `community`'s accepted eligibility drift. No auto-clear, no rejection; only an explicit edit of `maintenanceCompanyId` itself changes it. | Resolved |
-| 4 | **`taxId` and `contactInfo` shape.** Is `taxId` a validated Spanish CIF/NIF (format + checksum) or a trimmed, non-empty, unique free-text string? Is `contactInfo` free text or structured (`email`/`phone`/`address`)? | **Resolved.** Both free text. `taxId`: non-empty, trimmed, no checksum. `contactInfo`: single field now; a future `ContactInfo` entity shared with `Community` is the intended direction, not built in this slice. | Resolved |
-| 5 | **Error-code contract location.** `users-minimal-ui` set a rule-of-three trigger: hoist a shared error-code contract into `@sf-manager/validation` when a further consumer needs its own codes. `community-minimal-ui` mirrored again and re-flagged it. **This slice is the third consumer.** | **Open — `sdd-design` decides**, and must address the trigger explicitly rather than silently mirroring a third time. | `sdd-design` |
-| 6 | **Warn-and-choose delete UX.** Instead of a hard block, show "N users are attached — cascade-detach or cancel?" | **Deferred, settled** — this slice ships the block only. *Revisit trigger*: the first complaint that reassigning users one by one before deleting a company is too tedious. | Future slice |
-| 7 | **`CommunityMaintenanceAssignment` and the ADR-011 scoping question.** The exploration flagged a real drift: ADR-011 resolves technician review scope through a company↔community join, but only the user-level `CommunityTechnician` is shipped. | **Deferred to the follow-up slice, deliberately.** This slice neither builds the join nor supersedes ADR-011 — it is a recorded open decision, not an omission. The follow-up change must either build the join or add an ADR-011 addendum accepting `CommunityTechnician` as the de facto mechanism. | Future slice |
-| 8 | **`MANAGE_MAINTENANCE_COMPANIES` for `MANAGER` (FR-002's second half)** and `MAINTENANCE_COMPANY_MANAGER`'s scoped CRUD over its own technicians (ADR-011 Decision 1). | **Deferred** — both need `User.managerCapabilities` and real scoped-permission machinery, neither of which exists. FR-002 stays partially satisfied after this slice, on purpose. | Future slice |
-| 9 | **No navigation entry point.** `/maintenance-companies` will be a third URL-only-reachable section. | **Pre-existing gap, out of scope** — `community-minimal-ui` Open Question 8 said the next UI slice should either add a minimal nav or record why not. Recording why not: this slice already carries a migration, a new API module, a `users` change and five pages; a nav bar is a fourth concern with its own layout decisions. | Future slice |
+| #   | Question                                                                                                                                                                                                                                                                                       | Status                                                                                                                                                                                                                                                                                                                           | Owner        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1   | **`taxId` uniqueness vs. soft delete.** A plain unique index keeps a soft-deleted company's tax id reserved forever (the shipped `User.email` behavior); a partial index `WHERE "deletedAt" IS NULL` frees it for reuse but allows two rows with the same tax id to coexist in history.        | **Resolved.** Partial unique index (`WHERE "deletedAt" IS NULL`) — a soft-deleted company's tax id is reusable by a re-onboarded instance of the same company.                                                                                                                                                                   | Resolved     |
+| 2   | **Existing maintenance-role users with no company.** `POST /users` has accepted both roles since `user-management-roles`. Are pre-existing rows grandfathered (readable, but any edit must supply a company), backfilled to a placeholder, or is the migration gated on there being none?      | **Open — `sdd-spec` decides.** The column is nullable so the migration is safe either way; this is a product rule, not a schema problem. Proposed direction: grandfather and require on next write, since these users are functionally inert today.                                                                              | `sdd-spec`   |
+| 3   | **Role change away from a maintenance role.** When `PATCH /users/:id` changes a technician to `MANAGER`, is the stale `maintenanceCompanyId` cleared automatically, or is the change rejected unless the caller clears it explicitly?                                                          | **Resolved.** Left untouched — mirrors `community`'s accepted eligibility drift. No auto-clear, no rejection; only an explicit edit of `maintenanceCompanyId` itself changes it.                                                                                                                                                 | Resolved     |
+| 4   | **`taxId` and `contactInfo` shape.** Is `taxId` a validated Spanish CIF/NIF (format + checksum) or a trimmed, non-empty, unique free-text string? Is `contactInfo` free text or structured (`email`/`phone`/`address`)?                                                                        | **Resolved.** Both free text. `taxId`: non-empty, trimmed, no checksum. `contactInfo`: single field now; a future `ContactInfo` entity shared with `Community` is the intended direction, not built in this slice.                                                                                                               | Resolved     |
+| 5   | **Error-code contract location.** `users-minimal-ui` set a rule-of-three trigger: hoist a shared error-code contract into `@sf-manager/validation` when a further consumer needs its own codes. `community-minimal-ui` mirrored again and re-flagged it. **This slice is the third consumer.** | **Open — `sdd-design` decides**, and must address the trigger explicitly rather than silently mirroring a third time.                                                                                                                                                                                                            | `sdd-design` |
+| 6   | **Warn-and-choose delete UX.** Instead of a hard block, show "N users are attached — cascade-detach or cancel?"                                                                                                                                                                                | **Deferred, settled** — this slice ships the block only. _Revisit trigger_: the first complaint that reassigning users one by one before deleting a company is too tedious.                                                                                                                                                      | Future slice |
+| 7   | **`CommunityMaintenanceAssignment` and the ADR-011 scoping question.** The exploration flagged a real drift: ADR-011 resolves technician review scope through a company↔community join, but only the user-level `CommunityTechnician` is shipped.                                              | **Deferred to the follow-up slice, deliberately.** This slice neither builds the join nor supersedes ADR-011 — it is a recorded open decision, not an omission. The follow-up change must either build the join or add an ADR-011 addendum accepting `CommunityTechnician` as the de facto mechanism.                            | Future slice |
+| 8   | **`MANAGE_MAINTENANCE_COMPANIES` for `MANAGER` (FR-002's second half)** and `MAINTENANCE_COMPANY_MANAGER`'s scoped CRUD over its own technicians (ADR-011 Decision 1).                                                                                                                         | **Deferred** — both need `User.managerCapabilities` and real scoped-permission machinery, neither of which exists. FR-002 stays partially satisfied after this slice, on purpose.                                                                                                                                                | Future slice |
+| 9   | **No navigation entry point.** `/maintenance-companies` will be a third URL-only-reachable section.                                                                                                                                                                                            | **Pre-existing gap, out of scope** — `community-minimal-ui` Open Question 8 said the next UI slice should either add a minimal nav or record why not. Recording why not: this slice already carries a migration, a new API module, a `users` change and five pages; a nav bar is a fourth concern with its own layout decisions. | Future slice |
 
 ## Next step
 

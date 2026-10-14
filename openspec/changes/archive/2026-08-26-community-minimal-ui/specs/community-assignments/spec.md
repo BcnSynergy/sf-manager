@@ -15,6 +15,7 @@ the (English, non-localizable) `message` string. 404 and 400
 responses on these routes are untouched by this requirement.
 
 #### Scenario: 409 responses carry a machine-readable cause
+
 - GIVEN an assign or reactivate request fails with 409
 - WHEN the response body is inspected
 - THEN it MUST include a `code` field equal to one of
@@ -24,6 +25,7 @@ responses on these routes are untouched by this requirement.
   unchanged in shape
 
 #### Scenario: Already-assigned 409 is distinguishable from ineligible-role 409
+
 - GIVEN a `POST` assign request fails because the target user already
   has an assignment (active or deactivated) for that role in that
   community
@@ -33,6 +35,7 @@ responses on these routes are untouched by this requirement.
   carry
 
 #### Scenario: Ineligible-role 409 is distinguishable from the other two
+
 - GIVEN a `POST` assign request fails because the target user's
   current global role does not match the assignment type
 - WHEN the response body is inspected
@@ -40,6 +43,7 @@ responses on these routes are untouched by this requirement.
   `ASSIGNMENT_ALREADY_EXISTS` and `TRANSACTION_CONFLICT`
 
 #### Scenario: Transaction-conflict 409 is distinguishable from the other two
+
 - GIVEN an assign or reactivate request fails due to a genuine
   transaction conflict, not a business-rule rejection
 - WHEN the response body is inspected
@@ -47,6 +51,7 @@ responses on these routes are untouched by this requirement.
   `ASSIGNMENT_ALREADY_EXISTS` and `INELIGIBLE_ROLE`
 
 #### Scenario: 404 and 400 responses on assignment routes are unaffected
+
 - GIVEN an assign, deactivate, or reactivate request fails with 404
   (unknown community, user, or assignment) or 400 (validation)
 - WHEN the response body is inspected

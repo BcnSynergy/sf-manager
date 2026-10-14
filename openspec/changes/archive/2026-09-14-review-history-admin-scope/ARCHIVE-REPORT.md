@@ -42,14 +42,14 @@ sampling.
 
 ## Engram Observation IDs (Source of Truth)
 
-| Artifact | Topic Key | Notes |
-|---|---|---|
-| Proposal | `sdd/review-history-admin-scope/proposal` (obs #236) | Complete |
-| Specification | `sdd/review-history-admin-scope/spec` (obs #238) | Complete (4 delta specs: `authorization`, `review-history`, `review-history-ui`, `review-session-management`) |
-| Design | `sdd/review-history-admin-scope/design` (obs #237) | Complete (4 numbered decisions + one watch-item open question, deliberately left unresolved as a non-blocking future-work note) |
-| Tasks | `sdd/review-history-admin-scope/tasks` (obs #239) | Complete (37/37 across 3 phases + 2 fix-ups per `tasks.md` on disk — the canonical count) |
-| Verification Report | `sdd/review-history-admin-scope/verify-report` (obs #246) | PASS WITH WARNINGS — 2 CRITICAL (resolved by PR4), 5 WARNING, 5 SUGGESTION |
-| Archive Report | `sdd/review-history-admin-scope/archive-report` | This document |
+| Artifact            | Topic Key                                                 | Notes                                                                                                                           |
+| ------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal            | `sdd/review-history-admin-scope/proposal` (obs #236)      | Complete                                                                                                                        |
+| Specification       | `sdd/review-history-admin-scope/spec` (obs #238)          | Complete (4 delta specs: `authorization`, `review-history`, `review-history-ui`, `review-session-management`)                   |
+| Design              | `sdd/review-history-admin-scope/design` (obs #237)        | Complete (4 numbered decisions + one watch-item open question, deliberately left unresolved as a non-blocking future-work note) |
+| Tasks               | `sdd/review-history-admin-scope/tasks` (obs #239)         | Complete (37/37 across 3 phases + 2 fix-ups per `tasks.md` on disk — the canonical count)                                       |
+| Verification Report | `sdd/review-history-admin-scope/verify-report` (obs #246) | PASS WITH WARNINGS — 2 CRITICAL (resolved by PR4), 5 WARNING, 5 SUGGESTION                                                      |
+| Archive Report      | `sdd/review-history-admin-scope/archive-report`           | This document                                                                                                                   |
 
 ## Merged Specifications (OpenSpec)
 
@@ -67,41 +67,41 @@ the exact locations `sdd-verify`'s fix instructions specified.
      fourth role operational on the review-history read surface, with a
      scope dimension unlike any other role's (the whole installation, no
      predicate). Only `MANAGER` remains fully inert.
-   - ADDED: *The System Admin Becomes Operational on Review History
-     Reads*, *Installation-Wide Review History Scope for a System Admin*
+   - ADDED: _The System Admin Becomes Operational on Review History
+     Reads_, _Installation-Wide Review History Scope for a System Admin_
      — 2 new requirements, 15 new scenarios.
-   - MODIFIED: *Resource Scope for Review History Reads* (adds the
-     `SYSTEM_ADMIN` row), *The Deferred Review Visibility Scopes Grant
-     Nothing* (narrowed to the `MANAGER` half only), *Technician and
-     Representative Become Operational* and *The Maintenance Company
-     Manager Becomes Operational* (both note the admin's new permission).
-   - **C-2 fix independently re-confirmed**: the scenario *"The manager's
-     own scope is unchanged by the admin scope"* — authored in the delta
-     under *The Maintenance Company Manager Becomes Operational*, dropped
+   - MODIFIED: _Resource Scope for Review History Reads_ (adds the
+     `SYSTEM_ADMIN` row), _The Deferred Review Visibility Scopes Grant
+     Nothing_ (narrowed to the `MANAGER` half only), _Technician and
+     Representative Become Operational_ and _The Maintenance Company
+     Manager Becomes Operational_ (both note the admin's new permission).
+   - **C-2 fix independently re-confirmed**: the scenario _"The manager's
+     own scope is unchanged by the admin scope"_ — authored in the delta
+     under _The Maintenance Company Manager Becomes Operational_, dropped
      during PR3's merge, restored by PR4 — is present at
      `openspec/specs/authorization/spec.md:437-440`, in the exact
-     position between *"The manager is refused on every review-session
-     write endpoint"* and *"MANAGER is untouched and the admin holds read
-     only"*, matching `sdd-verify`'s fix instruction precisely.
+     position between _"The manager is refused on every review-session
+     write endpoint"_ and _"MANAGER is untouched and the admin holds read
+     only"_, matching `sdd-verify`'s fix instruction precisely.
 
 2. **`openspec/specs/review-history/spec.md`**
    - Purpose updated: four visibility scopes now exist, not three; the
      fourth narrows nothing.
-   - ADDED: *A System Admin's Installation-Wide Completed Review History*,
-     *A System Admin Can Read Any Completed Session by Identifier* — 2 new
+   - ADDED: _A System Admin's Installation-Wide Completed Review History_,
+     _A System Admin Can Read Any Completed Session by Identifier_ — 2 new
      requirements, 15 new scenarios.
-   - MODIFIED: *Scoped Read-Back of One Historical Session* (extends the
-     read-back to the admin), *History Scope Is Carried by the Query, Not
-     by the Caller* (states the admin scope explicitly), *The Deferred
-     Review Visibility Scopes Are Not Built* (narrowed — the `SYSTEM_ADMIN`
+   - MODIFIED: _Scoped Read-Back of One Historical Session_ (extends the
+     read-back to the admin), _History Scope Is Carried by the Query, Not
+     by the Caller_ (states the admin scope explicitly), _The Deferred
+     Review Visibility Scopes Are Not Built_ (narrowed — the `SYSTEM_ADMIN`
      half is no longer deferred).
    - **C-1 fix independently re-confirmed**: the scenario that falsely
      claimed no migration/index was added has been corrected. Confirmed at
-     `openspec/specs/review-history/spec.md:566-569`: *"Scenario: This
-     change adds no new column, table or backfill"* (correctly scoped to
+     `openspec/specs/review-history/spec.md:566-569`: _"Scenario: This
+     change adds no new column, table or backfill"_ (correctly scoped to
      the domain model's shape only, not the index), immediately followed
-     at lines 571-574 by the new companion scenario *"The installation-wide
-     read is backed by a covering index, not a model change"*, which
+     at lines 571-574 by the new companion scenario _"The installation-wide
+     read is backed by a covering index, not a model change"_, which
      explicitly names the composite index on
      `ReviewSession(status, completedAt, id)` and states its purpose (keep
      the unscoped read off a full table scan/filesort) — matching
@@ -109,10 +109,10 @@ the exact locations `sdd-verify`'s fix instructions specified.
 
 3. **`openspec/specs/review-history-ui/spec.md`**
    - Purpose updated: four roles now reach the surface, not three.
-   - ADDED: *The System Admin Reaches the Shipped History Surface
-     Unchanged* — 1 new requirement, 6 new scenarios.
-   - MODIFIED: *Role-Gated Route Access for the History Views* (widened to
-     the admin), *No Filtering, Analytics or Adjacent Controls Ship*
+   - ADDED: _The System Admin Reaches the Shipped History Surface
+     Unchanged_ — 1 new requirement, 6 new scenarios.
+   - MODIFIED: _Role-Gated Route Access for the History Views_ (widened to
+     the admin), _No Filtering, Analytics or Adjacent Controls Ship_
      (explicit coverage of the installation-wide list).
 
 4. **`openspec/specs/review-session-management/spec.md`**
@@ -120,19 +120,19 @@ the exact locations `sdd-verify`'s fix instructions specified.
      system (owned by `review-history`, reachable only by `SYSTEM_ADMIN`);
      this capability introduces none of it and its own reads stay
      byte-unchanged.
-   - MODIFIED: *Adjacent Review Capabilities Are Not Introduced* (the
+   - MODIFIED: _Adjacent Review Capabilities Are Not Introduced_ (the
      FR-008 deferral guard's wording updated — the `review-history`
      capability now half-implements global visibility; this capability's
-     own guard scenario *"The one installation-wide read lives in
-     review-history, not here"* replaces the prior wholesale-deferral
+     own guard scenario _"The one installation-wide read lives in
+     review-history, not here"_ replaces the prior wholesale-deferral
      scenario). Wording-only per the delta's own note — no behavioural
      scenario changed (S-2 flags the Phase 2 task label calling this
      "wording-only" when the merge technically split one scenario into
      two; the delta file itself, which is authoritative, documents the
      split correctly).
 
-*(No other existing `openspec/specs/**` capability file was touched by
-this change.)*
+_(No other existing `openspec/specs/**` capability file was touched by
+this change.)_
 
 ## Verification Summary
 
@@ -140,6 +140,7 @@ this change.)*
 archive; 5 WARNING; 5 SUGGESTION)
 
 ### Test Execution (re-run live by `sdd-verify` on `main` @ `a66d9f6`, before PR4; PR4 is docs-only and does not affect these results)
+
 - API unit: 820/820 pass, 108 suites
 - API integration (scripted, parallel): 124/125 — 1 pre-existing,
   unrelated flake (`modules/users`, shared-DB worker contention), NOT a
@@ -154,6 +155,7 @@ archive; 5 WARNING; 5 SUGGESTION)
   only migration this change added, confirmed by direct inspection
 
 ### Compliance Matrix
+
 - **37/37 Implementation Tasks**: all marked complete. 35 independently
   cross-checked as genuinely true against `main`; the remaining 2 were
   the exact 2 CRITICAL findings (both text-only claims about the spec/
@@ -184,6 +186,7 @@ archive; 5 WARNING; 5 SUGGESTION)
   genuinely unverified
 
 ### Findings
+
 - CRITICAL: 2 — both resolved before this archive, see "Merged
   Specifications" above for the independent re-confirmation of each fix:
   - **C-1** (resolved, PR4): the review-history spec's migration scenario
@@ -226,6 +229,7 @@ additionally be polished.
 ## Archive Contents
 
 ### Files Present in Archive (`openspec/changes/archive/2026-09-14-review-history-admin-scope/`)
+
 - `proposal.md`
 - `design.md`
 - `tasks.md`
@@ -237,6 +241,7 @@ additionally be polished.
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
+
 - [x] All 9 files present in archive path, copied from the source change
       folder / Engram with no content changes beyond this report's own
       addition
@@ -255,12 +260,12 @@ additionally be polished.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| Phase 1 | PR 1 (#110, `00aeacd`) | Merged | Unscoped repository pair + both adapters + access-service `SYSTEM_ADMIN` branch + port-surface allowlist (8→10) + call-site source-scan guard. Fix-up: perf composite index (1.13), `Promise.all` N+1 fix (1.14), 3 WARNING-level readability/reliability fixes (1.15-1.17) from a pre-push 4R fresh-context review |
-| Phase 2 | PR 2 (#111, `390b36e`) | Merged | `ROLE_PERMISSIONS` entry + unit test + 4-role E2E visibility matrix incl. deactivated/soft-deleted cases. Fix-up: pre-existing PR1 wording defect in a guard-test-adjacent comment (2.8), discovered running e2e for the first time |
-| Phase 3 | PR 3 (#112, `a66d9f6`) | Merged | Web role-widening (`App.tsx`, `HealthPage.tsx` + tests), 4 delta-spec merges into `openspec/specs/**`, FR-008 status update, full-suite verification, live browser verification |
-| Phase 4 (fix-up) | PR 4 (#113, `585a699`) | Merged | Docs-only follow-up: corrected the 2 CRITICAL findings from `sdd-verify` (C-1 migration-scenario text, C-2 dropped authorization scenario) |
+| Phase            | PR #                   | Status | Details                                                                                                                                                                                                                                                                                                             |
+| ---------------- | ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1          | PR 1 (#110, `00aeacd`) | Merged | Unscoped repository pair + both adapters + access-service `SYSTEM_ADMIN` branch + port-surface allowlist (8→10) + call-site source-scan guard. Fix-up: perf composite index (1.13), `Promise.all` N+1 fix (1.14), 3 WARNING-level readability/reliability fixes (1.15-1.17) from a pre-push 4R fresh-context review |
+| Phase 2          | PR 2 (#111, `390b36e`) | Merged | `ROLE_PERMISSIONS` entry + unit test + 4-role E2E visibility matrix incl. deactivated/soft-deleted cases. Fix-up: pre-existing PR1 wording defect in a guard-test-adjacent comment (2.8), discovered running e2e for the first time                                                                                 |
+| Phase 3          | PR 3 (#112, `a66d9f6`) | Merged | Web role-widening (`App.tsx`, `HealthPage.tsx` + tests), 4 delta-spec merges into `openspec/specs/**`, FR-008 status update, full-suite verification, live browser verification                                                                                                                                     |
+| Phase 4 (fix-up) | PR 4 (#113, `585a699`) | Merged | Docs-only follow-up: corrected the 2 CRITICAL findings from `sdd-verify` (C-1 migration-scenario text, C-2 dropped authorization scenario)                                                                                                                                                                          |
 
 All 4 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`,
 `ask-on-risk`. No PR in this chain required a `size:exception` — the
@@ -269,15 +274,15 @@ slices" held. Final merge `585a699`.
 
 ## Risks & Mitigations (carried from the proposal, resolved status)
 
-| Risk | Mitigation | Status |
-|---|---|---|
-| The unscoped method is reachable from a non-admin path, turning the app's first "see everything" query into a leak | Called from exactly one branch of one service; source-scan call-site guard test; E2E four-role matrix, no sampling | Mitigated — verified, re-confirmed by hand-run scan at `sdd-verify` |
-| The unscoped by-id method becomes a de facto bare `findById`, destroying the shipped invariant | Naming (`…AcrossInstallation`) + allowlist guard + call-site guard + intent comment (design Decisions 1-2) | Mitigated — verified |
-| A reviewer or later slice "fixes" the intentional bare `WHERE` as a bug | Spec asserts the unscoped read as intended behaviour with its own scenario; port comment states it; a re-narrowing test would fail | Mitigated — verified |
-| Scope creep into `MANAGER`/`VIEW_ALL_REVIEWS` | Explicit non-goal; `sdd-verify` re-confirmed `MANAGER` still `[]` and no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol exists anywhere | Mitigated — verified |
-| The installation-wide list is unusable with no filter/sort/pagination | Accepted deliberately and on record; browser-verified at realistic volume (~300+ rows) with no observable pain measured | Mitigated — measured, not assumed |
-| Widening the shipped pages breaks the three roles already using them | Same surface, no variant; component/route tests assert all four roles; browser-verified for the admin, test-verified for the other three (change to their paths is provably zero lines) | Mitigated — verified |
-| `SYSTEM_ADMIN` gaining its first `reviewSession:*` permission reads as "admin can perform reviews" | Exactly one permission added; spec scenario asserts no create/perform/complete/discard; write routes NOT widened, confirmed | Mitigated — verified |
+| Risk                                                                                                               | Mitigation                                                                                                                                                                              | Status                                                              |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| The unscoped method is reachable from a non-admin path, turning the app's first "see everything" query into a leak | Called from exactly one branch of one service; source-scan call-site guard test; E2E four-role matrix, no sampling                                                                      | Mitigated — verified, re-confirmed by hand-run scan at `sdd-verify` |
+| The unscoped by-id method becomes a de facto bare `findById`, destroying the shipped invariant                     | Naming (`…AcrossInstallation`) + allowlist guard + call-site guard + intent comment (design Decisions 1-2)                                                                              | Mitigated — verified                                                |
+| A reviewer or later slice "fixes" the intentional bare `WHERE` as a bug                                            | Spec asserts the unscoped read as intended behaviour with its own scenario; port comment states it; a re-narrowing test would fail                                                      | Mitigated — verified                                                |
+| Scope creep into `MANAGER`/`VIEW_ALL_REVIEWS`                                                                      | Explicit non-goal; `sdd-verify` re-confirmed `MANAGER` still `[]` and no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol exists anywhere                                                  | Mitigated — verified                                                |
+| The installation-wide list is unusable with no filter/sort/pagination                                              | Accepted deliberately and on record; browser-verified at realistic volume (~300+ rows) with no observable pain measured                                                                 | Mitigated — measured, not assumed                                   |
+| Widening the shipped pages breaks the three roles already using them                                               | Same surface, no variant; component/route tests assert all four roles; browser-verified for the admin, test-verified for the other three (change to their paths is provably zero lines) | Mitigated — verified                                                |
+| `SYSTEM_ADMIN` gaining its first `reviewSession:*` permission reads as "admin can perform reviews"                 | Exactly one permission added; spec scenario asserts no create/perform/complete/discard; write routes NOT widened, confirmed                                                             | Mitigated — verified                                                |
 
 ## FR-008 Status (confirmed accurate)
 
@@ -307,6 +312,7 @@ remains, named on record and not started here:
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-explore / sdd-propose / sdd-spec / sdd-design**: completed in a
   prior session (2026-09-13), producing the proposal, 4 delta specs, and
   4 numbered design decisions plus a deliberately-open watch-item
@@ -331,6 +337,7 @@ remains, named on record and not started here:
   description) — completion of the SDD cycle
 
 ### Artifacts Persisted
+
 - Engram: proposal (#236), design (#237), spec (#238), tasks (#239),
   verify-report (#246) already existed from the planning/apply/verify
   phases; archive-report (new, topic key
@@ -418,6 +425,7 @@ recorded it as a clean rename with zero content diff on all 7 files.
 
 This archive report and all supporting artifacts are linked via Engram
 topic keys for cross-session recovery:
+
 - `sdd/review-history-admin-scope/proposal` (obs #236)
 - `sdd/review-history-admin-scope/design` (obs #237)
 - `sdd/review-history-admin-scope/spec` (obs #238)

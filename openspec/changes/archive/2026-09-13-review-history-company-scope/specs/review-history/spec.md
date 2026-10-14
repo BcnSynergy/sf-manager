@@ -41,41 +41,49 @@ with no maintenance company MUST receive an empty list, and a session
 carrying no attributed company MUST appear in no manager's list.
 
 #### Scenario: A manager sees every technician's work across communities
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` of company X, and technicians of X who completed sessions on communities C and D
 - WHEN they request their company review history
 - THEN the response MUST be 2xx and MUST contain every one of those completed sessions in one flat list, in deterministic chronological order by completion time
 
 #### Scenario: Another company's sessions never appear
+
 - GIVEN completed sessions attributed to companies X and Y
 - WHEN the manager of X requests their company review history
 - THEN only X's sessions MUST be returned, and no session of Y MUST appear in the result under any field
 
 #### Scenario: Attribution is frozen, not derived from current employment
+
 - GIVEN a technician completed session S while employed by company X and has since transferred to company Y
 - WHEN X's manager and Y's manager each request their company review history
 - THEN S MUST appear for X's manager and MUST NOT appear for Y's manager
 
 #### Scenario: A manager with no company gets an empty list, not everything
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` whose own maintenance company is absent, while completed sessions exist in the installation
 - WHEN they request their company review history
 - THEN the response MUST be 2xx carrying an empty list, and MUST NOT contain any session
 
 #### Scenario: A session with no attributed company appears nowhere
+
 - GIVEN a `completed` session carrying no performing-company attribution
 - WHEN every manager in the installation requests their company review history
 - THEN it MUST appear in none of the results
 
 #### Scenario: Each row identifies its performer
+
 - GIVEN a manager's company history containing sessions performed by two different technicians
 - WHEN the rows are inspected
 - THEN each row MUST identify the user who performed that session
 
 #### Scenario: An empty company history is a successful empty result
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` of a company whose technicians have completed no session
 - WHEN they request their company review history
 - THEN the response MUST be 2xx carrying an empty list, and MUST NOT be an error
 
 #### Scenario: Backfilled pre-existing sessions are visible
+
 - GIVEN sessions completed before this change, whose attribution was populated by the one-time backfill
 - WHEN the manager of the attributed company requests their company review history
 - THEN those sessions MUST be listed alongside newly completed ones, with no distinction in shape
@@ -95,39 +103,45 @@ community they are actively assigned to; and to a
 attributed to their own maintenance company. All three MUST receive the
 identical record — there MUST be no reduced or role-specific variant of
 the recorded record. The record MUST be returned as it was answered,
-paired with the template snapshot's wording, per *Sessions Render the
-Template's Frozen Snapshot*. Each entry MUST carry the identity of the
+paired with the template snapshot's wording, per _Sessions Render the
+Template's Frozen Snapshot_. Each entry MUST carry the identity of the
 inspectable element it records — a record whose entries cannot be
 attributed to a physical element is not a compliance record.
 (Previously: the read-back was available to the performer and to an
 actively assigned representative only.)
 
 #### Scenario: A performer reads back their own completed session
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` completed a session with three elements answered and one marked unreviewed with a reason
 - WHEN they open that session from their history
 - THEN the response MUST be 2xx and MUST return all four entries with their recorded answers, snapshotted question wording, and the unreviewed element's reason
 
 #### Scenario: A representative reads back a session they did not perform
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` actively assigned to community C, and a technician-performed `completed` session S for C
 - WHEN the representative opens S from their history
 - THEN the response MUST be 2xx and MUST return the same recorded record the performer would see
 
 #### Scenario: A manager reads back a session performed under their company
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` of company X and a `completed` session S attributed to X, performed by one of X's technicians on a community the manager has no relationship to
 - WHEN the manager opens S from their company history
 - THEN the response MUST be 2xx and MUST return the same recorded record the performer would see
 
 #### Scenario: Each entry identifies the element it records
+
 - GIVEN a `completed` session read back through history
 - WHEN its entries are inspected
 - THEN each entry MUST carry the identity of the inspectable element it records
 
 #### Scenario: An element removed after completion does not drop its entry
+
 - GIVEN a `completed` session one of whose inspectable elements was decommissioned or soft-deleted after completion
 - WHEN the session is read back through history
 - THEN that entry MUST still be returned with its answers and observations, with the element identity absent rather than the entry omitted
 
 #### Scenario: Read-back survives later edits to the live question pool
+
 - GIVEN a `completed` session and subsequent edits to the live `ChecklistQuestion` pool
 - WHEN the session is read back through history
 - THEN each answer MUST still be paired with the snapshotted wording that was answered
@@ -148,16 +162,19 @@ change.
 communities only.)
 
 #### Scenario: No unscoped session read exists
+
 - GIVEN the review-session repository port after this change
 - WHEN its methods are enumerated
 - THEN none MUST return a session (or a list of sessions) from an identifier alone, without a performer, community or maintenance-company scope in its signature
 
 #### Scenario: Scope is never applied after the fact
+
 - GIVEN the history use cases and routes after this change
 - WHEN their data access is inspected
 - THEN none MUST fetch sessions outside the caller's scope and filter them afterwards in application, presentation or client code
 
 #### Scenario: An unresolvable company never widens the query
+
 - GIVEN a company-scoped history read whose caller has no maintenance company
 - WHEN the data access is inspected
 - THEN it MUST NOT be issued without a company predicate, and MUST NOT fall back to an unfiltered read
@@ -184,35 +201,41 @@ that community — the reversal widens nothing beyond their own work.
 The `MAINTENANCE_COMPANY_MANAGER` scope is outside this requirement
 entirely: it involves no community assignment, and no assignment
 deactivation MUST affect it.
-(Previously: named *…, Including for One's Own Sessions*, and required an
+(Previously: named _…, Including for One's Own Sessions_, and required an
 active community assignment for the caller's own performed sessions too.)
 
 #### Scenario: A technician's own completed session stays readable after their assignment is deactivated
+
 - GIVEN a `MAINTENANCE_TECHNICIAN` actively assigned to community C who successfully reads back their own `completed` session S for C
 - WHEN their technician assignment to C is deactivated and they repeat the same request
 - THEN S MUST still appear in their own history and requesting S by id MUST still return its full recorded record
 
 #### Scenario: A deactivated technician gains nothing beyond their own work
+
 - GIVEN technician U, whose assignment to community C has been deactivated, and a `completed` session S on C performed by technician W
 - WHEN U requests their history and requests S by id
 - THEN S MUST NOT be listed and the by-id request MUST return `404 REVIEW_SESSION_NOT_FOUND`
 
 #### Scenario: A representative loses community history on deactivation
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` actively assigned to community C who successfully lists C's completed sessions
 - WHEN their representative assignment to C is deactivated and they repeat the same request
 - THEN C's sessions MUST no longer be returned, and requesting any of them by id MUST return `404 REVIEW_SESSION_NOT_FOUND`
 
 #### Scenario: A representative's access returns with a new active assignment
+
 - GIVEN a representative whose assignment to community C was deactivated and whose C history is consequently empty
 - WHEN they are actively assigned to C again and repeat the request
 - THEN the previously hidden completed sessions MUST be visible again
 
 #### Scenario: Deactivation takes effect on the next request
+
 - GIVEN a `COMMUNITY_REPRESENTATIVE` who has just performed a successful history read
 - WHEN their assignment is deactivated and the identical request is issued immediately afterwards
 - THEN the request MUST already be refused — no cached grant, no grace period
 
 #### Scenario: A manager's history is unaffected by any assignment change
+
 - GIVEN a `MAINTENANCE_COMPANY_MANAGER` of company X, and the deactivation of every community assignment held by X's technicians
 - WHEN the manager repeats their company history request
 - THEN the same completed sessions MUST still be returned
@@ -227,39 +250,45 @@ The system MUST NOT introduce any of the following.
 (Previously: company-wide visibility was deferred too, and this
 capability shipped no migration.)
 
-| Deferred | Must not exist |
-|---|---|
+| Deferred                                       | Must not exist                                                                                                                                                                                     |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Global visibility (`SYSTEM_ADMIN` / `MANAGER`) | Any unscoped "all sessions" query; any `VIEW_ALL_REVIEWS` permission or capability; any `ManagerCapability` enum, `User.managerCapabilities` field, migration or capability-gated permission layer |
-| Per-element history (FR-008's other half) | Any query, route or use case returning the past reviews of one inspectable element |
-| List controls | Any pagination, date-range filter, sorting or search parameter on a history read — including on the company-wide list |
-| Company-attribution history | Any effective-dated employment table, attribution version history, or route/use case that rewrites a session's recorded performing company |
+| Per-element history (FR-008's other half)      | Any query, route or use case returning the past reviews of one inspectable element                                                                                                                 |
+| List controls                                  | Any pagination, date-range filter, sorting or search parameter on a history read — including on the company-wide list                                                                              |
+| Company-attribution history                    | Any effective-dated employment table, attribution version history, or route/use case that rewrites a session's recorded performing company                                                         |
 
 #### Scenario: No manager capability mechanism exists
+
 - GIVEN the user model, schema and authorization code after this change
 - WHEN they are searched for `ManagerCapability`, `managerCapabilities` or `VIEW_ALL_REVIEWS`
 - THEN none MUST exist, and no migration MUST have added such a field
 
 #### Scenario: Every company-scoped query names a single company; no global query exists
+
 - GIVEN the review-session repository port and its adapters after this change
 - WHEN their methods are enumerated
 - THEN each company-scoped method MUST take exactly one maintenance-company identifier in its signature, and none MUST return sessions without a performer, community or company scope
 
 #### Scenario: The company scope never joins to the performer's current company
+
 - GIVEN the company-scoped history queries after this change
 - WHEN their predicates are inspected
 - THEN each MUST match the session's own recorded performing company, and none MUST resolve membership through the performer's current `User.maintenanceCompanyId`
 
 #### Scenario: No per-element history query or route exists
+
 - GIVEN the routes, use cases and repository queries after this change
 - WHEN they are searched for the past reviews of a single element
 - THEN none MUST be found
 
 #### Scenario: No list-control parameters are accepted
+
 - GIVEN the history read routes and their request contracts after this change
 - WHEN they are inspected
 - THEN none MUST accept a page, cursor, limit, offset, date-range, sort or search parameter, on any of the three scopes
 
 #### Scenario: The only migration is the attribution column and its backfill
+
 - GIVEN the migration directory after this change
 - WHEN it is compared with the state before the change
 - THEN the only migration added MUST be the one introducing the performing-company attribution column, its index and its one-time data backfill
@@ -272,7 +301,7 @@ capability shipped no migration.)
 2026-09-09. The old name states the exact behaviour this change removes,
 so leaving it in place would make the canonical spec self-contradictory.)
 (Migration: replace the old requirement block wholesale with the full
-block of the new name under *MODIFIED Requirements* above. The dedicated
+block of the new name under _MODIFIED Requirements_ above. The dedicated
 E2E scenario asserting a technician loses their own history on
 deactivation MUST be inverted, not deleted, so the reversal stays
 regression-guarded.)

@@ -26,6 +26,7 @@ response for an existing one.
 ## Scope
 
 ### In Scope
+
 - A per-email failed-attempt limit on `POST /auth/login`, independent of
   the existing per-client-key limit (both apply).
 - Email bucket key: SHA-256 of a fixed prefix plus the normalized email
@@ -70,6 +71,7 @@ response for an existing one.
   artifacts in the first PR.
 
 ### Out of Scope
+
 - A persistent lock on `User` (`failedLoginCount`, `lockedUntil`;
   explore Approach B) and any migration on `User`.
 - Admin unlock action or screen (nothing to unlock under a temporary
@@ -111,9 +113,11 @@ No new web UI, and no change under `apps/web/**` is expected.
 ## Capabilities
 
 ### New Capabilities
+
 None.
 
 ### Modified Capabilities
+
 - `authentication`:
   - ADDED requirement "Login Failure Limiting per Email" (name final in
     `sdd-spec`): the per-email failed-attempt limit, key normalization
@@ -177,21 +181,21 @@ Explore Approach A, as settled by the binding decision answers
 
 ## Affected Areas
 
-| Area | Impact | Description |
-|------|--------|-------------|
-| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts` | Modified | Email-bucket block check, combined `Retry-After` |
-| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts` | Modified | Record failure, reset, read block state (or a sibling adapter) |
-| `apps/api/src/modules/auth/application/` (new port) | New | `LoginAttemptPolicy`-style port for failure/reset (design decides) |
-| `apps/api/src/modules/auth/application/use-cases/login.use-case.ts` or `presentation/auth.controller.ts` | Modified | Record failure / reset on success |
-| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts` | Modified | Two new env vars, validation |
-| `apps/api/src/modules/auth/auth.module.ts` | Modified | Wiring |
-| Login request schema (`loginRequestSchema`) | Modified | Shared email normalization |
-| `apps/api/test/e2e-env.setup.ts`, `apps/api/test/test-database/rate-limit-env.setup.ts` | Modified | Raise the email limit for existing suites |
-| Unit, integration and e2e specs under `apps/api` | New/Modified | Coverage listed in Scope |
-| `openspec/changes/login-account-lockout/specs/authentication/spec.md` | New | Delta spec (ADDED + MODIFIED) |
-| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` | Modified | Addendum |
-| `docs/technical-debt.md`, `docs/enhancements.md` | Modified | Registers |
-| `README.md` | Modified | New env vars |
+| Area                                                                                                     | Impact       | Description                                                        |
+| -------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------ |
+| `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`                                 | Modified     | Email-bucket block check, combined `Retry-After`                   |
+| `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`               | Modified     | Record failure, reset, read block state (or a sibling adapter)     |
+| `apps/api/src/modules/auth/application/` (new port)                                                      | New          | `LoginAttemptPolicy`-style port for failure/reset (design decides) |
+| `apps/api/src/modules/auth/application/use-cases/login.use-case.ts` or `presentation/auth.controller.ts` | Modified     | Record failure / reset on success                                  |
+| `apps/api/src/modules/auth/infrastructure/config/login-rate-limit.config.ts`                             | Modified     | Two new env vars, validation                                       |
+| `apps/api/src/modules/auth/auth.module.ts`                                                               | Modified     | Wiring                                                             |
+| Login request schema (`loginRequestSchema`)                                                              | Modified     | Shared email normalization                                         |
+| `apps/api/test/e2e-env.setup.ts`, `apps/api/test/test-database/rate-limit-env.setup.ts`                  | Modified     | Raise the email limit for existing suites                          |
+| Unit, integration and e2e specs under `apps/api`                                                         | New/Modified | Coverage listed in Scope                                           |
+| `openspec/changes/login-account-lockout/specs/authentication/spec.md`                                    | New          | Delta spec (ADDED + MODIFIED)                                      |
+| `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md`                                               | Modified     | Addendum                                                           |
+| `docs/technical-debt.md`, `docs/enhancements.md`                                                         | Modified     | Registers                                                          |
+| `README.md`                                                                                              | Modified     | New env vars                                                       |
 
 Unaffected: `apps/web/**`, i18n files, `prisma/schema.prisma` (expected),
 `User` and the users module.
@@ -212,16 +216,16 @@ Unaffected: `apps/web/**`, i18n files, `prisma/schema.prisma` (expected),
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| Bounded DoS: an attacker who knows an email keeps it blocked by sending 5 failures per window | Med (accepted) | Temporary block only; no stored lock; per-IP limit bounds each source; recorded in the ADR addendum. Not eliminable without CAPTCHA or similar (out of scope) |
-| Bucket pollution: random emails create attacker-driven rows | Med | Bounded by the per-IP limit; rows expire via the `expiresAt` trigger and bounded cleanup (TD-35, EN-22) |
-| Normalization drift between the guard and the Zod schema lets a variant email bypass its bucket | Low | One shared normalization function; tests with case and whitespace variants |
-| Existing e2e suites that log in repeatedly trip the new limit | Med | Raise the limit in the e2e env setup; dedicated suites set low limits explicitly |
-| One more upsert per failed attempt and one read per attempt add DB load | Low | Single atomic statements on the indexed table; same order of cost as the per-IP counter |
-| Anti-enumeration regression (different status, body, header or timing for unknown emails) | Low | Identical path; tests compare unknown vs existing email responses |
-| A storage error returns 500 on login when reading the block state or recording a failure | Low | Fail closed by decision, consistent with the per-IP limit; EN-12 tracks 503. A failed reset after a valid login only logs a warning |
-| Spec contradiction with the existing per-key isolation scenario | Low | MODIFIED wording in the same delta spec |
+| Risk                                                                                            | Likelihood     | Mitigation                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bounded DoS: an attacker who knows an email keeps it blocked by sending 5 failures per window   | Med (accepted) | Temporary block only; no stored lock; per-IP limit bounds each source; recorded in the ADR addendum. Not eliminable without CAPTCHA or similar (out of scope) |
+| Bucket pollution: random emails create attacker-driven rows                                     | Med            | Bounded by the per-IP limit; rows expire via the `expiresAt` trigger and bounded cleanup (TD-35, EN-22)                                                       |
+| Normalization drift between the guard and the Zod schema lets a variant email bypass its bucket | Low            | One shared normalization function; tests with case and whitespace variants                                                                                    |
+| Existing e2e suites that log in repeatedly trip the new limit                                   | Med            | Raise the limit in the e2e env setup; dedicated suites set low limits explicitly                                                                              |
+| One more upsert per failed attempt and one read per attempt add DB load                         | Low            | Single atomic statements on the indexed table; same order of cost as the per-IP counter                                                                       |
+| Anti-enumeration regression (different status, body, header or timing for unknown emails)       | Low            | Identical path; tests compare unknown vs existing email responses                                                                                             |
+| A storage error returns 500 on login when reading the block state or recording a failure        | Low            | Fail closed by decision, consistent with the per-IP limit; EN-12 tracks 503. A failed reset after a valid login only logs a warning                           |
+| Spec contradiction with the existing per-key isolation scenario                                 | Low            | MODIFIED wording in the same delta spec                                                                                                                       |
 
 ## Rollback Plan
 

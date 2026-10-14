@@ -30,15 +30,15 @@ discipline the `review-session` and `review-history` slices established.
 
 ## Engram Observation IDs (Source of Truth)
 
-| Artifact | Topic Key | Notes |
-|---|---|---|
-| Proposal | `sdd/review-history-company-scope/proposal` | Complete |
-| Specification | `sdd/review-history-company-scope/spec` | Complete (4 delta specs: `authorization`, `review-history`, `review-history-ui`, `review-session-management`, all modified/extended) |
-| Design | `sdd/review-history-company-scope/design` | Complete (11 numbered decisions, an Open Questions section with both items closed with real content at archive time) |
-| Tasks | `sdd/review-history-company-scope/tasks` | Complete (71/71 across 6 phases per `tasks.md` on disk — the canonical count) |
-| Apply Progress | `sdd/review-history-company-scope/apply-progress` (13+ revisions) | Full Phase 1-6 history recorded across successive upserts; per-task TDD Cycle Evidence detail did not survive to the final revision (verify-report W-2 — same recurring class of loss flagged in the prior two archived changes) |
-| Verification Report | `sdd/review-history-company-scope/verify-report` (obs #232) | PASS WITH WARNINGS — 0 CRITICAL, 2 WARNING, 4 SUGGESTION |
-| Archive Report | `sdd/review-history-company-scope/archive-report` | This document |
+| Artifact            | Topic Key                                                         | Notes                                                                                                                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal            | `sdd/review-history-company-scope/proposal`                       | Complete                                                                                                                                                                                                                         |
+| Specification       | `sdd/review-history-company-scope/spec`                           | Complete (4 delta specs: `authorization`, `review-history`, `review-history-ui`, `review-session-management`, all modified/extended)                                                                                             |
+| Design              | `sdd/review-history-company-scope/design`                         | Complete (11 numbered decisions, an Open Questions section with both items closed with real content at archive time)                                                                                                             |
+| Tasks               | `sdd/review-history-company-scope/tasks`                          | Complete (71/71 across 6 phases per `tasks.md` on disk — the canonical count)                                                                                                                                                    |
+| Apply Progress      | `sdd/review-history-company-scope/apply-progress` (13+ revisions) | Full Phase 1-6 history recorded across successive upserts; per-task TDD Cycle Evidence detail did not survive to the final revision (verify-report W-2 — same recurring class of loss flagged in the prior two archived changes) |
+| Verification Report | `sdd/review-history-company-scope/verify-report` (obs #232)       | PASS WITH WARNINGS — 0 CRITICAL, 2 WARNING, 4 SUGGESTION                                                                                                                                                                         |
+| Archive Report      | `sdd/review-history-company-scope/archive-report`                 | This document                                                                                                                                                                                                                    |
 
 ## Merged Specifications (OpenSpec)
 
@@ -57,35 +57,35 @@ reconciliation was needed.
      inert — it becomes operational on review-history reads only, holding
      `reviewSession:read` alone, and is the first role whose resource
      scope is not a set of communities.
-   - ADDED: *The Maintenance Company Manager Becomes Operational*,
-     *Company-Wide Review History Scope for a Maintenance Company
-     Manager* — 2 new requirements, ~13 new scenarios.
-   - MODIFIED: *Resource Scope for Review History Reads* (adds the
+   - ADDED: _The Maintenance Company Manager Becomes Operational_,
+     _Company-Wide Review History Scope for a Maintenance Company
+     Manager_ — 2 new requirements, ~13 new scenarios.
+   - MODIFIED: _Resource Scope for Review History Reads_ (adds the
      company scope row and the technician's own-history-survives-
-     deactivation reversal), *The Deferred Review Visibility Scopes Grant
-     Nothing* (narrowed to global/`ManagerCapability` only), *Technician
-     and Representative Become Operational* and *Non-Admin Roles Remain
-     Inert After the Checklist Permissions Are Added* (both note the
+     deactivation reversal), _The Deferred Review Visibility Scopes Grant
+     Nothing_ (narrowed to global/`ManagerCapability` only), _Technician
+     and Representative Become Operational_ and _Non-Admin Roles Remain
+     Inert After the Checklist Permissions Are Added_ (both note the
      manager's new single permission).
-   - RENAMED: *Maintenance-Role Permissions Stay Inert* → *The Company
-     Association Itself Confers No Permission* (the old name no longer
+   - RENAMED: _Maintenance-Role Permissions Stay Inert_ → _The Company
+     Association Itself Confers No Permission_ (the old name no longer
      holds once the manager gains a permission).
 
 2. **`openspec/specs/review-history/spec.md`**
    - Purpose updated: three visibility scopes now exist, not two; the
      third is not resolved by the community-scope check.
-   - ADDED: *A Maintenance Company Manager's Company-Wide Completed
-     Review History* — 1 new requirement, 8 new scenarios.
-   - MODIFIED: *Scoped Read-Back of One Historical Session* (extends the
-     read-back to the manager), *History Scope Is Carried by the Query,
-     Not by the Caller* (adds the company dimension), *History Access
+   - ADDED: _A Maintenance Company Manager's Company-Wide Completed
+     Review History_ — 1 new requirement, 8 new scenarios.
+   - MODIFIED: _Scoped Read-Back of One Historical Session_ (extends the
+     read-back to the manager), _History Scope Is Carried by the Query,
+     Not by the Caller_ (adds the company dimension), _History Access
      Requires a Currently Active Community Assignment, Except for One's
-     Own Performed Sessions* (the technician own-history reversal — see
-     RENAMED below), *The Deferred Review Visibility Scopes Are Not
-     Built* (narrowed — company-wide visibility is no longer deferred).
-   - RENAMED: *History Access Requires a Currently Active Community
-     Assignment, Including for One's Own Sessions* → *…, Except for
-     One's Own Performed Sessions* — the 2026-09-08 confirmation was
+     Own Performed Sessions_ (the technician own-history reversal — see
+     RENAMED below), _The Deferred Review Visibility Scopes Are Not
+     Built_ (narrowed — company-wide visibility is no longer deferred).
+   - RENAMED: _History Access Requires a Currently Active Community
+     Assignment, Including for One's Own Sessions_ → _…, Except for
+     One's Own Performed Sessions_ — the 2026-09-08 confirmation was
      reversed by the product owner on 2026-09-09; the E2E scenario was
      inverted in place per the migration note, not deleted.
 
@@ -93,33 +93,34 @@ reconciliation was needed.
    - Purpose updated: three roles now reach the surface, not two; the
      manager reaches it without crossing the `/review-sessions` write
      surface.
-   - ADDED: *A Reachable Entry Point for the Maintenance Company Manager
-     That Bypasses the Write Surface* — 1 new requirement, 4 new
+   - ADDED: _A Reachable Entry Point for the Maintenance Company Manager
+     That Bypasses the Write Surface_ — 1 new requirement, 4 new
      scenarios.
-   - MODIFIED: *Role-Gated Route Access for the History Views* (widened
-     to the manager), *The History List Renders the Server-Scoped Result
-     Unfiltered* (adds the performer-identification requirement for a
-     multi-performer caller), *No Filtering, Analytics or Adjacent
-     Controls Ship* (explicit coverage of the company-wide list).
+   - MODIFIED: _Role-Gated Route Access for the History Views_ (widened
+     to the manager), _The History List Renders the Server-Scoped Result
+     Unfiltered_ (adds the performer-identification requirement for a
+     multi-performer caller), _No Filtering, Analytics or Adjacent
+     Controls Ship_ (explicit coverage of the company-wide list).
 
 4. **`openspec/specs/review-session-management/spec.md`**
    - Purpose updated: company-wide visibility no longer out of scope
      (owned by `review-history`); this capability gains a write-path
      fact only — the frozen company attribution.
-   - ADDED: *A Session Records the Company on Whose Behalf It Was
-     Performed* — 1 new requirement, 7 new scenarios.
-   - MODIFIED: *Adjacent Review Capabilities Are Not Introduced*
+   - ADDED: _A Session Records the Company on Whose Behalf It Was
+     Performed_ — 1 new requirement, 7 new scenarios.
+   - MODIFIED: _Adjacent Review Capabilities Are Not Introduced_
      (narrowed — company-wide is no longer deferred; global visibility
      and per-element history remain forbidden).
 
-*(No other existing `openspec/specs/**` capability file was touched by
-this change.)*
+_(No other existing `openspec/specs/**` capability file was touched by
+this change.)_
 
 ## Verification Summary
 
 **Verdict**: PASS WITH WARNINGS
 
 ### Test Execution (re-run live by `sdd-verify` on `main` @ `ee2c00c`, 7/7 PRs merged)
+
 - API unit: 813/813 pass, 108 suites
 - API integration: 122/122 pass, 21 suites (serially; one pre-existing,
   unrelated flake in `modules/users` under parallel-worker contention —
@@ -136,6 +137,7 @@ this change.)*
   inspection
 
 ### Compliance Matrix
+
 - **71/71 Implementation Tasks**: all marked complete, independently
   cross-checked against current `main` across all 6 phases — not trusted
   from checkboxes
@@ -162,12 +164,13 @@ this change.)*
   Engram `topic_key` upserts (W-2)
 
 ### Findings
+
 - CRITICAL: 0
 - WARNING: 2 — both non-blocking for archive, both process/tooling gaps
   rather than implementation defects:
   - **W-1**: `npm run test:integration`'s scripted (parallel) form is
     non-deterministic — `prisma-user.repository.integration.spec.ts >
-    countActiveByRole()` failed once under worker contention against a
+countActiveByRole()` failed once under worker contention against a
     shared, non-reset dev Postgres, passed both in isolation and with
     `--runInBand`. Pre-existing, in an unrelated module (`modules/users`,
     inherited from the archived `user-management-roles` change), not a
@@ -207,6 +210,7 @@ additionally be polished.
 ## Archive Contents
 
 ### Files Present in Archive (`openspec/changes/archive/2026-09-13-review-history-company-scope/`)
+
 - `proposal.md`
 - `design.md`
 - `tasks.md`
@@ -218,6 +222,7 @@ additionally be polished.
 - `ARCHIVE-REPORT.md` (this document)
 
 ### Verification Checklist
+
 - [x] All 9 files present in archive path, copied from the source change
       folder with no content changes beyond this report's own addition
 - [x] No unchecked implementation tasks (71/71 marked complete)
@@ -233,15 +238,15 @@ additionally be polished.
 
 ## SDD Cycle Summary
 
-| Phase | PR # | Status | Details |
-|---|---|---|---|
-| Phase 1 | PR 1 (#103) | Merged | Migration + backfill + write-path snapshot (`performedByCompanyId`), `UserDirectory.findMaintenanceCompanyId` |
-| Phase 2a | PR 2a (#104) | Merged | `CompanyScopeChecker` Layer 2 authorization port + adapter + module wiring |
-| Phase 2b | PR 2b (#105) | Merged | Repository scope methods (+4), both adapters. Deviation: the two orphaned `…ForPerformerInCommunities` methods deliberately kept, deferred to Phase 3 |
-| Phase 3 | PR 3 | Merged | Access-service reversal (technician own-history) + company branch + use cases + performer-email read. Over budget (~1105 lines, `size:exception` accepted) |
-| Phase 4 | PR 4 | Merged | `ROLE_PERMISSIONS` wiring + full E2E three-role visibility matrix. Over budget (~721 lines, `size:exception` accepted) |
-| Phase 5 | PR 5 | Merged | Web: role-widening, manager entry point, performer column, i18n. Under budget (~337 lines) |
-| Phase 6 | PR 6/7 (#109, merged at `809c628`) | Merged | ADR-011 addendum, FR-008 status, 4 delta-spec merges, full-suite checks, browser verification (6.8), final scope-guard confirmation (6.9) |
+| Phase    | PR #                               | Status | Details                                                                                                                                                    |
+| -------- | ---------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1  | PR 1 (#103)                        | Merged | Migration + backfill + write-path snapshot (`performedByCompanyId`), `UserDirectory.findMaintenanceCompanyId`                                              |
+| Phase 2a | PR 2a (#104)                       | Merged | `CompanyScopeChecker` Layer 2 authorization port + adapter + module wiring                                                                                 |
+| Phase 2b | PR 2b (#105)                       | Merged | Repository scope methods (+4), both adapters. Deviation: the two orphaned `…ForPerformerInCommunities` methods deliberately kept, deferred to Phase 3      |
+| Phase 3  | PR 3                               | Merged | Access-service reversal (technician own-history) + company branch + use cases + performer-email read. Over budget (~1105 lines, `size:exception` accepted) |
+| Phase 4  | PR 4                               | Merged | `ROLE_PERMISSIONS` wiring + full E2E three-role visibility matrix. Over budget (~721 lines, `size:exception` accepted)                                     |
+| Phase 5  | PR 5                               | Merged | Web: role-widening, manager entry point, performer column, i18n. Under budget (~337 lines)                                                                 |
+| Phase 6  | PR 6/7 (#109, merged at `809c628`) | Merged | ADR-011 addendum, FR-008 status, 4 delta-spec merges, full-suite checks, browser verification (6.8), final scope-guard confirmation (6.9)                  |
 
 All 7 PRs merged to `main` in order. Delivery strategy: `stacked-to-main`,
 `ask-on-risk` delivery strategy; three phases (2b, 3, 4) plus the docs
@@ -252,22 +257,23 @@ by `sdd-verify` as "the process working, not silent drift." Final merge
 
 ## Risks & Mitigations (carried from the proposal, resolved status)
 
-| Risk | Mitigation | Status |
-|---|---|---|
-| A company query leaks another company's sessions, or a null company degrades to an unfiltered read | Fail-closed stated as binding in the proposal; scope lives in the port signature; E2E asserts the full three-role matrix plus both null cases explicitly, no sampling | Mitigated — verified (e2e + integration) |
-| The backfill is wrong or partially applied | Migration is its own PR with a real-Postgres integration test asserting row-level attribution; wrongness for already-transferred technicians is a stated, accepted limitation | Mitigated — verified |
-| The write path forgets the snapshot on some creation route | Column written in the session's own creation path only, no second writer exists; test asserts every newly created session carries the performer's company | Mitigated — verified (structural, not just test-enforced) |
-| The manager is forced through the community-assignment gate | Manager scope resolution bypasses `CommunityScopeChecker` entirely by design; e2e asserts the manager's scope requires no community assignment of any kind | Mitigated — verified |
-| Scope creep into global visibility | Explicit non-goal; `sdd-verify` re-confirmed `MANAGER` still `[]`, `SYSTEM_ADMIN` holds no `reviewSession:*`, no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol exists | Mitigated — verified |
-| The company list is large and unusable with no filter/sort/pagination | Accepted deliberately and on record; browser-verified at seeded volume with no observable pain (design.md Open Questions, closed) | Mitigated — measured, not assumed |
-| A migration on `ReviewSession` breaks the hand-written FK/index conventions Prisma cannot see | Extended the shipped migration integration-test precedent rather than trusting Prisma's diff | Mitigated — verified |
-| Widening the shipped pages breaks the two roles already using them | Same surface, no variant, per the shipped UI requirement; component tests assert all three roles' rendering; browser-verified | Mitigated — verified |
-| The ADR-011 addendum slips a third time | Shipped in Phase 6 per the settled decision, all 5 required content points present in order | Mitigated — realized as designed |
-| ES/CA translations stubbed with English placeholders | Real translations shipped; `locales.test.ts` parity guard covers new keys | Mitigated — verified |
+| Risk                                                                                               | Mitigation                                                                                                                                                                    | Status                                                    |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| A company query leaks another company's sessions, or a null company degrades to an unfiltered read | Fail-closed stated as binding in the proposal; scope lives in the port signature; E2E asserts the full three-role matrix plus both null cases explicitly, no sampling         | Mitigated — verified (e2e + integration)                  |
+| The backfill is wrong or partially applied                                                         | Migration is its own PR with a real-Postgres integration test asserting row-level attribution; wrongness for already-transferred technicians is a stated, accepted limitation | Mitigated — verified                                      |
+| The write path forgets the snapshot on some creation route                                         | Column written in the session's own creation path only, no second writer exists; test asserts every newly created session carries the performer's company                     | Mitigated — verified (structural, not just test-enforced) |
+| The manager is forced through the community-assignment gate                                        | Manager scope resolution bypasses `CommunityScopeChecker` entirely by design; e2e asserts the manager's scope requires no community assignment of any kind                    | Mitigated — verified                                      |
+| Scope creep into global visibility                                                                 | Explicit non-goal; `sdd-verify` re-confirmed `MANAGER` still `[]`, `SYSTEM_ADMIN` holds no `reviewSession:*`, no `ManagerCapability`/`VIEW_ALL_REVIEWS` symbol exists         | Mitigated — verified                                      |
+| The company list is large and unusable with no filter/sort/pagination                              | Accepted deliberately and on record; browser-verified at seeded volume with no observable pain (design.md Open Questions, closed)                                             | Mitigated — measured, not assumed                         |
+| A migration on `ReviewSession` breaks the hand-written FK/index conventions Prisma cannot see      | Extended the shipped migration integration-test precedent rather than trusting Prisma's diff                                                                                  | Mitigated — verified                                      |
+| Widening the shipped pages breaks the two roles already using them                                 | Same surface, no variant, per the shipped UI requirement; component tests assert all three roles' rendering; browser-verified                                                 | Mitigated — verified                                      |
+| The ADR-011 addendum slips a third time                                                            | Shipped in Phase 6 per the settled decision, all 5 required content points present in order                                                                                   | Mitigated — realized as designed                          |
+| ES/CA translations stubbed with English placeholders                                               | Real translations shipped; `locales.test.ts` parity guard covers new keys                                                                                                     | Mitigated — verified                                      |
 
 ## Session Activity Summary
 
 ### Phase Completion Record
+
 - **sdd-explore / sdd-propose / sdd-spec / sdd-design**: completed in a
   prior session (2026-09-09), producing the proposal, 4 delta specs, and
   11 design decisions plus an Open Questions section
@@ -291,6 +297,7 @@ by `sdd-verify` as "the process working, not silent drift." Final merge
   reconciliation needed) — completion of the SDD cycle
 
 ### Artifacts Persisted
+
 - Engram: proposal, spec, design, tasks, apply-progress observations
   already existed from the planning and apply phases; verify-report
   (obs #232); archive-report (new, topic key
@@ -326,11 +333,12 @@ As a direct consequence:
 
 **Recommended remediation** (for the orchestrator or a follow-up session
 with shell access):
+
 - Delete `openspec/changes/review-history-company-scope/` (the source
   folder) now that its full contents are duplicated, verified complete,
   and byte-identical in the archive path.
 - `git add openspec/changes/archive/2026-09-13-review-history-company-scope/
-  openspec/specs/` (the specs were already merged and committed in PR
+openspec/specs/` (the specs were already merged and committed in PR
   6/7 — confirm no diff) and the deletion of the source folder, then
   commit with a conventional-commit message, e.g.:
   `docs(review-history-company-scope): archive change`.
@@ -387,13 +395,14 @@ that was not.
      on record as the eventual remedy for the company-wide list's
      unbounded size, not started, stubbed or parameterized here
 4. **Close**: once the source folder is removed, the fresh-context review
-   + user confirmation complete, and the commit merges, the SDD cycle is
-   fully complete; the change is archived and ready for reference.
+   - user confirmation complete, and the commit merges, the SDD cycle is
+     fully complete; the change is archived and ready for reference.
 
 ## Traceability
 
 This archive report and all supporting artifacts are linked via Engram
 topic keys for cross-session recovery:
+
 - `sdd/review-history-company-scope/proposal`
 - `sdd/review-history-company-scope/spec`
 - `sdd/review-history-company-scope/design`
