@@ -278,10 +278,27 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
 - **EN-36** (api): Every client-key-rejected request with a valid email now
   costs one extra database read (`getBlock`) in
   `LoginThrottlerGuard.throwThrottlingException`, on the cheap blocked path
-  from TD-35. Consider skipping or caching the read if pool pressure appears
-  under attack. Evidence:
+  from TD-35. The read is also awaited with no timeout, so a hanging (not
+  failing) store delays every rejected login and holds a pool connection.
+  Consider skipping or caching the read, or bounding it with a timeout, if
+  pool pressure appears under attack. Evidence:
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`.
   Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-37** (api): `LoginThrottlerGuard.throwThrottlingException` always
+  writes the literal `Retry-After` header. `@nestjs/throttler` suffixes the
+  header with the throttler name unless it is `'default'`
+  (`Retry-After-<name>`), so renaming the login throttler or adding a second
+  one would leave the library's header untouched and add an unsuffixed one,
+  silently breaking the combined `Retry-After`. Today the only throttler is
+  `'default'` (`apps/api/src/modules/auth/auth.module.ts`). Derive the suffix
+  the same way the library does, or pin the name with a test. Origin:
+  `login-account-lockout` PR 3/4 review, 2026-10-14.
+- **EN-38** (api tests): The client-key-only case in
+  `apps/api/test/login-email-limit.e2e-spec.ts` (around line 309) needs four
+  sequential requests inside one 10 s fixed window. On a very slow runner the
+  window can roll over and the 4th request gets 401 instead of 429 (a
+  timing-dependent failure, not a false pass). A longer window would make it
+  deterministic. Origin: `login-account-lockout` PR 3/4 review, 2026-10-14.
 
 ## Done
 

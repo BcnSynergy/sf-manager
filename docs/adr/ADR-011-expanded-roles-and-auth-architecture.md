@@ -603,7 +603,7 @@ Still open:
 
 ## Addendum (2026-10-14): `login-account-lockout` — per-email failed-login limit (TD-31)
 
-Resolves TD-31 (PRs #214, #215 and PR 3/4, number `#TBD`). The per-client-key
+Resolves TD-31 (PRs #214, #215 and #216). The per-client-key
 limit (2026-10-07 and 2026-10-12 addenda) cannot stop a distributed attack on
 one account, because the attacker rotates client keys. A second, independent
 limit now keys on the normalized email.

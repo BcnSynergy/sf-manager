@@ -200,7 +200,7 @@ None.
   Origin: `login-rate-limit-hardening` PR 2 and PR 3 RDD reviews, 2026-10-12.
 - **TD-31**: Account lockout and per-email rate-limit keying were deferred, so
   a distributed attack on one account was not limited. Resolved by
-  `login-account-lockout` (#214, #215, #TBD): failed logins are now counted
+  `login-account-lockout` (#214, #215, #216): failed logins are now counted
   per normalized email across all client keys, with a hashed key in
   `ThrottleCounter`, block on reaching the limit, reset on success and a
   combined `Retry-After` (ADR-011 addendum 2026-10-14). A persistent account
