@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 
@@ -16,7 +17,7 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
   let queryRaw: jest.Mock;
   let executeRaw: jest.Mock;
   let transaction: jest.Mock;
-  let storage: PrismaThrottlerStorage;
+  let storage: ThrottlerStorage;
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {

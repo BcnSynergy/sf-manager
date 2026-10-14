@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 
@@ -14,7 +15,7 @@ import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 // set of expired rows (the cleanup test) clears them in its own setup.
 describe('PrismaThrottlerStorage (integration)', () => {
   let prisma: PrismaService;
-  let storage: PrismaThrottlerStorage;
+  let storage: ThrottlerStorage;
 
   const TTL_MS = 60_000;
   const NAME = 'default';
