@@ -40,9 +40,9 @@ Mode: strict TDD is enabled for the project (ADR-016), but this is tooling with 
 
 ## Tasks
 
-- [ ] T1 Config: `endOfLine: auto`, `.prettierignore`, root `format` / `format:check` scripts. Route: inline (mechanical). RED: `format:check` fails.
-- [ ] T2 Format the code files (formatting-only commit). Route: inline (tool). GREEN: `format:check` passes; build, lint, typecheck, unit green.
-- [ ] T3 CI `Format` step, `.git-blame-ignore-revs`, README. Route: inline.
+- [x] T1 Config: `endOfLine: auto`, `.prettierignore`, root `format` / `format:check` scripts. Route: inline (mechanical). RED: `format:check` fails.
+- [x] T2 Format the code files (formatting-only commit). Route: inline (tool). GREEN: `format:check` passes; build, lint, typecheck, unit green.
+- [x] T3 CI `Format` step, `.git-blame-ignore-revs`, README. Route: inline.
 - [ ] T4 PR 1: fresh review, push, PR, CI, merge (ask the user at each step).
 - [ ] T5 PR 2: drop the doc exclusions, handle `openspec/config.yaml`, format docs, verify SDD tooling, TD-33 to Resolved.
 - [ ] T6 PR 2: fresh review, push, PR, CI, merge.
@@ -55,7 +55,10 @@ Mode: strict TDD is enabled for the project (ADR-016), but this is tooling with 
 ## Progress
 
 - 2026-10-14: measured the drift (`--end-of-line auto`): 86 code files, ~300 docs files. Document created.
+- T1 `836573f`: RED observed, `npm run format:check` exit 1, "Code style issues found in 86 files".
+- T2 `1bcbd81` (formatting only, 86 files, +622/-655): GREEN, `format:check` passes; build, lint (0 errors, 6 pre-existing API warnings), API typecheck and unit (api 1487, all 5 turbo tasks) green.
+- T3: CI `Format` step after Lint, `.git-blame-ignore-revs` with `1bcbd81`, README scripts and CI order.
 
 ## Next step
 
-T1.
+T4 (PR 1 fresh review, then push/PR/merge with the user's OK).
