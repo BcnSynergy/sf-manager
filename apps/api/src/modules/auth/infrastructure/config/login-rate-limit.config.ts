@@ -35,3 +35,29 @@ export function getLoginRateLimitConfig(): LoginRateLimitConfig {
   );
   return { maxAttempts, windowMs: windowSeconds * 1000 };
 }
+
+// Per-email failure limit (login-account-lockout/design.md Decision 8). Counts
+// failed credential checks for one normalized email across every client key,
+// so it has its own variables and defaults, independent of the per-client-key
+// limit above.
+export interface LoginEmailRateLimitConfig {
+  maxFailures: number;
+  windowMs: number;
+}
+
+const DEFAULT_EMAIL_MAX_FAILURES = 5;
+const DEFAULT_EMAIL_WINDOW_SECONDS = 900;
+
+export function getLoginEmailRateLimitConfig(): LoginEmailRateLimitConfig {
+  const maxFailures = parsePositiveInteger(
+    'LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES',
+    process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES,
+    DEFAULT_EMAIL_MAX_FAILURES,
+  );
+  const windowSeconds = parsePositiveInteger(
+    'LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS',
+    process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS,
+    DEFAULT_EMAIL_WINDOW_SECONDS,
+  );
+  return { maxFailures, windowMs: windowSeconds * 1000 };
+}
