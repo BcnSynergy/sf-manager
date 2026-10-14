@@ -15,7 +15,8 @@ import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 //
 // Every test uses its own randomUUID() email. The table is shared and the
 // throttler storage's cleanup deletes ANY expired row, so the one test that
-// depends on the set of expired rows clears the table in its own setup.
+// depends on the set of expired rows first removes only the rows this suite
+// created, never the whole table the sibling suite also uses.
 describe('PrismaLoginFailureLimiter (integration)', () => {
   let prisma: PrismaService;
 
@@ -27,7 +28,13 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
 
   const keyFor = (email: string) =>
     createHash('sha256').update(`login-email:${email}`).digest('hex');
-  const newEmail = () => `${randomUUID()}@example.com`;
+  // Every email this suite creates, so cleanup touches only its own rows.
+  const createdKeys = new Set<string>();
+  const newEmail = () => {
+    const email = `${randomUUID()}@example.com`;
+    createdKeys.add(keyFor(email));
+    return email;
+  };
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -272,7 +279,9 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     });
 
     it('lets PrismaThrottlerStorage cleanup remove an expired email row but keep a blocked one', async () => {
-      await prisma.$executeRaw`DELETE FROM "ThrottleCounter"`;
+      await prisma.throttleCounter.deleteMany({
+        where: { key: { in: [...createdKeys] } },
+      });
       const expiring = limiterWith({ maxFailures: 1000, windowMs: 1000 });
       const expiredEmail = newEmail();
       const blockedEmail = newEmail();

@@ -12,12 +12,16 @@ function parsePositiveInteger(
   name: string,
   raw: string | undefined,
   fallback: number,
+  max = Number.MAX_SAFE_INTEGER,
 ): number {
   if (raw === undefined || raw === '') {
     return fallback;
   }
   if (!/^\d+$/.test(raw) || Number(raw) < 1) {
     throw new Error(`${name} must be a positive integer, got "${raw}"`);
+  }
+  if (Number(raw) > max) {
+    throw new Error(`${name} must be at most ${max}, got "${raw}"`);
   }
   return Number(raw);
 }
@@ -48,16 +52,25 @@ export interface LoginEmailRateLimitConfig {
 const DEFAULT_EMAIL_MAX_FAILURES = 5;
 const DEFAULT_EMAIL_WINDOW_SECONDS = 900;
 
+// Upper bounds that keep the adapter's SQL from failing at runtime instead of
+// at boot: the limit is cast with ::int (int4 maximum), and the window is
+// added to now() as a timestamptz, so an absurd window overflows the
+// timestamp range. One year is far beyond any sensible lockout window.
+const MAX_EMAIL_MAX_FAILURES = 2147483647;
+const MAX_EMAIL_WINDOW_SECONDS = 31536000;
+
 export function getLoginEmailRateLimitConfig(): LoginEmailRateLimitConfig {
   const maxFailures = parsePositiveInteger(
     'LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES',
     process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES,
     DEFAULT_EMAIL_MAX_FAILURES,
+    MAX_EMAIL_MAX_FAILURES,
   );
   const windowSeconds = parsePositiveInteger(
     'LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS',
     process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS,
     DEFAULT_EMAIL_WINDOW_SECONDS,
+    MAX_EMAIL_WINDOW_SECONDS,
   );
   return { maxFailures, windowMs: windowSeconds * 1000 };
 }

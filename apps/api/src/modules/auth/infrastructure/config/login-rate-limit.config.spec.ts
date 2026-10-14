@@ -137,4 +137,42 @@ describe('getLoginEmailRateLimitConfig', () => {
       );
     },
   );
+
+  it('accepts the int4 maximum for LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES', () => {
+    process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES = '2147483647';
+
+    expect(getLoginEmailRateLimitConfig().maxFailures).toBe(2147483647);
+  });
+
+  // The adapter casts the limit with ::int, so a larger value would pass boot
+  // and then fail every recordFailure with "integer out of range".
+  it.each(['2147483648', '99999999999999999999'])(
+    'throws naming LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES when above the int4 maximum for "%s"',
+    (value) => {
+      process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES = value;
+
+      expect(() => getLoginEmailRateLimitConfig()).toThrow(
+        `LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES must be at most 2147483647, got "${value}"`,
+      );
+    },
+  );
+
+  it('accepts a window of one year for LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS', () => {
+    process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS = '31536000';
+
+    expect(getLoginEmailRateLimitConfig().windowMs).toBe(31536000000);
+  });
+
+  // The adapter adds the window to now() as a timestamptz; an absurd window
+  // overflows the timestamp range and would fail every recordFailure.
+  it.each(['31536001', '99999999999999999999'])(
+    'throws naming LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS when above one year for "%s"',
+    (value) => {
+      process.env.LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS = value;
+
+      expect(() => getLoginEmailRateLimitConfig()).toThrow(
+        `LOGIN_EMAIL_RATE_LIMIT_WINDOW_SECONDS must be at most 31536000, got "${value}"`,
+      );
+    },
+  );
 });

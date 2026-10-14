@@ -184,6 +184,19 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   overwrites. The cleanup's `$transaction` uses Prisma's default `maxWait`
   to acquire a connection, so under pool exhaustion the wait before the
   500 ms statement timeout applies is longer than that timeout suggests.
+- **EN-25** (api): Tidy the SQL in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
+  The upsert repeats the "new window" condition (`blockedUntil IS NOT NULL OR
+  windowEndsAt <= now()`) four times and the window-end expression five
+  times; computing each once (for example in a CTE or a single anchor) would
+  state every rule once. Related to EN-9 and EN-21. Origin:
+  `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
+- **EN-26** (api tests): In
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.integration.spec.ts`
+  the window-expiry tests use a 1000 ms window and short sleeps, which may
+  flake on a slow CI runner; widening the window to about 3 s would remove
+  the race. Origin: `login-account-lockout` native review of PR 1/4 (#214),
+  2026-10-14.
 
 ## Done
 

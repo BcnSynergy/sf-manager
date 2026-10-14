@@ -23,7 +23,8 @@ export interface LoginFailureLimiter {
 
   // Clears the counter and any block after a successful login. Resolves when
   // there is nothing to clear. Errors propagate; the caller decides what to
-  // do with them (LoginUseCase logs and continues).
+  // do with them (planned for login-account-lockout PR 2: LoginUseCase will
+  // log and continue).
   reset(email: string): Promise<void>;
 }
 
