@@ -282,8 +282,8 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     createdKeys.add(unprefixed);
     createdKeys.add(clientStyle);
     const storage = new PrismaThrottlerStorage(prisma);
-    await storage.increment(unprefixed, WINDOW_MS, 10, WINDOW_MS, 'default');
-    await storage.increment(clientStyle, WINDOW_MS, 10, WINDOW_MS, 'default');
+    await storage.increment(unprefixed, WINDOW_MS, 10, WINDOW_MS);
+    await storage.increment(clientStyle, WINDOW_MS, 10, WINDOW_MS);
 
     await limiter.recordFailure(email);
 
@@ -349,7 +349,6 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
           WINDOW_MS,
           10,
           WINDOW_MS,
-          'default',
         );
       }
 

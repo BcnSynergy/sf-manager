@@ -76,10 +76,10 @@ Strict TDD (Jest in `apps/api`; Vitest in `packages/validation`; ADR-016): each 
 
 ## Gate PR 1 (orchestrator)
 
-- [ ] G.1 Fresh-context independent review (sub-agent with no prior context) before push; focus: SQL atomicity and semantics vs the in-memory fake, raw email never reaching SQL, rows or logs, block-on-reaching-limit (`>=`), blocked rows not rewritten, normalization shared through the schema, nothing wired. Fix findings or register non-blocking ones in `docs/technical-debt.md` / `docs/enhancements.md` in this PR.
-- [ ] G.2 Ask the user before push.
-- [ ] G.3 Ask the user before creating the PR. Title `feat(auth): PR 1/4 — per-email login failure store`. Description: "not wired, no runtime change; not browser-verified, no UI change"; code vs test split.
-- [ ] G.4 PR passes `ci`; ask the user before merge.
+- [x] G.1 Fresh-context independent review (sub-agent with no prior context) before push; focus: SQL atomicity and semantics vs the in-memory fake, raw email never reaching SQL, rows or logs, block-on-reaching-limit (`>=`), blocked rows not rewritten, normalization shared through the schema, nothing wired. Fix findings or register non-blocking ones in `docs/technical-debt.md` / `docs/enhancements.md` in this PR.
+- [x] G.2 Ask the user before push.
+- [x] G.3 Ask the user before creating the PR. Title `feat(auth): PR 1/4 — per-email login failure store`. Description: "not wired, no runtime change; not browser-verified, no UI change"; code vs test split.
+- [x] G.4 PR passes `ci`; ask the user before merge.
 
 ## Phase B: PR 2 — email login limit (branch `login-account-lockout/02-email-login-limit`)
 
