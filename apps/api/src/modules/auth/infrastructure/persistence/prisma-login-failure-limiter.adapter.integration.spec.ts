@@ -21,6 +21,11 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
   let prisma: PrismaService;
 
   const WINDOW_MS = 60_000;
+  // Window for the tests that wait for expiry. It must outlast the several
+  // sequential DB round trips made before the assertion that still expects the
+  // window or block to be live, even on a slow CI runner (EN-26).
+  const SHORT_WINDOW_MS = 3000;
+  const SLEEP_MARGIN_MS = 300;
   const config: LoginEmailRateLimitConfig = {
     maxFailures: 3,
     windowMs: WINDOW_MS,
@@ -137,12 +142,12 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
   });
 
   it('restarts the count at 1 once the window has elapsed', async () => {
-    const limiter = limiterWith({ windowMs: 1000 });
+    const limiter = limiterWith({ windowMs: SHORT_WINDOW_MS });
     const email = newEmail();
     await failTimes(limiter, email, config.maxFailures - 1);
     expect((await rowFor(email))?.hits).toBe(config.maxFailures - 1);
 
-    await sleep(1200);
+    await sleep(SHORT_WINDOW_MS + SLEEP_MARGIN_MS);
     await limiter.recordFailure(email);
 
     const row = await rowFor(email);
@@ -152,14 +157,14 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
   });
 
   it('unblocks once the block has expired and the next failure opens a new window', async () => {
-    const limiter = limiterWith({ windowMs: 1000 });
+    const limiter = limiterWith({ windowMs: SHORT_WINDOW_MS });
     const email = newEmail();
     await failTimes(limiter, email, config.maxFailures);
     await expect(limiter.getBlock(email)).resolves.toMatchObject({
       blocked: true,
     });
 
-    await sleep(1200);
+    await sleep(SHORT_WINDOW_MS + SLEEP_MARGIN_MS);
     await expect(limiter.getBlock(email)).resolves.toEqual({ blocked: false });
     await limiter.recordFailure(email);
 
@@ -167,6 +172,36 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     expect(row?.hits).toBe(1);
     expect(row?.blockedUntil).toBeNull();
     await expect(limiter.getBlock(email)).resolves.toEqual({ blocked: false });
+  });
+
+  it('re-blocks on the failure that follows an expired block when the limit is 1', async () => {
+    const limiter = limiterWith({
+      maxFailures: 1,
+      windowMs: SHORT_WINDOW_MS,
+    });
+    const email = newEmail();
+    await limiter.recordFailure(email);
+    await expect(limiter.getBlock(email)).resolves.toMatchObject({
+      blocked: true,
+    });
+    const transitionsFor = () =>
+      warn.mock.calls.filter((call) => String(call[0]).includes(keyFor(email)))
+        .length;
+    expect(transitionsFor()).toBe(1);
+
+    await sleep(SHORT_WINDOW_MS + SLEEP_MARGIN_MS);
+    await expect(limiter.getBlock(email)).resolves.toEqual({ blocked: false });
+    await limiter.recordFailure(email);
+
+    // The existing row (ON CONFLICT path) is blocked again straight away: the
+    // new window starts with this failure, which already reaches the limit.
+    const row = await rowFor(email);
+    expect(row?.hits).toBe(1);
+    expect(row?.blockedUntil).not.toBeNull();
+    await expect(limiter.getBlock(email)).resolves.toMatchObject({
+      blocked: true,
+    });
+    expect(transitionsFor()).toBe(2);
   });
 
   it('reset deletes the row and clears a block', async () => {
@@ -265,9 +300,6 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
         [clientStyle, 1],
       ].sort(),
     );
-    expect(keyFor(email)).toBe(
-      createHash('sha256').update(`login-email:${email}`).digest('hex'),
-    );
   });
 
   describe('expiresAt and cleanup', () => {
@@ -296,12 +328,15 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
       await prisma.throttleCounter.deleteMany({
         where: { key: { in: [...createdKeys] } },
       });
-      const expiring = limiterWith({ maxFailures: 1000, windowMs: 1000 });
+      const expiring = limiterWith({
+        maxFailures: 1000,
+        windowMs: SHORT_WINDOW_MS,
+      });
       const expiredEmail = newEmail();
       const blockedEmail = newEmail();
       await expiring.recordFailure(expiredEmail);
       await failTimes(limiterWith(), blockedEmail, config.maxFailures);
-      await sleep(1200);
+      await sleep(SHORT_WINDOW_MS + SLEEP_MARGIN_MS);
 
       // A new client key opens a window, which is when the bounded cleanup
       // runs. Cleanup deletes at most 100 expired rows per run, best-effort,

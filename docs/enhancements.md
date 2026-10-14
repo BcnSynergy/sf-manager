@@ -191,13 +191,9 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   times; computing each once (for example in a CTE or a single anchor) would
   state every rule once. Related to EN-9 and EN-21. Origin:
   `login-account-lockout` native review of PR 1/4 (#214), 2026-10-14.
-- **EN-26** (api tests): In
-  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.integration.spec.ts`
-  the window-expiry tests use a 1000 ms window and short sleeps, which may
-  flake on a slow CI runner; widening the window to about 3 s would remove
-  the race. Origin: `login-account-lockout` native review of PR 1/4 (#214),
-  2026-10-14.
 
 ## Done
 
-None yet.
+- **EN-26** (api tests): Widened the 1000 ms windows in the login-failure
+  limiter integration spec to 3 s so the window-expiry tests no longer race a
+  slow CI runner. Done in `login-account-lockout`, PR #214.

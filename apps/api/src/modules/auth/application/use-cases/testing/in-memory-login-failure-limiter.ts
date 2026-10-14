@@ -10,7 +10,11 @@ interface Counter {
   blockedUntil: number | null;
 }
 
-const isBlocked = (counter: Counter, now: number): boolean =>
+// Type guard: a true result also narrows blockedUntil to a number.
+const isBlocked = (
+  counter: Counter,
+  now: number,
+): counter is Counter & { blockedUntil: number } =>
   counter.blockedUntil !== null && counter.blockedUntil > now;
 
 // Test double for LoginFailureLimiter (login-account-lockout/design.md
@@ -28,7 +32,7 @@ export class InMemoryLoginFailureLimiter implements LoginFailureLimiter {
   getBlock(email: string): Promise<LoginBlock> {
     const now = Date.now();
     const counter = this.counters.get(email);
-    if (counter?.blockedUntil == null || !isBlocked(counter, now)) {
+    if (counter === undefined || !isBlocked(counter, now)) {
       return Promise.resolve({ blocked: false });
     }
     return Promise.resolve({
