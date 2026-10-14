@@ -209,8 +209,8 @@ None.
 - **TD-33**: Prettier was a dependency but not enforced. Resolved by
   `td-33-prettier-enforced` (#220, #221): root `format` / `format:check`
   scripts, a CI `Format` step, and the whole repo formatted (code in #220,
-  docs in #221). `openspec/config.yaml` (TD-37) and four archived Markdown
-  files that Prettier cannot format stably stay in `.prettierignore`.
+  docs in #221). `openspec/config.yaml` (TD-37) and five archived Markdown
+  files that Prettier cannot format stably or correctly stay in `.prettierignore`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

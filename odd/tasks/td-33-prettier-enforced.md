@@ -61,7 +61,8 @@ Mode: strict TDD is enabled for the project (ADR-016), but this is tooling with 
 - T2 `1bcbd81` (formatting only, 86 files, +622/-655): GREEN, `format:check` passes; build, lint (0 errors, 6 pre-existing API warnings), API typecheck and unit (api 1487, all 5 turbo tasks) green.
 - T3: CI `Format` step after Lint, `.git-blame-ignore-revs` with `1bcbd81`, README scripts and CI order.
 - T4: PR #220 merged (`8874817`, merge commit; `1bcbd81` is on `main`). Native review approved; fresh review no findings.
-- T5 `32493a7` + `67e7243` (docs formatting only, 296 files): Markdown heading and word sequences compared before/after for every file, identical except one `*emphasis*` to `_emphasis_` in a heading. `openspec/config.yaml` is invalid YAML (TD-37) and four archived files are unstable under Prettier's Markdown formatter (a second `--write` changes them again): both kept in `.prettierignore`. Then `CLAUDE.md` formatting rule (the user asked), README, TD-33 to Resolved, TD-37, EN-43, `.git-blame-ignore-revs`.
+- T5 `32493a7` (`.prettierignore` only) + `67e7243` (docs formatting only, 296 files): Markdown heading and word sequences compared before/after for every file, identical except one `*emphasis*` to `_emphasis_` in a heading. `openspec/config.yaml` is invalid YAML (TD-37) and four archived files are unstable under Prettier's Markdown formatter (a second `--write` changes them again): both kept in `.prettierignore`. Then `CLAUDE.md` formatting rule (the user asked), README, TD-33 to Resolved, TD-37, EN-43, `.git-blame-ignore-revs`.
+- T6 fresh review: one archived verify report had spaces dropped by Prettier (a code span wrapping onto a line starting with `>`); `6ce1733` restores it and ignores the file, so five archived files are ignored.
 
 ## Next step
 
