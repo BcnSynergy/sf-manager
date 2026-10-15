@@ -27,8 +27,9 @@ See also: [domain model — inspections](../architecture/domain-model-inspection
 
 - **Containerization / Docker Compose layout**: requested as a goal, not yet
   written up as an ADR.
-- **i18n libraries/mechanism per platform**: locales are decided (ADR-007), the
-  actual tooling (e.g. react-i18next, nestjs-i18n) is a design-phase detail.
+- **i18n libraries/mechanism per platform**: locales are decided (ADR-007).
+  The web app uses i18next with react-i18next; the API has no i18n library.
+  Neither choice is written up as an ADR, and mobile/desktop are not built yet.
 - **Maintenance-company assignment granularity by element type**, whether a
   `ReviewSession` can ever cover more than one element type, and exact
   `ExtinguisherDetails` fields — see open questions in the domain model doc.
@@ -39,8 +40,7 @@ See also: [domain model — inspections](../architecture/domain-model-inspection
   external consumer to protect from a breaking change today. Revisit if a
   third-party/public API consumer appears, or if a client ever needs to be
   deployed on a different cadence than the server.
-- **End-user manual**: not started. Deferred deliberately — most slices so
-  far are API-only (no web UI yet beyond the health-check slice), and SDD
-  specs document technical contract, not end-user usage. Start a living
-  manual per feature once that feature has a real, stable UI — not per
-  spec/PR while a slice is still API-only.
+- **End-user manual**: not started. SDD specs document the technical
+  contract, not end-user usage. The plan is a living manual per feature once
+  that feature has a real, stable UI, not per spec/PR. Every slice since
+  `review-history` ships with web UI, so when to start it is now open.
