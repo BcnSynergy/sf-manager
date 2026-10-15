@@ -78,7 +78,10 @@ Every authorization check goes through a single application-layer port,
 `@RequirePermission('checklistQuestion:write')`) — never a scattered
 `if (user.role === X)` check in a controller. Today `PermissionChecker`
 resolves permissions from a static role→permission lookup table plus the
-`managerCapabilities` flags above. This keeps a fully dynamic, DB-backed
+`managerCapabilities` flags above (**superseded 2026-09-15** — see the
+addendum below; `PermissionChecker` stays a pure role→permission lookup, and
+the capability is resolved by a separate Layer 2 port,
+`ManagerCapabilityChecker`). This keeps a fully dynamic, DB-backed
 permission system reachable later as an internal swap behind the same
 port, without touching any controller or use case. Resource **scope**
 (which communities/companies, and for reviews, which actor) stays a

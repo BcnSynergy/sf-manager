@@ -45,13 +45,6 @@ None.
   92, 102, 117 (confirmed with `eslint` on 2026-10-09). Origin: the
   2026-10-06 debt inventory, after #188 removed the cast in
   `community.e2e-spec.ts`.
-- **TD-10**: ADR-011 Decision 3 still says `PermissionChecker` resolves
-  permissions from the role table "plus the `managerCapabilities` flags", with
-  no inline pointer to the 2026-09-15 addendum that supersedes it (the
-  capability is resolved by a separate Layer 2 port). Evidence:
-  `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` lines 73-75
-  versus the 2026-09-15 addendum, item 2. Origin:
-  `review-history-manager-capability` archive-report W5.
 - **TD-12**: No compile-time check that `ManagerCapability` has a single
   member. The schedule scope logic assumes `VIEW_ALL_REVIEWS` is the only one,
   so a second capability should fail the build until that logic is revisited.
@@ -207,6 +200,12 @@ None.
   capability is declared. Resolved by `td-11-unknown-capability-test` (#224): it now
   uses `'NOT_A_CAPABILITY'`, and no ADR-011 undeclared name remains in
   `apps/**` or `packages/**`.
+- **TD-10**: ADR-011 Decision 3 said `PermissionChecker` resolves permissions
+  "plus the `managerCapabilities` flags", with no inline pointer to the
+  2026-09-15 addendum that supersedes it. Resolved by
+  `td-10-adr-011-decision-3-pointer`: Decision 3 now carries an inline
+  "superseded 2026-09-15" note, in the same style as the existing
+  "corrected 2026-09-08" note in Decision 1.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
