@@ -204,7 +204,7 @@ None.
   end-user manual bullet no longer says slices are API-only.
 - **TD-11**: The unknown-capability rejection test used `'MANAGE_COMMUNITIES'`,
   one of ADR-011's undeclared capability names, so it would break once that
-  capability is declared. Resolved by `td-11-unknown-capability-test`: it now
+  capability is declared. Resolved by `td-11-unknown-capability-test` (#224): it now
   uses `'NOT_A_CAPABILITY'`, and no ADR-011 undeclared name remains in
   `apps/**` or `packages/**`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
