@@ -22,7 +22,7 @@ describe('updateUserSchema — managerCapabilities', () => {
 
   it('rejects an unknown capability member', () => {
     const result = updateUserSchema.safeParse({
-      managerCapabilities: ['MANAGE_COMMUNITIES'],
+      managerCapabilities: ['NOT_A_CAPABILITY'],
     });
     expect(result.success).toBe(false);
   });
