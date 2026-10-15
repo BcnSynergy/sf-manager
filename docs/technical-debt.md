@@ -121,14 +121,6 @@ None.
   `review-history` ships with web UI and the web app uses react-i18next.
   Evidence: `docs/adr/INDEX.md:30-31` and `:43-46`. Origin: the 2026-10-06
   debt inventory.
-- **TD-37**: `openspec/config.yaml` is not valid YAML: under `rules:`, the
-  `apply:` block mixes a list item (`- Follow existing code patterns ...`)
-  with mapping keys (`tdd`, `test_command`), so strict parsers such as
-  Prettier reject it ("All mapping items must start at the same column").
-  Whatever reads it today does so leniently or not at all, so the fix needs
-  a check of what the SDD tooling expects there. Excluded from Prettier
-  meanwhile. Evidence: `npx prettier --check openspec/config.yaml`. Origin:
-  `td-33-prettier-enforced` PR 2, 2026-10-14.
 
 ## Resolved
 
@@ -209,8 +201,16 @@ None.
 - **TD-33**: Prettier was a dependency but not enforced. Resolved by
   `td-33-prettier-enforced` (#220, #221): root `format` / `format:check`
   scripts, a CI `Format` step, and the whole repo formatted (code in #220,
-  docs in #221). `openspec/config.yaml` (TD-37) and five archived Markdown
-  files that Prettier cannot format stably or correctly stay in `.prettierignore`.
+  docs in #221). Five archived Markdown files that Prettier cannot format
+  stably or correctly stay in `.prettierignore`; `openspec/config.yaml` stayed
+  there too until TD-37 was resolved.
+- **TD-37**: `openspec/config.yaml` was not valid YAML: `rules.apply` mixed a
+  list item with the mapping keys `tdd` and `test_command`. Resolved by
+  `td-37-openspec-config-yaml` (#222): `rules.apply` is now a list like the other
+  list-based phases, and the two keys became one rule. Nothing read them as keys:
+  `sdd-apply` takes Strict TDD from the top-level `strict_tdd` and `testing`,
+  and reads `rules.apply` as free-text rules. The file is formatted and no
+  longer in `.prettierignore`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
