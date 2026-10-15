@@ -330,6 +330,14 @@ windowEndsAt <= now()`) four times and the window-end expression five
   the whole index is LF. A `.gitattributes` with `* text=auto eol=lf` would
   keep line endings enforced. Origin: `td-33-prettier-enforced` PR 1 review,
   2026-10-14.
+- **EN-44** (docs): In ADR-011 Decision 3, "The single port keeps a fully
+  dynamic, DB-backed permission system..." follows a note that names a second
+  port (`ManagerCapabilityChecker`), so a reader may think the text
+  contradicts itself about how many authorization ports exist. Say which port
+  is meant, e.g. "The single `PermissionChecker` port keeps...". Evidence:
+  `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md:81-83`. Origin:
+  `td-10-adr-011-decision-3-pointer` (#225) native review, findings
+  `R2-single-port-wording` and `R3-001`, 2026-10-15.
 
 ## Done
 
