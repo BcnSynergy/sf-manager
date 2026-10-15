@@ -203,7 +203,7 @@ None.
 - **TD-10**: ADR-011 Decision 3 said `PermissionChecker` resolves permissions
   "plus the `managerCapabilities` flags", with no inline pointer to the
   2026-09-15 addendum that supersedes it. Resolved by
-  `td-10-adr-011-decision-3-pointer`: Decision 3 now carries an inline
+  `td-10-adr-011-decision-3-pointer` (#225): Decision 3 now carries an inline
   "superseded 2026-09-15" note, in the same style as the existing
   "corrected 2026-09-08" note in Decision 1.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
