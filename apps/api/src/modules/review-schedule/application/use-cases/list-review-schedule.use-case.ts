@@ -12,6 +12,7 @@ import {
   type Clock,
 } from '../../../../shared/application/ports/clock.port';
 import type { ElementType } from '../../../inspectable-element/domain/element-type';
+import type { SoleManagerCapability } from '../../../users/domain/manager-capability';
 import type { Role } from '../../../users/domain/role';
 import {
   coverageWindowStart,
@@ -53,6 +54,10 @@ export interface ReviewScheduleRow {
   // Null only for NEVER_REVIEWED (there is no covering session).
   lastCoveringSessionDate: string | null;
 }
+
+// TD-12: typed with SoleManagerCapability, so a second capability fails the
+// build here until the MANAGER branch below is revisited.
+const MANAGER_SCHEDULE_CAPABILITY: SoleManagerCapability = 'VIEW_ALL_REVIEWS';
 
 // design.md Decisions 4, 7 and 8, Data Flow: resolve the scope for the
 // caller's role, read `now` once, read the pairs, evaluate each with the pure
@@ -114,7 +119,7 @@ export class ListReviewScheduleUseCase {
           await this.managerCapabilityChecker.hasManagerCapability(
             actor.userId,
             actor.role,
-            'VIEW_ALL_REVIEWS',
+            MANAGER_SCHEDULE_CAPABILITY,
           );
         return granted ? { kind: 'all' } : null;
       }

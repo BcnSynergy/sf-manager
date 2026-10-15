@@ -2720,6 +2720,8 @@ describe('Review History (e2e)', () => {
       'shared/seeding/dev-dataset.spec.ts',
       'shared/seeding/seed-dev-dataset.spec.ts',
       'shared/seeding/seed-dev-dataset.integration.spec.ts',
+      // TD-12: the type-level spec for the SoleManagerCapability guard.
+      'modules/users/domain/manager-capability.spec.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     const ALLOWED_FILES = [
