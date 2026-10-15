@@ -116,11 +116,6 @@ None.
   `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
-- **TD-34**: Stale wording in `docs/adr/INDEX.md`: it says most slices are
-  API-only and that i18n tooling is undecided, but every slice since
-  `review-history` ships with web UI and the web app uses react-i18next.
-  Evidence: `docs/adr/INDEX.md:30-31` and `:43-46`. Origin: the 2026-10-06
-  debt inventory.
 
 ## Resolved
 
@@ -211,6 +206,10 @@ None.
   `sdd-apply` takes Strict TDD from the top-level `strict_tdd` and `testing`,
   and reads `rules.apply` as free-text rules. The file is formatted and no
   longer in `.prettierignore`.
+- **TD-34**: Stale wording in `docs/adr/INDEX.md` (slices API-only, i18n
+  tooling undecided). Resolved by `td-34-adr-index-wording` (#223): the i18n bullet
+  names i18next/react-i18next on web and no i18n library on the API, and the
+  end-user manual bullet no longer says slices are API-only.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
