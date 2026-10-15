@@ -206,7 +206,7 @@ None.
   pins the collapse with `@ts-expect-error` probe unions.
 - **TD-13**: Review schedule rows' `data-testid`s used `communityId` only, so
   two rows for one community would collide once a second `ElementType`
-  exists. Resolved by `td-13-schedule-row-test-ids`: the row, reason and
+  exists. Resolved by `td-13-schedule-row-test-ids` (#229): the row, reason and
   last-review ids use the same `communityId-elementType` key as the React
   `key`, and a test with a simulated second type pins one id per pair.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
