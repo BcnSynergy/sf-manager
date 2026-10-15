@@ -11,9 +11,7 @@ export type ManagerCapability = 'VIEW_ALL_REVIEWS';
 // VIEW_ALL_REVIEWS alone, which is only right while it is the sole member.
 // This type becomes `never` once the union gains, renames or loses a member,
 // so each call site that types its capability with it fails to compile
-// until that scope logic is revisited.
-export type SoleManagerCapability = [ManagerCapability] extends [
-  'VIEW_ALL_REVIEWS',
-]
-  ? ManagerCapability
-  : never;
+// until that scope logic is revisited. Generic so the spec can prove the
+// collapse with probe unions.
+export type SoleCapability<U> = [U] extends ['VIEW_ALL_REVIEWS'] ? U : never;
+export type SoleManagerCapability = SoleCapability<ManagerCapability>;

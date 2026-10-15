@@ -207,8 +207,8 @@ None.
   `ManagerCapability`) becomes `never` once the union gains, renames or loses
   a member. The review schedule use case and `ReviewHistoryAccessService`,
   which makes the same assumption, pass constants typed with it, so the build
-  fails at both until their MANAGER scope is revisited (mutation-checked with
-  a probe member).
+  fails at both until their MANAGER scope is revisited. `manager-capability.spec.ts`
+  pins the collapse with `@ts-expect-error` probe unions.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
