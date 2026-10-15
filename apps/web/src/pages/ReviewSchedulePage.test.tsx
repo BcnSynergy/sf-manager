@@ -68,7 +68,7 @@ function withServerMessage(error: ApiError, message: string): ApiError {
 }
 
 function rowOf(communityId: string) {
-  return screen.getByTestId(`review-schedule-row-${communityId}`);
+  return screen.getByTestId(`review-schedule-row-${communityId}-EXTINGUISHER`);
 }
 
 describe('ReviewSchedulePage', () => {
@@ -122,9 +122,9 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    const row = await screen.findByTestId('review-schedule-row-c2');
+    const row = await screen.findByTestId('review-schedule-row-c2-EXTINGUISHER');
     expect(within(row).getByText('Upcoming')).toBeInTheDocument();
-    expect(within(row).getByTestId('review-schedule-reason-c2')).toHaveTextContent(
+    expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).toHaveTextContent(
       'No annual review on record; due by December 31, 2026.',
     );
   });
@@ -134,9 +134,9 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    const row = await screen.findByTestId('review-schedule-row-c3');
+    const row = await screen.findByTestId('review-schedule-row-c3-EXTINGUISHER');
     expect(within(row).getByText('Overdue')).toBeInTheDocument();
-    expect(within(row).getByTestId('review-schedule-reason-c3')).toHaveTextContent(
+    expect(within(row).getByTestId('review-schedule-reason-c3-EXTINGUISHER')).toHaveTextContent(
       'Q3 2026 is not covered by a completed review (was due by September 30, 2026).',
     );
   });
@@ -146,11 +146,13 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    const row = await screen.findByTestId('review-schedule-row-c4');
-    expect(within(row).getByTestId('review-schedule-last-review-c4')).toHaveTextContent(
-      'Never reviewed',
-    );
-    expect(within(row).queryByTestId('review-schedule-reason-c4')).not.toBeInTheDocument();
+    const row = await screen.findByTestId('review-schedule-row-c4-EXTINGUISHER');
+    expect(
+      within(row).getByTestId('review-schedule-last-review-c4-EXTINGUISHER'),
+    ).toHaveTextContent('Never reviewed');
+    expect(
+      within(row).queryByTestId('review-schedule-reason-c4-EXTINGUISHER'),
+    ).not.toBeInTheDocument();
     expect(row).not.toHaveTextContent(/overdue/i);
     expect(row.textContent).not.toMatch(/\d{4}/);
   });
@@ -160,12 +162,14 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    const row = await screen.findByTestId('review-schedule-row-c1');
+    const row = await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
     expect(within(row).getByText('Up to date')).toBeInTheDocument();
-    expect(within(row).getByTestId('review-schedule-last-review-c1')).toHaveTextContent(
-      'November 15, 2026',
-    );
-    expect(within(row).queryByTestId('review-schedule-reason-c1')).not.toBeInTheDocument();
+    expect(
+      within(row).getByTestId('review-schedule-last-review-c1-EXTINGUISHER'),
+    ).toHaveTextContent('November 15, 2026');
+    expect(
+      within(row).queryByTestId('review-schedule-reason-c1-EXTINGUISHER'),
+    ).not.toBeInTheDocument();
   });
 
   it('renders no reason line, and does not crash, for an overdue row with no usable reason data', async () => {
@@ -176,11 +180,33 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    await screen.findByTestId('review-schedule-row-c3');
-    expect(screen.queryByTestId('review-schedule-reason-c3')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('review-schedule-reason-c2')).not.toBeInTheDocument();
+    await screen.findByTestId('review-schedule-row-c3-EXTINGUISHER');
+    expect(screen.queryByTestId('review-schedule-reason-c3-EXTINGUISHER')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('review-schedule-reason-c2-EXTINGUISHER')).not.toBeInTheDocument();
     expect(within(rowOf('c3')).getByText('Overdue')).toBeInTheDocument();
     expect(within(rowOf('c2')).getByText('Upcoming')).toBeInTheDocument();
+  });
+
+  it('gives each element type of one community its own row ids', async () => {
+    // TD-13: only EXTINGUISHER exists today, so a second type is simulated to
+    // prove the ids are unique per (community, element type) pair.
+    const secondType = 'SECOND_TYPE' as ReviewScheduleRow['elementType'];
+    mockedListReviewSchedule.mockResolvedValue([
+      baseRow,
+      { ...overdueQuarterly, communityId: 'c1', elementType: secondType },
+    ]);
+
+    renderPage();
+
+    const first = await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
+    const second = screen.getByTestId('review-schedule-row-c1-SECOND_TYPE');
+    expect(within(first).getByText('Up to date')).toBeInTheDocument();
+    expect(
+      within(first).queryByTestId('review-schedule-reason-c1-EXTINGUISHER'),
+    ).not.toBeInTheDocument();
+    expect(within(second).getByTestId('review-schedule-reason-c1-SECOND_TYPE')).toHaveTextContent(
+      'Q3 2026 is not covered by a completed review (was due by September 30, 2026).',
+    );
   });
 
   it('localizes the element type and never shows a raw enum value', async () => {
@@ -193,7 +219,7 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    await screen.findByTestId('review-schedule-row-c1');
+    await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
     const text = document.body.textContent ?? '';
     expect(text).toContain(i18n.t('inspectableElement.type.extinguisher'));
     for (const raw of [
@@ -221,10 +247,10 @@ describe('ReviewSchedulePage', () => {
 
     const rows = await screen.findAllByTestId(/^review-schedule-row-/);
     expect(rows.map((element) => element.getAttribute('data-testid'))).toEqual([
-      'review-schedule-row-c2',
-      'review-schedule-row-c1',
-      'review-schedule-row-c4',
-      'review-schedule-row-c3',
+      'review-schedule-row-c2-EXTINGUISHER',
+      'review-schedule-row-c1-EXTINGUISHER',
+      'review-schedule-row-c4-EXTINGUISHER',
+      'review-schedule-row-c3-EXTINGUISHER',
     ]);
   });
 
@@ -238,7 +264,7 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    await screen.findByTestId('review-schedule-row-c1');
+    await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);
@@ -265,13 +291,15 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    const row = await screen.findByTestId('review-schedule-row-c2');
+    const row = await screen.findByTestId('review-schedule-row-c2-EXTINGUISHER');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title);
     expect(row).not.toHaveTextContent('Upcoming');
-    expect(within(row).getByTestId('review-schedule-reason-c2')).not.toHaveTextContent(
+    expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).not.toHaveTextContent(
       'No annual review',
     );
-    expect(within(row).getByTestId('review-schedule-reason-c2')).toHaveTextContent('2026');
+    expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).toHaveTextContent(
+      '2026',
+    );
   });
 
   it('names the table by its heading and scopes every column header', async () => {
