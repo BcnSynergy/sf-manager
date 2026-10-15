@@ -203,8 +203,8 @@ None.
 - **TD-9**: `as any` casts on the mocked `Response` in
   `auth.controller.spec.ts` triggered `@typescript-eslint/no-unsafe-argument`
   warnings (six by 2026-10-15, up from the four first recorded). Resolved by
-  `td-9-auth-controller-spec-casts`: the spec casts the mock once to the
-  Express `Response` type (`as unknown as Response`, the repo's spec idiom),
+  `td-9-auth-controller-spec-casts` (#227): the spec casts the mock once to the
+  Express `Response` type (`as unknown as Response`, the idiom other specs use),
   and the file lints clean.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
