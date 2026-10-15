@@ -201,13 +201,13 @@ None.
 - **TD-33**: Prettier was a dependency but not enforced. Resolved by
   `td-33-prettier-enforced` (#220, #221): root `format` / `format:check`
   scripts, a CI `Format` step, and the whole repo formatted (code in #220,
-  docs in #221). Five archived Markdown files that Prettier cannot format stably or
-  correctly stay in `.prettierignore`; `openspec/config.yaml` stayed there too
-  until TD-37 was resolved.
+  docs in #221). Five archived Markdown files that Prettier cannot format
+  stably or correctly stay in `.prettierignore`; `openspec/config.yaml` stayed
+  there too until TD-37 was resolved.
 - **TD-37**: `openspec/config.yaml` was not valid YAML: `rules.apply` mixed a
   list item with the mapping keys `tdd` and `test_command`. Resolved by
   `td-37-openspec-config-yaml`: `rules.apply` is now a list like the other
-  phases, and the two keys became one rule. Nothing read them as keys:
+  list-based phases, and the two keys became one rule. Nothing read them as keys:
   `sdd-apply` takes Strict TDD from the top-level `strict_tdd` and `testing`,
   and reads `rules.apply` as free-text rules. The file is formatted and no
   longer in `.prettierignore`.
