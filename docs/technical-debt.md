@@ -39,11 +39,6 @@ None.
   recorded in the `checklist-management` archive-report (S-2), the
   `label-printing` verify-report (S-5, `qrcode` pushed it to 764 kB), and the
   `community-minimal-ui` verify-report. Origin: `checklist-management`.
-- **TD-13**: Review schedule rows' `data-testid`s use `communityId` only, so
-  two rows for one community collide once a second `ElementType` exists.
-  Evidence: `apps/web/src/pages/ReviewSchedulePage.tsx:75,81,86`;
-  `review-schedule` archive-report S-1 and follow-up 1. Origin:
-  `review-schedule`.
 - **TD-15**: The soft-deleted manager case is covered at e2e with fakes only,
   not through the real `PrismaUserRepository`. Evidence: `review-schedule`
   archive-report S-3 and follow-up 4; `prisma-user.repository.integration.spec.ts`
@@ -209,6 +204,11 @@ None.
   which makes the same assumption, pass constants typed with it, so the build
   fails at both until their MANAGER scope is revisited. `manager-capability.spec.ts`
   pins the collapse with `@ts-expect-error` probe unions.
+- **TD-13**: Review schedule rows' `data-testid`s used `communityId` only, so
+  two rows for one community would collide once a second `ElementType`
+  exists. Resolved by `td-13-schedule-row-test-ids`: the row, reason and
+  last-review ids use the same `communityId-elementType` key as the React
+  `key`, and a test with a simulated second type pins one id per pair.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

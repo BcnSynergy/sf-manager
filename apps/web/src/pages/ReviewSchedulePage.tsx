@@ -72,18 +72,18 @@ export function ReviewSchedulePage() {
               const rowKey = `${row.communityId}-${row.elementType}`;
               const reason = mapReasonToText(row, i18n.language);
               return (
-                <tr key={rowKey} data-testid={`review-schedule-row-${row.communityId}`}>
+                <tr key={rowKey} data-testid={`review-schedule-row-${rowKey}`}>
                   <td>{row.communityName}</td>
                   <td>{t(mapElementTypeToLabelKey(row.elementType))}</td>
                   <td>{t(mapStatusToLabelKey(row.status))}</td>
                   <td>
                     {reason && (
-                      <span data-testid={`review-schedule-reason-${row.communityId}`}>
+                      <span data-testid={`review-schedule-reason-${rowKey}`}>
                         {t(reason.key, reason.params)}
                       </span>
                     )}
                   </td>
-                  <td data-testid={`review-schedule-last-review-${row.communityId}`}>
+                  <td data-testid={`review-schedule-last-review-${rowKey}`}>
                     {row.lastCoveringSessionDate
                       ? formatCalendarDate(row.lastCoveringSessionDate, i18n.language)
                       : t(NEVER_REVIEWED_LABEL_KEY)}
