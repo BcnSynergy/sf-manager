@@ -346,7 +346,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `MANAGER_CAPABILITIES`, derived from a `Record<ManagerCapability, true>` in
   the domain, so a new capability fails to compile until it is listed and the
   OpenAPI enum follows. A spec checks both schemas against it. Done in
-  `en-45-swagger-capability-enum`.
+  `en-45-swagger-capability-enum`, PR #231.
 - **EN-46** (api tests): `manager-capability.spec.ts` now also pins the
   lost-member case (`SoleCapability<never>`) with a fourth `@ts-expect-error`.
   Done in `en-46-lost-member-probe`, PR #230.
