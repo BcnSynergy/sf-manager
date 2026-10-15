@@ -206,7 +206,7 @@ None.
   there too until TD-37 was resolved.
 - **TD-37**: `openspec/config.yaml` was not valid YAML: `rules.apply` mixed a
   list item with the mapping keys `tdd` and `test_command`. Resolved by
-  `td-37-openspec-config-yaml`: `rules.apply` is now a list like the other
+  `td-37-openspec-config-yaml` (#222): `rules.apply` is now a list like the other
   list-based phases, and the two keys became one rule. Nothing read them as keys:
   `sdd-apply` takes Strict TDD from the top-level `strict_tdd` and `testing`,
   and reads `rules.apply` as free-text rules. The file is formatted and no
