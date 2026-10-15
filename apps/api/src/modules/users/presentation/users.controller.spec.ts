@@ -4,6 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  DocumentBuilder,
+  type OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
 import { CreateUserUseCase } from '../application/use-cases/create-user.use-case';
 import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.use-case';
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
@@ -16,6 +21,7 @@ import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-co
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import { UserNotFoundError } from '../domain/errors/user-not-found.error';
 import { WeakPasswordError } from '../domain/errors/weak-password.error';
+import { MANAGER_CAPABILITIES } from '../domain/manager-capability';
 import { UsersController } from './users.controller';
 
 describe('UsersController', () => {
@@ -25,10 +31,11 @@ describe('UsersController', () => {
   const deactivateUserUseCase = { execute: jest.fn() };
 
   let controller: UsersController;
+  let module: TestingModule;
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
         { provide: CreateUserUseCase, useValue: createUserUseCase },
@@ -435,6 +442,41 @@ describe('UsersController', () => {
         message: domainError.message,
         code: 'TRANSACTION_CONFLICT',
       });
+    });
+  });
+
+  // EN-45: the OpenAPI schema lists the manager capabilities from
+  // MANAGER_CAPABILITIES, so a new ManagerCapability cannot leave it stale.
+  describe('OpenAPI schema', () => {
+    type Schema = {
+      properties?: Record<string, { items?: { enum?: unknown[] } }>;
+    };
+
+    it('lists MANAGER_CAPABILITIES for managerCapabilities in the update body and the user response', async () => {
+      const app = module.createNestApplication();
+      await app.init();
+      let document: OpenAPIObject;
+      try {
+        document = SwaggerModule.createDocument(
+          app,
+          new DocumentBuilder().build(),
+        );
+      } finally {
+        await app.close();
+      }
+      const patchBody = document.paths['/users/{id}']?.patch?.requestBody as
+        { content: Record<string, { schema: Schema }> } | undefined;
+      const responseSchema = document.components?.schemas?.[
+        'UserResponseDto'
+      ] as Schema | undefined;
+
+      expect(
+        patchBody?.content['application/json'].schema.properties
+          ?.managerCapabilities?.items?.enum,
+      ).toEqual([...MANAGER_CAPABILITIES]);
+      expect(
+        responseSchema?.properties?.managerCapabilities?.items?.enum,
+      ).toEqual([...MANAGER_CAPABILITIES]);
     });
   });
 });
