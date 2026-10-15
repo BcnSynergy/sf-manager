@@ -39,12 +39,6 @@ None.
   recorded in the `checklist-management` archive-report (S-2), the
   `label-printing` verify-report (S-5, `qrcode` pushed it to 764 kB), and the
   `community-minimal-ui` verify-report. Origin: `checklist-management`.
-- **TD-9**: Four `as any` casts on the mocked `Response` trigger
-  `@typescript-eslint/no-unsafe-argument` warnings. Evidence:
-  `apps/api/src/modules/auth/presentation/auth.controller.spec.ts` lines 61,
-  92, 102, 117 (confirmed with `eslint` on 2026-10-09). Origin: the
-  2026-10-06 debt inventory, after #188 removed the cast in
-  `community.e2e-spec.ts`.
 - **TD-12**: No compile-time check that `ManagerCapability` has a single
   member. The schedule scope logic assumes `VIEW_ALL_REVIEWS` is the only one,
   so a second capability should fail the build until that logic is revisited.
@@ -206,6 +200,12 @@ None.
   `td-10-adr-011-decision-3-pointer` (#225): Decision 3 now carries an inline
   "superseded 2026-09-15" note, in the same style as the existing
   "corrected 2026-09-08" note in Decision 1.
+- **TD-9**: `as any` casts on the mocked `Response` in
+  `auth.controller.spec.ts` triggered `@typescript-eslint/no-unsafe-argument`
+  warnings (six by 2026-10-15, up from the four first recorded). Resolved by
+  `td-9-auth-controller-spec-casts`: the spec casts the mock once to the
+  Express `Response` type (`as unknown as Response`, the repo's spec idiom),
+  and the file lints clean.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
