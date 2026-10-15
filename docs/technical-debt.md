@@ -52,14 +52,6 @@ None.
   `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` lines 73-75
   versus the 2026-09-15 addendum, item 2. Origin:
   `review-history-manager-capability` archive-report W5.
-- **TD-11**: The unknown-capability rejection test uses `'MANAGE_COMMUNITIES'`,
-  one of ADR-011's undeclared capability names. This contradicts the spec
-  invariant that no other capability name appears in `apps/**` or
-  `packages/**` (the guard only scans `apps/api/src`), and the test would
-  break once that capability is declared. Fix: use a non-ADR-011 string such
-  as `'NOT_A_CAPABILITY'`. Evidence:
-  `packages/validation/src/users/update-user.schema.spec.ts:25`. Origin:
-  `review-history-manager-capability` verify-report W4.
 - **TD-12**: No compile-time check that `ManagerCapability` has a single
   member. The schedule scope logic assumes `VIEW_ALL_REVIEWS` is the only one,
   so a second capability should fail the build until that logic is revisited.
@@ -210,6 +202,11 @@ None.
   tooling undecided). Resolved by `td-34-adr-index-wording` (#223): the i18n bullet
   names i18next/react-i18next on web and no i18n library on the API, and the
   end-user manual bullet no longer says slices are API-only.
+- **TD-11**: The unknown-capability rejection test used `'MANAGE_COMMUNITIES'`,
+  one of ADR-011's undeclared capability names, so it would break once that
+  capability is declared. Resolved by `td-11-unknown-capability-test`: it now
+  uses `'NOT_A_CAPABILITY'`, and no ADR-011 undeclared name remains in
+  `apps/**` or `packages/**`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
