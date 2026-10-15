@@ -39,12 +39,6 @@ None.
   recorded in the `checklist-management` archive-report (S-2), the
   `label-printing` verify-report (S-5, `qrcode` pushed it to 764 kB), and the
   `community-minimal-ui` verify-report. Origin: `checklist-management`.
-- **TD-12**: No compile-time check that `ManagerCapability` has a single
-  member. The schedule scope logic assumes `VIEW_ALL_REVIEWS` is the only one,
-  so a second capability should fail the build until that logic is revisited.
-  Evidence: `apps/api/src/modules/users/domain/manager-capability.ts` (plain
-  union); `review-schedule` archive-report follow-up 3. Origin:
-  `review-schedule`.
 - **TD-13**: Review schedule rows' `data-testid`s use `communityId` only, so
   two rows for one community collide once a second `ElementType` exists.
   Evidence: `apps/web/src/pages/ReviewSchedulePage.tsx:75,81,86`;
@@ -206,6 +200,13 @@ None.
   `td-9-auth-controller-spec-casts` (#227): the spec casts the mock once to the
   Express `Response` type (`as unknown as Response`, the idiom other specs use),
   and the file lints clean.
+- **TD-12**: No compile-time check that `ManagerCapability` has a single
+  member, although the review schedule's MANAGER scope assumes
+  `VIEW_ALL_REVIEWS` is the only one. Resolved by
+  `td-12-single-manager-capability`: `list-review-schedule.use-case.ts` passes
+  a constant typed as `SoleManagerCapability`, which becomes `never` once the
+  union gains a second member, so the build fails there until the branch is
+  revisited (mutation-checked with a probe member).
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
