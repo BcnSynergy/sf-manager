@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerException } from '@nestjs/throttler';
+import type { Response } from 'express';
 import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
@@ -33,6 +34,7 @@ describe('AuthController', () => {
     clearCookie: jest.fn(),
     setHeader: jest.fn(),
   };
+  const res = response as unknown as Response;
 
   let controller: AuthController;
 
@@ -64,7 +66,7 @@ describe('AuthController', () => {
 
     const result = await controller.login(
       { email: 'admin@example.com', password: 'correct' },
-      response as any,
+      res,
     );
 
     expect(loginUseCase.execute).toHaveBeenCalledWith(
@@ -93,10 +95,7 @@ describe('AuthController', () => {
     loginUseCase.execute.mockRejectedValue(new InvalidCredentialsError());
 
     await expect(
-      controller.login(
-        { email: 'nobody@example.com', password: 'wrong' },
-        response as any,
-      ),
+      controller.login({ email: 'nobody@example.com', password: 'wrong' }, res),
     ).rejects.toThrow(UnauthorizedException);
 
     expect(response.cookie).not.toHaveBeenCalled();
@@ -106,7 +105,7 @@ describe('AuthController', () => {
     loginUseCase.execute.mockRejectedValue(new LoginBlockedError(42));
 
     const error = await controller
-      .login({ email: 'admin@example.com', password: 'x' }, response as any)
+      .login({ email: 'admin@example.com', password: 'x' }, res)
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ThrottlerException);
@@ -123,10 +122,7 @@ describe('AuthController', () => {
     loginUseCase.execute.mockRejectedValue(storageError);
 
     await expect(
-      controller.login(
-        { email: 'admin@example.com', password: 'x' },
-        response as any,
-      ),
+      controller.login({ email: 'admin@example.com', password: 'x' }, res),
     ).rejects.toBe(storageError);
 
     expect(response.setHeader).not.toHaveBeenCalled();
@@ -135,7 +131,7 @@ describe('AuthController', () => {
   it('logout revokes the cookie token and clears the cookie with matching attributes', async () => {
     const request = { cookies: { sf_access_token: 'raw-token' } };
 
-    await controller.logout(request, response as any);
+    await controller.logout(request, res);
 
     expect(logoutUseCase.execute).toHaveBeenCalledWith('raw-token');
     expect(response.clearCookie).toHaveBeenCalledWith('sf_access_token', {
@@ -150,7 +146,7 @@ describe('AuthController', () => {
     logoutUseCase.execute.mockRejectedValue(new InvalidCredentialsError());
     const request = { cookies: { sf_access_token: 'expired-token' } };
 
-    await expect(controller.logout(request, response as any)).rejects.toThrow(
+    await expect(controller.logout(request, res)).rejects.toThrow(
       UnauthorizedException,
     );
 
