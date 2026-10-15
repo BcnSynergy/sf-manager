@@ -4,7 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  DocumentBuilder,
+  type OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
 import { CreateUserUseCase } from '../application/use-cases/create-user.use-case';
 import { DeactivateUserUseCase } from '../application/use-cases/deactivate-user.use-case';
 import { ListUsersUseCase } from '../application/use-cases/list-users.use-case';
@@ -451,11 +455,15 @@ describe('UsersController', () => {
     it('lists MANAGER_CAPABILITIES for managerCapabilities in the update body and the user response', async () => {
       const app = module.createNestApplication();
       await app.init();
-
-      const document = SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder().build(),
-      );
+      let document: OpenAPIObject;
+      try {
+        document = SwaggerModule.createDocument(
+          app,
+          new DocumentBuilder().build(),
+        );
+      } finally {
+        await app.close();
+      }
       const patchBody = document.paths['/users/{id}']?.patch?.requestBody as
         { content: Record<string, { schema: Schema }> } | undefined;
       const responseSchema = document.components?.schemas?.[
@@ -469,8 +477,6 @@ describe('UsersController', () => {
       expect(
         responseSchema?.properties?.managerCapabilities?.items?.enum,
       ).toEqual([...MANAGER_CAPABILITIES]);
-
-      await app.close();
     });
   });
 });
