@@ -207,7 +207,7 @@ None.
   and reads `rules.apply` as free-text rules. The file is formatted and no
   longer in `.prettierignore`.
 - **TD-34**: Stale wording in `docs/adr/INDEX.md` (slices API-only, i18n
-  tooling undecided). Resolved by `td-34-adr-index-wording`: the i18n bullet
+  tooling undecided). Resolved by `td-34-adr-index-wording` (#223): the i18n bullet
   names i18next/react-i18next on web and no i18n library on the API, and the
   end-user manual bullet no longer says slices are API-only.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
