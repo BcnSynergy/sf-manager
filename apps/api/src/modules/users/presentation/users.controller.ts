@@ -39,6 +39,7 @@ import { MaintenanceCompanyNotFoundError } from '../domain/errors/maintenance-co
 import { TransactionConflictError } from '../domain/errors/transaction-conflict.error';
 import { UserNotFoundError } from '../domain/errors/user-not-found.error';
 import { WeakPasswordError } from '../domain/errors/weak-password.error';
+import { MANAGER_CAPABILITIES } from '../domain/manager-capability';
 import type { UserErrorCode } from './user-error-code';
 import type { CreateUserRequestDto } from './dto/create-user-request.dto';
 import type { UpdateUserRequestDto } from './dto/update-user-request.dto';
@@ -149,7 +150,7 @@ export class UsersController {
         },
         managerCapabilities: {
           type: 'array',
-          items: { type: 'string', enum: ['VIEW_ALL_REVIEWS'] },
+          items: { type: 'string', enum: [...MANAGER_CAPABILITIES] },
           description:
             'Present iff this request grants/revokes a manager capability. ' +
             'Absent leaves the value unchanged; an explicit empty array is ' +

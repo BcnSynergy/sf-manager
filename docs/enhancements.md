@@ -338,16 +338,15 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md:81-83`. Origin:
   `td-10-adr-011-decision-3-pointer` (#225) native review, findings
   `R2-single-port-wording` and `R3-001`, 2026-10-15.
-- **EN-45** (api docs): The Swagger metadata lists the manager capabilities by
-  hand (`enum: ['VIEW_ALL_REVIEWS']`), so a new `ManagerCapability` would
-  leave the OpenAPI docs out of date with no build error. Derive the list
-  from one source, or add it to the TD-12 compile-time guard. Evidence:
-  `apps/api/src/modules/users/presentation/users.controller.ts:152`,
-  `apps/api/src/modules/users/presentation/dto/user-response.dto.ts:36`.
-  Origin: `td-12-single-manager-capability` (#228) fresh review, 2026-10-15.
 
 ## Done
 
+- **EN-45** (api docs): The Swagger metadata for `managerCapabilities` (the
+  `PATCH /users/:id` body and `UserResponseDto`) now lists
+  `MANAGER_CAPABILITIES`, derived from a `Record<ManagerCapability, true>` in
+  the domain, so a new capability fails to compile until it is listed and the
+  OpenAPI enum follows. A spec checks both schemas against it. Done in
+  `en-45-swagger-capability-enum`.
 - **EN-46** (api tests): `manager-capability.spec.ts` now also pins the
   lost-member case (`SoleCapability<never>`) with a fourth `@ts-expect-error`.
   Done in `en-46-lost-member-probe`, PR #230.
