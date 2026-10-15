@@ -350,7 +350,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
 
 - **EN-46** (api tests): `manager-capability.spec.ts` now also pins the
   lost-member case (`SoleCapability<never>`) with a fourth `@ts-expect-error`.
-  Done in `en-46-lost-member-probe`.
+  Done in `en-46-lost-member-probe`, PR #230.
 - **EN-26** (api tests): Widened the 1000 ms windows in the login-failure
   limiter integration spec to 3 s so the window-expiry tests no longer race a
   slow CI runner. Done in `login-account-lockout`, PR #214.
