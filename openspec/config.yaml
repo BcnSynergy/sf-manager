@@ -13,12 +13,12 @@ strict_tdd: true
 
 testing:
   api:
-    test_command: "npm run test --workspace=apps/api"
-    coverage_command: "npm run test:cov --workspace=apps/api"
-    e2e_command: "npm run test:e2e --workspace=apps/api"
+    test_command: 'npm run test --workspace=apps/api'
+    coverage_command: 'npm run test:cov --workspace=apps/api'
+    e2e_command: 'npm run test:e2e --workspace=apps/api'
     framework: jest
   web:
-    test_command: "npm run test --workspace=apps/web"
+    test_command: 'npm run test --workspace=apps/web'
     framework: vitest
 
 rules:
@@ -38,11 +38,10 @@ rules:
     - Keep tasks completable in one session
   apply:
     - Follow existing code patterns (NestJS modules, Clean Architecture layers)
-    tdd: true
-    test_command: "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
+    - Strict TDD (strict_tdd above); run both suites with `npm run test --workspace=apps/api && npm run test --workspace=apps/web`
   verify:
-    test_command: "npm run test --workspace=apps/api && npm run test --workspace=apps/web"
-    build_command: "npm run build"
+    test_command: 'npm run test --workspace=apps/api && npm run test --workspace=apps/web'
+    build_command: 'npm run build'
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas

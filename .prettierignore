@@ -2,10 +2,6 @@
 package-lock.json
 .claude/
 
-# Not valid YAML (the apply: block mixes a list item with mapping keys), so
-# Prettier cannot parse it. See TD-37.
-openspec/config.yaml
-
 # Prettier's Markdown output is not stable on these archived files (each
 # --write pass changes them again), so they are left as written.
 openspec/changes/archive/2026-08-26-users-minimal-ui/proposal.md
