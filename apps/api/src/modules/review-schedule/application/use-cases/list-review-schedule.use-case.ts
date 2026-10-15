@@ -12,7 +12,7 @@ import {
   type Clock,
 } from '../../../../shared/application/ports/clock.port';
 import type { ElementType } from '../../../inspectable-element/domain/element-type';
-import type { ManagerCapability } from '../../../users/domain/manager-capability';
+import type { SoleManagerCapability } from '../../../users/domain/manager-capability';
 import type { Role } from '../../../users/domain/role';
 import {
   coverageWindowStart,
@@ -55,13 +55,8 @@ export interface ReviewScheduleRow {
   lastCoveringSessionDate: string | null;
 }
 
-// TD-12: the MANAGER branch below grants full scope on VIEW_ALL_REVIEWS
-// alone, which is only right while it is the sole ManagerCapability. With a
-// second member this type becomes `never` and the constant fails to compile,
-// so the branch must be revisited before the build passes again.
-type SoleManagerCapability = [ManagerCapability] extends ['VIEW_ALL_REVIEWS']
-  ? ManagerCapability
-  : never;
+// TD-12: typed with SoleManagerCapability, so a second capability fails the
+// build here until the MANAGER branch below is revisited.
 const MANAGER_SCHEDULE_CAPABILITY: SoleManagerCapability = 'VIEW_ALL_REVIEWS';
 
 // design.md Decisions 4, 7 and 8, Data Flow: resolve the scope for the

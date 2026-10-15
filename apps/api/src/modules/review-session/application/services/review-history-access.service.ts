@@ -19,6 +19,7 @@ import {
   type ElementReviewEntryRow,
   type ReviewSessionRepository,
 } from '../ports/review-session.repository.port';
+import type { SoleManagerCapability } from '../../../users/domain/manager-capability';
 import type { Actor } from './session-access.service';
 
 // Merged-list order, mirroring the adapter's `completedAt DESC, id DESC`
@@ -41,6 +42,10 @@ function completedHistoryOrder(a: ReviewSession, b: ReviewSession): number {
 // false }` has no `entries` property to read at all.
 export type ElementHistoryScope =
   { reachable: false } | { reachable: true; entries: ElementReviewEntryRow[] };
+
+// TD-12: typed with SoleManagerCapability, so a second capability fails the
+// build here until the MANAGER branches below are revisited.
+const MANAGER_HISTORY_CAPABILITY: SoleManagerCapability = 'VIEW_ALL_REVIEWS';
 
 // design.md Decision 1: a read-only SIBLING of SessionAccessService, not an
 // extension of it. SessionAccess = "may this actor ACT on this draft"
@@ -150,7 +155,7 @@ export class ReviewHistoryAccessService {
           await this.managerCapabilityChecker.hasManagerCapability(
             actor.userId,
             actor.role,
-            'VIEW_ALL_REVIEWS',
+            MANAGER_HISTORY_CAPABILITY,
           );
         if (!granted) {
           return [];
@@ -250,7 +255,7 @@ export class ReviewHistoryAccessService {
           await this.managerCapabilityChecker.hasManagerCapability(
             actor.userId,
             actor.role,
-            'VIEW_ALL_REVIEWS',
+            MANAGER_HISTORY_CAPABILITY,
           );
         if (!granted) {
           return null;
@@ -356,7 +361,7 @@ export class ReviewHistoryAccessService {
           await this.managerCapabilityChecker.hasManagerCapability(
             actor.userId,
             actor.role,
-            'VIEW_ALL_REVIEWS',
+            MANAGER_HISTORY_CAPABILITY,
           );
         if (!granted) {
           return { reachable: false };
