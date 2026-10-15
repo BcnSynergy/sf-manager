@@ -345,15 +345,12 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `apps/api/src/modules/users/presentation/users.controller.ts:152`,
   `apps/api/src/modules/users/presentation/dto/user-response.dto.ts:36`.
   Origin: `td-12-single-manager-capability` (#228) fresh review, 2026-10-15.
-- **EN-46** (api tests): `manager-capability.spec.ts` probes the
-  `SoleCapability` collapse for a gained, renamed and widened member, but not
-  for a lost one (`SoleCapability<never>`), which the guard's comment also
-  claims. It holds today (checked by hand); a fourth `@ts-expect-error` case
-  would pin it. Origin: `td-12-single-manager-capability` (#228) native
-  review, finding `R3-loses-member-unprobed`, 2026-10-15.
 
 ## Done
 
+- **EN-46** (api tests): `manager-capability.spec.ts` now also pins the
+  lost-member case (`SoleCapability<never>`) with a fourth `@ts-expect-error`.
+  Done in `en-46-lost-member-probe`, PR #230.
 - **EN-26** (api tests): Widened the 1000 ms windows in the login-failure
   limiter integration spec to 3 s so the window-expiry tests no longer race a
   slow CI runner. Done in `login-account-lockout`, PR #214.

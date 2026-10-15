@@ -16,7 +16,7 @@ describe('SoleManagerCapability', () => {
     expect(widened).toBe('VIEW_ALL_REVIEWS');
   });
 
-  it('collapses to never when the union gains, renames or widens its member', () => {
+  it('collapses to never when the union gains, renames, widens or loses its member', () => {
     // @ts-expect-error a second member makes the guard `never`
     const gained: SoleCapability<'VIEW_ALL_REVIEWS' | 'PROBE'> =
       'VIEW_ALL_REVIEWS';
@@ -25,6 +25,9 @@ describe('SoleManagerCapability', () => {
     // @ts-expect-error widening to string makes the guard `never`
     const widenedToString: SoleCapability<string> = 'VIEW_ALL_REVIEWS';
 
-    expect([gained, renamed, widenedToString]).toHaveLength(3);
+    // @ts-expect-error losing the only member makes the guard `never`
+    const lost: SoleCapability<never> = 'VIEW_ALL_REVIEWS';
+
+    expect([gained, renamed, widenedToString, lost]).toHaveLength(4);
   });
 });
