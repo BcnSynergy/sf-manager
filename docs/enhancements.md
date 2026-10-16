@@ -383,6 +383,17 @@ windowEndsAt <= now()`) four times and the window-end expression five
   boundary in `App.tsx` has no test for its fallback or error path. Origin:
   `td-8-route-code-splitting` native review, findings `R3-001` and `R3-002`,
   2026-10-16.
+- **EN-52** (web): react-router 7 `BrowserRouter` wraps each navigation in
+  `startTransition` (unless `useTransitions={false}`), so on in-app navigation
+  React keeps the current page on screen while a lazy page chunk downloads.
+  The TD-8 "Loading page…" fallback only shows on a full load; on a slow
+  network a nav click looks idle until the chunk arrives. Add a pending
+  indicator (for example from `useNavigation`/transition state) or opt out of
+  transitions. Also, a protected deep link downloads the page chunk only after
+  `/auth/me` resolves (`ProtectedRoute` renders `null` while loading), two
+  requests in sequence. Evidence: `node_modules/react-router` 7.18.2
+  `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` fresh-context
+  review, 2026-10-16.
 
 ## Done
 
