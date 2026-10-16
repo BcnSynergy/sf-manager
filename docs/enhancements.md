@@ -374,6 +374,15 @@ windowEndsAt <= now()`) four times and the window-end expression five
   documents why `import.meta.url` does not work under jsdom. A shared helper
   resolving from the Vitest config root would fix both. Origin:
   `td-8-route-code-splitting` native review, finding `R3-002`, 2026-10-16.
+- **EN-51** (web): `PageLoadBoundary` (`apps/web/src/components/PageSuspense.tsx`)
+  catches every render error, not only chunk-load failures, so a page that
+  crashes at runtime shows "This page could not be loaded" and the real error
+  is not reported (no `componentDidCatch`). Before TD-8 such a crash blanked
+  the whole app, so this is still an improvement. Tell the two cases apart (or
+  word the message generically) and log the error. Also, the `/login`
+  boundary in `App.tsx` has no test for its fallback or error path. Origin:
+  `td-8-route-code-splitting` native review, findings `R3-001` and `R3-002`,
+  2026-10-16.
 
 ## Done
 
