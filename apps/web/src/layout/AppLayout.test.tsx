@@ -53,32 +53,42 @@ function renderAppLayout(initialEntries: string[] = ['/']) {
   );
 }
 
+// ui-redesign-foundation app-navigation delta: same item set per role, in the
+// grouped sidebar order (Home, then Operations, Setup, Administration).
 const EXPECTED_ITEM_TESTIDS: Record<Role, string[]> = {
   SYSTEM_ADMIN: [
     'nav-link-home',
-    'nav-link-users',
+    'nav-link-review-schedule',
+    'nav-link-review-history',
     'nav-link-communities',
     'nav-link-maintenance-companies',
-    'nav-link-checklist-questions',
     'nav-link-review-templates',
-    'nav-link-review-history',
-    'nav-link-review-schedule',
+    'nav-link-checklist-questions',
+    'nav-link-users',
     'nav-link-organization-profile',
   ],
-  MANAGER: ['nav-link-home', 'nav-link-review-history', 'nav-link-review-schedule'],
+  MANAGER: ['nav-link-home', 'nav-link-review-schedule', 'nav-link-review-history'],
   MAINTENANCE_COMPANY_MANAGER: ['nav-link-home', 'nav-link-review-history'],
   MAINTENANCE_TECHNICIAN: [
     'nav-link-home',
+    'nav-link-review-schedule',
     'nav-link-review-sessions',
     'nav-link-review-history',
-    'nav-link-review-schedule',
   ],
   COMMUNITY_REPRESENTATIVE: [
     'nav-link-home',
+    'nav-link-review-schedule',
     'nav-link-review-sessions',
     'nav-link-review-history',
-    'nav-link-review-schedule',
   ],
+};
+
+const EXPECTED_GROUP_LABELS: Record<Role, string[]> = {
+  SYSTEM_ADMIN: ['Operations', 'Setup', 'Administration'],
+  MANAGER: ['Operations'],
+  MAINTENANCE_COMPANY_MANAGER: ['Operations'],
+  MAINTENANCE_TECHNICIAN: ['Operations'],
+  COMMUNITY_REPRESENTATIVE: ['Operations'],
 };
 
 describe('AppLayout', () => {
@@ -149,7 +159,7 @@ describe('AppLayout', () => {
         within(nav)
           .getAllByRole('link')
           .map((link) => link.getAttribute('data-testid')),
-      ).toEqual(['nav-link-home', 'nav-link-review-history', 'nav-link-review-schedule']);
+      ).toEqual(['nav-link-home', 'nav-link-review-schedule', 'nav-link-review-history']);
       const urls = fetchStub.mock.calls.map(([url]) => String(url));
       expect(urls.every((url) => url.includes('/auth/me'))).toBe(true);
     });
@@ -187,6 +197,121 @@ describe('AppLayout', () => {
         expect(nav).not.toContainElement(outlet);
       },
     );
+  });
+
+  // app-navigation delta "The Navigation Is a Grouped Sidebar Without Toggle
+  // State", "The Navigation Shows the Signed-In User's Email"; web-visual-
+  // foundation "The Maker Credit Appears on Screen Only".
+  describe('sidebar shell', () => {
+    it.each(Object.entries(EXPECTED_GROUP_LABELS) as [Role, string[]][])(
+      '%s sees exactly its non-empty group labels, in order, each before its items',
+      async (role, labels) => {
+        vi.stubGlobal('fetch', mockFetch({ role }));
+        renderAppLayout();
+
+        const nav = await screen.findByTestId('nav-root');
+        expect(within(nav).queryByTestId('nav-group-home')).toBeInTheDocument();
+        const groupLabels = within(nav)
+          .queryAllByTestId(/^nav-group-label-/)
+          .map((label) => label.textContent);
+        expect(groupLabels).toEqual(labels);
+
+        const operations = within(nav).getByTestId('nav-group-operations');
+        expect(operations.firstElementChild).toHaveTextContent('Operations');
+      },
+    );
+
+    it('reads the admin group labels and links interleaved in document order', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(
+        within(nav)
+          .getAllByTestId(/^nav-(group-label|link)-/)
+          .map((element) => element.getAttribute('data-testid')),
+      ).toEqual([
+        'nav-link-home',
+        'nav-group-label-operations',
+        'nav-link-review-schedule',
+        'nav-link-review-history',
+        'nav-group-label-setup',
+        'nav-link-communities',
+        'nav-link-maintenance-companies',
+        'nav-link-review-templates',
+        'nav-link-checklist-questions',
+        'nav-group-label-administration',
+        'nav-link-users',
+        'nav-link-organization-profile',
+      ]);
+    });
+
+    it('exposes each labelled group to assistive technology by its label', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(
+        within(nav)
+          .getAllByRole('group')
+          .map((group) => group.getAttribute('aria-labelledby')),
+      ).toHaveLength(3);
+      const operations = within(nav).getByRole('group', { name: 'Operations' });
+      expect(
+        within(operations)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['Review schedule', 'Review history']);
+    });
+
+    it('renders no Setup or Administration group for a manager', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(within(nav).queryByTestId('nav-group-setup')).not.toBeInTheDocument();
+      expect(within(nav).queryByTestId('nav-group-administration')).not.toBeInTheDocument();
+      expect(within(nav).queryByText('Setup')).not.toBeInTheDocument();
+    });
+
+    it('shows the wordmark, and it is not a link', async () => {
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      const wordmark = within(nav).getByTestId('nav-wordmark');
+      expect(wordmark).toHaveTextContent('SF-Manager');
+      expect(wordmark.closest('a')).toBeNull();
+      expect(within(wordmark).queryAllByRole('link')).toHaveLength(0);
+    });
+
+    it("shows the signed-in user's email as plain text, without any extra request", async () => {
+      const fetchStub = mockFetch({ role: 'MAINTENANCE_TECHNICIAN' });
+      vi.stubGlobal('fetch', fetchStub);
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      const email = within(nav).getByTestId('nav-user-email');
+      expect(email).toHaveTextContent('user@sf-manager.example');
+      expect(email.closest('a, button')).toBeNull();
+      const urls = fetchStub.mock.calls.map(([url]) => String(url));
+      expect(urls.every((url) => url.includes('/auth/me'))).toBe(true);
+    });
+
+    it('renders the footer credit with the nav, outside the nav, and not as a link', async () => {
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      const footer = screen.getByTestId('app-footer');
+      expect(footer).toHaveTextContent('A BCNSynergy product');
+      expect(nav).not.toContainElement(footer);
+      expect(within(footer).queryAllByRole('link')).toHaveLength(0);
+    });
+
+    it('renders no footer while the session is still resolving', () => {
+      renderAppLayout();
+
+      expect(screen.queryByTestId('app-footer')).not.toBeInTheDocument();
+    });
   });
 
   describe('write-surface guard', () => {
@@ -343,6 +468,23 @@ describe('AppLayout language selector', () => {
     fireEvent.change(selectors[0], { target: { value: 'es' } });
 
     await waitFor(() => expect(screen.getByTestId('nav-link-home')).toHaveTextContent('Inicio'));
+  });
+
+  it('labels the groups and the credit in the active locale', async () => {
+    vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+    renderAppLayout();
+
+    const nav = await screen.findByTestId('nav-root');
+    fireEvent.change(within(nav).getByRole('combobox'), { target: { value: 'ca' } });
+
+    await waitFor(() =>
+      expect(
+        within(nav)
+          .getAllByTestId(/^nav-group-label-/)
+          .map((label) => label.textContent),
+      ).toEqual(['Operacions', 'Configuració', 'Administració']),
+    );
+    expect(screen.getByTestId('app-footer')).toHaveTextContent('Un producte de BCNSynergy');
   });
 });
 

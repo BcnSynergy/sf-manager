@@ -448,9 +448,22 @@ windowEndsAt <= now()`) four times and the window-end expression five
 - **EN-59** (web tests): Pin the print resets added by the redesign with a
   source-level test like `apps/web/src/styles/index-css-print-credit.test.ts`:
   `main` back to block flow without width cap or padding, and the stacked
-  `dl`/`dd` layout of labels and review documents. Today only a browser print
-  pass covers them. Origin: `ui-redesign-foundation` PR 1 native review,
+  `dl`/`dd` layout of labels and review documents, and (from PR 2) the shell
+  resets: `.sf-shell`/`.sf-main` as blocks and `.sf-main > main` back to
+  `overflow: visible`, so a later screen rule placed after the print block
+  cannot bring back print clipping. Today only a browser print pass covers
+  them. Origin: `ui-redesign-foundation` PR 1 native review,
   finding `R3-print-layout-reset-untested`, 2026-10-16.
+- **EN-60** (web tests): The print guard
+  (`apps/web/src/styles/check-app-nav-print-suppression.ts`) rejects a
+  descendant rule after the chrome selector (`.app-nav .x { display: none }`)
+  but still accepts an ancestor-qualified one (`.page .app-nav { display:
+none }`) as hiding the nav or footer, although that only hides chrome inside
+  `.page`. Today's CSS uses bare selectors, so nothing prints wrongly. Anchor
+  the hidden-rule match to the start of a selector (start of the rule or after
+  a comma) and add a fixture for the ancestor case. Origin:
+  `ui-redesign-foundation` PR 2 native review, finding
+  `R3-print-guard-left-descendant`, 2026-10-16.
 
 ## Done
 

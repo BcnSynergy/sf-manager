@@ -584,7 +584,12 @@
     "reviewSessions": "Review sessions",
     "reviewHistory": "Review history",
     "reviewSchedule": "Review schedule",
-    "organizationProfile": "Organization profile"
+    "organizationProfile": "Organization profile",
+    "group": {
+      "operations": "Operations",
+      "setup": "Setup",
+      "administration": "Administration"
+    }
   },
   "auth": {
     "loginTitle": "Sign in",
