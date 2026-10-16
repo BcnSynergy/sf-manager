@@ -205,7 +205,7 @@ None.
   a checker that caches its answer per user.
 - **TD-16**: The e2e guard that scans `apps/web/src` exempted the review
   schedule surface by exact relative path, so each new schedule file had to be
-  added by hand. Resolved by `td-16-schedule-guard-exemption`: the guard in
+  added by hand. Resolved by `td-16-schedule-guard-exemption` (#233): the guard in
   `apps/api/test/review-session.e2e-spec.ts` skips any file with a directory or
   file name that is `review-schedule` / `ReviewSchedule` or continues with a
   non-lowercase character (so `ReviewScheduler` is still scanned). A

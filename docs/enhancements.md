@@ -356,7 +356,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   mixed case (`reviewSchedule.ts`, `Review-Schedule`), and a schedule directory
   holding a non-matching file name. Evidence:
   `apps/api/test/review-session.e2e-spec.ts` (`isReviewScheduleFile` and its
-  `it.each`). Origin: `td-16-schedule-guard-exemption` native review, findings
+  `it.each`). Origin: `td-16-schedule-guard-exemption` (#233) native review, findings
   `R3-001` and `R3-002`, 2026-10-16.
 
 ## Done
