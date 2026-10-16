@@ -793,6 +793,11 @@ main.sf-login {
     border: 1px solid #000;
   }
 
+  /* The in-progress marker keeps its dashed outline on paper (RDD review). */
+  .sf-badge-draft {
+    border-style: dashed;
+  }
+
   .label-print [data-print-hide] {
     display: none;
   }
