@@ -1198,7 +1198,9 @@ describe('Review History (e2e)', () => {
 
     // TD-24 W1 (review-history-manager-capability verify-report): the
     // granted manager's own "an empty installation renders a successful
-    // empty list" scenario, not only its SYSTEM_ADMIN equivalent.
+    // empty list" scenario, not only its SYSTEM_ADMIN equivalent. An
+    // ungranted manager also gets 200 [], so this pins only "empty, not an
+    // error"; the grant itself is proven by the live grant/revoke test below.
     it('a granted MANAGER in an installation with no completed session gets a successful empty list', async () => {
       const grantedManager = await buildSeedUser({
         id: 'rhd-manager-granted-empty-id',
@@ -1244,9 +1246,13 @@ describe('Review History (e2e)', () => {
 
       const beforeGrant = await managerAgent.get('/review-history').expect(200);
       expect(beforeGrant.body).toEqual([]);
-      await managerAgent
+      const nonexistentResponse = await managerAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
+      const byIdBeforeGrant = await managerAgent
         .get(`/review-history/${sessionByUForC.id}`)
         .expect(404);
+      expect(byIdBeforeGrant.body).toEqual(nonexistentResponse.body);
 
       await adminAgent
         .patch(`/users/${managerId}`)
@@ -1271,9 +1277,6 @@ describe('Review History (e2e)', () => {
 
       const afterRevoke = await managerAgent.get('/review-history').expect(200);
       expect(afterRevoke.body).toEqual([]);
-      const nonexistentResponse = await managerAgent
-        .get('/review-history/00000000-0000-7000-8000-000000000000')
-        .expect(404);
       const byIdAfterRevoke = await managerAgent
         .get(`/review-history/${sessionByUForC.id}`)
         .expect(404);

@@ -338,7 +338,6 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md:81-83`. Origin:
   `td-10-adr-011-decision-3-pointer` (#225) native review, findings
   `R2-single-port-wording` and `R3-001`, 2026-10-15.
-
 - **EN-47** (api tests): The TD-24 live grant/revoke e2e seeds a MANAGER into
   the shared `built.userRepository` of its describe block and does not undo
   the grant in a `finally`, so a failure between the grant and the revoke
