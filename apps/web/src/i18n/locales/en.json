@@ -12,7 +12,9 @@
     "error": {
       "network": "Something went wrong. Please try again."
     },
-    "pageLoading": "Loading page…"
+    "pageLoading": "Loading page…",
+    "pageLoadError": "This page could not be loaded. Reload to try again.",
+    "reload": "Reload"
   },
   "users": {
     "list": {

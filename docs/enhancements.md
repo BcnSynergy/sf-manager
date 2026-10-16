@@ -365,6 +365,15 @@ windowEndsAt <= now()`) four times and the window-end expression five
   would let each page take only the schemas it uses. Evidence: `vite build`
   output (`dist-*.js`, 358 kB) on `td-8-route-code-splitting`, 2026-10-16.
   Origin: `td-8-route-code-splitting`.
+- **EN-50** (web tests): The TD-8 static-import guards in
+  `apps/web/src/routes/authenticated-routes.test.ts` read source files from
+  `process.cwd()`, so they only work when Vitest runs with `apps/web` as its
+  working directory (the workspace scripts and CI do). Run from elsewhere they
+  fail with ENOENT instead of checking the imports.
+  `src/styles/check-app-nav-print-suppression.test.ts` has the same limit and
+  documents why `import.meta.url` does not work under jsdom. A shared helper
+  resolving from the Vitest config root would fix both. Origin:
+  `td-8-route-code-splitting` native review, finding `R3-002`, 2026-10-16.
 
 ## Done
 

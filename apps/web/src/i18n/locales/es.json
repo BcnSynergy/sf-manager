@@ -12,7 +12,9 @@
     "error": {
       "network": "Algo ha fallado. Inténtalo de nuevo."
     },
-    "pageLoading": "Cargando página…"
+    "pageLoading": "Cargando página…",
+    "pageLoadError": "No se ha podido cargar esta página. Recarga para intentarlo de nuevo.",
+    "reload": "Recargar"
   },
   "users": {
     "list": {

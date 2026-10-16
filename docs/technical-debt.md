@@ -211,7 +211,8 @@ None.
 - **TD-8**: The web app shipped as a single ~830 kB JS chunk, over Vite's
   500 kB warning. Resolved by `td-8-route-code-splitting`: every page,
   `LoginPage` included, is loaded with `React.lazy` behind a `<Suspense>`
-  fallback, so each page is its own chunk. The entry chunk is 339 kB (100 kB
+  fallback, so each page is its own chunk. An error boundary shows a reload
+  message if a chunk fails to load (for example after a redeploy). The entry chunk is 339 kB (100 kB
   gzip) and the warning is gone. `@sf-manager/validation` and zod now form a
   shared 358 kB chunk loaded with the login and form pages (EN-49).
   `authenticated-routes.test.ts` fails if a page is imported statically again.

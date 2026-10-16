@@ -1,9 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { PageLoading } from './components/PageLoading';
+import { PageSuspense } from './components/PageSuspense';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
 
 // TD-8: lazy like every authenticated page. LoginPage imports
@@ -27,9 +27,9 @@ export function AppRoutes() {
       <Route
         path="/login"
         element={
-          <Suspense fallback={<PageLoading />}>
+          <PageSuspense>
             <LoginPage />
-          </Suspense>
+          </PageSuspense>
         }
       />
       {/* nav-menu/design.md Decision 1: /login is declared OUTSIDE the
