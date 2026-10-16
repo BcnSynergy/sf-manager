@@ -208,8 +208,12 @@ offer a hamburger, a dropdown other than the language selector, a collapse
 toggle, breadcrumbs, a "back" affordance, search, a dashboard or a
 user/profile menu.
 
-The navigation MUST add no new runtime dependency, and MUST leave the API,
-database schema and shared validation packages untouched.
+The `ui-redesign-foundation` change that introduced the sidebar MUST add no
+new runtime dependency, and MUST leave the API, database schema and shared
+validation packages untouched; the navigation itself stays client-only.
+(Scoped to that change, as the earlier link-bar wording was scoped to the
+navigation's introduction: later changes may add endpoints that the
+navigation links to.)
 
 #### Scenario: The sidebar holds wordmark, items and foot in order
 
@@ -237,7 +241,7 @@ database schema and shared validation packages untouched.
 
 #### Scenario: No dependency and no backend change ships
 
-- GIVEN the dependency manifests, the API, the database schema and the shared validation package before and after this change
+- GIVEN the dependency manifests, the API, the database schema and the shared validation package before and after the `ui-redesign-foundation` change
 - WHEN each is compared
 - THEN no dependency MUST have been added and all three MUST be untouched
 
