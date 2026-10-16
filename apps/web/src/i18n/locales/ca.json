@@ -11,7 +11,8 @@
     "reactivate": "Reactivar",
     "error": {
       "network": "Alguna cosa ha fallat. Torna-ho a provar."
-    }
+    },
+    "pageLoading": "Carregant la pàgina…"
   },
   "users": {
     "list": {

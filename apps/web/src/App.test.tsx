@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
-import type { ReactElement } from 'react';
 import type { Role } from '@sf-manager/validation';
 import '../src/i18n';
 import { AuthProvider } from './auth/AuthProvider';
 import { AppRoutes } from './App';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
+import type { AuthenticatedRoute } from './routes/authenticated-routes';
 
 // nav-menu/design.md Decision 1, "How route gating is verified end to end"
 // step 2: the exhaustive structural-wiring test. Every one of the 29 page
@@ -211,12 +211,14 @@ function renderApp(initialEntries: string[], role?: string) {
   );
 }
 
-// Renders a table entry's own `element` in isolation to read off the exact
-// stub marker it produces — the oracle for "which component does this path
-// EXPECT to render", derived straight from the imported `AUTHENTICATED_ROUTES`
-// entry itself, not a hand-typed duplicate list.
-function expectedMarkerOf(element: ReactElement): string {
-  const { container, unmount } = render(element);
+// Renders a table entry's own page component in isolation to read off the
+// exact stub marker it produces — the oracle for "which component does this
+// path EXPECT to render", derived straight from the imported
+// `AUTHENTICATED_ROUTES` entry itself, not a hand-typed duplicate list. Uses
+// the entry's `load()` (TD-8: `element` is lazy and would suspend here).
+async function expectedMarkerOf(route: AuthenticatedRoute): Promise<string> {
+  const Page = await route.load();
+  const { container, unmount } = render(<Page />);
   const marker = container
     .querySelector('[data-testid^="page-stub-"]')
     ?.getAttribute('data-testid');
@@ -233,7 +235,7 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
   it.each(AUTHENTICATED_ROUTES.map((route) => [route.path, route] as const))(
     '%s renders under AppLayout with its paired component and an allowed role',
     async (path, route) => {
-      const expectedMarker = expectedMarkerOf(route.element);
+      const expectedMarker = await expectedMarkerOf(route);
       const allowedRole = route.allowedRoles?.[0] ?? 'SYSTEM_ADMIN';
 
       renderApp([toConcretePath(path)], allowedRole);

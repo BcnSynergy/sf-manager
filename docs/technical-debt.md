@@ -33,12 +33,6 @@ None.
   `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` (Decision 4 and
   the 2026-08-21 addendum); `auth-live-user-check` explore.md option 3
   (rejected by the user, deferred). Origin: `auth-minimal-skeleton`.
-- **TD-8**: The web app ships as a single ~830 kB JS chunk, so first load is
-  heavier than needed; Vite warns above 500 kB. Evidence: local
-  `apps/web/dist/assets` build (832,225 bytes, 2026-10-09); the warning is
-  recorded in the `checklist-management` archive-report (S-2), the
-  `label-printing` verify-report (S-5, `qrcode` pushed it to 764 kB), and the
-  `community-minimal-ui` verify-report. Origin: `checklist-management`.
 - **TD-15**: The soft-deleted manager case is covered at e2e with fakes only,
   not through the real `PrismaUserRepository`. Evidence: `review-schedule`
   archive-report S-3 and follow-up 4; `prisma-user.repository.integration.spec.ts`
@@ -214,6 +208,13 @@ None.
   one still fails. This also newly exempts `api/review-schedule.ts` and its
   test, which were scanned before (both free of forbidden terms). Evidence:
   `review-schedule` archive-report W-3.
+- **TD-8**: The web app shipped as a single ~830 kB JS chunk, over Vite's
+  500 kB warning. Resolved by `td-8-route-code-splitting`: every page,
+  `LoginPage` included, is loaded with `React.lazy` behind a `<Suspense>`
+  fallback, so each page is its own chunk. The entry chunk is 339 kB (100 kB
+  gzip) and the warning is gone. `@sf-manager/validation` and zod now form a
+  shared 358 kB chunk loaded with the login and form pages (EN-49).
+  `authenticated-routes.test.ts` fails if a page is imported statically again.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

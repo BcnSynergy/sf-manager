@@ -11,7 +11,8 @@
     "reactivate": "Reactivar",
     "error": {
       "network": "Algo ha fallado. Inténtalo de nuevo."
-    }
+    },
+    "pageLoading": "Cargando página…"
   },
   "users": {
     "list": {

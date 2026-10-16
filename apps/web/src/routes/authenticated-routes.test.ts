@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ELEMENT_HISTORY_ALLOWED_ROLES } from '../auth/element-history-route.roles';
 import { ChecklistQuestionCreatePage } from '../pages/ChecklistQuestionCreatePage';
@@ -211,13 +213,39 @@ describe('AUTHENTICATED_ROUTES', () => {
     expect(AUTHENTICATED_ROUTES).toHaveLength(31);
   });
 
-  it('matches path, allowedRoles and paired element component exactly, in order', () => {
-    const actual = AUTHENTICATED_ROUTES.map(({ path, allowedRoles, element }) => ({
-      path,
-      allowedRoles,
-      elementType: element.type,
-    }));
+  it('matches path, allowedRoles and paired page component exactly, in order', async () => {
+    const actual = await Promise.all(
+      AUTHENTICATED_ROUTES.map(async ({ path, allowedRoles, load }) => ({
+        path,
+        allowedRoles,
+        elementType: await load(),
+      })),
+    );
 
     expect(actual).toEqual(EXPECTED_ROUTES);
+  });
+
+  // TD-8: every page is its own chunk, loaded on demand. A static import of a
+  // page module in the route table would pull it back into the entry chunk.
+  it('imports no page module statically, so each page stays a separate chunk', () => {
+    // process.cwd() is apps/web; import.meta.url resolves against jsdom's
+    // http base here (see styles/check-app-nav-print-suppression.test.ts).
+    const source = readFileSync(
+      join(process.cwd(), 'src', 'routes', 'authenticated-routes.tsx'),
+      'utf-8',
+    );
+
+    expect(source).not.toMatch(/^import[^;]*from '\.\.\/pages\//m);
+    expect(source.match(/import\('\.\.\/pages\//g)).toHaveLength(31);
+  });
+
+  // TD-8: the same holds for /login, declared in App.tsx outside this table.
+  // LoginPage pulls in @sf-manager/validation and zod, the largest code in
+  // the app, so a static import would put them back in the entry chunk.
+  it('App.tsx imports no page module statically either', () => {
+    const source = readFileSync(join(process.cwd(), 'src', 'App.tsx'), 'utf-8');
+
+    expect(source).not.toMatch(/^import[^;]*from '\.\/pages\//m);
+    expect(source).toContain("import('./pages/LoginPage')");
   });
 });

@@ -1,43 +1,27 @@
 import type { Role } from '@sf-manager/validation';
-import type { ReactElement } from 'react';
+import { lazy } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 import { ELEMENT_HISTORY_ALLOWED_ROLES } from '../auth/element-history-route.roles';
-import { ChecklistQuestionCreatePage } from '../pages/ChecklistQuestionCreatePage';
-import { ChecklistQuestionEditPage } from '../pages/ChecklistQuestionEditPage';
-import { ChecklistQuestionsListPage } from '../pages/ChecklistQuestionsListPage';
-import { CommunitiesListPage } from '../pages/CommunitiesListPage';
-import { CommunityCreatePage } from '../pages/CommunityCreatePage';
-import { CommunityDetailPage } from '../pages/CommunityDetailPage';
-import { CommunityEditPage } from '../pages/CommunityEditPage';
-import { CommunityElementsListPage } from '../pages/CommunityElementsListPage';
-import { ElementReviewHistoryPage } from '../pages/ElementReviewHistoryPage';
-import { HealthPage } from '../pages/HealthPage';
-import { InspectableElementCreatePage } from '../pages/InspectableElementCreatePage';
-import { InspectableElementEditPage } from '../pages/InspectableElementEditPage';
-import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPage';
-import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListPage';
-import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
-import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
-import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
-import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
-import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
-import { ReviewHistoryPage } from '../pages/ReviewHistoryPage';
-import { ReviewSchedulePage } from '../pages/ReviewSchedulePage';
-import { ReviewSessionDetailPage } from '../pages/ReviewSessionDetailPage';
-import { ReviewSessionElementPage } from '../pages/ReviewSessionElementPage';
-import { ReviewSessionNewPage } from '../pages/ReviewSessionNewPage';
-import { ReviewSessionsPage } from '../pages/ReviewSessionsPage';
-import { ReviewTemplateCreatePage } from '../pages/ReviewTemplateCreatePage';
-import { ReviewTemplateDetailPage } from '../pages/ReviewTemplateDetailPage';
-import { ReviewTemplatesListPage } from '../pages/ReviewTemplatesListPage';
-import { UserCreatePage } from '../pages/UserCreatePage';
-import { UserEditPage } from '../pages/UserEditPage';
-import { UsersListPage } from '../pages/UsersListPage';
 
 export type AuthenticatedRoute = {
   readonly path: string;
   readonly element: ReactElement;
+  // Resolves the route's page component; `element` renders that same
+  // component lazily. Exposed so tests can check the pairing without
+  // rendering a lazy element.
+  readonly load: () => Promise<ComponentType>;
   readonly allowedRoles: Role[] | undefined;
 };
+
+// TD-8: every page is loaded on demand through a dynamic import(), so each
+// one becomes its own chunk and the first load only fetches what the login
+// page and the layout need. AppLayout wraps its <Outlet /> in <Suspense>.
+// Never import a page module statically here: that pulls it back into the
+// entry chunk (authenticated-routes.test.ts guards this).
+function lazyPage(load: () => Promise<ComponentType>) {
+  const Page = lazy(() => load().then((component) => ({ default: component })));
+  return { element: <Page />, load };
+}
 
 // nav-menu/design.md Decision 1: the 29 authenticated routes are declared
 // once, here, and App.tsx's <Routes> tree is generated FROM this table by
@@ -45,11 +29,31 @@ export type AuthenticatedRoute = {
 // ordering comment that used to sit above its <Route> in App.tsx, verbatim,
 // same reasoning, new location.
 export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
-  { path: '/', element: <HealthPage />, allowedRoles: undefined },
-  { path: '/users', element: <UsersListPage />, allowedRoles: ['SYSTEM_ADMIN'] },
-  { path: '/users/new', element: <UserCreatePage />, allowedRoles: ['SYSTEM_ADMIN'] },
-  { path: '/users/:id/edit', element: <UserEditPage />, allowedRoles: ['SYSTEM_ADMIN'] },
-  { path: '/communities', element: <CommunitiesListPage />, allowedRoles: ['SYSTEM_ADMIN'] },
+  {
+    path: '/',
+    ...lazyPage(() => import('../pages/HealthPage').then((m) => m.HealthPage)),
+    allowedRoles: undefined,
+  },
+  {
+    path: '/users',
+    ...lazyPage(() => import('../pages/UsersListPage').then((m) => m.UsersListPage)),
+    allowedRoles: ['SYSTEM_ADMIN'],
+  },
+  {
+    path: '/users/new',
+    ...lazyPage(() => import('../pages/UserCreatePage').then((m) => m.UserCreatePage)),
+    allowedRoles: ['SYSTEM_ADMIN'],
+  },
+  {
+    path: '/users/:id/edit',
+    ...lazyPage(() => import('../pages/UserEditPage').then((m) => m.UserEditPage)),
+    allowedRoles: ['SYSTEM_ADMIN'],
+  },
+  {
+    path: '/communities',
+    ...lazyPage(() => import('../pages/CommunitiesListPage').then((m) => m.CommunitiesListPage)),
+    allowedRoles: ['SYSTEM_ADMIN'],
+  },
   // design.md "Route order note": the static /communities/new
   // segment ranks above the dynamic /communities/:id segment
   // (added in Phase 7) — React Router matches static path
@@ -57,7 +61,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // order, so this coexists safely once :id is added.
   {
     path: '/communities/new',
-    element: <CommunityCreatePage />,
+    ...lazyPage(() => import('../pages/CommunityCreatePage').then((m) => m.CommunityCreatePage)),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md "Route order note" (same reasoning as /communities/new
@@ -67,7 +71,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // ordering conflict against either.
   {
     path: '/communities/:id',
-    element: <CommunityDetailPage />,
+    ...lazyPage(() => import('../pages/CommunityDetailPage').then((m) => m.CommunityDetailPage)),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md "Route order note" (same reasoning as /communities/new
@@ -77,7 +81,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // one — no ordering conflict between any of the three.
   {
     path: '/communities/:id/edit',
-    element: <CommunityEditPage />,
+    ...lazyPage(() => import('../pages/CommunityEditPage').then((m) => m.CommunityEditPage)),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 8: nested under the community, same
@@ -90,7 +94,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // families regardless of declaration order.
   {
     path: '/communities/:communityId/inspectable-elements',
-    element: <CommunityElementsListPage />,
+    ...lazyPage(() =>
+      import('../pages/CommunityElementsListPage').then((m) => m.CommunityElementsListPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 8 (React Router ordering note): the static
@@ -100,7 +106,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // ordering conflict exists.
   {
     path: '/communities/:communityId/inspectable-elements/new',
-    element: <InspectableElementCreatePage />,
+    ...lazyPage(() =>
+      import('../pages/InspectableElementCreatePage').then((m) => m.InspectableElementCreatePage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 8 (React Router ordering note, same
@@ -112,7 +120,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // the list/create routes above do not.
   {
     path: '/communities/:communityId/inspectable-elements/:elementId/edit',
-    element: <InspectableElementEditPage />,
+    ...lazyPage(() =>
+      import('../pages/InspectableElementEditPage').then((m) => m.InspectableElementEditPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 8 (React Router ordering note, same
@@ -122,7 +132,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // between the two never matters.
   {
     path: '/communities/:communityId/inspectable-elements/:elementId/label',
-    element: <InspectableElementLabelPage />,
+    ...lazyPage(() =>
+      import('../pages/InspectableElementLabelPage').then((m) => m.InspectableElementLabelPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // review-history-per-element/design.md Decision 7: DELIBERATELY
@@ -142,12 +154,16 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // order.
   {
     path: '/communities/:communityId/inspectable-elements/:elementId/history',
-    element: <ElementReviewHistoryPage />,
+    ...lazyPage(() =>
+      import('../pages/ElementReviewHistoryPage').then((m) => m.ElementReviewHistoryPage),
+    ),
     allowedRoles: ELEMENT_HISTORY_ALLOWED_ROLES,
   },
   {
     path: '/maintenance-companies',
-    element: <MaintenanceCompaniesListPage />,
+    ...lazyPage(() =>
+      import('../pages/MaintenanceCompaniesListPage').then((m) => m.MaintenanceCompaniesListPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md "Routes" + the /communities precedent above: the
@@ -158,7 +174,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // once :id/edit is added.
   {
     path: '/maintenance-companies/new',
-    element: <MaintenanceCompanyCreatePage />,
+    ...lazyPage(() =>
+      import('../pages/MaintenanceCompanyCreatePage').then((m) => m.MaintenanceCompanyCreatePage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md "Routes" + the /communities precedent above: this
@@ -168,12 +186,16 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // first).
   {
     path: '/maintenance-companies/:id/edit',
-    element: <MaintenanceCompanyEditPage />,
+    ...lazyPage(() =>
+      import('../pages/MaintenanceCompanyEditPage').then((m) => m.MaintenanceCompanyEditPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   {
     path: '/checklist-questions',
-    element: <ChecklistQuestionsListPage />,
+    ...lazyPage(() =>
+      import('../pages/ChecklistQuestionsListPage').then((m) => m.ChecklistQuestionsListPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 9 (React Router ordering note, same
@@ -183,7 +205,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // static path segments before dynamic ones.
   {
     path: '/checklist-questions/new',
-    element: <ChecklistQuestionCreatePage />,
+    ...lazyPage(() =>
+      import('../pages/ChecklistQuestionCreatePage').then((m) => m.ChecklistQuestionCreatePage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 9 (React Router ordering note, same
@@ -192,12 +216,16 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // regardless of declaration order.
   {
     path: '/checklist-questions/:questionId/edit',
-    element: <ChecklistQuestionEditPage />,
+    ...lazyPage(() =>
+      import('../pages/ChecklistQuestionEditPage').then((m) => m.ChecklistQuestionEditPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   {
     path: '/review-templates',
-    element: <ReviewTemplatesListPage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewTemplatesListPage').then((m) => m.ReviewTemplatesListPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 9 (React Router ordering note, same
@@ -207,7 +235,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // path segments before dynamic ones.
   {
     path: '/review-templates/new',
-    element: <ReviewTemplateCreatePage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewTemplateCreatePage').then((m) => m.ReviewTemplateCreatePage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // design.md Decision 9 (React Router ordering note, same
@@ -216,7 +246,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // regardless of declaration order.
   {
     path: '/review-templates/:templateId',
-    element: <ReviewTemplateDetailPage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewTemplateDetailPage').then((m) => m.ReviewTemplateDetailPage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
   // review-session-ui spec "Role-Gated Route Access for the Field
@@ -231,12 +263,12 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // file (e.g. /communities/new above /communities/:id).
   {
     path: '/review-sessions',
-    element: <ReviewSessionsPage />,
+    ...lazyPage(() => import('../pages/ReviewSessionsPage').then((m) => m.ReviewSessionsPage)),
     allowedRoles: ['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'],
   },
   {
     path: '/review-sessions/new',
-    element: <ReviewSessionNewPage />,
+    ...lazyPage(() => import('../pages/ReviewSessionNewPage').then((m) => m.ReviewSessionNewPage)),
     allowedRoles: ['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'],
   },
   // Depth-2 dynamic route: never conflicts with the static `new`
@@ -245,7 +277,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // route below regardless of declaration order.
   {
     path: '/review-sessions/:sessionId',
-    element: <ReviewSessionDetailPage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewSessionDetailPage').then((m) => m.ReviewSessionDetailPage),
+    ),
     allowedRoles: ['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'],
   },
   // Depth-4 route with two dynamic segments: never conflicts with
@@ -253,7 +287,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // `/review-sessions/new` (a distinct, shorter static route).
   {
     path: '/review-sessions/:sessionId/elements/:code',
-    element: <ReviewSessionElementPage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewSessionElementPage').then((m) => m.ReviewSessionElementPage),
+    ),
     allowedRoles: ['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'],
   },
   // review-history-ui spec + design.md: read-only, reachable by the
@@ -271,7 +307,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // pair in this file).
   {
     path: '/review-history',
-    element: <ReviewHistoryPage />,
+    ...lazyPage(() => import('../pages/ReviewHistoryPage').then((m) => m.ReviewHistoryPage)),
     allowedRoles: [
       'MAINTENANCE_TECHNICIAN',
       'COMMUNITY_REPRESENTATIVE',
@@ -282,7 +318,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   },
   {
     path: '/review-history/:sessionId',
-    element: <ReviewHistoryDetailPage />,
+    ...lazyPage(() =>
+      import('../pages/ReviewHistoryDetailPage').then((m) => m.ReviewHistoryDetailPage),
+    ),
     allowedRoles: [
       'MAINTENANCE_TECHNICIAN',
       'COMMUNITY_REPRESENTATIVE',
@@ -299,7 +337,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // ReviewHistoryDetailPage ships separately).
   {
     path: '/review-history/:sessionId/document',
-    element: <ReviewDocumentPage />,
+    ...lazyPage(() => import('../pages/ReviewDocumentPage').then((m) => m.ReviewDocumentPage)),
     allowedRoles: [
       'MAINTENANCE_TECHNICIAN',
       'COMMUNITY_REPRESENTATIVE',
@@ -315,7 +353,7 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // never learns the VIEW_ALL_REVIEWS capability.
   {
     path: '/review-schedule',
-    element: <ReviewSchedulePage />,
+    ...lazyPage(() => import('../pages/ReviewSchedulePage').then((m) => m.ReviewSchedulePage)),
     allowedRoles: ['SYSTEM_ADMIN', 'MANAGER', 'COMMUNITY_REPRESENTATIVE', 'MAINTENANCE_TECHNICIAN'],
   },
   // organization-profile-admin-ui spec "Role-Gated Route Access": a single
@@ -323,7 +361,9 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   // order against (design.md "File Changes" — no ordering note needed).
   {
     path: '/organization-profile',
-    element: <OrganizationProfilePage />,
+    ...lazyPage(() =>
+      import('../pages/OrganizationProfilePage').then((m) => m.OrganizationProfilePage),
+    ),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
 ];

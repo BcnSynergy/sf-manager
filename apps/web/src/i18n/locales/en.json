@@ -11,7 +11,8 @@
     "reactivate": "Reactivate",
     "error": {
       "network": "Something went wrong. Please try again."
-    }
+    },
+    "pageLoading": "Loading page…"
   },
   "users": {
     "list": {

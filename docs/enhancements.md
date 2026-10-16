@@ -358,6 +358,13 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `apps/api/test/review-session.e2e-spec.ts` (`isReviewScheduleFile` and its
   `it.each`). Origin: `td-16-schedule-guard-exemption` (#233) native review, findings
   `R3-001` and `R3-002`, 2026-10-16.
+- **EN-49** (web build): `@sf-manager/validation` compiles to CommonJS
+  (ADR-015), so Vite cannot tree-shake it and any page that imports one schema
+  pulls in the whole package plus zod, a shared 358 kB chunk (login and every
+  form page). An ESM build of the package (for example a dual CJS/ESM output)
+  would let each page take only the schemas it uses. Evidence: `vite build`
+  output (`dist-*.js`, 358 kB) on `td-8-route-code-splitting`, 2026-10-16.
+  Origin: `td-8-route-code-splitting`.
 
 ## Done
 

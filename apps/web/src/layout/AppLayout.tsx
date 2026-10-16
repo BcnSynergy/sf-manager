@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { PageLoading } from '../components/PageLoading';
 import { NAV_ITEMS_BY_ROLE } from './nav-items';
 
 // nav-menu/design.md Decision 2: the one authenticated shell. It owns no
@@ -59,7 +61,11 @@ export function AppLayout() {
           <LanguageSelector />
         </nav>
       )}
-      <Outlet />
+      {/* TD-8: pages are lazy-loaded chunks (routes/authenticated-routes.tsx).
+          The nav stays visible while a page's chunk downloads. */}
+      <Suspense fallback={<PageLoading />}>
+        <Outlet />
+      </Suspense>
     </>
   );
 }
