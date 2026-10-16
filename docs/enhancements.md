@@ -364,7 +364,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   form page). An ESM build of the package (for example a dual CJS/ESM output)
   would let each page take only the schemas it uses. Evidence: `vite build`
   output (`dist-*.js`, 358 kB) on `td-8-route-code-splitting`, 2026-10-16.
-  Origin: `td-8-route-code-splitting`.
+  Origin: `td-8-route-code-splitting` (#234).
 - **EN-50** (web tests): The TD-8 static-import guards in
   `apps/web/src/routes/authenticated-routes.test.ts` read source files from
   `process.cwd()`, so they only work when Vitest runs with `apps/web` as its
@@ -373,7 +373,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `src/styles/check-app-nav-print-suppression.test.ts` has the same limit and
   documents why `import.meta.url` does not work under jsdom. A shared helper
   resolving from the Vitest config root would fix both. Origin:
-  `td-8-route-code-splitting` native review, finding `R3-002`, 2026-10-16.
+  `td-8-route-code-splitting` (#234) native review, finding `R3-002`, 2026-10-16.
 - **EN-51** (web): `PageLoadBoundary` (`apps/web/src/components/PageSuspense.tsx`)
   catches every render error, not only chunk-load failures, so a page that
   crashes at runtime shows "This page could not be loaded" and the real error
@@ -381,7 +381,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   the whole app, so this is still an improvement. Tell the two cases apart (or
   word the message generically) and log the error. Also, the `/login`
   boundary in `App.tsx` has no test for its fallback or error path. Origin:
-  `td-8-route-code-splitting` native review, findings `R3-001` and `R3-002`,
+  `td-8-route-code-splitting` (#234) native review, findings `R3-001` and `R3-002`,
   2026-10-16.
 - **EN-52** (web): react-router 7 `BrowserRouter` wraps each navigation in
   `startTransition` (unless `useTransitions={false}`), so on in-app navigation
@@ -392,7 +392,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   transitions. Also, a protected deep link downloads the page chunk only after
   `/auth/me` resolves (`ProtectedRoute` renders `null` while loading), two
   requests in sequence. Evidence: `node_modules/react-router` 7.18.2
-  `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` fresh-context
+  `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` (#234) fresh-context
   review, 2026-10-16.
 
 ## Done

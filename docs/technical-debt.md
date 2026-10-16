@@ -209,7 +209,7 @@ None.
   test, which were scanned before (both free of forbidden terms). Evidence:
   `review-schedule` archive-report W-3.
 - **TD-8**: The web app shipped as a single ~830 kB JS chunk, over Vite's
-  500 kB warning. Resolved by `td-8-route-code-splitting`: every page,
+  500 kB warning. Resolved by `td-8-route-code-splitting` (#234): every page,
   `LoginPage` included, is loaded with `React.lazy` behind a `<Suspense>`
   fallback, so each page is its own chunk. An error boundary shows a reload
   message if a chunk fails to load (for example after a redeploy). The entry chunk is 339 kB (100 kB
