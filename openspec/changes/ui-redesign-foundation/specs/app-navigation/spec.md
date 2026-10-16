@@ -114,13 +114,13 @@ page. Suppression MUST be an actual, verified rule rather than a vacuous one.
 
 - GIVEN a signed-in `SYSTEM_ADMIN` on the element label page, with the navigation rendered on screen
 - WHEN the print output is produced
-- THEN the navigation MUST NOT appear in it, and the label content MUST print as it already does
+- THEN the navigation MUST NOT appear in it, and the label MUST print the same content in the same layout, black on white, with the typography of `web-visual-foundation`
 
 #### Scenario: The footer does not print
 
 - GIVEN a signed-in user on the review document page, with the footer rendered on screen
 - WHEN the print output is produced
-- THEN neither the navigation nor the footer MUST appear in it, and the document MUST print as it already does
+- THEN neither the navigation nor the footer MUST appear in it, and the document MUST print the same content in the same layout, black on white, with the typography of `web-visual-foundation`
 
 #### Scenario: Print suppression is verified in a browser, not only in tests
 

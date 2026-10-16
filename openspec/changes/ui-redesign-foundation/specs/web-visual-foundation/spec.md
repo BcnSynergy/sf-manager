@@ -6,7 +6,9 @@ The look shared by every page of the web app: the SF-Manager design system's
 tokens, fonts, light and dark themes, and brand. It sets how the app looks,
 never what it does: no flow, route, permission or data depends on it. Pages
 adopt the design system's components one slice at a time; this capability
-fixes only what every page shares.
+fixes only what every page shares. Printed pages use the same typefaces;
+their content, layout and black-on-white output are set by the capabilities
+that print them.
 
 The design system itself lives outside the repo (the "SF-Manager" Design
 System artifact). Its values are copied into `apps/web/src/index.css`, which

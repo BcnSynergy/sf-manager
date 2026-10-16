@@ -50,7 +50,10 @@ matches the canvas; no flow, permission, route or data changes.
 - Restyling any page other than login and the review schedule.
 - A theme toggle, a stored theme preference, or a high-contrast theme.
 - An icon set, a profile menu, a hamburger menu, search or breadcrumbs.
-- Any change to routes, roles, permissions, API, data or print output.
+- Any change to routes, roles, permissions, API or data, or to what prints:
+  printed labels and review documents keep their content, layout and black on
+  white. Their typography follows the design system (user decision
+  2026-10-16, after the PR 1 native review).
 - Changing which items each role sees.
 
 ## Capabilities
