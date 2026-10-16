@@ -422,6 +422,14 @@ windowEndsAt <= now()`) four times and the window-end expression five
   is unchanged. Evidence:
   `apps/api/src/modules/review-schedule/infrastructure/persistence/prisma-review-schedule.reader.ts`.
   Origin: `review-schedule-in-progress` (#235) fresh-context review, 2026-10-16.
+- **EN-56** (specs): The `review-schedule-ui` scenario "Marker in the
+  browser" relies on the dev seed holding an open draft and passes vacuously
+  when that draft is not `QUARTERLY`/`ANNUAL`. On 2026-10-16 the dev database
+  held no open draft at all, and the browser pass opened a `QUARTERLY` draft
+  in Dev Seed Residences South by hand. Reword the scenario to open a
+  `QUARTERLY` draft as a seeded technician, or pin the seed draft's
+  frequency. Origin: `review-schedule-in-progress` (#236) archive native review,
+  finding `R3-browser-scenario-conditional`, 2026-10-16.
 
 ## Done
 
