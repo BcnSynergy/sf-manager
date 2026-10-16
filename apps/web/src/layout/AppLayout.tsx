@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { PageSuspense } from '../components/PageSuspense';
 import { NAV_ITEMS_BY_ROLE } from './nav-items';
 
 // nav-menu/design.md Decision 2: the one authenticated shell. It owns no
@@ -11,6 +12,7 @@ import { NAV_ITEMS_BY_ROLE } from './nav-items';
 export function AppLayout() {
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
 
   // spec "Logout Moves Into the Navigation": unchanged behaviour, new home
@@ -59,7 +61,11 @@ export function AppLayout() {
           <LanguageSelector />
         </nav>
       )}
-      <Outlet />
+      {/* TD-8: pages are lazy-loaded chunks (routes/authenticated-routes.tsx).
+          The nav stays visible while a page's chunk downloads or fails. */}
+      <PageSuspense resetKey={location.pathname}>
+        <Outlet />
+      </PageSuspense>
     </>
   );
 }

@@ -1,9 +1,17 @@
+import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { LoginPage } from './pages/LoginPage';
+import { PageSuspense } from './components/PageSuspense';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
+
+// TD-8: lazy like every authenticated page. LoginPage imports
+// @sf-manager/validation (CommonJS, so not tree-shaken), which pulls zod in;
+// loading it on demand keeps both out of the entry chunk.
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })),
+);
 
 // nav-menu/design.md Decision 1: the <Routes> tree is extracted into its own
 // exported AppRoutes component so tests can mount it inside their own
@@ -16,7 +24,14 @@ import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <PageSuspense>
+            <LoginPage />
+          </PageSuspense>
+        }
+      />
       {/* nav-menu/design.md Decision 1: /login is declared OUTSIDE the
           AppLayout wrapper and OUTSIDE AUTHENTICATED_ROUTES entirely — "no
           nav on /login" is structural, not a condition to remember. */}

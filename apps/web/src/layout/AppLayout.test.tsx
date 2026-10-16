@@ -1,3 +1,5 @@
+import { lazy } from 'react';
+import type { ComponentType } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
@@ -341,5 +343,72 @@ describe('AppLayout language selector', () => {
     fireEvent.change(selectors[0], { target: { value: 'es' } });
 
     await waitFor(() => expect(screen.getByTestId('nav-link-home')).toHaveTextContent('Inicio'));
+  });
+});
+
+// TD-8: pages are lazy-loaded chunks. While one downloads, the nav stays and
+// a loading message shows; if one fails to load (network error, or a stale
+// tab asking for a chunk a redeploy removed), the page area shows an error
+// with a reload button instead of the whole app going blank.
+describe('AppLayout lazy page loading (TD-8)', () => {
+  const PendingPage = lazy(() => new Promise<{ default: ComponentType }>(() => {}));
+  const FailingPage = lazy(() =>
+    Promise.reject<{ default: ComponentType }>(
+      new Error('Failed to fetch dynamically imported module'),
+    ),
+  );
+
+  function renderWithLazyRoutes(initialEntries: string[]) {
+    return render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<div data-testid="outlet-content">home</div>} />
+              <Route path="/pending" element={<PendingPage />} />
+              <Route path="/failing" element={<FailingPage />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('shows the page-loading message with the nav still present while a page chunk downloads', async () => {
+    renderWithLazyRoutes(['/pending']);
+
+    expect(await screen.findByTestId('page-loading')).toHaveTextContent('Loading page…');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+  });
+
+  it('shows a page-load error with a reload button, nav still present, when a page chunk fails to load', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderWithLazyRoutes(['/failing']);
+
+    expect(await screen.findByTestId('page-load-error')).toHaveTextContent(
+      'This page could not be loaded. Reload to try again.',
+    );
+    expect(screen.getByTestId('page-load-reload')).toHaveTextContent('Reload');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+  });
+
+  it('clears the page-load error when the user navigates to another page', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderWithLazyRoutes(['/failing']);
+    await screen.findByTestId('page-load-error');
+
+    fireEvent.click(screen.getByTestId('nav-link-home'));
+
+    expect(await screen.findByTestId('outlet-content')).toHaveTextContent('home');
+    expect(screen.queryByTestId('page-load-error')).not.toBeInTheDocument();
   });
 });

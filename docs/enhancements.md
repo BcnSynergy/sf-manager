@@ -358,6 +358,42 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `apps/api/test/review-session.e2e-spec.ts` (`isReviewScheduleFile` and its
   `it.each`). Origin: `td-16-schedule-guard-exemption` (#233) native review, findings
   `R3-001` and `R3-002`, 2026-10-16.
+- **EN-49** (web build): `@sf-manager/validation` compiles to CommonJS
+  (ADR-015), so Vite cannot tree-shake it and any page that imports one schema
+  pulls in the whole package plus zod, a shared 358 kB chunk (login and every
+  form page). An ESM build of the package (for example a dual CJS/ESM output)
+  would let each page take only the schemas it uses. Evidence: `vite build`
+  output (`dist-*.js`, 358 kB) on `td-8-route-code-splitting`, 2026-10-16.
+  Origin: `td-8-route-code-splitting` (#234).
+- **EN-50** (web tests): The TD-8 static-import guards in
+  `apps/web/src/routes/authenticated-routes.test.ts` read source files from
+  `process.cwd()`, so they only work when Vitest runs with `apps/web` as its
+  working directory (the workspace scripts and CI do). Run from elsewhere they
+  fail with ENOENT instead of checking the imports.
+  `src/styles/check-app-nav-print-suppression.test.ts` has the same limit and
+  documents why `import.meta.url` does not work under jsdom. A shared helper
+  resolving from the Vitest config root would fix both. Origin:
+  `td-8-route-code-splitting` (#234) native review, finding `R3-002`, 2026-10-16.
+- **EN-51** (web): `PageLoadBoundary` (`apps/web/src/components/PageSuspense.tsx`)
+  catches every render error, not only chunk-load failures, so a page that
+  crashes at runtime shows "This page could not be loaded" and the real error
+  is not reported (no `componentDidCatch`). Before TD-8 such a crash blanked
+  the whole app, so this is still an improvement. Tell the two cases apart (or
+  word the message generically) and log the error. Also, the `/login`
+  boundary in `App.tsx` has no test for its fallback or error path. Origin:
+  `td-8-route-code-splitting` (#234) native review, findings `R3-001` and `R3-002`,
+  2026-10-16.
+- **EN-52** (web): react-router 7 `BrowserRouter` wraps each navigation in
+  `startTransition` (unless `useTransitions={false}`), so on in-app navigation
+  React keeps the current page on screen while a lazy page chunk downloads.
+  The TD-8 "Loading page…" fallback only shows on a full load; on a slow
+  network a nav click looks idle until the chunk arrives. Add a pending
+  indicator (for example from `useNavigation`/transition state) or opt out of
+  transitions. Also, a protected deep link downloads the page chunk only after
+  `/auth/me` resolves (`ProtectedRoute` renders `null` while loading), two
+  requests in sequence. Evidence: `node_modules/react-router` 7.18.2
+  `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` (#234) fresh-context
+  review, 2026-10-16.
 
 ## Done
 

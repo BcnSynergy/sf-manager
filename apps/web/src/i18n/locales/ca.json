@@ -11,7 +11,10 @@
     "reactivate": "Reactivar",
     "error": {
       "network": "Alguna cosa ha fallat. Torna-ho a provar."
-    }
+    },
+    "pageLoading": "Carregant la pàgina…",
+    "pageLoadError": "No s'ha pogut carregar aquesta pàgina. Torna a carregar per tornar-ho a provar.",
+    "reload": "Torna a carregar"
   },
   "users": {
     "list": {
