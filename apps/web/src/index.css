@@ -539,6 +539,19 @@ main.sf-login {
     color: #000;
   }
 
+  /* RDD review R3-001: base `dl` is a two-column grid on screen. Printed
+     labels and documents keep the browser's default stacked layout they had
+     before the redesign (app-navigation: "the label content MUST print as it
+     already does"). */
+  .label-print dl,
+  .review-document-print dl {
+    display: block;
+  }
+  .label-print dd,
+  .review-document-print dd {
+    margin-inline-start: 40px;
+  }
+
   /* review-export/design.md "Web surface": the review document page's own
      print scope, same allowlist/reset convention as `.label-print` above —
      `[data-print-hide]` hides the page heading, the incomplete-profile
