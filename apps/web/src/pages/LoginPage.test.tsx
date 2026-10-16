@@ -37,10 +37,41 @@ describe('LoginPage', () => {
     );
   });
 
-  it('renders the app logo', () => {
+  // web-visual-foundation spec "The Product Is Branded With Its Own Marks":
+  // one <img> with the localized alt, and a dark-ground <source> the browser
+  // picks when the OS prefers dark (ui-redesign-foundation design Decision 8).
+  it('renders the app logo with a dark-theme variant and its localized alt text', () => {
     renderLoginPage();
 
-    expect(screen.getByTestId('login-logo')).toBeInTheDocument();
+    const logo = screen.getByTestId('login-logo');
+    expect(logo).toHaveAttribute('src', '/logo.svg');
+    expect(logo).toHaveAttribute('alt', 'SF-Manager');
+    expect(screen.getAllByRole('img', { name: 'SF-Manager' })).toHaveLength(1);
+
+    const picture = logo.parentElement;
+    expect(picture?.tagName).toBe('PICTURE');
+    const source = picture?.querySelector('source');
+    expect(source).toHaveAttribute('srcset', '/logo-on-dark.svg');
+    expect(source).toHaveAttribute('media', '(prefers-color-scheme: dark)');
+  });
+
+  // web-visual-foundation spec "The Maker Credit Appears on Screen Only".
+  it('shows the maker credit once, as text and not as a link', () => {
+    renderLoginPage();
+
+    const credit = screen.getByTestId('login-credit');
+    expect(credit).toHaveTextContent('A BCNSynergy product');
+    expect(credit.closest('a')).toBeNull();
+    expect(screen.getAllByText('A BCNSynergy product')).toHaveLength(1);
+
+    // The navy mark is unreadable on the dark ground (browser pass), so it
+    // swaps to a light variant the same way the logo does.
+    const mark = credit.querySelector('img');
+    expect(mark).toHaveAttribute('src', '/bcnsynergy-mark.svg');
+    expect(mark).toHaveAttribute('alt', '');
+    const source = mark?.parentElement?.querySelector('source');
+    expect(source).toHaveAttribute('srcset', '/bcnsynergy-mark-on-dark.svg');
+    expect(source).toHaveAttribute('media', '(prefers-color-scheme: dark)');
   });
 
   it('blocks submission client-side and shows a required-field message when fields are empty', async () => {
@@ -238,6 +269,16 @@ describe('LoginPage language selector', () => {
 
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Iniciar sesión'),
+    );
+  });
+
+  it('shows the maker credit in the active locale', async () => {
+    renderLoginPage();
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ca' } });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('login-credit')).toHaveTextContent('Un producte de BCNSynergy'),
     );
   });
 });
