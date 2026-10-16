@@ -211,7 +211,9 @@ None.
   non-lowercase character (so `ReviewScheduler` is still scanned). A
   table-driven test pins the rule, and the guard was checked both ways: a new
   schedule file using a forbidden term passes, and a review-session file using
-  one still fails.
+  one still fails. This also newly exempts `api/review-schedule.ts` and its
+  test, which were scanned before (both free of forbidden terms). Evidence:
+  `review-schedule` archive-report W-3.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

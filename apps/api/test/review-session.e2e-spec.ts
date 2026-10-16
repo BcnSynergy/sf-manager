@@ -1335,16 +1335,6 @@ describe('Review Sessions (e2e)', () => {
       expect(offendingRoutes).toEqual([]);
     });
 
-    // Corrected review-session/08 (PR8/8, discovered during the PR8 full-
-    // suite run, not something PR8 introduced): this assertion originally
-    // proved the web flow did NOT exist yet, per its own title ("FR-007 web
-    // flow ships in PR 7") — written in PR 6, before PR 7 shipped it. Once
-    // PR 7 shipped `apps/web/src/pages/ReviewSession*.tsx` etc., the
-    // assertion became permanently false by design, not a regression. There
-    // is no longer a "not built yet" fact left to prove; the real ongoing
-    // guarantee — no scheduling/reminder/export/history mechanism, on the
-    // web side either — is the one worth keeping, mirroring the sibling
-    // scanRoot check above for the API module.
     it.each([
       ['pages/ReviewSchedulePage.tsx', true],
       ['pages/ReviewSchedulePage.test.tsx', true],
@@ -1360,6 +1350,16 @@ describe('Review Sessions (e2e)', () => {
       expect(isReviewScheduleFile(relative)).toBe(expected);
     });
 
+    // Corrected review-session/08 (PR8/8, discovered during the PR8 full-
+    // suite run, not something PR8 introduced): this assertion originally
+    // proved the web flow did NOT exist yet, per its own title ("FR-007 web
+    // flow ships in PR 7") — written in PR 6, before PR 7 shipped it. Once
+    // PR 7 shipped `apps/web/src/pages/ReviewSession*.tsx` etc., the
+    // assertion became permanently false by design, not a regression. There
+    // is no longer a "not built yet" fact left to prove; the real ongoing
+    // guarantee — no scheduling/reminder/export/history mechanism, on the
+    // web side either — is the one worth keeping, mirroring the sibling
+    // scanRoot check above for the API module.
     it('no review-session web file introduces a scheduling, reminder, export or history mechanism', () => {
       const forbidden = [
         'dueDate',
