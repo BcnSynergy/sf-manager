@@ -451,8 +451,10 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `dl`/`dd` layout of labels and review documents, and (from PR 2) the shell
   resets: `.sf-shell`/`.sf-main` as blocks and `.sf-main > main` back to
   `overflow: visible`, so a later screen rule placed after the print block
-  cannot bring back print clipping. Today only a browser print pass covers
-  them. Origin: `ui-redesign-foundation` PR 1 native review,
+  cannot bring back print clipping, and (from PR 3) the print badge rules:
+  `.sf-table-wrap` overflow visible, badges black with no fill, the draft
+  marker still dashed (native review finding `R3-print-badge-untested`).
+  Today only a browser print pass covers them. Origin: `ui-redesign-foundation` PR 1 native review,
   finding `R3-print-layout-reset-untested`, 2026-10-16.
 - **EN-60** (web tests): The print guard
   (`apps/web/src/styles/check-app-nav-print-suppression.ts`) rejects a

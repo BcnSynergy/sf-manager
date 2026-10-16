@@ -22,14 +22,19 @@ the role alone and an ungranted manager sees the identical link and the
 already-shipped empty state, exactly as ADR-011's _"link visible, empty
 result"_ precedent requires.
 
-The nav is a **link bar and nothing more**. Out of scope: a sidebar, a
-hamburger/dropdown or any responsive-collapse treatment; breadcrumbs, a
-"back" affordance, search, a dashboard or a user/profile menu; a design
-system, CSS framework, theming or app branding; any language switcher
-other than the single selector defined by `web-locale-selection`; and
-any change to a route's `allowedRoles` or to `ProtectedRoute`'s
-precedence logic. Promoting a CRUD sub-route or the element-history
-drill-in to a nav item is likewise out of scope.
+The navigation is a **grouped sidebar** (since `ui-redesign-foundation`):
+the product wordmark, the role's items grouped into Operations, Setup and
+Administration, and a foot with the signed-in user's email, the single
+language selector defined by `web-locale-selection` and logout. A footer
+under each authenticated page carries the maker credit. Its look comes from
+`web-visual-foundation`. Out of scope: a hamburger/dropdown or any
+collapse/toggle state; breadcrumbs, a "back" affordance, search, a
+dashboard or a user/profile menu; any other language switcher; and any
+change to a route's `allowedRoles` or to `ProtectedRoute`'s precedence
+logic. Promoting a CRUD sub-route or the element-history drill-in to a nav
+item is likewise out of scope.
+(Previously: "a **link bar and nothing more**", with a sidebar, a design
+system, CSS framework, theming and app branding out of scope.)
 
 > **Recorded, explicitly out of scope — not a requirement of this
 > capability.** The product owner asked to flag that a future change
@@ -100,15 +105,21 @@ role alone, through a single static lookup that is **exhaustive over
 every member of `Role`** — adding a sixth role MUST fail the build
 rather than silently produce an empty navigation.
 
-Each role MUST be offered exactly these items and no others:
+Each role MUST be offered exactly these items and no others, in this
+order. Home comes first and belongs to no group. Every other item belongs
+to exactly one group, and groups appear in the order Operations, Setup,
+Administration:
 
-| Role                          | Items                                                                                                                                                 |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SYSTEM_ADMIN`                | Home, Users, Communities, Maintenance companies, Checklist questions, Review templates, Review history, Review schedule, Organization profile (**9**) |
-| `MAINTENANCE_TECHNICIAN`      | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
-| `COMMUNITY_REPRESENTATIVE`    | Home, Review sessions, Review history, Review schedule (**4**)                                                                                        |
-| `MAINTENANCE_COMPANY_MANAGER` | Home, Review history (**2**)                                                                                                                          |
-| `MANAGER`                     | Home, Review history, Review schedule (**3**)                                                                                                         |
+| Role                          | Home | Operations                                       | Setup                                                                     | Administration              | Total |
+| ----------------------------- | ---- | ------------------------------------------------ | ------------------------------------------------------------------------- | --------------------------- | ----- |
+| `SYSTEM_ADMIN`                | Home | Review schedule, Review history                  | Communities, Maintenance companies, Review templates, Checklist questions | Users, Organization profile | **9** |
+| `MAINTENANCE_TECHNICIAN`      | Home | Review schedule, Review sessions, Review history | —                                                                         | —                           | **4** |
+| `COMMUNITY_REPRESENTATIVE`    | Home | Review schedule, Review sessions, Review history | —                                                                         | —                           | **4** |
+| `MAINTENANCE_COMPANY_MANAGER` | Home | Review history                                   | —                                                                         | —                           | **2** |
+| `MANAGER`                     | Home | Review schedule, Review history                  | —                                                                         | —                           | **3** |
+
+A group with no items for the role MUST NOT render, not even its label.
+Each rendered group MUST show its localized label once, before its items.
 
 Every item MUST point at its section's **top-level route**: the list
 route for a section that manages a collection, and the page itself for
@@ -123,8 +134,10 @@ state beyond what the auth provider already exposes. In particular the
 organization profile item MUST be decided by the role alone — the
 navigation MUST NOT read the profile, and MUST NOT vary with whether the
 profile is filled in or blank.
-(Previously: the table had no Review schedule item, and counted 8, 3, 3, 2
-and 2 items for the five roles in the order shown.)
+(Previously: one flat list per role in the order Home, Users, Communities,
+Maintenance companies, Checklist questions, Review templates, Review history,
+Review schedule, Organization profile, with no groups. Every role keeps the
+same item set; only the order and the grouping change.)
 
 #### Scenario: Each of the five roles sees exactly its own item set
 
@@ -132,12 +145,23 @@ and 2 items for the five roles in the order shown.)
 - WHEN the navigation renders for each
 - THEN the rendered items MUST match that role's row of the table above exactly — none missing and none extra
 
+#### Scenario: Items render in the specified order and groups
+
+- GIVEN a signed-in user of each role in turn
+- WHEN the navigation's links and group labels are read in document order
+- THEN Home MUST come first, followed by each non-empty group's label and its items in the order of that role's row
+
+#### Scenario: An empty group renders nothing
+
+- GIVEN a signed-in `MANAGER`, whose Setup and Administration groups are empty
+- WHEN the navigation renders
+- THEN neither the Setup nor the Administration label MUST be rendered
+
 #### Scenario: The admin reaches all nine sections without typing a URL
 
 - GIVEN a signed-in `SYSTEM_ADMIN` on any authenticated page
 - WHEN they use the navigation
-- THEN all nine sections — Home, the five admin sections, Review history, Review schedule and Organization profile — MUST be reachable in one click, with no hand-typed URL required
-  (Previously: the body counted eight sections, without Review schedule. The scenario title and body now count nine.)
+- THEN all nine sections — Home, Review schedule, Review history, the four setup sections, Users and Organization profile — MUST be reachable in one click, with no hand-typed URL required
 
 #### Scenario: Only the admin is offered the organization profile
 
@@ -168,6 +192,85 @@ and 2 items for the five roles in the order shown.)
 - GIVEN the navigation rendered for any role
 - WHEN its item targets are enumerated
 - THEN each MUST be a section's top-level route, and none MUST be a create, detail or edit sub-route
+
+### Requirement: The Navigation Is a Grouped Sidebar Without Toggle State
+
+The navigation MUST be a sidebar beside the page content on wide screens
+that stacks above the content on narrow screens. It MUST hold, in this order:
+the product wordmark, the role's items as specified in _The Role → Navigation
+Items Map Is Exhaustive and Fixed_, and a foot with the signed-in user's
+email, exactly one language selector as specified by `web-locale-selection`,
+and the logout control.
+
+The wordmark MUST NOT be a link, so the navigation's links stay exactly the
+role's items. The navigation MUST NOT hold any open/closed state and MUST NOT
+offer a hamburger, a dropdown other than the language selector, a collapse
+toggle, breadcrumbs, a "back" affordance, search, a dashboard or a
+user/profile menu.
+
+The navigation MUST add no new runtime dependency, and MUST leave the API,
+database schema and shared validation packages untouched.
+
+#### Scenario: The sidebar holds wordmark, items and foot in order
+
+- GIVEN a signed-in user of any role on a wide screen
+- WHEN the navigation renders
+- THEN it MUST show the wordmark, then the role's items, then the email, the language selector and logout, beside the page content
+
+#### Scenario: The sidebar stacks on a narrow screen
+
+- GIVEN a signed-in user on a screen about 400px wide
+- WHEN the page renders
+- THEN the navigation MUST appear above the page content at full width, with every item still visible and no horizontal page scroll
+
+#### Scenario: The controls are only links, one selector and logout
+
+- GIVEN the navigation for any role
+- WHEN its interactive controls are enumerated
+- THEN they MUST be the role's item links, exactly one language selector and the logout control, and nothing else
+
+#### Scenario: No collapse state ships
+
+- GIVEN the navigation component
+- WHEN its state is inspected
+- THEN it MUST hold no open/closed state
+
+#### Scenario: No dependency and no backend change ships
+
+- GIVEN the dependency manifests, the API, the database schema and the shared validation package before and after this change
+- WHEN each is compared
+- THEN no dependency MUST have been added and all three MUST be untouched
+
+### Requirement: The Navigation Shows the Signed-In User's Email
+
+The navigation's foot MUST show the signed-in user's email, taken from the
+auth provider's user, as plain text. It MUST NOT be a link or a control, and
+the navigation MUST NOT fetch it.
+
+#### Scenario: The email is shown
+
+- GIVEN a signed-in user whose email is `technician@sf-manager.example`
+- WHEN the navigation renders
+- THEN `technician@sf-manager.example` MUST be shown in its foot as plain text
+
+#### Scenario: The email triggers no request
+
+- GIVEN a signed-in user
+- WHEN the navigation renders
+- THEN it MUST have issued no request to obtain the email
+
+### Requirement: Group Labels Are Localized
+
+Each group label (Operations, Setup, Administration) MUST come from a
+translation key with real values in `en`, `es` and `ca`, on the same terms as
+_Internationalization Coverage_, and the locale parity test MUST cover the new
+keys.
+
+#### Scenario: Group labels in each locale
+
+- GIVEN a signed-in `SYSTEM_ADMIN` and each locale in turn
+- WHEN the navigation renders
+- THEN the three group labels MUST come from that locale's translation keys, not from English fallbacks
 
 ### Requirement: Every Navigation Item Targets a Route Its Viewer May Open
 
@@ -380,22 +483,28 @@ after the navigation wraps that page.
 
 ### Requirement: The Navigation Is Absent From Printed Output
 
-The navigation MUST NOT appear in printed output on any page. It is the
-first real application chrome the printed-label surface's shipped
-chrome-suppression requirement has ever had to suppress, so suppression
-MUST be an actual, verified rule rather than a vacuous one.
+The navigation, including the signed-in user's email, the language selector
+and logout, and the page footer MUST NOT appear in printed output on any
+page. Suppression MUST be an actual, verified rule rather than a vacuous one.
+(Previously: named the navigation only; the footer did not exist.)
 
 #### Scenario: The navigation does not print
 
 - GIVEN a signed-in `SYSTEM_ADMIN` on the element label page, with the navigation rendered on screen
 - WHEN the print output is produced
-- THEN the navigation MUST NOT appear in it, and the label content MUST print as it already does
+- THEN the navigation MUST NOT appear in it, and the label MUST print the same content in the same layout, black on white, with the typography of `web-visual-foundation`
+
+#### Scenario: The footer does not print
+
+- GIVEN a signed-in user on the review document page, with the footer rendered on screen
+- WHEN the print output is produced
+- THEN neither the navigation nor the footer MUST appear in it, and the document MUST print the same content in the same layout, black on white, with the typography of `web-visual-foundation`
 
 #### Scenario: Print suppression is verified in a browser, not only in tests
 
-- GIVEN the label page rendered inside the navigation on a running dev server
-- WHEN its print preview is inspected
-- THEN the navigation MUST be absent from the preview
+- GIVEN the label page and the review document page rendered inside the navigation on a running dev server
+- WHEN their print previews are inspected
+- THEN the navigation and the footer MUST be absent from both previews
 
 ### Requirement: Route Gating Is Unchanged by the Wrapping
 
@@ -460,43 +569,6 @@ value MUST be rendered as visible text.
 - GIVEN the locale files after this change
 - WHEN the parity test runs
 - THEN it MUST pass over the navigation's new keys and over the two removed health-page keys alike
-
-### Requirement: The Navigation Stays a Link Bar and Nothing More
-
-The navigation MUST remain a plain list of links plus the logout
-control, plus exactly one language selector as specified by
-`web-locale-selection`. It MUST NOT introduce a sidebar, a hamburger,
-dropdown or any collapse/toggle state other than that language selector;
-breadcrumbs, a "back" affordance, search, a dashboard or a user/profile
-menu; a design system, CSS framework, theming or app branding; or any
-language switcher other than that one selector.
-(Previously: forbade "a language switcher" outright and allowed no control other than the links and logout.)
-
-The navigation's introduction MUST add no new runtime dependency, and MUST
-leave the API, database schema and shared validation packages untouched.
-(Previously: "This change MUST add no new runtime dependency, and MUST leave
-the API, database schema and shared validation packages untouched",
-unqualified, which is false once the review-schedule change adds an API
-endpoint. The claim is scoped to the navigation's introduction.)
-
-#### Scenario: No collapse, menu or dashboard chrome ships
-
-- GIVEN the navigation after the web-locale-switch change
-- WHEN its rendered controls and its state are enumerated
-- THEN none MUST offer a sidebar, hamburger, dropdown (other than the language selector), collapse toggle, breadcrumb, search box, dashboard or profile menu, and the component MUST hold no open/closed state
-
-#### Scenario: The language selector is the only added control
-
-- GIVEN the navigation after the web-locale-switch change
-- WHEN its rendered controls are enumerated
-- THEN they MUST be the links, the logout control and exactly one language selector, and nothing else
-
-#### Scenario: No dependency and no backend change ships
-
-- GIVEN the project's dependency manifests, the API, the database schema and the shared validation package before and after the navigation's introduction
-- WHEN each is compared
-- THEN that introduction MUST have added no dependency and left all three untouched
-  (Previously: "before and after this change".)
 
 ### Requirement: The Manager's Schedule Item Is Gated on the Role Alone
 

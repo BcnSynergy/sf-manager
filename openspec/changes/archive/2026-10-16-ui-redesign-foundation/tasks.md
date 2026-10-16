@@ -52,7 +52,7 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 
 ## Gate PR 1 (orchestrator)
 
-- [ ] Native review (if due), fresh-context review, push, PR, CI, merge, each
+- [x] Native review (if due), fresh-context review, push, PR, CI, merge, each
       confirmed with the user.
 
 ## Phase D: Navigation groups (spec: Role map; Group Labels Are Localized)
@@ -84,7 +84,7 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 
 ## Gate PR 2 (orchestrator)
 
-- [ ] Native review (if due), fresh-context review, push, PR, CI, merge, each
+- [x] Native review (if due), fresh-context review, push, PR, CI, merge, each
       confirmed with the user.
 
 ## Phase F: Review schedule (spec: The Status Is Shown as a Badge) — PR 3
@@ -104,13 +104,13 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 
 ## Gate PR 3 (orchestrator)
 
-- [ ] Native review (if due), fresh-context review, push, PR, CI, merge, each
+- [x] Native review (if due), fresh-context review, push, PR, CI, merge, each
       confirmed with the user.
 
 ## Phase H: PR 4 — archive (branch `ui-redesign-foundation/04-archive`)
 
-- [ ] H.1 Merge the deltas into `openspec/specs/app-navigation` (including
+- [x] H.1 Merge the deltas into `openspec/specs/app-navigation` (including
       the Purpose rewrite noted at the top of its delta) and
       `review-schedule-ui`; create `openspec/specs/web-visual-foundation`.
-- [ ] H.2 Move the change to `openspec/changes/archive/<date>-ui-redesign-foundation/`
+- [x] H.2 Move the change to `openspec/changes/archive/<date>-ui-redesign-foundation/`
       with archive-report.md; register any non-blocking findings.
