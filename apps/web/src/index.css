@@ -181,8 +181,10 @@ body {
 }
 
 /* The page area of the app shell (AppLayout's .sf-main). Every page's
-   existing <main> gets the page layout without edits. */
-:where(.sf-main) > main {
+   existing <main> gets the page layout without edits. `#root > main` covers
+   the one route outside the shell, /login, while PageSuspense shows its
+   loading or error <main> (RDD review R3-root-main-layout-scope). */
+:where(.sf-main, #root) > main {
   box-sizing: border-box;
   width: 100%;
   max-width: var(--content-max);
@@ -345,7 +347,7 @@ code {
 }
 
 @media (max-width: 640px) {
-  :where(.sf-main) > main {
+  :where(.sf-main, #root) > main {
     padding: var(--space-6) var(--space-4);
   }
   dl {
@@ -659,10 +661,17 @@ main.sf-login {
     display: block;
   }
 
-  :where(.sf-main) > main {
+  :where(.sf-main, #root) > main {
     display: block;
     max-width: none;
     padding: 0;
+  }
+
+  /* RDD review R3-print-overflow-clip: the screen page area scrolls wide
+     tables (overflow-x: auto), which print would clip; printed content flows.
+     Same selector as the screen rule, declared later, so it wins. */
+  .sf-main > main {
+    overflow: visible;
   }
 
   .sf-credit {
