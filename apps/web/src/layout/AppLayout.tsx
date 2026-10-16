@@ -66,9 +66,16 @@ export function AppLayout() {
               key={section.group ?? 'home'}
               className="sf-side-group"
               data-testid={`nav-group-${section.group ?? 'home'}`}
+              // A labelled group is announced with its label; Home has none.
+              role={section.group ? 'group' : undefined}
+              aria-labelledby={section.group ? `nav-group-label-${section.group}` : undefined}
             >
               {section.group && (
-                <p className="sf-side-label" data-testid={`nav-group-label-${section.group}`}>
+                <p
+                  className="sf-side-label"
+                  id={`nav-group-label-${section.group}`}
+                  data-testid={`nav-group-label-${section.group}`}
+                >
                   {t(`nav.group.${section.group}`)}
                 </p>
               )}

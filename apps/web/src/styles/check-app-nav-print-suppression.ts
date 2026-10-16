@@ -31,9 +31,14 @@ function escapeRegExp(text: string): string {
 // just a standalone `.app-nav { ... }`, so a valid grouped-selector CSS
 // refactor doesn't false-negative this check.
 function selectorRules(selector: string) {
-  const token = `${escapeRegExp(selector)}(?![\\w-])[^{}]*\\{`;
+  const name = `${escapeRegExp(selector)}(?![\\w-])`;
+  const token = `${name}[^{}]*\\{`;
+  // The hidden rule must target the selector itself: only whitespace or a
+  // comma-separated list may follow it, so a descendant rule such as
+  // `.app-nav .x { display: none }` does not count as hiding the chrome.
+  const ownRule = `${name}\\s*(?:,[^{}]*)?\\{`;
   return {
-    hidden: new RegExp(`${token}[^}]*display:\\s*none[^}]*\\}`, 'i'),
+    hidden: new RegExp(`${ownRule}[^}]*display:\\s*none[^}]*\\}`, 'i'),
     visible: new RegExp(`${token}[^}]*display:\\s*(?!none)[a-z-]+[^}]*\\}`, 'i'),
     any: new RegExp(token),
   };
@@ -41,7 +46,7 @@ function selectorRules(selector: string) {
 
 export function checkAppNavPrintSuppression(
   rawCss: string,
-  selectors: readonly string[] = ['.app-nav'],
+  selectors: readonly string[] = PRINT_CHROME_SELECTORS,
 ): PrintSuppressionResult {
   // Strip comments first so a stray `{`/`}` inside explanatory prose (this
   // file's own header comment does exactly that) can't desync the

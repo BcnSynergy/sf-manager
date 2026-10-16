@@ -26,7 +26,41 @@ const cssSource = readFileSync(INDEX_CSS_PATH, 'utf8');
 // function so the detection logic itself can be triangulated against
 // synthetic fixtures, independent of whatever apps/web/src/index.css
 // currently contains.
+// The original nav-only fixtures below pass the selector list explicitly; the
+// checker's default is every chrome selector (PRINT_CHROME_SELECTORS).
+const NAV_ONLY = ['.app-nav'];
+
 describe('checkAppNavPrintSuppression', () => {
+  // fresh review of ui-redesign-foundation PR 2: a descendant rule inside the
+  // print block hides something INSIDE the nav, not the nav itself.
+  it('does not accept a descendant rule as hiding .app-nav in print', () => {
+    const css = `
+      .app-nav { display: flex; }
+      @media print {
+        .app-nav .badge { display: none; }
+      }
+    `;
+
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining('display: none'),
+    });
+  });
+
+  it('checks every chrome selector by default', () => {
+    const css = `
+      .app-nav { display: flex; }
+      @media print {
+        .app-nav { display: none; }
+      }
+    `;
+
+    expect(checkAppNavPrintSuppression(css)).toEqual({
+      ok: false,
+      reason: '.app-footer { display: none } is missing inside the @media print block.',
+    });
+  });
+
   it('reports ok when the screen rule precedes @media print and .app-nav is hidden inside it', () => {
     const css = `
       .app-nav { display: flex; gap: 1rem; }
@@ -35,7 +69,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
   });
 
   it('reports failure when a later .app-nav rule appears after @media print (the exact regression Decision 6 warns about)', () => {
@@ -47,7 +81,7 @@ describe('checkAppNavPrintSuppression', () => {
       .app-nav { display: flex; }
     `;
 
-    const result = checkAppNavPrintSuppression(css);
+    const result = checkAppNavPrintSuppression(css, NAV_ONLY);
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({
       ok: false,
@@ -63,7 +97,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    const result = checkAppNavPrintSuppression(css);
+    const result = checkAppNavPrintSuppression(css, NAV_ONLY);
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({
       ok: false,
@@ -74,7 +108,7 @@ describe('checkAppNavPrintSuppression', () => {
   it('reports failure when there is no @media print block at all', () => {
     const css = `.app-nav { display: flex; }`;
 
-    const result = checkAppNavPrintSuppression(css);
+    const result = checkAppNavPrintSuppression(css, NAV_ONLY);
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({
       ok: false,
@@ -89,7 +123,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    const result = checkAppNavPrintSuppression(css);
+    const result = checkAppNavPrintSuppression(css, NAV_ONLY);
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({
       ok: false,
@@ -109,7 +143,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
   });
 
   // code-review finding on the guard itself: a compound/grouped selector
@@ -124,7 +158,7 @@ describe('checkAppNavPrintSuppression', () => {
       .app-nav, .some-other-class { display: flex; }
     `;
 
-    const result = checkAppNavPrintSuppression(css);
+    const result = checkAppNavPrintSuppression(css, NAV_ONLY);
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({
       ok: false,
@@ -141,7 +175,7 @@ describe('checkAppNavPrintSuppression', () => {
       .app-navbar { display: flex; }
     `;
 
-    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
   });
 
   // code-review finding (second round): APP_NAV_HIDDEN_RULE/APP_NAV_VISIBLE_RULE
@@ -158,7 +192,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
   });
 
   it('recognizes a grouped screen selector making .app-nav visible before @media print', () => {
@@ -169,7 +203,7 @@ describe('checkAppNavPrintSuppression', () => {
       }
     `;
 
-    expect(checkAppNavPrintSuppression(css)).toEqual({ ok: true });
+    expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
   });
 
   // The regression guard the CRITICAL-1 finding actually asked for: run the

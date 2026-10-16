@@ -385,13 +385,11 @@ code {
   width: auto;
 }
 
-/* Login (design.md Decision 8). The login page renders outside the app shell,
-   so it lays itself out. */
+/* Login (design.md Decision 8). Its <main> sits directly under #root, outside
+   the app shell; `main.sf-login` beats the shared `:where(.sf-main, #root) >
+   main` page rule on specificity and makes the page full-bleed. */
 main.sf-login {
-  box-sizing: border-box;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
+  max-width: none;
   min-height: 100svh;
   padding: var(--space-12) var(--space-4);
   align-items: center;
@@ -506,8 +504,13 @@ main.sf-login {
   padding: var(--space-4) var(--space-8);
   border-top: 1px solid var(--border);
 }
-@media (max-width: 800px) {
+/* Stack deterministically a little before the natural wrap point (232px +
+   560px of shell width), so viewport scrollbars cannot leave a narrow sidebar
+   with the wrong border. Never set `display` here: an A4 print page matches
+   this width too, and the print rules hide .app-nav. */
+@media (max-width: 840px) {
   .app-nav {
+    flex-basis: 100%;
     max-width: none;
     border-right: 0;
     border-bottom: 1px solid var(--border);

@@ -62,6 +62,15 @@ None.
   `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
+- **TD-38**: The web suite has an intermittent failure under load. On
+  2026-10-16, "shows the page-loading message with the nav still present
+  while a page chunk downloads" (TD-8, `apps/web/src/layout/AppLayout.test.tsx`)
+  failed once in a full `npm run test --workspace=apps/web` run and passed
+  three times alone and on the next full run; a similar one-off failure was
+  seen while a build ran in parallel during `ui-redesign-foundation` PR 1. The
+  test awaits `findByTestId('page-loading')` with the default 1 s timeout.
+  Find the cause (timeout under load or suspense timing) and make it
+  deterministic. Origin: `ui-redesign-foundation` PR 2.
 
 ## Resolved
 

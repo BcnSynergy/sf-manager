@@ -221,6 +221,49 @@ describe('AppLayout', () => {
       },
     );
 
+    it('reads the admin group labels and links interleaved in document order', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(
+        within(nav)
+          .getAllByTestId(/^nav-(group-label|link)-/)
+          .map((element) => element.getAttribute('data-testid')),
+      ).toEqual([
+        'nav-link-home',
+        'nav-group-label-operations',
+        'nav-link-review-schedule',
+        'nav-link-review-history',
+        'nav-group-label-setup',
+        'nav-link-communities',
+        'nav-link-maintenance-companies',
+        'nav-link-review-templates',
+        'nav-link-checklist-questions',
+        'nav-group-label-administration',
+        'nav-link-users',
+        'nav-link-organization-profile',
+      ]);
+    });
+
+    it('exposes each labelled group to assistive technology by its label', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout();
+
+      const nav = await screen.findByTestId('nav-root');
+      expect(
+        within(nav)
+          .getAllByRole('group')
+          .map((group) => group.getAttribute('aria-labelledby')),
+      ).toHaveLength(3);
+      const operations = within(nav).getByRole('group', { name: 'Operations' });
+      expect(
+        within(operations)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['Review schedule', 'Review history']);
+    });
+
     it('renders no Setup or Administration group for a manager', async () => {
       vi.stubGlobal('fetch', mockFetch({ role: 'MANAGER' }));
       renderAppLayout();
