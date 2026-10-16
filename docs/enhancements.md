@@ -428,7 +428,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   held no open draft at all, and the browser pass opened a `QUARTERLY` draft
   in Dev Seed Residences South by hand. Reword the scenario to open a
   `QUARTERLY` draft as a seeded technician, or pin the seed draft's
-  frequency. Origin: `review-schedule-in-progress` archive native review,
+  frequency. Origin: `review-schedule-in-progress` (#236) archive native review,
   finding `R3-browser-scenario-conditional`, 2026-10-16.
 
 ## Done

@@ -22,10 +22,10 @@ last review date and order are unchanged; the row names no owner.
 
 ## Delivery (final state)
 
-| PR               | Content                                                  | Merge   |
-| ---------------- | -------------------------------------------------------- | ------- |
-| #235 (PR 1/2)    | Implementation, tests, delta specs, artifacts, registers | 256fffd |
-| PR 2/2 (archive) | This change; number not known at writing time            | pending |
+| PR            | Content                                                  | Merge   |
+| ------------- | -------------------------------------------------------- | ------- |
+| #235 (PR 1/2) | Implementation, tests, delta specs, artifacts, registers | 256fffd |
+| #236 (PR 2/2) | Archive: living specs, change folder, EN-56              | pending |
 
 ## Specs Synced
 
@@ -57,7 +57,7 @@ All tasks in `tasks.md` are checked. TDD evidence and the browser pass are in
 - Added: EN-53 (use-case order test flags every pair), EN-54 (draft on
   another element type; needs a second `ElementType`), EN-55 (widened
   `groupBy` status type; combined coverage-plus-draft reader test).
-- Added in this archive PR: EN-56 (the "Marker in the browser" scenario
+- Added in this archive PR: EN-56 (#236) (the "Marker in the browser" scenario
   depends on an unpinned seed draft), from the archive native review.
 - `review-schedule` archive follow-up 6 (the deferred "in progress" marker)
   is done by this change.
