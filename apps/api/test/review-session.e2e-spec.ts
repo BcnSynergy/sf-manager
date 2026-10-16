@@ -1345,16 +1345,17 @@ describe('Review Sessions (e2e)', () => {
       ];
       // The review schedule (FR-009 slice 1) legitimately speaks of overdue
       // reviews. It is its own surface, not a review-session mechanism, so
-      // exactly its own files are skipped (matched on the path relative to
-      // apps/web/src), the locale catalogs are scanned without their
-      // `reviewSchedule` subtree, and the locale key-set test without its
-      // `reviewSchedule.*` key paths. Every other key and file is scanned.
-      const reviewScheduleFiles = new Set([
-        'review-schedule/schedule-labels.ts',
-        'review-schedule/schedule-labels.test.ts',
-        'pages/ReviewSchedulePage.tsx',
-        'pages/ReviewSchedulePage.test.tsx',
-      ]);
+      // its files are skipped by naming convention (TD-16): any file whose
+      // path, relative to apps/web/src, has a directory or file name starting
+      // with `review-schedule` or `ReviewSchedule`. New or moved schedule
+      // files following that convention need no edit here. The locale
+      // catalogs are scanned without their `reviewSchedule` subtree, and the
+      // locale key-set test without its `reviewSchedule.*` key paths. Every
+      // other key and file is scanned.
+      const isReviewScheduleFile = (relative: string): boolean =>
+        relative
+          .split('/')
+          .some((segment) => /^(review-schedule|ReviewSchedule)/.test(segment));
       const withoutReviewScheduleCopy = (
         relative: string,
         content: string,
@@ -1378,7 +1379,7 @@ describe('Review Sessions (e2e)', () => {
           .relative(webScanRoot, file)
           .split(path.sep)
           .join('/');
-        if (reviewScheduleFiles.has(relative)) {
+        if (isReviewScheduleFile(relative)) {
           continue;
         }
         const content = withoutReviewScheduleCopy(
