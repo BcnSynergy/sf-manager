@@ -385,6 +385,102 @@ code {
   width: auto;
 }
 
+/* PageHeader: the page's single h1 and, when the page has them, its actions. */
+.sf-page-header {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* DataTable: a bordered wrapper that scrolls its table sideways on narrow
+   screens, so the page body never does. */
+.sf-table-wrap {
+  align-self: stretch;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.sf-table-wrap table {
+  background: none;
+}
+.sf-table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+.sf-table-wrap tbody tr:hover td {
+  background: var(--hover);
+}
+.sf-table-wrap td:first-child {
+  font-weight: 600;
+}
+
+/* Loading, empty and error messages that stand in for a table. */
+.sf-empty {
+  align-self: stretch;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* StatusBadge: one to three words of state with a leading dot. The word
+   carries the meaning; the tone (critical, warning, notice, success) only
+   speeds up scanning. `sf-badge-draft` is the outlined in-progress marker. */
+.sf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.sf-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sf-badge-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.sf-badge-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.sf-badge-notice {
+  background: var(--notice-soft);
+  color: var(--notice);
+}
+.sf-badge-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.sf-badge-draft {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  padding: 1px 7px;
+}
+.sf-badge-draft::before {
+  background: none;
+  border: 1.5px solid currentColor;
+  box-sizing: border-box;
+}
+
 /* Login (design.md Decision 8). Its <main> sits directly under #root, outside
    the app shell; `main.sf-login` beats the shared `:where(.sf-main, #root) >
    main` page rule on specificity and makes the page full-bleed. */
