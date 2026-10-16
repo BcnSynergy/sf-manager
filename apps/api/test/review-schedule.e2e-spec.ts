@@ -191,17 +191,20 @@ interface ScheduleRowBody {
   quarterNumber: number | null;
   deadline: string | null;
   lastCoveringSessionDate: string | null;
+  inProgress: boolean;
 }
 
 const pair = (
   communityId: string,
   communityName: string,
   coverage: PairCoverage,
+  inProgress = false,
 ): SchedulePair => ({
   communityId,
   communityName,
   elementType: 'EXTINGUISHER',
   coverage,
+  inProgress,
 });
 
 // review-schedule PR 6: the HTTP surface. Pairs A (overdue), B (up to date)
@@ -286,7 +289,8 @@ describe('Review Schedule (e2e)', () => {
       .expect(201);
     target.reader.seed(
       pair(b.id, b.name, UP_TO_DATE),
-      pair(c.id, c.name, UPCOMING),
+      // C has an open draft (TD-22): marked in progress, still UPCOMING.
+      pair(c.id, c.name, UPCOMING, true),
       pair(a.id, a.name, OVERDUE),
     );
     return { a, b, c };
@@ -333,7 +337,22 @@ describe('Review Schedule (e2e)', () => {
         quarterNumber: 3,
         deadline: '2026-09-30',
         lastCoveringSessionDate: '2026-05-10',
+        inProgress: false,
       });
+    });
+
+    it('carries inProgress per row without moving the marked row (TD-22)', async () => {
+      const agent = await loginAgent(built.app, emails.admin);
+
+      const response = await agent.get('/review-schedule').expect(200);
+      const rows = response.body as ScheduleRowBody[];
+
+      expect(rows.map((row) => [row.communityId, row.inProgress])).toEqual([
+        [communityA.id, false],
+        [communityC.id, true],
+        [communityB.id, false],
+      ]);
+      expect(rows[1].status).toBe('UPCOMING');
     });
 
     it('a granted MANAGER receives the same list as the admin', async () => {

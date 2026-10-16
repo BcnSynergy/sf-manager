@@ -41,4 +41,9 @@ export class ReviewScheduleRowDto {
 
   @ApiProperty({ type: String, nullable: true, example: '2026-05-10' })
   lastCoveringSessionDate!: string | null;
+
+  // True while any user holds an open QUARTERLY or ANNUAL draft for the pair
+  // (TD-22). Never names the draft's owner and never affects status or order.
+  @ApiProperty({ type: Boolean, example: false })
+  inProgress!: boolean;
 }

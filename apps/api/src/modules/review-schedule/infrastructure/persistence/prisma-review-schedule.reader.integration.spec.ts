@@ -641,6 +641,184 @@ describe('PrismaReviewScheduleReader (integration)', () => {
     });
   });
 
+  // spec: An Open Draft Marks a Pair as In Progress (TD-22).
+  describe('the in-progress flag', () => {
+    it('is false for a pair with no session at all', async () => {
+      const community = await liveCommunity();
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(false);
+    });
+
+    it('is true for an open draft on a QUARTERLY template', async () => {
+      const community = await liveCommunity();
+      await createSession(
+        community.id,
+        await createTemplate('QUARTERLY'),
+        await createUser(),
+        null,
+      );
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(true);
+    });
+
+    it('is true for an open draft on an ANNUAL template', async () => {
+      const community = await liveCommunity();
+      await createSession(
+        community.id,
+        await createTemplate('ANNUAL'),
+        await createUser(),
+        null,
+      );
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(true);
+    });
+
+    it('is true for an open draft on an ACTIVE template version', async () => {
+      const community = await liveCommunity();
+
+      await withActiveTemplate('QUARTERLY', async (templateId) => {
+        await createSession(community.id, templateId, await createUser(), null);
+
+        const pair = await readPair(community.id);
+
+        expect(pair.inProgress).toBe(true);
+      });
+    });
+
+    it('is true for a draft frozen against a replaced template version', async () => {
+      const community = await liveCommunity();
+      const replacedVersion = await createTemplate('QUARTERLY');
+      await createTemplate('QUARTERLY'); // the newer version; no session on it
+      await createSession(
+        community.id,
+        replacedVersion,
+        await createUser(),
+        null,
+      );
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(true);
+    });
+
+    it('is true whichever users hold drafts, and the pair carries no owner', async () => {
+      const community = await liveCommunity();
+      const template = await createTemplate('QUARTERLY');
+      await createSession(community.id, template, await createUser(), null);
+      await createSession(community.id, template, await createUser(), null);
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(true);
+      expect(Object.keys(pair).sort()).toEqual([
+        'communityId',
+        'communityName',
+        'coverage',
+        'elementType',
+        'inProgress',
+      ]);
+    });
+
+    it('is false when the only drafts are MONTHLY or SEMIANNUAL', async () => {
+      const community = await liveCommunity();
+      const user = await createUser();
+      await createSession(
+        community.id,
+        await createTemplate('MONTHLY'),
+        user,
+        null,
+      );
+      await createSession(
+        community.id,
+        await createTemplate('SEMIANNUAL'),
+        user,
+        null,
+      );
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(false);
+    });
+
+    it('is false when the only draft belongs to another community', async () => {
+      const community = await liveCommunity();
+      const other = await liveCommunity();
+      await createSession(
+        other.id,
+        await createTemplate('QUARTERLY'),
+        await createUser(),
+        null,
+      );
+
+      const pairs = await reader.listPairs(
+        scopeOf(community.id, other.id),
+        SINCE,
+      );
+
+      const inProgressById = Object.fromEntries(
+        pairs.map((pair) => [pair.communityId, pair.inProgress]),
+      );
+      expect(inProgressById).toEqual({
+        [community.id]: false,
+        [other.id]: true,
+      });
+    });
+
+    it('is false when the only sessions are completed', async () => {
+      const community = await liveCommunity();
+      await createSession(
+        community.id,
+        await createTemplate('QUARTERLY'),
+        await createUser(),
+        '2026-10-10T10:00:00.000Z',
+      );
+
+      const pair = await readPair(community.id);
+
+      expect(pair.inProgress).toBe(false);
+    });
+
+    it('clears once the only draft is discarded (a hard delete)', async () => {
+      const community = await liveCommunity();
+      const template = await createTemplate('QUARTERLY');
+      await createSession(community.id, template, await createUser(), null);
+      expect((await readPair(community.id)).inProgress).toBe(true);
+
+      await prisma.reviewSession.deleteMany({
+        where: { communityId: community.id, status: 'draft' },
+      });
+
+      expect((await readPair(community.id)).inProgress).toBe(false);
+    });
+
+    it('clears once the only draft is completed, which then covers', async () => {
+      const community = await liveCommunity();
+      const template = await createTemplate('QUARTERLY');
+      await createSession(community.id, template, await createUser(), null);
+      expect((await readPair(community.id)).inProgress).toBe(true);
+
+      await prisma.reviewSession.updateMany({
+        where: { communityId: community.id, status: 'draft' },
+        data: {
+          status: 'completed',
+          completedAt: new Date('2026-10-10T10:00:00.000Z'),
+        },
+      });
+
+      const pair = await readPair(community.id);
+      expect(pair.inProgress).toBe(false);
+      expect(times(pair.coverage).recentCoveringAt).toEqual([
+        '2026-10-10T10:00:00.000Z',
+      ]);
+    });
+  });
+
   // Records every Prisma client operation of one `listPairs` call through a
   // client extension (E9: the repo has no other counting mechanism). The
   // extended client is passed with no cast: the constructor takes the
@@ -694,7 +872,7 @@ describe('PrismaReviewScheduleReader (integration)', () => {
       return ids;
     };
 
-    it('issues the same six operations for 2 and for 20 communities', async () => {
+    it('issues the same seven operations for 2 and for 20 communities', async () => {
       const fewIds = await seedCommunities(2);
       const few = await recordOperations(scopeOf(...fewIds));
       const manyIds = await seedCommunities(20);
@@ -703,7 +881,7 @@ describe('PrismaReviewScheduleReader (integration)', () => {
       // Every seeded community yields a pair, so a per-pair lookup would show.
       expect(few.pairs).toHaveLength(fewIds.length);
       expect(many.pairs).toHaveLength(manyIds.length);
-      expect(few.operations).toHaveLength(6);
+      expect(few.operations).toHaveLength(7);
       expect(many.operations).toHaveLength(few.operations.length);
     }, 60_000);
   });
@@ -731,6 +909,7 @@ describe('PrismaReviewScheduleReader (integration)', () => {
         'ReviewSession.groupBy',
         'ReviewSession.groupBy',
         'ReviewSession.findMany',
+        'ReviewSession.groupBy',
       ]);
       // q1
       expect(whereOf(operations, 'Community')[0]).toMatchObject({
@@ -740,9 +919,9 @@ describe('PrismaReviewScheduleReader (integration)', () => {
       expect(whereOf(operations, 'InspectableElement')[0]).toMatchObject({
         communityId: { in: ids },
       });
-      // q4, q5, q6
+      // q4, q5, q6, q7
       const sessionWheres = whereOf(operations, 'ReviewSession');
-      expect(sessionWheres).toHaveLength(3);
+      expect(sessionWheres).toHaveLength(4);
       for (const where of sessionWheres) {
         expect(where).toMatchObject({ communityId: { in: ids } });
       }

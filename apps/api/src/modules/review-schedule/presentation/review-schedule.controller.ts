@@ -42,6 +42,7 @@ export class ReviewScheduleController {
       quarterNumber: row.quarter?.number ?? null,
       deadline: row.deadline,
       lastCoveringSessionDate: row.lastCoveringSessionDate,
+      inProgress: row.inProgress,
     }));
   }
 }
