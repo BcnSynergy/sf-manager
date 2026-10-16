@@ -598,5 +598,8 @@
     "sessionEnded": "La teva sessió ha acabat. Torna a iniciar la sessió.",
     "logoAlt": "SF-Manager",
     "logoutLabel": "Tanca sessió"
+  },
+  "brand": {
+    "credit": "Un producte de BCNSynergy"
   }
 }

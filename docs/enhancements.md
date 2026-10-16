@@ -430,6 +430,27 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `QUARTERLY` draft as a seeded technician, or pin the seed draft's
   frequency. Origin: `review-schedule-in-progress` (#236) archive native review,
   finding `R3-browser-scenario-conditional`, 2026-10-16.
+- **EN-57** (web UX): The community details page lists representatives and
+  technicians by raw user id (a UUID) and assigns one by typing a user id
+  (`apps/web/src/community/AssignmentSection.tsx`). Show each assignee's email
+  and pick the user from a list of eligible users instead. This changes a flow,
+  so it needs its own slice. Origin: `ui-redesign-foundation` screens canvas,
+  2026-10-16.
+- **EN-58** (web print): The `.label-print` print scope forces black only on
+  `dt`/`dd`, while the review document scope also covers `th`, `td`, `code`
+  and headings. The redesign's base styles give `th`, `td` and `code` token
+  colors and fills that turn light in dark mode. The label page uses none of
+  them today, but a future table or code element on it would print light text
+  or a dark fill on a dark-mode OS. Extend the label override to the same
+  element list. Evidence: `apps/web/src/index.css` print block. Origin:
+  `ui-redesign-foundation` PR 1 native review, finding
+  `R3-label-print-dark-colors`, 2026-10-16.
+- **EN-59** (web tests): Pin the print resets added by the redesign with a
+  source-level test like `apps/web/src/styles/index-css-print-credit.test.ts`:
+  `main` back to block flow without width cap or padding, and the stacked
+  `dl`/`dd` layout of labels and review documents. Today only a browser print
+  pass covers them. Origin: `ui-redesign-foundation` PR 1 native review,
+  finding `R3-print-layout-reset-untested`, 2026-10-16.
 
 ## Done
 

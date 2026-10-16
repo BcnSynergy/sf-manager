@@ -59,37 +59,53 @@ export function LoginPage() {
   }
 
   return (
-    <main>
-      <LanguageSelector />
-      <img src="/logo.svg" alt={t('auth.logoAlt')} data-testid="login-logo" />
-      <h1>{t('auth.loginTitle')}</h1>
-      {/* noValidate: validation messages are ours (i18n-driven), not the
+    <main className="sf-login">
+      <div className="sf-login-card">
+        {/* ui-redesign-foundation design Decision 8: one <img> (one alt text);
+            the browser swaps in the dark-ground logo when the OS prefers dark. */}
+        <picture className="sf-login-logo">
+          <source srcSet="/logo-on-dark.svg" media="(prefers-color-scheme: dark)" />
+          <img src="/logo.svg" alt={t('auth.logoAlt')} data-testid="login-logo" />
+        </picture>
+        <h1>{t('auth.loginTitle')}</h1>
+        {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="login-email-input">{t('auth.emailLabel')}</label>
-        <input
-          id="login-email-input"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          data-testid="login-email"
-        />
-        <label htmlFor="login-password-input">{t('auth.passwordLabel')}</label>
-        <input
-          id="login-password-input"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          data-testid="login-password"
-        />
-        {sessionEnded && !error && (
-          <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
-        )}
-        {error && <p data-testid="login-error">{error}</p>}
-        <button type="submit" data-testid="login-submit">
-          {t('auth.submitLabel')}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} noValidate>
+          <label htmlFor="login-email-input">{t('auth.emailLabel')}</label>
+          <input
+            id="login-email-input"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            data-testid="login-email"
+          />
+          <label htmlFor="login-password-input">{t('auth.passwordLabel')}</label>
+          <input
+            id="login-password-input"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            data-testid="login-password"
+          />
+          {sessionEnded && !error && (
+            <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
+          )}
+          {error && <p data-testid="login-error">{error}</p>}
+          <button type="submit" className="sf-btn-primary" data-testid="login-submit">
+            {t('auth.submitLabel')}
+          </button>
+        </form>
+        <div className="sf-login-foot">
+          <span className="sf-credit" data-testid="login-credit">
+            <picture>
+              <source srcSet="/bcnsynergy-mark-on-dark.svg" media="(prefers-color-scheme: dark)" />
+              <img src="/bcnsynergy-mark.svg" alt="" />
+            </picture>
+            {t('brand.credit')}
+          </span>
+          <LanguageSelector />
+        </div>
+      </div>
     </main>
   );
 }
