@@ -401,7 +401,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   one pair, as the spec scenario says (the e2e test already does this at the
   HTTP level). Evidence:
   `apps/api/src/modules/review-schedule/application/use-cases/list-review-schedule.use-case.spec.ts`.
-  Origin: `review-schedule-in-progress` native review, finding
+  Origin: `review-schedule-in-progress` (#235) native review, finding
   `R3-uniform-flag-order-test`, 2026-10-16.
 - **EN-54** (api tests): No reader integration test covers an open
   `QUARTERLY`/`ANNUAL` draft on a template of another element type in the same
@@ -409,7 +409,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   Postgres. It cannot be written while `ElementType` has only `EXTINGUISHER`;
   add it with the second element type, next to the existing "Pairs are per
   element type" follow-up of `review-schedule`. Origin:
-  `review-schedule-in-progress` native review, finding
+  `review-schedule-in-progress` (#235) native review, finding
   `R3-other-element-type-draft`, 2026-10-16.
 - **EN-55** (api): For TD-22, `ReviewSchedulePrisma.reviewSession.groupBy`
   now accepts `status: 'completed' | 'draft'` (a draft-only overload is not
@@ -421,7 +421,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   covering session plus an open draft on the same pair asserting the coverage
   is unchanged. Evidence:
   `apps/api/src/modules/review-schedule/infrastructure/persistence/prisma-review-schedule.reader.ts`.
-  Origin: `review-schedule-in-progress` fresh-context review, 2026-10-16.
+  Origin: `review-schedule-in-progress` (#235) fresh-context review, 2026-10-16.
 
 ## Done
 

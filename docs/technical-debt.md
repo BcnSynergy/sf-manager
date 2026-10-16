@@ -214,7 +214,7 @@ None.
   `authenticated-routes.test.ts` fails if a page is imported statically again.
 - **TD-22**: No "in progress" marker on a review schedule pair that has an open
   draft; drafts never change status or sort. Resolved by
-  `review-schedule-in-progress`: each `GET /review-schedule` row carries
+  `review-schedule-in-progress` (#235): each `GET /review-schedule` row carries
   `inProgress`, true while any user holds an open `QUARTERLY` or `ANNUAL`
   draft for the pair (a seventh reader query), and the page shows "In
   progress" after the status label. Status, reason and order are unchanged
