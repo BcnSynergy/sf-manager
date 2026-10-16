@@ -445,17 +445,17 @@ windowEndsAt <= now()`) four times and the window-end expression five
   element list. Evidence: `apps/web/src/index.css` print block. Origin:
   `ui-redesign-foundation` PR 1 native review, finding
   `R3-label-print-dark-colors`, 2026-10-16.
-- **EN-59** (web tests): Pin the print resets added by the redesign with a
-  source-level test like `apps/web/src/styles/index-css-print-credit.test.ts`:
-  `main` back to block flow without width cap or padding, and the stacked
-  `dl`/`dd` layout of labels and review documents, and (from PR 2) the shell
-  resets: `.sf-shell`/`.sf-main` as blocks and `.sf-main > main` back to
-  `overflow: visible`, so a later screen rule placed after the print block
-  cannot bring back print clipping, and (from PR 3) the print badge rules:
-  `.sf-table-wrap` overflow visible, badges black with no fill, the draft
-  marker still dashed (native review finding `R3-print-badge-untested`).
-  Today only a browser print pass covers them. Origin: `ui-redesign-foundation` PR 1 native review,
-  finding `R3-print-layout-reset-untested`, 2026-10-16.
+- **EN-59** (web tests): Pin the redesign's print rules with source-level
+  tests like `apps/web/src/styles/index-css-print-credit.test.ts`. Today only
+  a browser print pass covers them. PR 1: `main` back to block flow without
+  width cap or padding, and the stacked `dl`/`dd` layout of labels and review
+  documents. PR 2: `.sf-shell`/`.sf-main` as blocks and `.sf-main > main` back
+  to `overflow: visible`, so a later screen rule placed after the print block
+  cannot bring back print clipping. PR 3: `.sf-table-wrap` overflow visible,
+  badges black with no fill, and the draft marker still dashed. Origin:
+  `ui-redesign-foundation` native reviews, findings
+  `R3-print-layout-reset-untested` (PR 1) and `R3-print-badge-untested`
+  (PR 3), 2026-10-16.
 - **EN-60** (web tests): The print guard
   (`apps/web/src/styles/check-app-nav-print-suppression.ts`) rejects a
   descendant rule after the chrome selector (`.app-nav .x { display: none }`)
