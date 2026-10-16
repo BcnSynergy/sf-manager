@@ -20,42 +20,42 @@ Under the 400-line budget: one implementation PR plus the archive PR.
 
 ## Phase A: Branch and baseline (PR 1)
 
-- [ ] A.1 Branch from `main`; baseline `npm run test --workspace=apps/api`,
+- [x] A.1 Branch from `main`; baseline `npm run test --workspace=apps/api`,
       the review-schedule integration spec, and `apps/web` Vitest green.
 
 ## Phase B: Reader (spec: An Open Draft Marks a Pair as In Progress)
 
-- [ ] B.1 RED: integration tests for quarterly draft, annual draft, another
+- [x] B.1 RED: integration tests for quarterly draft, annual draft, another
       user's draft, retired-version draft, MONTHLY/SEMIANNUAL drafts, draft in
       another community, completed-only and discarded, completing a draft.
-- [ ] B.2 RED: query-count test expects seven.
-- [ ] B.3 GREEN: `SchedulePair.inProgress`, q7 with its structural type
+- [x] B.2 RED: query-count test expects seven.
+- [x] B.3 GREEN: `SchedulePair.inProgress`, q7 with its structural type
       signature (Decision 2), fold, header comment.
 
 ## Phase C: Use case (spec: status and order unchanged)
 
-- [ ] C.1 RED: flag copied per pair; same pairs sort and evaluate identically
+- [x] C.1 RED: flag copied per pair; same pairs sort and evaluate identically
       with the flag true or false.
-- [ ] C.2 GREEN: `ReviewScheduleRow.inProgress` set in `.map`.
+- [x] C.2 GREEN: `ReviewScheduleRow.inProgress` set in `.map`.
 
 ## Phase D: HTTP (spec: the entry carries `inProgress`)
 
-- [ ] D.1 RED: e2e DTO shape includes `inProgress`.
-- [ ] D.2 GREEN: DTO field and controller mapping.
+- [x] D.1 RED: e2e DTO shape includes `inProgress`.
+- [x] D.2 GREEN: DTO field and controller mapping.
 
 ## Phase E: Web (spec: An In-Progress Row Shows a Marker)
 
-- [ ] E.1 RED: page shows the marker for a flagged row only, in en/es/ca; the
+- [x] E.1 RED: page shows the marker for a flagged row only, in en/es/ca; the
       marker is not a control.
-- [ ] E.2 GREEN: row type, `IN_PROGRESS_LABEL_KEY`, marker span, locale keys.
+- [x] E.2 GREEN: row type, `IN_PROGRESS_LABEL_KEY`, marker span, locale keys.
 
 ## Phase F: Registers and verification (PR 1)
 
-- [ ] F.1 TD-22 to Resolved (with PR number after the PR exists).
-- [ ] F.2 Full suites: API unit, API e2e, review-schedule integration, web;
+- [x] F.1 TD-22 to Resolved (with PR number after the PR exists).
+- [x] F.2 Full suites: API unit, API e2e, review-schedule integration, web;
       `npm run build`, `npm run format:check`, lint.
-- [ ] F.3 Browser pass: seeded draft's row shows the marker; other rows do not.
-- [ ] F.4 verify-report.md.
+- [x] F.3 Browser pass: seeded draft's row shows the marker; other rows do not.
+- [x] F.4 verify-report.md.
 
 ## Gate PR 1 (orchestrator)
 
