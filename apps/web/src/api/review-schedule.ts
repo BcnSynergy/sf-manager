@@ -30,6 +30,9 @@ export type ReviewScheduleRow = {
   quarterNumber: number | null;
   deadline: string | null;
   lastCoveringSessionDate: string | null;
+  // True while any user holds an open QUARTERLY or ANNUAL draft for the pair
+  // (TD-22). It never changes status, reason or order.
+  inProgress: boolean;
 };
 
 export function listReviewSchedule(): Promise<ReviewScheduleRow[]> {

@@ -34,6 +34,7 @@ const rows: ReviewScheduleRow[] = [
     quarterNumber: 3,
     deadline: '2026-09-30',
     lastCoveringSessionDate: '2026-05-10',
+    inProgress: true,
   },
   {
     communityId: 'c2',
@@ -45,6 +46,7 @@ const rows: ReviewScheduleRow[] = [
     quarterNumber: null,
     deadline: null,
     lastCoveringSessionDate: null,
+    inProgress: false,
   },
 ];
 

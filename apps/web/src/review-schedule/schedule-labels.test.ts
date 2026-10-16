@@ -27,6 +27,7 @@ function row(overrides: Partial<ReviewScheduleRow>): ReviewScheduleRow {
     quarterNumber: null,
     deadline: '2026-12-31',
     lastCoveringSessionDate: '2026-11-15',
+    inProgress: false,
     ...overrides,
   };
 }

@@ -558,6 +558,7 @@
     "columnReason": "Motivo",
     "columnLastReview": "Última revisión",
     "neverReviewed": "Sin revisar",
+    "inProgress": "En curso",
     "status": {
       "overdue": "Vencida",
       "neverReviewed": "Sin revisar",

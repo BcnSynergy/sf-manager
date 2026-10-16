@@ -558,6 +558,7 @@
     "columnReason": "Motiu",
     "columnLastReview": "Darrera revisió",
     "neverReviewed": "Sense revisar",
+    "inProgress": "En curs",
     "status": {
       "overdue": "Vençuda",
       "neverReviewed": "Sense revisar",

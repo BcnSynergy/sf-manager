@@ -46,10 +46,6 @@ None.
   and `apps/web/src/review-session/format-date.test.ts:55-56` (W-4 still
   present); `review-export` verify-report W-4, S-5, S-6 (S-5 and S-6 not
   re-checked in code). Origin: `review-export`.
-- **TD-22**: No "in progress" marker on a review schedule pair that has an open
-  draft; drafts never change status or sort. Deferred by design. Evidence:
-  `review-schedule` design.md Decision 8 and archive-report follow-up 6.
-  Origin: `review-schedule`.
 - **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
   the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
   cannot be shown from the artifacts. Evidence: verify-reports of
@@ -216,6 +212,13 @@ None.
   gzip) and the warning is gone. `@sf-manager/validation` and zod now form a
   shared 358 kB chunk loaded with the login and form pages (EN-49).
   `authenticated-routes.test.ts` fails if a page is imported statically again.
+- **TD-22**: No "in progress" marker on a review schedule pair that has an open
+  draft; drafts never change status or sort. Resolved by
+  `review-schedule-in-progress`: each `GET /review-schedule` row carries
+  `inProgress`, true while any user holds an open `QUARTERLY` or `ANNUAL`
+  draft for the pair (a seventh reader query), and the page shows "In
+  progress" after the status label. Status, reason and order are unchanged
+  (Decision 8 still holds); the row names no owner.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
