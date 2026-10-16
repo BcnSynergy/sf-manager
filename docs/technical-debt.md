@@ -207,9 +207,11 @@ None.
   schedule surface by exact relative path, so each new schedule file had to be
   added by hand. Resolved by `td-16-schedule-guard-exemption`: the guard in
   `apps/api/test/review-session.e2e-spec.ts` skips any file with a directory or
-  file name starting with `review-schedule` or `ReviewSchedule`. Checked both
-  ways: a new schedule file using a forbidden term passes, and a review-session
-  file using one still fails.
+  file name that is `review-schedule` / `ReviewSchedule` or continues with a
+  non-lowercase character (so `ReviewScheduler` is still scanned). A
+  table-driven test pins the rule, and the guard was checked both ways: a new
+  schedule file using a forbidden term passes, and a review-session file using
+  one still fails.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
