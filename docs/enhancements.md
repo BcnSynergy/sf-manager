@@ -394,6 +394,34 @@ windowEndsAt <= now()`) four times and the window-end expression five
   requests in sequence. Evidence: `node_modules/react-router` 7.18.2
   `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` (#234) fresh-context
   review, 2026-10-16.
+- **EN-53** (api tests): The use-case test "leaves status, reason, deadline,
+  last date and order unchanged" for the TD-22 `inProgress` flag compares a
+  run where every pair is flagged with one where none is, so a comparator that
+  started sorting or tie-breaking on the flag would still pass. Flag exactly
+  one pair, as the spec scenario says (the e2e test already does this at the
+  HTTP level). Evidence:
+  `apps/api/src/modules/review-schedule/application/use-cases/list-review-schedule.use-case.spec.ts`.
+  Origin: `review-schedule-in-progress` (#235) native review, finding
+  `R3-uniform-flag-order-test`, 2026-10-16.
+- **EN-54** (api tests): No reader integration test covers an open
+  `QUARTERLY`/`ANNUAL` draft on a template of another element type in the same
+  community, so the element-type half of the draft fold is untested against
+  Postgres. It cannot be written while `ElementType` has only `EXTINGUISHER`;
+  add it with the second element type, next to the existing "Pairs are per
+  element type" follow-up of `review-schedule`. Origin:
+  `review-schedule-in-progress` (#235) native review, finding
+  `R3-other-element-type-draft`, 2026-10-16.
+- **EN-55** (api): For TD-22, `ReviewSchedulePrisma.reviewSession.groupBy`
+  now accepts `status: 'completed' | 'draft'` (a draft-only overload is not
+  assignable from `PrismaService`), so the compiler no longer stops q4 or q5
+  from filtering on `'draft'`. Today drafts still cannot cover (their
+  `completedAt` is null, and the coverage tests would fail), but the rule is
+  no longer documented by the type. Add a comment at q4/q5 that the status
+  must stay `'completed'`, and optionally a reader test with a completed
+  covering session plus an open draft on the same pair asserting the coverage
+  is unchanged. Evidence:
+  `apps/api/src/modules/review-schedule/infrastructure/persistence/prisma-review-schedule.reader.ts`.
+  Origin: `review-schedule-in-progress` (#235) fresh-context review, 2026-10-16.
 
 ## Done
 

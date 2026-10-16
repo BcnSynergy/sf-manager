@@ -21,6 +21,7 @@ const baseRow: ReviewScheduleRow = {
   quarterNumber: null,
   deadline: null,
   lastCoveringSessionDate: '2026-11-15',
+  inProgress: false,
 };
 
 const upcomingAnnual: ReviewScheduleRow = {
@@ -53,6 +54,9 @@ const neverReviewed: ReviewScheduleRow = {
   reasonCode: 'NEVER_REVIEWED',
   lastCoveringSessionDate: null,
 };
+
+// Same pair as upcomingAnnual, with an open draft (TD-22).
+const upcomingInProgress: ReviewScheduleRow = { ...upcomingAnnual, inProgress: true };
 
 function renderPage() {
   return render(
@@ -257,14 +261,14 @@ describe('ReviewSchedulePage', () => {
   it('offers no control and shows no per-session data', async () => {
     mockedListReviewSchedule.mockResolvedValue([
       baseRow,
-      upcomingAnnual,
+      upcomingInProgress,
       overdueQuarterly,
       neverReviewed,
     ]);
 
     renderPage();
 
-    await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
+    await screen.findByTestId('review-schedule-in-progress-c2-EXTINGUISHER');
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);
@@ -280,6 +284,56 @@ describe('ReviewSchedulePage', () => {
       'Reason',
       'Last review',
     ]);
+  });
+
+  // spec: An In-Progress Row Shows a Marker (TD-22).
+  it('shows the in-progress marker after the status label of a flagged row, leaving the rest as before', async () => {
+    mockedListReviewSchedule.mockResolvedValue([upcomingInProgress]);
+
+    renderPage();
+
+    const row = await screen.findByTestId('review-schedule-row-c2-EXTINGUISHER');
+    const marker = within(row).getByTestId('review-schedule-in-progress-c2-EXTINGUISHER');
+    expect(marker).toHaveTextContent('(In progress)');
+    expect(marker.closest('td')).toHaveTextContent('Upcoming (In progress)');
+    expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).toHaveTextContent(
+      'No annual review on record; due by December 31, 2026.',
+    );
+    expect(
+      within(row).getByTestId('review-schedule-last-review-c2-EXTINGUISHER'),
+    ).toHaveTextContent('June 2, 2026');
+  });
+
+  it('shows no in-progress marker on unflagged rows', async () => {
+    mockedListReviewSchedule.mockResolvedValue([
+      baseRow,
+      upcomingInProgress,
+      overdueQuarterly,
+      neverReviewed,
+    ]);
+
+    renderPage();
+
+    await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
+    expect(screen.getAllByTestId(/^review-schedule-in-progress-/)).toEqual([
+      screen.getByTestId('review-schedule-in-progress-c2-EXTINGUISHER'),
+    ]);
+    expect(rowOf('c1')).not.toHaveTextContent('In progress');
+  });
+
+  it.each([
+    ['en', '(In progress)'],
+    ['es', '(En curso)'],
+    ['ca', '(En curs)'],
+  ])('shows the in-progress marker from the %s locale', async (locale, text) => {
+    await i18n.changeLanguage(locale);
+    mockedListReviewSchedule.mockResolvedValue([upcomingInProgress]);
+
+    renderPage();
+
+    expect(
+      await screen.findByTestId('review-schedule-in-progress-c2-EXTINGUISHER'),
+    ).toHaveTextContent(text);
   });
 
   it.each([

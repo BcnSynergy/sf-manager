@@ -51,11 +51,13 @@ const pair = (
   communityId: string,
   communityName: string,
   coverage: PairCoverage,
+  inProgress = false,
 ): SchedulePair => ({
   communityId,
   communityName,
   elementType: 'EXTINGUISHER',
   coverage,
+  inProgress,
 });
 
 interface Harness {
@@ -335,6 +337,7 @@ describe('ListReviewScheduleUseCase', () => {
           quarter: { year: 2026, number: 3 },
           deadline: '2026-09-30',
           lastCoveringSessionDate: '2026-05-10',
+          inProgress: false,
         },
         {
           communityId: 'c-2',
@@ -345,6 +348,7 @@ describe('ListReviewScheduleUseCase', () => {
           quarter: { year: 2026, number: 4 },
           deadline: '2026-12-31',
           lastCoveringSessionDate: '2026-08-10',
+          inProgress: false,
         },
       ]);
     });
@@ -466,6 +470,7 @@ describe('ListReviewScheduleUseCase', () => {
         quarter: null,
         deadline: null,
         lastCoveringSessionDate: '2026-10-10',
+        inProgress: false,
       });
     });
 
@@ -483,7 +488,51 @@ describe('ListReviewScheduleUseCase', () => {
         quarter: null,
         deadline: null,
         lastCoveringSessionDate: null,
+        inProgress: false,
       });
+    });
+  });
+
+  // spec: An Open Draft Marks a Pair as In Progress (TD-22).
+  describe('in-progress flag', () => {
+    const admin = { userId: 'admin-1', role: 'SYSTEM_ADMIN' as const };
+
+    it("copies each pair's flag onto its row", async () => {
+      h.reader.seed(
+        pair('c-a', 'Alpha', UP_TO_DATE, true),
+        pair('c-b', 'Beta', OVERDUE, false),
+      );
+
+      const rows = await h.useCase.execute(admin);
+
+      expect(
+        Object.fromEntries(
+          rows.map((row) => [row.communityId, row.inProgress]),
+        ),
+      ).toEqual({ 'c-a': true, 'c-b': false });
+    });
+
+    it('leaves status, reason, deadline, last date and order unchanged', async () => {
+      const seed = (inProgress: boolean) => [
+        pair('c-a', 'Alpha', UP_TO_DATE, inProgress),
+        pair('c-b', 'Beta', OVERDUE, inProgress),
+        pair('c-c', 'Gamma', UPCOMING, inProgress),
+        pair('c-d', 'Delta', NEVER_REVIEWED, inProgress),
+      ];
+      const withoutFlag = ({ inProgress, ...rest }: ReviewScheduleRow) => {
+        void inProgress;
+        return rest;
+      };
+
+      h.reader.seed(...seed(false));
+      const idle = await h.useCase.execute(admin);
+      const busyHarness = build();
+      busyHarness.reader.seed(...seed(true));
+      const busy = await busyHarness.useCase.execute(admin);
+
+      expect(busy.every((row) => row.inProgress)).toBe(true);
+      expect(idle.every((row) => !row.inProgress)).toBe(true);
+      expect(busy.map(withoutFlag)).toEqual(idle.map(withoutFlag));
     });
   });
 });

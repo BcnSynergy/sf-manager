@@ -47,10 +47,13 @@ export interface ReviewSchedulePrisma {
     }): Promise<{ id: string; elementType: ElementType; frequency: string }[]>;
   };
   reviewSession: {
+    // `status` admits 'draft' for q7 only (TD-22). A second, draft-only
+    // overload is not assignable from PrismaService (the constraint above),
+    // so q7 shares this signature and also asks for `_max`, which it ignores.
     groupBy(args: {
       by: ['communityId', 'templateId'];
       where: {
-        status: 'completed';
+        status: 'completed' | 'draft';
         communityId: IdFilter;
         templateId: { in: string[] };
         completedAt?: { lt: Date };
@@ -98,7 +101,7 @@ const latest = (current: Date | null, candidate: Date | null): Date | null =>
     ? candidate
     : current;
 
-// Prisma adapter for ReviewScheduleReader (design.md Decision 6). Exactly six
+// Prisma adapter for ReviewScheduleReader (design.md Decision 6). Exactly seven
 // typed queries whatever the result size, with no raw SQL and no per-pair
 // lookup: ReviewSession has no @relation to its template or community (E1), so
 // the join is done here by folding on (communityId, template element type).
@@ -175,6 +178,17 @@ export class PrismaReviewScheduleReader implements ReviewScheduleReader {
       },
       select: { communityId: true, templateId: true, completedAt: true },
     });
+    // q7: open drafts on the same covering versions (TD-22). They never cover;
+    // they only mark the pair as in progress. `groupBy` returns no performer.
+    const drafts = await this.prisma.reviewSession.groupBy({
+      by: ['communityId', 'templateId'],
+      where: {
+        status: 'draft',
+        communityId: inScope,
+        templateId: { in: coveringIds },
+      },
+      _max: { completedAt: true },
+    });
 
     const nameByCommunityId = new Map(
       communities.map((community) => [community.id, community.name]),
@@ -226,20 +240,28 @@ export class PrismaReviewScheduleReader implements ReviewScheduleReader {
       }
     }
 
+    const inProgressPairs = new Set<string>();
+    for (const row of drafts) {
+      const elementType = elementTypeByTemplateId.get(row.templateId);
+      if (elementType !== undefined) {
+        inProgressPairs.add(pairKey(row.communityId, elementType));
+      }
+    }
+
     return livePairs.flatMap((pair): SchedulePair[] => {
       const communityName = nameByCommunityId.get(pair.communityId);
       if (communityName === undefined) {
         return [];
       }
-      const coverage: PairCoverage =
-        coverageByPair.get(pairKey(pair.communityId, pair.elementType)) ??
-        emptyCoverage();
+      const key = pairKey(pair.communityId, pair.elementType);
+      const coverage: PairCoverage = coverageByPair.get(key) ?? emptyCoverage();
       return [
         {
           communityId: pair.communityId,
           communityName,
           elementType: pair.elementType,
           coverage,
+          inProgress: inProgressPairs.has(key),
         },
       ];
     });

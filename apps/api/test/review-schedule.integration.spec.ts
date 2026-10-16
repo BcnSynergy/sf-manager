@@ -41,6 +41,7 @@ interface ScheduleRowBody {
   quarterNumber: number | null;
   deadline: string | null;
   lastCoveringSessionDate: string | null;
+  inProgress: boolean;
 }
 
 describe('GET /review-schedule through the real Prisma reader (integration)', () => {
@@ -247,6 +248,7 @@ describe('GET /review-schedule through the real Prisma reader (integration)', ()
         quarterNumber: 3,
         deadline: '2026-09-30',
         lastCoveringSessionDate: '2026-05-10',
+        inProgress: false,
       },
       {
         communityId: communityC.id,
@@ -258,6 +260,7 @@ describe('GET /review-schedule through the real Prisma reader (integration)', ()
         quarterNumber: null,
         deadline: null,
         lastCoveringSessionDate: null,
+        inProgress: false,
       },
       expect.objectContaining({
         communityId: communityB.id,

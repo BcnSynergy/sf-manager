@@ -17,6 +17,10 @@ export interface SchedulePair {
   communityName: string;
   elementType: ElementType;
   coverage: PairCoverage;
+  // True while any user holds an open draft on a QUARTERLY or ANNUAL template
+  // of this element type in this community (TD-22). Kept outside
+  // `coverage`: it never feeds the due policy or the sort.
+  inProgress: boolean;
 }
 
 export interface ReviewScheduleReader {

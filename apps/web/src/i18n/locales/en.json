@@ -558,6 +558,7 @@
     "columnReason": "Reason",
     "columnLastReview": "Last review",
     "neverReviewed": "Never reviewed",
+    "inProgress": "In progress",
     "status": {
       "overdue": "Overdue",
       "neverReviewed": "Never reviewed",

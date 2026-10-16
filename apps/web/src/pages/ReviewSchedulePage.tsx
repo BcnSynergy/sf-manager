@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { listReviewSchedule, type ReviewScheduleRow } from '../api/review-schedule';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import {
+  IN_PROGRESS_LABEL_KEY,
   NEVER_REVIEWED_LABEL_KEY,
   formatCalendarDate,
   mapReasonToText,
@@ -75,7 +76,17 @@ export function ReviewSchedulePage() {
                 <tr key={rowKey} data-testid={`review-schedule-row-${rowKey}`}>
                   <td>{row.communityName}</td>
                   <td>{t(mapElementTypeToLabelKey(row.elementType))}</td>
-                  <td>{t(mapStatusToLabelKey(row.status))}</td>
+                  <td>
+                    {t(mapStatusToLabelKey(row.status))}
+                    {row.inProgress && (
+                      <>
+                        {' '}
+                        <span data-testid={`review-schedule-in-progress-${rowKey}`}>
+                          ({t(IN_PROGRESS_LABEL_KEY)})
+                        </span>
+                      </>
+                    )}
+                  </td>
                   <td>
                     {reason && (
                       <span data-testid={`review-schedule-reason-${rowKey}`}>

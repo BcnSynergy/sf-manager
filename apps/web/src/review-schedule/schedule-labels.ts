@@ -22,6 +22,9 @@ export function mapStatusToLabelKey(status: ReviewScheduleStatus): string {
 // Shown in place of the last-review date when no covering session exists.
 export const NEVER_REVIEWED_LABEL_KEY = 'reviewSchedule.neverReviewed';
 
+// Shown after the status label of a row with an open draft (TD-22).
+export const IN_PROGRESS_LABEL_KEY = 'reviewSchedule.inProgress';
+
 // Reason codes that carry no driving obligation (null = no reason line).
 const REASON_KEYS: Record<ReviewScheduleReasonCode, string | null> = {
   NEVER_REVIEWED: null,

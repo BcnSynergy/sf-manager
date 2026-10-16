@@ -15,6 +15,7 @@ const pair = (
     lastAnnualAt: null,
     recentCoveringAt: [],
   },
+  inProgress: false,
 });
 
 describe('InMemoryReviewScheduleReader', () => {

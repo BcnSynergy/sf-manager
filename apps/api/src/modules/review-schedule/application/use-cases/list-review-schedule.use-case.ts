@@ -53,6 +53,9 @@ export interface ReviewScheduleRow {
   deadline: string | null;
   // Null only for NEVER_REVIEWED (there is no covering session).
   lastCoveringSessionDate: string | null;
+  // An open QUARTERLY or ANNUAL draft exists (TD-22). Copied from the pair,
+  // never from the evaluation, so it cannot change status or order.
+  inProgress: boolean;
 }
 
 // TD-12: typed with SoleManagerCapability, so a second capability fails the
@@ -101,6 +104,7 @@ export class ListReviewScheduleUseCase {
           quarter: evaluation.quarter,
           deadline: evaluation.deadline,
           lastCoveringSessionDate: lastCoveringSessionDate(pair.coverage),
+          inProgress: pair.inProgress,
         };
       })
       .sort(compareScheduleRows);
