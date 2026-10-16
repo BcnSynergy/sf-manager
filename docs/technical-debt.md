@@ -43,11 +43,6 @@ None.
   not through the real `PrismaUserRepository`. Evidence: `review-schedule`
   archive-report S-3 and follow-up 4; `prisma-user.repository.integration.spec.ts`
   has no soft-deleted manager case. Origin: `review-schedule`.
-- **TD-16**: The e2e guard that scans `apps/web/src` exempts the schedule
-  surface by exact relative path, so each new exempt file must be added by
-  hand (all other files are still scanned; mutation-checked in task 9.2).
-  Evidence: `apps/api/test/review-session.e2e-spec.ts` (guard block);
-  `review-schedule` archive-report W-3. Origin: `review-schedule`.
 - **TD-18**: Review-export test-quality gaps. W-4: the permission-count lock
   checks a test-local list, not the production `Permission` union, and es/ca
   date formatting is only checked non-empty. S-5: the "rejected read issues no
@@ -208,6 +203,17 @@ None.
   `td-24-manager-capability-e2e` (#232): both cases are in
   `apps/api/test/review-history.e2e-spec.ts`; W3 was mutation-checked against
   a checker that caches its answer per user.
+- **TD-16**: The e2e guard that scans `apps/web/src` exempted the review
+  schedule surface by exact relative path, so each new schedule file had to be
+  added by hand. Resolved by `td-16-schedule-guard-exemption` (#233): the guard in
+  `apps/api/test/review-session.e2e-spec.ts` skips any file with a directory or
+  file name that is `review-schedule` / `ReviewSchedule` or continues with a
+  non-lowercase character (so `ReviewScheduler` is still scanned). A
+  table-driven test pins the rule, and the guard was checked both ways: a new
+  schedule file using a forbidden term passes, and a review-session file using
+  one still fails. This also newly exempts `api/review-schedule.ts` and its
+  test, which were scanned before (both free of forbidden terms). Evidence:
+  `review-schedule` archive-report W-3.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

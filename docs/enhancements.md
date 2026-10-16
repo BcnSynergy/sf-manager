@@ -348,6 +348,16 @@ windowEndsAt <= now()`) four times and the window-end expression five
   (test "a live grant and revoke change what the same MANAGER session sees on
   the very next request"). Origin: `td-24-manager-capability-e2e` (#232) native
   review, finding `R3-001`, 2026-10-16.
+- **EN-48** (api tests): The TD-16 review schedule exemption accepts any
+  non-lowercase character after `review-schedule` / `ReviewSchedule`, so a
+  future `review-schedule-reminders.ts` or `ReviewScheduleExport.tsx` would skip
+  the forbidden-term scan. That is the accepted cost of a naming convention, but
+  the table-driven test does not pin it: add rows for a hyphen continuation,
+  mixed case (`reviewSchedule.ts`, `Review-Schedule`), and a schedule directory
+  holding a non-matching file name. Evidence:
+  `apps/api/test/review-session.e2e-spec.ts` (`isReviewScheduleFile` and its
+  `it.each`). Origin: `td-16-schedule-guard-exemption` (#233) native review, findings
+  `R3-001` and `R3-002`, 2026-10-16.
 
 ## Done
 

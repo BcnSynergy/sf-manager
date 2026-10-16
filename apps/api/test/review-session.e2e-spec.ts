@@ -1240,6 +1240,20 @@ describe('Review Sessions (e2e)', () => {
       'review-session',
     );
     const webScanRoot = path.join(__dirname, '..', '..', 'web', 'src');
+
+    // TD-16: the review schedule web surface is recognized by naming
+    // convention, not by an exact file list, so new or moved schedule files
+    // need no edit here. A path (relative to apps/web/src) belongs to it when
+    // a directory or file name is exactly `review-schedule` / `ReviewSchedule`
+    // or continues with a non-lowercase character (`ReviewSchedulePage.tsx`,
+    // `review-schedule.ts`), so `ReviewScheduler` or `review-scheduled` do
+    // not qualify.
+    const isReviewScheduleFile = (relative: string): boolean =>
+      relative
+        .split('/')
+        .some((segment) =>
+          /^(review-schedule|ReviewSchedule)(?![a-z])/.test(segment),
+        );
     const excludedDirs = new Set(['node_modules', 'dist', '.turbo']);
 
     function collectFiles(target: string): string[] {
@@ -1321,6 +1335,21 @@ describe('Review Sessions (e2e)', () => {
       expect(offendingRoutes).toEqual([]);
     });
 
+    it.each([
+      ['pages/ReviewSchedulePage.tsx', true],
+      ['pages/ReviewSchedulePage.test.tsx', true],
+      ['review-schedule/schedule-labels.ts', true],
+      ['review-schedule/schedule-labels.test.ts', true],
+      ['api/review-schedule.ts', true],
+      ['components/schedule/ReviewScheduleRow.tsx', true],
+      ['pages/ReviewSessionPage.tsx', false],
+      ['pages/ReviewScheduler.tsx', false],
+      ['api/review-scheduled-sessions.ts', false],
+      ['i18n/locales/en.json', false],
+    ])('isReviewScheduleFile(%s) is %s', (relative, expected) => {
+      expect(isReviewScheduleFile(relative)).toBe(expected);
+    });
+
     // Corrected review-session/08 (PR8/8, discovered during the PR8 full-
     // suite run, not something PR8 introduced): this assertion originally
     // proved the web flow did NOT exist yet, per its own title ("FR-007 web
@@ -1345,16 +1374,10 @@ describe('Review Sessions (e2e)', () => {
       ];
       // The review schedule (FR-009 slice 1) legitimately speaks of overdue
       // reviews. It is its own surface, not a review-session mechanism, so
-      // exactly its own files are skipped (matched on the path relative to
-      // apps/web/src), the locale catalogs are scanned without their
+      // its files are skipped by naming convention (isReviewScheduleFile,
+      // TD-16). The locale catalogs are scanned without their
       // `reviewSchedule` subtree, and the locale key-set test without its
       // `reviewSchedule.*` key paths. Every other key and file is scanned.
-      const reviewScheduleFiles = new Set([
-        'review-schedule/schedule-labels.ts',
-        'review-schedule/schedule-labels.test.ts',
-        'pages/ReviewSchedulePage.tsx',
-        'pages/ReviewSchedulePage.test.tsx',
-      ]);
       const withoutReviewScheduleCopy = (
         relative: string,
         content: string,
@@ -1378,7 +1401,7 @@ describe('Review Sessions (e2e)', () => {
           .relative(webScanRoot, file)
           .split(path.sep)
           .join('/');
-        if (reviewScheduleFiles.has(relative)) {
+        if (isReviewScheduleFile(relative)) {
           continue;
         }
         const content = withoutReviewScheduleCopy(
