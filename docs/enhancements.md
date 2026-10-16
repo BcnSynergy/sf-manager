@@ -454,6 +454,16 @@ windowEndsAt <= now()`) four times and the window-end expression five
   cannot bring back print clipping. Today only a browser print pass covers
   them. Origin: `ui-redesign-foundation` PR 1 native review,
   finding `R3-print-layout-reset-untested`, 2026-10-16.
+- **EN-60** (web tests): The print guard
+  (`apps/web/src/styles/check-app-nav-print-suppression.ts`) rejects a
+  descendant rule after the chrome selector (`.app-nav .x { display: none }`)
+  but still accepts an ancestor-qualified one (`.page .app-nav { display:
+none }`) as hiding the nav or footer, although that only hides chrome inside
+  `.page`. Today's CSS uses bare selectors, so nothing prints wrongly. Anchor
+  the hidden-rule match to the start of a selector (start of the rule or after
+  a comma) and add a fixture for the ancestor case. Origin:
+  `ui-redesign-foundation` PR 2 native review, finding
+  `R3-print-guard-left-descendant`, 2026-10-16.
 
 ## Done
 
