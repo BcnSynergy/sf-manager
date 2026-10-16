@@ -254,7 +254,9 @@ label {
   font-weight: 600;
 }
 
-input:not([type='checkbox'], [type='radio']),
+/* :where() keeps the attribute selectors at zero specificity, so a single
+   `sf-` class on an input still overrides these (RDD review R3-001). */
+:where(input:not([type='checkbox'], [type='radio'])),
 select,
 textarea {
   box-sizing: border-box;
@@ -267,7 +269,7 @@ textarea {
   color: var(--ink);
   font: 400 15px/22px var(--font-sans);
 }
-input[readonly] {
+:where(input[readonly]) {
   background: var(--surface-sunken);
 }
 input[type='checkbox'],
