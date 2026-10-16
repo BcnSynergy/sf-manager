@@ -205,7 +205,7 @@ None.
 - **TD-24**: `review-history-manager-capability` had no e2e for a granted
   MANAGER on an empty installation (W1) or for a live grant/revoke followed by
   `/review-history` on the same session (W3). Resolved by
-  `td-24-manager-capability-e2e`: both cases are in
+  `td-24-manager-capability-e2e` (#232): both cases are in
   `apps/api/test/review-history.e2e-spec.ts`; W3 was mutation-checked against
   a checker that caches its answer per user.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the

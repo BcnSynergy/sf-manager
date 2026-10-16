@@ -346,7 +346,7 @@ windowEndsAt <= now()`) four times and the window-end expression five
   today. Wrap the grant/revoke in `try/finally` or give the test its own app,
   as the W1 test does. Evidence: `apps/api/test/review-history.e2e-spec.ts`
   (test "a live grant and revoke change what the same MANAGER session sees on
-  the very next request"). Origin: `td-24-manager-capability-e2e` native
+  the very next request"). Origin: `td-24-manager-capability-e2e` (#232) native
   review, finding `R3-001`, 2026-10-16.
 
 ## Done
