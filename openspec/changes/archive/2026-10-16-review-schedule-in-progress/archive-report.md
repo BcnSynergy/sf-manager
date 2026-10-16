@@ -57,6 +57,8 @@ All tasks in `tasks.md` are checked. TDD evidence and the browser pass are in
 - Added: EN-53 (use-case order test flags every pair), EN-54 (draft on
   another element type; needs a second `ElementType`), EN-55 (widened
   `groupBy` status type; combined coverage-plus-draft reader test).
+- Added in this archive PR: EN-56 (the "Marker in the browser" scenario
+  depends on an unpinned seed draft), from the archive native review.
 - `review-schedule` archive follow-up 6 (the deferred "in progress" marker)
   is done by this change.
 
