@@ -411,6 +411,17 @@ windowEndsAt <= now()`) four times and the window-end expression five
   element type" follow-up of `review-schedule`. Origin:
   `review-schedule-in-progress` native review, finding
   `R3-other-element-type-draft`, 2026-10-16.
+- **EN-55** (api): For TD-22, `ReviewSchedulePrisma.reviewSession.groupBy`
+  now accepts `status: 'completed' | 'draft'` (a draft-only overload is not
+  assignable from `PrismaService`), so the compiler no longer stops q4 or q5
+  from filtering on `'draft'`. Today drafts still cannot cover (their
+  `completedAt` is null, and the coverage tests would fail), but the rule is
+  no longer documented by the type. Add a comment at q4/q5 that the status
+  must stay `'completed'`, and optionally a reader test with a completed
+  covering session plus an open draft on the same pair asserting the coverage
+  is unchanged. Evidence:
+  `apps/api/src/modules/review-schedule/infrastructure/persistence/prisma-review-schedule.reader.ts`.
+  Origin: `review-schedule-in-progress` fresh-context review, 2026-10-16.
 
 ## Done
 
