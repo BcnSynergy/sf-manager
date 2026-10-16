@@ -43,15 +43,15 @@ blocker.
 
 ### review-schedule-ui (delta)
 
-| Scenario                                 | Evidence                                                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Each status gets its tone                | `schedule-labels.test.ts` (`mapStatusToBadgeTone`); `ReviewSchedulePage.test.tsx` (badge word and tone class) |
-| The marker follows the badge             | `ReviewSchedulePage.test.tsx` (next sibling, draft badge, not a control)                                      |
-| The badge in the browser, in both themes | Browser: all five badge styles measured in both themes; lowest text contrast 5.44:1 (notice, light)           |
+| Scenario                                 | Evidence                                                                                                                                                                                      |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Each status gets its tone                | `schedule-labels.test.ts` (`mapStatusToBadgeTone`); `ReviewSchedulePage.test.tsx` (badge word and tone class)                                                                                 |
+| The marker follows the badge             | `ReviewSchedulePage.test.tsx` "shows the warning badge followed by the marker for a never-reviewed row in progress" (warning badge, draft badge after it, read as two phrases, not a control) |
+| The badge in the browser, in both themes | Browser: all five badge styles measured in both themes; lowest text contrast 5.44:1 (notice, light)                                                                                           |
 
 ## Checks
 
-- `npm run test --workspace=apps/web`: 70 files, 1168 tests pass. One
+- `npm run test --workspace=apps/web`: 70 files, 1171 tests pass. One
   intermittent TD-8 test failure under load was seen during PR 2 and is
   registered as TD-38.
 - `npm run lint --workspace=apps/web`, `npm run build --workspace=apps/web`

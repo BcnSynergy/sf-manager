@@ -777,6 +777,22 @@ main.sf-login {
     display: none;
   }
 
+  /* ui-redesign-foundation PR 3 (fresh review): a table wrapper scrolls
+     sideways on screen; printed, the whole table flows. Badges print as black
+     outlined words, since browsers drop backgrounds and the dark-mode tone
+     colors are light. */
+  .sf-table-wrap {
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .sf-badge {
+    color: #000;
+    background: none;
+    border: 1px solid #000;
+  }
+
   .label-print [data-print-hide] {
     display: none;
   }

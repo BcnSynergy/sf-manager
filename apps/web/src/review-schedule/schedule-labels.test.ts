@@ -62,6 +62,10 @@ describe('mapStatusToBadgeTone', () => {
   ])('maps %s to the %s tone', (status, tone) => {
     expect(mapStatusToBadgeTone(status as ReviewScheduleStatus)).toBe(tone);
   });
+
+  it('returns no tone for a status the client does not know', () => {
+    expect(mapStatusToBadgeTone('NOT_A_STATUS' as ReviewScheduleStatus)).toBeNull();
+  });
 });
 
 describe('mapReasonToText', () => {

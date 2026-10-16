@@ -31,8 +31,11 @@ const STATUS_BADGE_TONES: Record<ReviewScheduleStatus, BadgeTone> = {
   UP_TO_DATE: 'success',
 };
 
-export function mapStatusToBadgeTone(status: ReviewScheduleStatus): BadgeTone {
-  return STATUS_BADGE_TONES[status];
+// Null for a status the client does not know (out-of-domain server data), so
+// the page falls back to the neutral badge instead of an `sf-badge-undefined`
+// class (RDD review of PR 3).
+export function mapStatusToBadgeTone(status: ReviewScheduleStatus): BadgeTone | null {
+  return Object.hasOwn(STATUS_BADGE_TONES, status) ? STATUS_BADGE_TONES[status] : null;
 }
 
 // Shown in place of the last-review date when no covering session exists.

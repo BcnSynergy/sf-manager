@@ -90,7 +90,10 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    expect(screen.getByTestId('review-schedule-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('review-schedule-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByTestId('review-schedule-empty')).not.toBeInTheDocument();
   });
@@ -100,7 +103,10 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    expect(await screen.findByTestId('review-schedule-empty')).toBeInTheDocument();
+    expect(await screen.findByTestId('review-schedule-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(screen.queryByTestId('review-schedule-error')).not.toBeInTheDocument();
     expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -117,6 +123,10 @@ describe('ReviewSchedulePage', () => {
 
     const message = await screen.findByTestId('review-schedule-error');
     expect(message).toHaveTextContent(i18n.t('reviewSchedule.error'));
+    expect(message).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(document.body).not.toHaveTextContent('Server said');
     expect(screen.queryByTestId('review-schedule-loading')).not.toBeInTheDocument();
   });
@@ -295,11 +305,14 @@ describe('ReviewSchedulePage', () => {
     const row = await screen.findByTestId('review-schedule-row-c2-EXTINGUISHER');
     const marker = within(row).getByTestId('review-schedule-in-progress-c2-EXTINGUISHER');
     expect(marker).toHaveTextContent('In progress');
-    expect(marker.closest('td')).toHaveTextContent('Upcoming In progress');
+    // A visually hidden comma keeps the two badges two phrases for a screen
+    // reader now that the marker has no parentheses (fresh review of PR 3).
+    expect(marker.closest('td')).toHaveTextContent('Upcoming, In progress');
     // ui-redesign-foundation: the marker is an outlined badge that follows the
     // status badge in the same cell, and is still not a control.
     const status = within(row).getByTestId('review-schedule-status-c2-EXTINGUISHER');
-    expect(status.nextElementSibling).toBe(marker);
+    expect(status.closest('td')).toBe(marker.closest('td'));
+    expect(status.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(marker).toHaveClass('sf-badge', 'sf-badge-draft');
     expect(marker.closest('a, button')).toBeNull();
     expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).toHaveTextContent(
@@ -308,6 +321,33 @@ describe('ReviewSchedulePage', () => {
     expect(
       within(row).getByTestId('review-schedule-last-review-c2-EXTINGUISHER'),
     ).toHaveTextContent('June 2, 2026');
+  });
+
+  // review-schedule-ui delta scenario "The marker follows the badge".
+  it('shows the warning badge followed by the marker for a never-reviewed row in progress', async () => {
+    mockedListReviewSchedule.mockResolvedValue([{ ...neverReviewed, inProgress: true }]);
+
+    renderPage();
+
+    const row = await screen.findByTestId('review-schedule-row-c4-EXTINGUISHER');
+    const status = within(row).getByTestId('review-schedule-status-c4-EXTINGUISHER');
+    const marker = within(row).getByTestId('review-schedule-in-progress-c4-EXTINGUISHER');
+    expect(status).toHaveClass('sf-badge', 'sf-badge-warning');
+    expect(status).toHaveTextContent('Never reviewed');
+    expect(status.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(marker).toHaveClass('sf-badge-draft');
+    expect(status.closest('td')).toHaveTextContent('Never reviewed, In progress');
+  });
+
+  it('falls back to a neutral badge for a status the client does not know', async () => {
+    mockedListReviewSchedule.mockResolvedValue([
+      { ...baseRow, status: 'NOT_A_STATUS' as ReviewScheduleRow['status'] },
+    ]);
+
+    renderPage();
+
+    const status = await screen.findByTestId('review-schedule-status-c1-EXTINGUISHER');
+    expect(status.className).toBe('sf-badge');
   });
 
   // review-schedule-ui delta "The Status Is Shown as a Badge".

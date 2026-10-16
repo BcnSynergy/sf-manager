@@ -13,6 +13,11 @@ import {
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
+function badgeClassName(status: ReviewScheduleRow['status']): string {
+  const tone = mapStatusToBadgeTone(status);
+  return tone ? `sf-badge sf-badge-${tone}` : 'sf-badge';
+}
+
 // review-schedule-ui spec: a read-only view of the server's schedule. Scope,
 // status, reason and order are all decided server-side, so this page applies
 // no client-side filtering, sorting or recomputation, and offers no control.
@@ -96,14 +101,16 @@ export function ReviewSchedulePage() {
                         as an outlined badge right after it (text, no
                         control). */}
                       <span
-                        className={`sf-badge sf-badge-${mapStatusToBadgeTone(row.status)}`}
+                        className={badgeClassName(row.status)}
                         data-testid={`review-schedule-status-${rowKey}`}
                       >
                         {t(mapStatusToLabelKey(row.status))}
                       </span>
                       {row.inProgress && (
                         <>
-                          {' '}
+                          {/* Read as a separate phrase: "Upcoming, In
+                              progress" (fresh review of PR 3). */}
+                          <span className="visually-hidden">,</span>{' '}
                           <span
                             className="sf-badge sf-badge-draft"
                             data-testid={`review-schedule-in-progress-${rowKey}`}
