@@ -75,6 +75,8 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 - [ ] E.2 RED: print guard generalized to `['.app-nav', '.app-footer']`, with
       a fixture where only the footer breaks the rule (design Decision 7).
 - [ ] E.3 GREEN: `AppLayout` markup (Decision 6), shell CSS, print rules.
+      Move the PR 1 interim `:where(#root) > main` screen rule AND its print
+      reset to `.sf-main > main` (fresh review of PR 1).
 - [ ] E.4 Check new test ids against the API e2e web-tree scans.
 - [ ] E.5 Full web suite, build, lint, format; browser pass: each seeded role
       in both themes and at 400px; print preview of the label and review

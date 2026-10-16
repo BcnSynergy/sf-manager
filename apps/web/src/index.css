@@ -214,7 +214,9 @@ a {
   color: var(--notice);
   text-underline-offset: 3px;
 }
-a:hover {
+/* Pseudo-classes and attributes go inside :where() so these stay at element
+   specificity (0,0,1) and any `sf-` class overrides them (fresh review). */
+a:where(:hover) {
   color: var(--ink);
 }
 
@@ -233,10 +235,10 @@ button {
   font: 600 15px/22px var(--font-sans);
   cursor: pointer;
 }
-button:hover {
+button:where(:hover) {
   background: var(--hover);
 }
-button:disabled {
+button:where(:disabled) {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -272,8 +274,7 @@ textarea {
 :where(input[readonly]) {
   background: var(--surface-sunken);
 }
-input[type='checkbox'],
-input[type='radio'] {
+input:where([type='checkbox'], [type='radio']) {
   width: 18px;
   height: 18px;
   accent-color: var(--primary);
@@ -504,11 +505,18 @@ main.sf-login {
     display: none;
   }
 
-  /* ui-redesign-foundation: the page layout's gutters and width cap are for
-     the screen; printed pages use the @page margin alone. */
+  /* ui-redesign-foundation: the page layout (gutters, width cap, flex gap) is
+     for the screen; printed pages use the @page margin and normal block flow,
+     as before the redesign. The maker credit is screen-only
+     (web-visual-foundation: "The Maker Credit Appears on Screen Only"). */
   :where(#root) > main {
+    display: block;
     max-width: none;
     padding: 0;
+  }
+
+  .sf-credit {
+    display: none;
   }
 
   .label-print [data-print-hide] {

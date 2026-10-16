@@ -72,7 +72,9 @@ broken next to the new shell, base styles target bare elements:
 
 - `body`: `--ground`, `--ink`, Public Sans 15/22. `#root` loses its 1126px
   centered column and `text-align: center`.
-- `.sf-main > main`: max width `--content-max`, padding `--space-12`
+- `.sf-main > main` (PR 1 ships it as `:where(#root) > main`, because the
+  shell wrapper arrives in PR 2; PR 2 MUST move both that screen rule and its
+  print reset to `.sf-main > main`): max width `--content-max`, padding `--space-12`
   `--space-8` (`--space-4` on phones), vertical gap. Every page's existing
   `<main>` gets the page layout without edits.
 - `h1` page-title style, `h2` section-title style, both `--ink`.

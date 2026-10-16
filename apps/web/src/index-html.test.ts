@@ -12,7 +12,11 @@ describe('index.html', () => {
   it('links the SF-Manager shield as the SVG favicon', () => {
     expect(html).toMatch(/<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg" \/>/);
     expect(shield).toMatch(/aria-label="SF-Manager"/);
-    expect(shield).toMatch(/fill="#c5052a"/);
+    // The shield alone in a square box, in the brand red, with no text: the
+    // lockup (logo.svg) has a wide viewBox and a second ink.
+    expect(shield).toMatch(/viewBox="0 0 (\d+) \1"/);
+    expect(shield.match(/fill="#[0-9a-f]{6}"/g)).toEqual(['fill="#c5052a"']);
+    expect(shield).not.toMatch(/<text/);
   });
 
   it('keeps the document title', () => {
