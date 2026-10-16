@@ -68,13 +68,6 @@ None.
   `review-history-company-scope` (W-2), `review-history-admin-scope` (W-5),
   `organization-profile`, `hermetic-integration-tests` (W1), and
   `review-schedule` (W-1). Origin: those reviews.
-- **TD-24**: Coverage gaps in `review-history-manager-capability`. W1: no e2e
-  for the empty-installation list as a granted MANAGER. W3: no e2e composes a
-  live grant/revoke PATCH with a following `/review-history` request on the
-  same session. Evidence: `review-history-manager-capability` verify-report W1
-  and W3; `apps/api/test/review-history.e2e-spec.ts` has no such case (the
-  comment at lines 2255-2263 defers W1 to the admin equivalent). Origin:
-  `review-history-manager-capability`.
 - **TD-27**: The public-endpoint "no lookup" behavior is proven at unit level
   only. Evidence: `auth-live-user-check` archive-report S-1. Origin:
   `auth-live-user-check`.
@@ -209,6 +202,12 @@ None.
   exists. Resolved by `td-13-schedule-row-test-ids` (#229): the row, reason and
   last-review ids use the same `communityId-elementType` key as the React
   `key`, and a test with a simulated second type pins one id per pair.
+- **TD-24**: `review-history-manager-capability` had no e2e for a granted
+  MANAGER on an empty installation (W1) or for a live grant/revoke followed by
+  `/review-history` on the same session (W3). Resolved by
+  `td-24-manager-capability-e2e` (#232): both cases are in
+  `apps/api/test/review-history.e2e-spec.ts`; W3 was mutation-checked against
+  a checker that caches its answer per user.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

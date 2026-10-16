@@ -338,6 +338,16 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md:81-83`. Origin:
   `td-10-adr-011-decision-3-pointer` (#225) native review, findings
   `R2-single-port-wording` and `R3-001`, 2026-10-15.
+- **EN-47** (api tests): The TD-24 live grant/revoke e2e seeds a MANAGER into
+  the shared `built.userRepository` of its describe block and does not undo
+  the grant in a `finally`, so a failure between the grant and the revoke
+  leaves a granted manager behind. No test in that block lists users, and its
+  sibling granted-manager tests already seed without cleanup, so nothing fails
+  today. Wrap the grant/revoke in `try/finally` or give the test its own app,
+  as the W1 test does. Evidence: `apps/api/test/review-history.e2e-spec.ts`
+  (test "a live grant and revoke change what the same MANAGER session sees on
+  the very next request"). Origin: `td-24-manager-capability-e2e` (#232) native
+  review, finding `R3-001`, 2026-10-16.
 
 ## Done
 

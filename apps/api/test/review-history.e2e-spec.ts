@@ -1196,6 +1196,93 @@ describe('Review History (e2e)', () => {
         .expect(401);
     });
 
+    // TD-24 W1 (review-history-manager-capability verify-report): the
+    // granted manager's own "an empty installation renders a successful
+    // empty list" scenario, not only its SYSTEM_ADMIN equivalent. An
+    // ungranted manager also gets 200 [], so this pins only "empty, not an
+    // error"; the grant itself is proven by the live grant/revoke test below.
+    it('a granted MANAGER in an installation with no completed session gets a successful empty list', async () => {
+      const grantedManager = await buildSeedUser({
+        id: 'rhd-manager-granted-empty-id',
+        email: 'rhd-manager-granted-empty@example.com',
+        role: 'MANAGER',
+        managerCapabilities: ['VIEW_ALL_REVIEWS'],
+      });
+      const emptyBuilt = await buildApp({ users: [grantedManager] });
+      try {
+        const agent = await loginAgent(
+          emptyBuilt.app,
+          'rhd-manager-granted-empty@example.com',
+        );
+
+        const response = await agent.get('/review-history').expect(200);
+
+        expect(response.body).toEqual([]);
+      } finally {
+        await emptyBuilt.app.close();
+      }
+    });
+
+    // TD-24 W3 (review-history-manager-capability verify-report): a grant
+    // and a revoke through PATCH /users/:id take effect on the manager's
+    // NEXT /review-history request, on the SAME session, with no re-login.
+    // ManagerCapabilityChecker reads the live user on every request, never
+    // a value captured at login.
+    it('a live grant and revoke change what the same MANAGER session sees on the very next request', async () => {
+      // uuid-path-validation branch: well-formed UUID — a real PATCH
+      // /users/:id target below.
+      const managerId = '00000000-0000-7000-8000-000000000068';
+      const liveManager = await buildSeedUser({
+        id: managerId,
+        email: 'rhd-manager-live-grant@example.com',
+        role: 'MANAGER',
+      });
+      built.userRepository.seed(liveManager);
+      const managerAgent = await loginAgent(
+        built.app,
+        'rhd-manager-live-grant@example.com',
+      );
+      const adminAgent = await loginAgent(built.app, adminEmail);
+
+      const beforeGrant = await managerAgent.get('/review-history').expect(200);
+      expect(beforeGrant.body).toEqual([]);
+      const nonexistentResponse = await managerAgent
+        .get('/review-history/00000000-0000-7000-8000-000000000000')
+        .expect(404);
+      const byIdBeforeGrant = await managerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(404);
+      expect(byIdBeforeGrant.body).toEqual(nonexistentResponse.body);
+
+      await adminAgent
+        .patch(`/users/${managerId}`)
+        .send({ managerCapabilities: ['VIEW_ALL_REVIEWS'] })
+        .expect(200);
+
+      const afterGrant = await managerAgent.get('/review-history').expect(200);
+      const rowIdsAfterGrant = (afterGrant.body as HistoryRowBody[]).map(
+        (row) => row.id,
+      );
+      expect(rowIdsAfterGrant).toContain(sessionByUForC.id);
+      expect(rowIdsAfterGrant).toContain(sessionByWForC.id);
+      expect(rowIdsAfterGrant).toContain(sessionForD.id);
+      await managerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(200);
+
+      await adminAgent
+        .patch(`/users/${managerId}`)
+        .send({ managerCapabilities: [] })
+        .expect(200);
+
+      const afterRevoke = await managerAgent.get('/review-history').expect(200);
+      expect(afterRevoke.body).toEqual([]);
+      const byIdAfterRevoke = await managerAgent
+        .get(`/review-history/${sessionByUForC.id}`)
+        .expect(404);
+      expect(byIdAfterRevoke.body).toEqual(nonexistentResponse.body);
+    });
+
     // authorization/spec.md "The manager is refused on every review-session
     // write endpoint" — reviewSession:read grants NOTHING on the write
     // surface, the same shape as the MAINTENANCE_COMPANY_MANAGER and
@@ -2271,8 +2358,8 @@ describe('Review History (e2e)', () => {
     // from review-history/spec.md ("the granted manager's list is
     // identical to the admin's", "deleted/deactivated context hides
     // nothing from the granted manager", "an empty installation renders a
-    // successful empty list" — the last covered by this block's admin
-    // equivalent already).
+    // successful empty list" — the last covered by its own granted-manager
+    // test in the "GET /review-history/:sessionId" block, TD-24 W1).
     const grantedManagerEmail = 'rha-granted-manager@example.com';
 
     const COMPANY_X = 'rha-company-x';
