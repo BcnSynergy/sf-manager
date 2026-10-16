@@ -90,7 +90,10 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    expect(screen.getByTestId('review-schedule-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('review-schedule-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByTestId('review-schedule-empty')).not.toBeInTheDocument();
   });
@@ -100,7 +103,10 @@ describe('ReviewSchedulePage', () => {
 
     renderPage();
 
-    expect(await screen.findByTestId('review-schedule-empty')).toBeInTheDocument();
+    expect(await screen.findByTestId('review-schedule-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(screen.queryByTestId('review-schedule-error')).not.toBeInTheDocument();
     expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -117,6 +123,10 @@ describe('ReviewSchedulePage', () => {
 
     const message = await screen.findByTestId('review-schedule-error');
     expect(message).toHaveTextContent(i18n.t('reviewSchedule.error'));
+    expect(message).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
     expect(document.body).not.toHaveTextContent('Server said');
     expect(screen.queryByTestId('review-schedule-loading')).not.toBeInTheDocument();
   });
@@ -294,14 +304,87 @@ describe('ReviewSchedulePage', () => {
 
     const row = await screen.findByTestId('review-schedule-row-c2-EXTINGUISHER');
     const marker = within(row).getByTestId('review-schedule-in-progress-c2-EXTINGUISHER');
-    expect(marker).toHaveTextContent('(In progress)');
-    expect(marker.closest('td')).toHaveTextContent('Upcoming (In progress)');
+    expect(marker).toHaveTextContent('In progress');
+    // A visually hidden comma keeps the two badges two phrases for a screen
+    // reader now that the marker has no parentheses (fresh review of PR 3).
+    expect(marker.closest('td')).toHaveTextContent('Upcoming, In progress');
+    // ui-redesign-foundation: the marker is an outlined badge that follows the
+    // status badge in the same cell, and is still not a control.
+    const status = within(row).getByTestId('review-schedule-status-c2-EXTINGUISHER');
+    expect(status.closest('td')).toBe(marker.closest('td'));
+    expect(status.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(marker).toHaveClass('sf-badge', 'sf-badge-draft');
+    expect(marker.closest('a, button')).toBeNull();
     expect(within(row).getByTestId('review-schedule-reason-c2-EXTINGUISHER')).toHaveTextContent(
       'No annual review on record; due by December 31, 2026.',
     );
     expect(
       within(row).getByTestId('review-schedule-last-review-c2-EXTINGUISHER'),
     ).toHaveTextContent('June 2, 2026');
+  });
+
+  // review-schedule-ui delta scenario "The marker follows the badge".
+  it('shows the warning badge followed by the marker for a never-reviewed row in progress', async () => {
+    mockedListReviewSchedule.mockResolvedValue([{ ...neverReviewed, inProgress: true }]);
+
+    renderPage();
+
+    const row = await screen.findByTestId('review-schedule-row-c4-EXTINGUISHER');
+    const status = within(row).getByTestId('review-schedule-status-c4-EXTINGUISHER');
+    const marker = within(row).getByTestId('review-schedule-in-progress-c4-EXTINGUISHER');
+    expect(status).toHaveClass('sf-badge', 'sf-badge-warning');
+    expect(status).toHaveTextContent('Never reviewed');
+    expect(status.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(marker).toHaveClass('sf-badge-draft');
+    expect(status.closest('td')).toHaveTextContent('Never reviewed, In progress');
+  });
+
+  it('falls back to a neutral badge for a status the client does not know', async () => {
+    mockedListReviewSchedule.mockResolvedValue([
+      { ...baseRow, status: 'NOT_A_STATUS' as ReviewScheduleRow['status'] },
+    ]);
+
+    renderPage();
+
+    const status = await screen.findByTestId('review-schedule-status-c1-EXTINGUISHER');
+    expect(status.className).toBe('sf-badge');
+  });
+
+  // review-schedule-ui delta "The Status Is Shown as a Badge".
+  it('shows each status as a badge with its word and its tone', async () => {
+    mockedListReviewSchedule.mockResolvedValue([
+      overdueQuarterly,
+      neverReviewed,
+      upcomingAnnual,
+      baseRow,
+    ]);
+
+    renderPage();
+
+    await screen.findByTestId('review-schedule-row-c1-EXTINGUISHER');
+    const badge = (communityId: string) =>
+      screen.getByTestId(`review-schedule-status-${communityId}-EXTINGUISHER`);
+    expect(badge('c3')).toHaveTextContent('Overdue');
+    expect(badge('c3')).toHaveClass('sf-badge', 'sf-badge-danger');
+    expect(badge('c4')).toHaveTextContent('Never reviewed');
+    expect(badge('c4')).toHaveClass('sf-badge', 'sf-badge-warning');
+    expect(badge('c2')).toHaveTextContent('Upcoming');
+    expect(badge('c2')).toHaveClass('sf-badge', 'sf-badge-notice');
+    expect(badge('c1')).toHaveTextContent('Up to date');
+    expect(badge('c1')).toHaveClass('sf-badge', 'sf-badge-success');
+  });
+
+  it('puts the table in the design-system wrapper with its caption still first', async () => {
+    mockedListReviewSchedule.mockResolvedValue([baseRow]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table');
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    expect(table.firstElementChild?.tagName).toBe('CAPTION');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
   });
 
   it('shows no in-progress marker on unflagged rows', async () => {
@@ -322,9 +405,9 @@ describe('ReviewSchedulePage', () => {
   });
 
   it.each([
-    ['en', '(In progress)'],
-    ['es', '(En curso)'],
-    ['ca', '(En curs)'],
+    ['en', 'In progress'],
+    ['es', 'En curso'],
+    ['ca', 'En curs'],
   ])('shows the in-progress marker from the %s locale', async (locale, text) => {
     await i18n.changeLanguage(locale);
     mockedListReviewSchedule.mockResolvedValue([upcomingInProgress]);

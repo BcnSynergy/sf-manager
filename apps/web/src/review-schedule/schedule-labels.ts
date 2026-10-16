@@ -19,6 +19,25 @@ export function mapStatusToLabelKey(status: ReviewScheduleStatus): string {
   return STATUS_LABEL_KEYS[status];
 }
 
+// ui-redesign-foundation, review-schedule-ui delta "The Status Is Shown as a
+// Badge": the design system's StatusBadge tone per status. The word always
+// carries the meaning; the tone only speeds up scanning.
+export type BadgeTone = 'danger' | 'warning' | 'notice' | 'success';
+
+const STATUS_BADGE_TONES: Record<ReviewScheduleStatus, BadgeTone> = {
+  OVERDUE: 'danger',
+  NEVER_REVIEWED: 'warning',
+  UPCOMING: 'notice',
+  UP_TO_DATE: 'success',
+};
+
+// Null for a status the client does not know (out-of-domain server data), so
+// the page falls back to the neutral badge instead of an `sf-badge-undefined`
+// class (RDD review of PR 3).
+export function mapStatusToBadgeTone(status: ReviewScheduleStatus): BadgeTone | null {
+  return Object.hasOwn(STATUS_BADGE_TONES, status) ? STATUS_BADGE_TONES[status] : null;
+}
+
 // Shown in place of the last-review date when no covering session exists.
 export const NEVER_REVIEWED_LABEL_KEY = 'reviewSchedule.neverReviewed';
 

@@ -89,18 +89,18 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 
 ## Phase F: Review schedule (spec: The Status Is Shown as a Badge) — PR 3
 
-- [ ] F.1 Branch `ui-redesign-foundation/03-review-schedule` from `main`.
-- [ ] F.2 RED: `ReviewSchedulePage.test.tsx`: `review-schedule-status-<rowKey>`
+- [x] F.1 Branch `ui-redesign-foundation/03-review-schedule` from `main`.
+- [x] F.2 RED: `ReviewSchedulePage.test.tsx`: `review-schedule-status-<rowKey>`
       carries the tone class per status; the in-progress marker follows it,
       has the draft badge class and is not a control; existing state tests
       unchanged.
-- [ ] F.3 GREEN: page markup (design Decision 10), `STATUS_TONE`, badge and
+- [x] F.3 GREEN: page markup (design Decision 10), `STATUS_TONE`, badge and
       table CSS.
 - [x] F.4 EN-57 in `docs/enhancements.md` (registered early, in PR 1, with
       EN-58 and EN-59 from its native review): community assignment ids.
-- [ ] F.5 Full web suite, build, lint, format; browser pass of the schedule in
+- [x] F.5 Full web suite, build, lint, format; browser pass of the schedule in
       both themes and at 400px with the seeded draft.
-- [ ] F.6 verify-report.md for the change.
+- [x] F.6 verify-report.md for the change.
 
 ## Gate PR 3 (orchestrator)
 

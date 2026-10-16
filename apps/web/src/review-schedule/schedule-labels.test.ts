@@ -9,6 +9,7 @@ import {
   NEVER_REVIEWED_LABEL_KEY,
   formatCalendarDate,
   mapReasonToText,
+  mapStatusToBadgeTone,
   mapStatusToLabelKey,
 } from './schedule-labels';
 
@@ -48,6 +49,22 @@ describe('mapStatusToLabelKey', () => {
     for (const status of Object.keys(expected) as ReviewScheduleStatus[]) {
       expect(mapStatusToLabelKey(status)).not.toBe(status);
     }
+  });
+});
+
+// review-schedule-ui delta "The Status Is Shown as a Badge".
+describe('mapStatusToBadgeTone', () => {
+  it.each([
+    ['OVERDUE', 'danger'],
+    ['NEVER_REVIEWED', 'warning'],
+    ['UPCOMING', 'notice'],
+    ['UP_TO_DATE', 'success'],
+  ])('maps %s to the %s tone', (status, tone) => {
+    expect(mapStatusToBadgeTone(status as ReviewScheduleStatus)).toBe(tone);
+  });
+
+  it('returns no tone for a status the client does not know', () => {
+    expect(mapStatusToBadgeTone('NOT_A_STATUS' as ReviewScheduleStatus)).toBeNull();
   });
 });
 
