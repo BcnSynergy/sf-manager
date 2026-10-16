@@ -57,28 +57,28 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
 
 ## Phase D: Navigation groups (spec: Role map; Group Labels Are Localized)
 
-- [ ] D.1 Branch `ui-redesign-foundation/02-sidebar-shell` from `main`.
-- [ ] D.2 RED: `nav-items.test.ts`: `groupNavItems` for each role returns the
+- [x] D.1 Branch `ui-redesign-foundation/02-sidebar-shell` from `main`.
+- [x] D.2 RED: `nav-items.test.ts`: `groupNavItems` for each role returns the
       spec table's sections in order; empty groups omitted.
-- [ ] D.3 RED: `AppLayout.test.tsx`: ordered link testids per role updated to
+- [x] D.3 RED: `AppLayout.test.tsx`: ordered link testids per role updated to
       the new order; group labels per role; MANAGER has no setup or
       administration group; wordmark present and not a link; existing
       one-combobox and logout tests unchanged.
-- [ ] D.4 GREEN: `NavGroup`, `group` on items, reordered rows,
+- [x] D.4 GREEN: `NavGroup`, `group` on items, reordered rows,
       `groupNavItems`, `nav.group.*` keys in en/es/ca.
 
 ## Phase E: Sidebar shell (spec: Grouped Sidebar; Email; Print)
 
-- [ ] E.1 RED: `AppLayout.test.tsx`: `nav-user-email` shows the user's email
+- [x] E.1 RED: `AppLayout.test.tsx`: `nav-user-email` shows the user's email
       and the layout issues no request; `app-footer` with the credit renders
       with the nav and not while loading.
-- [ ] E.2 RED: print guard generalized to `['.app-nav', '.app-footer']`, with
+- [x] E.2 RED: print guard generalized to `['.app-nav', '.app-footer']`, with
       a fixture where only the footer breaks the rule (design Decision 7).
-- [ ] E.3 GREEN: `AppLayout` markup (Decision 6), shell CSS, print rules.
+- [x] E.3 GREEN: `AppLayout` markup (Decision 6), shell CSS, print rules.
       Move the PR 1 interim `:where(#root) > main` screen rule AND its print
       reset to `.sf-main > main` (fresh review of PR 1).
-- [ ] E.4 Check new test ids against the API e2e web-tree scans.
-- [ ] E.5 Full web suite, build, lint, format; browser pass: each seeded role
+- [x] E.4 Check new test ids against the API e2e web-tree scans.
+- [x] E.5 Full web suite, build, lint, format; browser pass: each seeded role
       in both themes and at 400px; print preview of the label and review
       document pages (user opens the preview).
 

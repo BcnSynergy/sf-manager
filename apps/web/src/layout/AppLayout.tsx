@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { PageSuspense } from '../components/PageSuspense';
-import { NAV_ITEMS_BY_ROLE } from './nav-items';
+import { groupNavItems, NAV_ITEMS_BY_ROLE } from './nav-items';
 
 // nav-menu/design.md Decision 2: the one authenticated shell. It owns no
 // state, fetches nothing, and reads exactly two values from useAuth() plus
@@ -46,26 +46,84 @@ export function AppLayout() {
       ? NAV_ITEMS_BY_ROLE[user.role as keyof typeof NAV_ITEMS_BY_ROLE]
       : [];
 
+  // ui-redesign-foundation design Decision 6: a grouped sidebar beside the
+  // page, and a footer with the maker credit under it. `.app-nav` and
+  // `.app-footer` are the print-chrome selectors the print guard checks
+  // (styles/check-app-nav-print-suppression.ts). The wordmark is not a link,
+  // so the nav's links stay exactly the role's items.
   return (
-    <>
-      {showNav && (
-        <nav className="app-nav" data-testid="nav-root" aria-label={t('nav.label')}>
-          {items.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} data-testid={item.testId}>
-              {t(item.labelKey)}
-            </NavLink>
+    <div className="sf-shell">
+      {showNav && user && (
+        <nav className="app-nav sf-side" data-testid="nav-root" aria-label={t('nav.label')}>
+          <div className="sf-wordmark" data-testid="nav-wordmark">
+            <img src="/favicon.svg" alt="" />
+            <span>
+              <span className="sf-wordmark-sf">SF</span>-Manager
+            </span>
+          </div>
+          {groupNavItems(items).map((section) => (
+            <div
+              key={section.group ?? 'home'}
+              className="sf-side-group"
+              data-testid={`nav-group-${section.group ?? 'home'}`}
+            >
+              {section.group && (
+                <p className="sf-side-label" data-testid={`nav-group-label-${section.group}`}>
+                  {t(`nav.group.${section.group}`)}
+                </p>
+              )}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className="sf-side-link"
+                  data-testid={item.testId}
+                >
+                  {t(item.labelKey)}
+                </NavLink>
+              ))}
+            </div>
           ))}
-          <button type="button" data-testid="nav-logout-button" onClick={() => void handleLogout()}>
-            {t('auth.logoutLabel')}
-          </button>
-          <LanguageSelector />
+          <div className="sf-side-foot">
+            <span className="sf-user" data-testid="nav-user-email">
+              {user.email}
+            </span>
+            <div className="sf-side-controls">
+              <LanguageSelector />
+              <button
+                type="button"
+                className="sf-btn-ghost"
+                data-testid="nav-logout-button"
+                onClick={() => void handleLogout()}
+              >
+                {t('auth.logoutLabel')}
+              </button>
+            </div>
+          </div>
         </nav>
       )}
-      {/* TD-8: pages are lazy-loaded chunks (routes/authenticated-routes.tsx).
-          The nav stays visible while a page's chunk downloads or fails. */}
-      <PageSuspense resetKey={location.pathname}>
-        <Outlet />
-      </PageSuspense>
-    </>
+      <div className="sf-main">
+        {/* TD-8: pages are lazy-loaded chunks (routes/authenticated-routes.tsx).
+            The nav stays visible while a page's chunk downloads or fails. */}
+        <PageSuspense resetKey={location.pathname}>
+          <Outlet />
+        </PageSuspense>
+        {showNav && (
+          <footer className="app-footer sf-footer" data-testid="app-footer">
+            <span className="sf-credit">
+              <picture>
+                <source
+                  srcSet="/bcnsynergy-mark-on-dark.svg"
+                  media="(prefers-color-scheme: dark)"
+                />
+                <img src="/bcnsynergy-mark.svg" alt="" />
+              </picture>
+              {t('brand.credit')}
+            </span>
+          </footer>
+        )}
+      </div>
+    </div>
   );
 }

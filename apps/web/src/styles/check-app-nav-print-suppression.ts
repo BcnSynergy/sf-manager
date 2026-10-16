@@ -15,22 +15,34 @@ const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 // for this single-purpose regression guard (walking-skeleton discipline) —
 // revisit this file if/when a second `@media print` block is introduced.
 const MEDIA_PRINT_START = /@media\s+print\s*\{/;
-// Both rules below match `.app-nav` as a selector token (not part of a
-// longer class name like `.app-navbar`) anywhere in a comma/compound
-// selector list that is still open when the next `{` is reached — e.g.
-// `.app-nav, .drawer { display: none }` or `.app-nav.legacy { ... }`, not
-// just a standalone `.app-nav { ... }`. Same token-boundary approach as
-// APP_NAV_ANY_RULE below, applied consistently so a valid grouped-selector
-// CSS refactor doesn't false-negative this check.
-const APP_NAV_HIDDEN_RULE = /\.app-nav(?![\w-])[^{}]*\{[^}]*display:\s*none[^}]*\}/i;
-const APP_NAV_VISIBLE_RULE = /\.app-nav(?![\w-])[^{}]*\{[^}]*display:\s*(?!none)[a-z-]+[^}]*\}/i;
-// Matches `.app-nav` as a selector token (not part of a longer class name
-// like `.app-navbar`) anywhere in a comma/compound selector list that is
-// still open when the next `{` is reached — e.g. `.app-nav, .foo {` or
-// `.app-nav.legacy {`, not just a standalone `.app-nav {`.
-const APP_NAV_ANY_RULE = /\.app-nav(?![\w-])[^{}]*\{/;
+// ui-redesign-foundation design Decision 7: every piece of application chrome
+// the redesign's shell renders around a page. Each must pass the same three
+// checks as the original nav rule.
+export const PRINT_CHROME_SELECTORS = ['.app-nav', '.app-footer'] as const;
 
-export function checkAppNavPrintSuppression(rawCss: string): PrintSuppressionResult {
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// The rules below match the selector as a token (not part of a longer class
+// name like `.app-navbar`) anywhere in a comma/compound selector list that is
+// still open when the next `{` is reached — e.g.
+// `.app-nav, .drawer { display: none }` or `.app-nav.legacy { ... }`, not
+// just a standalone `.app-nav { ... }`, so a valid grouped-selector CSS
+// refactor doesn't false-negative this check.
+function selectorRules(selector: string) {
+  const token = `${escapeRegExp(selector)}(?![\\w-])[^{}]*\\{`;
+  return {
+    hidden: new RegExp(`${token}[^}]*display:\\s*none[^}]*\\}`, 'i'),
+    visible: new RegExp(`${token}[^}]*display:\\s*(?!none)[a-z-]+[^}]*\\}`, 'i'),
+    any: new RegExp(token),
+  };
+}
+
+export function checkAppNavPrintSuppression(
+  rawCss: string,
+  selectors: readonly string[] = ['.app-nav'],
+): PrintSuppressionResult {
   // Strip comments first so a stray `{`/`}` inside explanatory prose (this
   // file's own header comment does exactly that) can't desync the
   // brace-depth scan below or the selector-detection regexes.
@@ -56,27 +68,29 @@ export function checkAppNavPrintSuppression(rawCss: string): PrintSuppressionRes
   const before = css.slice(0, startMatch.index);
   const after = css.slice(cursor);
 
-  if (!APP_NAV_HIDDEN_RULE.test(mediaPrintBody)) {
-    return {
-      ok: false,
-      reason: '.app-nav { display: none } is missing inside the @media print block.',
-    };
-  }
+  for (const selector of selectors) {
+    const rules = selectorRules(selector);
 
-  if (!APP_NAV_VISIBLE_RULE.test(before)) {
-    return {
-      ok: false,
-      reason:
-        'The screen .app-nav rule must be declared before the @media print block, or the source-order tie is undetermined.',
-    };
-  }
+    if (!rules.hidden.test(mediaPrintBody)) {
+      return {
+        ok: false,
+        reason: `${selector} { display: none } is missing inside the @media print block.`,
+      };
+    }
 
-  if (APP_NAV_ANY_RULE.test(after)) {
-    return {
-      ok: false,
-      reason:
-        'A .app-nav rule appears after the @media print block; it would win the source-order tie and make the nav print again.',
-    };
+    if (!rules.visible.test(before)) {
+      return {
+        ok: false,
+        reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
+      };
+    }
+
+    if (rules.any.test(after)) {
+      return {
+        ok: false,
+        reason: `A ${selector} rule appears after the @media print block; it would win the source-order tie and make it print again.`,
+      };
+    }
   }
 
   return { ok: true };

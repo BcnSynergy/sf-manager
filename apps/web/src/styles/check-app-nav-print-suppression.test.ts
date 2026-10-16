@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkAppNavPrintSuppression } from './check-app-nav-print-suppression';
+import {
+  checkAppNavPrintSuppression,
+  PRINT_CHROME_SELECTORS,
+} from './check-app-nav-print-suppression';
 
 // `?raw` Vite imports and `import.meta.url`-relative resolution both proved
 // unreliable under this project's jsdom vitest environment (verified
@@ -175,5 +178,77 @@ describe('checkAppNavPrintSuppression', () => {
   // edit appends a screen .app-nav rule after the print block.
   it('holds for the real, shipped apps/web/src/index.css', () => {
     expect(checkAppNavPrintSuppression(cssSource)).toEqual({ ok: true });
+  });
+
+  // ui-redesign-foundation design Decision 7: the footer is application
+  // chrome too, so the same three-part rule applies to every selector in
+  // PRINT_CHROME_SELECTORS.
+  describe('with several chrome selectors', () => {
+    const shell = `
+      .app-nav { display: flex; }
+      .app-footer { display: flex; }
+    `;
+
+    it('reports ok when every selector is visible before and hidden inside @media print', () => {
+      const css = `${shell}
+        @media print {
+          .app-nav { display: none; }
+          .app-footer { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({ ok: true });
+    });
+
+    it('names the footer when only the footer is not hidden in print', () => {
+      const css = `${shell}
+        @media print {
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({
+        ok: false,
+        reason: '.app-footer { display: none } is missing inside the @media print block.',
+      });
+    });
+
+    it('names the footer when a footer rule follows @media print', () => {
+      const css = `${shell}
+        @media print {
+          .app-nav { display: none; }
+          .app-footer { display: none; }
+        }
+        .app-footer { display: flex; }
+      `;
+
+      const result = checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS);
+      expect(result).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('A .app-footer rule appears after'),
+      });
+    });
+
+    it('does not false-match .app-footer-note as the footer', () => {
+      const css = `${shell}
+        @media print {
+          .app-nav { display: none; }
+          .app-footer { display: none; }
+        }
+        .app-footer-note { display: block; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({ ok: true });
+    });
+
+    it('lists the nav and the footer as print chrome', () => {
+      expect(PRINT_CHROME_SELECTORS).toEqual(['.app-nav', '.app-footer']);
+    });
+
+    it('holds for the real, shipped apps/web/src/index.css', () => {
+      expect(checkAppNavPrintSuppression(cssSource, PRINT_CHROME_SELECTORS)).toEqual({
+        ok: true,
+      });
+    });
   });
 });

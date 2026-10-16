@@ -584,7 +584,12 @@
     "reviewSessions": "Sessions de revisió",
     "reviewHistory": "Historial de revisions",
     "reviewSchedule": "Calendari de revisions",
-    "organizationProfile": "Perfil de l'organització"
+    "organizationProfile": "Perfil de l'organització",
+    "group": {
+      "operations": "Operacions",
+      "setup": "Configuració",
+      "administration": "Administració"
+    }
   },
   "auth": {
     "loginTitle": "Inicia sessió",

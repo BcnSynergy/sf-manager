@@ -24,7 +24,10 @@ Three PRs carry the work (proposal, Delivery), each green on its own:
    `tokens.json`, `color-scheme: light dark`, and a
    `@media (prefers-color-scheme: dark)` block redefining only the color and
    shadow tokens. Names keep the design system's (`--ground`, `--ink`,
-   `--brand`, `--space-4`, `--radius-md`, `--font-display`…).
+   `--brand`, `--space-4`, `--radius-md`, `--font-display`…). PR 2 adds
+   `--brand-mark` (`#c5052a` in both themes) for the typeset wordmark beside
+   the shield, so it matches the logo; `--brand` stays the UI accent and
+   lightens in dark mode (user feedback in the PR 2 browser pass).
 3. Base element styles (Decision 4).
 4. Component classes from the design system's `bundle.css` that this change
    uses, `sf-` prefix: shell (`sf-shell`, `sf-side*`, `sf-main`,
