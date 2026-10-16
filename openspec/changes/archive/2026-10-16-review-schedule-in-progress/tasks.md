@@ -59,12 +59,12 @@ Under the 400-line budget: one implementation PR plus the archive PR.
 
 ## Gate PR 1 (orchestrator)
 
-- [ ] Native review (if due), fresh-context review, push, PR, CI, merge —
+- [x] Native review (if due), fresh-context review, push, PR, CI, merge —
       each confirmed with the user.
 
 ## Phase H: PR 2 — archive (branch `review-schedule-in-progress/02-archive`)
 
-- [ ] H.1 Merge delta specs into `openspec/specs/review-schedule` and
+- [x] H.1 Merge delta specs into `openspec/specs/review-schedule` and
       `review-schedule-ui`; Purpose sentence (design Decision 5).
-- [ ] H.2 Move the change to `openspec/changes/archive/2026-10-16-review-schedule-in-progress/`
+- [x] H.2 Move the change to `openspec/changes/archive/2026-10-16-review-schedule-in-progress/`
       with archive-report.md; register any non-blocking findings.
