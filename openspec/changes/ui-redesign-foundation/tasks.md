@@ -96,8 +96,8 @@ Over the 400-line budget: chained PRs, `stacked-to-main`.
       unchanged.
 - [ ] F.3 GREEN: page markup (design Decision 10), `STATUS_TONE`, badge and
       table CSS.
-- [ ] F.4 EN-57 in `docs/enhancements.md`: community assignments list raw user
-      ids and assign by typing an id.
+- [x] F.4 EN-57 in `docs/enhancements.md` (registered early, in PR 1, with
+      EN-58 and EN-59 from its native review): community assignment ids.
 - [ ] F.5 Full web suite, build, lint, format; browser pass of the schedule in
       both themes and at 400px with the seeded draft.
 - [ ] F.6 verify-report.md for the change.
