@@ -420,6 +420,7 @@ export function ReviewTemplateDetailPage() {
           collision by only ever having one dialog mounted instead. */}
       {pendingActivate && (
         <ConfirmDialog
+          tone="primary"
           open={pendingActivate}
           title={t('reviewTemplate.detail.activateConfirmTitle')}
           message={activateMessage}
@@ -429,6 +430,7 @@ export function ReviewTemplateDetailPage() {
       )}
       {pendingDelete && (
         <ConfirmDialog
+          tone="danger"
           open={pendingDelete}
           title={t('reviewTemplate.detail.deleteConfirmTitle')}
           message={t('reviewTemplate.detail.deleteConfirmMessage')}

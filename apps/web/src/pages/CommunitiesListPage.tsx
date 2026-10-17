@@ -177,6 +177,7 @@ export function CommunitiesListPage() {
         </div>
       )}
       <ConfirmDialog
+        tone="danger"
         open={pendingDeleteId !== null}
         title={t('community.list.deleteConfirmTitle')}
         message={t('community.list.deleteConfirmMessage')}

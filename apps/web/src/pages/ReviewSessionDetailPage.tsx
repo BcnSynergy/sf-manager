@@ -288,6 +288,7 @@ export function ReviewSessionDetailPage() {
           as ReviewTemplateDetailPage.tsx's Activate/Delete pair. */}
       {pendingComplete && (
         <ConfirmDialog
+          tone="primary"
           open={pendingComplete}
           title={t('reviewSession.detail.completeConfirmTitle')}
           message={t('reviewSession.detail.completeConfirmMessage')}
@@ -298,6 +299,7 @@ export function ReviewSessionDetailPage() {
       )}
       {pendingDiscard && (
         <ConfirmDialog
+          tone="danger"
           open={pendingDiscard}
           title={t('reviewSession.detail.discardConfirmTitle')}
           message={t('reviewSession.detail.discardConfirmMessage')}

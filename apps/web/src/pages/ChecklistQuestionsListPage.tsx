@@ -216,6 +216,7 @@ export function ChecklistQuestionsListPage() {
         ))
       )}
       <ConfirmDialog
+        tone="danger"
         open={pendingDeleteId !== null}
         title={t('checklistQuestion.list.deleteConfirmTitle')}
         message={t('checklistQuestion.list.deleteConfirmMessage')}

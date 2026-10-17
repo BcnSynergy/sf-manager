@@ -208,6 +208,7 @@ export function MaintenanceCompanyEditPage() {
         {t('maintenanceCompany.edit.deleteLabel')}
       </button>
       <ConfirmDialog
+        tone="danger"
         open={pendingDelete}
         title={t('maintenanceCompany.edit.deleteConfirmTitle')}
         message={t('maintenanceCompany.edit.deleteConfirmMessage')}

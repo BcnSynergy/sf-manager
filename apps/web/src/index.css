@@ -106,6 +106,7 @@
   --success: #1c6648;
   --success-soft: #dcf0e6;
   --shadow-dialog: 0 12px 32px rgba(29, 27, 24, 0.18);
+  --backdrop: rgba(29, 27, 24, 0.45);
 
   --font-display: 'Montserrat', system-ui, 'Segoe UI', sans-serif;
   --font-sans: 'Public Sans', system-ui, 'Segoe UI', sans-serif;
@@ -160,6 +161,7 @@
     --success: #72d1a2;
     --success-soft: #10291f;
     --shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.6);
+    --backdrop: rgba(0, 0, 0, 0.65);
     color-scheme: dark;
   }
 }
@@ -503,6 +505,39 @@ code {
 /* Ties with `td:first-child` above and wins by order: data stays regular. */
 .sf-table-wrap td.sf-data {
   font-weight: 400;
+}
+
+/* ConfirmDialog: the native modal <dialog> that confirms a consequential
+   action, and the only element with a shadow. `display` is set only while
+   open: a plain `display: grid` would override the browser's rule that hides
+   a closed dialog. */
+.sf-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  margin: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-dialog);
+}
+.sf-dialog[open] {
+  display: grid;
+  gap: var(--space-4);
+}
+.sf-dialog::backdrop {
+  background: var(--backdrop);
+}
+.sf-dialog-title {
+  font: 600 17px/24px var(--font-sans);
+  margin: 0;
+}
+.sf-dialog p {
+  color: var(--ink-muted);
+}
+.sf-dialog .sf-actions {
+  justify-content: flex-end;
 }
 
 /* A titled group of content inside a page, such as one table of a grouped
