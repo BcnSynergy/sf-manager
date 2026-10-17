@@ -502,6 +502,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   per state (or `it.each`) on all three pages together, keeping them
   consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
   2026-10-17.
+- **EN-65** (web): The review templates list picks the version cell's class
+  with `version === null` but its text with `version ?? noVersion`. The API
+  type is `number | null`, so they agree today; an `undefined` version would
+  show "no version" in the `sf-data` monospace style. Use one nullish check
+  (`version == null`) for both if the contract ever loosens. Evidence:
+  `apps/web/src/pages/ReviewTemplatesListPage.tsx` version cell. Origin:
+  `ui-restyle-review-templates` PR 1 native review, finding
+  `R3-version-null-check-mismatch`, 2026-10-17.
 
 ## Done
 

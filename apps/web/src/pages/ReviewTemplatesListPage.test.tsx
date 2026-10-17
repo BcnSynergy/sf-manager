@@ -129,4 +129,92 @@ describe('ReviewTemplatesListPage', () => {
       2,
     );
   });
+
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListReviewTemplates.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('review-template-list-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListReviewTemplates.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('review-template-list-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListReviewTemplates.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('review-template-list-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows the create link as the primary button and each group as a section with a wrapped table', async () => {
+    mockedListReviewTemplates.mockResolvedValue([templateOne]);
+
+    renderPage();
+
+    const group = await screen.findByTestId('review-template-group-EXTINGUISHER::QUARTERLY');
+    expect(group).toHaveClass('sf-section');
+    expect(within(group).getByRole('table').parentElement).toHaveClass('sf-table-wrap');
+    const create = screen.getByTestId('review-template-list-create-link');
+    expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(create.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('shows View as a secondary button and the version as data, but "no version" as text', async () => {
+    mockedListReviewTemplates.mockResolvedValue([
+      templateOne,
+      { ...templateOne, id: 'template-draft', version: null, status: 'draft' as const },
+    ]);
+
+    renderPage();
+
+    const view = await screen.findByTestId(`review-template-list-view-${templateOne.id}`);
+    expect(view.tagName).toBe('A');
+    expect(view).toHaveClass('sf-btn');
+    expect(view).not.toHaveClass('sf-btn-primary');
+    expect(view.parentElement).toHaveClass('sf-actions');
+    expect(screen.getByTestId(`review-template-list-version-${templateOne.id}`)).toHaveClass(
+      'sf-data',
+    );
+    expect(screen.getByTestId('review-template-list-version-template-draft')).not.toHaveClass(
+      'sf-data',
+    );
+  });
+
+  it('shows each status as a badge: active success, draft outlined, retired neutral', async () => {
+    mockedListReviewTemplates.mockResolvedValue([
+      templateOne,
+      { ...templateOne, id: 'template-draft', version: null, status: 'draft' as const },
+      { ...templateOne, id: 'template-retired', version: 0, status: 'retired' as const },
+    ]);
+
+    renderPage();
+
+    const badgeOf = (id: string) => {
+      const badge = screen.getByTestId(`review-template-list-status-${id}`).firstElementChild;
+      if (!badge) {
+        throw new Error(`no badge in the status cell of ${id}`);
+      }
+      return badge;
+    };
+    await screen.findByTestId('review-template-list-status-template-draft');
+    const active = badgeOf(templateOne.id);
+    expect(active).toHaveTextContent('Active');
+    expect(active).toHaveClass('sf-badge', 'sf-badge-success');
+    const draft = badgeOf('template-draft');
+    expect(draft).toHaveTextContent('Draft');
+    expect(draft).toHaveClass('sf-badge', 'sf-badge-draft');
+    const retired = badgeOf('template-retired');
+    expect(retired).toHaveTextContent('Retired');
+    expect(retired).toHaveClass('sf-badge');
+    expect(retired.className).toBe('sf-badge');
+  });
 });

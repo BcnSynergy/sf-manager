@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import type { ElementType, ReviewFrequency } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
-import { listReviewTemplates, type ReviewTemplateListItem } from '../api/review-template';
+import {
+  listReviewTemplates,
+  type ReviewTemplateListItem,
+  type ReviewTemplateStatus,
+} from '../api/review-template';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
@@ -16,6 +20,15 @@ type LineageKey = `${ElementType}::${ReviewFrequency}`;
 function buildLineageKey(elementType: ElementType, frequency: ReviewFrequency): LineageKey {
   return `${elementType}::${frequency}`;
 }
+
+// StatusBadge tone per status (user decision, 2026-10-17): the version in
+// use stands out, a draft gets the outlined in-progress marker, a retired
+// version stays neutral. The label still carries the meaning.
+const STATUS_BADGE_CLASS: Record<ReviewTemplateStatus, string> = {
+  active: 'sf-badge sf-badge-success',
+  draft: 'sf-badge sf-badge-draft',
+  retired: 'sf-badge',
+};
 
 // spec.md "List Templates With Version and Status": grouped by
 // elementType + frequency, each row showing name/version/status badge,
@@ -57,8 +70,12 @@ export function ReviewTemplatesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewTemplate.list.title')}</h1>
-        <p data-testid="review-template-list-loading">{t('reviewTemplate.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewTemplate.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-template-list-loading">
+          {t('reviewTemplate.list.loading')}
+        </p>
       </main>
     );
   }
@@ -66,8 +83,12 @@ export function ReviewTemplatesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('reviewTemplate.list.title')}</h1>
-        <p data-testid="review-template-list-error">{t(loadErrorKey ?? 'common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewTemplate.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-template-list-error">
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       </main>
     );
   }
@@ -85,12 +106,20 @@ export function ReviewTemplatesListPage() {
 
   return (
     <main>
-      <h1>{t('reviewTemplate.list.title')}</h1>
-      <Link to="/review-templates/new" data-testid="review-template-list-create-link">
-        {t('reviewTemplate.list.createLink')}
-      </Link>
+      <header className="sf-page-header">
+        <h1>{t('reviewTemplate.list.title')}</h1>
+        <Link
+          to="/review-templates/new"
+          className="sf-btn sf-btn-primary"
+          data-testid="review-template-list-create-link"
+        >
+          {t('reviewTemplate.list.createLink')}
+        </Link>
+      </header>
       {templates.length === 0 ? (
-        <p data-testid="review-template-list-empty">{t('reviewTemplate.list.empty')}</p>
+        <p className="sf-empty" data-testid="review-template-list-empty">
+          {t('reviewTemplate.list.empty')}
+        </p>
       ) : (
         [...templatesByLineage.entries()].map(([lineageKey, groupTemplates]) => {
           const [elementType, frequency] = groupTemplates[0]
@@ -98,40 +127,54 @@ export function ReviewTemplatesListPage() {
             : (lineageKey.split('::') as [ElementType, ReviewFrequency]);
           const groupTitle = `${t(mapElementTypeToLabelKey(elementType))} — ${t(mapReviewFrequencyToLabelKey(frequency))}`;
           return (
-            <section key={lineageKey} data-testid={`review-template-group-${lineageKey}`}>
+            <section
+              key={lineageKey}
+              className="sf-section"
+              data-testid={`review-template-group-${lineageKey}`}
+            >
               <h2>{groupTitle}</h2>
-              <table>
-                <caption className="visually-hidden">{groupTitle}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('reviewTemplate.list.columnName')}</th>
-                    <th scope="col">{t('reviewTemplate.list.columnVersion')}</th>
-                    <th scope="col">{t('reviewTemplate.list.columnStatus')}</th>
-                    <th scope="col">{t('reviewTemplate.list.columnActions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupTemplates.map((template) => (
-                    <tr key={template.id} data-testid={`review-template-list-row-${template.id}`}>
-                      <td>{template.name}</td>
-                      <td data-testid={`review-template-list-version-${template.id}`}>
-                        {template.version ?? t('reviewTemplate.list.noVersion')}
-                      </td>
-                      <td data-testid={`review-template-list-status-${template.id}`}>
-                        {t(mapTemplateStatusToLabelKey(template.status))}
-                      </td>
-                      <td>
-                        <Link
-                          to={`/review-templates/${template.id}`}
-                          data-testid={`review-template-list-view-${template.id}`}
-                        >
-                          {t('reviewTemplate.list.viewLink')}
-                        </Link>
-                      </td>
+              <div className="sf-table-wrap">
+                <table>
+                  <caption className="visually-hidden">{groupTitle}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('reviewTemplate.list.columnName')}</th>
+                      <th scope="col">{t('reviewTemplate.list.columnVersion')}</th>
+                      <th scope="col">{t('reviewTemplate.list.columnStatus')}</th>
+                      <th scope="col">{t('reviewTemplate.list.columnActions')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {groupTemplates.map((template) => (
+                      <tr key={template.id} data-testid={`review-template-list-row-${template.id}`}>
+                        <td>{template.name}</td>
+                        <td
+                          className={template.version === null ? undefined : 'sf-data'}
+                          data-testid={`review-template-list-version-${template.id}`}
+                        >
+                          {template.version ?? t('reviewTemplate.list.noVersion')}
+                        </td>
+                        <td data-testid={`review-template-list-status-${template.id}`}>
+                          <span className={STATUS_BADGE_CLASS[template.status]}>
+                            {t(mapTemplateStatusToLabelKey(template.status))}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="sf-actions">
+                            <Link
+                              to={`/review-templates/${template.id}`}
+                              className="sf-btn"
+                              data-testid={`review-template-list-view-${template.id}`}
+                            >
+                              {t('reviewTemplate.list.viewLink')}
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           );
         })
