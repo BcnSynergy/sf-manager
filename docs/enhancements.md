@@ -467,11 +467,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ui-redesign-foundation` PR 2 native review, finding
   `R3-print-guard-left-descendant`, 2026-10-16.
 - **EN-61** (web tests): The users list's `users-list-action-error` test id
-  now sits on the `sf-alert` container, whose text content also includes the
-  `aria-hidden` "!" icon. The current assertion is a substring match, so it
-  passes, but an exact text match would fail. Move the message assertion to
+  (and, since `ui-restyle-communities` PR 1, the communities list's
+  `communities-list-action-error`) now sits on the `sf-alert` container,
+  whose text content also includes the `aria-hidden` "!" icon. The current
+  assertion is a substring match, so it passes, but an exact text match
+  would fail. Move the message assertion to
   the alert's `<p>`, or assert the accessible text. Evidence:
-  `apps/web/src/pages/UsersListPage.tsx` action error block. Origin:
+  `apps/web/src/pages/UsersListPage.tsx` action error block (the communities
+  test already asserts the message on the alert's `<p>`). Origin:
   `ui-restyle-users` PR 1 native review, finding `R3-alert-textcontent`,
   2026-10-17.
 - **EN-62** (web UI): `ConfirmDialog` still has the pre-redesign look (plain
@@ -481,6 +484,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   every page that confirms an action shares it. Evidence:
   `apps/web/src/components/ConfirmDialog.tsx`. Origin: `ui-restyle-users`
   PR 1 browser pass, 2026-10-17.
+- **EN-63** (web UI copy): A failed community delete that returns 404 (no
+  error code) shows `community.error.assignmentTargetNotFound`, "This
+  community or user could not be found.", because `mapApiErrorToMessageKey`
+  maps every code-less 404 to the assignment-actions message. It already did
+  this before the restyle; the communities list test now pins it. Give
+  deletes their own not-found message (for example "This community no
+  longer exists") if the shared wording reads wrong. Evidence:
+  `apps/web/src/community/error-messages.ts` 404 case. Origin:
+  `ui-restyle-communities` PR 1 pre-merge fresh review, 2026-10-17.
 
 ## Done
 

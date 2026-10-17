@@ -75,8 +75,12 @@ export function CommunitiesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('community.list.title')}</h1>
-        <p data-testid="communities-list-loading">{t('community.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('community.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="communities-list-loading">
+          {t('community.list.loading')}
+        </p>
       </main>
     );
   }
@@ -84,63 +88,93 @@ export function CommunitiesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('community.list.title')}</h1>
-        <p data-testid="communities-list-error">{t(loadErrorKey ?? 'common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('community.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="communities-list-error">
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('community.list.title')}</h1>
-      <Link to="/communities/new" data-testid="communities-list-create-link">
-        {t('community.list.createLink')}
-      </Link>
-      {actionErrorKey && <p data-testid="communities-list-action-error">{t(actionErrorKey)}</p>}
+      <header className="sf-page-header">
+        <h1>{t('community.list.title')}</h1>
+        <Link
+          to="/communities/new"
+          className="sf-btn sf-btn-primary"
+          data-testid="communities-list-create-link"
+        >
+          {t('community.list.createLink')}
+        </Link>
+      </header>
+      {actionErrorKey && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="communities-list-action-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{t(actionErrorKey)}</p>
+        </div>
+      )}
       {communities.length === 0 ? (
-        <p data-testid="communities-list-empty">{t('community.list.empty')}</p>
+        <p className="sf-empty" data-testid="communities-list-empty">
+          {t('community.list.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('community.list.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('community.list.columnName')}</th>
-              <th scope="col">{t('community.list.columnAddress')}</th>
-              <th scope="col">{t('community.list.columnLocale')}</th>
-              <th scope="col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {communities.map((row) => (
-              <tr key={row.id} data-testid={`communities-list-row-${row.id}`}>
-                <td>{row.name}</td>
-                <td>{row.address}</td>
-                <td>{t(mapLocaleToLabelKey(row.locale))}</td>
-                <td>
-                  <Link
-                    to={`/communities/${row.id}`}
-                    data-testid={`communities-list-view-${row.id}`}
-                  >
-                    {t('community.list.viewLink')}
-                  </Link>
-                  <Link
-                    to={`/communities/${row.id}/edit`}
-                    data-testid={`communities-list-edit-${row.id}`}
-                  >
-                    {t('community.list.editLink')}
-                  </Link>
-                  <button
-                    type="button"
-                    data-testid={`communities-list-delete-${row.id}`}
-                    onClick={() => requestDelete(row.id)}
-                  >
-                    {t('community.list.delete')}
-                  </button>
-                </td>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('community.list.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('community.list.columnName')}</th>
+                <th scope="col">{t('community.list.columnAddress')}</th>
+                <th scope="col">{t('community.list.columnLocale')}</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {communities.map((row) => (
+                <tr key={row.id} data-testid={`communities-list-row-${row.id}`}>
+                  <td>{row.name}</td>
+                  <td>{row.address}</td>
+                  <td>{t(mapLocaleToLabelKey(row.locale))}</td>
+                  <td>
+                    <div className="sf-actions">
+                      <Link
+                        to={`/communities/${row.id}`}
+                        className="sf-btn"
+                        data-testid={`communities-list-view-${row.id}`}
+                      >
+                        {t('community.list.viewLink')}
+                      </Link>
+                      <Link
+                        to={`/communities/${row.id}/edit`}
+                        className="sf-btn"
+                        data-testid={`communities-list-edit-${row.id}`}
+                      >
+                        {t('community.list.editLink')}
+                      </Link>
+                      <button
+                        type="button"
+                        className="sf-btn sf-btn-danger"
+                        data-testid={`communities-list-delete-${row.id}`}
+                        onClick={() => requestDelete(row.id)}
+                      >
+                        {t('community.list.delete')}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <ConfirmDialog
         open={pendingDeleteId !== null}
