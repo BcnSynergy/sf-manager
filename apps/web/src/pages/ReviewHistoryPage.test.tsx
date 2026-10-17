@@ -164,6 +164,7 @@ describe('ReviewHistoryPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
   it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
     mockedListReviewHistory.mockReturnValueOnce(new Promise(() => {}));
     const { unmount } = renderPage();

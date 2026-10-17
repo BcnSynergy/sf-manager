@@ -492,11 +492,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-64** (web tests): The restyled list pages check the loading, empty
   and error states in one test that renders and unmounts the page three
   times (`UsersListPage.test.tsx`, `CommunitiesListPage.test.tsx`,
-  `MaintenanceCompaniesListPage.test.tsx`, "puts the heading in a page
-  header and the loading, empty and error messages in empty-state boxes").
-  A failure in the first state hides the other two. Split it into one test
-  per state (or `it.each`) on all three pages together, keeping them
-  consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
+  `MaintenanceCompaniesListPage.test.tsx`, and since their restyles the
+  review templates, checklist questions and review history lists: "puts the
+  heading in a page header and the loading, empty and error messages in
+  empty-state boxes"). A failure in the first state hides the other two.
+  Split it into one test per state (or `it.each`) on all of these pages
+  together, keeping them consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
   2026-10-17.
 - **EN-65** (web): The review templates list picks the version cell's class
   with `version === null` but its text with `version ?? noVersion`. The API
@@ -530,6 +531,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   observable behavior and goes through SDD. Evidence:
   `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell. Origin:
   `ui-restyle-review-history` PR 1 browser pass, 2026-10-17.
+- **EN-69** (web): Every restyled list page repeats the same
+  `<header className="sf-page-header"><h1>…</h1></header>` block in its
+  loading, error and loaded branches (three times per page, six pages so far).
+  A small `PageHeader` component (title plus optional actions) would remove
+  the copies; extract it once the page restyles are done, so it covers every
+  shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
+  2026-10-17.
 
 ## Done
 
