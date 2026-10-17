@@ -534,6 +534,10 @@ code {
   padding: 0;
   list-style: none;
 }
+/* Tags are not states: no leading status dot. */
+.sf-tags .sf-badge::before {
+  content: none;
+}
 
 /* StatusBadge: one to three words of state with a leading dot. The word
    carries the meaning; the tone (critical, warning, notice, success) only
