@@ -479,13 +479,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `<p>`; no e2e test reads these ids). Origin:
   `ui-restyle-users` PR 1 native review, finding `R3-alert-textcontent`,
   2026-10-17.
-- **EN-62** (web UI): `ConfirmDialog` still has the pre-redesign look (plain
-  box, default buttons), although the pages that open it are being restyled.
-  Give it the design system's dialog (`sf-dialog`, title, muted message,
-  right-aligned actions, danger confirm for removals) in its own slice, since
-  every page that confirms an action shares it. Evidence:
-  `apps/web/src/components/ConfirmDialog.tsx`. Origin: `ui-restyle-users`
-  PR 1 browser pass, 2026-10-17.
 - **EN-63** (web UI copy): A failed community delete that returns 404 (no
   error code) shows `community.error.assignmentTargetNotFound`, "This
   community or user could not be found.", because `mapApiErrorToMessageKey`
@@ -524,6 +517,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-62** (web UI): `ConfirmDialog` now has the design system dialog: the
+  `sf-dialog` surface, shadow and backdrop, a muted message, right-aligned
+  actions with Cancel first, and a required `tone` prop (`danger` for
+  removals, `primary` otherwise) passed by every caller. It is also named by
+  its title for assistive technology. Done in `en-62-confirm-dialog-restyle`,
+  PR #247.
 - **EN-45** (api docs): The Swagger metadata for `managerCapabilities` (the
   `PATCH /users/:id` body and `UserResponseDto`) now lists
   `MANAGER_CAPABILITIES`, derived from a `Record<ManagerCapability, true>` in
