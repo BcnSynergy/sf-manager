@@ -191,4 +191,74 @@ describe('CommunitiesListPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListCommunities.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('communities-list-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListCommunities.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('communities-list-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListCommunities.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('communities-list-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows the create link as the primary button in the page header and wraps the table', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('community.list.title') });
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    const create = screen.getByTestId('communities-list-create-link');
+    expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(create.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('shows the row actions as buttons: View and Edit secondary, Delete danger', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+
+    renderPage();
+
+    for (const testId of [
+      `communities-list-view-${communityA.id}`,
+      `communities-list-edit-${communityA.id}`,
+    ]) {
+      const link = await screen.findByTestId(testId);
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveClass('sf-btn');
+      expect(link).not.toHaveClass('sf-btn-primary');
+    }
+    const remove = screen.getByTestId(`communities-list-delete-${communityA.id}`);
+    expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+    expect(remove.parentElement).toHaveClass('sf-actions');
+  });
+
+  it('shows a failed deletion as a danger alert', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+    mockedSoftDeleteCommunity.mockRejectedValue(new ApiError(404));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`communities-list-delete-${communityA.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('sf-alert', 'sf-alert-danger');
+    expect(alert).toBe(screen.getByTestId('communities-list-action-error'));
+  });
 });
