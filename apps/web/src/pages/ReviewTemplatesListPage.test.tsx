@@ -198,8 +198,13 @@ describe('ReviewTemplatesListPage', () => {
 
     renderPage();
 
-    const badgeOf = (id: string) =>
-      screen.getByTestId(`review-template-list-status-${id}`).firstElementChild;
+    const badgeOf = (id: string) => {
+      const badge = screen.getByTestId(`review-template-list-status-${id}`).firstElementChild;
+      if (!badge) {
+        throw new Error(`no badge in the status cell of ${id}`);
+      }
+      return badge;
+    };
     await screen.findByTestId('review-template-list-status-template-draft');
     const active = badgeOf(templateOne.id);
     expect(active).toHaveTextContent('Active');
