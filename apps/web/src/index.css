@@ -524,6 +524,14 @@ code {
   border-radius: var(--radius-lg);
 }
 
+/* A wrapping row of neutral badges used as tags (for example a question's
+   review frequencies). */
+.sf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
 /* StatusBadge: one to three words of state with a leading dot. The word
    carries the meaning; the tone (critical, warning, notice, success) only
    speeds up scanning. `sf-badge-draft` is the outlined in-progress marker. */

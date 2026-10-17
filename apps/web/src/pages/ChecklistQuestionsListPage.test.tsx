@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionsListPage } from './ChecklistQuestionsListPage';
@@ -162,5 +162,86 @@ describe('ChecklistQuestionsListPage', () => {
       expect(header).toHaveAttribute('scope', 'col');
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
+  });
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListChecklistQuestions.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('checklist-question-list-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListChecklistQuestions.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('checklist-question-list-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListChecklistQuestions.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('checklist-question-list-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows the create link as the primary button and each group as a section with a wrapped table', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([questionOne]);
+
+    renderPage();
+
+    const group = await screen.findByTestId('checklist-question-group-EXTINGUISHER');
+    expect(group).toHaveClass('sf-section');
+    expect(within(group).getByRole('table').parentElement).toHaveClass('sf-table-wrap');
+    const create = screen.getByTestId('checklist-question-list-create-link');
+    expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(create.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('shows the row actions as buttons and the frequencies as neutral tags', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([
+      { ...questionOne, frequencies: ['QUARTERLY' as const, 'ANNUAL' as const] },
+    ]);
+
+    renderPage();
+
+    const edit = await screen.findByTestId(`checklist-question-list-edit-${questionOne.id}`);
+    expect(edit.tagName).toBe('A');
+    expect(edit).toHaveClass('sf-btn');
+    expect(edit).not.toHaveClass('sf-btn-primary');
+    const remove = screen.getByTestId(`checklist-question-list-delete-${questionOne.id}`);
+    expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+    expect(remove.parentElement).toHaveClass('sf-actions');
+    expect(edit.parentElement).toBe(remove.parentElement);
+
+    const quarterly = screen.getByTestId(
+      `checklist-question-frequency-tag-${questionOne.id}-QUARTERLY`,
+    );
+    const annual = screen.getByTestId(`checklist-question-frequency-tag-${questionOne.id}-ANNUAL`);
+    for (const tag of [quarterly, annual]) {
+      expect(tag.className).toBe('sf-badge');
+    }
+    expect(quarterly).toHaveTextContent('Quarterly');
+    expect(annual).toHaveTextContent('Annual');
+    expect(quarterly.parentElement).toHaveClass('sf-tags');
+    expect(annual.parentElement).toBe(quarterly.parentElement);
+  });
+
+  it('shows a failed deletion as a danger alert with the mapped message', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([questionOne]);
+    mockedSoftDeleteChecklistQuestion.mockRejectedValue(new ApiError(404));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`checklist-question-list-delete-${questionOne.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('sf-alert', 'sf-alert-danger');
+    expect(alert).toBe(screen.getByTestId('checklist-question-list-delete-error'));
+    expect(alert.querySelector('p')?.textContent).toBe(i18n.t('checklistQuestion.error.notFound'));
   });
 });
