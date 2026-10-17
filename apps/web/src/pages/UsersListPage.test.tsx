@@ -262,4 +262,70 @@ describe('UsersListPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListUsers.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('users-list-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListUsers.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('users-list-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListUsers.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('users-list-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows the create link as the primary button in the page header and wraps the table', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('users.list.title') });
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    const create = screen.getByTestId('users-list-create-link');
+    expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(create.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('shows the row actions as buttons: Edit secondary, Deactivate danger', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+
+    renderPage();
+
+    const edit = await screen.findByTestId(`users-list-edit-${otherUser.id}`);
+    expect(edit.tagName).toBe('A');
+    expect(edit).toHaveClass('sf-btn');
+    expect(edit).not.toHaveClass('sf-btn-primary');
+    expect(screen.getByTestId(`users-list-deactivate-${otherUser.id}`)).toHaveClass(
+      'sf-btn',
+      'sf-btn-danger',
+    );
+  });
+
+  it('shows a failed deactivation as a danger alert', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedDeactivateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`users-list-deactivate-${otherUser.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('sf-alert', 'sf-alert-danger');
+    expect(alert).toBe(screen.getByTestId('users-list-action-error'));
+  });
 });

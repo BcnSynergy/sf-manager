@@ -466,6 +466,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   a comma) and add a fixture for the ancestor case. Origin:
   `ui-redesign-foundation` PR 2 native review, finding
   `R3-print-guard-left-descendant`, 2026-10-16.
+- **EN-61** (web tests): The users list's `users-list-action-error` test id
+  now sits on the `sf-alert` container, whose text content also includes the
+  `aria-hidden` "!" icon. The current assertion is a substring match, so it
+  passes, but an exact text match would fail. Move the message assertion to
+  the alert's `<p>`, or assert the accessible text. Evidence:
+  `apps/web/src/pages/UsersListPage.tsx` action error block. Origin:
+  `ui-restyle-users` PR 1 native review, finding `R3-alert-textcontent`,
+  2026-10-17.
+- **EN-62** (web UI): `ConfirmDialog` still has the pre-redesign look (plain
+  box, default buttons), although the pages that open it are being restyled.
+  Give it the design system's dialog (`sf-dialog`, title, muted message,
+  right-aligned actions, danger confirm for removals) in its own slice, since
+  every page that confirms an action shares it. Evidence:
+  `apps/web/src/components/ConfirmDialog.tsx`. Origin: `ui-restyle-users`
+  PR 1 browser pass, 2026-10-17.
 
 ## Done
 
