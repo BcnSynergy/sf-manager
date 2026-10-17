@@ -226,6 +226,7 @@ export function UsersListPage() {
         </div>
       )}
       <ConfirmDialog
+        tone="danger"
         open={pendingDeactivateId !== null}
         title={t('users.list.deactivateConfirmTitle')}
         message={t('users.list.deactivateConfirmMessage')}

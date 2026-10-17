@@ -238,6 +238,7 @@ export function ChecklistQuestionEditPage() {
         {t('checklistQuestion.edit.deleteLabel')}
       </button>
       <ConfirmDialog
+        tone="danger"
         open={pendingDelete}
         title={t('checklistQuestion.edit.deleteConfirmTitle')}
         message={t('checklistQuestion.edit.deleteConfirmMessage')}

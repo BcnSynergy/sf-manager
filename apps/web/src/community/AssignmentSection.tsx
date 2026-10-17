@@ -219,6 +219,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
       </form>
 
       <ConfirmDialog
+        tone="danger"
         open={pendingDeactivateUserId !== null}
         title={t(keys.confirmTitle)}
         message={t(keys.confirmMessage)}

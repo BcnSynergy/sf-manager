@@ -355,6 +355,7 @@ export function InspectableElementEditPage() {
         </button>
       )}
       <ConfirmDialog
+        tone="danger"
         open={pendingAction !== null}
         title={
           pendingAction === 'decommission'

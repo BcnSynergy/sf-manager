@@ -11,6 +11,7 @@ function renderDialog(overrides: Partial<Parameters<typeof ConfirmDialog>[0]> = 
       message="This cannot be undone."
       onConfirm={vi.fn()}
       onCancel={vi.fn()}
+      tone="danger"
       {...overrides}
     />,
   );
@@ -40,6 +41,7 @@ describe('ConfirmDialog', () => {
         message="This cannot be undone."
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
+        tone="danger"
       />,
     );
 
@@ -88,5 +90,34 @@ describe('ConfirmDialog', () => {
     renderDialog({ confirmLabel: 'Sign and close' });
 
     expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Sign and close');
+  });
+  it('uses the design system dialog: title, message, then Cancel (ghost) before the action', () => {
+    renderDialog();
+
+    const dialog = screen.getByTestId('confirm-dialog');
+    expect(dialog).toHaveClass('sf-dialog');
+    expect(screen.getByRole('heading', { name: 'Deactivate user' })).toHaveClass('sf-dialog-title');
+    const cancel = screen.getByTestId('confirm-dialog-cancel');
+    const confirm = screen.getByTestId('confirm-dialog-confirm');
+    expect(cancel).toHaveClass('sf-btn', 'sf-btn-ghost');
+    expect(cancel.parentElement).toHaveClass('sf-actions');
+    expect(confirm.parentElement).toBe(cancel.parentElement);
+    expect(cancel.nextElementSibling).toBe(confirm);
+  });
+
+  it('styles the confirm button as danger when the action removes data', () => {
+    renderDialog({ tone: 'danger' });
+
+    const confirm = screen.getByTestId('confirm-dialog-confirm');
+    expect(confirm).toHaveClass('sf-btn', 'sf-btn-danger');
+    expect(confirm).not.toHaveClass('sf-btn-primary');
+  });
+
+  it('styles the confirm button as primary when the action removes nothing', () => {
+    renderDialog({ tone: 'primary', confirmLabel: 'Sign and close' });
+
+    const confirm = screen.getByTestId('confirm-dialog-confirm');
+    expect(confirm).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(confirm).not.toHaveClass('sf-btn-danger');
   });
 });

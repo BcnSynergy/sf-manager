@@ -8,6 +8,7 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
   onCancel: () => void;
   confirmLabel?: string;
+  tone: 'danger' | 'primary';
 };
 
 // design.md Decision 4: native <dialog> over window.confirm — the browser
@@ -21,6 +22,11 @@ type ConfirmDialogProps = {
 // button's copy (e.g. "Sign and close") when the generic Confirm label
 // doesn't convey what confirming actually does; it defaults to the
 // existing generic label so every other caller is unaffected.
+// tone (EN-62) picks the confirm button's look: 'danger' when confirming
+// removes or deactivates data, 'primary' otherwise (design system
+// ConfirmDialog). It is required so each caller decides it explicitly
+// (user decision, 2026-10-17). Cancel comes first, so the native dialog's
+// initial focus lands on it.
 export function ConfirmDialog({
   open,
   title,
@@ -28,6 +34,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   confirmLabel,
+  tone,
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -46,15 +53,27 @@ export function ConfirmDialog({
   }, [open]);
 
   return (
-    <dialog ref={dialogRef} data-testid="confirm-dialog" onCancel={onCancel}>
-      <h2>{title}</h2>
+    <dialog ref={dialogRef} className="sf-dialog" data-testid="confirm-dialog" onCancel={onCancel}>
+      <h2 className="sf-dialog-title">{title}</h2>
       <p>{message}</p>
-      <button type="button" onClick={onCancel} data-testid="confirm-dialog-cancel">
-        {t('common.cancel')}
-      </button>
-      <button type="button" onClick={onConfirm} data-testid="confirm-dialog-confirm">
-        {confirmLabel ?? t('common.confirm')}
-      </button>
+      <div className="sf-actions">
+        <button
+          type="button"
+          className="sf-btn sf-btn-ghost"
+          onClick={onCancel}
+          data-testid="confirm-dialog-cancel"
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className={`sf-btn sf-btn-${tone}`}
+          onClick={onConfirm}
+          data-testid="confirm-dialog-confirm"
+        >
+          {confirmLabel ?? t('common.confirm')}
+        </button>
+      </div>
     </dialog>
   );
 }

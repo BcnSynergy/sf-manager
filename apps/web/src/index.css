@@ -505,6 +505,39 @@ code {
   font-weight: 400;
 }
 
+/* ConfirmDialog: the native modal <dialog> that confirms an irreversible
+   action, and the only element with a shadow. `display` is set only while
+   open: a plain `display: grid` would override the browser's rule that hides
+   a closed dialog. */
+.sf-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  margin: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-dialog);
+}
+.sf-dialog[open] {
+  display: grid;
+  gap: var(--space-4);
+}
+.sf-dialog::backdrop {
+  background: rgba(20, 19, 18, 0.45);
+}
+.sf-dialog-title {
+  font: 600 17px/24px var(--font-sans);
+  margin: 0;
+}
+.sf-dialog p {
+  color: var(--ink-muted);
+}
+.sf-dialog .sf-actions {
+  justify-content: flex-end;
+}
+
 /* A titled group of content inside a page, such as one table of a grouped
    list: full width, its h2 above its content. */
 .sf-section {
