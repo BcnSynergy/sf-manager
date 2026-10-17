@@ -153,6 +153,19 @@ describe('ReviewSessionDetailPage', () => {
     expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Sign and close');
   });
 
+  it('styles the Sign and close confirmation as primary and the discard one as danger', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveClass('sf-btn', 'sf-btn-primary');
+    fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+    fireEvent.click(screen.getByTestId('review-session-detail-discard'));
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveClass('sf-btn', 'sf-btn-danger');
+  });
+
   it('completes the session after confirmation and reloads it as read-only', async () => {
     mockedReadReviewSession
       .mockResolvedValueOnce(draftSession)

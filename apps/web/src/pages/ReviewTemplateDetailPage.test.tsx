@@ -243,6 +243,21 @@ describe('ReviewTemplateDetailPage', () => {
       expect(mockedActivateReviewTemplate).not.toHaveBeenCalled();
     });
 
+    it('styles the activate confirmation as primary and the delete one as danger', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-template-detail-activate'));
+      expect(screen.getByTestId('confirm-dialog-confirm')).toHaveClass('sf-btn', 'sf-btn-primary');
+      fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+      fireEvent.click(screen.getByTestId('review-template-detail-delete'));
+      expect(screen.getByTestId('confirm-dialog-confirm')).toHaveClass('sf-btn', 'sf-btn-danger');
+    });
+
     it('activates on confirmation and refreshes to the frozen render (spec: Successful activation updates both versions in the list)', async () => {
       mockedReadReviewTemplate.mockResolvedValueOnce(draftTemplate).mockResolvedValueOnce({
         ...activeTemplate,
