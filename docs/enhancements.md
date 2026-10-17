@@ -493,6 +493,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   longer exists") if the shared wording reads wrong. Evidence:
   `apps/web/src/community/error-messages.ts` 404 case. Origin:
   `ui-restyle-communities` PR 1 pre-merge fresh review, 2026-10-17.
+- **EN-64** (web tests): The restyled list pages check the loading, empty
+  and error states in one test that renders and unmounts the page three
+  times (`UsersListPage.test.tsx`, `CommunitiesListPage.test.tsx`,
+  `MaintenanceCompaniesListPage.test.tsx`, "puts the heading in a page
+  header and the loading, empty and error messages in empty-state boxes").
+  A failure in the first state hides the other two. Split it into one test
+  per state (or `it.each`) on all three pages together, keeping them
+  consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
+  2026-10-17.
 
 ## Done
 

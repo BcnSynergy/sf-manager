@@ -53,8 +53,10 @@ export function MaintenanceCompaniesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('maintenanceCompany.list.title')}</h1>
-        <p data-testid="maintenance-companies-list-loading">
+        <header className="sf-page-header">
+          <h1>{t('maintenanceCompany.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="maintenance-companies-list-loading">
           {t('maintenanceCompany.list.loading')}
         </p>
       </main>
@@ -64,8 +66,10 @@ export function MaintenanceCompaniesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('maintenanceCompany.list.title')}</h1>
-        <p data-testid="maintenance-companies-list-error">
+        <header className="sf-page-header">
+          <h1>{t('maintenanceCompany.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="maintenance-companies-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
       </main>
@@ -74,41 +78,54 @@ export function MaintenanceCompaniesListPage() {
 
   return (
     <main>
-      <h1>{t('maintenanceCompany.list.title')}</h1>
-      <Link to="/maintenance-companies/new" data-testid="maintenance-companies-list-create-link">
-        {t('maintenanceCompany.list.createLink')}
-      </Link>
+      <header className="sf-page-header">
+        <h1>{t('maintenanceCompany.list.title')}</h1>
+        <Link
+          to="/maintenance-companies/new"
+          className="sf-btn sf-btn-primary"
+          data-testid="maintenance-companies-list-create-link"
+        >
+          {t('maintenanceCompany.list.createLink')}
+        </Link>
+      </header>
       {companies.length === 0 ? (
-        <p data-testid="maintenance-companies-list-empty">{t('maintenanceCompany.list.empty')}</p>
+        <p className="sf-empty" data-testid="maintenance-companies-list-empty">
+          {t('maintenanceCompany.list.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('maintenanceCompany.list.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('maintenanceCompany.list.columnName')}</th>
-              <th scope="col">{t('maintenanceCompany.list.columnTaxId')}</th>
-              <th scope="col">{t('maintenanceCompany.list.columnContactInfo')}</th>
-              <th scope="col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((row) => (
-              <tr key={row.id} data-testid={`maintenance-companies-list-row-${row.id}`}>
-                <td>{row.name}</td>
-                <td>{row.taxId}</td>
-                <td>{row.contactInfo}</td>
-                <td>
-                  <Link
-                    to={`/maintenance-companies/${row.id}/edit`}
-                    data-testid={`maintenance-companies-list-edit-${row.id}`}
-                  >
-                    {t('maintenanceCompany.list.editLink')}
-                  </Link>
-                </td>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('maintenanceCompany.list.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('maintenanceCompany.list.columnName')}</th>
+                <th scope="col">{t('maintenanceCompany.list.columnTaxId')}</th>
+                <th scope="col">{t('maintenanceCompany.list.columnContactInfo')}</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {companies.map((row) => (
+                <tr key={row.id} data-testid={`maintenance-companies-list-row-${row.id}`}>
+                  <td>{row.name}</td>
+                  <td className="sf-data">{row.taxId}</td>
+                  <td>{row.contactInfo}</td>
+                  <td>
+                    <div className="sf-actions">
+                      <Link
+                        to={`/maintenance-companies/${row.id}/edit`}
+                        className="sf-btn"
+                        data-testid={`maintenance-companies-list-edit-${row.id}`}
+                      >
+                        {t('maintenanceCompany.list.editLink')}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );

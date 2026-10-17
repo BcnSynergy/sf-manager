@@ -106,4 +106,60 @@ describe('MaintenanceCompaniesListPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListMaintenanceCompanies.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('maintenance-companies-list-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListMaintenanceCompanies.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('maintenance-companies-list-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListMaintenanceCompanies.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('maintenance-companies-list-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows the create link as the primary button in the page header and wraps the table', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', {
+      name: i18n.t('maintenanceCompany.list.title'),
+    });
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    const create = screen.getByTestId('maintenance-companies-list-create-link');
+    expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(create.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('shows Edit as a secondary button and the tax id as data', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+
+    renderPage();
+
+    const edit = await screen.findByTestId(`maintenance-companies-list-edit-${companyA.id}`);
+    expect(edit.tagName).toBe('A');
+    expect(edit).toHaveClass('sf-btn');
+    expect(edit).not.toHaveClass('sf-btn-primary');
+    expect(edit.parentElement).toHaveClass('sf-actions');
+    expect(
+      within(screen.getByTestId(`maintenance-companies-list-row-${companyA.id}`)).getByText(
+        companyA.taxId,
+      ),
+    ).toHaveClass('sf-data');
+  });
 });
