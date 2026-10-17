@@ -378,7 +378,7 @@ code {
   white-space: nowrap;
   cursor: pointer;
 }
-.sf-btn:hover {
+.sf-btn:hover:not(:disabled) {
   background: var(--hover);
   color: var(--ink);
 }
