@@ -512,6 +512,7 @@ code {
   display: grid;
   gap: var(--space-3);
 }
+
 /* Loading, empty and error messages that stand in for a table. */
 .sf-empty {
   align-self: stretch;

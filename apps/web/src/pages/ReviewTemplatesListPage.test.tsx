@@ -199,7 +199,7 @@ describe('ReviewTemplatesListPage', () => {
     renderPage();
 
     const badgeOf = (id: string) =>
-      within(screen.getByTestId(`review-template-list-status-${id}`)).getByText(/./);
+      screen.getByTestId(`review-template-list-status-${id}`).firstElementChild;
     await screen.findByTestId('review-template-list-status-template-draft');
     const active = badgeOf(templateOne.id);
     expect(active).toHaveTextContent('Active');
