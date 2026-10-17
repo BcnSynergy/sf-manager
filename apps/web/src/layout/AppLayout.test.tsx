@@ -516,8 +516,21 @@ describe('AppLayout lazy page loading (TD-8)', () => {
     );
   }
 
+  // TD-38: the nav waits for /auth/me, while the page area renders its
+  // Suspense fallback (or chunk error) on the first render. Delaying the
+  // session response makes that order deterministic, as on a loaded machine,
+  // so each test must wait for the nav before checking the page area.
   beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch());
+    const authFetch = mockFetch();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (url: RequestInfo | URL) =>
+          new Promise<Response>((resolve) => {
+            setTimeout(() => resolve(authFetch(url)), 50);
+          }),
+      ),
+    );
   });
 
   afterEach(() => {
@@ -528,14 +541,15 @@ describe('AppLayout lazy page loading (TD-8)', () => {
   it('shows the page-loading message with the nav still present while a page chunk downloads', async () => {
     renderWithLazyRoutes(['/pending']);
 
-    expect(await screen.findByTestId('page-loading')).toHaveTextContent('Loading page…');
-    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+    expect(await screen.findByTestId('nav-root')).toBeInTheDocument();
+    expect(screen.getByTestId('page-loading')).toHaveTextContent('Loading page…');
   });
 
   it('shows a page-load error with a reload button, nav still present, when a page chunk fails to load', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderWithLazyRoutes(['/failing']);
 
+    expect(await screen.findByTestId('nav-root')).toBeInTheDocument();
     expect(await screen.findByTestId('page-load-error')).toHaveTextContent(
       'This page could not be loaded. Reload to try again.',
     );
@@ -546,6 +560,7 @@ describe('AppLayout lazy page loading (TD-8)', () => {
   it('clears the page-load error when the user navigates to another page', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderWithLazyRoutes(['/failing']);
+    await screen.findByTestId('nav-root');
     await screen.findByTestId('page-load-error');
 
     fireEvent.click(screen.getByTestId('nav-link-home'));

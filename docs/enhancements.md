@@ -512,6 +512,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `apps/web/src/pages/ReviewTemplatesListPage.tsx` version cell. Origin:
   `ui-restyle-review-templates` PR 1 native review, finding
   `R3-version-null-check-mismatch`, 2026-10-17.
+- **EN-66** (web tests): The TD-8 lazy-page tests in
+  `apps/web/src/layout/AppLayout.test.tsx` delay `/auth/me` with a 50 ms
+  `setTimeout` that is never cleared. Every test awaits the nav, so the timer
+  has always fired before a passing test ends, and the file uses no fake
+  timers. A test that fails early, or a future one that switches to fake
+  timers, could leave the response pending after unmount. Clear the timers in
+  `afterEach` (or note that the block needs real timers) if either happens.
+  Origin: `td-38-lazy-page-test-race` PR 1 native review, finding
+  `R3-pending-timer-teardown`, 2026-10-17.
 
 ## Done
 
