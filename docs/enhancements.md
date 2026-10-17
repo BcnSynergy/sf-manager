@@ -484,6 +484,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   every page that confirms an action shares it. Evidence:
   `apps/web/src/components/ConfirmDialog.tsx`. Origin: `ui-restyle-users`
   PR 1 browser pass, 2026-10-17.
+- **EN-63** (web UI copy): A failed community delete that returns 404 (no
+  error code) shows `community.error.assignmentTargetNotFound`, "This
+  community or user could not be found.", because `mapApiErrorToMessageKey`
+  maps every code-less 404 to the assignment-actions message. It already did
+  this before the restyle; the communities list test now pins it. Give
+  deletes their own not-found message (for example "This community no
+  longer exists") if the shared wording reads wrong. Evidence:
+  `apps/web/src/community/error-messages.ts` 404 case. Origin:
+  `ui-restyle-communities` PR 1 pre-merge fresh review, 2026-10-17.
 
 ## Done
 
