@@ -358,6 +358,30 @@ code {
 
 /* ---------- Components (design system bundle.css, `sf-` prefix) ---------- */
 
+/* Button: bare <button>s already look like the secondary button; `sf-btn`
+   gives a link (Create, Edit, View) the same look. It stays before the
+   variants so their :hover backgrounds win the specificity tie. */
+.sf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 15px/22px var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sf-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
 .sf-btn-primary {
   background: var(--primary);
   border-color: var(--primary);
@@ -367,9 +391,55 @@ code {
   background: var(--primary);
   opacity: 0.88;
 }
+.sf-btn-primary:hover {
+  color: var(--on-primary);
+}
+/* Danger: only actions that remove data, always behind a ConfirmDialog. */
+.sf-btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+}
+.sf-btn-danger:hover {
+  background: var(--danger);
+  opacity: 0.88;
+}
 .sf-btn-ghost {
   border-color: transparent;
   background: none;
+}
+
+/* A row of buttons: a page header's actions or a table row's. */
+.sf-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Alert: a one-line message above the content it concerns. Request failures
+   use `sf-alert-danger` with role="alert"; the text stays `ink`. */
+.sf-alert {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--notice-soft);
+  color: var(--notice);
+}
+.sf-alert-icon {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  line-height: 22px;
+}
+.sf-alert p {
+  margin: 0;
+  color: var(--ink);
+}
+.sf-alert-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .sf-credit {
@@ -418,6 +488,16 @@ code {
 }
 .sf-table-wrap td:first-child {
   font-weight: 600;
+}
+/* A row's actions stay on one line; the wrap scrolls if the table is wider. */
+.sf-table-wrap .sf-actions {
+  flex-wrap: nowrap;
+}
+/* Dates, codes and ids: monospace with tabular figures. */
+.sf-data {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 /* Loading, empty and error messages that stand in for a table. */

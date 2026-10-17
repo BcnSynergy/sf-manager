@@ -127,8 +127,12 @@ export function UsersListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('users.list.title')}</h1>
-        <p data-testid="users-list-loading">{t('users.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('users.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="users-list-loading">
+          {t('users.list.loading')}
+        </p>
       </main>
     );
   }
@@ -136,58 +140,90 @@ export function UsersListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('users.list.title')}</h1>
-        <p data-testid="users-list-error">{t(loadErrorKey ?? 'common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('users.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="users-list-error">
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('users.list.title')}</h1>
-      <Link to="/users/new" data-testid="users-list-create-link">
-        {t('users.list.createLink')}
-      </Link>
-      {actionErrorKey && <p data-testid="users-list-action-error">{t(actionErrorKey)}</p>}
+      <header className="sf-page-header">
+        <h1>{t('users.list.title')}</h1>
+        <Link
+          to="/users/new"
+          className="sf-btn sf-btn-primary"
+          data-testid="users-list-create-link"
+        >
+          {t('users.list.createLink')}
+        </Link>
+      </header>
+      {actionErrorKey && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="users-list-action-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{t(actionErrorKey)}</p>
+        </div>
+      )}
       {users.length === 0 ? (
-        <p data-testid="users-list-empty">{t('users.list.empty')}</p>
+        <p className="sf-empty" data-testid="users-list-empty">
+          {t('users.list.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('users.list.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('users.list.columnId')}</th>
-              <th scope="col">{t('users.list.columnEmail')}</th>
-              <th scope="col">{t('users.list.columnRole')}</th>
-              <th scope="col">{t('users.list.columnCompany')}</th>
-              <th scope="col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((row) => (
-              <tr key={row.id} data-testid={`users-list-row-${row.id}`}>
-                <td>{row.id}</td>
-                <td>{row.email}</td>
-                <td>{t(mapRoleToLabelKey(row.role))}</td>
-                <td>{resolveCompanyName(row)}</td>
-                <td>
-                  <Link to={`/users/${row.id}/edit`} data-testid={`users-list-edit-${row.id}`}>
-                    {t('users.list.editLink')}
-                  </Link>
-                  {row.id !== currentUser?.id && (
-                    <button
-                      type="button"
-                      data-testid={`users-list-deactivate-${row.id}`}
-                      onClick={() => requestDeactivate(row.id)}
-                    >
-                      {t('users.list.deactivate')}
-                    </button>
-                  )}
-                </td>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('users.list.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('users.list.columnId')}</th>
+                <th scope="col">{t('users.list.columnEmail')}</th>
+                <th scope="col">{t('users.list.columnRole')}</th>
+                <th scope="col">{t('users.list.columnCompany')}</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((row) => (
+                <tr key={row.id} data-testid={`users-list-row-${row.id}`}>
+                  <td className="sf-data">{row.id}</td>
+                  <td>{row.email}</td>
+                  <td>{t(mapRoleToLabelKey(row.role))}</td>
+                  <td>{resolveCompanyName(row)}</td>
+                  <td>
+                    <div className="sf-actions">
+                      <Link
+                        to={`/users/${row.id}/edit`}
+                        className="sf-btn"
+                        data-testid={`users-list-edit-${row.id}`}
+                      >
+                        {t('users.list.editLink')}
+                      </Link>
+                      {row.id !== currentUser?.id && (
+                        <button
+                          type="button"
+                          className="sf-btn sf-btn-danger"
+                          data-testid={`users-list-deactivate-${row.id}`}
+                          onClick={() => requestDeactivate(row.id)}
+                        >
+                          {t('users.list.deactivate')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <ConfirmDialog
         open={pendingDeactivateId !== null}
