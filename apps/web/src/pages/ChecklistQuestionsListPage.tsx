@@ -86,8 +86,12 @@ export function ChecklistQuestionsListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('checklistQuestion.list.title')}</h1>
-        <p data-testid="checklist-question-list-loading">{t('checklistQuestion.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('checklistQuestion.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="checklist-question-list-loading">
+          {t('checklistQuestion.list.loading')}
+        </p>
       </main>
     );
   }
@@ -95,8 +99,10 @@ export function ChecklistQuestionsListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('checklistQuestion.list.title')}</h1>
-        <p data-testid="checklist-question-list-error">
+        <header className="sf-page-header">
+          <h1>{t('checklistQuestion.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="checklist-question-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
       </main>
@@ -115,64 +121,97 @@ export function ChecklistQuestionsListPage() {
 
   return (
     <main>
-      <h1>{t('checklistQuestion.list.title')}</h1>
-      <Link to="/checklist-questions/new" data-testid="checklist-question-list-create-link">
-        {t('checklistQuestion.list.createLink')}
-      </Link>
+      <header className="sf-page-header">
+        <h1>{t('checklistQuestion.list.title')}</h1>
+        <Link
+          to="/checklist-questions/new"
+          className="sf-btn sf-btn-primary"
+          data-testid="checklist-question-list-create-link"
+        >
+          {t('checklistQuestion.list.createLink')}
+        </Link>
+      </header>
       {deleteErrorKey && (
-        <p data-testid="checklist-question-list-delete-error">{t(deleteErrorKey)}</p>
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="checklist-question-list-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{t(deleteErrorKey)}</p>
+        </div>
       )}
       {questions.length === 0 ? (
-        <p data-testid="checklist-question-list-empty">{t('checklistQuestion.list.empty')}</p>
+        <p className="sf-empty" data-testid="checklist-question-list-empty">
+          {t('checklistQuestion.list.empty')}
+        </p>
       ) : (
         [...questionsByElementType.entries()].map(([elementType, groupQuestions]) => (
-          <section key={elementType} data-testid={`checklist-question-group-${elementType}`}>
+          <section
+            key={elementType}
+            className="sf-section"
+            data-testid={`checklist-question-group-${elementType}`}
+          >
             <h2>{t(mapElementTypeToLabelKey(elementType))}</h2>
-            <table>
-              <caption className="visually-hidden">
-                {t(mapElementTypeToLabelKey(elementType))}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t('checklistQuestion.list.columnText')}</th>
-                  <th scope="col">{t('checklistQuestion.list.columnFrequencies')}</th>
-                  <th scope="col">{t('checklistQuestion.list.columnActions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupQuestions.map((question) => (
-                  <tr key={question.id} data-testid={`checklist-question-list-row-${question.id}`}>
-                    <td>{question.text}</td>
-                    <td>
-                      {question.frequencies.map((frequency) => (
-                        <span
-                          key={frequency}
-                          data-testid={`checklist-question-frequency-tag-${question.id}-${frequency}`}
-                        >
-                          {t(mapReviewFrequencyToLabelKey(frequency))}
-                        </span>
-                      ))}
-                    </td>
-                    <td>
-                      <Link
-                        to={`/checklist-questions/${question.id}/edit`}
-                        data-testid={`checklist-question-list-edit-${question.id}`}
-                      >
-                        {t('checklistQuestion.list.editLink')}
-                      </Link>
-                      <button
-                        type="button"
-                        data-testid={`checklist-question-list-delete-${question.id}`}
-                        disabled={deletingId === question.id}
-                        onClick={() => requestDelete(question.id)}
-                      >
-                        {t('checklistQuestion.list.delete')}
-                      </button>
-                    </td>
+            <div className="sf-table-wrap">
+              <table>
+                <caption className="visually-hidden">
+                  {t(mapElementTypeToLabelKey(elementType))}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('checklistQuestion.list.columnText')}</th>
+                    <th scope="col">{t('checklistQuestion.list.columnFrequencies')}</th>
+                    <th scope="col">{t('checklistQuestion.list.columnActions')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {groupQuestions.map((question) => (
+                    <tr
+                      key={question.id}
+                      data-testid={`checklist-question-list-row-${question.id}`}
+                    >
+                      <td>{question.text}</td>
+                      <td>
+                        <ul className="sf-tags">
+                          {question.frequencies.map((frequency) => (
+                            <li
+                              key={frequency}
+                              className="sf-badge"
+                              data-testid={`checklist-question-frequency-tag-${question.id}-${frequency}`}
+                            >
+                              {t(mapReviewFrequencyToLabelKey(frequency))}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td>
+                        <div className="sf-actions">
+                          <Link
+                            to={`/checklist-questions/${question.id}/edit`}
+                            className="sf-btn"
+                            data-testid={`checklist-question-list-edit-${question.id}`}
+                          >
+                            {t('checklistQuestion.list.editLink')}
+                          </Link>
+                          <button
+                            type="button"
+                            className="sf-btn sf-btn-danger"
+                            data-testid={`checklist-question-list-delete-${question.id}`}
+                            disabled={deletingId === question.id}
+                            onClick={() => requestDelete(question.id)}
+                          >
+                            {t('checklistQuestion.list.delete')}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         ))
       )}

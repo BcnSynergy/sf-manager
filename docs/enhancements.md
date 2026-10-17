@@ -467,14 +467,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ui-redesign-foundation` PR 2 native review, finding
   `R3-print-guard-left-descendant`, 2026-10-16.
 - **EN-61** (web tests): The users list's `users-list-action-error` test id
-  (and, since `ui-restyle-communities` PR 1, the communities list's
-  `communities-list-action-error`) now sits on the `sf-alert` container,
+  (and, since their restyles, the communities list's
+  `communities-list-action-error` and the checklist questions list's
+  `checklist-question-list-delete-error`) now sits on the `sf-alert` container,
   whose text content also includes the `aria-hidden` "!" icon. The current
   assertion is a substring match, so it passes, but an exact text match
   would fail. Move the message assertion to
   the alert's `<p>`, or assert the accessible text. Evidence:
   `apps/web/src/pages/UsersListPage.tsx` action error block (the communities
-  test already asserts the message on the alert's `<p>`). Origin:
+  and checklist questions tests already assert the message on the alert's
+  `<p>`; no e2e test reads these ids). Origin:
   `ui-restyle-users` PR 1 native review, finding `R3-alert-textcontent`,
   2026-10-17.
 - **EN-62** (web UI): `ConfirmDialog` still has the pre-redesign look (plain
