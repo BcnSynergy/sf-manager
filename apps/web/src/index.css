@@ -387,12 +387,12 @@ code {
   border-color: var(--primary);
   color: var(--on-primary);
 }
-.sf-btn-primary:hover {
+/* Variant hovers restate their text color (`.sf-btn:hover` sets `ink`) and
+   skip disabled buttons so the disabled opacity still shows. */
+.sf-btn-primary:hover:not(:disabled) {
   background: var(--primary);
-  opacity: 0.88;
-}
-.sf-btn-primary:hover {
   color: var(--on-primary);
+  opacity: 0.88;
 }
 /* Danger: only actions that remove data, always behind a ConfirmDialog. */
 .sf-btn-danger {
@@ -400,8 +400,9 @@ code {
   border-color: var(--danger);
   color: var(--on-danger);
 }
-.sf-btn-danger:hover {
+.sf-btn-danger:hover:not(:disabled) {
   background: var(--danger);
+  color: var(--on-danger);
   opacity: 0.88;
 }
 .sf-btn-ghost {
@@ -498,6 +499,10 @@ code {
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 18px;
+}
+/* Ties with `td:first-child` above and wins by order: data stays regular. */
+.sf-table-wrap td.sf-data {
+  font-weight: 400;
 }
 
 /* Loading, empty and error messages that stand in for a table. */
