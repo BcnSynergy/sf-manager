@@ -225,7 +225,7 @@ None.
   an order race: the nav renders only once `/auth/me` resolves, while the
   page area shows its Suspense fallback (or chunk error) on the first render,
   so the tests found the page state before the nav and then read the nav
-  synchronously. Resolved by `td-38-lazy-page-test-race`: the three lazy-page
+  synchronously. Resolved by `td-38-lazy-page-test-race` (#246): the three lazy-page
   tests delay the `/auth/me` response (which made two of them fail every
   run) and wait for the nav before checking the page area.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
