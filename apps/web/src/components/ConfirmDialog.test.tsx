@@ -105,6 +105,14 @@ describe('ConfirmDialog', () => {
     expect(cancel.nextElementSibling).toBe(confirm);
   });
 
+  it('is named by its title for assistive technology', () => {
+    renderDialog();
+
+    expect(screen.getByRole('dialog', { name: 'Deactivate user' })).toBe(
+      screen.getByTestId('confirm-dialog'),
+    );
+  });
+
   it('styles the confirm button as danger when the action removes data', () => {
     renderDialog({ tone: 'danger' });
 

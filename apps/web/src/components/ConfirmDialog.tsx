@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type ConfirmDialogProps = {
@@ -38,6 +38,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -53,8 +54,16 @@ export function ConfirmDialog({
   }, [open]);
 
   return (
-    <dialog ref={dialogRef} className="sf-dialog" data-testid="confirm-dialog" onCancel={onCancel}>
-      <h2 className="sf-dialog-title">{title}</h2>
+    <dialog
+      ref={dialogRef}
+      className="sf-dialog"
+      aria-labelledby={titleId}
+      data-testid="confirm-dialog"
+      onCancel={onCancel}
+    >
+      <h2 id={titleId} className="sf-dialog-title">
+        {title}
+      </h2>
       <p>{message}</p>
       <div className="sf-actions">
         <button
