@@ -175,17 +175,17 @@ export function ChecklistQuestionsListPage() {
                     >
                       <td>{question.text}</td>
                       <td>
-                        <span className="sf-tags">
+                        <ul className="sf-tags">
                           {question.frequencies.map((frequency) => (
-                            <span
+                            <li
                               key={frequency}
                               className="sf-badge"
                               data-testid={`checklist-question-frequency-tag-${question.id}-${frequency}`}
                             >
                               {t(mapReviewFrequencyToLabelKey(frequency))}
-                            </span>
+                            </li>
                           ))}
-                        </span>
+                        </ul>
                       </td>
                       <td>
                         <div className="sf-actions">

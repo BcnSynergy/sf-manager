@@ -163,6 +163,7 @@ describe('ChecklistQuestionsListPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
   it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
     mockedListChecklistQuestions.mockReturnValueOnce(new Promise(() => {}));
     const { unmount } = renderPage();
@@ -227,6 +228,8 @@ describe('ChecklistQuestionsListPage', () => {
     expect(quarterly).toHaveTextContent('Quarterly');
     expect(annual).toHaveTextContent('Annual');
     expect(quarterly.parentElement).toHaveClass('sf-tags');
+    expect(quarterly.tagName).toBe('LI');
+    expect(quarterly.parentElement?.tagName).toBe('UL');
     expect(annual.parentElement).toBe(quarterly.parentElement);
   });
 
