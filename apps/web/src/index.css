@@ -505,6 +505,13 @@ code {
   font-weight: 400;
 }
 
+/* A titled group of content inside a page, such as one table of a grouped
+   list: full width, its h2 above its content. */
+.sf-section {
+  align-self: stretch;
+  display: grid;
+  gap: var(--space-3);
+}
 /* Loading, empty and error messages that stand in for a table. */
 .sf-empty {
   align-self: stretch;
