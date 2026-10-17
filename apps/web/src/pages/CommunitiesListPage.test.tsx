@@ -260,8 +260,8 @@ describe('CommunitiesListPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveClass('sf-alert', 'sf-alert-danger');
     expect(alert).toBe(screen.getByTestId('communities-list-action-error'));
-    expect(alert.querySelector('p')).toHaveTextContent(
-      new RegExp(`^${i18n.t('community.error.assignmentTargetNotFound')}$`),
+    expect(alert.querySelector('p')?.textContent).toBe(
+      i18n.t('community.error.assignmentTargetNotFound'),
     );
   });
 });
