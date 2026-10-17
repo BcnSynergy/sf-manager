@@ -370,7 +370,8 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `process.cwd()`, so they only work when Vitest runs with `apps/web` as its
   working directory (the workspace scripts and CI do). Run from elsewhere they
   fail with ENOENT instead of checking the imports.
-  `src/styles/check-app-nav-print-suppression.test.ts` has the same limit and
+  `src/styles/check-app-nav-print-suppression.test.ts` (and, since EN-62,
+  `src/styles/index-css-dialog.test.ts`) has the same limit and
   documents why `import.meta.url` does not work under jsdom. A shared helper
   resolving from the Vitest config root would fix both. Origin:
   `td-8-route-code-splitting` (#234) native review, finding `R3-002`, 2026-10-16.
@@ -514,6 +515,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `afterEach` (or note that the block needs real timers) if either happens.
   Origin: `td-38-lazy-page-test-race` PR 1 native review, finding
   `R3-pending-timer-teardown`, 2026-10-17.
+- **EN-67** (web tests): `ConfirmDialog` puts Cancel before the confirm
+  button so the native modal's initial focus lands on Cancel, not on a
+  danger action. The tests pin only the DOM order: jsdom's `showModal` is a
+  polyfill (`apps/web/src/test/setup.ts`) that does not move focus, so
+  `document.activeElement` after opening proves nothing there. It was checked
+  by hand in Chrome. Cover it with a real-browser test (Playwright) if the
+  web E2E suite grows one. Origin: `en-62-confirm-dialog-restyle` PR 1
+  native review, finding `R3-cancel-initial-focus-unproved`, 2026-10-17.
 
 ## Done
 
