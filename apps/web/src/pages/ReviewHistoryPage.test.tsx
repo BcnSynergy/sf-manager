@@ -164,4 +164,45 @@ describe('ReviewHistoryPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListReviewHistory.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('review-history-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListReviewHistory.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('review-history-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListReviewHistory.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('review-history-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('wraps the table, shows Open as a secondary button and the completion time as data', async () => {
+    mockedListReviewHistory.mockResolvedValue([row]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('reviewHistory.list.title') });
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    const open = screen.getByTestId(`review-history-open-${row.id}`);
+    expect(open.tagName).toBe('A');
+    expect(open).toHaveClass('sf-btn');
+    expect(open).not.toHaveClass('sf-btn-primary');
+    expect(open.parentElement).toHaveClass('sf-actions');
+    expect(
+      within(screen.getByTestId(`review-history-row-${row.id}`)).getByText(row.completedAt),
+    ).toHaveClass('sf-data');
+  });
 });

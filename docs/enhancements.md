@@ -523,6 +523,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   by hand in Chrome. Cover it with a real-browser test (Playwright) if the
   web E2E suite grows one. Origin: `en-62-confirm-dialog-restyle` PR 1
   native review, finding `R3-cancel-initial-focus-unproved`, 2026-10-17.
+- **EN-68** (web UI): The review history list shows `completedAt` as the raw
+  ISO string the API returns (for example `2026-10-08T09:36:36.272Z`), in
+  every locale. A localized date and time would read better. The
+  `review-history-ui` spec says nothing about the format, so changing it is
+  observable behavior and goes through SDD. Evidence:
+  `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell. Origin:
+  `ui-restyle-review-history` PR 1 browser pass, 2026-10-17.
 
 ## Done
 

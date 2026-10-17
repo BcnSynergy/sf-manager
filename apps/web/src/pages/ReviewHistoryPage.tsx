@@ -43,8 +43,12 @@ export function ReviewHistoryPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewHistory.list.title')}</h1>
-        <p data-testid="review-history-loading">{t('reviewHistory.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-history-loading">
+          {t('reviewHistory.list.loading')}
+        </p>
       </main>
     );
   }
@@ -52,50 +56,63 @@ export function ReviewHistoryPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('reviewHistory.list.title')}</h1>
-        <p data-testid="review-history-error">{t('reviewHistory.list.error')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-history-error">
+          {t('reviewHistory.list.error')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('reviewHistory.list.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('reviewHistory.list.title')}</h1>
+      </header>
       {rows.length === 0 ? (
-        <p data-testid="review-history-empty">{t('reviewHistory.list.empty')}</p>
+        <p className="sf-empty" data-testid="review-history-empty">
+          {t('reviewHistory.list.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('reviewHistory.list.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('reviewHistory.list.columnCommunity')}</th>
-              <th scope="col">{t('reviewHistory.list.columnPerformer')}</th>
-              <th scope="col">{t('reviewHistory.list.columnCompletedAt')}</th>
-              <th scope="col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} data-testid={`review-history-row-${row.id}`}>
-                <td data-testid={`review-history-community-${row.id}`}>
-                  {row.communityName || t('reviewHistory.list.communityUnknown')}
-                </td>
-                <td data-testid={`review-history-performer-${row.id}`}>
-                  {row.performedByEmail || t('reviewHistory.list.performerUnknown')}
-                </td>
-                <td>{row.completedAt}</td>
-                <td>
-                  <Link
-                    to={`/review-history/${row.id}`}
-                    data-testid={`review-history-open-${row.id}`}
-                  >
-                    {t('reviewHistory.list.openLink')}
-                  </Link>
-                </td>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('reviewHistory.list.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('reviewHistory.list.columnCommunity')}</th>
+                <th scope="col">{t('reviewHistory.list.columnPerformer')}</th>
+                <th scope="col">{t('reviewHistory.list.columnCompletedAt')}</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} data-testid={`review-history-row-${row.id}`}>
+                  <td data-testid={`review-history-community-${row.id}`}>
+                    {row.communityName || t('reviewHistory.list.communityUnknown')}
+                  </td>
+                  <td data-testid={`review-history-performer-${row.id}`}>
+                    {row.performedByEmail || t('reviewHistory.list.performerUnknown')}
+                  </td>
+                  <td className="sf-data">{row.completedAt}</td>
+                  <td>
+                    <div className="sf-actions">
+                      <Link
+                        to={`/review-history/${row.id}`}
+                        className="sf-btn"
+                        data-testid={`review-history-open-${row.id}`}
+                      >
+                        {t('reviewHistory.list.openLink')}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
