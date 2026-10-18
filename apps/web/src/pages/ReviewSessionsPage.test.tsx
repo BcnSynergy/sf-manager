@@ -101,4 +101,61 @@ describe('ReviewSessionsPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
+  it('puts the heading in a page header and the loading, empty and error messages in empty-state boxes', async () => {
+    mockedListOwnReviewSessions.mockReturnValueOnce(new Promise(() => {}));
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('review-sessions-loading')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    unmount();
+
+    mockedListOwnReviewSessions.mockResolvedValueOnce([]);
+    const empty = renderPage();
+    expect(await screen.findByTestId('review-sessions-empty')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+    empty.unmount();
+
+    mockedListOwnReviewSessions.mockRejectedValueOnce(new ApiError(0));
+    renderPage();
+    expect(await screen.findByTestId('review-sessions-error')).toHaveClass('sf-empty');
+    expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveClass(
+      'sf-page-header',
+    );
+  });
+
+  it('shows Start as the primary button and History as a secondary one in the page header', async () => {
+    mockedListOwnReviewSessions.mockResolvedValue([]);
+
+    renderPage();
+
+    const start = await screen.findByTestId('review-sessions-start-link');
+    const history = screen.getByTestId('review-history-entry-link');
+    expect(start).toHaveClass('sf-btn', 'sf-btn-primary');
+    expect(history).toHaveClass('sf-btn');
+    expect(history).not.toHaveClass('sf-btn-primary');
+    expect(start.parentElement).toHaveClass('sf-actions');
+    expect(history.parentElement).toBe(start.parentElement);
+    expect(start.closest('header')).toHaveClass('sf-page-header');
+  });
+
+  it('wraps the table, shows Resume as a secondary button and the start time as data', async () => {
+    mockedListOwnReviewSessions.mockResolvedValue([session]);
+
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: i18n.t('reviewSession.entry.title') });
+    expect(table.parentElement).toHaveClass('sf-table-wrap');
+    const resume = screen.getByTestId(`review-sessions-resume-${session.id}`);
+    expect(resume.tagName).toBe('A');
+    expect(resume).toHaveClass('sf-btn');
+    expect(resume).not.toHaveClass('sf-btn-primary');
+    expect(resume.parentElement).toHaveClass('sf-actions');
+    expect(
+      within(screen.getByTestId(`review-sessions-row-${session.id}`)).getByText(session.startedAt),
+    ).toHaveClass('sf-data');
+  });
 });
