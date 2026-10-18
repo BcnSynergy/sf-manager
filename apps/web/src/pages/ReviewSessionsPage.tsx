@@ -44,8 +44,12 @@ export function ReviewSessionsPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewSession.entry.title')}</h1>
-        <p data-testid="review-sessions-loading">{t('reviewSession.entry.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.entry.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-sessions-loading">
+          {t('reviewSession.entry.loading')}
+        </p>
       </main>
     );
   }
@@ -53,48 +57,67 @@ export function ReviewSessionsPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('reviewSession.entry.title')}</h1>
-        <p data-testid="review-sessions-error">{t(loadErrorKey ?? 'common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.entry.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-sessions-error">
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('reviewSession.entry.title')}</h1>
-      <Link to="/review-sessions/new" data-testid="review-sessions-start-link">
-        {t('reviewSession.entry.startLink')}
-      </Link>
-      <Link to="/review-history" data-testid="review-history-entry-link">
-        {t('reviewSession.entry.historyLink')}
-      </Link>
+      <header className="sf-page-header">
+        <h1>{t('reviewSession.entry.title')}</h1>
+        <div className="sf-actions">
+          <Link
+            to="/review-sessions/new"
+            className="sf-btn sf-btn-primary"
+            data-testid="review-sessions-start-link"
+          >
+            {t('reviewSession.entry.startLink')}
+          </Link>
+          <Link to="/review-history" className="sf-btn" data-testid="review-history-entry-link">
+            {t('reviewSession.entry.historyLink')}
+          </Link>
+        </div>
+      </header>
       {sessions.length === 0 ? (
-        <p data-testid="review-sessions-empty">{t('reviewSession.entry.empty')}</p>
+        <p className="sf-empty" data-testid="review-sessions-empty">
+          {t('reviewSession.entry.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('reviewSession.entry.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('reviewSession.entry.columnStarted')}</th>
-              <th scope="col"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.map((session) => (
-              <tr key={session.id} data-testid={`review-sessions-row-${session.id}`}>
-                <td>{session.startedAt}</td>
-                <td>
-                  <Link
-                    to={`/review-sessions/${session.id}`}
-                    data-testid={`review-sessions-resume-${session.id}`}
-                  >
-                    {t('reviewSession.entry.resumeLink')}
-                  </Link>
-                </td>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('reviewSession.entry.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('reviewSession.entry.columnStarted')}</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sessions.map((session) => (
+                <tr key={session.id} data-testid={`review-sessions-row-${session.id}`}>
+                  <td className="sf-data">{session.startedAt}</td>
+                  <td>
+                    <div className="sf-actions">
+                      <Link
+                        to={`/review-sessions/${session.id}`}
+                        className="sf-btn"
+                        data-testid={`review-sessions-resume-${session.id}`}
+                      >
+                        {t('reviewSession.entry.resumeLink')}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );

@@ -493,9 +493,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   and error states in one test that renders and unmounts the page three
   times (`UsersListPage.test.tsx`, `CommunitiesListPage.test.tsx`,
   `MaintenanceCompaniesListPage.test.tsx`, and since their restyles the
-  review templates, checklist questions and review history lists: "puts the
-  heading in a page header and the loading, empty and error messages in
-  empty-state boxes"). A failure in the first state hides the other two.
+  review templates, checklist questions, review history and review sessions
+  lists: "puts the heading in a page header and the loading, empty and error
+  messages in empty-state boxes"). A failure in the first state hides the
+  other two.
   Split it into one test per state (or `it.each`) on all of these pages
   together, keeping them consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
   2026-10-17.
@@ -524,16 +525,20 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   by hand in Chrome. Cover it with a real-browser test (Playwright) if the
   web E2E suite grows one. Origin: `en-62-confirm-dialog-restyle` PR 1
   native review, finding `R3-cancel-initial-focus-unproved`, 2026-10-17.
-- **EN-68** (web UI): The review history list shows `completedAt` as the raw
-  ISO string the API returns (for example `2026-10-08T09:36:36.272Z`), in
-  every locale. A localized date and time would read better. The
-  `review-history-ui` spec says nothing about the format, so changing it is
-  observable behavior and goes through SDD. Evidence:
-  `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell. Origin:
-  `ui-restyle-review-history` PR 1 browser pass, 2026-10-17.
+- **EN-68** (web UI): The review history list shows `completedAt`, and the
+  review sessions list shows `startedAt`, as the raw ISO string the API
+  returns (for example `2026-10-08T09:36:36.272Z`), in every locale. A
+  localized date and time would read better. Neither the `review-history-ui`
+  nor the `review-session-ui` spec says anything about the format, so
+  changing it is observable behavior and goes through SDD. Evidence:
+  `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell and
+  `apps/web/src/pages/ReviewSessionsPage.tsx` started-at cell. Origin:
+  `ui-restyle-review-history` PR 1 browser pass, 2026-10-17; widened in
+  `ui-restyle-review-sessions` PR 1, 2026-10-18.
 - **EN-69** (web): Every restyled list page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
-  loading, error and loaded branches (three times per page, seven pages so far, the review schedule included).
+  loading, error and loaded branches (three times per page, eight pages so
+  far, the review schedule and review sessions included).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
