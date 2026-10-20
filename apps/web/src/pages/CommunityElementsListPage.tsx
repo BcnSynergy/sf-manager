@@ -64,8 +64,12 @@ export function CommunityElementsListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('inspectableElement.list.title')}</h1>
-        <p data-testid="community-elements-list-loading">{t('inspectableElement.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('inspectableElement.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="community-elements-list-loading">
+          {t('inspectableElement.list.loading')}
+        </p>
       </main>
     );
   }
@@ -73,8 +77,10 @@ export function CommunityElementsListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('inspectableElement.list.title')}</h1>
-        <p data-testid="community-elements-list-error">
+        <header className="sf-page-header">
+          <h1>{t('inspectableElement.list.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="community-elements-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
       </main>
@@ -83,85 +89,99 @@ export function CommunityElementsListPage() {
 
   return (
     <main>
-      <h1>{t('inspectableElement.list.title')}</h1>
-      <Link
-        to={`/communities/${communityId}/inspectable-elements/new`}
-        data-testid="community-elements-list-create-link"
-      >
-        {t('inspectableElement.list.createLink')}
-      </Link>
+      <header className="sf-page-header">
+        <h1>{t('inspectableElement.list.title')}</h1>
+        <Link
+          to={`/communities/${communityId}/inspectable-elements/new`}
+          className="sf-btn sf-btn-primary"
+          data-testid="community-elements-list-create-link"
+        >
+          {t('inspectableElement.list.createLink')}
+        </Link>
+      </header>
       {elements.length === 0 ? (
-        <p data-testid="community-elements-list-empty">{t('inspectableElement.list.empty')}</p>
+        <p className="sf-empty" data-testid="community-elements-list-empty">
+          {t('inspectableElement.list.empty')}
+        </p>
       ) : (
-        <table>
-          <caption className="visually-hidden">{t('inspectableElement.list.title')}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('inspectableElement.list.columnType')}</th>
-              <th scope="col">{t('inspectableElement.list.columnName')}</th>
-              <th scope="col">{t('inspectableElement.list.columnDescription')}</th>
-              <th scope="col">{t('inspectableElement.list.columnLocation')}</th>
-              <th scope="col">{t('inspectableElement.list.columnSerialNumber')}</th>
-              <th scope="col">{t('inspectableElement.list.columnInstalledAt')}</th>
-              <th scope="col">{t('inspectableElement.list.columnCode')}</th>
-              <th scope="col">{t('inspectableElement.list.columnState')}</th>
-              <th scope="col">{t('inspectableElement.list.columnActions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {elements.map((row) => {
-              const decommissioned = row.deactivatedAt !== null;
-              return (
-                <tr key={row.id} data-testid={`community-elements-list-row-${row.id}`}>
-                  <td>{t(mapElementTypeToLabelKey(row.elementType))}</td>
-                  <td>{row.name}</td>
-                  <td>{row.description ?? ''}</td>
-                  <td>{row.location}</td>
-                  <td>{row.serialNumber ?? ''}</td>
-                  <td>{row.installedAt}</td>
-                  <td>{row.code}</td>
-                  <td>
-                    {/* inspectable-element-admin-ui spec.md "Element State
-                      Shown in the List": rendered through a localized label,
-                      never a raw field value; `data-element-state`
-                      distinguishes the two states visually beyond the
-                      label's own text. */}
-                    <span
-                      data-testid={`community-elements-list-state-${row.id}`}
-                      data-element-state={decommissioned ? 'decommissioned' : 'active'}
-                    >
-                      {t(
-                        decommissioned
-                          ? 'inspectableElement.list.stateDecommissioned'
-                          : 'inspectableElement.list.stateActive',
-                      )}
-                    </span>
-                  </td>
-                  <td>
-                    {/* design.md Decision 6: print is per-element only — no
-                      list-level "print all" control exists anywhere on this
-                      page. */}
-                    <Link
-                      to={`/communities/${communityId}/inspectable-elements/${row.id}/label`}
-                      data-testid={`community-elements-list-print-${row.id}`}
-                    >
-                      {t('inspectableElement.list.printLink')}
-                    </Link>{' '}
-                    {/* review-history-per-element/design.md Decision 7: the
-                      Print link's shape verbatim, one new per-row link to
-                      the element's review-history page. */}
-                    <Link
-                      to={`/communities/${communityId}/inspectable-elements/${row.id}/history`}
-                      data-testid={`community-elements-list-history-${row.id}`}
-                    >
-                      {t('inspectableElement.list.historyLink')}
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('inspectableElement.list.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('inspectableElement.list.columnType')}</th>
+                <th scope="col">{t('inspectableElement.list.columnName')}</th>
+                <th scope="col">{t('inspectableElement.list.columnDescription')}</th>
+                <th scope="col">{t('inspectableElement.list.columnLocation')}</th>
+                <th scope="col">{t('inspectableElement.list.columnSerialNumber')}</th>
+                <th scope="col">{t('inspectableElement.list.columnInstalledAt')}</th>
+                <th scope="col">{t('inspectableElement.list.columnCode')}</th>
+                <th scope="col">{t('inspectableElement.list.columnState')}</th>
+                <th scope="col">{t('inspectableElement.list.columnActions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {elements.map((row) => {
+                const decommissioned = row.deactivatedAt !== null;
+                return (
+                  <tr key={row.id} data-testid={`community-elements-list-row-${row.id}`}>
+                    <td>{t(mapElementTypeToLabelKey(row.elementType))}</td>
+                    <td>{row.name}</td>
+                    <td>{row.description ?? ''}</td>
+                    <td>{row.location}</td>
+                    <td className={row.serialNumber === null ? undefined : 'sf-data'}>
+                      {row.serialNumber ?? ''}
+                    </td>
+                    <td className="sf-data">{row.installedAt}</td>
+                    <td className="sf-data">{row.code}</td>
+                    <td>
+                      {/* inspectable-element-admin-ui spec.md "Element State
+                        Shown in the List": rendered through a localized label,
+                        never a raw field value; `data-element-state`
+                        distinguishes the two states visually beyond the
+                        label's own text. */}
+                      <span
+                        data-testid={`community-elements-list-state-${row.id}`}
+                        className={decommissioned ? 'sf-badge' : 'sf-badge sf-badge-success'}
+                        data-element-state={decommissioned ? 'decommissioned' : 'active'}
+                      >
+                        {t(
+                          decommissioned
+                            ? 'inspectableElement.list.stateDecommissioned'
+                            : 'inspectableElement.list.stateActive',
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="sf-actions">
+                        {/* design.md Decision 6: print is per-element only — no
+                          list-level "print all" control exists anywhere on
+                          this page. */}
+                        <Link
+                          to={`/communities/${communityId}/inspectable-elements/${row.id}/label`}
+                          className="sf-btn"
+                          data-testid={`community-elements-list-print-${row.id}`}
+                        >
+                          {t('inspectableElement.list.printLink')}
+                        </Link>
+                        {/* review-history-per-element/design.md Decision 7: the
+                          Print link's shape verbatim, one new per-row link to
+                          the element's review-history page. */}
+                        <Link
+                          to={`/communities/${communityId}/inspectable-elements/${row.id}/history`}
+                          className="sf-btn"
+                          data-testid={`community-elements-list-history-${row.id}`}
+                        >
+                          {t('inspectableElement.list.historyLink')}
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );

@@ -188,4 +188,80 @@ describe('CommunityElementsListPage', () => {
     }
     expect(table.querySelector('[scope="row"]')).toBeNull();
   });
+
+  describe('design system styling', () => {
+    it('renders the loading state as an sf-empty line under an sf-page-header', () => {
+      mockedListInspectableElements.mockReturnValue(new Promise(() => {}));
+
+      renderPage();
+
+      expect(screen.getByTestId('community-elements-list-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the empty state as an sf-empty line under an sf-page-header', async () => {
+      mockedListInspectableElements.mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await screen.findByTestId('community-elements-list-empty')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the error state as an sf-empty line under an sf-page-header', async () => {
+      mockedListInspectableElements.mockRejectedValue(new ApiError(0));
+
+      renderPage();
+
+      expect(await screen.findByTestId('community-elements-list-error')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the create link as the primary action in the page header', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+
+      renderPage();
+
+      const create = await screen.findByTestId('community-elements-list-create-link');
+      expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(create.parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('wraps the table, shows codes and dates as data, and renders row links as secondary buttons', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage();
+
+      const table = await screen.findByRole('table');
+      expect(table.parentElement).toHaveClass('sf-table-wrap');
+
+      const row = screen.getByTestId(`community-elements-list-row-${elementA.id}`);
+      for (const value of [elementA.serialNumber as string, elementA.installedAt, elementA.code]) {
+        expect(within(row).getByText(value)).toHaveClass('sf-data');
+      }
+      // A missing serial number leaves its cell plain, not an empty data cell.
+      const rowB = screen.getByTestId(`community-elements-list-row-${elementB.id}`);
+      expect(rowB.querySelectorAll('td.sf-data')).toHaveLength(2);
+
+      const print = screen.getByTestId(`community-elements-list-print-${elementA.id}`);
+      const history = screen.getByTestId(`community-elements-list-history-${elementA.id}`);
+      for (const link of [print, history]) {
+        expect(link).toHaveClass('sf-btn');
+        expect(link).not.toHaveClass('sf-btn-primary');
+        expect(link.parentElement).toHaveClass('sf-actions');
+      }
+    });
+
+    it('renders the state as a badge: success when active, neutral when decommissioned', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
+
+      renderPage();
+
+      const stateA = await screen.findByTestId(`community-elements-list-state-${elementA.id}`);
+      const stateB = screen.getByTestId(`community-elements-list-state-${elementB.id}`);
+      expect(stateA).toHaveClass('sf-badge', 'sf-badge-success');
+      expect(stateB).toHaveClass('sf-badge');
+      expect(stateB).not.toHaveClass('sf-badge-success');
+    });
+  });
 });
