@@ -525,21 +525,24 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   by hand in Chrome. Cover it with a real-browser test (Playwright) if the
   web E2E suite grows one. Origin: `en-62-confirm-dialog-restyle` PR 1
   native review, finding `R3-cancel-initial-focus-unproved`, 2026-10-17.
-- **EN-68** (web UI): The review history list shows `completedAt`, and the
-  review sessions list shows `startedAt`, as the raw ISO string the API
-  returns (for example `2026-10-08T09:36:36.272Z`), in every locale. A
-  localized date and time would read better. Neither the `review-history-ui`
-  nor the `review-session-ui` spec says anything about the format, so
-  changing it is observable behavior and goes through SDD. Evidence:
-  `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell and
-  `apps/web/src/pages/ReviewSessionsPage.tsx` started-at cell. Origin:
-  `ui-restyle-review-history` PR 1 browser pass, 2026-10-17; widened in
-  `ui-restyle-review-sessions` PR 1, 2026-10-18.
+- **EN-68** (web UI): The review history list shows `completedAt`, the
+  review sessions list shows `startedAt`, and the element review history
+  shows each entry's `recordedAt`, as the raw ISO string the API returns
+  (for example `2026-10-08T09:36:36.272Z`), in every locale. A localized
+  date and time would read better. Neither the `review-history-ui` nor the
+  `review-session-ui` spec says anything about the format, so changing it is
+  observable behavior and goes through SDD. Evidence:
+  `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell,
+  `apps/web/src/pages/ReviewSessionsPage.tsx` started-at cell and
+  `apps/web/src/pages/ElementReviewHistoryPage.tsx` recorded-at cell.
+  Origin: `ui-restyle-review-history` PR 1 browser pass, 2026-10-17; widened
+  in `ui-restyle-review-sessions` PR 1, 2026-10-18, and
+  `ui-restyle-element-history` PR 1, 2026-10-20.
 - **EN-69** (web): Every restyled list page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
-  loading, error and loaded branches (three times per page, nine pages so
-  far, the review schedule, review sessions and community elements
-  included).
+  loading, error and loaded branches (three times per page, ten pages so
+  far, the review schedule, review sessions, community elements and element
+  review history included).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
