@@ -226,6 +226,7 @@ describe('CommunityDetailPage', () => {
 
       const name = await screen.findByTestId('community-detail-name');
       const list = name.closest('dl');
+      expect(list).not.toBeNull();
       expect(list?.parentElement).toHaveClass('sf-panel');
       expect(
         within(list as HTMLElement)
@@ -241,7 +242,9 @@ describe('CommunityDetailPage', () => {
 
       const link = await screen.findByTestId('community-detail-elements-link');
       expect(link).toHaveClass('sf-btn', 'sf-btn-primary');
-      expect(link.parentElement).toHaveClass('sf-page-header');
+      expect(link.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
     });
   });
 });

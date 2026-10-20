@@ -112,7 +112,7 @@ export function CommunityDetailPage() {
       )}
 
       {loadState === 'loaded' && community && (
-        <section className="sf-panel">
+        <div className="sf-panel">
           <dl>
             <dt>{t('community.detail.nameLabel')}</dt>
             <dd data-testid="community-detail-name">{community.name}</dd>
@@ -123,7 +123,7 @@ export function CommunityDetailPage() {
               {t(mapLocaleToLabelKey(community.locale))}
             </dd>
           </dl>
-        </section>
+        </div>
       )}
 
       {id !== undefined && loadState !== 'not-found' && (
