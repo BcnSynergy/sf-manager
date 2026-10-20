@@ -368,7 +368,8 @@ describe('AssignmentSection', () => {
 
       const reactivate = screen.getByTestId('representatives-reactivate-user-deactivated');
       expect(reactivate).toHaveClass('sf-btn');
-      expect(reactivate).not.toHaveClass('sf-btn-danger', 'sf-btn-primary');
+      expect(reactivate).not.toHaveClass('sf-btn-danger');
+      expect(reactivate).not.toHaveClass('sf-btn-primary');
     });
 
     it('renders the assign submit as the primary button', async () => {
