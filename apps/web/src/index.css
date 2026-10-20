@@ -593,6 +593,18 @@ code {
   list-style: none;
 }
 
+/* Form layout: fields further apart than a label from its own control. The
+   controls keep the global input/select styles above. */
+.sf-form {
+  display: grid;
+  gap: var(--space-4);
+}
+/* One label with its control (and, later, its hint or error). */
+.sf-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
 /* Loading, empty and error messages that stand in for a table. */
 .sf-empty {
   align-self: stretch;

@@ -109,4 +109,56 @@ describe('CommunityEditPage', () => {
     expect(await screen.findByTestId('community-edit-error')).toBeInTheDocument();
     expect(screen.queryByTestId('communities-list-sentinel')).not.toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedListCommunities.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage(communityA.id);
+      expect(screen.getByTestId('community-edit-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedListCommunities.mockResolvedValue([communityA]);
+      const notFound = renderPage('community-missing');
+      expect(await screen.findByTestId('community-edit-not-found')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      notFound.unmount();
+
+      mockedListCommunities.mockRejectedValue(new ApiError(0));
+      renderPage(communityA.id);
+      expect(await screen.findByTestId('community-edit-error-state')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form under a page header, one field group per label and control', async () => {
+      mockedListCommunities.mockResolvedValue([communityA]);
+      renderPage(communityA.id);
+
+      const submit = await screen.findByTestId('community-edit-submit');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      for (const field of ['name', 'address', 'locale']) {
+        const control = screen.getByTestId(`community-edit-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('renders the submit as the primary action and the form error as a danger alert', async () => {
+      mockedListCommunities.mockResolvedValue([communityA]);
+      mockedUpdateCommunity.mockRejectedValue(new ApiError(400));
+      renderPage(communityA.id);
+
+      const submit = await screen.findByTestId('community-edit-submit');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+
+      fireEvent.click(submit);
+
+      const error = await screen.findByTestId('community-edit-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

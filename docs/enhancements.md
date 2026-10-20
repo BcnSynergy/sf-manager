@@ -543,10 +543,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
   loading, error and loaded branches (three or four times per page,
-  fourteen pages so far, the review schedule, review sessions, community
+  sixteen pages so far, the review schedule, review sessions, community
   elements, element review history, review history detail, review session
-  detail and review template detail included; the community detail page
-  has it once).
+  detail, review template detail and the community create and edit forms
+  included; the community detail page has it once).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,

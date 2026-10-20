@@ -76,8 +76,12 @@ export function CommunityEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('community.edit.title')}</h1>
-        <p data-testid="community-edit-loading">{t('community.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('community.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="community-edit-loading">
+          {t('community.list.loading')}
+        </p>
       </main>
     );
   }
@@ -85,8 +89,12 @@ export function CommunityEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('community.edit.title')}</h1>
-        <p data-testid="community-edit-not-found">{t('community.edit.notFound')}</p>
+        <header className="sf-page-header">
+          <h1>{t('community.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="community-edit-not-found">
+          {t('community.edit.notFound')}
+        </p>
       </main>
     );
   }
@@ -94,51 +102,77 @@ export function CommunityEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('community.edit.title')}</h1>
-        <p data-testid="community-edit-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('community.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="community-edit-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('community.edit.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('community.edit.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="community-edit-name-input">{t('community.edit.nameLabel')}</label>
-        <input
-          id="community-edit-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="community-edit-name"
-        />
-        <label htmlFor="community-edit-address-input">{t('community.edit.addressLabel')}</label>
-        <input
-          id="community-edit-address-input"
-          type="text"
-          value={address}
-          onChange={(event) => setAddress(event.target.value)}
-          data-testid="community-edit-address"
-        />
-        <label htmlFor="community-edit-locale-input">{t('community.edit.localeLabel')}</label>
-        <select
-          id="community-edit-locale-input"
-          value={locale}
-          onChange={(event) => setLocale(event.target.value as Locale)}
-          data-testid="community-edit-locale"
-        >
-          {LOCALE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapLocaleToLabelKey(option))}
-            </option>
-          ))}
-        </select>
-        {error && <p data-testid="community-edit-error">{error}</p>}
-        <button type="submit" data-testid="community-edit-submit" disabled={submitting}>
-          {t('community.edit.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="community-edit-name-input">{t('community.edit.nameLabel')}</label>
+          <input
+            id="community-edit-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="community-edit-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="community-edit-address-input">{t('community.edit.addressLabel')}</label>
+          <input
+            id="community-edit-address-input"
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            data-testid="community-edit-address"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="community-edit-locale-input">{t('community.edit.localeLabel')}</label>
+          <select
+            id="community-edit-locale-input"
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as Locale)}
+            data-testid="community-edit-locale"
+          >
+            {LOCALE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapLocaleToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && (
+          <div className="sf-alert sf-alert-danger" role="alert" data-testid="community-edit-error">
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="community-edit-submit"
+            disabled={submitting}
+          >
+            {t('community.edit.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );
