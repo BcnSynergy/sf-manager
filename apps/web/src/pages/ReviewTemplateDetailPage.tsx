@@ -15,7 +15,10 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
-import { mapTemplateStatusToLabelKey } from '../review-template/template-status-labels';
+import {
+  mapTemplateStatusToBadgeClass,
+  mapTemplateStatusToLabelKey,
+} from '../review-template/template-status-labels';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
 
@@ -221,8 +224,12 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewTemplate.detail.title')}</h1>
-        <p data-testid="review-template-detail-loading">{t('reviewTemplate.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewTemplate.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-template-detail-loading">
+          {t('reviewTemplate.list.loading')}
+        </p>
       </main>
     );
   }
@@ -230,8 +237,12 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('reviewTemplate.detail.title')}</h1>
-        <p data-testid="review-template-detail-not-found">{t('reviewTemplate.detail.notFound')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewTemplate.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-template-detail-not-found">
+          {t('reviewTemplate.detail.notFound')}
+        </p>
       </main>
     );
   }
@@ -239,8 +250,12 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'error' || template === null) {
     return (
       <main>
-        <h1>{t('reviewTemplate.detail.title')}</h1>
-        <p data-testid="review-template-detail-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewTemplate.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-template-detail-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
@@ -266,67 +281,134 @@ export function ReviewTemplateDetailPage() {
 
   return (
     <main>
-      <h1>{t('reviewTemplate.detail.title')}</h1>
-      <dl>
-        <dt>{t('reviewTemplate.detail.nameLabel')}</dt>
-        <dd data-testid="review-template-detail-name">{template.name}</dd>
-        <dt>{t('reviewTemplate.detail.typeLabel')}</dt>
-        <dd data-testid="review-template-detail-type">
-          {t(mapElementTypeToLabelKey(template.elementType))}
-        </dd>
-        <dt>{t('reviewTemplate.detail.frequencyLabel')}</dt>
-        <dd data-testid="review-template-detail-frequency">
-          {t(mapReviewFrequencyToLabelKey(template.frequency))}
-        </dd>
-        <dt>{t('reviewTemplate.detail.versionLabel')}</dt>
-        <dd data-testid="review-template-detail-version">
-          {template.version ?? t('reviewTemplate.list.noVersion')}
-        </dd>
-        <dt>{t('reviewTemplate.detail.statusLabel')}</dt>
-        <dd data-testid="review-template-detail-status">
-          {t(mapTemplateStatusToLabelKey(template.status))}
-        </dd>
-      </dl>
+      <header className="sf-page-header">
+        <h1>{t('reviewTemplate.detail.title')}</h1>
+        {isDraft && (
+          <div className="sf-actions">
+            <button
+              type="button"
+              className="sf-btn sf-btn-primary"
+              data-testid="review-template-detail-activate"
+              onClick={requestActivate}
+              disabled={activating}
+            >
+              {t('reviewTemplate.detail.activateLabel')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn-danger"
+              data-testid="review-template-detail-delete"
+              onClick={requestDelete}
+              disabled={deleting}
+            >
+              {t('reviewTemplate.detail.deleteLabel')}
+            </button>
+          </div>
+        )}
+      </header>
 
-      <section data-testid="review-template-detail-questions">
+      {isDraft && activateError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="review-template-detail-activate-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{activateError}</p>
+        </div>
+      )}
+      {isDraft && deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="review-template-detail-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
+
+      <div className="sf-panel">
+        <dl>
+          <dt>{t('reviewTemplate.detail.nameLabel')}</dt>
+          <dd data-testid="review-template-detail-name">{template.name}</dd>
+          <dt>{t('reviewTemplate.detail.typeLabel')}</dt>
+          <dd data-testid="review-template-detail-type">
+            {t(mapElementTypeToLabelKey(template.elementType))}
+          </dd>
+          <dt>{t('reviewTemplate.detail.frequencyLabel')}</dt>
+          <dd data-testid="review-template-detail-frequency">
+            {t(mapReviewFrequencyToLabelKey(template.frequency))}
+          </dd>
+          <dt>{t('reviewTemplate.detail.versionLabel')}</dt>
+          <dd
+            className={template.version === null ? undefined : 'sf-data'}
+            data-testid="review-template-detail-version"
+          >
+            {template.version ?? t('reviewTemplate.list.noVersion')}
+          </dd>
+          <dt>{t('reviewTemplate.detail.statusLabel')}</dt>
+          <dd data-testid="review-template-detail-status">
+            <span className={mapTemplateStatusToBadgeClass(template.status)}>
+              {t(mapTemplateStatusToLabelKey(template.status))}
+            </span>
+          </dd>
+        </dl>
+      </div>
+
+      <section className="sf-section" data-testid="review-template-detail-questions">
         <h2>{t('reviewTemplate.detail.questionsTitle')}</h2>
         {selectedQuestionIds.length === 0 ? (
-          <p data-testid="review-template-detail-questions-empty">
+          <p className="sf-empty" data-testid="review-template-detail-questions-empty">
             {t('reviewTemplate.detail.questionsEmpty')}
           </p>
         ) : (
-          <ol>
+          // An <ol>: the order is the template's question order.
+          <ol className="sf-stack">
             {selectedQuestionIds.map((questionId, index) => (
-              <li key={questionId} data-testid={`review-template-detail-question-${questionId}`}>
-                <span>{selectedQuestionText.get(questionId) ?? ''}</span>
-                {isDraft && (
-                  <>
-                    <button
-                      type="button"
-                      data-testid={`review-template-detail-question-up-${questionId}`}
-                      onClick={() => moveQuestion(questionId, -1)}
-                      disabled={index === 0 || saving}
-                    >
-                      {t('reviewTemplate.detail.moveUp')}
-                    </button>
-                    <button
-                      type="button"
-                      data-testid={`review-template-detail-question-down-${questionId}`}
-                      onClick={() => moveQuestion(questionId, 1)}
-                      disabled={index === selectedQuestionIds.length - 1 || saving}
-                    >
-                      {t('reviewTemplate.detail.moveDown')}
-                    </button>
-                    <button
-                      type="button"
-                      data-testid={`review-template-detail-question-remove-${questionId}`}
-                      onClick={() => removeQuestion(questionId)}
-                      disabled={saving}
-                    >
-                      {t('reviewTemplate.detail.removeQuestion')}
-                    </button>
-                  </>
-                )}
+              <li
+                key={questionId}
+                className="sf-panel"
+                data-testid={`review-template-detail-question-${questionId}`}
+              >
+                <div className="sf-panel-header">
+                  <span>{selectedQuestionText.get(questionId) ?? ''}</span>
+                  {isDraft && (
+                    <div className="sf-actions">
+                      <button
+                        type="button"
+                        className="sf-btn sf-btn-ghost"
+                        data-testid={`review-template-detail-question-up-${questionId}`}
+                        onClick={() => moveQuestion(questionId, -1)}
+                        disabled={index === 0 || saving}
+                      >
+                        {t('reviewTemplate.detail.moveUp')}
+                      </button>
+                      <button
+                        type="button"
+                        className="sf-btn sf-btn-ghost"
+                        data-testid={`review-template-detail-question-down-${questionId}`}
+                        onClick={() => moveQuestion(questionId, 1)}
+                        disabled={index === selectedQuestionIds.length - 1 || saving}
+                      >
+                        {t('reviewTemplate.detail.moveDown')}
+                      </button>
+                      <button
+                        type="button"
+                        className="sf-btn sf-btn-ghost"
+                        data-testid={`review-template-detail-question-remove-${questionId}`}
+                        onClick={() => removeQuestion(questionId)}
+                        disabled={saving}
+                      >
+                        {t('reviewTemplate.detail.removeQuestion')}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ol>
@@ -334,7 +416,7 @@ export function ReviewTemplateDetailPage() {
       </section>
 
       {isDraft && (
-        <section data-testid="review-template-detail-picker">
+        <section className="sf-section" data-testid="review-template-detail-picker">
           <h2>{t('reviewTemplate.detail.pickerTitle')}</h2>
           <label htmlFor="review-template-detail-show-all-frequencies">
             <input
@@ -347,63 +429,58 @@ export function ReviewTemplateDetailPage() {
             {t('reviewTemplate.detail.showAllFrequencies')}
           </label>
           {poolLoaded && pool.length === 0 ? (
-            <p data-testid="review-template-detail-pool-empty">
+            <p className="sf-empty" data-testid="review-template-detail-pool-empty">
               {t('reviewTemplate.detail.poolEmpty')}
             </p>
           ) : (
-            <ul>
+            <ul className="sf-stack">
               {availableQuestions.map((question) => (
                 <li
                   key={question.id}
+                  className="sf-panel"
                   data-testid={`review-template-detail-picker-item-${question.id}`}
                 >
-                  <span>{question.text}</span>
-                  <button
-                    type="button"
-                    data-testid={`review-template-detail-picker-add-${question.id}`}
-                    onClick={() => addQuestion(question)}
-                    disabled={saving}
-                  >
-                    {t('reviewTemplate.detail.addQuestion')}
-                  </button>
+                  <div className="sf-panel-header">
+                    <span>{question.text}</span>
+                    <button
+                      type="button"
+                      className="sf-btn"
+                      data-testid={`review-template-detail-picker-add-${question.id}`}
+                      onClick={() => addQuestion(question)}
+                      disabled={saving}
+                    >
+                      {t('reviewTemplate.detail.addQuestion')}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-          {saveError && <p data-testid="review-template-detail-save-error">{saveError}</p>}
-          <button
-            type="button"
-            data-testid="review-template-detail-save"
-            onClick={() => void handleSave()}
-            disabled={saving}
-          >
-            {t('reviewTemplate.detail.saveLabel')}
-          </button>
-        </section>
-      )}
-
-      {isDraft && (
-        <section>
-          {activateError && (
-            <p data-testid="review-template-detail-activate-error">{activateError}</p>
+          {saveError && (
+            <div
+              className="sf-alert sf-alert-danger"
+              role="alert"
+              data-testid="review-template-detail-save-error"
+            >
+              <span className="sf-alert-icon" aria-hidden="true">
+                !
+              </span>
+              <p>{saveError}</p>
+            </div>
           )}
-          <button
-            type="button"
-            data-testid="review-template-detail-activate"
-            onClick={requestActivate}
-            disabled={activating}
-          >
-            {t('reviewTemplate.detail.activateLabel')}
-          </button>
-          {deleteError && <p data-testid="review-template-detail-delete-error">{deleteError}</p>}
-          <button
-            type="button"
-            data-testid="review-template-detail-delete"
-            onClick={requestDelete}
-            disabled={deleting}
-          >
-            {t('reviewTemplate.detail.deleteLabel')}
-          </button>
+          {/* Secondary on purpose: Activate in the page header is the one
+              primary action of a draft. */}
+          <div className="sf-actions">
+            <button
+              type="button"
+              className="sf-btn"
+              data-testid="review-template-detail-save"
+              onClick={() => void handleSave()}
+              disabled={saving}
+            >
+              {t('reviewTemplate.detail.saveLabel')}
+            </button>
+          </div>
         </section>
       )}
 
@@ -415,9 +492,10 @@ export function ReviewTemplateDetailPage() {
           shape (two AssignmentSections, each with its own ConfirmDialog)
           and resolves the collision by scoping queries with `within()`
           against each section's own container. That approach doesn't
-          transfer here — Activate and Delete share one section with no
-          equivalent container boundary — so this page scopes the
-          collision by only ever having one dialog mounted instead. */}
+          transfer here — Activate and Delete share the page header's
+          actions with no equivalent container boundary — so this page
+          scopes the collision by only ever having one dialog mounted
+          instead. */}
       {pendingActivate && (
         <ConfirmDialog
           tone="primary"

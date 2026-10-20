@@ -543,9 +543,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
   loading, error and loaded branches (three or four times per page,
-  thirteen pages so far, the review schedule, review sessions, community
-  elements, element review history, review history detail and review
-  session detail included; the community detail page has it once).
+  fourteen pages so far, the review schedule, review sessions, community
+  elements, element review history, review history detail, review session
+  detail and review template detail included; the community detail page
+  has it once).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
@@ -577,6 +578,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   goes through SDD. Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
+- **EN-73** (web UI): On a draft template, Activate activates the last
+  saved question selection. Picker changes not yet saved are silently
+  dropped, with no warning or prompt to save first. Options: disable
+  Activate while the selection is unsaved, or warn in the confirmation.
+  Either changes observable behavior, so it goes through SDD. Evidence:
+  `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
+  Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 
 ## Done
 
