@@ -93,6 +93,9 @@
       "ca": "Catalán"
     },
     "assignment": {
+      "columnUser": "Usuario",
+      "columnStatus": "Estado",
+      "columnActions": "Acciones",
       "status": {
         "active": "Activo",
         "deactivated": "Desactivado"

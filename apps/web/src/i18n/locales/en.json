@@ -93,6 +93,9 @@
       "ca": "Catalan"
     },
     "assignment": {
+      "columnUser": "User",
+      "columnStatus": "Status",
+      "columnActions": "Actions",
       "status": {
         "active": "Active",
         "deactivated": "Deactivated"

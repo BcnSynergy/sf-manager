@@ -92,6 +92,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     'community.locale.es',
     'community.locale.ca',
     // assignment status label map (Phase 3)
+    'community.assignment.columnUser',
+    'community.assignment.columnStatus',
+    'community.assignment.columnActions',
     'community.assignment.status.active',
     'community.assignment.status.deactivated',
     // create (Phase 5)

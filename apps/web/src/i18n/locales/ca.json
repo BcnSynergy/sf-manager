@@ -93,6 +93,9 @@
       "ca": "Català"
     },
     "assignment": {
+      "columnUser": "Usuari",
+      "columnStatus": "Estat",
+      "columnActions": "Accions",
       "status": {
         "active": "Actiu",
         "deactivated": "Desactivat"
