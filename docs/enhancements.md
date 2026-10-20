@@ -498,8 +498,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   messages in empty-state boxes"). A failure in the first state hides the
   other two.
   Split it into one test per state (or `it.each`) on all of these pages
-  together, keeping them consistent. Origin: `ui-restyle-maintenance-companies` PR 1 fresh review,
-  2026-10-17.
+  together, keeping them consistent. Origin:
+  `ui-restyle-maintenance-companies` PR 1 fresh review, 2026-10-17.
 - **EN-65** (web): The review templates list picks the version cell's class
   with `version === null` but its text with `version ?? noVersion`. The API
   type is `number | null`, so they agree today; an `undefined` version would
@@ -537,8 +537,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ui-restyle-review-sessions` PR 1, 2026-10-18.
 - **EN-69** (web): Every restyled list page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
-  loading, error and loaded branches (three times per page, eight pages so
-  far, the review schedule and review sessions included).
+  loading, error and loaded branches (three times per page, nine pages so
+  far, the review schedule, review sessions and community elements
+  included).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
