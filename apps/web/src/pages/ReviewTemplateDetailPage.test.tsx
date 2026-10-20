@@ -328,6 +328,7 @@ describe('ReviewTemplateDetailPage', () => {
       mockedReadReviewTemplate.mockRejectedValue(new ApiError(404));
       const notFound = renderPage();
       expect(await screen.findByTestId('review-template-detail-not-found')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
       notFound.unmount();
 
       mockedReadReviewTemplate.mockRejectedValue(new ApiError(500));
@@ -335,6 +336,7 @@ describe('ReviewTemplateDetailPage', () => {
       expect(await screen.findByTestId('review-template-detail-error-state')).toHaveClass(
         'sf-empty',
       );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
     });
 
     it('puts Activate (primary) and Delete draft (danger) in the page header', async () => {
@@ -452,7 +454,7 @@ describe('ReviewTemplateDetailPage', () => {
       fireEvent.click(await screen.findByTestId('review-template-detail-save'));
       fireEvent.click(screen.getByTestId('review-template-detail-activate'));
       fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
-      fireEvent.click(await screen.findByTestId('review-template-detail-delete'));
+      fireEvent.click(screen.getByTestId('review-template-detail-delete'));
       fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
       for (const action of ['save', 'activate', 'delete']) {
