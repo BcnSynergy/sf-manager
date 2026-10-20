@@ -355,6 +355,8 @@ describe('AssignmentSection', () => {
       const badge = within(deactivatedRow).getByText('Deactivated');
       expect(badge).toHaveClass('sf-badge');
       expect(badge).not.toHaveClass('sf-badge-success');
+      expect(badge).not.toHaveClass('sf-badge-danger');
+      expect(badge).not.toHaveClass('sf-badge-warning');
     });
 
     it('renders Deactivate as a danger button and Reactivate as a secondary one', async () => {

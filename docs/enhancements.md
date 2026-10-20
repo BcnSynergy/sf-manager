@@ -553,7 +553,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   ("Actions", in en/es/ca), as the community elements list already shows
   visibly, on all of them together. Put the class on a `<span>` inside the
   `<th>`, as `community/AssignmentSection.tsx` does: on the `<th>` itself it
-  takes the cell out of the table flow and cuts the header row short. Evidence: `CommunitiesListPage.tsx`,
+  takes the cell out of the table flow and cuts the header row short.
+  Evidence: `CommunitiesListPage.tsx`,
   `MaintenanceCompaniesListPage.tsx`, `ReviewHistoryPage.tsx`,
   `ReviewSessionsPage.tsx`, `UsersListPage.tsx` and
   `ElementReviewHistoryPage.tsx` in `apps/web/src/pages/`. Origin:
