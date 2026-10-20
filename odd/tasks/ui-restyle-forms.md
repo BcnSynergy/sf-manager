@@ -14,7 +14,7 @@ Route: ODD (visual restyle only, no behavior change; the user accepted the propo
 
 | ID  | Specs      | Pages                                                                  | Route  | Status  | Commit / PR |
 | --- | ---------- | ---------------------------------------------------------------------- | ------ | ------- | ----------- |
-| T1  | S1, S2, S3 | CSS classes + `CommunityCreatePage`, `CommunityEditPage`               | inline | pending |             |
+| T1  | S1, S2, S3 | CSS classes + `CommunityCreatePage`, `CommunityEditPage`               | inline | review  | 5d25d98     |
 | T2  | S2, S3     | `MaintenanceCompanyCreatePage`, `MaintenanceCompanyEditPage`           | inline | pending |             |
 | T3  | S1, S2, S3 | `ReviewTemplateCreatePage`, `ChecklistQuestionCreatePage`, `…EditPage` | inline | pending |             |
 | T4  | S2, S3     | `InspectableElementCreatePage`, `InspectableElementEditPage`           | inline | pending |             |
