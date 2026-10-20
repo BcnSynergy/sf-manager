@@ -48,44 +48,70 @@ export function MaintenanceCompanyCreatePage() {
 
   return (
     <main>
-      <h1>{t('maintenanceCompany.create.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('maintenanceCompany.create.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="maintenance-company-create-name-input">
-          {t('maintenanceCompany.create.nameLabel')}
-        </label>
-        <input
-          id="maintenance-company-create-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="maintenance-company-create-name"
-        />
-        <label htmlFor="maintenance-company-create-tax-id-input">
-          {t('maintenanceCompany.create.taxIdLabel')}
-        </label>
-        <input
-          id="maintenance-company-create-tax-id-input"
-          type="text"
-          value={taxId}
-          onChange={(event) => setTaxId(event.target.value)}
-          data-testid="maintenance-company-create-tax-id"
-        />
-        <label htmlFor="maintenance-company-create-contact-info-input">
-          {t('maintenanceCompany.create.contactInfoLabel')}
-        </label>
-        <input
-          id="maintenance-company-create-contact-info-input"
-          type="text"
-          value={contactInfo}
-          onChange={(event) => setContactInfo(event.target.value)}
-          data-testid="maintenance-company-create-contact-info"
-        />
-        {error && <p data-testid="maintenance-company-create-error">{error}</p>}
-        <button type="submit" data-testid="maintenance-company-create-submit" disabled={submitting}>
-          {t('maintenanceCompany.create.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-create-name-input">
+            {t('maintenanceCompany.create.nameLabel')}
+          </label>
+          <input
+            id="maintenance-company-create-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="maintenance-company-create-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-create-tax-id-input">
+            {t('maintenanceCompany.create.taxIdLabel')}
+          </label>
+          <input
+            id="maintenance-company-create-tax-id-input"
+            type="text"
+            value={taxId}
+            onChange={(event) => setTaxId(event.target.value)}
+            data-testid="maintenance-company-create-tax-id"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-create-contact-info-input">
+            {t('maintenanceCompany.create.contactInfoLabel')}
+          </label>
+          <input
+            id="maintenance-company-create-contact-info-input"
+            type="text"
+            value={contactInfo}
+            onChange={(event) => setContactInfo(event.target.value)}
+            data-testid="maintenance-company-create-contact-info"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="maintenance-company-create-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="maintenance-company-create-submit"
+            disabled={submitting}
+          >
+            {t('maintenanceCompany.create.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

@@ -541,12 +541,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ui-restyle-element-history` PR 1, 2026-10-20, and
   `ui-restyle-review-history-detail` PR 1, 2026-10-20.
 - **EN-69** (web): Every restyled page repeats the same
-  `<header className="sf-page-header"><h1>…</h1></header>` block in its
-  loading, error and loaded branches (three or four times per page,
-  sixteen pages so far, the review schedule, review sessions, community
-  elements, element review history, review history detail, review session
-  detail, review template detail and the community create and edit forms
-  included; the community detail page has it once).
+  `<header className="sf-page-header"><h1>…</h1></header>` block: three or
+  four times on a page with loading and error branches, once on the
+  community detail page and on the create-only forms. Eighteen pages so far
+  (the non-test pages in `apps/web/src/pages` that contain
+  `sf-page-header`).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
@@ -585,6 +584,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it goes through SDD. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
+- **EN-74** (web a11y): On the maintenance company edit form, Delete is
+  the page header's only action, so it comes before the form fields in
+  keyboard tab order and the first Tab reaches it (a confirmation dialog
+  guards it). The template and session detail pages avoid this by putting
+  their primary action first in the header. Options: also put Save in the
+  header before Delete, or move Delete after the form's Save. Decide once
+  for every edit form with a destructive action, ideally with the EN-69
+  `PageHeader`. Origin: `ui-restyle-forms` PR 2 fresh review, 2026-10-20.
 
 ## Done
 

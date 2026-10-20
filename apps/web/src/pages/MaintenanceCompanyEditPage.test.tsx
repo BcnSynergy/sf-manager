@@ -193,4 +193,76 @@ describe('MaintenanceCompanyEditPage', () => {
     );
     expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedListMaintenanceCompanies.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage(companyA.id);
+      expect(screen.getByTestId('maintenance-company-edit-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+      const notFound = renderPage('company-missing');
+      expect(await screen.findByTestId('maintenance-company-edit-not-found')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      notFound.unmount();
+
+      mockedListMaintenanceCompanies.mockRejectedValue(new ApiError(0));
+      renderPage(companyA.id);
+      expect(await screen.findByTestId('maintenance-company-edit-error-state')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form as field groups with the submit as the primary action', async () => {
+      mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+      renderPage(companyA.id);
+
+      const submit = await screen.findByTestId('maintenance-company-edit-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['name', 'tax-id', 'contact-info']) {
+        const control = screen.getByTestId(`maintenance-company-edit-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('puts Delete (danger) in the page header', async () => {
+      mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+      renderPage(companyA.id);
+
+      const remove = await screen.findByTestId('maintenance-company-edit-delete');
+      expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+      expect(remove.parentElement).toHaveClass('sf-actions');
+      expect(remove.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+    });
+
+    it('shows the save and delete failures as danger alerts', async () => {
+      mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+      mockedUpdateMaintenanceCompany.mockRejectedValue(new ApiError(400));
+      mockedSoftDeleteMaintenanceCompany.mockRejectedValue(new ApiError(400));
+      renderPage(companyA.id);
+
+      fireEvent.click(await screen.findByTestId('maintenance-company-edit-submit'));
+      const saveError = await screen.findByTestId('maintenance-company-edit-error');
+      expect(mockedUpdateMaintenanceCompany).toHaveBeenCalled();
+      expect(saveError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(saveError).toHaveAttribute('role', 'alert');
+
+      fireEvent.click(screen.getByTestId('maintenance-company-edit-delete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      const deleteError = await screen.findByTestId('maintenance-company-edit-delete-error');
+      expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(deleteError).toHaveAttribute('role', 'alert');
+    });
+  });
 });
