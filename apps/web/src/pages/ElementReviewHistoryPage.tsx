@@ -64,8 +64,10 @@ export function ElementReviewHistoryPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewHistory.elementHistory.title')}</h1>
-        <p data-testid="element-review-history-loading">
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.elementHistory.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="element-review-history-loading">
           {t('reviewHistory.elementHistory.loading')}
         </p>
       </main>
@@ -75,8 +77,12 @@ export function ElementReviewHistoryPage() {
   if (loadState === 'error' || history === null) {
     return (
       <main>
-        <h1>{t('reviewHistory.elementHistory.title')}</h1>
-        <p data-testid="element-review-history-error">{t(errorMessageKey)}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.elementHistory.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="element-review-history-error">
+          {t(errorMessageKey)}
+        </p>
       </main>
     );
   }
@@ -86,71 +92,101 @@ export function ElementReviewHistoryPage() {
 
   return (
     <main>
-      <h1>{t('reviewHistory.elementHistory.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('reviewHistory.elementHistory.title')}</h1>
+      </header>
 
-      <section data-testid="element-review-history-header">
-        <p>{t('reviewHistory.elementHistory.codeLabel', { code: element.code })}</p>
-        <p>{element.name}</p>
-        <p>
-          {t('reviewHistory.elementHistory.typeLabel', {
-            type: t(mapElementTypeToLabelKey(element.elementType)),
-          })}
-        </p>
-        <p>{t('reviewHistory.elementHistory.locationLabel', { location: element.location })}</p>
-        <p>
-          {t('reviewHistory.elementHistory.communityLabel', {
-            community: element.communityName || t('reviewHistory.elementHistory.communityUnknown'),
-          })}
-        </p>
-        {/* inspectable-element-admin-ui spec.md "Element State Shown in the
-            List" precedent, mirrored here: rendered through a localized
-            label, never a raw boolean/timestamp; `data-element-state`
-            distinguishes the two states visually beyond the label's text. */}
-        <span
-          data-testid="element-review-history-state"
-          data-element-state={decommissioned ? 'decommissioned' : 'active'}
-        >
-          {t(
-            decommissioned
-              ? 'inspectableElement.list.stateDecommissioned'
-              : 'inspectableElement.list.stateActive',
-          )}
-        </span>
+      <section className="sf-panel" data-testid="element-review-history-header">
+        <h2 className="sf-section-title">{element.name}</h2>
+        <dl>
+          <dt>{t('reviewHistory.elementHistory.fieldCode')}</dt>
+          <dd className="sf-data">{element.code}</dd>
+          <dt>{t('reviewHistory.elementHistory.fieldType')}</dt>
+          <dd>{t(mapElementTypeToLabelKey(element.elementType))}</dd>
+          <dt>{t('reviewHistory.elementHistory.fieldLocation')}</dt>
+          <dd>{element.location}</dd>
+          <dt>{t('reviewHistory.elementHistory.fieldCommunity')}</dt>
+          <dd>{element.communityName || t('reviewHistory.elementHistory.communityUnknown')}</dd>
+          <dt>{t('reviewHistory.elementHistory.fieldState')}</dt>
+          <dd>
+            {/* inspectable-element-admin-ui spec.md "Element State Shown in the
+                List" precedent, mirrored here: rendered through a localized
+                label, never a raw boolean/timestamp; `data-element-state`
+                distinguishes the two states visually beyond the label's text. */}
+            <span
+              data-testid="element-review-history-state"
+              className={decommissioned ? 'sf-badge' : 'sf-badge sf-badge-success'}
+              data-element-state={decommissioned ? 'decommissioned' : 'active'}
+            >
+              {t(
+                decommissioned
+                  ? 'inspectableElement.list.stateDecommissioned'
+                  : 'inspectableElement.list.stateActive',
+              )}
+            </span>
+          </dd>
+        </dl>
       </section>
 
-      <section data-testid="element-review-history-entries">
+      <section className="sf-section" data-testid="element-review-history-entries">
         <h2>{t('reviewHistory.elementHistory.entriesTitle')}</h2>
         {entries.length === 0 ? (
-          <p data-testid="element-review-history-empty">
+          <p className="sf-empty" data-testid="element-review-history-empty">
             {t('reviewHistory.elementHistory.entriesEmpty')}
           </p>
         ) : (
-          <ul>
-            {entries.map((entry) => (
-              <li
-                key={entry.reviewSessionId}
-                data-testid={`element-review-history-entry-${entry.reviewSessionId}`}
-              >
-                <span>{entry.recordedAt}</span>
-                <span>
-                  {entry.performedByEmail || t('reviewHistory.elementHistory.performerUnknown')}
-                </span>
-                {entry.reviewed ? (
-                  <span>{t('reviewHistory.elementHistory.reviewedLabel')}</span>
-                ) : (
-                  <span>
-                    {t('reviewHistory.elementHistory.unreviewedLabel')} {entry.observations ?? ''}
-                  </span>
-                )}
-                <Link
-                  to={`/review-history/${entry.reviewSessionId}`}
-                  data-testid={`element-review-history-open-${entry.reviewSessionId}`}
-                >
-                  {t('reviewHistory.elementHistory.openLink')}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="sf-table-wrap">
+            <table>
+              <caption className="visually-hidden">
+                {t('reviewHistory.elementHistory.entriesTitle')}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t('reviewHistory.elementHistory.columnRecordedAt')}</th>
+                  <th scope="col">{t('reviewHistory.elementHistory.columnPerformer')}</th>
+                  <th scope="col">{t('reviewHistory.elementHistory.columnResult')}</th>
+                  <th scope="col">{t('reviewHistory.elementHistory.columnObservations')}</th>
+                  <th scope="col"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr
+                    key={entry.reviewSessionId}
+                    data-testid={`element-review-history-entry-${entry.reviewSessionId}`}
+                  >
+                    <td className="sf-data">{entry.recordedAt}</td>
+                    <td>
+                      {entry.performedByEmail || t('reviewHistory.elementHistory.performerUnknown')}
+                    </td>
+                    <td>
+                      {entry.reviewed ? (
+                        <span className="sf-badge sf-badge-success">
+                          {t('reviewHistory.elementHistory.reviewedLabel')}
+                        </span>
+                      ) : (
+                        <span className="sf-badge sf-badge-warning">
+                          {t('reviewHistory.elementHistory.unreviewedLabel')}
+                        </span>
+                      )}
+                    </td>
+                    <td>{entry.reviewed ? '' : (entry.observations ?? '')}</td>
+                    <td>
+                      <div className="sf-actions">
+                        <Link
+                          to={`/review-history/${entry.reviewSessionId}`}
+                          className="sf-btn"
+                          data-testid={`element-review-history-open-${entry.reviewSessionId}`}
+                        >
+                          {t('reviewHistory.elementHistory.openLink')}
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

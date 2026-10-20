@@ -548,6 +548,26 @@ code {
   gap: var(--space-3);
 }
 
+/* Panel: a bordered surface holding one record's facts (a DetailList) under
+   an `sf-section-title`. */
+.sf-panel {
+  align-self: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.sf-section-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  margin: 0;
+}
+
 /* Loading, empty and error messages that stand in for a table. */
 .sf-empty {
   align-self: stretch;
