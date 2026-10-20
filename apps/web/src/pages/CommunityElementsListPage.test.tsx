@@ -224,12 +224,11 @@ describe('CommunityElementsListPage', () => {
 
       const create = await screen.findByTestId('community-elements-list-create-link');
       expect(create).toHaveClass('sf-btn', 'sf-btn-primary');
-      expect(create.parentElement).toHaveClass('sf-actions');
-      expect(create.closest('header')).toHaveClass('sf-page-header');
+      expect(create.parentElement).toHaveClass('sf-page-header');
     });
 
     it('wraps the table, shows codes and dates as data, and renders row links as secondary buttons', async () => {
-      mockedListInspectableElements.mockResolvedValue([elementA]);
+      mockedListInspectableElements.mockResolvedValue([elementA, elementB]);
 
       renderPage();
 
@@ -240,6 +239,9 @@ describe('CommunityElementsListPage', () => {
       for (const value of [elementA.serialNumber as string, elementA.installedAt, elementA.code]) {
         expect(within(row).getByText(value)).toHaveClass('sf-data');
       }
+      // A missing serial number leaves its cell plain, not an empty data cell.
+      const rowB = screen.getByTestId(`community-elements-list-row-${elementB.id}`);
+      expect(rowB.querySelectorAll('td.sf-data')).toHaveLength(2);
 
       const print = screen.getByTestId(`community-elements-list-print-${elementA.id}`);
       const history = screen.getByTestId(`community-elements-list-history-${elementA.id}`);

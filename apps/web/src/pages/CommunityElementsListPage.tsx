@@ -91,15 +91,13 @@ export function CommunityElementsListPage() {
     <main>
       <header className="sf-page-header">
         <h1>{t('inspectableElement.list.title')}</h1>
-        <div className="sf-actions">
-          <Link
-            to={`/communities/${communityId}/inspectable-elements/new`}
-            className="sf-btn sf-btn-primary"
-            data-testid="community-elements-list-create-link"
-          >
-            {t('inspectableElement.list.createLink')}
-          </Link>
-        </div>
+        <Link
+          to={`/communities/${communityId}/inspectable-elements/new`}
+          className="sf-btn sf-btn-primary"
+          data-testid="community-elements-list-create-link"
+        >
+          {t('inspectableElement.list.createLink')}
+        </Link>
       </header>
       {elements.length === 0 ? (
         <p className="sf-empty" data-testid="community-elements-list-empty">
@@ -131,15 +129,17 @@ export function CommunityElementsListPage() {
                     <td>{row.name}</td>
                     <td>{row.description ?? ''}</td>
                     <td>{row.location}</td>
-                    <td className="sf-data">{row.serialNumber ?? ''}</td>
+                    <td className={row.serialNumber === null ? undefined : 'sf-data'}>
+                      {row.serialNumber ?? ''}
+                    </td>
                     <td className="sf-data">{row.installedAt}</td>
                     <td className="sf-data">{row.code}</td>
                     <td>
                       {/* inspectable-element-admin-ui spec.md "Element State
-                      Shown in the List": rendered through a localized label,
-                      never a raw field value; `data-element-state`
-                      distinguishes the two states visually beyond the
-                      label's own text. */}
+                        Shown in the List": rendered through a localized label,
+                        never a raw field value; `data-element-state`
+                        distinguishes the two states visually beyond the
+                        label's own text. */}
                       <span
                         data-testid={`community-elements-list-state-${row.id}`}
                         className={decommissioned ? 'sf-badge' : 'sf-badge sf-badge-success'}
@@ -155,8 +155,8 @@ export function CommunityElementsListPage() {
                     <td>
                       <div className="sf-actions">
                         {/* design.md Decision 6: print is per-element only — no
-                      list-level "print all" control exists anywhere on this
-                      page. */}
+                          list-level "print all" control exists anywhere on
+                          this page. */}
                         <Link
                           to={`/communities/${communityId}/inspectable-elements/${row.id}/label`}
                           className="sf-btn"
@@ -165,8 +165,8 @@ export function CommunityElementsListPage() {
                           {t('inspectableElement.list.printLink')}
                         </Link>
                         {/* review-history-per-element/design.md Decision 7: the
-                      Print link's shape verbatim, one new per-row link to
-                      the element's review-history page. */}
+                          Print link's shape verbatim, one new per-row link to
+                          the element's review-history page. */}
                         <Link
                           to={`/communities/${communityId}/inspectable-elements/${row.id}/history`}
                           className="sf-btn"
