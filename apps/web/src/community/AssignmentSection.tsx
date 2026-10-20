@@ -151,7 +151,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
 
   if (loadState === 'loading') {
     return (
-      <section>
+      <section className="sf-section">
         <h2>{t(keys.title)}</h2>
         <p data-testid={`${testIdPrefix}-loading`} />
       </section>
@@ -159,45 +159,79 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   }
 
   return (
-    <section>
+    <section className="sf-section">
       <h2>{t(keys.title)}</h2>
 
       {loadState === 'error' && (
-        <p data-testid={`${testIdPrefix}-error`}>{t(loadErrorKey ?? 'common.error.network')}</p>
+        <p className="sf-empty" data-testid={`${testIdPrefix}-error`}>
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       )}
 
       {loadState === 'loaded' && rows.length === 0 && (
-        <p data-testid={`${testIdPrefix}-empty`}>{t(keys.empty)}</p>
+        <p className="sf-empty" data-testid={`${testIdPrefix}-empty`}>
+          {t(keys.empty)}
+        </p>
       )}
 
       {loadState === 'loaded' && rows.length > 0 && (
-        <ul>
-          {rows.map((row) => (
-            <li key={row.userId} data-testid={`${testIdPrefix}-row-${row.userId}`}>
-              <span>{row.userId}</span>
-              <span>{t(mapAssignmentStatusToLabelKey(row.deactivatedAt))}</span>
-              {row.deactivatedAt === null ? (
-                <button
-                  type="button"
-                  data-testid={`${testIdPrefix}-deactivate-${row.userId}`}
-                  onClick={() => requestDeactivate(row.userId)}
-                  disabled={mutationPending}
-                >
-                  {t('common.deactivate')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  data-testid={`${testIdPrefix}-reactivate-${row.userId}`}
-                  onClick={() => void handleReactivate(row.userId)}
-                  disabled={mutationPending}
-                >
-                  {t('common.reactivate')}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="sf-table-wrap">
+          <table>
+            <caption className="visually-hidden">{t(keys.title)}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('community.assignment.columnUser')}</th>
+                <th scope="col">{t('community.assignment.columnStatus')}</th>
+                <th scope="col">
+                  {/* Hidden on the text, not the cell: a visually-hidden <th>
+                    leaves the table flow and cuts the header row short. */}
+                  <span className="visually-hidden">{t('community.assignment.columnActions')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.userId} data-testid={`${testIdPrefix}-row-${row.userId}`}>
+                  <td className="sf-data">{row.userId}</td>
+                  <td>
+                    <span
+                      className={
+                        row.deactivatedAt === null ? 'sf-badge sf-badge-success' : 'sf-badge'
+                      }
+                    >
+                      {t(mapAssignmentStatusToLabelKey(row.deactivatedAt))}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="sf-actions">
+                      {row.deactivatedAt === null ? (
+                        <button
+                          type="button"
+                          className="sf-btn sf-btn-danger"
+                          data-testid={`${testIdPrefix}-deactivate-${row.userId}`}
+                          onClick={() => requestDeactivate(row.userId)}
+                          disabled={mutationPending}
+                        >
+                          {t('common.deactivate')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="sf-btn"
+                          data-testid={`${testIdPrefix}-reactivate-${row.userId}`}
+                          onClick={() => void handleReactivate(row.userId)}
+                          disabled={mutationPending}
+                        >
+                          {t('common.reactivate')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <form onSubmit={(event) => void handleAssignSubmit(event)} noValidate>
@@ -210,12 +244,24 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
         />
         <button
           type="submit"
+          className="sf-btn sf-btn-primary"
           data-testid={`${testIdPrefix}-assign-submit`}
           disabled={mutationPending}
         >
           {t(keys.assignLabel)}
         </button>
-        {assignErrorKey && <p data-testid={`${testIdPrefix}-assign-error`}>{t(assignErrorKey)}</p>}
+        {assignErrorKey && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid={`${testIdPrefix}-assign-error`}
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{t(assignErrorKey)}</p>
+          </div>
+        )}
       </form>
 
       <ConfirmDialog

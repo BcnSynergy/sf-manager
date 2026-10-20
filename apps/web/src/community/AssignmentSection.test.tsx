@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -289,5 +289,112 @@ describe('AssignmentSection', () => {
     renderSection(ops, 'technicians');
 
     expect(await screen.findByTestId('technicians-row-tech-a')).toBeInTheDocument();
+  });
+
+  describe('design system styling', () => {
+    const twoRows = [
+      { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
+      { communityId: 'c1', userId: 'user-deactivated', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+    ];
+
+    it('renders the section as a titled sf-section', async () => {
+      const ops = makeOps();
+
+      renderSection(ops);
+
+      const empty = await screen.findByTestId('representatives-empty');
+      const section = empty.closest('section');
+      expect(section).toHaveClass('sf-section');
+      expect(within(section as HTMLElement).getByRole('heading', { level: 2 })).toHaveTextContent(
+        keys.title,
+      );
+    });
+
+    it('renders the empty and error states in empty-state boxes', async () => {
+      const { unmount } = renderSection(makeOps());
+      expect(await screen.findByTestId('representatives-empty')).toHaveClass('sf-empty');
+      unmount();
+
+      renderSection(makeOps({ list: vi.fn().mockRejectedValue(new ApiError(0)) }));
+      expect(await screen.findByTestId('representatives-error')).toHaveClass('sf-empty');
+    });
+
+    it('renders the rows as a wrapped table named by the section title', async () => {
+      const ops = makeOps({ list: vi.fn().mockResolvedValue(twoRows) });
+
+      renderSection(ops);
+
+      const table = await screen.findByRole('table', { name: keys.title });
+      expect(table.parentElement).toHaveClass('sf-table-wrap');
+      expect(table.querySelector('caption')).toHaveClass('visually-hidden');
+      const headers = within(table).getAllByRole('columnheader');
+      expect(headers.map((header) => header.textContent)).toEqual(['User', 'Status', 'Actions']);
+      for (const header of headers) {
+        expect(header).toHaveAttribute('scope', 'col');
+      }
+      expect(headers[2]).not.toHaveClass('visually-hidden');
+      expect(headers[2].firstElementChild).toHaveClass('visually-hidden');
+      expect(within(table).getAllByRole('row').slice(1)).toHaveLength(2);
+    });
+
+    it('shows the user id as data and the status as a badge', async () => {
+      const ops = makeOps({ list: vi.fn().mockResolvedValue(twoRows) });
+
+      renderSection(ops);
+
+      const activeRow = await screen.findByTestId('representatives-row-user-active');
+      const activeCells = within(activeRow).getAllByRole('cell');
+      expect(activeCells[0]).toHaveClass('sf-data');
+      expect(activeCells[0]).toHaveTextContent('user-active');
+      expect(within(activeCells[1]).getByText('Active')).toHaveClass(
+        'sf-badge',
+        'sf-badge-success',
+      );
+
+      const deactivatedRow = screen.getByTestId('representatives-row-user-deactivated');
+      const badge = within(deactivatedRow).getByText('Deactivated');
+      expect(badge).toHaveClass('sf-badge');
+      expect(badge).not.toHaveClass('sf-badge-success');
+    });
+
+    it('renders Deactivate as a danger button and Reactivate as a secondary one', async () => {
+      const ops = makeOps({ list: vi.fn().mockResolvedValue(twoRows) });
+
+      renderSection(ops);
+
+      const deactivate = await screen.findByTestId('representatives-deactivate-user-active');
+      expect(deactivate).toHaveClass('sf-btn', 'sf-btn-danger');
+      expect(deactivate.parentElement).toHaveClass('sf-actions');
+
+      const reactivate = screen.getByTestId('representatives-reactivate-user-deactivated');
+      expect(reactivate).toHaveClass('sf-btn');
+      expect(reactivate).not.toHaveClass('sf-btn-danger', 'sf-btn-primary');
+    });
+
+    it('renders the assign submit as the primary button', async () => {
+      renderSection(makeOps());
+
+      await screen.findByTestId('representatives-empty');
+      expect(screen.getByTestId('representatives-assign-submit')).toHaveClass(
+        'sf-btn',
+        'sf-btn-primary',
+      );
+    });
+
+    it('shows an assign error as a danger alert', async () => {
+      const ops = makeOps({ assign: vi.fn().mockRejectedValue(new ApiError(0)) });
+
+      renderSection(ops);
+
+      await screen.findByTestId('representatives-empty');
+      fireEvent.change(screen.getByTestId('representatives-assign-input'), {
+        target: { value: 'user-x' },
+      });
+      fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+      const error = await screen.findByTestId('representatives-assign-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
   });
 });
