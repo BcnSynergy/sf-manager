@@ -475,7 +475,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     // detail (ReviewHistoryDetailPage)
     'reviewHistory.detail.title',
     'reviewHistory.detail.loading',
-    'reviewHistory.detail.completedAtLabel',
+    'reviewHistory.detail.fieldCompletedAt',
+    'reviewHistory.detail.fieldPerformer',
+    'reviewHistory.detail.fieldCoverage',
     'reviewHistory.detail.coverageLabel',
     'reviewHistory.detail.entriesTitle',
     'reviewHistory.detail.entriesEmpty',
@@ -483,7 +485,6 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewHistory.detail.questionTextUnknown',
     'reviewHistory.detail.entryUnreviewedLabel',
     // performer line (review-history-company-scope, Phase 5)
-    'reviewHistory.detail.performerLabel',
     'reviewHistory.detail.performerUnknown',
   ];
 

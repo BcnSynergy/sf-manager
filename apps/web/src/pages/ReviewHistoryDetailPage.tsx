@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
@@ -72,8 +72,12 @@ export function ReviewHistoryDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewHistory.detail.title')}</h1>
-        <p data-testid="review-history-detail-loading">{t('reviewHistory.detail.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-history-detail-loading">
+          {t('reviewHistory.detail.loading')}
+        </p>
       </main>
     );
   }
@@ -81,8 +85,12 @@ export function ReviewHistoryDetailPage() {
   if (loadState === 'error' || detail === null) {
     return (
       <main>
-        <h1>{t('reviewHistory.detail.title')}</h1>
-        <p data-testid="review-history-detail-error">{t(errorMessageKey)}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewHistory.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-history-detail-error">
+          {t(errorMessageKey)}
+        </p>
       </main>
     );
   }
@@ -93,83 +101,104 @@ export function ReviewHistoryDetailPage() {
 
   return (
     <main>
-      <h1>{t('reviewHistory.detail.title')}</h1>
-      <p data-testid="review-history-detail-completed-at">
-        {t('reviewHistory.detail.completedAtLabel', { completedAt: detail.completedAt })}
-      </p>
-      <p data-testid="review-history-detail-performer">
-        {t('reviewHistory.detail.performerLabel', {
-          performer: detail.performedByEmail || t('reviewHistory.detail.performerUnknown'),
-        })}
-      </p>
-      <p data-testid="review-history-detail-coverage">
-        {t('reviewHistory.detail.coverageLabel', {
-          reviewed: detail.coverage.reviewed,
-          unreviewed: detail.coverage.unreviewed,
-        })}
-      </p>
+      <header className="sf-page-header">
+        <h1>{t('reviewHistory.detail.title')}</h1>
+        {/* review-document-ui spec "Exactly One Entry Link Reaches the
+            Document Page", review-history-ui spec "Read-Only Historical
+            Session View": the single, non-mutating View document link, for
+            every one of the five history roles this page already serves —
+            this view's read is scoped by history, not by performer, so no
+            role branching is needed here (decided 2026-09-23, supersedes
+            proposal question 3). */}
+        <Link
+          to={`/review-history/${sessionId}/document`}
+          className="sf-btn sf-btn-primary"
+          data-testid="review-history-detail-document-link"
+        >
+          {t('reviewHistory.detail.documentLink')}
+        </Link>
+      </header>
 
-      {/* review-document-ui spec "Exactly One Entry Link Reaches the
-          Document Page", review-history-ui spec "Read-Only Historical
-          Session View": the single, non-mutating View document link, for
-          every one of the five history roles this page already serves —
-          this view's read is scoped by history, not by performer, so no
-          role branching is needed here (decided 2026-09-23, supersedes
-          proposal question 3). */}
-      <Link
-        to={`/review-history/${sessionId}/document`}
-        data-testid="review-history-detail-document-link"
-      >
-        {t('reviewHistory.detail.documentLink')}
-      </Link>
+      <div className="sf-panel">
+        <dl>
+          <dt>{t('reviewHistory.detail.fieldCompletedAt')}</dt>
+          <dd className="sf-data" data-testid="review-history-detail-completed-at">
+            {detail.completedAt}
+          </dd>
+          <dt>{t('reviewHistory.detail.fieldPerformer')}</dt>
+          <dd data-testid="review-history-detail-performer">
+            {detail.performedByEmail || t('reviewHistory.detail.performerUnknown')}
+          </dd>
+          <dt>{t('reviewHistory.detail.fieldCoverage')}</dt>
+          <dd data-testid="review-history-detail-coverage">
+            {t('reviewHistory.detail.coverageLabel', {
+              reviewed: detail.coverage.reviewed,
+              unreviewed: detail.coverage.unreviewed,
+            })}
+          </dd>
+        </dl>
+      </div>
 
-      <section data-testid="review-history-detail-entries">
+      <section className="sf-section" data-testid="review-history-detail-entries">
         <h2>{t('reviewHistory.detail.entriesTitle')}</h2>
         {detail.entries.length === 0 ? (
-          <p data-testid="review-history-detail-entries-empty">
+          <p className="sf-empty" data-testid="review-history-detail-entries-empty">
             {t('reviewHistory.detail.entriesEmpty')}
           </p>
         ) : (
-          <ul>
+          <ul className="sf-stack">
             {detail.entries.map((entry) => (
               <li
                 key={entry.inspectableElementId}
+                className="sf-panel"
                 data-testid={`review-history-detail-entry-${entry.inspectableElementId}`}
               >
-                <p data-testid={`review-history-detail-entry-code-${entry.inspectableElementId}`}>
-                  {entry.elementCode ?? t('reviewHistory.detail.elementCodeUnknown')}
-                </p>
-                {/* review-history-per-element/design.md Decision 7: the
-                    other of the two entry links into
-                    ElementReviewHistoryPage (the sibling lives on
-                    CommunityElementsListPage). This is what makes the four
-                    non-admin scopes reachable in a browser at all.
-                    review-history-per-element/spec.md "Two Entry Links Reach
-                    the Element History Page": an entry whose element no
-                    longer resolves (elementCode === null, e.g.
-                    soft-deleted) MUST NOT offer the link at all, rather than
-                    a link leading to a rejection. */}
-                {entry.elementCode !== null && (
-                  <Link
-                    to={`/communities/${detail.communityId}/inspectable-elements/${entry.inspectableElementId}/history`}
-                    data-testid={`review-history-detail-entry-history-${entry.inspectableElementId}`}
-                  >
-                    {t('reviewHistory.detail.elementHistoryLink')}
-                  </Link>
-                )}
+                <div className="sf-panel-header">
+                  <h3 className="sf-section-title">
+                    <span
+                      className={entry.elementCode === null ? undefined : 'sf-data'}
+                      data-testid={`review-history-detail-entry-code-${entry.inspectableElementId}`}
+                    >
+                      {entry.elementCode ?? t('reviewHistory.detail.elementCodeUnknown')}
+                    </span>
+                  </h3>
+                  {/* review-history-per-element/design.md Decision 7: the
+                      other of the two entry links into
+                      ElementReviewHistoryPage (the sibling lives on
+                      CommunityElementsListPage). This is what makes the four
+                      non-admin scopes reachable in a browser at all.
+                      review-history-per-element/spec.md "Two Entry Links Reach
+                      the Element History Page": an entry whose element no
+                      longer resolves (elementCode === null, e.g.
+                      soft-deleted) MUST NOT offer the link at all, rather than
+                      a link leading to a rejection. */}
+                  {entry.elementCode !== null && (
+                    <Link
+                      to={`/communities/${detail.communityId}/inspectable-elements/${entry.inspectableElementId}/history`}
+                      className="sf-btn"
+                      data-testid={`review-history-detail-entry-history-${entry.inspectableElementId}`}
+                    >
+                      {t('reviewHistory.detail.elementHistoryLink')}
+                    </Link>
+                  )}
+                </div>
                 {entry.reviewed ? (
-                  <ul>
+                  <dl>
                     {entry.answers.map((answer) => (
-                      <li key={answer.questionId}>
-                        {questionTextById.get(answer.questionId) ??
-                          t('reviewHistory.detail.questionTextUnknown')}
-                        : {t(mapAnswerValueToLabelKey(answer.answer))}
-                      </li>
+                      <Fragment key={answer.questionId}>
+                        <dt>
+                          {questionTextById.get(answer.questionId) ??
+                            t('reviewHistory.detail.questionTextUnknown')}
+                        </dt>
+                        <dd>{t(mapAnswerValueToLabelKey(answer.answer))}</dd>
+                      </Fragment>
                     ))}
-                  </ul>
+                  </dl>
                 ) : (
                   <p>
-                    {t('reviewHistory.detail.entryUnreviewedLabel')}{' '}
+                    <span className="sf-badge sf-badge-warning">
+                      {t('reviewHistory.detail.entryUnreviewedLabel')}
+                    </span>{' '}
                     <span
                       data-testid={`review-history-detail-observations-${entry.inspectableElementId}`}
                     >
