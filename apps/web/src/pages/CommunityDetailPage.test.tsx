@@ -192,4 +192,56 @@ describe('CommunityDetailPage', () => {
     // Technicians section is untouched by the representative-only swap.
     expect(screen.getByTestId('technicians-empty')).toBeInTheDocument();
   });
+
+  describe('design system styling', () => {
+    it('puts the heading in a page header and the loading state in an empty-state box', () => {
+      mockedListCommunities.mockReturnValue(new Promise(() => {}));
+
+      renderPage(communityA.id);
+
+      expect(screen.getByTestId('community-detail-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the not-found state in an empty-state box', async () => {
+      mockedListCommunities.mockResolvedValue([]);
+
+      renderPage(communityA.id);
+
+      expect(await screen.findByTestId('community-detail-not-found')).toHaveClass('sf-empty');
+    });
+
+    it('renders the error state in an empty-state box', async () => {
+      mockedListCommunities.mockRejectedValue(new ApiError(0));
+
+      renderPage(communityA.id);
+
+      expect(await screen.findByTestId('community-detail-error-state')).toHaveClass('sf-empty');
+    });
+
+    it('shows the community fields as a detail list inside a panel', async () => {
+      mockedListCommunities.mockResolvedValue([communityA]);
+
+      renderPage(communityA.id);
+
+      const name = await screen.findByTestId('community-detail-name');
+      const list = name.closest('dl');
+      expect(list?.parentElement).toHaveClass('sf-panel');
+      expect(
+        within(list as HTMLElement)
+          .getAllByRole('term')
+          .map((term) => term.textContent),
+      ).toEqual(['Name', 'Address', 'Locale']);
+    });
+
+    it('renders the elements link as the primary action in the page header', async () => {
+      mockedListCommunities.mockResolvedValue([communityA]);
+
+      renderPage(communityA.id);
+
+      const link = await screen.findByTestId('community-detail-elements-link');
+      expect(link).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(link.parentElement).toHaveClass('sf-page-header');
+    });
+  });
 });
