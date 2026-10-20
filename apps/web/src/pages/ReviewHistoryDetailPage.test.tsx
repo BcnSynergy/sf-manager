@@ -182,6 +182,7 @@ describe('ReviewHistoryDetailPage', () => {
 
     const performerLine = await screen.findByTestId('review-history-detail-performer');
     expect(performerLine.textContent).not.toBe('');
+    expect(performerLine).toHaveTextContent(/^Unknown performer$/);
   });
 
   // review-history-per-element/design.md Decision 7: the second of the
@@ -301,9 +302,9 @@ describe('ReviewHistoryDetailPage', () => {
         'Coverage',
       ]);
       expect(completedAt).toHaveClass('sf-data');
-      expect(completedAt).toHaveTextContent(/^2026-09-01T01:00:00.000Z$/);
+      expect(completedAt).toHaveTextContent(/^2026-09-01T01:00:00\.000Z$/);
       expect(screen.getByTestId('review-history-detail-performer')).toHaveTextContent(
-        /^tech@sf-manager.example$/,
+        /^tech@sf-manager\.example$/,
       );
       expect(screen.getByTestId('review-history-detail-coverage')).toHaveTextContent(
         /^1 reviewed, 1 not reviewed$/,
@@ -341,6 +342,12 @@ describe('ReviewHistoryDetailPage', () => {
       expect(title).toHaveClass('sf-section-title');
       expect(title).toHaveTextContent('AB3456789C');
       expect(screen.getByTestId('review-history-detail-entry-code-e1')).toHaveClass('sf-data');
+
+      const unknownEntry = screen.getByTestId('review-history-detail-entry-e2');
+      expect(within(unknownEntry).getByRole('heading', { level: 3 })).toHaveTextContent(
+        /^Unknown element$/,
+      );
+      expect(screen.getByTestId('review-history-detail-entry-code-e2')).not.toHaveClass('sf-data');
 
       const history = screen.getByTestId('review-history-detail-entry-history-e1');
       expect(history).toHaveClass('sf-btn');
