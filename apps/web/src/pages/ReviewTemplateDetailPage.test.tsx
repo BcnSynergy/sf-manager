@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -314,6 +314,152 @@ describe('ReviewTemplateDetailPage', () => {
         expect(mockedSoftDeleteDraftReviewTemplate).toHaveBeenCalledWith(TEMPLATE_ID),
       );
       expect(await screen.findByTestId('review-template-list-sentinel')).toBeInTheDocument();
+    });
+  });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedReadReviewTemplate.mockReturnValue(new Promise(() => {}));
+      const { unmount } = renderPage();
+      expect(screen.getByTestId('review-template-detail-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      unmount();
+
+      mockedReadReviewTemplate.mockRejectedValue(new ApiError(404));
+      const notFound = renderPage();
+      expect(await screen.findByTestId('review-template-detail-not-found')).toHaveClass('sf-empty');
+      notFound.unmount();
+
+      mockedReadReviewTemplate.mockRejectedValue(new ApiError(500));
+      renderPage();
+      expect(await screen.findByTestId('review-template-detail-error-state')).toHaveClass(
+        'sf-empty',
+      );
+    });
+
+    it('puts Activate (primary) and Delete draft (danger) in the page header', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      const activate = await screen.findByTestId('review-template-detail-activate');
+      const remove = screen.getByTestId('review-template-detail-delete');
+      expect(activate).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+      expect(activate.parentElement).toHaveClass('sf-actions');
+      expect(remove.parentElement).toBe(activate.parentElement);
+      expect(activate.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+    });
+
+    it('shows the fields as a detail list in a panel, the version as data and the draft status as a draft badge', async () => {
+      mockedReadReviewTemplate.mockResolvedValue({ ...draftTemplate, version: 2 });
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      const name = await screen.findByTestId('review-template-detail-name');
+      expect(name.closest('dl')?.parentElement).toHaveClass('sf-panel');
+      expect(screen.getByTestId('review-template-detail-version')).toHaveClass('sf-data');
+      expect(
+        within(screen.getByTestId('review-template-detail-status')).getByText('Draft'),
+      ).toHaveClass('sf-badge', 'sf-badge-draft');
+    });
+
+    it('shows an active status as a success badge and a retired one as a plain badge', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(activeTemplate);
+      const active = renderPage();
+      const activeBadge = within(
+        await screen.findByTestId('review-template-detail-status'),
+      ).getByText('Active');
+      expect(activeBadge).toHaveClass('sf-badge', 'sf-badge-success');
+      active.unmount();
+
+      mockedReadReviewTemplate.mockResolvedValue({ ...activeTemplate, status: 'retired' as const });
+      renderPage();
+      const retiredBadge = within(
+        await screen.findByTestId('review-template-detail-status'),
+      ).getByText('Retired');
+      expect(retiredBadge).toHaveClass('sf-badge');
+      expect(retiredBadge).not.toHaveClass('sf-badge-success');
+      expect(retiredBadge).not.toHaveClass('sf-badge-draft');
+    });
+
+    it('renders the selected questions as a stack of panels with ghost reorder and remove controls', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      const question = await screen.findByTestId('review-template-detail-question-question-1');
+      expect(question).toHaveClass('sf-panel');
+      expect(question.parentElement).toHaveClass('sf-stack');
+      expect(screen.getByTestId('review-template-detail-questions')).toHaveClass('sf-section');
+      for (const control of ['up', 'down', 'remove']) {
+        const button = screen.getByTestId(`review-template-detail-question-${control}-question-1`);
+        expect(button).toHaveClass('sf-btn', 'sf-btn-ghost');
+        expect(button.parentElement).toHaveClass('sf-actions');
+      }
+    });
+
+    it('renders the empty selection and empty pool states in empty-state boxes', async () => {
+      mockedReadReviewTemplate.mockResolvedValue({ ...draftTemplate, questions: [] });
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-template-detail-pool-empty')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByTestId('review-template-detail-questions-empty')).toHaveClass('sf-empty');
+    });
+
+    it('renders the picker as a section with a stack of panels, secondary Add and Save buttons', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+
+      renderPage();
+
+      const item = await screen.findByTestId('review-template-detail-picker-item-question-2');
+      expect(item).toHaveClass('sf-panel');
+      expect(item.parentElement).toHaveClass('sf-stack');
+      expect(screen.getByTestId('review-template-detail-picker')).toHaveClass('sf-section');
+      const add = screen.getByTestId('review-template-detail-picker-add-question-2');
+      const save = screen.getByTestId('review-template-detail-save');
+      for (const button of [add, save]) {
+        expect(button).toHaveClass('sf-btn');
+        expect(button).not.toHaveClass('sf-btn-primary');
+      }
+    });
+
+    it('shows save, activate and delete failures as danger alerts', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+      mockedSetReviewTemplateQuestions.mockRejectedValue(new ApiError(500));
+      mockedActivateReviewTemplate.mockRejectedValue(new ApiError(500));
+      mockedSoftDeleteDraftReviewTemplate.mockRejectedValue(new ApiError(500));
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-template-detail-save'));
+      fireEvent.click(screen.getByTestId('review-template-detail-activate'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      fireEvent.click(await screen.findByTestId('review-template-detail-delete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      for (const action of ['save', 'activate', 'delete']) {
+        const error = await screen.findByTestId(`review-template-detail-${action}-error`);
+        expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+        expect(error).toHaveAttribute('role', 'alert');
+      }
     });
   });
 });

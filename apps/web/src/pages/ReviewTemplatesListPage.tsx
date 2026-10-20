@@ -3,15 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import type { ElementType, ReviewFrequency } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
-import {
-  listReviewTemplates,
-  type ReviewTemplateListItem,
-  type ReviewTemplateStatus,
-} from '../api/review-template';
+import { listReviewTemplates, type ReviewTemplateListItem } from '../api/review-template';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
-import { mapTemplateStatusToLabelKey } from '../review-template/template-status-labels';
+import {
+  mapTemplateStatusToBadgeClass,
+  mapTemplateStatusToLabelKey,
+} from '../review-template/template-status-labels';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -20,15 +19,6 @@ type LineageKey = `${ElementType}::${ReviewFrequency}`;
 function buildLineageKey(elementType: ElementType, frequency: ReviewFrequency): LineageKey {
   return `${elementType}::${frequency}`;
 }
-
-// StatusBadge tone per status (user decision, 2026-10-17): the version in
-// use stands out, a draft gets the outlined in-progress marker, a retired
-// version stays neutral. The label still carries the meaning.
-const STATUS_BADGE_CLASS: Record<ReviewTemplateStatus, string> = {
-  active: 'sf-badge sf-badge-success',
-  draft: 'sf-badge sf-badge-draft',
-  retired: 'sf-badge',
-};
 
 // spec.md "List Templates With Version and Status": grouped by
 // elementType + frequency, each row showing name/version/status badge,
@@ -155,7 +145,7 @@ export function ReviewTemplatesListPage() {
                           {template.version ?? t('reviewTemplate.list.noVersion')}
                         </td>
                         <td data-testid={`review-template-list-status-${template.id}`}>
-                          <span className={STATUS_BADGE_CLASS[template.status]}>
+                          <span className={mapTemplateStatusToBadgeClass(template.status)}>
                             {t(mapTemplateStatusToLabelKey(template.status))}
                           </span>
                         </td>
