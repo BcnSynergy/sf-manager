@@ -120,4 +120,34 @@ describe('MaintenanceCompanyCreatePage', () => {
 
     expect(await screen.findByTestId('maintenance-company-create-error')).toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the form under a page header, one field group per label and control', () => {
+      renderPage();
+
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      const submit = screen.getByTestId('maintenance-company-create-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      for (const field of ['name', 'tax-id', 'contact-info']) {
+        const control = screen.getByTestId(`maintenance-company-create-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('renders the submit as the primary action and the form error as a danger alert', async () => {
+      renderPage();
+
+      const submit = screen.getByTestId('maintenance-company-create-submit');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+
+      fireEvent.click(submit);
+
+      const error = await screen.findByTestId('maintenance-company-create-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

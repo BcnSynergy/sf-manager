@@ -127,8 +127,12 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('maintenanceCompany.edit.title')}</h1>
-        <p data-testid="maintenance-company-edit-loading">{t('maintenanceCompany.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('maintenanceCompany.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="maintenance-company-edit-loading">
+          {t('maintenanceCompany.list.loading')}
+        </p>
       </main>
     );
   }
@@ -136,8 +140,10 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('maintenanceCompany.edit.title')}</h1>
-        <p data-testid="maintenance-company-edit-not-found">
+        <header className="sf-page-header">
+          <h1>{t('maintenanceCompany.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="maintenance-company-edit-not-found">
           {t('maintenanceCompany.edit.notFound')}
         </p>
       </main>
@@ -147,66 +153,106 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('maintenanceCompany.edit.title')}</h1>
-        <p data-testid="maintenance-company-edit-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('maintenanceCompany.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="maintenance-company-edit-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('maintenanceCompany.edit.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('maintenanceCompany.edit.title')}</h1>
+        <div className="sf-actions">
+          <button
+            type="button"
+            className="sf-btn sf-btn-danger"
+            data-testid="maintenance-company-edit-delete"
+            disabled={submitting || deleting}
+            onClick={requestDelete}
+          >
+            {t('maintenanceCompany.edit.deleteLabel')}
+          </button>
+        </div>
+      </header>
+      {deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="maintenance-company-edit-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="maintenance-company-edit-name-input">
-          {t('maintenanceCompany.edit.nameLabel')}
-        </label>
-        <input
-          id="maintenance-company-edit-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="maintenance-company-edit-name"
-        />
-        <label htmlFor="maintenance-company-edit-tax-id-input">
-          {t('maintenanceCompany.edit.taxIdLabel')}
-        </label>
-        <input
-          id="maintenance-company-edit-tax-id-input"
-          type="text"
-          value={taxId}
-          onChange={(event) => setTaxId(event.target.value)}
-          data-testid="maintenance-company-edit-tax-id"
-        />
-        <label htmlFor="maintenance-company-edit-contact-info-input">
-          {t('maintenanceCompany.edit.contactInfoLabel')}
-        </label>
-        <input
-          id="maintenance-company-edit-contact-info-input"
-          type="text"
-          value={contactInfo}
-          onChange={(event) => setContactInfo(event.target.value)}
-          data-testid="maintenance-company-edit-contact-info"
-        />
-        {error && <p data-testid="maintenance-company-edit-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="maintenance-company-edit-submit"
-          disabled={submitting || deleting}
-        >
-          {t('maintenanceCompany.edit.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-edit-name-input">
+            {t('maintenanceCompany.edit.nameLabel')}
+          </label>
+          <input
+            id="maintenance-company-edit-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="maintenance-company-edit-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-edit-tax-id-input">
+            {t('maintenanceCompany.edit.taxIdLabel')}
+          </label>
+          <input
+            id="maintenance-company-edit-tax-id-input"
+            type="text"
+            value={taxId}
+            onChange={(event) => setTaxId(event.target.value)}
+            data-testid="maintenance-company-edit-tax-id"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="maintenance-company-edit-contact-info-input">
+            {t('maintenanceCompany.edit.contactInfoLabel')}
+          </label>
+          <input
+            id="maintenance-company-edit-contact-info-input"
+            type="text"
+            value={contactInfo}
+            onChange={(event) => setContactInfo(event.target.value)}
+            data-testid="maintenance-company-edit-contact-info"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="maintenance-company-edit-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="maintenance-company-edit-submit"
+            disabled={submitting || deleting}
+          >
+            {t('maintenanceCompany.edit.submitLabel')}
+          </button>
+        </div>
       </form>
-      {deleteError && <p data-testid="maintenance-company-edit-delete-error">{deleteError}</p>}
-      <button
-        type="button"
-        data-testid="maintenance-company-edit-delete"
-        disabled={submitting || deleting}
-        onClick={requestDelete}
-      >
-        {t('maintenanceCompany.edit.deleteLabel')}
-      </button>
       <ConfirmDialog
         tone="danger"
         open={pendingDelete}
