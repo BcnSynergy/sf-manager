@@ -567,6 +567,31 @@ code {
   font-weight: 600;
   margin: 0;
 }
+/* A code used as a title (an entry's element code) keeps the monospace face
+   but the title's size. */
+.sf-section-title .sf-data {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* A panel's title row: the section title with its actions to the right. */
+.sf-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* A vertical list of panels (one per record, such as a session's entries).
+   A <ul> so screen readers count the items. */
+.sf-stack {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
 /* Loading, empty and error messages that stand in for a table. */
 .sf-empty {

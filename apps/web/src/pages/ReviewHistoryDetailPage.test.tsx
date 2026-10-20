@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -182,6 +182,7 @@ describe('ReviewHistoryDetailPage', () => {
 
     const performerLine = await screen.findByTestId('review-history-detail-performer');
     expect(performerLine.textContent).not.toBe('');
+    expect(performerLine).toHaveTextContent(/^Unknown performer$/);
   });
 
   // review-history-per-element/design.md Decision 7: the second of the
@@ -257,5 +258,140 @@ describe('ReviewHistoryDetailPage', () => {
     expect(screen.getByTestId('review-history-detail-entry-history-e1')).toBeInTheDocument();
     expect(screen.getByTestId('review-history-detail-document-link')).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  describe('design system styling', () => {
+    it('renders the loading and error states in empty-state boxes under a page header', async () => {
+      mockedReadReviewHistory.mockReturnValue(new Promise(() => {}));
+      const { unmount } = renderPage();
+      expect(screen.getByTestId('review-history-detail-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      unmount();
+
+      mockedReadReviewHistory.mockRejectedValue(new ApiError(0));
+      renderPage();
+      expect(await screen.findByTestId('review-history-detail-error')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders View document as the primary action in the page header', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const link = await screen.findByTestId('review-history-detail-document-link');
+      expect(link).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(link.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+    });
+
+    it('shows the session summary as a labelled detail list inside a panel', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const completedAt = await screen.findByTestId('review-history-detail-completed-at');
+      const list = completedAt.closest('dl');
+      expect(list).not.toBeNull();
+      expect(list?.parentElement).toHaveClass('sf-panel');
+      const summary = within(list as HTMLElement);
+      expect(summary.getAllByRole('term').map((term) => term.textContent)).toEqual([
+        'Completed at',
+        'Performed by',
+        'Coverage',
+      ]);
+      expect(completedAt).toHaveClass('sf-data');
+      expect(completedAt).toHaveTextContent(/^2026-09-01T01:00:00\.000Z$/);
+      expect(screen.getByTestId('review-history-detail-performer')).toHaveTextContent(
+        /^tech@sf-manager\.example$/,
+      );
+      expect(screen.getByTestId('review-history-detail-coverage')).toHaveTextContent(
+        /^1 reviewed, 1 not reviewed$/,
+      );
+    });
+
+    it('renders the entries as a titled section of one panel per entry, in order', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const section = await screen.findByTestId('review-history-detail-entries');
+      expect(section).toHaveClass('sf-section');
+      expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent(
+        'Reviewed elements',
+      );
+      const entries = within(section).getAllByRole('listitem');
+      expect(entries.map((entry) => entry.dataset.testid)).toEqual([
+        'review-history-detail-entry-e1',
+        'review-history-detail-entry-e2',
+      ]);
+      for (const entry of entries) {
+        expect(entry).toHaveClass('sf-panel');
+      }
+      expect(entries[0].parentElement).toHaveClass('sf-stack');
+    });
+
+    it('titles each entry by its element code with the history link as a secondary button', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const entry = await screen.findByTestId('review-history-detail-entry-e1');
+      const title = within(entry).getByRole('heading', { level: 3 });
+      expect(title).toHaveClass('sf-section-title');
+      expect(title).toHaveTextContent('AB3456789C');
+      expect(screen.getByTestId('review-history-detail-entry-code-e1')).toHaveClass('sf-data');
+
+      const unknownEntry = screen.getByTestId('review-history-detail-entry-e2');
+      expect(within(unknownEntry).getByRole('heading', { level: 3 })).toHaveTextContent(
+        /^Unknown element$/,
+      );
+      expect(screen.getByTestId('review-history-detail-entry-code-e2')).not.toHaveClass('sf-data');
+
+      const history = screen.getByTestId('review-history-detail-entry-history-e1');
+      expect(history).toHaveClass('sf-btn');
+      expect(history).not.toHaveClass('sf-btn-primary');
+    });
+
+    it('lists a reviewed entry answers as question and answer pairs', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const entry = await screen.findByTestId('review-history-detail-entry-e1');
+      expect(
+        within(entry)
+          .getAllByRole('term')
+          .map((term) => term.textContent),
+      ).toEqual(['Is the extinguisher charged?']);
+      expect(
+        within(entry)
+          .getAllByRole('definition')
+          .map((value) => value.textContent),
+      ).toEqual(['Yes']);
+    });
+
+    it('marks an unreviewed entry with a warning badge next to its observations', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+
+      renderPage();
+
+      const entry = await screen.findByTestId('review-history-detail-entry-e2');
+      expect(within(entry).getByText('Not reviewed')).toHaveClass('sf-badge', 'sf-badge-warning');
+      expect(screen.getByTestId('review-history-detail-observations-e2')).toHaveTextContent(
+        /^Access blocked$/,
+      );
+    });
+
+    it('renders the empty entries state in an empty-state box', async () => {
+      mockedReadReviewHistory.mockResolvedValue({ ...detail, entries: [] });
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-history-detail-entries-empty')).toHaveClass(
+        'sf-empty',
+      );
+    });
   });
 });
