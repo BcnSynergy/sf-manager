@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -272,5 +272,187 @@ describe('ReviewSessionDetailPage', () => {
     const gapLink = await screen.findByTestId('review-session-detail-gap-link-23456789AB');
     expect(gapLink).toHaveAttribute('href', `/review-sessions/${SESSION_ID}/elements/23456789AB`);
     expect(screen.getByTestId('review-session-detail-gap-link-CDEFGHJKMN')).toBeInTheDocument();
+  });
+
+  describe('design system styling', () => {
+    const sessionWithEntries = {
+      ...draftSession,
+      entries: [
+        {
+          inspectableElementId: 'e1',
+          reviewed: true,
+          observations: null,
+          answers: [],
+          recordedAt: '2026-09-08T00:10:00.000Z',
+        },
+        {
+          inspectableElementId: 'e2',
+          reviewed: false,
+          observations: 'Access blocked',
+          answers: [],
+          recordedAt: '2026-09-08T00:20:00.000Z',
+        },
+      ],
+      coverage: { reviewed: 1, unreviewed: 1 },
+    };
+
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedReadReviewSession.mockReturnValue(new Promise(() => {}));
+      const first = renderPage();
+      expect(screen.getByTestId('review-session-detail-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      first.unmount();
+
+      mockedReadReviewSession.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
+      const second = renderPage();
+      expect(await screen.findByTestId('review-session-detail-not-found')).toHaveClass('sf-empty');
+      second.unmount();
+
+      mockedReadReviewSession.mockRejectedValue(new ApiError(0));
+      renderPage();
+      expect(await screen.findByTestId('review-session-detail-error')).toHaveClass('sf-empty');
+    });
+
+    it('puts Sign and close (primary) and Discard draft (danger) in the page header', async () => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      const complete = await screen.findByTestId('review-session-detail-complete');
+      const discard = screen.getByTestId('review-session-detail-discard');
+      expect(complete).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(discard).toHaveClass('sf-btn', 'sf-btn-danger');
+      expect(complete.parentElement).toHaveClass('sf-actions');
+      expect(complete.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+    });
+
+    it('shows status and coverage as a detail list in a panel, the draft status as a draft badge', async () => {
+      mockedReadReviewSession.mockResolvedValue(sessionWithEntries);
+
+      renderPage();
+
+      const status = await screen.findByTestId('review-session-detail-status');
+      const list = status.closest('dl');
+      expect(list).not.toBeNull();
+      expect(list?.parentElement).toHaveClass('sf-panel');
+      expect(
+        within(list as HTMLElement)
+          .getAllByRole('term')
+          .map((term) => term.textContent),
+      ).toEqual(['Status', 'Coverage']);
+      expect(within(status).getByText(/^In progress$/)).toHaveClass('sf-badge', 'sf-badge-draft');
+      expect(screen.getByTestId('review-session-detail-coverage')).toHaveTextContent(
+        /^1 reviewed, 1 not reviewed$/,
+      );
+    });
+
+    it('shows a completed session status as a success badge and its notice as an alert', async () => {
+      mockedReadReviewSession.mockResolvedValue(completedSession);
+
+      renderPage();
+
+      const status = await screen.findByTestId('review-session-detail-status');
+      expect(within(status).getByText(/^Completed$/)).toHaveClass('sf-badge', 'sf-badge-success');
+      const notice = screen.getByTestId('review-session-detail-completed-notice');
+      expect(notice).toHaveClass('sf-alert');
+      expect(notice).not.toHaveClass('sf-alert-danger');
+    });
+
+    it('renders the recorded entries as a titled table with a result badge and observations', async () => {
+      mockedReadReviewSession.mockResolvedValue(sessionWithEntries);
+
+      renderPage();
+
+      const section = await screen.findByTestId('review-session-detail-entries');
+      expect(section).toHaveClass('sf-section');
+      const table = within(section).getByRole('table', { name: 'Recorded elements' });
+      expect(table.parentElement).toHaveClass('sf-table-wrap');
+      expect(
+        within(table)
+          .getAllByRole('columnheader')
+          .map((header) => header.textContent),
+      ).toEqual(['Result', 'Observations']);
+
+      const reviewed = within(screen.getByTestId('review-session-detail-entry-e1')).getAllByRole(
+        'cell',
+      );
+      expect(within(reviewed[0]).getByText(/^Reviewed$/)).toHaveClass(
+        'sf-badge',
+        'sf-badge-success',
+      );
+      expect(reviewed[1]).toBeEmptyDOMElement();
+
+      const unreviewed = within(screen.getByTestId('review-session-detail-entry-e2')).getAllByRole(
+        'cell',
+      );
+      expect(within(unreviewed[0]).getByText(/^Not reviewed$/)).toHaveClass(
+        'sf-badge',
+        'sf-badge-warning',
+      );
+      expect(unreviewed[1]).toHaveTextContent(/^Access blocked$/);
+    });
+
+    it('renders the empty entries state in an empty-state box', async () => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-session-detail-entries-empty')).toHaveClass(
+        'sf-empty',
+      );
+    });
+
+    it('renders the code form with a secondary submit and its validation error as a danger alert', async () => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      const submit = await screen.findByTestId('review-session-detail-code-submit');
+      expect(submit).toHaveClass('sf-btn');
+      expect(submit).not.toHaveClass('sf-btn-primary');
+      fireEvent.click(submit);
+
+      const error = await screen.findByTestId('review-session-detail-code-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+
+    it('shows a completion failure as a danger alert and the gap links as buttons in a panel', async () => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+      mockedCompleteReviewSession.mockRejectedValue(
+        Object.assign(new ApiError(409, 'UNREVIEWED_ELEMENTS_WITHOUT_REASON'), {
+          extra: { elementCodes: ['23456789AB'] },
+        }),
+      );
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      const error = await screen.findByTestId('review-session-detail-complete-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+      expect(screen.getByTestId('review-session-detail-unreviewed-gaps')).toHaveClass('sf-panel');
+      const gapLink = screen.getByTestId('review-session-detail-gap-link-23456789AB');
+      expect(gapLink).toHaveClass('sf-btn');
+      expect(gapLink.closest('ul')).toHaveClass('sf-tags');
+    });
+
+    it('shows a discard failure as a danger alert', async () => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+      mockedDiscardReviewSession.mockRejectedValue(new ApiError(0));
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-session-detail-discard'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      const error = await screen.findByTestId('review-session-detail-discard-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
   });
 });

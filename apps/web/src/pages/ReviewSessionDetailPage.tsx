@@ -150,8 +150,12 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewSession.detail.title')}</h1>
-        <p data-testid="review-session-detail-loading">{t('reviewSession.detail.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-detail-loading">
+          {t('reviewSession.detail.loading')}
+        </p>
       </main>
     );
   }
@@ -159,8 +163,12 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('reviewSession.detail.title')}</h1>
-        <p data-testid="review-session-detail-not-found">{t('reviewSession.detail.notFound')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-detail-not-found">
+          {t('reviewSession.detail.notFound')}
+        </p>
       </main>
     );
   }
@@ -168,8 +176,12 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'error' || session === null) {
     return (
       <main>
-        <h1>{t('reviewSession.detail.title')}</h1>
-        <p data-testid="review-session-detail-error">{t('reviewSession.detail.error')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.detail.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-detail-error">
+          {t('reviewSession.detail.error')}
+        </p>
       </main>
     );
   }
@@ -178,50 +190,152 @@ export function ReviewSessionDetailPage() {
 
   return (
     <main>
-      <h1>{t('reviewSession.detail.title')}</h1>
-      <p data-testid="review-session-detail-status">
-        {t('reviewSession.detail.statusLabel')}:{' '}
-        {t(isDraft ? 'reviewSession.detail.statusDraft' : 'reviewSession.detail.statusCompleted')}
-      </p>
-      <p data-testid="review-session-detail-coverage">
-        {t('reviewSession.detail.coverageLabel', {
-          reviewed: session.coverage.reviewed,
-          unreviewed: session.coverage.unreviewed,
-        })}
-      </p>
+      <header className="sf-page-header">
+        <h1>{t('reviewSession.detail.title')}</h1>
+        {isDraft && (
+          <div className="sf-actions">
+            <button
+              type="button"
+              className="sf-btn sf-btn-primary"
+              data-testid="review-session-detail-complete"
+              onClick={requestComplete}
+              disabled={completing}
+            >
+              {t('reviewSession.detail.completeLabel')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn-danger"
+              data-testid="review-session-detail-discard"
+              onClick={requestDiscard}
+              disabled={discarding}
+            >
+              {t('reviewSession.detail.discardLabel')}
+            </button>
+          </div>
+        )}
+      </header>
 
-      {!isDraft && (
-        <p data-testid="review-session-detail-completed-notice">
-          {t('reviewSession.detail.completedNotice')}
-        </p>
+      {isDraft && completeError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="review-session-detail-complete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{completeError}</p>
+        </div>
       )}
-
-      <section data-testid="review-session-detail-entries">
-        <h2>{t('reviewSession.detail.entriesTitle')}</h2>
-        {session.entries.length === 0 ? (
-          <p data-testid="review-session-detail-entries-empty">
-            {t('reviewSession.detail.entriesEmpty')}
-          </p>
-        ) : (
-          <ul>
-            {session.entries.map((entry) => (
-              <li
-                key={entry.inspectableElementId}
-                data-testid={`review-session-detail-entry-${entry.inspectableElementId}`}
-              >
-                {entry.reviewed
-                  ? t('reviewSession.detail.entryReviewed')
-                  : t('reviewSession.detail.entryUnreviewed', {
-                      reason: entry.observations ?? '',
-                    })}
+      {isDraft && unreviewedCodes && unreviewedCodes.length > 0 && (
+        <div className="sf-panel" data-testid="review-session-detail-unreviewed-gaps">
+          <p>{t('reviewSession.detail.unreviewedGapsTitle')}</p>
+          <ul className="sf-tags">
+            {unreviewedCodes.map((elementCode) => (
+              <li key={elementCode}>
+                <Link
+                  to={`/review-sessions/${sessionId}/elements/${encodeURIComponent(elementCode)}`}
+                  className="sf-btn"
+                  data-testid={`review-session-detail-gap-link-${elementCode}`}
+                >
+                  {t('reviewSession.detail.unreviewedGapsElementLink', { code: elementCode })}
+                </Link>
               </li>
             ))}
           </ul>
+        </div>
+      )}
+      {isDraft && discardError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="review-session-detail-discard-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{discardError}</p>
+        </div>
+      )}
+
+      {!isDraft && (
+        <div className="sf-alert" data-testid="review-session-detail-completed-notice">
+          <span className="sf-alert-icon" aria-hidden="true">
+            i
+          </span>
+          <p>{t('reviewSession.detail.completedNotice')}</p>
+        </div>
+      )}
+
+      <div className="sf-panel">
+        <dl>
+          <dt>{t('reviewSession.detail.statusLabel')}</dt>
+          <dd data-testid="review-session-detail-status">
+            <span className={isDraft ? 'sf-badge sf-badge-draft' : 'sf-badge sf-badge-success'}>
+              {t(
+                isDraft
+                  ? 'reviewSession.detail.statusDraft'
+                  : 'reviewSession.detail.statusCompleted',
+              )}
+            </span>
+          </dd>
+          <dt>{t('reviewSession.detail.fieldCoverage')}</dt>
+          <dd data-testid="review-session-detail-coverage">
+            {t('reviewSession.detail.coverageLabel', {
+              reviewed: session.coverage.reviewed,
+              unreviewed: session.coverage.unreviewed,
+            })}
+          </dd>
+        </dl>
+      </div>
+
+      <section className="sf-section" data-testid="review-session-detail-entries">
+        <h2>{t('reviewSession.detail.entriesTitle')}</h2>
+        {session.entries.length === 0 ? (
+          <p className="sf-empty" data-testid="review-session-detail-entries-empty">
+            {t('reviewSession.detail.entriesEmpty')}
+          </p>
+        ) : (
+          <div className="sf-table-wrap">
+            <table>
+              <caption className="visually-hidden">
+                {t('reviewSession.detail.entriesTitle')}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t('reviewSession.detail.columnResult')}</th>
+                  <th scope="col">{t('reviewSession.detail.columnObservations')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {session.entries.map((entry) => (
+                  <tr
+                    key={entry.inspectableElementId}
+                    data-testid={`review-session-detail-entry-${entry.inspectableElementId}`}
+                  >
+                    <td>
+                      {entry.reviewed ? (
+                        <span className="sf-badge sf-badge-success">
+                          {t('reviewSession.detail.entryReviewed')}
+                        </span>
+                      ) : (
+                        <span className="sf-badge sf-badge-warning">
+                          {t('reviewSession.detail.entryUnreviewed')}
+                        </span>
+                      )}
+                    </td>
+                    <td>{entry.reviewed ? '' : (entry.observations ?? '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       {isDraft && (
-        <section>
+        <section className="sf-section">
           <form onSubmit={handleCodeSubmit} noValidate>
             <label htmlFor="review-session-detail-code-input">
               {t('reviewSession.detail.codeLabel')}
@@ -233,54 +347,26 @@ export function ReviewSessionDetailPage() {
               onChange={(event) => setCode(event.target.value)}
               data-testid="review-session-detail-code-input"
             />
-            {codeError && <p data-testid="review-session-detail-code-error">{codeError}</p>}
-            <button type="submit" data-testid="review-session-detail-code-submit">
+            {codeError && (
+              <div
+                className="sf-alert sf-alert-danger"
+                role="alert"
+                data-testid="review-session-detail-code-error"
+              >
+                <span className="sf-alert-icon" aria-hidden="true">
+                  !
+                </span>
+                <p>{codeError}</p>
+              </div>
+            )}
+            <button
+              type="submit"
+              className="sf-btn"
+              data-testid="review-session-detail-code-submit"
+            >
               {t('reviewSession.detail.codeSubmitLabel')}
             </button>
           </form>
-        </section>
-      )}
-
-      {isDraft && (
-        <section>
-          {completeError && (
-            <p data-testid="review-session-detail-complete-error">{completeError}</p>
-          )}
-          {unreviewedCodes && unreviewedCodes.length > 0 && (
-            <div data-testid="review-session-detail-unreviewed-gaps">
-              <p>{t('reviewSession.detail.unreviewedGapsTitle')}</p>
-              <ul>
-                {unreviewedCodes.map((elementCode) => (
-                  <li key={elementCode}>
-                    <Link
-                      to={`/review-sessions/${sessionId}/elements/${encodeURIComponent(elementCode)}`}
-                      data-testid={`review-session-detail-gap-link-${elementCode}`}
-                    >
-                      {t('reviewSession.detail.unreviewedGapsElementLink', { code: elementCode })}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <button
-            type="button"
-            data-testid="review-session-detail-complete"
-            onClick={requestComplete}
-            disabled={completing}
-          >
-            {t('reviewSession.detail.completeLabel')}
-          </button>
-
-          {discardError && <p data-testid="review-session-detail-discard-error">{discardError}</p>}
-          <button
-            type="button"
-            data-testid="review-session-detail-discard"
-            onClick={requestDiscard}
-            disabled={discarding}
-          >
-            {t('reviewSession.detail.discardLabel')}
-          </button>
         </section>
       )}
 

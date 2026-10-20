@@ -542,10 +542,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ui-restyle-review-history-detail` PR 1, 2026-10-20.
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block in its
-  loading, error and loaded branches (three times per page, twelve pages so
-  far, the review schedule, review sessions, community elements, element
-  review history and review history detail included; the community detail
-  page has it once).
+  loading, error and loaded branches (three or four times per page,
+  thirteen pages so far, the review schedule, review sessions, community
+  elements, element review history, review history detail and review
+  session detail included; the community detail page has it once).
   A small `PageHeader` component (title plus optional actions) would remove
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
@@ -562,6 +562,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ReviewSessionsPage.tsx`, `UsersListPage.tsx` and
   `ElementReviewHistoryPage.tsx` in `apps/web/src/pages/`. Origin:
   `ui-restyle-element-history` PR 1 fresh review, 2026-10-20.
+- **EN-71** (web a11y): The review session's element code input does not
+  point at its validation error: when "Enter an element code." shows, the
+  input gets neither `aria-invalid` nor an `aria-describedby` to the alert.
+  The alert is announced (`role="alert"`), but a screen reader user who
+  returns to the field hears no error. Set both while `codeError` is shown.
+  Evidence: `apps/web/src/pages/ReviewSessionDetailPage.tsx` code form.
+  Origin: `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
+- **EN-72** (web UI): The review session's recorded elements table shows
+  only each entry's result and observations, not which element it is, so
+  its rows (on screen and to a screen reader) cannot be told apart. The
+  session detail response carries `inspectableElementId` but no code or
+  name; showing one needs an API and `review-session-ui` spec change, so it
+  goes through SDD. Evidence:
+  `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
+  `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
 
 ## Done
 
