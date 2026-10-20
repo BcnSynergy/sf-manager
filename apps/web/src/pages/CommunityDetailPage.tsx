@@ -76,42 +76,54 @@ export function CommunityDetailPage() {
 
   return (
     <main>
-      <h1>{t('community.detail.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('community.detail.title')}</h1>
+        {/* design.md Decision 9 — this Link is CommunityDetailPage's only
+            sanctioned change for the inspectable-elements slice; the elements
+            list is a distinct, community-scoped route, never a standalone one
+            (spec.md "Navigation to Inspectable Elements"). */}
+        {loadState === 'loaded' && community && id !== undefined && (
+          <Link
+            to={`/communities/${id}/inspectable-elements`}
+            className="sf-btn sf-btn-primary"
+            data-testid="community-detail-elements-link"
+          >
+            {t('community.detail.elementsLink')}
+          </Link>
+        )}
+      </header>
 
       {loadState === 'loading' && (
-        <p data-testid="community-detail-loading">{t('community.list.loading')}</p>
+        <p className="sf-empty" data-testid="community-detail-loading">
+          {t('community.list.loading')}
+        </p>
       )}
 
       {loadState === 'not-found' && (
-        <p data-testid="community-detail-not-found">{t('community.detail.notFound')}</p>
+        <p className="sf-empty" data-testid="community-detail-not-found">
+          {t('community.detail.notFound')}
+        </p>
       )}
 
       {loadState === 'error' && (
-        <p data-testid="community-detail-error-state">{t('common.error.network')}</p>
+        <p className="sf-empty" data-testid="community-detail-error-state">
+          {t('common.error.network')}
+        </p>
       )}
 
       {loadState === 'loaded' && community && (
-        <dl>
-          <dt>{t('community.detail.nameLabel')}</dt>
-          <dd data-testid="community-detail-name">{community.name}</dd>
-          <dt>{t('community.detail.addressLabel')}</dt>
-          <dd data-testid="community-detail-address">{community.address}</dd>
-          <dt>{t('community.detail.localeLabel')}</dt>
-          <dd data-testid="community-detail-locale">{t(mapLocaleToLabelKey(community.locale))}</dd>
-        </dl>
-      )}
-
-      {/* design.md Decision 9 — this Link is CommunityDetailPage's only
-          sanctioned change for the inspectable-elements slice; the elements
-          list is a distinct, community-scoped route, never a standalone one
-          (spec.md "Navigation to Inspectable Elements"). */}
-      {loadState === 'loaded' && community && id !== undefined && (
-        <Link
-          to={`/communities/${id}/inspectable-elements`}
-          data-testid="community-detail-elements-link"
-        >
-          {t('community.detail.elementsLink')}
-        </Link>
+        <div className="sf-panel">
+          <dl>
+            <dt>{t('community.detail.nameLabel')}</dt>
+            <dd data-testid="community-detail-name">{community.name}</dd>
+            <dt>{t('community.detail.addressLabel')}</dt>
+            <dd data-testid="community-detail-address">{community.address}</dd>
+            <dt>{t('community.detail.localeLabel')}</dt>
+            <dd data-testid="community-detail-locale">
+              {t(mapLocaleToLabelKey(community.locale))}
+            </dd>
+          </dl>
+        </div>
       )}
 
       {id !== undefined && loadState !== 'not-found' && (
