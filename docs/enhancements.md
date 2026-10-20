@@ -547,6 +547,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   the copies; extract it once the page restyles are done, so it covers every
   shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
   2026-10-17.
+- **EN-70** (web a11y): Six list tables leave their link column header
+  empty (`<th scope="col"></th>`), so a screen reader announces a blank
+  header for the actions cells. Give it a `visually-hidden` label
+  ("Actions", in en/es/ca), as the community elements list already shows
+  visibly, on all of them together. Evidence: `CommunitiesListPage.tsx`,
+  `MaintenanceCompaniesListPage.tsx`, `ReviewHistoryPage.tsx`,
+  `ReviewSessionsPage.tsx`, `UsersListPage.tsx` and
+  `ElementReviewHistoryPage.tsx` in `apps/web/src/pages/`. Origin:
+  `ui-restyle-element-history` PR 1 fresh review, 2026-10-20.
 
 ## Done
 

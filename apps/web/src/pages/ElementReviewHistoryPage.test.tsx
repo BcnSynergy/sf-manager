@@ -30,7 +30,9 @@ const activeElementHistory = {
       performedById: 'u1',
       performedByEmail: 'tech@sf-manager.example',
       reviewed: true,
-      observations: null,
+      // Present on purpose: the page shows observations only for unreviewed
+      // entries, and the styling test pins that this one stays hidden.
+      observations: 'Pressure gauge checked',
       recordedAt: '2026-09-01T00:30:00.000Z',
     },
     {
