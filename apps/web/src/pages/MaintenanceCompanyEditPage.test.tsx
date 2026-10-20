@@ -254,6 +254,7 @@ describe('MaintenanceCompanyEditPage', () => {
 
       fireEvent.click(await screen.findByTestId('maintenance-company-edit-submit'));
       const saveError = await screen.findByTestId('maintenance-company-edit-error');
+      expect(mockedUpdateMaintenanceCompany).toHaveBeenCalled();
       expect(saveError).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(saveError).toHaveAttribute('role', 'alert');
 
