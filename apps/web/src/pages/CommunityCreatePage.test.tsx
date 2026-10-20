@@ -96,4 +96,38 @@ describe('CommunityCreatePage', () => {
     expect(await screen.findByTestId('community-create-error')).toBeInTheDocument();
     expect(screen.queryByTestId('communities-list-sentinel')).not.toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the form under a page header, one field group per label and control', () => {
+      renderPage();
+
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      const submit = screen.getByTestId('community-create-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      for (const field of ['name', 'address', 'locale']) {
+        const control = screen.getByTestId(`community-create-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('renders the submit as the primary action', () => {
+      renderPage();
+
+      const submit = screen.getByTestId('community-create-submit');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+    });
+
+    it('shows the form error as a danger alert', async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('community-create-submit'));
+
+      const error = await screen.findByTestId('community-create-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

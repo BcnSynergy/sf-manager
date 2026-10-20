@@ -53,43 +53,71 @@ export function CommunityCreatePage() {
 
   return (
     <main>
-      <h1>{t('community.create.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('community.create.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="community-create-name-input">{t('community.create.nameLabel')}</label>
-        <input
-          id="community-create-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="community-create-name"
-        />
-        <label htmlFor="community-create-address-input">{t('community.create.addressLabel')}</label>
-        <input
-          id="community-create-address-input"
-          type="text"
-          value={address}
-          onChange={(event) => setAddress(event.target.value)}
-          data-testid="community-create-address"
-        />
-        <label htmlFor="community-create-locale-input">{t('community.create.localeLabel')}</label>
-        <select
-          id="community-create-locale-input"
-          value={locale}
-          onChange={(event) => setLocale(event.target.value as Locale)}
-          data-testid="community-create-locale"
-        >
-          {LOCALE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapLocaleToLabelKey(option))}
-            </option>
-          ))}
-        </select>
-        {error && <p data-testid="community-create-error">{error}</p>}
-        <button type="submit" data-testid="community-create-submit" disabled={submitting}>
-          {t('community.create.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="community-create-name-input">{t('community.create.nameLabel')}</label>
+          <input
+            id="community-create-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="community-create-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="community-create-address-input">
+            {t('community.create.addressLabel')}
+          </label>
+          <input
+            id="community-create-address-input"
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            data-testid="community-create-address"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="community-create-locale-input">{t('community.create.localeLabel')}</label>
+          <select
+            id="community-create-locale-input"
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as Locale)}
+            data-testid="community-create-locale"
+          >
+            {LOCALE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapLocaleToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="community-create-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="community-create-submit"
+            disabled={submitting}
+          >
+            {t('community.create.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );
