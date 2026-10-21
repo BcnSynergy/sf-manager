@@ -198,7 +198,7 @@ export function OrganizationProfilePage() {
       {incomplete && (
         <div className="sf-alert" data-testid="organization-profile-incomplete">
           <span className="sf-alert-icon" aria-hidden="true">
-            !
+            i
           </span>
           <p>{t('organizationProfile.incomplete')}</p>
         </div>

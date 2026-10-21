@@ -434,7 +434,7 @@ describe('OrganizationProfilePage route access', () => {
       }
     });
 
-    it('shows the incomplete notice as a neutral alert', async () => {
+    it('shows the incomplete notice as an informational alert', async () => {
       mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
       renderPage();
 
