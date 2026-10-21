@@ -383,8 +383,8 @@ describe('InspectableElementEditPage', () => {
       mockedListInspectableElements.mockResolvedValue([elementA]);
       renderPage(elementA.id);
 
-      const header = (await screen.findByRole('heading', { level: 1 })).parentElement;
       const decommission = await screen.findByTestId('inspectable-element-edit-decommission');
+      const header = screen.getByRole('heading', { level: 1 }).parentElement;
       const remove = screen.getByTestId('inspectable-element-edit-delete');
       expect(decommission).toHaveClass('sf-btn');
       expect(decommission).not.toHaveClass('sf-btn-primary');
