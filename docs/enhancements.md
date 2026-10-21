@@ -586,8 +586,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 - **EN-74** (web a11y): On the maintenance company and checklist question
   edit forms, Delete is the page header's only action, so it comes before
-  the form fields in keyboard tab order and the first Tab reaches it (a
-  confirmation dialog guards it). The template and session detail pages
+  the form fields in keyboard tab order: after the side navigation, it is
+  the first focusable element in the page content (a confirmation dialog
+  guards it). The template and session detail pages
   avoid this by putting their primary action first in the header. Options:
   also put Save in the header before Delete, or move Delete after the
   form's Save. Decide once for every edit form with a destructive action,
