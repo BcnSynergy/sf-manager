@@ -585,13 +585,20 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 - **EN-74** (web a11y): On the maintenance company and checklist question
-  edit forms, Delete is the page header's only action, so it comes before the form fields in
-  keyboard tab order and the first Tab reaches it (a confirmation dialog
-  guards it). The template and session detail pages avoid this by putting
-  their primary action first in the header. Options: also put Save in the
-  header before Delete, or move Delete after the form's Save. Decide once
-  for every edit form with a destructive action, ideally with the EN-69
-  `PageHeader`. Origin: `ui-restyle-forms` PR 2 fresh review, 2026-10-20.
+  edit forms, Delete is the page header's only action, so it comes before
+  the form fields in keyboard tab order and the first Tab reaches it (a
+  confirmation dialog guards it). The template and session detail pages
+  avoid this by putting their primary action first in the header. Options:
+  also put Save in the header before Delete, or move Delete after the
+  form's Save. Decide once for every edit form with a destructive action,
+  ideally with the EN-69 `PageHeader`. Origin: `ui-restyle-forms` PR 2
+  fresh review, 2026-10-20.
+- **EN-75** (web): The checklist question edit form shows the read-only
+  element type as a plain paragraph (`Element type: Fire extinguisher`),
+  outside any `sf-field` and with a regular-weight label, so its first row
+  looks different from the type field on the create form. A styled term
+  and value inside an `sf-field` would match the other fields. Origin:
+  `ui-restyle-forms` PR 3 fresh review, 2026-10-21.
 
 ## Done
 
