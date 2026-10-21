@@ -127,8 +127,12 @@ export function ReviewSessionElementPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewSession.element.title')}</h1>
-        <p data-testid="review-session-element-loading">{t('reviewSession.element.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.element.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-element-loading">
+          {t('reviewSession.element.loading')}
+        </p>
       </main>
     );
   }
@@ -136,48 +140,69 @@ export function ReviewSessionElementPage() {
   if (loadState === 'error' || resolved === null) {
     return (
       <main>
-        <h1>{t('reviewSession.element.title')}</h1>
-        <p data-testid="review-session-element-error">
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.element.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-element-error">
           {t(loadErrorKey ?? 'reviewSession.element.notFound')}
         </p>
-        <button
-          type="button"
-          data-testid="review-session-element-back"
-          onClick={() => navigate(`/review-sessions/${sessionId}`)}
-        >
-          {t('reviewSession.element.backLabel')}
-        </button>
+        <div className="sf-actions">
+          <button
+            type="button"
+            className="sf-btn"
+            data-testid="review-session-element-back"
+            onClick={() => navigate(`/review-sessions/${sessionId}`)}
+          >
+            {t('reviewSession.element.backLabel')}
+          </button>
+        </div>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('reviewSession.element.title')}</h1>
-      <p data-testid="review-session-element-name">{resolved.element.name}</p>
-      <p data-testid="review-session-element-location">{resolved.element.location}</p>
+      <header className="sf-page-header">
+        <h1>{t('reviewSession.element.title')}</h1>
+      </header>
+      <div className="sf-panel">
+        <p data-testid="review-session-element-name">{resolved.element.name}</p>
+        <p data-testid="review-session-element-location">{resolved.element.location}</p>
+      </div>
 
       {saved && (
-        <div data-testid="review-session-element-saved">
-          <p>{t('reviewSession.element.saveConfirmation')}</p>
-          {/* spec "Saving is confirmed and the flow continues" — MUST be
-              returned to code entry for the next element. The code-entry
-              form lives on ReviewSessionDetailPage.tsx (design.md
-              Decision 10), so "returned to" is this explicit navigation
-              control rather than an automatic redirect that would hide the
-              confirmation the same requirement also demands. */}
-          <button
-            type="button"
-            data-testid="review-session-element-continue"
-            onClick={() => navigate(`/review-sessions/${sessionId}`)}
-          >
-            {t('reviewSession.element.backLabel')}
-          </button>
+        <div
+          className="sf-alert sf-alert-success"
+          role="status"
+          data-testid="review-session-element-saved"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            ✓
+          </span>
+          <div className="sf-section">
+            <p>{t('reviewSession.element.saveConfirmation')}</p>
+            {/* spec "Saving is confirmed and the flow continues" — MUST be
+                returned to code entry for the next element. The code-entry
+                form lives on ReviewSessionDetailPage.tsx (design.md
+                Decision 10), so "returned to" is this explicit navigation
+                control rather than an automatic redirect that would hide the
+                confirmation the same requirement also demands. */}
+            <div className="sf-actions">
+              <button
+                type="button"
+                className="sf-btn"
+                data-testid="review-session-element-continue"
+                onClick={() => navigate(`/review-sessions/${sessionId}`)}
+              >
+                {t('reviewSession.element.backLabel')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <form onSubmit={(event) => void handleSubmit(event)} noValidate>
-        <label htmlFor="review-session-element-mark-unreviewed">
+      <form className="sf-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+        <label className="sf-choice" htmlFor="review-session-element-mark-unreviewed">
           <input
             id="review-session-element-mark-unreviewed"
             type="checkbox"
@@ -189,7 +214,7 @@ export function ReviewSessionElementPage() {
         </label>
 
         {markUnreviewed ? (
-          <>
+          <div className="sf-field">
             <label htmlFor="review-session-element-observations-input">
               {t('reviewSession.element.observationsLabel')}
             </label>
@@ -199,21 +224,22 @@ export function ReviewSessionElementPage() {
               onChange={(event) => setObservations(event.target.value)}
               data-testid="review-session-element-observations"
             />
-          </>
+          </div>
         ) : (
-          <section data-testid="review-session-element-questions">
-            <h2>{t('reviewSession.element.questionsTitle')}</h2>
+          <section className="sf-section" data-testid="review-session-element-questions">
+            <h2 className="sf-section-title">{t('reviewSession.element.questionsTitle')}</h2>
             {resolved.questions
               .slice()
               .sort((a, b) => a.order - b.order)
               .map((question) => (
                 <fieldset
                   key={question.questionId}
+                  className="sf-field"
                   data-testid={`review-session-element-question-${question.questionId}`}
                 >
                   <legend>{question.text}</legend>
                   {ANSWER_VALUES.map((value) => (
-                    <label key={value}>
+                    <label key={value} className="sf-choice">
                       <input
                         type="radio"
                         name={`review-session-element-question-${question.questionId}`}
@@ -229,10 +255,28 @@ export function ReviewSessionElementPage() {
           </section>
         )}
 
-        {saveError && <p data-testid="review-session-element-save-error">{saveError}</p>}
-        <button type="submit" data-testid="review-session-element-save" disabled={saving}>
-          {t('reviewSession.element.saveLabel')}
-        </button>
+        {saveError && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="review-session-element-save-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{saveError}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="review-session-element-save"
+            disabled={saving}
+          >
+            {t('reviewSession.element.saveLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

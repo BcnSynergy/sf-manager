@@ -174,4 +174,113 @@ describe('ReviewSessionElementPage', () => {
     ).toBe(true);
     expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the loading and error states in empty-state boxes under a page header, with Back as a secondary action', async () => {
+      mockedResolveElementByCode.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage();
+      expect(screen.getByTestId('review-session-element-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedResolveElementByCode.mockRejectedValue(new ApiError(404, 'ELEMENT_NOT_FOUND'));
+      renderPage();
+      expect(await screen.findByTestId('review-session-element-error')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      const back = screen.getByTestId('review-session-element-back');
+      expect(back).toHaveClass('sf-btn');
+      expect(back).not.toHaveClass('sf-btn-primary');
+      expect(back.parentElement).toHaveClass('sf-actions');
+    });
+
+    it('shows the element in a panel and the form with the save as the primary action', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      renderPage();
+
+      const save = await screen.findByTestId('review-session-element-save');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      expect(screen.getByTestId('review-session-element-name').parentElement).toHaveClass(
+        'sf-panel',
+      );
+      expect(screen.getByTestId('review-session-element-location').parentElement).toHaveClass(
+        'sf-panel',
+      );
+      expect(save.closest('form')).toHaveClass('sf-form');
+      expect(save).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(save.parentElement).toHaveClass('sf-actions');
+    });
+
+    it('renders the questions as field groups of answer choices', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      renderPage();
+
+      const question = await screen.findByTestId('review-session-element-question-q1');
+      expect(question).toHaveClass('sf-field');
+      expect(screen.getByTestId('review-session-element-questions')).toHaveClass('sf-section');
+      expect(screen.getByRole('heading', { level: 2 })).toHaveClass('sf-section-title');
+      const answer = screen.getByTestId('review-session-element-answer-q1-YES');
+      expect(answer.parentElement).toHaveClass('sf-choice');
+      expect(
+        screen.getByTestId('review-session-element-mark-unreviewed').parentElement,
+      ).toHaveClass('sf-choice');
+    });
+
+    it('renders the observations as a field group when marking the element unreviewed', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-session-element-mark-unreviewed'));
+
+      const observations = screen.getByTestId('review-session-element-observations');
+      expect(observations.parentElement).toHaveClass('sf-field');
+      expect(
+        observations.parentElement?.querySelector(`label[for="${observations.id}"]`),
+      ).not.toBeNull();
+    });
+
+    it('shows the save confirmation as a success status alert with Continue as a secondary action', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      mockedRecordEntry.mockResolvedValue({
+        inspectableElementId: 'element-1',
+        reviewed: true,
+        observations: null,
+        answers: [
+          { questionId: 'q1', answer: 'YES' },
+          { questionId: 'q2', answer: 'YES' },
+        ],
+        recordedAt: '2026-09-08T00:00:00.000Z',
+      });
+      renderPage();
+
+      await screen.findByTestId('review-session-element-question-q1');
+      fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+      fireEvent.click(screen.getByTestId('review-session-element-answer-q2-YES'));
+      fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+      const saved = await screen.findByTestId('review-session-element-saved');
+      expect(saved).toHaveClass('sf-alert', 'sf-alert-success');
+      expect(saved).toHaveAttribute('role', 'status');
+      const proceed = screen.getByTestId('review-session-element-continue');
+      expect(saved).toContainElement(proceed);
+      expect(proceed).toHaveClass('sf-btn');
+      expect(proceed).not.toHaveClass('sf-btn-primary');
+      expect(proceed.parentElement).toHaveClass('sf-actions');
+    });
+
+    it('shows the save failure as a danger alert', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      mockedRecordEntry.mockRejectedValue(new ApiError(0));
+      renderPage();
+
+      await screen.findByTestId('review-session-element-question-q1');
+      fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+      fireEvent.click(screen.getByTestId('review-session-element-answer-q2-YES'));
+      fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+      const error = await screen.findByTestId('review-session-element-save-error');
+      expect(mockedRecordEntry).toHaveBeenCalled();
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });
