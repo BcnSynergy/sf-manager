@@ -98,4 +98,32 @@ describe('ReviewTemplateCreatePage', () => {
       'A draft already exists for this element type and review frequency.',
     );
   });
+
+  describe('design system', () => {
+    it('renders the title in a page header and the form as field groups with the submit as the primary action', () => {
+      renderPage();
+
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      const submit = screen.getByTestId('review-template-create-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['type', 'frequency', 'name']) {
+        const control = screen.getByTestId(`review-template-create-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('shows the form error as a danger alert', async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+      const error = await screen.findByTestId('review-template-create-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

@@ -156,8 +156,12 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('checklistQuestion.edit.title')}</h1>
-        <p data-testid="checklist-question-edit-loading">{t('checklistQuestion.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('checklistQuestion.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="checklist-question-edit-loading">
+          {t('checklistQuestion.list.loading')}
+        </p>
       </main>
     );
   }
@@ -165,8 +169,10 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('checklistQuestion.edit.title')}</h1>
-        <p data-testid="checklist-question-edit-not-found">
+        <header className="sf-page-header">
+          <h1>{t('checklistQuestion.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="checklist-question-edit-not-found">
           {t('checklistQuestion.edit.notFound')}
         </p>
       </main>
@@ -176,28 +182,61 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('checklistQuestion.edit.title')}</h1>
-        <p data-testid="checklist-question-edit-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('checklistQuestion.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="checklist-question-edit-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('checklistQuestion.edit.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('checklistQuestion.edit.title')}</h1>
+        <div className="sf-actions">
+          <button
+            type="button"
+            className="sf-btn sf-btn-danger"
+            data-testid="checklist-question-edit-delete"
+            disabled={submitting || deleting}
+            onClick={requestDelete}
+          >
+            {t('checklistQuestion.edit.deleteLabel')}
+          </button>
+        </div>
+      </header>
+      {deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="checklist-question-edit-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
         <p>
           {t('checklistQuestion.edit.typeLabel')}:{' '}
           <span data-testid="checklist-question-edit-type">
             {elementType !== null ? t(mapElementTypeToLabelKey(elementType)) : ''}
           </span>
         </p>
-        <fieldset>
+        <fieldset className="sf-field">
           <legend>{t('checklistQuestion.edit.frequenciesLabel')}</legend>
           {REVIEW_FREQUENCY_OPTIONS.map((option) => (
-            <label key={option} htmlFor={`checklist-question-edit-frequency-${option}`}>
+            <label
+              key={option}
+              className="sf-choice"
+              htmlFor={`checklist-question-edit-frequency-${option}`}
+            >
               <input
                 id={`checklist-question-edit-frequency-${option}`}
                 type="checkbox"
@@ -210,33 +249,40 @@ export function ChecklistQuestionEditPage() {
             </label>
           ))}
         </fieldset>
-        <label htmlFor="checklist-question-edit-text-input">
-          {t('checklistQuestion.edit.textLabel')}
-        </label>
-        <textarea
-          id="checklist-question-edit-text-input"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          data-testid="checklist-question-edit-text"
-        />
-        {error && <p data-testid="checklist-question-edit-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="checklist-question-edit-submit"
-          disabled={submitting || deleting}
-        >
-          {t('checklistQuestion.edit.submitLabel')}
-        </button>
+        <div className="sf-field">
+          <label htmlFor="checklist-question-edit-text-input">
+            {t('checklistQuestion.edit.textLabel')}
+          </label>
+          <textarea
+            id="checklist-question-edit-text-input"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            data-testid="checklist-question-edit-text"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="checklist-question-edit-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="checklist-question-edit-submit"
+            disabled={submitting || deleting}
+          >
+            {t('checklistQuestion.edit.submitLabel')}
+          </button>
+        </div>
       </form>
-      {deleteError && <p data-testid="checklist-question-edit-delete-error">{deleteError}</p>}
-      <button
-        type="button"
-        data-testid="checklist-question-edit-delete"
-        disabled={submitting || deleting}
-        onClick={requestDelete}
-      >
-        {t('checklistQuestion.edit.deleteLabel')}
-      </button>
       <ConfirmDialog
         tone="danger"
         open={pendingDelete}
