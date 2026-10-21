@@ -213,8 +213,12 @@ export function InspectableElementEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('inspectableElement.edit.title')}</h1>
-        <p data-testid="inspectable-element-edit-loading">{t('inspectableElement.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('inspectableElement.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="inspectable-element-edit-loading">
+          {t('inspectableElement.list.loading')}
+        </p>
       </main>
     );
   }
@@ -222,8 +226,10 @@ export function InspectableElementEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('inspectableElement.edit.title')}</h1>
-        <p data-testid="inspectable-element-edit-not-found">
+        <header className="sf-page-header">
+          <h1>{t('inspectableElement.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="inspectable-element-edit-not-found">
           {t('inspectableElement.edit.notFound')}
         </p>
       </main>
@@ -233,18 +239,83 @@ export function InspectableElementEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('inspectableElement.edit.title')}</h1>
-        <p data-testid="inspectable-element-edit-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('inspectableElement.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="inspectable-element-edit-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('inspectableElement.edit.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('inspectableElement.edit.title')}</h1>
+        <div className="sf-actions">
+          {/* inspectable-element-admin-ui spec.md "The control is single-element
+              and reason-free": exactly one action, no bulk variant, no reason
+              field — either Decommission or Reactivate is shown, never both. */}
+          {deactivated ? (
+            <button
+              type="button"
+              className="sf-btn"
+              data-testid="inspectable-element-edit-reactivate"
+              disabled={submitting || deleting || decommissionSubmitting}
+              onClick={() => void reactivate()}
+            >
+              {t('inspectableElement.edit.reactivateLabel')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="sf-btn"
+              data-testid="inspectable-element-edit-decommission"
+              disabled={submitting || deleting || decommissionSubmitting}
+              onClick={requestDecommission}
+            >
+              {t('inspectableElement.edit.decommissionLabel')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="sf-btn sf-btn-danger"
+            data-testid="inspectable-element-edit-delete"
+            disabled={submitting || deleting}
+            onClick={requestDelete}
+          >
+            {t('inspectableElement.edit.deleteLabel')}
+          </button>
+        </div>
+      </header>
+      {deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="inspectable-element-edit-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
+      {decommissionError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="inspectable-element-edit-decommission-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{decommissionError}</p>
+        </div>
+      )}
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
         <p>
           {t('inspectableElement.edit.typeLabel')}:{' '}
           <span data-testid="inspectable-element-edit-type">
@@ -257,103 +328,95 @@ export function InspectableElementEditPage() {
             gets an explicit state label here, mirroring the list page's
             state column. */}
         {deactivated && (
-          <p data-testid="inspectable-element-edit-deactivated-label">
-            {t('inspectableElement.edit.deactivatedLabel')}
+          <p>
+            <span className="sf-badge" data-testid="inspectable-element-edit-deactivated-label">
+              {t('inspectableElement.edit.deactivatedLabel')}
+            </span>
           </p>
         )}
-        <label htmlFor="inspectable-element-edit-name-input">
-          {t('inspectableElement.edit.nameLabel')}
-        </label>
-        <input
-          id="inspectable-element-edit-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="inspectable-element-edit-name"
-        />
-        <label htmlFor="inspectable-element-edit-description-input">
-          {t('inspectableElement.edit.descriptionLabel')}
-        </label>
-        <input
-          id="inspectable-element-edit-description-input"
-          type="text"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          data-testid="inspectable-element-edit-description"
-        />
-        <label htmlFor="inspectable-element-edit-location-input">
-          {t('inspectableElement.edit.locationLabel')}
-        </label>
-        <input
-          id="inspectable-element-edit-location-input"
-          type="text"
-          value={location}
-          onChange={(event) => setLocation(event.target.value)}
-          data-testid="inspectable-element-edit-location"
-        />
-        <label htmlFor="inspectable-element-edit-serial-number-input">
-          {t('inspectableElement.edit.serialNumberLabel')}
-        </label>
-        <input
-          id="inspectable-element-edit-serial-number-input"
-          type="text"
-          value={serialNumber}
-          onChange={(event) => setSerialNumber(event.target.value)}
-          data-testid="inspectable-element-edit-serial-number"
-        />
-        <label htmlFor="inspectable-element-edit-installed-at-input">
-          {t('inspectableElement.edit.installedAtLabel')}
-        </label>
-        <input
-          id="inspectable-element-edit-installed-at-input"
-          type="date"
-          value={installedAt}
-          onChange={(event) => setInstalledAt(event.target.value)}
-          data-testid="inspectable-element-edit-installed-at"
-        />
-        {error && <p data-testid="inspectable-element-edit-error">{error}</p>}
-        <button
-          type="submit"
-          data-testid="inspectable-element-edit-submit"
-          disabled={submitting || deleting}
-        >
-          {t('inspectableElement.edit.submitLabel')}
-        </button>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-edit-name-input">
+            {t('inspectableElement.edit.nameLabel')}
+          </label>
+          <input
+            id="inspectable-element-edit-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="inspectable-element-edit-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-edit-description-input">
+            {t('inspectableElement.edit.descriptionLabel')}
+          </label>
+          <input
+            id="inspectable-element-edit-description-input"
+            type="text"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            data-testid="inspectable-element-edit-description"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-edit-location-input">
+            {t('inspectableElement.edit.locationLabel')}
+          </label>
+          <input
+            id="inspectable-element-edit-location-input"
+            type="text"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            data-testid="inspectable-element-edit-location"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-edit-serial-number-input">
+            {t('inspectableElement.edit.serialNumberLabel')}
+          </label>
+          <input
+            id="inspectable-element-edit-serial-number-input"
+            type="text"
+            value={serialNumber}
+            onChange={(event) => setSerialNumber(event.target.value)}
+            data-testid="inspectable-element-edit-serial-number"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-edit-installed-at-input">
+            {t('inspectableElement.edit.installedAtLabel')}
+          </label>
+          <input
+            id="inspectable-element-edit-installed-at-input"
+            type="date"
+            value={installedAt}
+            onChange={(event) => setInstalledAt(event.target.value)}
+            data-testid="inspectable-element-edit-installed-at"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="inspectable-element-edit-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="inspectable-element-edit-submit"
+            disabled={submitting || deleting}
+          >
+            {t('inspectableElement.edit.submitLabel')}
+          </button>
+        </div>
       </form>
-      {deleteError && <p data-testid="inspectable-element-edit-delete-error">{deleteError}</p>}
-      <button
-        type="button"
-        data-testid="inspectable-element-edit-delete"
-        disabled={submitting || deleting}
-        onClick={requestDelete}
-      >
-        {t('inspectableElement.edit.deleteLabel')}
-      </button>
-      {decommissionError && (
-        <p data-testid="inspectable-element-edit-decommission-error">{decommissionError}</p>
-      )}
-      {/* inspectable-element-admin-ui spec.md "The control is single-element
-          and reason-free": exactly one action, no bulk variant, no reason
-          field — either Decommission or Reactivate is shown, never both. */}
-      {deactivated ? (
-        <button
-          type="button"
-          data-testid="inspectable-element-edit-reactivate"
-          disabled={submitting || deleting || decommissionSubmitting}
-          onClick={() => void reactivate()}
-        >
-          {t('inspectableElement.edit.reactivateLabel')}
-        </button>
-      ) : (
-        <button
-          type="button"
-          data-testid="inspectable-element-edit-decommission"
-          disabled={submitting || deleting || decommissionSubmitting}
-          onClick={requestDecommission}
-        >
-          {t('inspectableElement.edit.decommissionLabel')}
-        </button>
-      )}
       <ConfirmDialog
         tone="danger"
         open={pendingAction !== null}

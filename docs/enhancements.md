@@ -543,7 +543,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block: three or
   four times on a page with loading and error branches, once on the
-  community detail page and on the create-only forms. Twenty-one pages so far
+  community detail page and on the create-only forms. Twenty-three pages so far
   (the non-test pages in `apps/web/src/pages` that contain
   `sf-page-header`).
   A small `PageHeader` component (title plus optional actions) would remove
@@ -588,17 +588,19 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   edit forms, Delete is the page header's only action, so it comes before
   the form fields in keyboard tab order: after the side navigation, it is
   the first focusable element in the page content (a confirmation dialog
-  guards it). The template and session detail pages
-  avoid this by putting their primary action first in the header. Options:
-  also put Save in the header before Delete, or move Delete after the
-  form's Save. Decide once for every edit form with a destructive action,
-  ideally with the EN-69 `PageHeader`. Origin: `ui-restyle-forms` PR 2
-  fresh review, 2026-10-20.
-- **EN-75** (web): The checklist question edit form shows the read-only
-  element type as a plain paragraph (`Element type: Fire extinguisher`),
-  outside any `sf-field` and with a regular-weight label, so its first row
-  looks different from the type field on the create form. A styled term
-  and value inside an `sf-field` would match the other fields. Origin:
+  guards it). The inspectable element edit form has the same order with
+  Decommission (or Reactivate) then Delete in its header. The template and
+  session detail pages avoid this by putting their primary action first in
+  the header. Options: also put Save in the header before the other
+  actions, or move them after the form's Save. Decide once for every edit
+  form with header actions, ideally with the EN-69 `PageHeader`. Origin:
+  `ui-restyle-forms` PR 2 fresh review, 2026-10-20.
+- **EN-75** (web): The checklist question and inspectable element edit
+  forms show the read-only element type as a plain paragraph (`Element
+type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
+  `sf-field` and with a regular-weight label, so their first row looks
+  different from the type field on the create forms. A styled term and
+  value inside an `sf-field` would match the other fields. Origin:
   `ui-restyle-forms` PR 3 fresh review, 2026-10-21.
 
 ## Done
