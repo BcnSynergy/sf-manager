@@ -62,6 +62,16 @@ None.
   `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
+- **TD-39**: The review session element page opens an element of a
+  completed session with its answer radios, the mark-unreviewed toggle and
+  an enabled Save, although `review-session-ui` requires that "no control
+  MUST offer to edit, reopen, answer, discard or delete" a completed
+  session, in the field flow too. The server rejects the save, so no data
+  changes, but the controls are reachable by URL. Evidence:
+  `openspec/specs/review-session-ui/spec.md` ("A completed session still
+  offers no mutating control"); `resolve-element-by-code.use-case.ts` has no
+  status check and returns the recorded entry. Origin: `ui-restyle-forms`
+  PR 7 fresh review, 2026-10-21.
 
 ## Resolved
 

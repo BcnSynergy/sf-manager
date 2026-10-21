@@ -78,8 +78,12 @@ export function ReviewSessionNewPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('reviewSession.new.title')}</h1>
-        <p data-testid="review-session-new-loading">{t('reviewSession.new.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.new.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-new-loading">
+          {t('reviewSession.new.loading')}
+        </p>
       </main>
     );
   }
@@ -87,8 +91,12 @@ export function ReviewSessionNewPage() {
   if (loadState === 'error' || scope === null) {
     return (
       <main>
-        <h1>{t('reviewSession.new.title')}</h1>
-        <p data-testid="review-session-new-error">{t(loadErrorKey ?? 'common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.new.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-new-error">
+          {t(loadErrorKey ?? 'common.error.network')}
+        </p>
       </main>
     );
   }
@@ -96,8 +104,10 @@ export function ReviewSessionNewPage() {
   if (scope.communities.length === 0) {
     return (
       <main>
-        <h1>{t('reviewSession.new.title')}</h1>
-        <p data-testid="review-session-new-communities-empty">
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.new.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-new-communities-empty">
           {t('reviewSession.new.communitiesEmpty')}
         </p>
       </main>
@@ -107,8 +117,10 @@ export function ReviewSessionNewPage() {
   if (scope.templates.length === 0) {
     return (
       <main>
-        <h1>{t('reviewSession.new.title')}</h1>
-        <p data-testid="review-session-new-templates-empty">
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.new.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="review-session-new-templates-empty">
           {t('reviewSession.new.templatesEmpty')}
         </p>
       </main>
@@ -117,44 +129,68 @@ export function ReviewSessionNewPage() {
 
   return (
     <main>
-      <h1>{t('reviewSession.new.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('reviewSession.new.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={(event) => void handleSubmit(event)} noValidate>
-        <label htmlFor="review-session-new-community-input">
-          {t('reviewSession.new.communityLabel')}
-        </label>
-        <select
-          id="review-session-new-community-input"
-          value={communityId}
-          onChange={(event) => setCommunityId(event.target.value)}
-          data-testid="review-session-new-community"
-        >
-          {scope.communities.map((community) => (
-            <option key={community.id} value={community.id}>
-              {community.name}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="review-session-new-template-input">
-          {t('reviewSession.new.templateLabel')}
-        </label>
-        <select
-          id="review-session-new-template-input"
-          value={templateId}
-          onChange={(event) => setTemplateId(event.target.value)}
-          data-testid="review-session-new-template"
-        >
-          {scope.templates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {t(mapElementTypeToLabelKey(template.elementType as ElementType))} — {template.name}
-            </option>
-          ))}
-        </select>
-        {formError && <p data-testid="review-session-new-error-message">{formError}</p>}
-        <button type="submit" data-testid="review-session-new-submit" disabled={submitting}>
-          {t('reviewSession.new.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+        <div className="sf-field">
+          <label htmlFor="review-session-new-community-input">
+            {t('reviewSession.new.communityLabel')}
+          </label>
+          <select
+            id="review-session-new-community-input"
+            value={communityId}
+            onChange={(event) => setCommunityId(event.target.value)}
+            data-testid="review-session-new-community"
+          >
+            {scope.communities.map((community) => (
+              <option key={community.id} value={community.id}>
+                {community.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="sf-field">
+          <label htmlFor="review-session-new-template-input">
+            {t('reviewSession.new.templateLabel')}
+          </label>
+          <select
+            id="review-session-new-template-input"
+            value={templateId}
+            onChange={(event) => setTemplateId(event.target.value)}
+            data-testid="review-session-new-template"
+          >
+            {scope.templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {t(mapElementTypeToLabelKey(template.elementType as ElementType))} — {template.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {formError && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="review-session-new-error-message"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{formError}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="review-session-new-submit"
+            disabled={submitting}
+          >
+            {t('reviewSession.new.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

@@ -543,7 +543,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block: three or
   four times on a page with loading and error branches, once on the
-  community detail page and on the create-only forms. Twenty-six pages so far
+  community detail page and on the create-only forms. Twenty-eight pages so far
   (the non-test pages in `apps/web/src/pages` that contain
   `sf-page-header`).
   A small `PageHeader` component (title plus optional actions) would remove
@@ -603,14 +603,19 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
   value inside an `sf-field` would match the other fields. Origin:
   `ui-restyle-forms` PR 3 fresh review, 2026-10-21.
 - **EN-76** (web a11y): Screen readers may not announce alerts that the
-  web app mounts conditionally. The organization profile's save
-  confirmation (`role="status"`) is added already filled, and many screen
+  web app mounts conditionally. The save confirmations on the organization
+  profile and review session element pages (`role="status"`) are added
+  already filled, and many screen
   readers only announce changes inside a live region that was on the page
   before. On every restyled form, a repeated validation error with the
   same text (cleared and set again in the same handler tick, so React
   batches both) keeps the same `role="alert"` element, so it is not
   announced again; errors set after an awaited request remount instead.
-  A shared approach, such as a persistent live region per page or an alert
+  On a long form at phone width, the element page's confirmation sits
+  above the form, out of view of the Save button just pressed, and it
+  stays up (with Continue as the primary action) when the user then edits
+  the answers. A shared
+  approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
 
