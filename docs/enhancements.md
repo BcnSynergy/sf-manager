@@ -612,7 +612,9 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
   batches both) keeps the same `role="alert"` element, so it is not
   announced again; errors set after an awaited request remount instead.
   On a long form at phone width, the element page's confirmation sits
-  above the form, out of view of the Save button just pressed. A shared
+  above the form, out of view of the Save button just pressed, and it
+  stays up (with Continue as the primary action) when the user then edits
+  the answers. A shared
   approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
