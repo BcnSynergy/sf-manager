@@ -407,4 +407,66 @@ describe('UserEditPage', () => {
       'This role does not accept manager capabilities.',
     );
   });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedListUsers.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage(otherUser.id);
+      expect(screen.getByTestId('user-edit-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedListUsers.mockResolvedValue([admin, otherUser]);
+      const notFound = renderPage('user-missing');
+      expect(await screen.findByTestId('user-edit-not-found')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      notFound.unmount();
+
+      mockedListUsers.mockRejectedValue(new ApiError(0));
+      renderPage(otherUser.id);
+      expect(await screen.findByTestId('user-edit-error-state')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form as field groups with the submit as the primary action', async () => {
+      mockedListUsers.mockResolvedValue([admin, technician]);
+      renderPage(technician.id);
+
+      const submit = await screen.findByTestId('user-edit-submit');
+      await screen.findByTestId('user-edit-company');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['email', 'role', 'company']) {
+        const control = screen.getByTestId(`user-edit-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('renders the capability checkbox as a choice inside the capabilities field group', async () => {
+      mockedListUsers.mockResolvedValue([admin, grantedManager]);
+      renderPage(grantedManager.id);
+
+      const checkbox = await screen.findByTestId('user-edit-view-all-reviews');
+      expect(checkbox.parentElement).toHaveClass('sf-choice');
+      expect(checkbox.parentElement?.tagName).toBe('LABEL');
+      expect(checkbox.parentElement).toHaveAttribute('for', checkbox.id);
+      expect(checkbox.closest('fieldset')).toHaveClass('sf-field');
+    });
+
+    it('shows the form error as a danger alert', async () => {
+      mockedListUsers.mockResolvedValue([admin, otherUser]);
+      mockedUpdateUser.mockRejectedValue(new ApiError(0));
+      renderPage(otherUser.id);
+
+      fireEvent.click(await screen.findByTestId('user-edit-submit'));
+
+      const error = await screen.findByTestId('user-edit-error');
+      expect(mockedUpdateUser).toHaveBeenCalled();
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

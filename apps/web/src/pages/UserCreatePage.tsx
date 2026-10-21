@@ -100,41 +100,49 @@ export function UserCreatePage() {
 
   return (
     <main>
-      <h1>{t('users.create.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('users.create.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="user-create-email-input">{t('users.create.emailLabel')}</label>
-        <input
-          id="user-create-email-input"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          data-testid="user-create-email"
-        />
-        <label htmlFor="user-create-password-input">{t('users.create.passwordLabel')}</label>
-        <input
-          id="user-create-password-input"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          data-testid="user-create-password"
-        />
-        <label htmlFor="user-create-role-input">{t('users.create.roleLabel')}</label>
-        <select
-          id="user-create-role-input"
-          value={role}
-          onChange={handleRoleChange}
-          data-testid="user-create-role"
-        >
-          {ROLE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapRoleToLabelKey(option))}
-            </option>
-          ))}
-        </select>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="user-create-email-input">{t('users.create.emailLabel')}</label>
+          <input
+            id="user-create-email-input"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            data-testid="user-create-email"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="user-create-password-input">{t('users.create.passwordLabel')}</label>
+          <input
+            id="user-create-password-input"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            data-testid="user-create-password"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="user-create-role-input">{t('users.create.roleLabel')}</label>
+          <select
+            id="user-create-role-input"
+            value={role}
+            onChange={handleRoleChange}
+            data-testid="user-create-role"
+          >
+            {ROLE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapRoleToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
         {showCompanySelector && (
-          <>
+          <div className="sf-field">
             <label htmlFor="user-create-company-input">{t('users.create.companyLabel')}</label>
             <select
               id="user-create-company-input"
@@ -152,12 +160,26 @@ export function UserCreatePage() {
                 </option>
               ))}
             </select>
-          </>
+          </div>
         )}
-        {error && <p data-testid="user-create-error">{error}</p>}
-        <button type="submit" data-testid="user-create-submit" disabled={submitting}>
-          {t('users.create.submitLabel')}
-        </button>
+        {error && (
+          <div className="sf-alert sf-alert-danger" role="alert" data-testid="user-create-error">
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="user-create-submit"
+            disabled={submitting}
+          >
+            {t('users.create.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

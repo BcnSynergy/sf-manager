@@ -176,8 +176,12 @@ export function UserEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('users.edit.title')}</h1>
-        <p data-testid="user-edit-loading">{t('users.list.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('users.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="user-edit-loading">
+          {t('users.list.loading')}
+        </p>
       </main>
     );
   }
@@ -185,8 +189,12 @@ export function UserEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <h1>{t('users.edit.title')}</h1>
-        <p data-testid="user-edit-not-found">{t('users.edit.notFound')}</p>
+        <header className="sf-page-header">
+          <h1>{t('users.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="user-edit-not-found">
+          {t('users.edit.notFound')}
+        </p>
       </main>
     );
   }
@@ -194,42 +202,52 @@ export function UserEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('users.edit.title')}</h1>
-        <p data-testid="user-edit-error-state">{t('common.error.network')}</p>
+        <header className="sf-page-header">
+          <h1>{t('users.edit.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="user-edit-error-state">
+          {t('common.error.network')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('users.edit.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('users.edit.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="user-edit-email-input">{t('users.edit.emailLabel')}</label>
-        <input
-          id="user-edit-email-input"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          data-testid="user-edit-email"
-        />
-        <label htmlFor="user-edit-role-input">{t('users.edit.roleLabel')}</label>
-        <select
-          id="user-edit-role-input"
-          value={role}
-          onChange={handleRoleChange}
-          disabled={isSelf}
-          data-testid="user-edit-role"
-        >
-          {ROLE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapRoleToLabelKey(option))}
-            </option>
-          ))}
-        </select>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="user-edit-email-input">{t('users.edit.emailLabel')}</label>
+          <input
+            id="user-edit-email-input"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            data-testid="user-edit-email"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="user-edit-role-input">{t('users.edit.roleLabel')}</label>
+          <select
+            id="user-edit-role-input"
+            value={role}
+            onChange={handleRoleChange}
+            disabled={isSelf}
+            data-testid="user-edit-role"
+          >
+            {ROLE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapRoleToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
         {showCompanySelector && (
-          <>
+          <div className="sf-field">
             <label htmlFor="user-edit-company-input">{t('users.edit.companyLabel')}</label>
             <select
               id="user-edit-company-input"
@@ -247,27 +265,41 @@ export function UserEditPage() {
                 </option>
               ))}
             </select>
-          </>
+          </div>
         )}
         {showCapabilityToggle && (
-          <fieldset>
+          <fieldset className="sf-field">
             <legend>{t('users.edit.capabilitiesLabel')}</legend>
-            <input
-              id="user-edit-view-all-reviews-input"
-              type="checkbox"
-              checked={canViewAllReviews}
-              onChange={(event) => setCanViewAllReviews(event.target.checked)}
-              data-testid="user-edit-view-all-reviews"
-            />
-            <label htmlFor="user-edit-view-all-reviews-input">
+            <label className="sf-choice" htmlFor="user-edit-view-all-reviews-input">
+              <input
+                id="user-edit-view-all-reviews-input"
+                type="checkbox"
+                checked={canViewAllReviews}
+                onChange={(event) => setCanViewAllReviews(event.target.checked)}
+                data-testid="user-edit-view-all-reviews"
+              />
               {t('users.edit.viewAllReviewsLabel')}
             </label>
           </fieldset>
         )}
-        {error && <p data-testid="user-edit-error">{error}</p>}
-        <button type="submit" data-testid="user-edit-submit" disabled={submitting}>
-          {t('users.edit.submitLabel')}
-        </button>
+        {error && (
+          <div className="sf-alert sf-alert-danger" role="alert" data-testid="user-edit-error">
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="user-edit-submit"
+            disabled={submitting}
+          >
+            {t('users.edit.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );
