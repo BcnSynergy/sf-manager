@@ -238,7 +238,7 @@ describe('ReviewSessionElementPage', () => {
       ).not.toBeNull();
     });
 
-    it('shows the save confirmation as a success status alert with Continue as a secondary action', async () => {
+    it('shows the save confirmation as a success status alert with Continue as the primary action', async () => {
       mockedResolveElementByCode.mockResolvedValue(resolved);
       mockedRecordEntry.mockResolvedValue({
         inspectableElementId: 'element-1',
@@ -262,9 +262,11 @@ describe('ReviewSessionElementPage', () => {
       expect(saved).toHaveAttribute('role', 'status');
       const proceed = screen.getByTestId('review-session-element-continue');
       expect(saved).toContainElement(proceed);
-      expect(proceed).toHaveClass('sf-btn');
-      expect(proceed).not.toHaveClass('sf-btn-primary');
+      expect(proceed).toHaveClass('sf-btn', 'sf-btn-primary');
       expect(proceed.parentElement).toHaveClass('sf-actions');
+      const save = screen.getByTestId('review-session-element-save');
+      expect(save).toHaveClass('sf-btn');
+      expect(save).not.toHaveClass('sf-btn-primary');
     });
 
     it('shows the save failure as a danger alert', async () => {

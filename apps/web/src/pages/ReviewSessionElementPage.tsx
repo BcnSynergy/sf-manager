@@ -190,7 +190,7 @@ export function ReviewSessionElementPage() {
             <div className="sf-actions">
               <button
                 type="button"
-                className="sf-btn"
+                className="sf-btn sf-btn-primary"
                 data-testid="review-session-element-continue"
                 onClick={() => navigate(`/review-sessions/${sessionId}`)}
               >
@@ -268,9 +268,11 @@ export function ReviewSessionElementPage() {
           </div>
         )}
         <div className="sf-actions">
+          {/* Once saved, the next step is code entry (Continue above), so
+              Save steps down to a secondary button: one primary per view. */}
           <button
             type="submit"
-            className="sf-btn sf-btn-primary"
+            className={saved ? 'sf-btn' : 'sf-btn sf-btn-primary'}
             data-testid="review-session-element-save"
             disabled={saving}
           >
