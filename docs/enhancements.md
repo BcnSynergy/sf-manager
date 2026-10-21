@@ -606,9 +606,11 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
   web app mounts conditionally. The organization profile's save
   confirmation (`role="status"`) is added already filled, and many screen
   readers only announce changes inside a live region that was on the page
-  before; a repeated error with the same text keeps the same `role="alert"`
-  element on every restyled form, so it is not announced again. A shared
-  approach, such as a persistent live region per page or an alert
+  before. On every restyled form, a repeated validation error with the
+  same text (cleared and set again in the same handler tick, so React
+  batches both) keeps the same `role="alert"` element, so it is not
+  announced again; errors set after an awaited request remount instead.
+  A shared approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
 

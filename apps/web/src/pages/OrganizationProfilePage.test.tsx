@@ -442,6 +442,8 @@ describe('OrganizationProfilePage route access', () => {
       expect(notice).toHaveClass('sf-alert');
       expect(notice).not.toHaveClass('sf-alert-danger');
       expect(notice).not.toHaveClass('sf-alert-success');
+      expect(notice).not.toHaveAttribute('role');
+      expect(notice.querySelector('.sf-alert-icon')).toHaveTextContent('i');
     });
 
     it('shows the save confirmation as a success status alert', async () => {
