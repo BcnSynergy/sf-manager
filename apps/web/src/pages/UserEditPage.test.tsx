@@ -434,6 +434,7 @@ describe('UserEditPage', () => {
 
       const submit = await screen.findByTestId('user-edit-submit');
       await screen.findByTestId('user-edit-company');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
       expect(submit.closest('form')).toHaveClass('sf-form');
       expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
       expect(submit.parentElement).toHaveClass('sf-actions');
