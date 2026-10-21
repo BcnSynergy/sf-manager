@@ -543,7 +543,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-69** (web): Every restyled page repeats the same
   `<header className="sf-page-header"><h1>…</h1></header>` block: three or
   four times on a page with loading and error branches, once on the
-  community detail page and on the create-only forms. Twenty-three pages so far
+  community detail page and on the create-only forms. Twenty-five pages so far
   (the non-test pages in `apps/web/src/pages` that contain
   `sf-page-header`).
   A small `PageHeader` component (title plus optional actions) would remove
