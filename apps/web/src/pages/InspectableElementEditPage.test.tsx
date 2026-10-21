@@ -338,4 +338,104 @@ describe('InspectableElementEditPage', () => {
       expect(screen.getByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
     });
   });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedListInspectableElements.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage(elementA.id);
+      expect(screen.getByTestId('inspectable-element-edit-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      const notFound = renderPage('element-missing');
+      expect(await screen.findByTestId('inspectable-element-edit-not-found')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      notFound.unmount();
+
+      mockedListInspectableElements.mockRejectedValue(new ApiError(0));
+      renderPage(elementA.id);
+      expect(await screen.findByTestId('inspectable-element-edit-error-state')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form as field groups with the submit as the primary action', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      renderPage(elementA.id);
+
+      const submit = await screen.findByTestId('inspectable-element-edit-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['name', 'description', 'location', 'serial-number', 'installed-at']) {
+        const control = screen.getByTestId(`inspectable-element-edit-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('puts Decommission (secondary) and Delete (danger) in the page header', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      renderPage(elementA.id);
+
+      const header = (await screen.findByRole('heading', { level: 1 })).parentElement;
+      const decommission = await screen.findByTestId('inspectable-element-edit-decommission');
+      const remove = screen.getByTestId('inspectable-element-edit-delete');
+      expect(decommission).toHaveClass('sf-btn');
+      expect(decommission).not.toHaveClass('sf-btn-primary');
+      expect(decommission).not.toHaveClass('sf-btn-danger');
+      expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+      for (const action of [decommission, remove]) {
+        expect(action.parentElement).toHaveClass('sf-actions');
+        expect(action.closest('.sf-page-header')).toBe(header);
+      }
+    });
+
+    it('puts Reactivate (secondary) in the page header and shows the decommissioned state as a badge', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementB]);
+      renderPage(elementB.id);
+
+      const reactivate = await screen.findByTestId('inspectable-element-edit-reactivate');
+      expect(reactivate).toHaveClass('sf-btn');
+      expect(reactivate).not.toHaveClass('sf-btn-primary');
+      expect(reactivate.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+      expect(screen.getByTestId('inspectable-element-edit-deactivated-label')).toHaveClass(
+        'sf-badge',
+      );
+    });
+
+    it('shows the save, delete and decommission failures as danger alerts', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      mockedUpdateInspectableElement.mockRejectedValue(new ApiError(400));
+      mockedSoftDeleteInspectableElement.mockRejectedValue(new ApiError(400));
+      renderPage(elementA.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-submit'));
+      const saveError = await screen.findByTestId('inspectable-element-edit-error');
+      expect(mockedUpdateInspectableElement).toHaveBeenCalled();
+      expect(saveError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(saveError).toHaveAttribute('role', 'alert');
+
+      fireEvent.click(screen.getByTestId('inspectable-element-edit-delete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      const deleteError = await screen.findByTestId('inspectable-element-edit-delete-error');
+      expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(deleteError).toHaveAttribute('role', 'alert');
+
+      fireEvent.click(screen.getByTestId('inspectable-element-edit-decommission'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      const decommissionError = await screen.findByTestId(
+        'inspectable-element-edit-decommission-error',
+      );
+      expect(decommissionError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(decommissionError).toHaveAttribute('role', 'alert');
+    });
+  });
 });

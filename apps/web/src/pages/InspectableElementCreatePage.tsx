@@ -79,79 +79,111 @@ export function InspectableElementCreatePage() {
 
   return (
     <main>
-      <h1>{t('inspectableElement.create.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('inspectableElement.create.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="inspectable-element-create-type-input">
-          {t('inspectableElement.create.typeLabel')}
-        </label>
-        <select
-          id="inspectable-element-create-type-input"
-          value={elementType}
-          onChange={(event) => setElementType(event.target.value as ElementType)}
-          data-testid="inspectable-element-create-type"
-        >
-          {ELEMENT_TYPE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapElementTypeToLabelKey(option))}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="inspectable-element-create-name-input">
-          {t('inspectableElement.create.nameLabel')}
-        </label>
-        <input
-          id="inspectable-element-create-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="inspectable-element-create-name"
-        />
-        <label htmlFor="inspectable-element-create-description-input">
-          {t('inspectableElement.create.descriptionLabel')}
-        </label>
-        <input
-          id="inspectable-element-create-description-input"
-          type="text"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          data-testid="inspectable-element-create-description"
-        />
-        <label htmlFor="inspectable-element-create-location-input">
-          {t('inspectableElement.create.locationLabel')}
-        </label>
-        <input
-          id="inspectable-element-create-location-input"
-          type="text"
-          value={location}
-          onChange={(event) => setLocation(event.target.value)}
-          data-testid="inspectable-element-create-location"
-        />
-        <label htmlFor="inspectable-element-create-serial-number-input">
-          {t('inspectableElement.create.serialNumberLabel')}
-        </label>
-        <input
-          id="inspectable-element-create-serial-number-input"
-          type="text"
-          value={serialNumber}
-          onChange={(event) => setSerialNumber(event.target.value)}
-          data-testid="inspectable-element-create-serial-number"
-        />
-        <label htmlFor="inspectable-element-create-installed-at-input">
-          {t('inspectableElement.create.installedAtLabel')}
-        </label>
-        <input
-          id="inspectable-element-create-installed-at-input"
-          type="date"
-          value={installedAt}
-          onChange={(event) => setInstalledAt(event.target.value)}
-          data-testid="inspectable-element-create-installed-at"
-        />
-        {error && <p data-testid="inspectable-element-create-error">{error}</p>}
-        <button type="submit" data-testid="inspectable-element-create-submit" disabled={submitting}>
-          {t('inspectableElement.create.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-type-input">
+            {t('inspectableElement.create.typeLabel')}
+          </label>
+          <select
+            id="inspectable-element-create-type-input"
+            value={elementType}
+            onChange={(event) => setElementType(event.target.value as ElementType)}
+            data-testid="inspectable-element-create-type"
+          >
+            {ELEMENT_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapElementTypeToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-name-input">
+            {t('inspectableElement.create.nameLabel')}
+          </label>
+          <input
+            id="inspectable-element-create-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="inspectable-element-create-name"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-description-input">
+            {t('inspectableElement.create.descriptionLabel')}
+          </label>
+          <input
+            id="inspectable-element-create-description-input"
+            type="text"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            data-testid="inspectable-element-create-description"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-location-input">
+            {t('inspectableElement.create.locationLabel')}
+          </label>
+          <input
+            id="inspectable-element-create-location-input"
+            type="text"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            data-testid="inspectable-element-create-location"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-serial-number-input">
+            {t('inspectableElement.create.serialNumberLabel')}
+          </label>
+          <input
+            id="inspectable-element-create-serial-number-input"
+            type="text"
+            value={serialNumber}
+            onChange={(event) => setSerialNumber(event.target.value)}
+            data-testid="inspectable-element-create-serial-number"
+          />
+        </div>
+        <div className="sf-field">
+          <label htmlFor="inspectable-element-create-installed-at-input">
+            {t('inspectableElement.create.installedAtLabel')}
+          </label>
+          <input
+            id="inspectable-element-create-installed-at-input"
+            type="date"
+            value={installedAt}
+            onChange={(event) => setInstalledAt(event.target.value)}
+            data-testid="inspectable-element-create-installed-at"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="inspectable-element-create-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="inspectable-element-create-submit"
+            disabled={submitting}
+          >
+            {t('inspectableElement.create.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );
