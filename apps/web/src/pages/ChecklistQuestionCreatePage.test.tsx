@@ -95,4 +95,40 @@ describe('ChecklistQuestionCreatePage', () => {
 
     expect(await screen.findByTestId('checklist-question-create-error')).toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the title in a page header and the form as field groups with the submit as the primary action', () => {
+      renderPage();
+
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      const submit = screen.getByTestId('checklist-question-create-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['type', 'text']) {
+        const control = screen.getByTestId(`checklist-question-create-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('renders each frequency checkbox as a choice inside the frequencies field group', () => {
+      renderPage();
+
+      const checkbox = screen.getByTestId('checklist-question-create-frequency-QUARTERLY');
+      expect(checkbox.parentElement).toHaveClass('sf-choice');
+      expect(checkbox.closest('fieldset')).toHaveClass('sf-field');
+    });
+
+    it('shows the form error as a danger alert', async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('checklist-question-create-submit'));
+
+      const error = await screen.findByTestId('checklist-question-create-error');
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });

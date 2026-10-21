@@ -75,54 +75,80 @@ export function ReviewTemplateCreatePage() {
 
   return (
     <main>
-      <h1>{t('reviewTemplate.create.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('reviewTemplate.create.title')}</h1>
+      </header>
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
-      <form onSubmit={handleSubmit} noValidate>
-        <label htmlFor="review-template-create-type-input">
-          {t('reviewTemplate.create.typeLabel')}
-        </label>
-        <select
-          id="review-template-create-type-input"
-          value={elementType}
-          onChange={(event) => setElementType(event.target.value as ElementType)}
-          data-testid="review-template-create-type"
-        >
-          {ELEMENT_TYPE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapElementTypeToLabelKey(option))}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="review-template-create-frequency-input">
-          {t('reviewTemplate.create.frequencyLabel')}
-        </label>
-        <select
-          id="review-template-create-frequency-input"
-          value={frequency}
-          onChange={(event) => setFrequency(event.target.value as ReviewFrequency)}
-          data-testid="review-template-create-frequency"
-        >
-          {REVIEW_FREQUENCY_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {t(mapReviewFrequencyToLabelKey(option))}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="review-template-create-name-input">
-          {t('reviewTemplate.create.nameLabel')}
-        </label>
-        <input
-          id="review-template-create-name-input"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          data-testid="review-template-create-name"
-        />
-        {error && <p data-testid="review-template-create-error">{error}</p>}
-        <button type="submit" data-testid="review-template-create-submit" disabled={submitting}>
-          {t('reviewTemplate.create.submitLabel')}
-        </button>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+        <div className="sf-field">
+          <label htmlFor="review-template-create-type-input">
+            {t('reviewTemplate.create.typeLabel')}
+          </label>
+          <select
+            id="review-template-create-type-input"
+            value={elementType}
+            onChange={(event) => setElementType(event.target.value as ElementType)}
+            data-testid="review-template-create-type"
+          >
+            {ELEMENT_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapElementTypeToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="sf-field">
+          <label htmlFor="review-template-create-frequency-input">
+            {t('reviewTemplate.create.frequencyLabel')}
+          </label>
+          <select
+            id="review-template-create-frequency-input"
+            value={frequency}
+            onChange={(event) => setFrequency(event.target.value as ReviewFrequency)}
+            data-testid="review-template-create-frequency"
+          >
+            {REVIEW_FREQUENCY_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {t(mapReviewFrequencyToLabelKey(option))}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="sf-field">
+          <label htmlFor="review-template-create-name-input">
+            {t('reviewTemplate.create.nameLabel')}
+          </label>
+          <input
+            id="review-template-create-name-input"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="review-template-create-name"
+          />
+        </div>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="review-template-create-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="review-template-create-submit"
+            disabled={submitting}
+          >
+            {t('reviewTemplate.create.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

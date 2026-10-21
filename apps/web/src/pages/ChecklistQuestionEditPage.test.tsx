@@ -139,4 +139,76 @@ describe('ChecklistQuestionEditPage', () => {
     const error = await screen.findByTestId('checklist-question-edit-error');
     expect(error).toHaveTextContent('This checklist question could not be found.');
   });
+
+  describe('design system', () => {
+    it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
+      mockedListChecklistQuestions.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage();
+      expect(screen.getByTestId('checklist-question-edit-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      const notFound = renderPage();
+      expect(await screen.findByTestId('checklist-question-edit-not-found')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      notFound.unmount();
+
+      mockedListChecklistQuestions.mockRejectedValue(new ApiError(0));
+      renderPage();
+      expect(await screen.findByTestId('checklist-question-edit-error-state')).toHaveClass(
+        'sf-empty',
+      );
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form as field groups with choices and the submit as the primary action', async () => {
+      mockedListChecklistQuestions.mockResolvedValue([question]);
+      renderPage();
+
+      const submit = await screen.findByTestId('checklist-question-edit-submit');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      const text = screen.getByTestId('checklist-question-edit-text');
+      expect(text.parentElement).toHaveClass('sf-field');
+      expect(text.parentElement?.querySelector(`label[for="${text.id}"]`)).not.toBeNull();
+      const checkbox = screen.getByTestId('checklist-question-edit-frequency-QUARTERLY');
+      expect(checkbox.parentElement).toHaveClass('sf-choice');
+      expect(checkbox.closest('fieldset')).toHaveClass('sf-field');
+    });
+
+    it('puts Delete (danger) in the page header', async () => {
+      mockedListChecklistQuestions.mockResolvedValue([question]);
+      renderPage();
+
+      const remove = await screen.findByTestId('checklist-question-edit-delete');
+      expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
+      expect(remove.parentElement).toHaveClass('sf-actions');
+      expect(remove.closest('.sf-page-header')).toBe(
+        screen.getByRole('heading', { level: 1 }).parentElement,
+      );
+    });
+
+    it('shows the save and delete failures as danger alerts', async () => {
+      mockedListChecklistQuestions.mockResolvedValue([question]);
+      mockedUpdateChecklistQuestion.mockRejectedValue(new ApiError(400));
+      mockedSoftDeleteChecklistQuestion.mockRejectedValue(new ApiError(400));
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('checklist-question-edit-submit'));
+      const saveError = await screen.findByTestId('checklist-question-edit-error');
+      expect(mockedUpdateChecklistQuestion).toHaveBeenCalled();
+      expect(saveError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(saveError).toHaveAttribute('role', 'alert');
+
+      fireEvent.click(screen.getByTestId('checklist-question-edit-delete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      const deleteError = await screen.findByTestId('checklist-question-edit-delete-error');
+      expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(deleteError).toHaveAttribute('role', 'alert');
+    });
+  });
 });
