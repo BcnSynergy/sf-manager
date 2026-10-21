@@ -20,7 +20,7 @@ Route: ODD (visual restyle only, no behavior change; the user accepted the propo
 | T4  | S2, S3     | `InspectableElementCreatePage`, `InspectableElementEditPage`           | inline | done   | #260        |
 | T5  | S2, S3     | `UserCreatePage`, `UserEditPage`                                       | inline | done   | #261        |
 | T6  | S1, S2, S3 | `OrganizationProfilePage`                                              | inline | done   | #262        |
-| T7  | S2, S3, S4 | `ReviewSessionNewPage`, `ReviewSessionElementPage`                     | inline | review |             |
+| T7  | S2, S3, S4 | `ReviewSessionNewPage`, `ReviewSessionElementPage`                     | inline | done   | #263        |
 
 Route evidence: one PR per task, written inline by the parent; no writer trigger (units are sequential, not parallel).
 
@@ -50,3 +50,4 @@ Route evidence: one PR per task, written inline by the parent; no writer trigger
 - L22 (2026-10-21, user, verbatim): "si" — to making Continue the primary button and Save a secondary one once the element is saved (the spec's next step is code entry).
 - L23 (2026-10-21): T7 pre-push fresh review: no blockers; S4's conclusion confirmed. Done: after a save, Continue is `sf-btn-primary` and Save steps down to `sf-btn` (L22), test-first. Registered TD-39 (the element page offers answer controls and Save on a completed session's element, against the spec; pre-existing). EN-76 now also notes the confirmation can sit out of view at phone width. No action: Continue inside the `role="status"` region (allowed by ARIA), the new-session load failure looking like an empty state (S2), the element panel without a title, no class test for the `resolved === null` branch. The user accepted T7 over the 400-line budget (448 changed lines at acceptance: 170 tests, 252 code, 26 docs; the post-save button swap then added 2 code and 2 test lines, and the rest is docs).
 - L24 (2026-10-21): T7 pre-merge fresh review: no code blockers; TD-39, EN-69 and EN-76 verified. Fixed: the PR's whitespace-free code count now includes the CSS (124, not 120); L23's size note now says the swap added code and test lines; L21 notes it is superseded by L22-L23. EN-76 now notes that a confirmation stays up after the user edits answers. No action: no test checks Save returns to primary after a failed save.
+- L25 (2026-10-21): T7 merged as #263. The chain is complete: all 14 form pages restyled across #257-#263. Open follow-ups live in the registers: EN-69 (recounted by every PR here), EN-74, EN-75, EN-76 and TD-39.
