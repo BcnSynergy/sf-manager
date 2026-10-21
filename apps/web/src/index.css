@@ -444,6 +444,11 @@ code {
   background: var(--danger-soft);
   color: var(--danger);
 }
+/* A confirmation that an action succeeded, with role="status". */
+.sf-alert-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
 
 .sf-credit {
   display: inline-flex;

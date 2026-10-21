@@ -167,8 +167,12 @@ export function OrganizationProfilePage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <h1>{t('organizationProfile.title')}</h1>
-        <p data-testid="organization-profile-loading">{t('organizationProfile.loading')}</p>
+        <header className="sf-page-header">
+          <h1>{t('organizationProfile.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="organization-profile-loading">
+          {t('organizationProfile.loading')}
+        </p>
       </main>
     );
   }
@@ -176,26 +180,46 @@ export function OrganizationProfilePage() {
   if (loadState === 'error') {
     return (
       <main>
-        <h1>{t('organizationProfile.title')}</h1>
-        <p data-testid="organization-profile-error-state">{t('organizationProfile.errorState')}</p>
+        <header className="sf-page-header">
+          <h1>{t('organizationProfile.title')}</h1>
+        </header>
+        <p className="sf-empty" data-testid="organization-profile-error-state">
+          {t('organizationProfile.errorState')}
+        </p>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>{t('organizationProfile.title')}</h1>
+      <header className="sf-page-header">
+        <h1>{t('organizationProfile.title')}</h1>
+      </header>
       {incomplete && (
-        <p data-testid="organization-profile-incomplete">{t('organizationProfile.incomplete')}</p>
+        <div className="sf-alert" data-testid="organization-profile-incomplete">
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{t('organizationProfile.incomplete')}</p>
+        </div>
       )}
       {success && (
-        <p data-testid="organization-profile-success">{t('organizationProfile.saveSuccess')}</p>
+        <div
+          className="sf-alert sf-alert-success"
+          role="status"
+          data-testid="organization-profile-success"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            ✓
+          </span>
+          <p>{t('organizationProfile.saveSuccess')}</p>
+        </div>
       )}
       {/* noValidate: validation messages are ours, not the browser's native,
           locale-inconsistent constraint-validation UI. */}
-      <form onSubmit={handleSubmit} noValidate>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
         {REQUIRED_FIELDS.map((field) => (
-          <div key={field}>
+          <div key={field} className="sf-field">
             <label htmlFor={`organization-profile-${field}-input`}>
               {t(`organizationProfile.${field}Label`)}
             </label>
@@ -209,10 +233,28 @@ export function OrganizationProfilePage() {
             />
           </div>
         ))}
-        {error && <p data-testid="organization-profile-error">{error}</p>}
-        <button type="submit" data-testid="organization-profile-submit" disabled={submitting}>
-          {t('organizationProfile.submitLabel')}
-        </button>
+        {error && (
+          <div
+            className="sf-alert sf-alert-danger"
+            role="alert"
+            data-testid="organization-profile-error"
+          >
+            <span className="sf-alert-icon" aria-hidden="true">
+              !
+            </span>
+            <p>{error}</p>
+          </div>
+        )}
+        <div className="sf-actions">
+          <button
+            type="submit"
+            className="sf-btn sf-btn-primary"
+            data-testid="organization-profile-submit"
+            disabled={submitting}
+          >
+            {t('organizationProfile.submitLabel')}
+          </button>
+        </div>
       </form>
     </main>
   );

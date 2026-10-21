@@ -402,4 +402,71 @@ describe('OrganizationProfilePage route access', () => {
 
     expect(await screen.findByTestId('organization-profile-incomplete')).toBeInTheDocument();
   });
+
+  describe('design system', () => {
+    it('renders the loading and error states in empty-state boxes under a page header', async () => {
+      mockedGetOrganizationProfile.mockReturnValue(new Promise(() => {}));
+      const loading = renderPage();
+      expect(screen.getByTestId('organization-profile-loading')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      loading.unmount();
+
+      mockedGetOrganizationProfile.mockRejectedValue(new ApiError(0));
+      renderPage();
+      expect(await screen.findByTestId('organization-profile-error-state')).toHaveClass('sf-empty');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+    });
+
+    it('renders the form as field groups under a page header with the submit as the primary action', async () => {
+      mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+      renderPage();
+
+      const submit = await screen.findByTestId('organization-profile-submit');
+      expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
+      expect(submit.closest('form')).toHaveClass('sf-form');
+      expect(submit).toHaveClass('sf-btn', 'sf-btn-primary');
+      expect(submit.parentElement).toHaveClass('sf-actions');
+      for (const field of ['name', 'legal-name', 'tax-id', 'address', 'phone', 'email']) {
+        const control = screen.getByTestId(`organization-profile-${field}`);
+        const group = control.parentElement;
+        expect(group).toHaveClass('sf-field');
+        expect(group?.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+      }
+    });
+
+    it('shows the incomplete notice as a neutral alert', async () => {
+      mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+      renderPage();
+
+      const notice = await screen.findByTestId('organization-profile-incomplete');
+      expect(notice).toHaveClass('sf-alert');
+      expect(notice).not.toHaveClass('sf-alert-danger');
+      expect(notice).not.toHaveClass('sf-alert-success');
+    });
+
+    it('shows the save confirmation as a success status alert', async () => {
+      mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+      mockedUpdateOrganizationProfile.mockResolvedValue(filledProfile);
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('organization-profile-submit'));
+
+      const success = await screen.findByTestId('organization-profile-success');
+      expect(success).toHaveClass('sf-alert', 'sf-alert-success');
+      expect(success).toHaveAttribute('role', 'status');
+    });
+
+    it('shows the save failure as a danger alert', async () => {
+      mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+      mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(0));
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('organization-profile-submit'));
+
+      const error = await screen.findByTestId('organization-profile-error');
+      expect(mockedUpdateOrganizationProfile).toHaveBeenCalled();
+      expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
+      expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
 });
