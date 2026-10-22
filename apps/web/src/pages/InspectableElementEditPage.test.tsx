@@ -374,7 +374,11 @@ describe('InspectableElementEditPage', () => {
       expect(field).toHaveClass('sf-field');
       expect(field?.children).toHaveLength(2);
       expect(field?.firstElementChild).toHaveClass('sf-label');
-      expect(field?.firstElementChild).toHaveTextContent(/^Type$/);
+      // EN-78: a colon kept for screen readers only, so the term and the value
+      // are not read as one run.
+      expect(field?.firstElementChild).toHaveTextContent(/^Type:$/);
+      expect(field?.firstElementChild?.lastElementChild).toHaveClass('visually-hidden');
+      expect(field?.firstElementChild?.lastElementChild).toHaveTextContent(/^:$/);
       expect(type).toHaveTextContent(/^Fire extinguisher$/);
     });
 
