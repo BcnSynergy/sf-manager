@@ -189,31 +189,7 @@ export function ChecklistQuestionEditPage() {
 
   return (
     <main>
-      <PageHeader title={t('checklistQuestion.edit.title')}>
-        <div className="sf-actions">
-          <button
-            type="button"
-            className="sf-btn sf-btn-danger"
-            data-testid="checklist-question-edit-delete"
-            disabled={submitting || deleting}
-            onClick={requestDelete}
-          >
-            {t('checklistQuestion.edit.deleteLabel')}
-          </button>
-        </div>
-      </PageHeader>
-      {deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="checklist-question-edit-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
-      )}
+      <PageHeader title={t('checklistQuestion.edit.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
@@ -277,6 +253,31 @@ export function ChecklistQuestionEditPage() {
           </button>
         </div>
       </form>
+      {/* EN-74: the page actions follow the form, so the fields come first in
+          tab order; their failures show just above them. */}
+      {deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="checklist-question-edit-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
+      <div className="sf-actions">
+        <button
+          type="button"
+          className="sf-btn sf-btn-danger"
+          data-testid="checklist-question-edit-delete"
+          disabled={submitting || deleting}
+          onClick={requestDelete}
+        >
+          {t('checklistQuestion.edit.deleteLabel')}
+        </button>
+      </div>
       <ConfirmDialog
         tone="danger"
         open={pendingDelete}

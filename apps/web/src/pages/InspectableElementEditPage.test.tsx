@@ -379,12 +379,15 @@ describe('InspectableElementEditPage', () => {
       }
     });
 
-    it('puts Decommission (secondary) and Delete (danger) in the page header', async () => {
+    // EN-74: the header holds only the title, so the form fields come first
+    // in tab order and the element actions follow the form's Save in their
+    // own group, Decommission before Delete.
+    it('puts Decommission (secondary) then Delete (danger) after the form, following Save in tab order', async () => {
       mockedListInspectableElements.mockResolvedValue([elementA]);
       renderPage(elementA.id);
 
       const decommission = await screen.findByTestId('inspectable-element-edit-decommission');
-      const header = screen.getByRole('heading', { level: 1 }).parentElement;
+      const submit = screen.getByTestId('inspectable-element-edit-submit');
       const remove = screen.getByTestId('inspectable-element-edit-delete');
       expect(decommission).toHaveClass('sf-btn');
       expect(decommission).not.toHaveClass('sf-btn-primary');
@@ -392,20 +395,35 @@ describe('InspectableElementEditPage', () => {
       expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
       for (const action of [decommission, remove]) {
         expect(action.parentElement).toHaveClass('sf-actions');
-        expect(action.closest('.sf-page-header')).toBe(header);
+        expect(action.closest('.sf-page-header')).toBeNull();
+        expect(action.closest('form')).toBeNull();
       }
+      expect(screen.getByRole('heading', { level: 1 }).parentElement?.children).toHaveLength(1);
+      expect(
+        submit.compareDocumentPosition(decommission) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        decommission.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
-    it('puts Reactivate (secondary) in the page header and shows the decommissioned state as a badge', async () => {
+    it('puts Reactivate (secondary) after the form and shows the decommissioned state as a badge', async () => {
       mockedListInspectableElements.mockResolvedValue([elementB]);
       renderPage(elementB.id);
 
       const reactivate = await screen.findByTestId('inspectable-element-edit-reactivate');
       expect(reactivate).toHaveClass('sf-btn');
       expect(reactivate).not.toHaveClass('sf-btn-primary');
-      expect(reactivate.closest('.sf-page-header')).toBe(
-        screen.getByRole('heading', { level: 1 }).parentElement,
-      );
+      expect(reactivate.closest('.sf-page-header')).toBeNull();
+      expect(reactivate.closest('form')).toBeNull();
+      expect(
+        screen.getByTestId('inspectable-element-edit-submit').compareDocumentPosition(reactivate) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        reactivate.compareDocumentPosition(screen.getByTestId('inspectable-element-edit-delete')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(screen.getByTestId('inspectable-element-edit-deactivated-label')).toHaveClass(
         'sf-badge',
       );
@@ -428,6 +446,15 @@ describe('InspectableElementEditPage', () => {
       const deleteError = await screen.findByTestId('inspectable-element-edit-delete-error');
       expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(deleteError).toHaveAttribute('role', 'alert');
+      expect(deleteError.closest('form')).toBeNull();
+      expect(
+        screen.getByTestId('inspectable-element-edit-submit').compareDocumentPosition(deleteError) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        deleteError.compareDocumentPosition(screen.getByTestId('inspectable-element-edit-delete')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
 
       fireEvent.click(screen.getByTestId('inspectable-element-edit-decommission'));
       fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
@@ -436,6 +463,17 @@ describe('InspectableElementEditPage', () => {
       );
       expect(decommissionError).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(decommissionError).toHaveAttribute('role', 'alert');
+      expect(decommissionError.closest('form')).toBeNull();
+      expect(
+        screen
+          .getByTestId('inspectable-element-edit-submit')
+          .compareDocumentPosition(decommissionError) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        decommissionError.compareDocumentPosition(
+          screen.getByTestId('inspectable-element-edit-decommission'),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 });

@@ -234,16 +234,22 @@ describe('MaintenanceCompanyEditPage', () => {
       }
     });
 
-    it('puts Delete (danger) in the page header', async () => {
+    // EN-74: the header holds only the title, so the form fields come first
+    // in tab order and Delete follows the form's Save in its own group.
+    it('puts Delete (danger) after the form, following Save in tab order', async () => {
       mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
       renderPage(companyA.id);
 
       const remove = await screen.findByTestId('maintenance-company-edit-delete');
+      const submit = screen.getByTestId('maintenance-company-edit-submit');
       expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
       expect(remove.parentElement).toHaveClass('sf-actions');
-      expect(remove.closest('.sf-page-header')).toBe(
-        screen.getByRole('heading', { level: 1 }).parentElement,
-      );
+      expect(remove.closest('.sf-page-header')).toBeNull();
+      expect(remove.closest('form')).toBeNull();
+      expect(screen.getByRole('heading', { level: 1 }).parentElement?.children).toHaveLength(1);
+      expect(
+        submit.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it('shows the save and delete failures as danger alerts', async () => {
@@ -263,6 +269,15 @@ describe('MaintenanceCompanyEditPage', () => {
       const deleteError = await screen.findByTestId('maintenance-company-edit-delete-error');
       expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(deleteError).toHaveAttribute('role', 'alert');
+      expect(deleteError.closest('form')).toBeNull();
+      expect(
+        screen.getByTestId('maintenance-company-edit-submit').compareDocumentPosition(deleteError) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        deleteError.compareDocumentPosition(screen.getByTestId('maintenance-company-edit-delete')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 });

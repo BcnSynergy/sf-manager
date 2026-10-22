@@ -574,17 +574,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it goes through SDD. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-74** (web a11y): On the maintenance company and checklist question
-  edit forms, Delete is the page header's only action, so it comes before
-  the form fields in keyboard tab order: after the side navigation, it is
-  the first focusable element in the page content (a confirmation dialog
-  guards it). The inspectable element edit form has the same order with
-  Decommission (or Reactivate) then Delete in its header. The template and
-  session detail pages avoid this by putting their primary action first in
-  the header. Options: also put Save in the header before the other
-  actions, or move them after the form's Save. Decide once for every edit
-  form with header actions, ideally with the EN-69 `PageHeader`. Origin:
-  `ui-restyle-forms` PR 2 fresh review, 2026-10-20.
 - **EN-75** (web): The checklist question and inspectable element edit
   forms show the read-only element type as a plain paragraph (`Element
 type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
@@ -611,6 +600,12 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
 
 ## Done
 
+- **EN-74** (web a11y): On the maintenance company, checklist question and
+  inspectable element edit forms, the page actions (Delete, and Decommission
+  or Reactivate) no longer sit in the page header, where they came before the
+  form fields in keyboard tab order. They now follow the form in their own
+  `sf-actions` group, after its Save, with their failure alerts just above
+  them; the header holds only the title. Done in `page-header`, PR #268.
 - **EN-69** (web): The `sf-page-header` block with its `h1` that every page
   repeated (80 copies in 28 pages) is now one `PageHeader` component
   (`apps/web/src/components/PageHeader.tsx`): a title plus optional actions,
