@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import type { ElementType } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { getReviewScope, openReviewSession, type ReviewScope } from '../api/review-session';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -78,9 +79,7 @@ export function ReviewSessionNewPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.new.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.new.title')} />
         <p className="sf-empty" data-testid="review-session-new-loading">
           {t('reviewSession.new.loading')}
         </p>
@@ -91,9 +90,7 @@ export function ReviewSessionNewPage() {
   if (loadState === 'error' || scope === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.new.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.new.title')} />
         <p className="sf-empty" data-testid="review-session-new-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -104,9 +101,7 @@ export function ReviewSessionNewPage() {
   if (scope.communities.length === 0) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.new.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.new.title')} />
         <p className="sf-empty" data-testid="review-session-new-communities-empty">
           {t('reviewSession.new.communitiesEmpty')}
         </p>
@@ -117,9 +112,7 @@ export function ReviewSessionNewPage() {
   if (scope.templates.length === 0) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.new.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.new.title')} />
         <p className="sf-empty" data-testid="review-session-new-templates-empty">
           {t('reviewSession.new.templatesEmpty')}
         </p>
@@ -129,9 +122,7 @@ export function ReviewSessionNewPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewSession.new.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewSession.new.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={(event) => void handleSubmit(event)} noValidate>

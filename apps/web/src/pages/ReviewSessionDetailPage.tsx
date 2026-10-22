@@ -9,6 +9,7 @@ import {
   type ReviewSessionDetail,
 } from '../api/review-session';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
@@ -150,9 +151,7 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.detail.title')} />
         <p className="sf-empty" data-testid="review-session-detail-loading">
           {t('reviewSession.detail.loading')}
         </p>
@@ -163,9 +162,7 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.detail.title')} />
         <p className="sf-empty" data-testid="review-session-detail-not-found">
           {t('reviewSession.detail.notFound')}
         </p>
@@ -176,9 +173,7 @@ export function ReviewSessionDetailPage() {
   if (loadState === 'error' || session === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.detail.title')} />
         <p className="sf-empty" data-testid="review-session-detail-error">
           {t('reviewSession.detail.error')}
         </p>
@@ -190,8 +185,7 @@ export function ReviewSessionDetailPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewSession.detail.title')}</h1>
+      <PageHeader title={t('reviewSession.detail.title')}>
         {isDraft && (
           <div className="sf-actions">
             <button
@@ -214,7 +208,7 @@ export function ReviewSessionDetailPage() {
             </button>
           </div>
         )}
-      </header>
+      </PageHeader>
 
       {isDraft && completeError && (
         <div

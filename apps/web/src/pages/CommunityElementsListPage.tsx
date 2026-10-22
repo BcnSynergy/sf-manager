@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { listInspectableElements, type InspectableElement } from '../api/inspectable-element';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -64,9 +65,7 @@ export function CommunityElementsListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('inspectableElement.list.title')}</h1>
-        </header>
+        <PageHeader title={t('inspectableElement.list.title')} />
         <p className="sf-empty" data-testid="community-elements-list-loading">
           {t('inspectableElement.list.loading')}
         </p>
@@ -77,9 +76,7 @@ export function CommunityElementsListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('inspectableElement.list.title')}</h1>
-        </header>
+        <PageHeader title={t('inspectableElement.list.title')} />
         <p className="sf-empty" data-testid="community-elements-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -89,8 +86,7 @@ export function CommunityElementsListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('inspectableElement.list.title')}</h1>
+      <PageHeader title={t('inspectableElement.list.title')}>
         <Link
           to={`/communities/${communityId}/inspectable-elements/new`}
           className="sf-btn sf-btn-primary"
@@ -98,7 +94,7 @@ export function CommunityElementsListPage() {
         >
           {t('inspectableElement.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {elements.length === 0 ? (
         <p className="sf-empty" data-testid="community-elements-list-empty">
           {t('inspectableElement.list.empty')}

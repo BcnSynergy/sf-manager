@@ -9,6 +9,7 @@ import {
   updateInspectableElement,
 } from '../api/inspectable-element';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -213,9 +214,7 @@ export function InspectableElementEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('inspectableElement.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('inspectableElement.edit.title')} />
         <p className="sf-empty" data-testid="inspectable-element-edit-loading">
           {t('inspectableElement.list.loading')}
         </p>
@@ -226,9 +225,7 @@ export function InspectableElementEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('inspectableElement.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('inspectableElement.edit.title')} />
         <p className="sf-empty" data-testid="inspectable-element-edit-not-found">
           {t('inspectableElement.edit.notFound')}
         </p>
@@ -239,9 +236,7 @@ export function InspectableElementEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('inspectableElement.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('inspectableElement.edit.title')} />
         <p className="sf-empty" data-testid="inspectable-element-edit-error-state">
           {t('common.error.network')}
         </p>
@@ -251,8 +246,7 @@ export function InspectableElementEditPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('inspectableElement.edit.title')}</h1>
+      <PageHeader title={t('inspectableElement.edit.title')}>
         <div className="sf-actions">
           {/* inspectable-element-admin-ui spec.md "The control is single-element
               and reason-free": exactly one action, no bulk variant, no reason
@@ -288,7 +282,7 @@ export function InspectableElementEditPage() {
             {t('inspectableElement.edit.deleteLabel')}
           </button>
         </div>
-      </header>
+      </PageHeader>
       {deleteError && (
         <div
           className="sf-alert sf-alert-danger"

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router';
 import { updateCommunitySchema, localeSchema, type Locale } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { updateCommunity } from '../api/community';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
@@ -76,9 +77,7 @@ export function CommunityEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('community.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('community.edit.title')} />
         <p className="sf-empty" data-testid="community-edit-loading">
           {t('community.list.loading')}
         </p>
@@ -89,9 +88,7 @@ export function CommunityEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('community.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('community.edit.title')} />
         <p className="sf-empty" data-testid="community-edit-not-found">
           {t('community.edit.notFound')}
         </p>
@@ -102,9 +99,7 @@ export function CommunityEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('community.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('community.edit.title')} />
         <p className="sf-empty" data-testid="community-edit-error-state">
           {t('common.error.network')}
         </p>
@@ -114,9 +109,7 @@ export function CommunityEditPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('community.edit.title')}</h1>
-      </header>
+      <PageHeader title={t('community.edit.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

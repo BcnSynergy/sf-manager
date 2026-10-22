@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { createCommunitySchema, localeSchema, type Locale } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createCommunity } from '../api/community';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 
@@ -53,9 +54,7 @@ export function CommunityCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('community.create.title')}</h1>
-      </header>
+      <PageHeader title={t('community.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

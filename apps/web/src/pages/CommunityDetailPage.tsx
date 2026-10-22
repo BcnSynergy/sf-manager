@@ -10,6 +10,7 @@ import {
   reactivateRepresentative,
   reactivateTechnician,
 } from '../api/community';
+import { PageHeader } from '../components/PageHeader';
 import { AssignmentSection, type AssignmentOps } from '../community/AssignmentSection';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
@@ -76,8 +77,7 @@ export function CommunityDetailPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('community.detail.title')}</h1>
+      <PageHeader title={t('community.detail.title')}>
         {/* design.md Decision 9 — this Link is CommunityDetailPage's only
             sanctioned change for the inspectable-elements slice; the elements
             list is a distinct, community-scoped route, never a standalone one
@@ -91,7 +91,7 @@ export function CommunityDetailPage() {
             {t('community.detail.elementsLink')}
           </Link>
         )}
-      </header>
+      </PageHeader>
 
       {loadState === 'loading' && (
         <p className="sf-empty" data-testid="community-detail-loading">

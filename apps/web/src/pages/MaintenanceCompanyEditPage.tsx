@@ -9,6 +9,7 @@ import {
   updateMaintenanceCompany,
 } from '../api/maintenance-company';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
@@ -127,9 +128,7 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('maintenanceCompany.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('maintenanceCompany.edit.title')} />
         <p className="sf-empty" data-testid="maintenance-company-edit-loading">
           {t('maintenanceCompany.list.loading')}
         </p>
@@ -140,9 +139,7 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('maintenanceCompany.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('maintenanceCompany.edit.title')} />
         <p className="sf-empty" data-testid="maintenance-company-edit-not-found">
           {t('maintenanceCompany.edit.notFound')}
         </p>
@@ -153,9 +150,7 @@ export function MaintenanceCompanyEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('maintenanceCompany.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('maintenanceCompany.edit.title')} />
         <p className="sf-empty" data-testid="maintenance-company-edit-error-state">
           {t('common.error.network')}
         </p>
@@ -165,8 +160,7 @@ export function MaintenanceCompanyEditPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('maintenanceCompany.edit.title')}</h1>
+      <PageHeader title={t('maintenanceCompany.edit.title')}>
         <div className="sf-actions">
           <button
             type="button"
@@ -178,7 +172,7 @@ export function MaintenanceCompanyEditPage() {
             {t('maintenanceCompany.edit.deleteLabel')}
           </button>
         </div>
-      </header>
+      </PageHeader>
       {deleteError && (
         <div
           className="sf-alert sf-alert-danger"

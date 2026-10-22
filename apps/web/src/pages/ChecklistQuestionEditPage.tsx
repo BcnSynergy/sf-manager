@@ -14,6 +14,7 @@ import {
   updateChecklistQuestion,
 } from '../api/checklist-question';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -156,9 +157,7 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('checklistQuestion.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('checklistQuestion.edit.title')} />
         <p className="sf-empty" data-testid="checklist-question-edit-loading">
           {t('checklistQuestion.list.loading')}
         </p>
@@ -169,9 +168,7 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('checklistQuestion.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('checklistQuestion.edit.title')} />
         <p className="sf-empty" data-testid="checklist-question-edit-not-found">
           {t('checklistQuestion.edit.notFound')}
         </p>
@@ -182,9 +179,7 @@ export function ChecklistQuestionEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('checklistQuestion.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('checklistQuestion.edit.title')} />
         <p className="sf-empty" data-testid="checklist-question-edit-error-state">
           {t('common.error.network')}
         </p>
@@ -194,8 +189,7 @@ export function ChecklistQuestionEditPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('checklistQuestion.edit.title')}</h1>
+      <PageHeader title={t('checklistQuestion.edit.title')}>
         <div className="sf-actions">
           <button
             type="button"
@@ -207,7 +201,7 @@ export function ChecklistQuestionEditPage() {
             {t('checklistQuestion.edit.deleteLabel')}
           </button>
         </div>
-      </header>
+      </PageHeader>
       {deleteError && (
         <div
           className="sf-alert sf-alert-danger"

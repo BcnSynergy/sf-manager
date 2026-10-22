@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listReviewHistory, type ReviewHistoryRow } from '../api/review-history';
+import { PageHeader } from '../components/PageHeader';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -43,9 +44,7 @@ export function ReviewHistoryPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.list.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.list.title')} />
         <p className="sf-empty" data-testid="review-history-loading">
           {t('reviewHistory.list.loading')}
         </p>
@@ -56,9 +55,7 @@ export function ReviewHistoryPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.list.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.list.title')} />
         <p className="sf-empty" data-testid="review-history-error">
           {t('reviewHistory.list.error')}
         </p>
@@ -68,9 +65,7 @@ export function ReviewHistoryPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewHistory.list.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewHistory.list.title')} />
       {rows.length === 0 ? (
         <p className="sf-empty" data-testid="review-history-empty">
           {t('reviewHistory.list.empty')}

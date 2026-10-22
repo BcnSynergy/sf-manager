@@ -7,6 +7,7 @@ import {
   type OrganizationProfile,
   type UpdateOrganizationProfilePayload,
 } from '../api/organization-profile';
+import { PageHeader } from '../components/PageHeader';
 import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -167,9 +168,7 @@ export function OrganizationProfilePage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('organizationProfile.title')}</h1>
-        </header>
+        <PageHeader title={t('organizationProfile.title')} />
         <p className="sf-empty" data-testid="organization-profile-loading">
           {t('organizationProfile.loading')}
         </p>
@@ -180,9 +179,7 @@ export function OrganizationProfilePage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('organizationProfile.title')}</h1>
-        </header>
+        <PageHeader title={t('organizationProfile.title')} />
         <p className="sf-empty" data-testid="organization-profile-error-state">
           {t('organizationProfile.errorState')}
         </p>
@@ -192,9 +189,7 @@ export function OrganizationProfilePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('organizationProfile.title')}</h1>
-      </header>
+      <PageHeader title={t('organizationProfile.title')} />
       {incomplete && (
         <div className="sf-alert" data-testid="organization-profile-incomplete">
           <span className="sf-alert-icon" aria-hidden="true">

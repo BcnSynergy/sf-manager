@@ -9,6 +9,7 @@ import {
   resolveElementByCode,
   type ResolveElementResult,
 } from '../api/review-session';
+import { PageHeader } from '../components/PageHeader';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -135,9 +136,7 @@ export function ReviewSessionElementPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.element.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.element.title')} />
         <p className="sf-empty" data-testid="review-session-element-loading">
           {t('reviewSession.element.loading')}
         </p>
@@ -148,9 +147,7 @@ export function ReviewSessionElementPage() {
   if (loadState === 'error' || resolved === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.element.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.element.title')} />
         <p className="sf-empty" data-testid="review-session-element-error">
           {t(loadErrorKey ?? 'reviewSession.element.notFound')}
         </p>
@@ -180,9 +177,7 @@ export function ReviewSessionElementPage() {
     const { entry } = resolved;
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.element.readOnlyTitle')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.element.readOnlyTitle')} />
         {elementPanel}
         <div className="sf-alert" data-testid="review-session-element-completed-notice">
           <span className="sf-alert-icon" aria-hidden="true">
@@ -233,9 +228,7 @@ export function ReviewSessionElementPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewSession.element.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewSession.element.title')} />
       {elementPanel}
 
       {saved && (

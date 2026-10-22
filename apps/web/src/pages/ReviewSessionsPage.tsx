@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { listOwnReviewSessions, type ReviewSession } from '../api/review-session';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -44,9 +45,7 @@ export function ReviewSessionsPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.entry.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.entry.title')} />
         <p className="sf-empty" data-testid="review-sessions-loading">
           {t('reviewSession.entry.loading')}
         </p>
@@ -57,9 +56,7 @@ export function ReviewSessionsPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSession.entry.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSession.entry.title')} />
         <p className="sf-empty" data-testid="review-sessions-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -69,8 +66,7 @@ export function ReviewSessionsPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewSession.entry.title')}</h1>
+      <PageHeader title={t('reviewSession.entry.title')}>
         <div className="sf-actions">
           <Link
             to="/review-sessions/new"
@@ -83,7 +79,7 @@ export function ReviewSessionsPage() {
             {t('reviewSession.entry.historyLink')}
           </Link>
         </div>
-      </header>
+      </PageHeader>
       {sessions.length === 0 ? (
         <p className="sf-empty" data-testid="review-sessions-empty">
           {t('reviewSession.entry.empty')}

@@ -10,6 +10,7 @@ import {
 } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createDraftReviewTemplate } from '../api/review-template';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -75,9 +76,7 @@ export function ReviewTemplateCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewTemplate.create.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewTemplate.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

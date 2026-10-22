@@ -10,6 +10,7 @@ import {
 } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createChecklistQuestion } from '../api/checklist-question';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -75,9 +76,7 @@ export function ChecklistQuestionCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('checklistQuestion.create.title')}</h1>
-      </header>
+      <PageHeader title={t('checklistQuestion.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
