@@ -95,6 +95,15 @@ describe('ReviewSessionElementPage', () => {
     expect(new Set(renderedMessages).size).toBe(1);
   });
 
+  it('titles a draft session element as the answer form', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+
+    renderPage();
+
+    await screen.findByTestId('review-session-element-save');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Answer element');
+  });
+
   it('renders the frozen questions in snapshot order, each with three answer options', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
 
@@ -382,6 +391,15 @@ describe('ReviewSessionElementPage', () => {
       for (const testId of MUTATING_TEST_IDS) {
         expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
       }
+    });
+
+    it('titles the read-only view as the recorded element', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+
+      renderPage();
+
+      await screen.findByTestId('review-session-element-completed-notice');
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Recorded element');
     });
 
     it('offers Back to session as the only action', async () => {

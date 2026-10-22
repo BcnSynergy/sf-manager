@@ -438,6 +438,7 @@
     },
     "element": {
       "title": "Responder elemento",
+      "readOnlyTitle": "Elemento registrado",
       "loading": "Cargando elemento...",
       "notFound": "Este código no es válido para esta sesión.",
       "error": "Algo ha fallado al cargar este elemento.",

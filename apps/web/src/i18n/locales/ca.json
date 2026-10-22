@@ -438,6 +438,7 @@
     },
     "element": {
       "title": "Respondre element",
+      "readOnlyTitle": "Element registrat",
       "loading": "Carregant element...",
       "notFound": "Aquest codi no és vàlid per a aquesta sessió.",
       "error": "Alguna cosa ha fallat en carregar aquest element.",

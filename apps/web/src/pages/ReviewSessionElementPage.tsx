@@ -181,7 +181,7 @@ export function ReviewSessionElementPage() {
     return (
       <main>
         <header className="sf-page-header">
-          <h1>{t('reviewSession.element.title')}</h1>
+          <h1>{t('reviewSession.element.readOnlyTitle')}</h1>
         </header>
         {elementPanel}
         <div className="sf-alert" data-testid="review-session-element-completed-notice">

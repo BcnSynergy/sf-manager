@@ -438,6 +438,7 @@
     },
     "element": {
       "title": "Answer element",
+      "readOnlyTitle": "Recorded element",
       "loading": "Loading element...",
       "notFound": "This code is not valid for this session.",
       "error": "Something went wrong loading this element.",
