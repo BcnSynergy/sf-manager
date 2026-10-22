@@ -447,7 +447,9 @@
       "saveLabel": "Guardar y continuar",
       "saveError": "Este elemento no se ha podido guardar.",
       "saveConfirmation": "Guardado. Introduce el código del siguiente elemento.",
-      "backLabel": "Volver a la sesión"
+      "backLabel": "Volver a la sesión",
+      "unreviewedLabel": "No revisado",
+      "notRecorded": "No se registró ninguna entrada para este elemento en esta sesión."
     },
     "answer": {
       "yes": "Sí",

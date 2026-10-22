@@ -447,7 +447,9 @@
       "saveLabel": "Desar i continuar",
       "saveError": "Aquest element no s'ha pogut desar.",
       "saveConfirmation": "Desat. Introdueix el codi del següent element.",
-      "backLabel": "Tornar a la sessió"
+      "backLabel": "Tornar a la sessió",
+      "unreviewedLabel": "No revisat",
+      "notRecorded": "No s'ha registrat cap entrada per a aquest element en aquesta sessió."
     },
     "answer": {
       "yes": "Sí",

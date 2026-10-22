@@ -62,16 +62,6 @@ None.
   `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
-- **TD-39**: The review session element page opens an element of a
-  completed session with its answer radios, the mark-unreviewed toggle and
-  an enabled Save, although `review-session-ui` requires that "no control
-  MUST offer to edit, reopen, answer, discard or delete" a completed
-  session, in the field flow too. The server rejects the save, so no data
-  changes, but the controls are reachable by URL. Evidence:
-  `openspec/specs/review-session-ui/spec.md` ("A completed session still
-  offers no mutating control"); `resolve-element-by-code.use-case.ts` has no
-  status check and returns the recorded entry. Origin: `ui-restyle-forms`
-  PR 7 fresh review, 2026-10-21.
 
 ## Resolved
 
@@ -238,6 +228,14 @@ None.
   synchronously. Resolved by `td-38-lazy-page-test-race` (#246): the three lazy-page
   tests delay the `/auth/me` response (which made two of them fail every
   run) and wait for the nav before checking the page area.
+- **TD-39**: The review session element page opened an element of a
+  completed session with its answer radios, the mark-unreviewed toggle and an
+  enabled Save, against `review-session-ui`'s "A completed session still
+  offers no mutating control". Resolved by `td-39-completed-session-element`
+  (#265): the page also reads the session, and when it is completed it shows
+  the completed notice, the recorded answers (or the not-reviewed reason, or
+  that nothing was recorded) read-only, and Back to session as the only
+  action. The API is unchanged.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

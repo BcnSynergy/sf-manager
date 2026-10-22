@@ -438,6 +438,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewSession.element.saveError',
     'reviewSession.element.saveConfirmation',
     'reviewSession.element.backLabel',
+    'reviewSession.element.unreviewedLabel',
+    'reviewSession.element.notRecorded',
     // answer-value-labels.ts mapping targets
     'reviewSession.answer.yes',
     'reviewSession.answer.no',
