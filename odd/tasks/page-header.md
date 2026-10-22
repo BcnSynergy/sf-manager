@@ -14,7 +14,7 @@ Route: ODD (EN-69 refactor plus the EN-74 tab-order fix; the user accepted the 2
 | ID  | Specs  | Scope                                                                                              | Route  | Status | Commit / PR   |
 | --- | ------ | -------------------------------------------------------------------------------------------------- | ------ | ------ | ------------- |
 | T1  | S1, S2 | `components/PageHeader.tsx` + test; the 28 pages use it                                            | inline | done   | 2070bd9, #267 |
-| T2  | S3     | `MaintenanceCompanyEditPage`, `ChecklistQuestionEditPage`, `InspectableElementEditPage` (option B) | inline | done   | #268          |
+| T2  | S3     | `MaintenanceCompanyEditPage`, `ChecklistQuestionEditPage`, `InspectableElementEditPage` (option B) | inline | done   | a174808, #268 |
 
 Route evidence: one PR per task, written inline by the parent; no writer trigger (units are sequential, not parallel).
 
