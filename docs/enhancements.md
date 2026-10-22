@@ -540,16 +540,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   in `ui-restyle-review-sessions` PR 1, 2026-10-18,
   `ui-restyle-element-history` PR 1, 2026-10-20, and
   `ui-restyle-review-history-detail` PR 1, 2026-10-20.
-- **EN-69** (web): Every restyled page repeats the same
-  `<header className="sf-page-header"><h1>…</h1></header>` block: three or
-  four times on a page with loading and error branches, once on the
-  community detail page and on the create-only forms. Twenty-eight pages so far
-  (the non-test pages in `apps/web/src/pages` that contain
-  `sf-page-header`).
-  A small `PageHeader` component (title plus optional actions) would remove
-  the copies; extract it once the page restyles are done, so it covers every
-  shape at once. Origin: `ui-restyle-review-history` PR 1 fresh review,
-  2026-10-17.
 - **EN-70** (web a11y): Six list tables leave their link column header
   empty (`<th scope="col"></th>`), so a screen reader announces a blank
   header for the actions cells. Give it a `visually-hidden` label
@@ -621,6 +611,11 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
 
 ## Done
 
+- **EN-69** (web): The `sf-page-header` block with its `h1` that every page
+  repeated (80 copies in 28 pages) is now one `PageHeader` component
+  (`apps/web/src/components/PageHeader.tsx`): a title plus optional actions,
+  passed through unchanged after the `h1`, so the rendered markup is the same.
+  Done in `page-header`, PR #267.
 - **EN-77** (web UI): The review session element page's read-only view of a
   completed session (TD-39) is now headed "Recorded element"
   (`reviewSession.element.readOnlyTitle`) instead of "Answer element"; the
