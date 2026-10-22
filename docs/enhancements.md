@@ -590,6 +590,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
+- **EN-78** (web a11y): The read-only element type on the checklist question
+  and inspectable element edit forms (EN-75) is a term and a value in two
+  plain spans, so a screen reader reads them as one run ("Element type Fire
+  extinguisher") without the pause the old `Type:` colon gave. A colon in a
+  `visually-hidden` span after the term, or a labelled group, would separate
+  them. Origin: `en-75-read-only-type-field` fresh review, 2026-10-22.
 
 ## Done
 
