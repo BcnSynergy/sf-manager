@@ -43,7 +43,7 @@ On every page that shows its errors as design-system alerts (`sf-alert`), every 
 
 Out of scope:
 
-- load failures that render as empty-state messages, and the page chunk-load error, which are not action errors;
+- load failures, including the page chunk-load error, which are not action errors;
 - the login page, whose errors are plain text without a role (tracked as EN-82).
 
 #### Scenario: A repeated validation error is announced again
