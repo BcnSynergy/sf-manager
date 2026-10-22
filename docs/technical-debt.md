@@ -8,7 +8,7 @@ that add value without fixing a defect or gap live in
 ## How to use this file
 
 - Each item has a stable ID (`TD-<n>`). IDs are never reused or renumbered.
-  Commits, PRs, ADRs, and SDD artifacts refer to items by this ID.
+  Commits, PRs, ADRs, feature documents and specs refer to items by this ID.
 - New items go at the end of the matching severity section with the next free
   number. Include the evidence (file path, line, or source review) and the
   origin (which change or review found it).

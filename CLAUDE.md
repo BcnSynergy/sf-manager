@@ -57,13 +57,16 @@ deciding question in one line and ask the user to confirm it: **does this
 change create or alter behavior that `openspec/specs/` describes, or should
 describe?** "Behavior" means what a user or a business rule can observe:
 permissions, validations, data, and flows. It does not mean internal
-structure. Read-only requests (explain, review, investigate) and trivial
-one-file fixes such as a typo need no question.
+structure. Do not start writing until they answer. If the user already
+said whether the specs change (for example "just fix it, no spec change"),
+skip the question. Read-only requests (explain, review, investigate) and
+trivial one-file fixes such as a typo need no question.
 
 - **Yes:** edit the affected main spec in `openspec/specs/<capability>/spec.md`
   in the same PR as the behavior, in the existing requirement and scenario
-  format. A new domain or FR slice adds its own capability folder. Name the
-  changed specs in the feature document and the PR description.
+  format (scenarios in Given/When/Then). A new domain or FR slice adds its
+  own capability folder. Name the changed specs in the PR description, and
+  in the feature document when there is one.
 - **No:** no spec change, for example a bug fix that restores behavior the
   specs already describe, refactors, copy/style/i18n tweaks, test-only or
   tooling changes, dependency bumps, and docs.
@@ -89,8 +92,9 @@ memory. These two files are the source of truth:
 Rules:
 
 - When a review or a verification leaves a non-blocking finding that is not
-  fixed in the same PR, add it to the matching register in that PR. Do not leave it only in a report or in
-  Engram. Before reporting a change complete, say which items were added.
+  fixed in the same PR, add it to the matching register in that PR. Do not
+  leave it only in a report or in Engram. Before reporting a change
+  complete, say which items were added.
 - When work resolves an item, move it to the register's Resolved/Done
   section with the change name and PR numbers, in the same PR.
 - IDs are stable: never reuse or renumber them. Refer to items by ID in

@@ -10,8 +10,9 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
 - Each item has a stable ID (`EN-<n>`). IDs are never reused or renumbered.
 - New items go at the end of **Open** with the next free number. Include the
   area, the evidence (file path or source review), and the origin.
-- Typical sources: non-blocking suggestions from fresh-context reviews, RDD
-  reviews, `sdd-verify`, and `sdd-archive` follow-ups.
+- Typical sources: non-blocking suggestions from fresh-context reviews and
+  RDD reviews (older items also came from `sdd-verify` and `sdd-archive`
+  follow-ups).
 - When an item is done, move it to **Done** with the change name and PR
   numbers. If it is dropped, move it to **Done** marked "dropped" with a
   one-line reason.
@@ -531,7 +532,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   string the API returns (for example `2026-10-08T09:36:36.272Z`), in every
   locale. A localized date and time would read better. Neither the
   `review-history-ui` nor the `review-session-ui` spec says anything about
-  the format, so changing it is observable behavior and goes through SDD.
+  the format, so changing it is observable behavior and edits the spec.
   Evidence: `apps/web/src/pages/ReviewHistoryPage.tsx` completed-at cell,
   `apps/web/src/pages/ReviewHistoryDetailPage.tsx` completed-at field,
   `apps/web/src/pages/ReviewSessionsPage.tsx` started-at cell and
@@ -563,15 +564,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   only each entry's result and observations, not which element it is, so
   its rows (on screen and to a screen reader) cannot be told apart. The
   session detail response carries `inspectableElementId` but no code or
-  name; showing one needs an API and `review-session-ui` spec change, so it
-  goes through SDD. Evidence:
+  name; showing one needs an API and `review-session-ui` spec change.
+  Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
 - **EN-73** (web UI): On a draft template, Activate activates the last
   saved question selection. Picker changes not yet saved are silently
   dropped, with no warning or prompt to save first. Options: disable
   Activate while the selection is unsaved, or warn in the confirmation.
-  Either changes observable behavior, so it goes through SDD. Evidence:
+  Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 - **EN-76** (web a11y): Screen readers may not announce alerts that the
@@ -590,6 +591,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
+- **EN-79** (docs): Two SDD-era documents still read as living guidance
+  after the SDD tooling went away (2026-10-22, `CLAUDE.md` "Keeping
+  `openspec/specs/` Current"). ADR-016 (strict TDD in `sdd-apply` /
+  `sdd-verify`) is still "Accepted" in `docs/adr/INDEX.md`; the ODD
+  test-first policy now covers it, so it could be marked superseded.
+  `openspec/config.yaml` is the SDD tooling's config: its context is stale
+  ("only the health-check slice exists"), though its Given/When/Then rule
+  for scenarios is now also in `CLAUDE.md`. Origin: `claude-md-odd-only`
+  fresh review, 2026-10-22.
 
 ## Done
 
