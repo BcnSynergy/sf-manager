@@ -156,6 +156,25 @@ describe('UserEditPage', () => {
     expect(mockedUpdateUser).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    renderPage(otherUser.id);
+
+    fireEvent.change(await screen.findByTestId('user-edit-email'), {
+      target: { value: 'not-an-email' },
+    });
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    const first = await screen.findByTestId('user-edit-error');
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    const second = screen.getByTestId('user-edit-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('shows a distinct last-admin-lockout message on a 409 LAST_SYSTEM_ADMIN response', async () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     mockedUpdateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));

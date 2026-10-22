@@ -5,6 +5,8 @@ import { ApiError } from '../api/client';
 import { listCommunities, softDeleteCommunity, type Community } from '../api/community';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 
@@ -25,7 +27,12 @@ export function CommunitiesListPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [actionErrorKey, setActionErrorKey] = useState<string | null>(null);
+  const {
+    message: actionErrorKey,
+    key: actionErrorAlertKey,
+    show: showActionError,
+    clear: clearActionError,
+  } = useAlertMessage();
 
   // Mirrors UsersListPage.tsx's mount-effect / refetch pattern: a
   // .then/.catch chain (not async/await) so every setState call lives
@@ -52,7 +59,7 @@ export function CommunitiesListPage() {
   }, [loadCommunities]);
 
   function requestDelete(id: string) {
-    setActionErrorKey(null);
+    clearActionError();
     setPendingDeleteId(id);
   }
 
@@ -67,9 +74,7 @@ export function CommunitiesListPage() {
       await softDeleteCommunity(id);
       await loadCommunities();
     } catch (error) {
-      setActionErrorKey(
-        mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
-      );
+      showActionError(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
     }
   }
 
@@ -107,16 +112,12 @@ export function CommunitiesListPage() {
         </Link>
       </PageHeader>
       {actionErrorKey && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="communities-list-action-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{t(actionErrorKey)}</p>
-        </div>
+        <Alert
+          key={actionErrorAlertKey}
+          tone="danger"
+          testId="communities-list-action-error"
+          message={t(actionErrorKey)}
+        />
       )}
       {communities.length === 0 ? (
         <p className="sf-empty" data-testid="communities-list-empty">

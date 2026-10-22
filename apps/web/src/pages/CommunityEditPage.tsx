@@ -5,6 +5,8 @@ import { updateCommunitySchema, localeSchema, type Locale } from '@sf-manager/va
 import { ApiError } from '../api/client';
 import { updateCommunity } from '../api/community';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
@@ -30,7 +32,12 @@ export function CommunityEditPage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [locale, setLocale] = useState<Locale>('en');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   // Tracks which community's fields are currently reflected in the form
   // state, so a freshly-loaded community is synced exactly once. Adjusting
@@ -50,11 +57,11 @@ export function CommunityEditPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = updateCommunitySchema.safeParse({ name, address, locale });
     if (!result.success) {
-      setError(t('community.edit.validationError'));
+      showError(t('community.edit.validationError'));
       return;
     }
 
@@ -67,7 +74,7 @@ export function CommunityEditPage() {
       await updateCommunity(id, result.data);
       navigate('/communities');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -149,12 +156,7 @@ export function CommunityEditPage() {
           </select>
         </div>
         {error && (
-          <div className="sf-alert sf-alert-danger" role="alert" data-testid="community-edit-error">
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert key={errorAlertKey} tone="danger" testId="community-edit-error" message={error} />
         )}
         <div className="sf-actions">
           <button

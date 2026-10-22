@@ -13,6 +13,8 @@ import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/mainte
 import { listUsers, updateUser } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -56,7 +58,12 @@ export function UserEditPage() {
   const [companyId, setCompanyId] = useState('');
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
   const [canViewAllReviews, setCanViewAllReviews] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -134,7 +141,7 @@ export function UserEditPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     // design.md Decision 6/7: ALWAYS submits the array while the CURRENT
     // role is MANAGER — including `[]` — so a revoke arrives explicitly
@@ -154,7 +161,7 @@ export function UserEditPage() {
       managerCapabilities,
     });
     if (!result.success) {
-      setError(t('users.edit.validationError'));
+      showError(t('users.edit.validationError'));
       return;
     }
 
@@ -167,7 +174,7 @@ export function UserEditPage() {
       await updateUser(id, result.data);
       navigate('/users');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -276,12 +283,7 @@ export function UserEditPage() {
           </fieldset>
         )}
         {error && (
-          <div className="sf-alert sf-alert-danger" role="alert" data-testid="user-edit-error">
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert key={errorAlertKey} tone="danger" testId="user-edit-error" message={error} />
         )}
         <div className="sf-actions">
           <button

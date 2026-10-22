@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import type { Assignment } from '../api/community';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapAssignmentStatusToLabelKey } from './assignment-status-labels';
 import { mapApiErrorToMessageKey } from './error-messages';
 
@@ -47,7 +49,12 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
-  const [assignErrorKey, setAssignErrorKey] = useState<string | null>(null);
+  const {
+    message: assignErrorKey,
+    key: assignErrorAlertKey,
+    show: showAssignError,
+    clear: clearAssignError,
+  } = useAlertMessage();
   const [pendingDeactivateUserId, setPendingDeactivateUserId] = useState<string | null>(null);
   const [mutationPending, setMutationPending] = useState(false);
 
@@ -92,7 +99,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
 
   async function handleAssignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAssignErrorKey(null);
+    clearAssignError();
     const userId = userIdInput.trim();
     if (!userId) {
       return;
@@ -104,14 +111,14 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
       setUserIdInput('');
       await loadRows();
     } catch (error) {
-      setAssignErrorKey(resolveAssignErrorKey(error));
+      showAssignError(resolveAssignErrorKey(error));
     } finally {
       setMutationPending(false);
     }
   }
 
   function requestDeactivate(userId: string) {
-    setAssignErrorKey(null);
+    clearAssignError();
     setPendingDeactivateUserId(userId);
   }
 
@@ -127,7 +134,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
       await ops.deactivate(userId);
       await loadRows();
     } catch (error) {
-      setAssignErrorKey(resolveAssignErrorKey(error));
+      showAssignError(resolveAssignErrorKey(error));
     } finally {
       setMutationPending(false);
     }
@@ -137,13 +144,13 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // destructive action requiring it (spec "Representative/Technician
   // Assignment Lifecycle" only names deactivate as confirmation-gated).
   async function handleReactivate(userId: string) {
-    setAssignErrorKey(null);
+    clearAssignError();
     setMutationPending(true);
     try {
       await ops.reactivate(userId);
       await loadRows();
     } catch (error) {
-      setAssignErrorKey(resolveAssignErrorKey(error));
+      showAssignError(resolveAssignErrorKey(error));
     } finally {
       setMutationPending(false);
     }
@@ -251,16 +258,12 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
           {t(keys.assignLabel)}
         </button>
         {assignErrorKey && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid={`${testIdPrefix}-assign-error`}
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{t(assignErrorKey)}</p>
-          </div>
+          <Alert
+            key={assignErrorAlertKey}
+            tone="danger"
+            testId={`${testIdPrefix}-assign-error`}
+            message={t(assignErrorKey)}
+          />
         )}
       </form>
 

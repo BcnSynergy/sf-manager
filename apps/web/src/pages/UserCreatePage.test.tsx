@@ -49,6 +49,23 @@ describe('UserCreatePage', () => {
     expect(mockedCreateUser).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+    fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short' } });
+    fireEvent.click(screen.getByTestId('user-create-submit'));
+
+    const first = await screen.findByTestId('user-create-error');
+    fireEvent.click(screen.getByTestId('user-create-submit'));
+
+    const second = screen.getByTestId('user-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('navigates to the users list without a manual reload on a valid submission', async () => {
     mockedCreateUser.mockResolvedValue({
       id: 'user-3',

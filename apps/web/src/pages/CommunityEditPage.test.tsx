@@ -99,6 +99,25 @@ describe('CommunityEditPage', () => {
     expect(mockedUpdateCommunity).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    mockedListCommunities.mockResolvedValue([communityA, communityB]);
+    renderPage(communityB.id);
+
+    fireEvent.change(await screen.findByTestId('community-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('community-edit-submit'));
+
+    const first = await screen.findByTestId('community-edit-error');
+    fireEvent.click(screen.getByTestId('community-edit-submit'));
+
+    const second = screen.getByTestId('community-edit-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('shows a mapped error message on a server-side rejection, without reading ApiError.message', async () => {
     mockedListCommunities.mockResolvedValue([communityA, communityB]);
     mockedUpdateCommunity.mockRejectedValue(new ApiError(400));

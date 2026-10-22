@@ -5,6 +5,8 @@ import { createMaintenanceCompanySchema } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createMaintenanceCompany } from '../api/maintenance-company';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 // spec.md "Create Maintenance Company": client-side validation against the
@@ -22,16 +24,21 @@ export function MaintenanceCompanyCreatePage() {
   const [name, setName] = useState('');
   const [taxId, setTaxId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = createMaintenanceCompanySchema.safeParse({ name, taxId, contactInfo });
     if (!result.success) {
-      setError(t('maintenanceCompany.create.validationError'));
+      showError(t('maintenanceCompany.create.validationError'));
       return;
     }
 
@@ -40,7 +47,7 @@ export function MaintenanceCompanyCreatePage() {
       await createMaintenanceCompany(result.data);
       navigate('/maintenance-companies');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -90,16 +97,12 @@ export function MaintenanceCompanyCreatePage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="maintenance-company-create-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="maintenance-company-create-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
