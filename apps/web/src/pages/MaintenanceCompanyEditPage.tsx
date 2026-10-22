@@ -10,6 +10,8 @@ import {
 } from '../api/maintenance-company';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
@@ -41,10 +43,20 @@ export function MaintenanceCompanyEditPage() {
   const [name, setName] = useState('');
   const [taxId, setTaxId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const {
+    message: deleteError,
+    key: deleteErrorAlertKey,
+    show: showDeleteError,
+    clear: clearDeleteError,
+  } = useAlertMessage();
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -78,11 +90,11 @@ export function MaintenanceCompanyEditPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = updateMaintenanceCompanySchema.safeParse({ name, taxId, contactInfo });
     if (!result.success) {
-      setError(t('maintenanceCompany.edit.validationError'));
+      showError(t('maintenanceCompany.edit.validationError'));
       return;
     }
 
@@ -95,7 +107,7 @@ export function MaintenanceCompanyEditPage() {
       await updateMaintenanceCompany(id, result.data);
       navigate('/maintenance-companies');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -103,7 +115,7 @@ export function MaintenanceCompanyEditPage() {
   }
 
   function requestDelete() {
-    setDeleteError(null);
+    clearDeleteError();
     setPendingDelete(true);
   }
 
@@ -118,7 +130,7 @@ export function MaintenanceCompanyEditPage() {
       await softDeleteMaintenanceCompany(id);
       navigate('/maintenance-companies');
     } catch (caughtError) {
-      setDeleteError(
+      showDeleteError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setDeleting(false);
@@ -201,16 +213,12 @@ export function MaintenanceCompanyEditPage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="maintenance-company-edit-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="maintenance-company-edit-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
@@ -226,16 +234,12 @@ export function MaintenanceCompanyEditPage() {
       {/* EN-74: the page actions follow the form, so the fields come first in
           tab order; their failures show just above them. */}
       {deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="maintenance-company-edit-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
+        <Alert
+          key={deleteErrorAlertKey}
+          tone="danger"
+          testId="maintenance-company-edit-delete-error"
+          message={deleteError}
+        />
       )}
       <div className="sf-actions">
         <button

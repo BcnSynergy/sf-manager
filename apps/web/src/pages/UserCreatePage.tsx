@@ -6,6 +6,8 @@ import { ApiError } from '../api/client';
 import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { createUser } from '../api/users';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -39,7 +41,12 @@ export function UserCreatePage() {
   const [role, setRole] = useState<Role>(DEFAULT_ROLE);
   const [companyId, setCompanyId] = useState('');
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -74,7 +81,7 @@ export function UserCreatePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = createUserSchema.safeParse({
       email,
@@ -83,7 +90,7 @@ export function UserCreatePage() {
       maintenanceCompanyId: showCompanySelector ? companyId : undefined,
     });
     if (!result.success) {
-      setError(t('users.create.validationError'));
+      showError(t('users.create.validationError'));
       return;
     }
 
@@ -92,7 +99,7 @@ export function UserCreatePage() {
       await createUser(result.data);
       navigate('/users');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -162,12 +169,7 @@ export function UserCreatePage() {
           </div>
         )}
         {error && (
-          <div className="sf-alert sf-alert-danger" role="alert" data-testid="user-create-error">
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert key={errorAlertKey} tone="danger" testId="user-create-error" message={error} />
         )}
         <div className="sf-actions">
           <button

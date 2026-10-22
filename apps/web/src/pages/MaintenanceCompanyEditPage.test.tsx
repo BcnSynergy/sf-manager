@@ -120,6 +120,26 @@ describe('MaintenanceCompanyEditPage', () => {
     expect(mockedUpdateMaintenanceCompany).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
+
+    renderPage(companyB.id);
+
+    fireEvent.change(await screen.findByTestId('maintenance-company-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-edit-submit'));
+
+    const first = await screen.findByTestId('maintenance-company-edit-error');
+    fireEvent.click(screen.getByTestId('maintenance-company-edit-submit'));
+
+    const second = screen.getByTestId('maintenance-company-edit-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('shows the duplicate-taxId message when the update is rejected with code: TAX_ID_ALREADY_IN_USE', async () => {
     mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
     mockedUpdateMaintenanceCompany.mockRejectedValue(new ApiError(409, 'TAX_ID_ALREADY_IN_USE'));

@@ -51,6 +51,30 @@ describe('MaintenanceCompanyCreatePage', () => {
     expect(mockedCreateMaintenanceCompany).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('maintenance-company-create-name'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-tax-id'), {
+      target: { value: VALID_TAX_ID },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-contact-info'), {
+      target: { value: VALID_CONTACT_INFO },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-create-submit'));
+
+    const first = await screen.findByTestId('maintenance-company-create-error');
+    fireEvent.click(screen.getByTestId('maintenance-company-create-submit'));
+
+    const second = screen.getByTestId('maintenance-company-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('navigates to the maintenance companies list without a manual reload on a valid submission', async () => {
     mockedCreateMaintenanceCompany.mockResolvedValue({
       id: 'company-1',

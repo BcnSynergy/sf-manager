@@ -42,6 +42,25 @@ describe('CommunityCreatePage', () => {
     expect(mockedCreateCommunity).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('community-create-name'), { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('community-create-address'), {
+      target: { value: VALID_ADDRESS },
+    });
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    const first = await screen.findByTestId('community-create-error');
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    const second = screen.getByTestId('community-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('renders locale options through the locale label map, not the raw enum value', () => {
     renderPage();
 

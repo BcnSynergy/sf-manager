@@ -8,6 +8,8 @@ import { deactivateUser, listUsers, type User } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -36,7 +38,12 @@ export function UsersListPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeactivateId, setPendingDeactivateId] = useState<string | null>(null);
-  const [actionErrorKey, setActionErrorKey] = useState<string | null>(null);
+  const {
+    message: actionErrorKey,
+    key: actionErrorAlertKey,
+    show: showActionError,
+    clear: clearActionError,
+  } = useAlertMessage();
   const [companyNamesById, setCompanyNamesById] = useState<Record<string, string>>({});
 
   // Deliberately does not set loadState back to 'loading' here: this runs
@@ -104,7 +111,7 @@ export function UsersListPage() {
   }
 
   function requestDeactivate(id: string) {
-    setActionErrorKey(null);
+    clearActionError();
     setPendingDeactivateId(id);
   }
 
@@ -119,9 +126,7 @@ export function UsersListPage() {
       await deactivateUser(id);
       await loadUsers();
     } catch (error) {
-      setActionErrorKey(
-        mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
-      );
+      showActionError(mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)));
     }
   }
 
@@ -159,16 +164,12 @@ export function UsersListPage() {
         </Link>
       </PageHeader>
       {actionErrorKey && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="users-list-action-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{t(actionErrorKey)}</p>
-        </div>
+        <Alert
+          key={actionErrorAlertKey}
+          tone="danger"
+          testId="users-list-action-error"
+          message={t(actionErrorKey)}
+        />
       )}
       {users.length === 0 ? (
         <p className="sf-empty" data-testid="users-list-empty">

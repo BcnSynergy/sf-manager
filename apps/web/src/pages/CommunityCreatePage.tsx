@@ -5,6 +5,8 @@ import { createCommunitySchema, localeSchema, type Locale } from '@sf-manager/va
 import { ApiError } from '../api/client';
 import { createCommunity } from '../api/community';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 
@@ -27,16 +29,21 @@ export function CommunityCreatePage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = createCommunitySchema.safeParse({ name, address, locale });
     if (!result.success) {
-      setError(t('community.create.validationError'));
+      showError(t('community.create.validationError'));
       return;
     }
 
@@ -45,7 +52,7 @@ export function CommunityCreatePage() {
       await createCommunity(result.data);
       navigate('/communities');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -96,16 +103,12 @@ export function CommunityCreatePage() {
           </select>
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="community-create-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="community-create-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
