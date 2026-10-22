@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listReviewSchedule, type ReviewScheduleRow } from '../api/review-schedule';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import {
   IN_PROGRESS_LABEL_KEY,
@@ -42,9 +43,7 @@ export function ReviewSchedulePage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSchedule.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSchedule.title')} />
         <p className="sf-empty" data-testid="review-schedule-loading">
           {t('reviewSchedule.loading')}
         </p>
@@ -55,9 +54,7 @@ export function ReviewSchedulePage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewSchedule.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewSchedule.title')} />
         <p className="sf-empty" data-testid="review-schedule-error">
           {t('reviewSchedule.error')}
         </p>
@@ -67,9 +64,7 @@ export function ReviewSchedulePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewSchedule.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewSchedule.title')} />
       {rows.length === 0 ? (
         <p className="sf-empty" data-testid="review-schedule-empty">
           {t('reviewSchedule.empty')}

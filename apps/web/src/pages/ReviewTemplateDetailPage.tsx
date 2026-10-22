@@ -12,6 +12,7 @@ import {
   type ReviewTemplate,
 } from '../api/review-template';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
@@ -224,9 +225,7 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewTemplate.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewTemplate.detail.title')} />
         <p className="sf-empty" data-testid="review-template-detail-loading">
           {t('reviewTemplate.list.loading')}
         </p>
@@ -237,9 +236,7 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewTemplate.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewTemplate.detail.title')} />
         <p className="sf-empty" data-testid="review-template-detail-not-found">
           {t('reviewTemplate.detail.notFound')}
         </p>
@@ -250,9 +247,7 @@ export function ReviewTemplateDetailPage() {
   if (loadState === 'error' || template === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewTemplate.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewTemplate.detail.title')} />
         <p className="sf-empty" data-testid="review-template-detail-error-state">
           {t('common.error.network')}
         </p>
@@ -281,8 +276,7 @@ export function ReviewTemplateDetailPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewTemplate.detail.title')}</h1>
+      <PageHeader title={t('reviewTemplate.detail.title')}>
         {isDraft && (
           <div className="sf-actions">
             <button
@@ -305,7 +299,7 @@ export function ReviewTemplateDetailPage() {
             </button>
           </div>
         )}
-      </header>
+      </PageHeader>
 
       {isDraft && activateError && (
         <div

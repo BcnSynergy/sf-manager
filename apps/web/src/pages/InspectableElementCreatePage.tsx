@@ -8,6 +8,7 @@ import {
 } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createInspectableElement } from '../api/inspectable-element';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -79,9 +80,7 @@ export function InspectableElementCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('inspectableElement.create.title')}</h1>
-      </header>
+      <PageHeader title={t('inspectableElement.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

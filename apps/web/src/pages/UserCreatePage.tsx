@@ -5,6 +5,7 @@ import { createUserSchema, isMaintenanceRole, roleSchema, type Role } from '@sf-
 import { ApiError } from '../api/client';
 import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { createUser } from '../api/users';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -100,9 +101,7 @@ export function UserCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('users.create.title')}</h1>
-      </header>
+      <PageHeader title={t('users.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

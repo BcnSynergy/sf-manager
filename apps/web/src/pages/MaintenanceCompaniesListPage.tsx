@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -53,9 +54,7 @@ export function MaintenanceCompaniesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('maintenanceCompany.list.title')}</h1>
-        </header>
+        <PageHeader title={t('maintenanceCompany.list.title')} />
         <p className="sf-empty" data-testid="maintenance-companies-list-loading">
           {t('maintenanceCompany.list.loading')}
         </p>
@@ -66,9 +65,7 @@ export function MaintenanceCompaniesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('maintenanceCompany.list.title')}</h1>
-        </header>
+        <PageHeader title={t('maintenanceCompany.list.title')} />
         <p className="sf-empty" data-testid="maintenance-companies-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -78,8 +75,7 @@ export function MaintenanceCompaniesListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('maintenanceCompany.list.title')}</h1>
+      <PageHeader title={t('maintenanceCompany.list.title')}>
         <Link
           to="/maintenance-companies/new"
           className="sf-btn sf-btn-primary"
@@ -87,7 +83,7 @@ export function MaintenanceCompaniesListPage() {
         >
           {t('maintenanceCompany.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {companies.length === 0 ? (
         <p className="sf-empty" data-testid="maintenance-companies-list-empty">
           {t('maintenanceCompany.list.empty')}

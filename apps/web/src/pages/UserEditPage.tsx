@@ -12,6 +12,7 @@ import { ApiError } from '../api/client';
 import { listMaintenanceCompanies, type MaintenanceCompany } from '../api/maintenance-company';
 import { listUsers, updateUser } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -176,9 +177,7 @@ export function UserEditPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('users.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('users.edit.title')} />
         <p className="sf-empty" data-testid="user-edit-loading">
           {t('users.list.loading')}
         </p>
@@ -189,9 +188,7 @@ export function UserEditPage() {
   if (loadState === 'not-found') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('users.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('users.edit.title')} />
         <p className="sf-empty" data-testid="user-edit-not-found">
           {t('users.edit.notFound')}
         </p>
@@ -202,9 +199,7 @@ export function UserEditPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('users.edit.title')}</h1>
-        </header>
+        <PageHeader title={t('users.edit.title')} />
         <p className="sf-empty" data-testid="user-edit-error-state">
           {t('common.error.network')}
         </p>
@@ -214,9 +209,7 @@ export function UserEditPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('users.edit.title')}</h1>
-      </header>
+      <PageHeader title={t('users.edit.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>

@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { ApiError } from '../api/client';
 import { listCommunities, softDeleteCommunity, type Community } from '../api/community';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 
@@ -75,9 +76,7 @@ export function CommunitiesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('community.list.title')}</h1>
-        </header>
+        <PageHeader title={t('community.list.title')} />
         <p className="sf-empty" data-testid="communities-list-loading">
           {t('community.list.loading')}
         </p>
@@ -88,9 +87,7 @@ export function CommunitiesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('community.list.title')}</h1>
-        </header>
+        <PageHeader title={t('community.list.title')} />
         <p className="sf-empty" data-testid="communities-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -100,8 +97,7 @@ export function CommunitiesListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('community.list.title')}</h1>
+      <PageHeader title={t('community.list.title')}>
         <Link
           to="/communities/new"
           className="sf-btn sf-btn-primary"
@@ -109,7 +105,7 @@ export function CommunitiesListPage() {
         >
           {t('community.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {actionErrorKey && (
         <div
           className="sf-alert sf-alert-danger"

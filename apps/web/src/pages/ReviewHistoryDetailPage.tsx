@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { readReviewHistory, type ReviewHistoryDetail } from '../api/review-history';
+import { PageHeader } from '../components/PageHeader';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -72,9 +73,7 @@ export function ReviewHistoryDetailPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.detail.title')} />
         <p className="sf-empty" data-testid="review-history-detail-loading">
           {t('reviewHistory.detail.loading')}
         </p>
@@ -85,9 +84,7 @@ export function ReviewHistoryDetailPage() {
   if (loadState === 'error' || detail === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.detail.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.detail.title')} />
         <p className="sf-empty" data-testid="review-history-detail-error">
           {t(errorMessageKey)}
         </p>
@@ -101,8 +98,7 @@ export function ReviewHistoryDetailPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewHistory.detail.title')}</h1>
+      <PageHeader title={t('reviewHistory.detail.title')}>
         {/* review-document-ui spec "Exactly One Entry Link Reaches the
             Document Page", review-history-ui spec "Read-Only Historical
             Session View": the single, non-mutating View document link, for
@@ -117,7 +113,7 @@ export function ReviewHistoryDetailPage() {
         >
           {t('reviewHistory.detail.documentLink')}
         </Link>
-      </header>
+      </PageHeader>
 
       <div className="sf-panel">
         <dl>

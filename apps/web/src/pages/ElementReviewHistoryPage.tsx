@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { readElementReviewHistory, type ElementReviewHistory } from '../api/review-history';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -64,9 +65,7 @@ export function ElementReviewHistoryPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.elementHistory.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.elementHistory.title')} />
         <p className="sf-empty" data-testid="element-review-history-loading">
           {t('reviewHistory.elementHistory.loading')}
         </p>
@@ -77,9 +76,7 @@ export function ElementReviewHistoryPage() {
   if (loadState === 'error' || history === null) {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewHistory.elementHistory.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewHistory.elementHistory.title')} />
         <p className="sf-empty" data-testid="element-review-history-error">
           {t(errorMessageKey)}
         </p>
@@ -92,9 +89,7 @@ export function ElementReviewHistoryPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewHistory.elementHistory.title')}</h1>
-      </header>
+      <PageHeader title={t('reviewHistory.elementHistory.title')} />
 
       <section className="sf-panel" data-testid="element-review-history-header">
         <h2 className="sf-section-title">{element.name}</h2>

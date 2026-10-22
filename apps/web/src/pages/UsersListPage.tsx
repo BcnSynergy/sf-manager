@@ -7,6 +7,7 @@ import { ApiError } from '../api/client';
 import { deactivateUser, listUsers, type User } from '../api/users';
 import { useAuth } from '../auth/AuthProvider';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../users/error-messages';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -127,9 +128,7 @@ export function UsersListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('users.list.title')}</h1>
-        </header>
+        <PageHeader title={t('users.list.title')} />
         <p className="sf-empty" data-testid="users-list-loading">
           {t('users.list.loading')}
         </p>
@@ -140,9 +139,7 @@ export function UsersListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('users.list.title')}</h1>
-        </header>
+        <PageHeader title={t('users.list.title')} />
         <p className="sf-empty" data-testid="users-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -152,8 +149,7 @@ export function UsersListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('users.list.title')}</h1>
+      <PageHeader title={t('users.list.title')}>
         <Link
           to="/users/new"
           className="sf-btn sf-btn-primary"
@@ -161,7 +157,7 @@ export function UsersListPage() {
         >
           {t('users.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {actionErrorKey && (
         <div
           className="sf-alert sf-alert-danger"

@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import type { ElementType, ReviewFrequency } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { listReviewTemplates, type ReviewTemplateListItem } from '../api/review-template';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
@@ -60,9 +61,7 @@ export function ReviewTemplatesListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewTemplate.list.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewTemplate.list.title')} />
         <p className="sf-empty" data-testid="review-template-list-loading">
           {t('reviewTemplate.list.loading')}
         </p>
@@ -73,9 +72,7 @@ export function ReviewTemplatesListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('reviewTemplate.list.title')}</h1>
-        </header>
+        <PageHeader title={t('reviewTemplate.list.title')} />
         <p className="sf-empty" data-testid="review-template-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -96,8 +93,7 @@ export function ReviewTemplatesListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('reviewTemplate.list.title')}</h1>
+      <PageHeader title={t('reviewTemplate.list.title')}>
         <Link
           to="/review-templates/new"
           className="sf-btn sf-btn-primary"
@@ -105,7 +101,7 @@ export function ReviewTemplatesListPage() {
         >
           {t('reviewTemplate.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {templates.length === 0 ? (
         <p className="sf-empty" data-testid="review-template-list-empty">
           {t('reviewTemplate.list.empty')}

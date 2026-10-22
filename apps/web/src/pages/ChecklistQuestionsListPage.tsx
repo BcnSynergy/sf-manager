@@ -9,6 +9,7 @@ import {
   type ChecklistQuestion,
 } from '../api/checklist-question';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PageHeader } from '../components/PageHeader';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
@@ -86,9 +87,7 @@ export function ChecklistQuestionsListPage() {
   if (loadState === 'loading') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('checklistQuestion.list.title')}</h1>
-        </header>
+        <PageHeader title={t('checklistQuestion.list.title')} />
         <p className="sf-empty" data-testid="checklist-question-list-loading">
           {t('checklistQuestion.list.loading')}
         </p>
@@ -99,9 +98,7 @@ export function ChecklistQuestionsListPage() {
   if (loadState === 'error') {
     return (
       <main>
-        <header className="sf-page-header">
-          <h1>{t('checklistQuestion.list.title')}</h1>
-        </header>
+        <PageHeader title={t('checklistQuestion.list.title')} />
         <p className="sf-empty" data-testid="checklist-question-list-error">
           {t(loadErrorKey ?? 'common.error.network')}
         </p>
@@ -121,8 +118,7 @@ export function ChecklistQuestionsListPage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('checklistQuestion.list.title')}</h1>
+      <PageHeader title={t('checklistQuestion.list.title')}>
         <Link
           to="/checklist-questions/new"
           className="sf-btn sf-btn-primary"
@@ -130,7 +126,7 @@ export function ChecklistQuestionsListPage() {
         >
           {t('checklistQuestion.list.createLink')}
         </Link>
-      </header>
+      </PageHeader>
       {deleteErrorKey && (
         <div
           className="sf-alert sf-alert-danger"

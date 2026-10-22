@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { createMaintenanceCompanySchema } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { createMaintenanceCompany } from '../api/maintenance-company';
+import { PageHeader } from '../components/PageHeader';
 import { mapApiErrorToMessageKey } from '../maintenance-company/error-messages';
 
 // spec.md "Create Maintenance Company": client-side validation against the
@@ -48,9 +49,7 @@ export function MaintenanceCompanyCreatePage() {
 
   return (
     <main>
-      <header className="sf-page-header">
-        <h1>{t('maintenanceCompany.create.title')}</h1>
-      </header>
+      <PageHeader title={t('maintenanceCompany.create.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
