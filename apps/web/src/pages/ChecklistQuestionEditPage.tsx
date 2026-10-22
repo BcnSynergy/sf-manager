@@ -15,6 +15,8 @@ import {
 } from '../api/checklist-question';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -48,10 +50,20 @@ export function ChecklistQuestionEditPage() {
   const [elementType, setElementType] = useState<ElementType | null>(null);
   const [text, setText] = useState('');
   const [frequencies, setFrequencies] = useState<ReviewFrequency[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const {
+    message: deleteError,
+    key: deleteErrorAlertKey,
+    show: showDeleteError,
+    clear: clearDeleteError,
+  } = useAlertMessage();
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -107,11 +119,11 @@ export function ChecklistQuestionEditPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = updateChecklistQuestionSchema.safeParse({ text, frequencies });
     if (!result.success) {
-      setError(t('checklistQuestion.edit.validationError'));
+      showError(t('checklistQuestion.edit.validationError'));
       return;
     }
 
@@ -124,7 +136,7 @@ export function ChecklistQuestionEditPage() {
       await updateChecklistQuestion(questionId, result.data);
       navigate('/checklist-questions');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -132,7 +144,7 @@ export function ChecklistQuestionEditPage() {
   }
 
   function requestDelete() {
-    setDeleteError(null);
+    clearDeleteError();
     setPendingDelete(true);
   }
 
@@ -147,7 +159,7 @@ export function ChecklistQuestionEditPage() {
       await softDeleteChecklistQuestion(questionId);
       navigate('/checklist-questions');
     } catch (caughtError) {
-      setDeleteError(
+      showDeleteError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setDeleting(false);
@@ -237,16 +249,12 @@ export function ChecklistQuestionEditPage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="checklist-question-edit-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="checklist-question-edit-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
@@ -262,16 +270,12 @@ export function ChecklistQuestionEditPage() {
       {/* EN-74: the page actions follow the form, so the fields come first in
           tab order; their failures show just above them. */}
       {deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="checklist-question-edit-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
+        <Alert
+          key={deleteErrorAlertKey}
+          tone="danger"
+          testId="checklist-question-edit-delete-error"
+          message={deleteError}
+        />
       )}
       <div className="sf-actions">
         <button

@@ -13,6 +13,8 @@ import {
 } from '../api/review-template';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
@@ -64,15 +66,30 @@ export function ReviewTemplateDetailPage() {
   const [currentActiveVersion, setCurrentActiveVersion] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const {
+    message: saveError,
+    key: saveErrorAlertKey,
+    show: showSaveError,
+    clear: clearSaveError,
+  } = useAlertMessage();
 
   const [pendingActivate, setPendingActivate] = useState(false);
   const [activating, setActivating] = useState(false);
-  const [activateError, setActivateError] = useState<string | null>(null);
+  const {
+    message: activateError,
+    key: activateErrorAlertKey,
+    show: showActivateError,
+    clear: clearActivateError,
+  } = useAlertMessage();
 
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const {
+    message: deleteError,
+    key: deleteErrorAlertKey,
+    show: showDeleteError,
+    clear: clearDeleteError,
+  } = useAlertMessage();
 
   const applyTemplate = useCallback((loaded: ReviewTemplate) => {
     setTemplate(loaded);
@@ -162,13 +179,13 @@ export function ReviewTemplateDetailPage() {
     if (templateId === undefined) {
       return;
     }
-    setSaveError(null);
+    clearSaveError();
     setSaving(true);
     try {
       const updated = await setReviewTemplateQuestions(templateId, selectedQuestionIds);
       applyTemplate(updated);
     } catch (caughtError) {
-      setSaveError(
+      showSaveError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
     } finally {
@@ -177,7 +194,7 @@ export function ReviewTemplateDetailPage() {
   }
 
   function requestActivate() {
-    setActivateError(null);
+    clearActivateError();
     setPendingActivate(true);
   }
 
@@ -192,7 +209,7 @@ export function ReviewTemplateDetailPage() {
       const refreshed = await readReviewTemplate(templateId);
       applyTemplate(refreshed);
     } catch (caughtError) {
-      setActivateError(
+      showActivateError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
     } finally {
@@ -201,7 +218,7 @@ export function ReviewTemplateDetailPage() {
   }
 
   function requestDelete() {
-    setDeleteError(null);
+    clearDeleteError();
     setPendingDelete(true);
   }
 
@@ -215,7 +232,7 @@ export function ReviewTemplateDetailPage() {
       await softDeleteDraftReviewTemplate(templateId);
       navigate('/review-templates');
     } catch (caughtError) {
-      setDeleteError(
+      showDeleteError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setDeleting(false);
@@ -302,28 +319,20 @@ export function ReviewTemplateDetailPage() {
       </PageHeader>
 
       {isDraft && activateError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="review-template-detail-activate-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{activateError}</p>
-        </div>
+        <Alert
+          key={activateErrorAlertKey}
+          tone="danger"
+          testId="review-template-detail-activate-error"
+          message={activateError}
+        />
       )}
       {isDraft && deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="review-template-detail-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
+        <Alert
+          key={deleteErrorAlertKey}
+          tone="danger"
+          testId="review-template-detail-delete-error"
+          message={deleteError}
+        />
       )}
 
       <div className="sf-panel">
@@ -451,16 +460,12 @@ export function ReviewTemplateDetailPage() {
             </ul>
           )}
           {saveError && (
-            <div
-              className="sf-alert sf-alert-danger"
-              role="alert"
-              data-testid="review-template-detail-save-error"
-            >
-              <span className="sf-alert-icon" aria-hidden="true">
-                !
-              </span>
-              <p>{saveError}</p>
-            </div>
+            <Alert
+              key={saveErrorAlertKey}
+              tone="danger"
+              testId="review-template-detail-save-error"
+              message={saveError}
+            />
           )}
           {/* Secondary on purpose: Activate in the page header is the one
               primary action of a draft. */}

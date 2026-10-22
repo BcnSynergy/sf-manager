@@ -58,6 +58,24 @@ describe('ChecklistQuestionCreatePage', () => {
     expect(mockedCreateChecklistQuestion).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('checklist-question-create-text'), {
+      target: { value: VALID_TEXT },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-create-submit'));
+
+    const first = await screen.findByTestId('checklist-question-create-error');
+    fireEvent.click(screen.getByTestId('checklist-question-create-submit'));
+
+    const second = screen.getByTestId('checklist-question-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('creates the question and navigates to the list without a manual reload on valid submission (spec: Valid submission creates and lists the question)', async () => {
     mockedCreateChecklistQuestion.mockResolvedValue({
       id: 'question-1',

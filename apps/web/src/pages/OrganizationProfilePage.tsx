@@ -8,6 +8,8 @@ import {
   type UpdateOrganizationProfilePayload,
 } from '../api/organization-profile';
 import { PageHeader } from '../components/PageHeader';
+import { Alert, StatusRegion } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
 
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -75,7 +77,12 @@ export function OrganizationProfilePage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [values, setValues] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
   const [saved, setSaved] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   // design.md Decision 5, "The page stays put and shows a success
   // indication.": there is no navigate() to serve as an implicit
@@ -120,7 +127,7 @@ export function OrganizationProfilePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
     setSuccess(false);
 
     const payload: UpdateOrganizationProfilePayload = {};
@@ -136,18 +143,18 @@ export function OrganizationProfilePage() {
     }
 
     if (clearedAnExistingValue) {
-      setError(t('organizationProfile.clearedFieldError'));
+      showError(t('organizationProfile.clearedFieldError'));
       return;
     }
 
     if (Object.keys(payload).length === 0) {
-      setError(t('organizationProfile.emptySubmitError'));
+      showError(t('organizationProfile.emptySubmitError'));
       return;
     }
 
     const result = updateOrganizationProfileSchema.safeParse(payload);
     if (!result.success) {
-      setError(t('organizationProfile.validationError'));
+      showError(t('organizationProfile.validationError'));
       return;
     }
 
@@ -159,7 +166,7 @@ export function OrganizationProfilePage() {
       setSaved(fieldValues);
       setSuccess(true);
     } catch {
-      setError(t('organizationProfile.saveError'));
+      showError(t('organizationProfile.saveError'));
     } finally {
       setSubmitting(false);
     }
@@ -198,18 +205,15 @@ export function OrganizationProfilePage() {
           <p>{t('organizationProfile.incomplete')}</p>
         </div>
       )}
-      {success && (
-        <div
-          className="sf-alert sf-alert-success"
-          role="status"
-          data-testid="organization-profile-success"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            ✓
-          </span>
-          <p>{t('organizationProfile.saveSuccess')}</p>
-        </div>
-      )}
+      <StatusRegion>
+        {success && (
+          <Alert
+            tone="success"
+            testId="organization-profile-success"
+            message={t('organizationProfile.saveSuccess')}
+          />
+        )}
+      </StatusRegion>
       {/* noValidate: validation messages are ours, not the browser's native,
           locale-inconsistent constraint-validation UI. */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
@@ -229,16 +233,12 @@ export function OrganizationProfilePage() {
           </div>
         ))}
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="organization-profile-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="organization-profile-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button

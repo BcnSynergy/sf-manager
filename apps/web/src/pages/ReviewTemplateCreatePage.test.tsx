@@ -56,6 +56,21 @@ describe('ReviewTemplateCreatePage', () => {
     expect(mockedCreateDraftReviewTemplate).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    const first = await screen.findByTestId('review-template-create-error');
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    const second = screen.getByTestId('review-template-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('creates the draft and navigates to the list without a manual reload on valid submission (spec: Valid submission creates the draft)', async () => {
     mockedCreateDraftReviewTemplate.mockResolvedValue({
       id: 'template-1',

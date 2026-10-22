@@ -1001,6 +1001,12 @@ main.sf-login {
     padding: 0;
   }
 
+  /* EN-76: the block `main` above has no flex gap for an empty status
+     region to cancel. */
+  .sf-status-region:empty {
+    margin-block-start: 0;
+  }
+
   /* RDD review R3-print-overflow-clip: the screen page area scrolls wide
      tables (overflow-x: auto), which print would clip; printed content flows.
      Same selector as the screen rule, declared later, so it wins. */

@@ -9,6 +9,8 @@ import {
 import { ApiError } from '../api/client';
 import { createInspectableElement } from '../api/inspectable-element';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -37,12 +39,17 @@ export function InspectableElementCreatePage() {
   const [location, setLocation] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [installedAt, setInstalledAt] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     // Empty optional fields become `undefined` rather than an empty string,
     // which the shared schema's `.min(1)` would otherwise reject —
@@ -57,12 +64,12 @@ export function InspectableElementCreatePage() {
       installedAt,
     });
     if (!result.success) {
-      setError(t('inspectableElement.create.validationError'));
+      showError(t('inspectableElement.create.validationError'));
       return;
     }
 
     if (communityId === undefined) {
-      setError(t('inspectableElement.error.notFound'));
+      showError(t('inspectableElement.error.notFound'));
       return;
     }
 
@@ -71,7 +78,7 @@ export function InspectableElementCreatePage() {
       await createInspectableElement(communityId, result.data);
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -162,16 +169,12 @@ export function InspectableElementCreatePage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="inspectable-element-create-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="inspectable-element-create-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button

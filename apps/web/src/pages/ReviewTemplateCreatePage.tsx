@@ -11,6 +11,8 @@ import {
 import { ApiError } from '../api/client';
 import { createDraftReviewTemplate } from '../api/review-template';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../review-template/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -45,12 +47,17 @@ export function ReviewTemplateCreatePage() {
   const [elementType, setElementType] = useState<ElementType>(DEFAULT_ELEMENT_TYPE);
   const [frequency, setFrequency] = useState<ReviewFrequency>(DEFAULT_FREQUENCY);
   const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = createDraftReviewTemplateSchema.safeParse({
       elementType,
@@ -58,7 +65,7 @@ export function ReviewTemplateCreatePage() {
       name,
     });
     if (!result.success) {
-      setError(t('reviewTemplate.create.validationError'));
+      showError(t('reviewTemplate.create.validationError'));
       return;
     }
 
@@ -67,7 +74,7 @@ export function ReviewTemplateCreatePage() {
       await createDraftReviewTemplate(result.data);
       navigate('/review-templates');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -127,16 +134,12 @@ export function ReviewTemplateCreatePage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="review-template-create-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="review-template-create-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
