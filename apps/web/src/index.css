@@ -444,10 +444,21 @@ code {
   background: var(--danger-soft);
   color: var(--danger);
 }
-/* A confirmation that an action succeeded, with role="status". */
+/* A confirmation that an action succeeded, shown inside a StatusRegion. */
 .sf-alert-success {
   background: var(--success-soft);
   color: var(--success);
+}
+/* StatusRegion: a live region that stays in the page's flex column. It
+   stretches so its alert keeps the full width, and while empty it cancels
+   one of the two gaps around it, so the page looks as if it were not there.
+   Not display:none or display:contents: some screen readers stop tracking a
+   live region with either. */
+.sf-status-region {
+  align-self: stretch;
+}
+.sf-status-region:empty {
+  margin-block-start: calc(-1 * var(--space-4));
 }
 
 .sf-credit {

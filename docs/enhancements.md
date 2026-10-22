@@ -584,12 +584,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   same text (cleared and set again in the same handler tick, so React
   batches both) keeps the same `role="alert"` element, so it is not
   announced again; errors set after an awaited request remount instead.
-  On a long form at phone width, the element page's confirmation sits
-  above the form, out of view of the Save button just pressed, and it
-  stays up (with Continue as the primary action) when the user then edits
-  the answers. A shared
-  approach, such as a persistent live region per page or an alert
-  component that remounts on each message, would cover every form at once.
+  (The element page's confirmation position and persistence, once part of
+  this item, moved to EN-80.) A shared approach, such as a persistent live
+  region per page or an alert component that remounts on each message,
+  would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
 - **EN-79** (docs): Two SDD-era documents still read as living guidance
   after the SDD tooling went away (2026-10-22, `CLAUDE.md` "Keeping
@@ -600,6 +598,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   ("only the health-check slice exists"), though its Given/When/Then rule
   for scenarios is now also in `CLAUDE.md`. Origin: `claude-md-odd-only`
   fresh review, 2026-10-22.
+- **EN-80** (web UI): On a long form at phone width, the review session
+  element page's save confirmation sits above the form, out of view of the
+  Save button just pressed, and it stays up (with Continue as the primary
+  action) when the user then edits the answers. Changing either alters the
+  `review-session-ui` flow ("Saving is confirmed and the flow continues"),
+  so it edits that spec. Split out of EN-76 by `alert-announcements`,
+  2026-10-22.
 
 ## Done
 
