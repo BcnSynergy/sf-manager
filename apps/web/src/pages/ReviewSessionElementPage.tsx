@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import type { AnswerValue } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import {
+  readReviewSession,
   recordEntry,
   resolveElementByCode,
   type ResolveElementResult,
@@ -29,6 +30,11 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // server-side to one ELEMENT_NOT_FOUND, design.md Decision 6), this page
 // renders exactly the ONE key `mapApiErrorToMessageKey` returns for that
 // code, read from `ApiError.status`/`.code` only — never `.message`.
+//
+// review-session-ui spec "A completed session still offers no mutating
+// control" (TD-39): the resolve response carries no session status, so the
+// session is read alongside it and a completed one renders its recorded
+// entry read-only instead of the answer form.
 export function ReviewSessionElementPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,6 +43,7 @@ export function ReviewSessionElementPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [resolved, setResolved] = useState<ResolveElementResult | null>(null);
+  const [completed, setCompleted] = useState(false);
 
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map());
   const [markUnreviewed, setMarkUnreviewed] = useState(false);
@@ -53,9 +60,10 @@ export function ReviewSessionElementPage() {
       });
     }
 
-    return resolveElementByCode(sessionId, code)
-      .then((result) => {
+    return Promise.all([resolveElementByCode(sessionId, code), readReviewSession(sessionId)])
+      .then(([result, session]) => {
         setResolved(result);
+        setCompleted(session.status === 'completed');
         if (result.entry) {
           setMarkUnreviewed(!result.entry.reviewed);
           setObservations(result.entry.observations ?? '');
@@ -160,15 +168,75 @@ export function ReviewSessionElementPage() {
     );
   }
 
+  const elementPanel = (
+    <div className="sf-panel">
+      <p data-testid="review-session-element-name">{resolved.element.name}</p>
+      <p data-testid="review-session-element-location">{resolved.element.location}</p>
+    </div>
+  );
+  const sortedQuestions = resolved.questions.slice().sort((a, b) => a.order - b.order);
+
+  if (completed) {
+    const { entry } = resolved;
+    return (
+      <main>
+        <header className="sf-page-header">
+          <h1>{t('reviewSession.element.title')}</h1>
+        </header>
+        {elementPanel}
+        <div className="sf-alert" data-testid="review-session-element-completed-notice">
+          <span className="sf-alert-icon" aria-hidden="true">
+            i
+          </span>
+          <p>{t('reviewSession.detail.completedNotice')}</p>
+        </div>
+        {entry === null ? (
+          <p className="sf-empty" data-testid="review-session-element-not-recorded">
+            {t('reviewSession.element.notRecorded')}
+          </p>
+        ) : entry.reviewed ? (
+          <section className="sf-section">
+            <h2 className="sf-section-title">{t('reviewSession.element.questionsTitle')}</h2>
+            <dl data-testid="review-session-element-recorded-answers">
+              {sortedQuestions.map((question) => {
+                const answer = entry.answers.find((a) => a.questionId === question.questionId);
+                return (
+                  <Fragment key={question.questionId}>
+                    <dt>{question.text}</dt>
+                    <dd>{answer ? t(mapAnswerValueToLabelKey(answer.answer)) : ''}</dd>
+                  </Fragment>
+                );
+              })}
+            </dl>
+          </section>
+        ) : (
+          <p data-testid="review-session-element-recorded-unreviewed">
+            <span className="sf-badge sf-badge-warning">
+              {t('reviewSession.element.unreviewedLabel')}
+            </span>{' '}
+            <span>{entry.observations ?? ''}</span>
+          </p>
+        )}
+        <div className="sf-actions">
+          <button
+            type="button"
+            className="sf-btn"
+            data-testid="review-session-element-back"
+            onClick={() => navigate(`/review-sessions/${sessionId}`)}
+          >
+            {t('reviewSession.element.backLabel')}
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main>
       <header className="sf-page-header">
         <h1>{t('reviewSession.element.title')}</h1>
       </header>
-      <div className="sf-panel">
-        <p data-testid="review-session-element-name">{resolved.element.name}</p>
-        <p data-testid="review-session-element-location">{resolved.element.location}</p>
-      </div>
+      {elementPanel}
 
       {saved && (
         <div
@@ -228,30 +296,27 @@ export function ReviewSessionElementPage() {
         ) : (
           <section className="sf-section" data-testid="review-session-element-questions">
             <h2 className="sf-section-title">{t('reviewSession.element.questionsTitle')}</h2>
-            {resolved.questions
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((question) => (
-                <fieldset
-                  key={question.questionId}
-                  className="sf-field"
-                  data-testid={`review-session-element-question-${question.questionId}`}
-                >
-                  <legend>{question.text}</legend>
-                  {ANSWER_VALUES.map((value) => (
-                    <label key={value} className="sf-choice">
-                      <input
-                        type="radio"
-                        name={`review-session-element-question-${question.questionId}`}
-                        checked={answers.get(question.questionId) === value}
-                        onChange={() => setAnswer(question.questionId, value)}
-                        data-testid={`review-session-element-answer-${question.questionId}-${value}`}
-                      />
-                      {t(mapAnswerValueToLabelKey(value))}
-                    </label>
-                  ))}
-                </fieldset>
-              ))}
+            {sortedQuestions.map((question) => (
+              <fieldset
+                key={question.questionId}
+                className="sf-field"
+                data-testid={`review-session-element-question-${question.questionId}`}
+              >
+                <legend>{question.text}</legend>
+                {ANSWER_VALUES.map((value) => (
+                  <label key={value} className="sf-choice">
+                    <input
+                      type="radio"
+                      name={`review-session-element-question-${question.questionId}`}
+                      checked={answers.get(question.questionId) === value}
+                      onChange={() => setAnswer(question.questionId, value)}
+                      data-testid={`review-session-element-answer-${question.questionId}-${value}`}
+                    />
+                    {t(mapAnswerValueToLabelKey(value))}
+                  </label>
+                ))}
+              </fieldset>
+            ))}
           </section>
         )}
 

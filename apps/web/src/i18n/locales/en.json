@@ -447,7 +447,9 @@
       "saveLabel": "Save and continue",
       "saveError": "This element could not be saved.",
       "saveConfirmation": "Saved. Enter the next element's code.",
-      "backLabel": "Back to session"
+      "backLabel": "Back to session",
+      "unreviewedLabel": "Not reviewed",
+      "notRecorded": "No entry was recorded for this element in this session."
     },
     "answer": {
       "yes": "Yes",

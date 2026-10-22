@@ -10,6 +10,7 @@ vi.mock('../api/review-session');
 
 const mockedResolveElementByCode = vi.mocked(reviewSessionApi.resolveElementByCode);
 const mockedRecordEntry = vi.mocked(reviewSessionApi.recordEntry);
+const mockedReadReviewSession = vi.mocked(reviewSessionApi.readReviewSession);
 
 const SESSION_ID = 'session-1';
 const CODE = '23456789AB';
@@ -22,6 +23,20 @@ const resolved = {
   ],
   entry: null,
 };
+
+function sessionWithStatus(status: 'draft' | 'completed') {
+  return {
+    id: SESSION_ID,
+    communityId: 'community-1',
+    templateId: 'template-1',
+    performedById: 'user-1',
+    status,
+    startedAt: '2026-09-08T00:00:00.000Z',
+    completedAt: status === 'completed' ? '2026-09-09T00:00:00.000Z' : null,
+    entries: [],
+    coverage: { reviewed: 0, unreviewed: 0 },
+  };
+}
 
 function renderPage() {
   return render(
@@ -43,6 +58,7 @@ function renderPage() {
 describe('ReviewSessionElementPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedReadReviewSession.mockResolvedValue(sessionWithStatus('draft'));
   });
 
   it('shows a loading state while the resolve request is in flight', () => {
@@ -283,6 +299,110 @@ describe('ReviewSessionElementPage', () => {
       expect(mockedRecordEntry).toHaveBeenCalled();
       expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(error).toHaveAttribute('role', 'alert');
+    });
+  });
+
+  // review-session-ui spec "A completed session still offers no mutating
+  // control" (TD-39): the field flow shows a completed session's element
+  // read-only instead of the answer form.
+  describe('completed session', () => {
+    const MUTATING_TEST_IDS = [
+      'review-session-element-save',
+      'review-session-element-mark-unreviewed',
+      'review-session-element-answer-q1-YES',
+      'review-session-element-observations',
+    ];
+
+    beforeEach(() => {
+      mockedReadReviewSession.mockResolvedValue(sessionWithStatus('completed'));
+    });
+
+    it('shows the recorded answers read-only with no mutating control', async () => {
+      mockedResolveElementByCode.mockResolvedValue({
+        ...resolved,
+        entry: {
+          reviewed: true,
+          observations: null,
+          answers: [
+            { questionId: 'q1', answer: 'YES' },
+            { questionId: 'q2', answer: 'NOT_APPLICABLE' },
+          ],
+          recordedAt: '2026-09-08T00:00:00.000Z',
+        },
+      });
+
+      renderPage();
+
+      expect(
+        await screen.findByTestId('review-session-element-completed-notice'),
+      ).toHaveTextContent('This session is completed and read-only.');
+      const recorded = screen.getByTestId('review-session-element-recorded-answers');
+      expect(recorded).toHaveTextContent('Is it charged?');
+      expect(recorded).toHaveTextContent('Yes');
+      expect(recorded).toHaveTextContent('Is the seal intact?');
+      expect(recorded).toHaveTextContent('Not applicable');
+      for (const testId of MUTATING_TEST_IDS) {
+        expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+      }
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+      expect(mockedReadReviewSession).toHaveBeenCalledWith(SESSION_ID);
+    });
+
+    it('shows an unreviewed entry as not reviewed with its reason', async () => {
+      mockedResolveElementByCode.mockResolvedValue({
+        ...resolved,
+        entry: {
+          reviewed: false,
+          observations: 'Room sealed, could not access',
+          answers: [],
+          recordedAt: '2026-09-08T00:00:00.000Z',
+        },
+      });
+
+      renderPage();
+
+      const unreviewed = await screen.findByTestId('review-session-element-recorded-unreviewed');
+      expect(unreviewed).toHaveTextContent('Not reviewed');
+      expect(unreviewed).toHaveTextContent('Room sealed, could not access');
+      for (const testId of MUTATING_TEST_IDS) {
+        expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+      }
+    });
+
+    it('says no entry was recorded when the element has none', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-session-element-not-recorded')).toHaveTextContent(
+        'No entry was recorded for this element in this session.',
+      );
+      for (const testId of MUTATING_TEST_IDS) {
+        expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+      }
+    });
+
+    it('offers Back to session as the only action', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-session-element-back'));
+      expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
+    });
+
+    it('shows the load error when the session cannot be read', async () => {
+      mockedResolveElementByCode.mockResolvedValue(resolved);
+      mockedReadReviewSession.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-session-element-error')).toHaveTextContent(
+        'This session could not be found.',
+      );
+      expect(screen.queryByTestId('review-session-element-save')).not.toBeInTheDocument();
     });
   });
 });
