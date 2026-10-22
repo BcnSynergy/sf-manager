@@ -389,7 +389,9 @@ describe('ReviewSessionElementPage', () => {
 
       renderPage();
 
-      fireEvent.click(await screen.findByTestId('review-session-element-back'));
+      const back = await screen.findByTestId('review-session-element-back');
+      expect(screen.getAllByRole('button')).toEqual([back]);
+      fireEvent.click(back);
       expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
     });
 
