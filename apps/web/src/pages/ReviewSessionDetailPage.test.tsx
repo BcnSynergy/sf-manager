@@ -107,6 +107,22 @@ describe('ReviewSessionDetailPage', () => {
     expect(screen.queryByTestId('element-page')).not.toBeInTheDocument();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the code validation error again when an empty code is submitted again', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-code-submit'));
+    const first = await screen.findByTestId('review-session-detail-code-error');
+    fireEvent.click(screen.getByTestId('review-session-detail-code-submit'));
+
+    const second = screen.getByTestId('review-session-detail-code-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('discards the draft after confirmation and navigates to the list', async () => {
     mockedReadReviewSession.mockResolvedValue(draftSession);
     mockedDiscardReviewSession.mockResolvedValue(undefined);

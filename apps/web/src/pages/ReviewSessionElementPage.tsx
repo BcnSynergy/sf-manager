@@ -10,6 +10,8 @@ import {
   type ResolveElementResult,
 } from '../api/review-session';
 import { PageHeader } from '../components/PageHeader';
+import { Alert, StatusRegion } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -51,7 +53,12 @@ export function ReviewSessionElementPage() {
   const [observations, setObservations] = useState('');
 
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const {
+    message: saveError,
+    key: saveErrorAlertKey,
+    show: showSaveError,
+    clear: clearSaveError,
+  } = useAlertMessage();
   const [saved, setSaved] = useState(false);
 
   const loadElement = useCallback(() => {
@@ -93,14 +100,14 @@ export function ReviewSessionElementPage() {
     if (sessionId === undefined || resolved === null) {
       return;
     }
-    setSaveError(null);
+    clearSaveError();
     setSaved(false);
 
     setSaving(true);
     try {
       if (markUnreviewed) {
         if (observations.trim() === '') {
-          setSaveError(t('reviewSession.error.missingObservations'));
+          showSaveError(t('reviewSession.error.missingObservations'));
           setSaving(false);
           return;
         }
@@ -109,7 +116,7 @@ export function ReviewSessionElementPage() {
         });
       } else {
         if (answers.size !== resolved.questions.length) {
-          setSaveError(t('reviewSession.error.answersDoNotMatchTemplate'));
+          showSaveError(t('reviewSession.error.answersDoNotMatchTemplate'));
           setSaving(false);
           return;
         }
@@ -125,7 +132,7 @@ export function ReviewSessionElementPage() {
       // review-session-ui spec "A save failure is reported without losing
       // entered answers": no state reset here on failure — `answers`/
       // `observations` stay exactly as the user left them.
-      setSaveError(
+      showSaveError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
     } finally {
@@ -231,17 +238,13 @@ export function ReviewSessionElementPage() {
       <PageHeader title={t('reviewSession.element.title')} />
       {elementPanel}
 
-      {saved && (
-        <div
-          className="sf-alert sf-alert-success"
-          role="status"
-          data-testid="review-session-element-saved"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            ✓
-          </span>
-          <div className="sf-section">
-            <p>{t('reviewSession.element.saveConfirmation')}</p>
+      <StatusRegion>
+        {saved && (
+          <Alert
+            tone="success"
+            testId="review-session-element-saved"
+            message={t('reviewSession.element.saveConfirmation')}
+          >
             {/* spec "Saving is confirmed and the flow continues" — MUST be
                 returned to code entry for the next element. The code-entry
                 form lives on ReviewSessionDetailPage.tsx (design.md
@@ -258,9 +261,9 @@ export function ReviewSessionElementPage() {
                 {t('reviewSession.element.backLabel')}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Alert>
+        )}
+      </StatusRegion>
 
       <form className="sf-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         <label className="sf-choice" htmlFor="review-session-element-mark-unreviewed">
@@ -314,16 +317,12 @@ export function ReviewSessionElementPage() {
         )}
 
         {saveError && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="review-session-element-save-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{saveError}</p>
-          </div>
+          <Alert
+            key={saveErrorAlertKey}
+            tone="danger"
+            testId="review-session-element-save-error"
+            message={saveError}
+          />
         )}
         <div className="sf-actions">
           {/* Once saved, the next step is code entry (Continue above), so
