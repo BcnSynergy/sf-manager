@@ -180,16 +180,22 @@ describe('ChecklistQuestionEditPage', () => {
       expect(checkbox.closest('fieldset')).toHaveClass('sf-field');
     });
 
-    it('puts Delete (danger) in the page header', async () => {
+    // EN-74: the header holds only the title, so the form fields come first
+    // in tab order and Delete follows the form's Save in its own group.
+    it('puts Delete (danger) after the form, following Save in tab order', async () => {
       mockedListChecklistQuestions.mockResolvedValue([question]);
       renderPage();
 
       const remove = await screen.findByTestId('checklist-question-edit-delete');
+      const submit = screen.getByTestId('checklist-question-edit-submit');
       expect(remove).toHaveClass('sf-btn', 'sf-btn-danger');
       expect(remove.parentElement).toHaveClass('sf-actions');
-      expect(remove.closest('.sf-page-header')).toBe(
-        screen.getByRole('heading', { level: 1 }).parentElement,
-      );
+      expect(remove.closest('.sf-page-header')).toBeNull();
+      expect(remove.closest('form')).toBeNull();
+      expect(screen.getByRole('heading', { level: 1 }).parentElement?.children).toHaveLength(1);
+      expect(
+        submit.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it('shows the save and delete failures as danger alerts', async () => {
@@ -209,6 +215,15 @@ describe('ChecklistQuestionEditPage', () => {
       const deleteError = await screen.findByTestId('checklist-question-edit-delete-error');
       expect(deleteError).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(deleteError).toHaveAttribute('role', 'alert');
+      expect(deleteError.closest('form')).toBeNull();
+      expect(
+        screen.getByTestId('checklist-question-edit-submit').compareDocumentPosition(deleteError) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        deleteError.compareDocumentPosition(screen.getByTestId('checklist-question-edit-delete')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 });

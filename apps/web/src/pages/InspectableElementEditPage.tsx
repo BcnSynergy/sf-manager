@@ -246,67 +246,7 @@ export function InspectableElementEditPage() {
 
   return (
     <main>
-      <PageHeader title={t('inspectableElement.edit.title')}>
-        <div className="sf-actions">
-          {/* inspectable-element-admin-ui spec.md "The control is single-element
-              and reason-free": exactly one action, no bulk variant, no reason
-              field — either Decommission or Reactivate is shown, never both. */}
-          {deactivated ? (
-            <button
-              type="button"
-              className="sf-btn"
-              data-testid="inspectable-element-edit-reactivate"
-              disabled={submitting || deleting || decommissionSubmitting}
-              onClick={() => void reactivate()}
-            >
-              {t('inspectableElement.edit.reactivateLabel')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="sf-btn"
-              data-testid="inspectable-element-edit-decommission"
-              disabled={submitting || deleting || decommissionSubmitting}
-              onClick={requestDecommission}
-            >
-              {t('inspectableElement.edit.decommissionLabel')}
-            </button>
-          )}
-          <button
-            type="button"
-            className="sf-btn sf-btn-danger"
-            data-testid="inspectable-element-edit-delete"
-            disabled={submitting || deleting}
-            onClick={requestDelete}
-          >
-            {t('inspectableElement.edit.deleteLabel')}
-          </button>
-        </div>
-      </PageHeader>
-      {deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="inspectable-element-edit-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
-      )}
-      {decommissionError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="inspectable-element-edit-decommission-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{decommissionError}</p>
-        </div>
-      )}
+      <PageHeader title={t('inspectableElement.edit.title')} />
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
@@ -411,6 +351,67 @@ export function InspectableElementEditPage() {
           </button>
         </div>
       </form>
+      {/* EN-74: the page actions follow the form, so the fields come first in
+          tab order; their failures show just above them. */}
+      {deleteError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="inspectable-element-edit-delete-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{deleteError}</p>
+        </div>
+      )}
+      {decommissionError && (
+        <div
+          className="sf-alert sf-alert-danger"
+          role="alert"
+          data-testid="inspectable-element-edit-decommission-error"
+        >
+          <span className="sf-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <p>{decommissionError}</p>
+        </div>
+      )}
+      <div className="sf-actions">
+        {/* inspectable-element-admin-ui spec.md "The control is single-element
+            and reason-free": exactly one action, no bulk variant, no reason
+            field — either Decommission or Reactivate is shown, never both. */}
+        {deactivated ? (
+          <button
+            type="button"
+            className="sf-btn"
+            data-testid="inspectable-element-edit-reactivate"
+            disabled={submitting || deleting || decommissionSubmitting}
+            onClick={() => void reactivate()}
+          >
+            {t('inspectableElement.edit.reactivateLabel')}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="sf-btn"
+            data-testid="inspectable-element-edit-decommission"
+            disabled={submitting || deleting || decommissionSubmitting}
+            onClick={requestDecommission}
+          >
+            {t('inspectableElement.edit.decommissionLabel')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="sf-btn sf-btn-danger"
+          data-testid="inspectable-element-edit-delete"
+          disabled={submitting || deleting}
+          onClick={requestDelete}
+        >
+          {t('inspectableElement.edit.deleteLabel')}
+        </button>
+      </div>
       <ConfirmDialog
         tone="danger"
         open={pendingAction !== null}
