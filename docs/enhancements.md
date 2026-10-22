@@ -599,18 +599,26 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   in a comment, could make them pass or fail wrongly. A shared helper that
   collects every print block and strips comments would fix both. Origin:
   `alert-announcements` PR 3 (#273) pre-merge review, 2026-10-22.
+- **EN-82** (web a11y): The login page shows its errors (required fields,
+  invalid email, failed or rate-limited login) as a plain
+  `<p data-testid="login-error">` with no role, so screen readers do not
+  announce them, and a repeated error keeps the same element. It is the one
+  page outside `web-alert-announcements`, which names it as out of scope.
+  Rendering them with `Alert` and `useAlertMessage` would also change the
+  page's look, since it does not use the `sf-alert` styles yet. Origin:
+  `alert-announcements` PR 4 fresh review, 2026-10-22.
 
 ## Done
 
-- **EN-76** (web a11y): Every action error now renders through one `Alert`
-  component with a key from `useAlertMessage`, so the same error shown again
-  is a new `role="alert"` element and screen readers announce it again; the
-  organization profile and review session element save confirmations appear
-  inside a `StatusRegion`, a `role="status"` region that is on the page
-  before them. Specified in the new main spec `web-alert-announcements`. The
-  phone-width placement of the element page's confirmation was split out to
-  EN-80. Done in `alert-announcements`, PRs #271, #272, #273 and #274.
-
+- **EN-76** (web a11y): Every action error on the design-system pages now
+  renders through one `Alert` component with a key from `useAlertMessage`, so
+  the same error shown again is a new `role="alert"` element and screen
+  readers announce it again; the organization profile and review session
+  element save confirmations appear inside a `StatusRegion`, a `role="status"`
+  region that is on the page before them. Specified in the new main spec
+  `web-alert-announcements`. The phone-width placement of the element page's
+  confirmation was split out to EN-80, and the login page's errors to EN-82.
+  Done in `alert-announcements`, PRs #271, #272, #273 and #274.
 - **EN-78** (web a11y): The read-only element type term on the checklist
   question and inspectable element edit forms (EN-75) now ends with a colon in
   a `visually-hidden` span, so a screen reader no longer reads the term and

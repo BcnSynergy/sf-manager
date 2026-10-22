@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Makes screen readers announce every save confirmation and every action error in the web app, including an error shown again with the same text. Copy, styles, test ids, flows and validation are unchanged.
+Makes screen readers announce the save confirmations and the action errors of the web app's design-system pages, including an error shown again with the same text.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ The confirmations covered are:
 
 #### Scenario: The region is there before the save
 
-- GIVEN a covered page has loaded and nothing has been saved yet
+- GIVEN a covered page showing its save form, with nothing saved yet
 - WHEN the page renders
 - THEN exactly one `role="status"` region MUST be present and it MUST be empty
 
@@ -39,9 +39,12 @@ The confirmations covered are:
 
 ### Requirement: Action Errors Are Announced Each Time They Are Shown
 
-Every error that reports the outcome of a user action (a submit, save, delete, activate, discard, complete or similar) MUST render as a `role="alert"` element that is a new element each time its message is shown, including when the same text is shown again because the user repeated the same invalid action.
+On every page that shows its errors as design-system alerts (`sf-alert`), every error that reports the outcome of a user action (a submit, save, delete, activate, discard, complete or similar) MUST render as a `role="alert"` element that is a new element each time its message is shown, including when the same text is shown again because the user repeated the same invalid action.
 
-Load failures that render as empty-state messages, and the page chunk-load error, are not action errors and are out of scope.
+Out of scope:
+
+- load failures that render as empty-state messages, and the page chunk-load error, which are not action errors;
+- the login page, whose errors are plain text without a role (tracked as EN-82).
 
 #### Scenario: A repeated validation error is announced again
 
