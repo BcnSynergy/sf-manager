@@ -15,12 +15,12 @@ Route: ODD; adds the main spec `openspec/specs/web-alert-announcements/spec.md` 
 
 ## Tasks
 
-| ID  | Specs          | Scope                                                                                                                                                    | Route  | Status  | Commit / PR            |
-| --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- | ---------------------- |
-| T1  | S2, S3, S5     | `components/Alert.tsx`, `components/use-alert-message.ts` + tests; EN-80                                                                                 | inline | done    | 86c4643, #271          |
-| T2  | S2, S3, S7     | Community (Create, Edit, List, `AssignmentSection`), MaintenanceCompany (Create, Edit), User (Create, Edit, List)                                        | inline | done    | 61facb7, #272          |
-| T3  | S1, S2, S3, S7 | ChecklistQuestion (Create, Edit, List), InspectableElement (Create, Edit), ReviewTemplate (Create, Detail), OrganizationProfile (with its status region) | inline | done    | b2d95d7, 5f06e30, #273 |
-| T4  | S1, S2, S3, S6 | ReviewSession (Detail, New, Element with its status region); spec `web-alert-announcements`; EN-76 to Done                                               | inline | pending |                        |
+| ID  | Specs          | Scope                                                                                                                                                    | Route  | Status | Commit / PR            |
+| --- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ---------------------- |
+| T1  | S2, S3, S5     | `components/Alert.tsx`, `components/use-alert-message.ts` + tests; EN-80                                                                                 | inline | done   | 86c4643, #271          |
+| T2  | S2, S3, S7     | Community (Create, Edit, List, `AssignmentSection`), MaintenanceCompany (Create, Edit), User (Create, Edit, List)                                        | inline | done   | 61facb7, #272          |
+| T3  | S1, S2, S3, S7 | ChecklistQuestion (Create, Edit, List), InspectableElement (Create, Edit), ReviewTemplate (Create, Detail), OrganizationProfile (with its status region) | inline | done   | b2d95d7, 5f06e30, #273 |
+| T4  | S1, S2, S3, S6 | ReviewSession (Detail, New, Element with its status region); spec `web-alert-announcements`; EN-76 to Done                                               | inline | done   | 29756b1, 8a57f92, #274 |
 
 Route evidence: one PR per task, written inline by the parent; no writer trigger (units are sequential, not parallel).
 
