@@ -11,9 +11,9 @@ actively, not just as background context:
   not, note it (in the relevant ADR's "Open questions" or the FR list)
   and defer it — don't design or build it now.
 - Value Objects, application-layer use cases, and detailed entity
-  behavior are designed **per slice**, during that slice's `sdd-spec`/
-  `sdd-design` phases — never as a big upfront design pass across the
-  whole domain (see ADR-006's addendum).
+  behavior are designed **per slice**, in that slice's feature document
+  and spec edits — never as a big upfront design pass across the whole
+  domain (see ADR-006's addendum).
 - If a conversation starts drifting into designing multiple future
   slices at once, say so explicitly and redirect back to the slice
   actually in progress.
@@ -27,60 +27,56 @@ web UI on two known domains — a drift from this ADR's own "thinnest
 possible end-to-end slice = API + one client" premise. See ADR-006's
 2026-08-25 addendum for the full record. Going forward:
 
-- A new domain slice's SDD cycle (`sdd-propose`/`sdd-spec`/`sdd-design`)
-  must include its **minimal** web UI in the same change, not as a
-  separate later retrofit. "Minimal" still means minimal — no more UI
-  than the slice's own success criteria require (ADR-006 discipline
-  applies to UI scope exactly as it does to domain scope).
+- A new domain slice must include its **minimal** web UI in the same
+  change, not as a separate later retrofit. "Minimal" still means
+  minimal — no more UI than the slice's own success criteria require
+  (ADR-006 discipline applies to UI scope exactly as it does to domain
+  scope).
 - Both retrofit slices have landed and been archived (`users-minimal-ui`,
   `community-minimal-ui` — see `openspec/changes/archive/`). "New slice =
   domain + UI together" is now the steady state with no backlog behind
   it. Every slice since `review-history` has been built this way from the
   start. The most recent is `review-schedule` (FR-009 slice 1, archived
   2026-10-06).
-- If a proposal is about to be written for API-only, ask explicitly
+- If a slice is about to be planned as API-only, ask explicitly
   whether that's deliberate (e.g. a pure backend-to-backend concern)
   before proceeding — don't let it happen silently again.
 
-## Choosing SDD vs ODD at Task Start
+## Keeping `openspec/specs/` Current
 
-The global default workflow is ODD (Organic Driven Development), and SDD
-runs only when explicitly requested or when a proposal for it is accepted.
-In this project, `openspec/specs/` is the living specification of what the
-system does, kept current by archiving SDD changes. ODD has no equivalent,
-so a behavior change built through ODD would leave the specs silently out of
-date. This project rule deliberately overrides the global "do not recommend
-SDD" default.
+Every task follows the global ODD (Organic Driven Development) workflow.
+The SDD tooling (`/gentle-sdd-new` and the `sdd-*` phase skills) is no
+longer available, so SDD is not a route any more (2026-10-22).
+`openspec/specs/` is still the living specification of what the system
+does, and ODD work keeps it current. `openspec/changes/archive/` is the
+historical record of the SDD changes; nothing new is added there.
 
 At the start of every task that will change code, after the minimal
-exploration needed to classify it and before the first write, recommend a
-route with a one-line reason and ask the user to confirm it. Do not start
-writing until they answer. If the user already named a route ("use SDD",
-"just fix it"), skip the question. Read-only requests (explain, review,
-investigate) and trivial one-file fixes such as a typo need no route
-question.
+exploration needed to classify it and before the first write, answer the
+deciding question in one line and ask the user to confirm it: **does this
+change create or alter behavior that `openspec/specs/` describes, or should
+describe?** "Behavior" means what a user or a business rule can observe:
+permissions, validations, data, and flows. It does not mean internal
+structure. Do not start writing until they answer. If the user already
+said whether the specs change (for example "just fix it, no spec change"),
+skip the question. Read-only requests (explain, review, investigate) and
+trivial one-file fixes such as a typo need no question.
 
-The deciding question: **does this change create or alter behavior that
-`openspec/specs/` describes, or should describe?** "Behavior" means what a
-user or a business rule can observe: permissions, validations, data, and
-flows. It does not mean internal structure.
-
-- **Yes → recommend SDD** (`/gentle-sdd-new <change>`, artifacts under
-  `openspec/changes/`). This covers new domain or FR slices and any change
-  to an existing capability's observable rules, data, or flows.
-- **No → recommend ODD**, for example a bug fix that restores behavior the
+- **Yes:** edit the affected main spec in `openspec/specs/<capability>/spec.md`
+  in the same PR as the behavior, in the existing requirement and scenario
+  format (scenarios in Given/When/Then). A new domain or FR slice adds its
+  own capability folder. Name the changed specs in the PR description, and
+  in the feature document when there is one.
+- **No:** no spec change, for example a bug fix that restores behavior the
   specs already describe, refactors, copy/style/i18n tweaks, test-only or
   tooling changes, dependency bumps, and docs.
 - When in doubt, or when the specs are silent on the behavior involved,
-  recommend SDD.
-- If ODD work turns out to alter specified behavior, stop and ask again. If
-  the user keeps ODD, edit the affected main spec in `openspec/specs/`
-  directly in the same PR. This is the accepted exception to the
-  delta-spec + archive flow.
+  treat it as Yes and say which spec would gain the requirement.
+- If the work turns out to alter specified behavior after all, stop and ask
+  again before continuing.
 - ADR-006 scope discipline (including minimal UI for a domain slice), the
-  global ODD tracking rules, and the Git & PR conventions below apply to
-  both routes as relevant. ODD feature branches also use
-  `<change-name>/<NN>-<slug>`.
+  global ODD tracking rules, and the Git & PR conventions below apply.
+  Feature branches use `<change-name>/<NN>-<slug>`.
 
 ## Technical Debt and Enhancements Registers
 
@@ -95,19 +91,19 @@ memory. These two files are the source of truth:
 
 Rules:
 
-- When a review, `sdd-verify`, or `sdd-archive` leaves a non-blocking finding
-  that is not fixed in the same PR, add it to the matching register in that
-  PR (or the change's archive PR). Do not leave it only in a report or in
-  Engram. Before reporting a change complete, say which items were added.
+- When a review or a verification leaves a non-blocking finding that is not
+  fixed in the same PR, add it to the matching register in that PR. Do not
+  leave it only in a report or in Engram. Before reporting a change
+  complete, say which items were added.
 - When work resolves an item, move it to the register's Resolved/Done
   section with the change name and PR numbers, in the same PR.
 - IDs are stable: never reuse or renumber them. Refer to items by ID in
-  commits, PRs, and SDD artifacts (for example "TD-14").
+  commits, PRs, feature documents and specs (for example "TD-14").
 - Deferred scope that ADR-006 says to note in an ADR's "Open questions" or
   the FR list still gets a register entry that points there. The register is
   the canonical to-do list; the ADR or FR keeps the design context.
 - When choosing what to work on next, read both registers first.
-- Picking an item up still follows "Choosing SDD vs ODD at Task Start" above.
+- Picking an item up still follows "Keeping `openspec/specs/` Current" above.
 
 ## Git & PR Conventions
 
