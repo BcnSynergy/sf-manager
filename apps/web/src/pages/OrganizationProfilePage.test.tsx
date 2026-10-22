@@ -184,6 +184,26 @@ describe('OrganizationProfilePage', () => {
     expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('organization-profile-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    const first = await screen.findByTestId('organization-profile-error');
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    const second = screen.getByTestId('organization-profile-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('keeps the entered values and shows an error when the save request fails', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
     mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(400));
@@ -455,7 +475,25 @@ describe('OrganizationProfilePage route access', () => {
 
       const success = await screen.findByTestId('organization-profile-success');
       expect(success).toHaveClass('sf-alert', 'sf-alert-success');
-      expect(success).toHaveAttribute('role', 'status');
+    });
+
+    // EN-76: a `role="status"` added already filled is not reliably
+    // announced, so the confirmation appears inside a region that was there.
+    it('shows the save confirmation inside a status region that was on the page before the save', async () => {
+      mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+      mockedUpdateOrganizationProfile.mockResolvedValue(filledProfile);
+      renderPage();
+
+      const submit = await screen.findByTestId('organization-profile-submit');
+      const region = screen.getByRole('status');
+      expect(region).toBeEmptyDOMElement();
+
+      fireEvent.click(submit);
+
+      const success = await screen.findByTestId('organization-profile-success');
+      expect(success).not.toHaveAttribute('role');
+      expect(region).toContainElement(success);
+      expect(screen.getByRole('status')).toBe(region);
     });
 
     it('shows the save failure as a danger alert', async () => {

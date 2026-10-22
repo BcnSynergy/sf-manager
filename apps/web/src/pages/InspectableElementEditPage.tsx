@@ -10,6 +10,8 @@ import {
 } from '../api/inspectable-element';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../inspectable-element/error-messages';
 
@@ -45,9 +47,19 @@ export function InspectableElementEditPage() {
   const [location, setLocation] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [installedAt, setInstalledAt] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const {
+    message: deleteError,
+    key: deleteErrorAlertKey,
+    show: showDeleteError,
+    clear: clearDeleteError,
+  } = useAlertMessage();
   const [deleting, setDeleting] = useState(false);
   // review-session/design.md Decision 3 + inspectable-element-admin-ui
   // spec.md "Decommission and Reactivate Control": a single-element,
@@ -56,7 +68,12 @@ export function InspectableElementEditPage() {
   // (mirrors the soft-delete control's own button + error state, never
   // mixed into the main form submit).
   const [deactivated, setDeactivated] = useState(false);
-  const [decommissionError, setDecommissionError] = useState<string | null>(null);
+  const {
+    message: decommissionError,
+    key: decommissionErrorAlertKey,
+    show: showDecommissionError,
+    clear: clearDecommissionError,
+  } = useAlertMessage();
   const [decommissionSubmitting, setDecommissionSubmitting] = useState(false);
   // ConfirmDialog always renders its <dialog> DOM node regardless of `open`
   // (see ConfirmDialog.tsx), so this page can only ever mount ONE instance
@@ -113,7 +130,7 @@ export function InspectableElementEditPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = updateInspectableElementSchema.safeParse({
       name,
@@ -123,7 +140,7 @@ export function InspectableElementEditPage() {
       installedAt,
     });
     if (!result.success) {
-      setError(t('inspectableElement.edit.validationError'));
+      showError(t('inspectableElement.edit.validationError'));
       return;
     }
 
@@ -136,7 +153,7 @@ export function InspectableElementEditPage() {
       await updateInspectableElement(communityId, elementId, result.data);
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -144,7 +161,7 @@ export function InspectableElementEditPage() {
   }
 
   function requestDelete() {
-    setDeleteError(null);
+    clearDeleteError();
     setPendingAction('delete');
   }
 
@@ -159,7 +176,7 @@ export function InspectableElementEditPage() {
       await softDeleteInspectableElement(communityId, elementId);
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
-      setDeleteError(
+      showDeleteError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setDeleting(false);
@@ -171,7 +188,7 @@ export function InspectableElementEditPage() {
   // (no scenario requires it, mirrors the asymmetry in the spec's own
   // scenario list).
   function requestDecommission() {
-    setDecommissionError(null);
+    clearDecommissionError();
     setPendingAction('decommission');
   }
 
@@ -181,7 +198,7 @@ export function InspectableElementEditPage() {
     }
 
     setDecommissionSubmitting(true);
-    setDecommissionError(null);
+    clearDecommissionError();
     try {
       const updated = await updateInspectableElement(communityId, elementId, {
         deactivated: nextDeactivated,
@@ -190,7 +207,7 @@ export function InspectableElementEditPage() {
     } catch (caughtError) {
       // spec.md "A failed action is reported and does not change the shown
       // state" — `deactivated` is left untouched on failure.
-      setDecommissionError(
+      showDecommissionError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
     } finally {
@@ -335,16 +352,12 @@ export function InspectableElementEditPage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="inspectable-element-edit-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="inspectable-element-edit-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button
@@ -360,28 +373,20 @@ export function InspectableElementEditPage() {
       {/* EN-74: the page actions follow the form, so the fields come first in
           tab order; their failures show just above them. */}
       {deleteError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="inspectable-element-edit-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{deleteError}</p>
-        </div>
+        <Alert
+          key={deleteErrorAlertKey}
+          tone="danger"
+          testId="inspectable-element-edit-delete-error"
+          message={deleteError}
+        />
       )}
       {decommissionError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="inspectable-element-edit-decommission-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{decommissionError}</p>
-        </div>
+        <Alert
+          key={decommissionErrorAlertKey}
+          tone="danger"
+          testId="inspectable-element-edit-decommission-error"
+          message={decommissionError}
+        />
       )}
       <div className="sf-actions">
         {/* inspectable-element-admin-ui spec.md "The control is single-element

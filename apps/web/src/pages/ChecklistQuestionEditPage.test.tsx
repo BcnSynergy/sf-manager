@@ -97,6 +97,25 @@ describe('ChecklistQuestionEditPage', () => {
     expect(await screen.findByTestId('checklist-question-list-sentinel')).toBeInTheDocument();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([question]);
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('checklist-question-edit-text'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-edit-submit'));
+
+    const first = await screen.findByTestId('checklist-question-edit-error');
+    fireEvent.click(screen.getByTestId('checklist-question-edit-submit'));
+
+    const second = screen.getByTestId('checklist-question-edit-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('requires confirmation before soft-deleting, and the confirm copy does not imply a blocking dependency (spec: Confirmed Soft-Delete)', async () => {
     mockedListChecklistQuestions.mockResolvedValue([question]);
 

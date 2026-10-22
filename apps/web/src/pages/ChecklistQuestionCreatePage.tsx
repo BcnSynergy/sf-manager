@@ -11,6 +11,8 @@ import {
 import { ApiError } from '../api/client';
 import { createChecklistQuestion } from '../api/checklist-question';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
@@ -37,7 +39,12 @@ export function ChecklistQuestionCreatePage() {
   const [elementType, setElementType] = useState<ElementType>(DEFAULT_ELEMENT_TYPE);
   const [frequencies, setFrequencies] = useState<ReviewFrequency[]>([]);
   const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    message: error,
+    key: errorAlertKey,
+    show: showError,
+    clear: clearError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   function toggleFrequency(frequency: ReviewFrequency) {
@@ -50,7 +57,7 @@ export function ChecklistQuestionCreatePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearError();
 
     const result = createChecklistQuestionSchema.safeParse({
       elementType,
@@ -58,7 +65,7 @@ export function ChecklistQuestionCreatePage() {
       text,
     });
     if (!result.success) {
-      setError(t('checklistQuestion.create.validationError'));
+      showError(t('checklistQuestion.create.validationError'));
       return;
     }
 
@@ -67,7 +74,7 @@ export function ChecklistQuestionCreatePage() {
       await createChecklistQuestion(result.data);
       navigate('/checklist-questions');
     } catch (caughtError) {
-      setError(
+      showError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -129,16 +136,12 @@ export function ChecklistQuestionCreatePage() {
           />
         </div>
         {error && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="checklist-question-create-error"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{error}</p>
-          </div>
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="checklist-question-create-error"
+            message={error}
+          />
         )}
         <div className="sf-actions">
           <button

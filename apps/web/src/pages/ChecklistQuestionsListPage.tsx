@@ -10,6 +10,8 @@ import {
 } from '../api/checklist-question';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../checklist-question/error-messages';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
@@ -33,7 +35,12 @@ export function ChecklistQuestionsListPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [deleteErrorKey, setDeleteErrorKey] = useState<string | null>(null);
+  const {
+    message: deleteErrorKey,
+    key: deleteErrorAlertKey,
+    show: showDeleteError,
+    clear: clearDeleteError,
+  } = useAlertMessage();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Mirrors CommunityElementsListPage.tsx's mount-effect pattern: a
@@ -60,7 +67,7 @@ export function ChecklistQuestionsListPage() {
   }, [loadQuestions]);
 
   function requestDelete(id: string) {
-    setDeleteErrorKey(null);
+    clearDeleteError();
     setPendingDeleteId(id);
   }
 
@@ -77,7 +84,7 @@ export function ChecklistQuestionsListPage() {
       setQuestions((current) => current.filter((question) => question.id !== id));
       setDeletingId(null);
     } catch (caughtError) {
-      setDeleteErrorKey(
+      showDeleteError(
         mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDeletingId(null);
@@ -128,16 +135,12 @@ export function ChecklistQuestionsListPage() {
         </Link>
       </PageHeader>
       {deleteErrorKey && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="checklist-question-list-delete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{t(deleteErrorKey)}</p>
-        </div>
+        <Alert
+          key={deleteErrorAlertKey}
+          tone="danger"
+          testId="checklist-question-list-delete-error"
+          message={t(deleteErrorKey)}
+        />
       )}
       {questions.length === 0 ? (
         <p className="sf-empty" data-testid="checklist-question-list-empty">

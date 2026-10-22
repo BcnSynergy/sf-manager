@@ -76,6 +76,30 @@ describe('InspectableElementCreatePage', () => {
     expect(mockedCreateInspectableElement).not.toHaveBeenCalled();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the validation error again when the same invalid form is submitted again', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('inspectable-element-create-name'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByTestId('inspectable-element-create-location'), {
+      target: { value: VALID_LOCATION },
+    });
+    fireEvent.change(screen.getByTestId('inspectable-element-create-installed-at'), {
+      target: { value: VALID_INSTALLED_AT },
+    });
+    fireEvent.click(screen.getByTestId('inspectable-element-create-submit'));
+
+    const first = await screen.findByTestId('inspectable-element-create-error');
+    fireEvent.click(screen.getByTestId('inspectable-element-create-submit'));
+
+    const second = screen.getByTestId('inspectable-element-create-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+  });
+
   it('navigates to the community elements list without a manual reload on a valid submission', async () => {
     mockedCreateInspectableElement.mockResolvedValue({
       id: 'element-1',
