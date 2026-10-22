@@ -10,6 +10,8 @@ import {
 } from '../api/review-session';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
@@ -46,16 +48,31 @@ export function ReviewSessionDetailPage() {
   const [session, setSession] = useState<ReviewSessionDetail | null>(null);
 
   const [code, setCode] = useState('');
-  const [codeError, setCodeError] = useState<string | null>(null);
+  const {
+    message: codeError,
+    key: codeErrorAlertKey,
+    show: showCodeError,
+    clear: clearCodeError,
+  } = useAlertMessage();
 
   const [pendingComplete, setPendingComplete] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const [completeError, setCompleteError] = useState<string | null>(null);
+  const {
+    message: completeError,
+    key: completeErrorAlertKey,
+    show: showCompleteError,
+    clear: clearCompleteError,
+  } = useAlertMessage();
   const [unreviewedCodes, setUnreviewedCodes] = useState<string[] | null>(null);
 
   const [pendingDiscard, setPendingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const [discardError, setDiscardError] = useState<string | null>(null);
+  const {
+    message: discardError,
+    key: discardErrorAlertKey,
+    show: showDiscardError,
+    clear: clearDiscardError,
+  } = useAlertMessage();
 
   const loadSession = useCallback(() => {
     if (sessionId === undefined) {
@@ -88,11 +105,11 @@ export function ReviewSessionDetailPage() {
 
   function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCodeError(null);
+    clearCodeError();
 
     const trimmed = code.trim().toUpperCase();
     if (trimmed === '') {
-      setCodeError(t('reviewSession.detail.codeValidationError'));
+      showCodeError(t('reviewSession.detail.codeValidationError'));
       return;
     }
 
@@ -100,7 +117,7 @@ export function ReviewSessionDetailPage() {
   }
 
   function requestComplete() {
-    setCompleteError(null);
+    clearCompleteError();
     setUnreviewedCodes(null);
     setPendingComplete(true);
   }
@@ -120,14 +137,14 @@ export function ReviewSessionDetailPage() {
         const codes = apiError.extra?.elementCodes;
         setUnreviewedCodes(Array.isArray(codes) ? (codes as string[]) : []);
       }
-      setCompleteError(t(mapApiErrorToMessageKey(apiError)));
+      showCompleteError(t(mapApiErrorToMessageKey(apiError)));
     } finally {
       setCompleting(false);
     }
   }
 
   function requestDiscard() {
-    setDiscardError(null);
+    clearDiscardError();
     setPendingDiscard(true);
   }
 
@@ -141,7 +158,7 @@ export function ReviewSessionDetailPage() {
       await discardReviewSession(sessionId);
       navigate('/review-sessions');
     } catch (caughtError) {
-      setDiscardError(
+      showDiscardError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setDiscarding(false);
@@ -211,16 +228,12 @@ export function ReviewSessionDetailPage() {
       </PageHeader>
 
       {isDraft && completeError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="review-session-detail-complete-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{completeError}</p>
-        </div>
+        <Alert
+          key={completeErrorAlertKey}
+          tone="danger"
+          testId="review-session-detail-complete-error"
+          message={completeError}
+        />
       )}
       {isDraft && unreviewedCodes && unreviewedCodes.length > 0 && (
         <div className="sf-panel" data-testid="review-session-detail-unreviewed-gaps">
@@ -241,16 +254,12 @@ export function ReviewSessionDetailPage() {
         </div>
       )}
       {isDraft && discardError && (
-        <div
-          className="sf-alert sf-alert-danger"
-          role="alert"
-          data-testid="review-session-detail-discard-error"
-        >
-          <span className="sf-alert-icon" aria-hidden="true">
-            !
-          </span>
-          <p>{discardError}</p>
-        </div>
+        <Alert
+          key={discardErrorAlertKey}
+          tone="danger"
+          testId="review-session-detail-discard-error"
+          message={discardError}
+        />
       )}
 
       {!isDraft && (
@@ -342,16 +351,12 @@ export function ReviewSessionDetailPage() {
               data-testid="review-session-detail-code-input"
             />
             {codeError && (
-              <div
-                className="sf-alert sf-alert-danger"
-                role="alert"
-                data-testid="review-session-detail-code-error"
-              >
-                <span className="sf-alert-icon" aria-hidden="true">
-                  !
-                </span>
-                <p>{codeError}</p>
-              </div>
+              <Alert
+                key={codeErrorAlertKey}
+                tone="danger"
+                testId="review-session-detail-code-error"
+                message={codeError}
+              />
             )}
             <button
               type="submit"

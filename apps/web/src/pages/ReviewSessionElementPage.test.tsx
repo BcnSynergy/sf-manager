@@ -152,6 +152,57 @@ describe('ReviewSessionElementPage', () => {
     expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
+  it('announces the save error again when the same incomplete answers are saved again', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+
+    renderPage();
+
+    await screen.findByTestId('review-session-element-question-q1');
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+    const first = await screen.findByTestId('review-session-element-save-error');
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+    const second = screen.getByTestId('review-session-element-save-error');
+    expect(second).toHaveTextContent(first.textContent ?? '');
+    expect(second).not.toBe(first);
+    expect(mockedRecordEntry).not.toHaveBeenCalled();
+  });
+
+  // EN-76: a `role="status"` added already filled is not reliably announced,
+  // so the confirmation appears inside a region that was there.
+  it('shows the save confirmation inside a status region that was on the page before the save', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    mockedRecordEntry.mockResolvedValue({
+      inspectableElementId: 'element-1',
+      reviewed: true,
+      observations: null,
+      answers: [
+        { questionId: 'q1', answer: 'YES' },
+        { questionId: 'q2', answer: 'YES' },
+      ],
+      recordedAt: '2026-09-08T00:00:00.000Z',
+    });
+
+    renderPage();
+
+    await screen.findByTestId('review-session-element-question-q1');
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q2-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+    const saved = await screen.findByTestId('review-session-element-saved');
+    expect(saved).not.toHaveAttribute('role');
+    expect(region).toContainElement(saved);
+    expect(region).toContainElement(screen.getByTestId('review-session-element-continue'));
+    expect(screen.getByRole('status')).toBe(region);
+  });
+
   it('marks the element unreviewed with a reason instead of answering', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
     mockedRecordEntry.mockResolvedValue({
@@ -284,7 +335,6 @@ describe('ReviewSessionElementPage', () => {
 
       const saved = await screen.findByTestId('review-session-element-saved');
       expect(saved).toHaveClass('sf-alert', 'sf-alert-success');
-      expect(saved).toHaveAttribute('role', 'status');
       const proceed = screen.getByTestId('review-session-element-continue');
       expect(saved).toContainElement(proceed);
       expect(proceed).toHaveClass('sf-btn', 'sf-btn-primary');

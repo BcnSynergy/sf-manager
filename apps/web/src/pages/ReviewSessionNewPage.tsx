@@ -5,6 +5,8 @@ import type { ElementType } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { getReviewScope, openReviewSession, type ReviewScope } from '../api/review-session';
 import { PageHeader } from '../components/PageHeader';
+import { Alert } from '../components/Alert';
+import { useAlertMessage } from '../components/use-alert-message';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -31,7 +33,12 @@ export function ReviewSessionNewPage() {
 
   const [communityId, setCommunityId] = useState('');
   const [templateId, setTemplateId] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    message: formError,
+    key: formErrorAlertKey,
+    show: showFormError,
+    clear: clearFormError,
+  } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
 
   const loadScope = useCallback(() => {
@@ -57,10 +64,10 @@ export function ReviewSessionNewPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFormError(null);
+    clearFormError();
 
     if (communityId === '' || templateId === '') {
-      setFormError(t('reviewSession.new.validationError'));
+      showFormError(t('reviewSession.new.validationError'));
       return;
     }
 
@@ -69,7 +76,7 @@ export function ReviewSessionNewPage() {
       const session = await openReviewSession({ communityId, templateId });
       navigate(`/review-sessions/${session.id}`);
     } catch (caughtError) {
-      setFormError(
+      showFormError(
         t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
       );
       setSubmitting(false);
@@ -161,16 +168,12 @@ export function ReviewSessionNewPage() {
           </select>
         </div>
         {formError && (
-          <div
-            className="sf-alert sf-alert-danger"
-            role="alert"
-            data-testid="review-session-new-error-message"
-          >
-            <span className="sf-alert-icon" aria-hidden="true">
-              !
-            </span>
-            <p>{formError}</p>
-          </div>
+          <Alert
+            key={formErrorAlertKey}
+            tone="danger"
+            testId="review-session-new-error-message"
+            message={formError}
+          />
         )}
         <div className="sf-actions">
           <button

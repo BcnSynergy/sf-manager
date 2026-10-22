@@ -575,20 +575,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-76** (web a11y): Screen readers may not announce alerts that the
-  web app mounts conditionally. The save confirmations on the organization
-  profile and review session element pages (`role="status"`) are added
-  already filled, and many screen
-  readers only announce changes inside a live region that was on the page
-  before. On every restyled form, a repeated validation error with the
-  same text (cleared and set again in the same handler tick, so React
-  batches both) keeps the same `role="alert"` element, so it is not
-  announced again; errors set after an awaited request remount instead.
-  (The element page's confirmation position and persistence, once part of
-  this item, moved to EN-80.) A shared approach, such as a persistent live
-  region per page or an alert component that remounts on each message,
-  would cover every form at once.
-  Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
 - **EN-79** (docs): Two SDD-era documents still read as living guidance
   after the SDD tooling went away (2026-10-22, `CLAUDE.md` "Keeping
   `openspec/specs/` Current"). ADR-016 (strict TDD in `sdd-apply` /
@@ -615,6 +601,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `alert-announcements` PR 3 (#273) pre-merge review, 2026-10-22.
 
 ## Done
+
+- **EN-76** (web a11y): Every action error now renders through one `Alert`
+  component with a key from `useAlertMessage`, so the same error shown again
+  is a new `role="alert"` element and screen readers announce it again; the
+  organization profile and review session element save confirmations appear
+  inside a `StatusRegion`, a `role="status"` region that is on the page
+  before them. Specified in the new main spec `web-alert-announcements`. The
+  phone-width placement of the element page's confirmation was split out to
+  EN-80. Done in `alert-announcements`, PRs #271, #272, #273 and #274.
 
 - **EN-78** (web a11y): The read-only element type term on the checklist
   question and inspectable element edit forms (EN-75) now ends with a colon in
