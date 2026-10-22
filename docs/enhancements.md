@@ -618,15 +618,14 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
   approach, such as a persistent live region per page or an alert
   component that remounts on each message, would cover every form at once.
   Origin: `ui-restyle-forms` PR 6 fresh review, 2026-10-21.
-- **EN-77** (web UI): When the review session element page shows an element
-  of a completed session read-only (TD-39), its heading still reads "Answer
-  element" (`reviewSession.element.title`), although nothing can be answered
-  there. A read-only heading such as "Recorded element" would match what the
-  page does. Origin: `td-39-completed-session-element` browser check,
-  2026-10-22.
 
 ## Done
 
+- **EN-77** (web UI): The review session element page's read-only view of a
+  completed session (TD-39) is now headed "Recorded element"
+  (`reviewSession.element.readOnlyTitle`) instead of "Answer element"; the
+  draft answer form keeps its heading. Done in
+  `en-77-completed-element-heading`, PR #266.
 - **EN-62** (web UI): `ConfirmDialog` now has the design system dialog: the
   `sf-dialog` surface, shadow and backdrop, a muted message, right-aligned
   actions with Cancel first, and a required `tone` prop (`danger` for

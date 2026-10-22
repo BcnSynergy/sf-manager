@@ -426,8 +426,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewSession.detail.discardConfirmTitle',
     'reviewSession.detail.discardConfirmMessage',
     'reviewSession.detail.discardError',
-    // answer form (ReviewSessionElementPage)
+    // answer form and read-only view (ReviewSessionElementPage)
     'reviewSession.element.title',
+    'reviewSession.element.readOnlyTitle',
     'reviewSession.element.loading',
     'reviewSession.element.notFound',
     'reviewSession.element.error',
