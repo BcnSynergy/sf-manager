@@ -574,13 +574,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it goes through SDD. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-75** (web): The checklist question and inspectable element edit
-  forms show the read-only element type as a plain paragraph (`Element
-type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
-  `sf-field` and with a regular-weight label, so their first row looks
-  different from the type field on the create forms. A styled term and
-  value inside an `sf-field` would match the other fields. Origin:
-  `ui-restyle-forms` PR 3 fresh review, 2026-10-21.
 - **EN-76** (web a11y): Screen readers may not announce alerts that the
   web app mounts conditionally. The save confirmations on the organization
   profile and review session element pages (`role="status"`) are added
@@ -600,6 +593,11 @@ type: Fire extinguisher`, `Type: Fire extinguisher`), outside any
 
 ## Done
 
+- **EN-75** (web): The checklist question and inspectable element edit forms
+  now show the read-only element type as a field group like the other fields:
+  an `sf-field` with a bold term (new `.sf-label` class, the global label
+  weight) above its value, instead of a plain `Type: …` paragraph. Done in
+  `en-75-read-only-type-field`, PR #269.
 - **EN-74** (web a11y): On the maintenance company, checklist question and
   inspectable element edit forms, the page actions (Delete, and Decommission
   or Reactivate) no longer sit in the page header, where they came before the

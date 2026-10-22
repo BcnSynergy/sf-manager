@@ -363,6 +363,21 @@ describe('InspectableElementEditPage', () => {
       expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
     });
 
+    // EN-75: the read-only element type is a field group like the editable
+    // fields: a bold term above its value, inside an sf-field.
+    it('renders the read-only element type as a field group with a bold term', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      renderPage(elementA.id);
+
+      const type = await screen.findByTestId('inspectable-element-edit-type');
+      const field = type.parentElement;
+      expect(field).toHaveClass('sf-field');
+      expect(field?.children).toHaveLength(2);
+      expect(field?.firstElementChild).toHaveClass('sf-label');
+      expect(field?.firstElementChild).toHaveTextContent(/^Type$/);
+      expect(type).toHaveTextContent(/^Fire extinguisher$/);
+    });
+
     it('renders the form as field groups with the submit as the primary action', async () => {
       mockedListInspectableElements.mockResolvedValue([elementA]);
       renderPage(elementA.id);
