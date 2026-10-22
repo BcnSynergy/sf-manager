@@ -164,6 +164,25 @@ describe('ChecklistQuestionEditPage', () => {
       expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('sf-page-header');
     });
 
+    // EN-75: the read-only element type is a field group like the editable
+    // fields: a bold term above its value, inside an sf-field.
+    it('renders the read-only element type as a field group with a bold term', async () => {
+      mockedListChecklistQuestions.mockResolvedValue([question]);
+      renderPage();
+
+      const type = await screen.findByTestId('checklist-question-edit-type');
+      const field = type.parentElement;
+      expect(field).toHaveClass('sf-field');
+      expect(field?.children).toHaveLength(2);
+      expect(field?.firstElementChild).toHaveClass('sf-label');
+      // EN-78: a colon kept for screen readers only, so the term and the value
+      // are not read as one run.
+      expect(field?.firstElementChild).toHaveTextContent(/^Element type:$/);
+      expect(field?.firstElementChild?.lastElementChild).toHaveClass('visually-hidden');
+      expect(field?.firstElementChild?.lastElementChild).toHaveTextContent(/^:$/);
+      expect(type).toHaveTextContent(/^Fire extinguisher$/);
+    });
+
     it('renders the form as field groups with choices and the submit as the primary action', async () => {
       mockedListChecklistQuestions.mockResolvedValue([question]);
       renderPage();

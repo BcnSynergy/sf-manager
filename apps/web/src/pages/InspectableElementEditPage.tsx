@@ -250,12 +250,18 @@ export function InspectableElementEditPage() {
       {/* noValidate: validation messages are ours (i18n-driven), not the
           browser's native, locale-inconsistent constraint-validation UI */}
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
-        <p>
-          {t('inspectableElement.edit.typeLabel')}:{' '}
+        {/* EN-75: read-only, so a term instead of a label, styled like one.
+            EN-78: the colon is for screen readers only, so the term and the
+            value are not read as one run. */}
+        <div className="sf-field">
+          <span className="sf-label">
+            {t('inspectableElement.edit.typeLabel')}
+            <span className="visually-hidden">:</span>
+          </span>
           <span data-testid="inspectable-element-edit-type">
             {elementType !== null ? t(mapElementTypeToLabelKey(elementType)) : ''}
           </span>
-        </p>
+        </div>
         {/* inspectable-element-admin-ui spec.md "state is visually
             distinguishable": the edit page's own decommission/reactivate
             button already implies state, but a decommissioned element also
