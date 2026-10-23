@@ -599,8 +599,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `checkAppNavPrintSuppression` rejects a screen rule that comes only after
   the first block hiding the chrome, though the last hiding block wins and the
   page prints right, with a reason ("the source-order tie is undetermined")
-  that does not fit that case. `index.css` has none of these today. Origin:
-  `en-83-print-block-detection` (#277) pre-push review, 2026-10-23.
+  that does not fit that case. `printBlocks` also names any unclosed print-type
+  block "a @media print block", even `@media screen, print`. `index.css` has
+  none of these today. Origin:
+  `en-83-print-block-detection` (#277) pre-push and pre-merge reviews,
+  2026-10-23.
 
 ## Done
 
