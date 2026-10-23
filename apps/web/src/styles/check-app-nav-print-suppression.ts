@@ -1,3 +1,5 @@
+import { printBlocks, type PrintBlock } from './print-blocks';
+
 // nav-menu/design.md Decision 6, verify-report CRITICAL-1 remediation: the
 // screen `.app-nav` rule and the `@media print` rule that hides it share
 // identical specificity (one class selector each), so CSS resolves the tie
@@ -7,14 +9,6 @@
 export type PrintSuppressionResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
-const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
-// Only inspects the FIRST `@media print` block in the stylesheet (no `/g`
-// loop) — a KNOWN, ACCEPTED limitation. `apps/web/src/index.css` has exactly
-// one `@media print` block today; if a future edit adds a second one, this
-// checker will silently ignore it. Full multi-block support is out of scope
-// for this single-purpose regression guard (walking-skeleton discipline) —
-// revisit this file if/when a second `@media print` block is introduced.
-const MEDIA_PRINT_START = /@media\s+print\s*\{/;
 // ui-redesign-foundation design Decision 7: every piece of application chrome
 // the redesign's shell renders around a page. Each must pass the same three
 // checks as the original nav rule.
@@ -44,53 +38,58 @@ function selectorRules(selector: string) {
   };
 }
 
+// The text before `block` with every earlier print block cut out, so a rule
+// inside a print block never counts as the screen rule.
+function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): string {
+  let text = '';
+  let cursor = 0;
+  for (const earlier of blocks) {
+    const start = earlier.before.length;
+    if (start >= block.before.length) break;
+    if (start < cursor) continue; // nested inside a block already cut out
+    text += block.before.slice(cursor, start);
+    cursor = earlier.end;
+  }
+  return text + block.before.slice(cursor);
+}
+
+// EN-83: reads every print block (printBlocks strips comments, so a stray
+// `{`/`}` inside explanatory prose can't desync the scan). The selector must
+// be hidden in one of them, its screen rule must come before the first block
+// hiding it, and no rule for it may follow the last block hiding it.
 export function checkAppNavPrintSuppression(
   rawCss: string,
   selectors: readonly string[] = PRINT_CHROME_SELECTORS,
 ): PrintSuppressionResult {
-  // Strip comments first so a stray `{`/`}` inside explanatory prose (this
-  // file's own header comment does exactly that) can't desync the
-  // brace-depth scan below or the selector-detection regexes.
-  const css = rawCss.replace(CSS_COMMENT, '');
-  const startMatch = MEDIA_PRINT_START.exec(css);
-  if (!startMatch) {
+  let blocks: PrintBlock[];
+  try {
+    blocks = printBlocks(rawCss);
+  } catch {
+    return { ok: false, reason: '@media print block is not properly closed.' };
+  }
+  if (blocks.length === 0) {
     return { ok: false, reason: 'No @media print block found in the stylesheet.' };
   }
 
-  const blockBodyStart = startMatch.index + startMatch[0].length;
-  let depth = 1;
-  let cursor = blockBodyStart;
-  for (; cursor < css.length && depth > 0; cursor++) {
-    if (css[cursor] === '{') depth++;
-    else if (css[cursor] === '}') depth--;
-  }
-  if (depth !== 0) {
-    return { ok: false, reason: '@media print block is not properly closed.' };
-  }
-
-  const blockBodyEnd = cursor - 1; // index of the @media print block's own closing brace
-  const mediaPrintBody = css.slice(blockBodyStart, blockBodyEnd);
-  const before = css.slice(0, startMatch.index);
-  const after = css.slice(cursor);
-
   for (const selector of selectors) {
     const rules = selectorRules(selector);
+    const hiding = blocks.filter((block) => rules.hidden.test(block.body));
 
-    if (!rules.hidden.test(mediaPrintBody)) {
+    if (hiding.length === 0) {
       return {
         ok: false,
         reason: `${selector} { display: none } is missing inside the @media print block.`,
       };
     }
 
-    if (!rules.visible.test(before)) {
+    if (!rules.visible.test(screenTextBefore(blocks, hiding[0]))) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
       };
     }
 
-    if (rules.any.test(after)) {
+    if (rules.any.test(hiding[hiding.length - 1].after)) {
       return {
         ok: false,
         reason: `A ${selector} rule appears after the @media print block; it would win the source-order tie and make it print again.`,

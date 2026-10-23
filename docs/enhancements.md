@@ -591,21 +591,29 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-- **EN-83** (web tests): Two limits in how the print CSS checks find
-  `@media print` blocks. `printBlocks` (`apps/web/src/styles/print-blocks.ts`)
-  matches only a bare `@media print {`, so rules in `@media print and (...)`
-  or `@media screen, print` blocks are invisible to the print tests, as they
-  were before EN-81. `checkAppNavPrintSuppression`
-  (`check-app-nav-print-suppression.ts`) still reads only the first print
-  block, a limit its own header documents; it could use `printBlocks`.
-  `printBlocks` also strips comments without regard for CSS strings, so a
-  `content: "/*"` would hide the rules up to the next `*/`.
-  `index.css` has one bare print block today, so all checks are right. Origin:
-  `en-81-print-css-blocks` (#276) pre-push and pre-merge reviews,
+- **EN-84** (web tests): Leftover edges of the print CSS checks in
+  `apps/web/src/styles/`. `printBlocks` matches `@media` text inside strings,
+  so `content: "@media print {"` would make a false block; it returns a
+  `@media print` nested in another print block twice; and an unterminated
+  string runs to the end of the file, where CSS ends it at the newline.
+  `checkAppNavPrintSuppression` rejects a screen rule that comes only after
+  the first block hiding the chrome, though the last hiding block wins and the
+  page prints right, with a reason ("the source-order tie is undetermined")
+  that does not fit that case. `printBlocks` also names any unclosed print-type
+  block "a @media print block", even `@media screen, print`. `index.css` has
+  none of these today. Origin:
+  `en-83-print-block-detection` (#277) pre-push and pre-merge reviews,
   2026-10-23.
 
 ## Done
 
+- **EN-83** (web tests): `printBlocks` now reads every `@media` whose query
+  list has a `print` media type (`print and (...)`, `only print`,
+  `screen, print`), and leaves comment markers and braces inside strings
+  alone. `checkAppNavPrintSuppression` reads every print block through it:
+  the chrome must be hidden in one, its screen rule must come before the first
+  block hiding it, and no rule for it may follow the last. Done in
+  `en-83-print-block-detection`, PR #277.
 - **EN-81** (web tests): The print CSS tests read the stylesheet through one
   shared helper, `printBlocks` (`apps/web/src/styles/print-blocks.ts`), which
   strips comments first and returns every `@media print` block, so a second
