@@ -608,7 +608,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   that screen readers announce again; the page stores the message's i18n key,
   so a shown error follows a language switch. The `web-alert-announcements`
   spec no longer excludes the login page. Done in `en-82-login-alerts`, PR #275.
-
 - **EN-76** (web a11y): Every action error on the design-system pages now
   renders through one `Alert` component with a key from `useAlertMessage`, so
   the same error shown again is a new `role="alert"` element and screen
