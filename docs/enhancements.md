@@ -598,8 +598,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   were before EN-81. `checkAppNavPrintSuppression`
   (`check-app-nav-print-suppression.ts`) still reads only the first print
   block, a limit its own header documents; it could use `printBlocks`.
+  `printBlocks` also strips comments without regard for CSS strings, so a
+  `content: "/*"` would hide the rules up to the next `*/`.
   `index.css` has one bare print block today, so all checks are right. Origin:
-  `en-81-print-css-blocks` (#276) pre-push review, 2026-10-23.
+  `en-81-print-css-blocks` (#276) pre-push and pre-merge reviews,
+  2026-10-23.
 
 ## Done
 
