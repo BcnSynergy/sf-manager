@@ -599,7 +599,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`check-app-nav-print-suppression.ts`) still reads only the first print
   block, a limit its own header documents; it could use `printBlocks`.
   `index.css` has one bare print block today, so all checks are right. Origin:
-  `en-81-print-css-blocks` pre-push review, 2026-10-23.
+  `en-81-print-css-blocks` (#276) pre-push review, 2026-10-23.
 
 ## Done
 
@@ -607,7 +607,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   shared helper, `printBlocks` (`apps/web/src/styles/print-blocks.ts`), which
   strips comments first and returns every `@media print` block, so a second
   print block or a brace in a comment no longer makes them pass or fail
-  wrongly. Done in `en-81-print-css-blocks`.
+  wrongly. Done in `en-81-print-css-blocks`, PR #276.
 - **EN-82** (web a11y): The login page's errors (required fields, invalid
   email, failed or rate-limited login) now render as a danger `Alert` keyed
   by `useAlertMessage`, so a repeated error is a new `role="alert"` element
