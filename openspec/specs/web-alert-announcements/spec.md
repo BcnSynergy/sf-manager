@@ -41,10 +41,7 @@ The confirmations covered are:
 
 On every page that shows its errors as design-system alerts (`sf-alert`), every error that reports the outcome of a user action (a submit, save, delete, activate, discard, complete or similar) MUST render as a `role="alert"` element that is a new element each time its message is shown, including when the same text is shown again because the user repeated the same invalid action.
 
-Out of scope:
-
-- load failures, including the page chunk-load error, which are not action errors;
-- the login page, whose errors are plain text without a role (tracked as EN-82).
+Load failures, including the page chunk-load error, are out of scope: they are not action errors.
 
 #### Scenario: A repeated validation error is announced again
 

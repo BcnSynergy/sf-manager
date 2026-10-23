@@ -160,6 +160,39 @@ describe('LoginPage', () => {
     );
     expect(unauthorized.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
   });
+
+  // web-alert-announcements spec "Action Errors Are Announced Each Time They
+  // Are Shown" (EN-82).
+  it('announces a repeated validation error again, as a new role="alert" element', async () => {
+    renderLoginPage();
+
+    fireEvent.click(screen.getByTestId('login-submit'));
+    const first = await screen.findByRole('alert');
+    expect(first).toHaveAttribute('data-testid', 'login-error');
+    expect(first).toHaveClass('sf-alert', 'sf-alert-danger');
+    expect(first).toHaveTextContent('Email and password are required.');
+
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.getByRole('alert')).not.toBe(first));
+    expect(screen.getByRole('alert')).toHaveTextContent('Email and password are required.');
+  });
+
+  it('announces a repeated login failure again, as a new role="alert" element', async () => {
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 401 } as Response));
+    renderLoginPage();
+
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    const first = await screen.findByRole('alert');
+    expect(first).toHaveTextContent('Invalid email or password.');
+
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.getByRole('alert')).not.toBe(first));
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid email or password.');
+  });
 });
 
 // auth-live-user-check spec "Session-Ended Notice": the flag is raised by a
@@ -269,6 +302,26 @@ describe('LoginPage language selector', () => {
 
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Iniciar sesión'),
+    );
+  });
+
+  it('shows a login error in the newly selected language', async () => {
+    renderLoginPage();
+
+    fireEvent.click(screen.getByTestId('login-submit'));
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'Email and password are required.',
+    );
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'es' } });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('login-error')).toHaveTextContent(
+        i18n.t('auth.validationRequired', { lng: 'es' }),
+      ),
+    );
+    expect(screen.getByTestId('login-error')).not.toHaveTextContent(
+      'Email and password are required.',
     );
   });
 

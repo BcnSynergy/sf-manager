@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
+import { Alert } from '../components/Alert';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { useAlertMessage } from '../components/use-alert-message';
 
 // spec.md "Login Form Validation": empty/invalid fields are blocked
 // client-side, before any network call, using the SAME schema the API
@@ -17,21 +19,24 @@ import { LanguageSelector } from '../components/LanguageSelector';
 // The session-ended notice (auth-live-user-check spec "Session-Ended
 // Notice") shows only while no login error does, and the flag is cleared on
 // submit so the notice cannot reappear when a failed login's error clears.
+//
+// EN-82: the error is an `Alert` keyed per message, so a repeated error is
+// announced again. It holds the i18n key, so it follows a language switch.
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login, sessionEnded, clearSessionEnded } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const error = useAlertMessage();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    error.clear();
     clearSessionEnded();
 
     if (!email || !password) {
-      setError(t('auth.validationRequired'));
+      error.show('auth.validationRequired');
       return;
     }
 
@@ -42,7 +47,7 @@ export function LoginPage() {
       // from "required". This is purely a client-side format check, not the
       // server's anti-enumeration boundary: confirming an email LOOKS
       // syntactically valid never reveals whether an account exists.
-      setError(t('auth.validationInvalidEmail'));
+      error.show('auth.validationInvalidEmail');
       return;
     }
 
@@ -50,10 +55,10 @@ export function LoginPage() {
       await login(result.data.email, result.data.password);
       navigate('/');
     } catch (err) {
-      setError(
+      error.show(
         err instanceof ApiError && err.status === 429
-          ? t('auth.loginRateLimited')
-          : t('auth.loginFailed'),
+          ? 'auth.loginRateLimited'
+          : 'auth.loginFailed',
       );
     }
   }
@@ -87,10 +92,12 @@ export function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             data-testid="login-password"
           />
-          {sessionEnded && !error && (
+          {sessionEnded && !error.message && (
             <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
           )}
-          {error && <p data-testid="login-error">{error}</p>}
+          {error.message && (
+            <Alert key={error.key} tone="danger" testId="login-error" message={t(error.message)} />
+          )}
           <button type="submit" className="sf-btn-primary" data-testid="login-submit">
             {t('auth.submitLabel')}
           </button>
