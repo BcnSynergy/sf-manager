@@ -4,6 +4,8 @@
 // EN-83: a print block is any `@media` whose query list has a `print` media
 // type (`print and (...)`, `only print`, `screen, print`), and comment
 // markers and braces inside strings are left alone.
+// Queries without a media type (`@media all`, `@media (min-width: 0)`) also
+// apply in print, but their rules are not read as print rules.
 export type PrintBlock = {
   // The stylesheet text before the block's `@media`.
   readonly before: string;
@@ -11,6 +13,9 @@ export type PrintBlock = {
   readonly body: string;
   // The stylesheet text after the block's closing brace.
   readonly after: string;
+  // The offset just past the closing brace in the comment-stripped text; the
+  // block starts at `before.length`.
+  readonly end: number;
 };
 
 const MEDIA_RULE_START = /@media\s+([^{};]+)\{/gi;
@@ -74,6 +79,7 @@ export function printBlocks(rawCss: string): PrintBlock[] {
       before: css.slice(0, match.index),
       body: css.slice(bodyStart, cursor - 1),
       after: css.slice(cursor),
+      end: cursor,
     });
   }
 

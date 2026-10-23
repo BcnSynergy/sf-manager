@@ -301,6 +301,8 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
 
+    // The block hides the nav on screen too; screen visibility is outside
+    // this guard, which only checks that the chrome does not print.
     it('accepts the nav hidden in a screen, print block', () => {
       const css = `
         .app-nav { display: flex; }
@@ -329,6 +331,18 @@ describe('checkAppNavPrintSuppression', () => {
       const css = `
         @media print { .app-nav { display: none; } }
         .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('must be declared before the @media print block'),
+      });
+    });
+
+    it('does not take a rule inside an earlier print block as the screen rule', () => {
+      const css = `
+        @media print { .app-nav { display: block; } }
         @media print { .app-nav { display: none; } }
       `;
 

@@ -100,6 +100,7 @@ describe('printBlocks', () => {
 
     expect(first.before).toBe('.a {}  ');
     expect(second.before).toBe('.a {}  @media print { .b {} } .c {} ');
+    expect(first.end).toBe('.a {}  @media print { .b {} }'.length);
   });
 
   it('fails loudly on an unclosed print block', () => {

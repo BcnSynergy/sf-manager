@@ -591,6 +591,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
+- **EN-84** (web tests): Leftover edges of the print CSS checks in
+  `apps/web/src/styles/`. `printBlocks` matches `@media` text inside strings,
+  so `content: "@media print {"` would make a false block; it returns a
+  `@media print` nested in another print block twice; and an unterminated
+  string runs to the end of the file, where CSS ends it at the newline.
+  `checkAppNavPrintSuppression` rejects a screen rule that comes only after
+  the first block hiding the chrome, though the last hiding block wins and the
+  page prints right, with a reason ("the source-order tie is undetermined")
+  that does not fit that case. `index.css` has none of these today. Origin:
+  `en-83-print-block-detection` pre-push review, 2026-10-23.
 
 ## Done
 

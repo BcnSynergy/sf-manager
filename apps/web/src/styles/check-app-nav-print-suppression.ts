@@ -38,6 +38,21 @@ function selectorRules(selector: string) {
   };
 }
 
+// The text before `block` with every earlier print block cut out, so a rule
+// inside a print block never counts as the screen rule.
+function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): string {
+  let text = '';
+  let cursor = 0;
+  for (const earlier of blocks) {
+    const start = earlier.before.length;
+    if (start >= block.before.length) break;
+    if (start < cursor) continue; // nested inside a block already cut out
+    text += block.before.slice(cursor, start);
+    cursor = earlier.end;
+  }
+  return text + block.before.slice(cursor);
+}
+
 // EN-83: reads every print block (printBlocks strips comments, so a stray
 // `{`/`}` inside explanatory prose can't desync the scan). The selector must
 // be hidden in one of them, its screen rule must come before the first block
@@ -67,7 +82,7 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    if (!rules.visible.test(hiding[0].before)) {
+    if (!rules.visible.test(screenTextBefore(blocks, hiding[0]))) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
