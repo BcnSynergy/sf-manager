@@ -285,4 +285,69 @@ describe('checkAppNavPrintSuppression', () => {
       });
     });
   });
+
+  // EN-83: the checker reads every print block (printBlocks), not only the
+  // first. The selector must be hidden in one of them, its screen rule must
+  // come before the first block hiding it, and no rule for it may follow the
+  // last block hiding it.
+  describe('with several print blocks', () => {
+    it('accepts the nav hidden in a later print block', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .page { margin: 0; } }
+        @media print and (min-width: 0) { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('accepts the nav hidden in a screen, print block', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media screen, print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('reports failure when a nav rule follows the last block hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .page { margin: 0; } }
+        @media print { .app-nav { display: none; } }
+        .app-nav { display: flex; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'A .app-nav rule appears after the @media print block; it would win the source-order tie and make it print again.',
+      });
+    });
+
+    it('reports failure when the screen rule comes only after the first block hiding the nav', () => {
+      const css = `
+        @media print { .app-nav { display: none; } }
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('must be declared before the @media print block'),
+      });
+    });
+
+    it('reports an unclosed print block instead of throwing', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: '@media print block is not properly closed.',
+      });
+    });
+  });
 });

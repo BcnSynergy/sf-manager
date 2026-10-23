@@ -50,6 +50,58 @@ describe('printBlocks', () => {
     expect(second.after).toBe(' .d {}');
   });
 
+  // EN-83: every media query list with a `print` media type is a print block.
+  it.each([
+    '@media print and (min-width: 0)',
+    '@media only print',
+    '@media screen, print',
+    '@media PRINT',
+  ])('reads "%s" as a print block', (query) => {
+    const [block] = printBlocks(`.a {} ${query} { .b { display: none; } } .c {}`);
+
+    expect(block?.body.trim()).toBe('.b { display: none; }');
+  });
+
+  it.each(['@media not print', '@media screen', '@media (max-width: 640px)', '@media printer'])(
+    'does not read "%s" as a print block',
+    (query) => {
+      expect(printBlocks(`${query} { .b { display: none; } }`)).toEqual([]);
+    },
+  );
+
+  it('keeps comment markers inside strings', () => {
+    const [block] = printBlocks(
+      `@media print { .a::before { content: "/*"; } .b { display: none; } } /* x */ .c { content: '*/'; }`,
+    );
+
+    expect(block.body.trim()).toBe('.a::before { content: "/*"; } .b { display: none; }');
+    expect(block.after).toBe("  .c { content: '*/'; }");
+  });
+
+  it('keeps an escaped quote inside a string', () => {
+    const [block] = printBlocks(
+      `@media print { .a::before { content: "\\" /*"; } } .b { content: "*/"; }`,
+    );
+
+    expect(block.body.trim()).toBe('.a::before { content: "\\" /*"; }');
+  });
+
+  it('ignores braces inside strings', () => {
+    const [block] = printBlocks(`@media print { .a::before { content: "}"; } } .b {}`);
+
+    expect(block.body.trim()).toBe('.a::before { content: "}"; }');
+    expect(block.after).toBe(' .b {}');
+  });
+
+  it('gives the text before each block, without comments', () => {
+    const [first, second] = printBlocks(
+      '.a {} /* .x */ @media print { .b {} } .c {} @media print { .d {} }',
+    );
+
+    expect(first.before).toBe('.a {}  ');
+    expect(second.before).toBe('.a {}  @media print { .b {} } .c {} ');
+  });
+
   it('fails loudly on an unclosed print block', () => {
     expect(() => printBlocks('@media print { .a { display: none; }')).toThrow(
       /not properly closed/,
