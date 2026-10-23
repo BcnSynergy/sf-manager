@@ -591,17 +591,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-- **EN-81** (web tests): The print CSS tests read only the first
-  `@media print` block of `index.css`, and their brace counter does not skip
-  comments (`index-css-print-credit.test.ts`,
-  `index-css-print-status-region.test.ts`). They are right today, with one
-  print block and no braces in its comments; a second print block, or a `{`
-  in a comment, could make them pass or fail wrongly. A shared helper that
-  collects every print block and strips comments would fix both. Origin:
-  `alert-announcements` PR 3 (#273) pre-merge review, 2026-10-22.
 
 ## Done
 
+- **EN-81** (web tests): The print CSS tests read the stylesheet through one
+  shared helper, `printBlocks` (`apps/web/src/styles/print-blocks.ts`), which
+  strips comments first and returns every `@media print` block, so a second
+  print block or a brace in a comment no longer makes them pass or fail
+  wrongly. Done in `en-81-print-css-blocks`.
 - **EN-82** (web a11y): The login page's errors (required fields, invalid
   email, failed or rate-limited login) now render as a danger `Alert` keyed
   by `useAlertMessage`, so a repeated error is a new `role="alert"` element
