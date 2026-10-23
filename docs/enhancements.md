@@ -591,6 +591,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
+- **EN-83** (web tests): Two limits in how the print CSS checks find
+  `@media print` blocks. `printBlocks` (`apps/web/src/styles/print-blocks.ts`)
+  matches only a bare `@media print {`, so rules in `@media print and (...)`
+  or `@media screen, print` blocks are invisible to the print tests, as they
+  were before EN-81. `checkAppNavPrintSuppression`
+  (`check-app-nav-print-suppression.ts`) still reads only the first print
+  block, a limit its own header documents; it could use `printBlocks`.
+  `index.css` has one bare print block today, so all checks are right. Origin:
+  `en-81-print-css-blocks` pre-push review, 2026-10-23.
 
 ## Done
 
