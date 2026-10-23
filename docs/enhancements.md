@@ -600,7 +600,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   the first block hiding the chrome, though the last hiding block wins and the
   page prints right, with a reason ("the source-order tie is undetermined")
   that does not fit that case. `index.css` has none of these today. Origin:
-  `en-83-print-block-detection` pre-push review, 2026-10-23.
+  `en-83-print-block-detection` (#277) pre-push review, 2026-10-23.
 
 ## Done
 
@@ -610,7 +610,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   alone. `checkAppNavPrintSuppression` reads every print block through it:
   the chrome must be hidden in one, its screen rule must come before the first
   block hiding it, and no rule for it may follow the last. Done in
-  `en-83-print-block-detection`.
+  `en-83-print-block-detection`, PR #277.
 - **EN-81** (web tests): The print CSS tests read the stylesheet through one
   shared helper, `printBlocks` (`apps/web/src/styles/print-blocks.ts`), which
   strips comments first and returns every `@media print` block, so a second
