@@ -599,14 +599,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
   block with the `printBlocks` message, which names its query (for
   `@media screen, print`, "The @media screen, print block is not properly
-  closed."). Done in `en-87-print-check-conditions`.
+  closed."). Done in `en-87-print-check-conditions`, PR #281.
 - **EN-87** (web tests): `printBlocks` tells whether a block applies whenever
   the page prints (`alwaysApplies`: a plain `print`/`only print` query, not
   nested in another rule). `checkAppNavPrintSuppression` takes the last such
   block hiding the chrome as the one that wins in print, fails when the chrome
   is hidden only in conditional blocks, and ignores later blocks that hide it
   again when looking for a rule after it. Done in
-  `en-87-print-check-conditions`.
+  `en-87-print-check-conditions`, PR #281.
 - **EN-84** (web tests): `printBlocks` skips `@media` inside strings, ends an
   unterminated string at the newline as CSS does, resumes after each print
   block so a nested one is not returned twice, and names the media query of
