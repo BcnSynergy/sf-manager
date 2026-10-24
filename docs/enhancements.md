@@ -600,7 +600,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   inside a plain block no longer counts. The search for a later rule starts
   after the block's last hiding rule, so a block that hides and then shows
   the chrome fails, and of a later hiding block only the part up to its own
-  last hiding rule is cut. Done in `en-89-print-check-rule-order`, PR #TBD.
+  last hiding rule is cut. Done in `en-89-print-check-rule-order`, PR #282.
 
 - **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
   block with the `printBlocks` message, which names its query (for
