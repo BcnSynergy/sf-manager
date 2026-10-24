@@ -582,22 +582,30 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-- **EN-84** (web tests): Leftover edges of the print CSS checks in
-  `apps/web/src/styles/`. `printBlocks` matches `@media` text inside strings,
-  so `content: "@media print {"` would make a false block; it returns a
-  `@media print` nested in another print block twice; and an unterminated
-  string runs to the end of the file, where CSS ends it at the newline.
-  `checkAppNavPrintSuppression` rejects a screen rule that comes only after
-  the first block hiding the chrome, though the last hiding block wins and the
-  page prints right, with a reason ("the source-order tie is undetermined")
-  that does not fit that case. `printBlocks` also names any unclosed print-type
-  block "a @media print block", even `@media screen, print`. `index.css` has
-  none of these today. Origin:
-  `en-83-print-block-detection` (#277) pre-push and pre-merge reviews,
-  2026-10-23.
+- **EN-87** (web tests): `checkAppNavPrintSuppression` takes the last print
+  block hiding the chrome as the one that wins in print (EN-84), but that
+  holds only when the block always applies when printing. A last hiding block
+  with a condition (`@media print and (orientation: landscape)`) or nested in
+  a non-print `@media` (`@media screen { @media print { ... } }`, which never
+  applies) lets a screen rule before it pass while the chrome still prints.
+  Treat only a plain `print`/`only print` block as the winner, or read the
+  enclosing `@media`. `index.css` has none of these today. Origin:
+  `en-84-print-check-edges` pre-push review, 2026-10-24.
+- **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
+  block as "@media print block is not properly closed." even for
+  `@media screen, print`, discarding the `printBlocks` error that names the
+  query (EN-84). Pass that message through. Origin: `en-84-print-check-edges`
+  pre-push review, 2026-10-24.
 
 ## Done
 
+- **EN-84** (web tests): `printBlocks` skips `@media` inside strings, ends an
+  unterminated string at the newline as CSS does, resumes after each print
+  block so a nested one is not returned twice, and names the media query of
+  an unclosed block. `checkAppNavPrintSuppression` asks for the screen rule
+  before the last block hiding the chrome, which wins the tie in print, so a
+  screen rule between two hiding blocks passes. Done in
+  `en-84-print-check-edges`, PR #280.
 - **EN-86** (docs): ADR-006's addendum now says per-slice design happens in
   the slice's feature document and spec edits (ODD), naming the
   `sdd-spec`/`sdd-design` phases only as what it was until 2026-10-22. Done

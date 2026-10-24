@@ -46,7 +46,9 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
   for (const earlier of blocks) {
     const start = earlier.before.length;
     if (start >= block.before.length) break;
-    if (start < cursor) continue; // nested inside a block already cut out
+    // Defensive: printBlocks no longer returns a print block nested in
+    // another (EN-84), but one would already be cut out.
+    if (start < cursor) continue;
     text += block.before.slice(cursor, start);
     cursor = earlier.end;
   }
@@ -55,8 +57,9 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
 
 // EN-83: reads every print block (printBlocks strips comments, so a stray
 // `{`/`}` inside explanatory prose can't desync the scan). The selector must
-// be hidden in one of them, its screen rule must come before the first block
-// hiding it, and no rule for it may follow the last block hiding it.
+// be hidden in one of them, its screen rule must come before the last block
+// hiding it (EN-84: that block wins the tie in print), and no rule for it may
+// follow that block.
 export function checkAppNavPrintSuppression(
   rawCss: string,
   selectors: readonly string[] = PRINT_CHROME_SELECTORS,
@@ -82,14 +85,15 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    if (!rules.visible.test(screenTextBefore(blocks, hiding[0]))) {
+    const lastHiding = hiding[hiding.length - 1];
+    if (!rules.visible.test(screenTextBefore(blocks, lastHiding))) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
       };
     }
 
-    if (rules.any.test(hiding[hiding.length - 1].after)) {
+    if (rules.any.test(lastHiding.after)) {
       return {
         ok: false,
         reason: `A ${selector} rule appears after the @media print block; it would win the source-order tie and make it print again.`,
