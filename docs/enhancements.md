@@ -606,7 +606,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   an unclosed block. `checkAppNavPrintSuppression` asks for the screen rule
   before the last block hiding the chrome, which wins the tie in print, so a
   screen rule between two hiding blocks passes. Done in
-  `en-84-print-check-edges`.
+  `en-84-print-check-edges`, PR #280.
 - **EN-86** (docs): ADR-006's addendum now says per-slice design happens in
   the slice's feature document and spec edits (ODD), naming the
   `sdd-spec`/`sdd-design` phases only as what it was until 2026-10-22. Done
