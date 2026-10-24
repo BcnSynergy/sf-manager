@@ -493,6 +493,19 @@ describe('checkAppNavPrintSuppression', () => {
       });
     });
 
+    it('reports failure when a later conditional block shows the nav again after hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        ${LANDSCAPE} { .app-nav { display: none; } .app-nav { display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block hides it'),
+      });
+    });
+
     it('reports failure when a conditional block shows the nav again after the plain one', () => {
       const css = `
         .app-nav { display: flex; }

@@ -582,6 +582,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
+- **EN-90** (web tests): `checkAppNavPrintSuppression` still misreads a few
+  selector shapes. It counts a descendant hiding rule as hiding the chrome,
+  so `@media print { .foo .app-nav { display: none } }` passes (also on
+  `main`). It fails, on the safe side, for a descendant rule after the hide
+  in the same block (`.app-nav a { color: black }`) and for a hiding rule
+  that nests CSS (`.app-nav { display: none; &:hover { ... } }`), since EN-89.
+  `index.css` has none of them. Match each comma-separated selector of the
+  rule's prelude exactly, and read the declarations outside nested rules.
+  Origin: `en-89-print-check-rule-order` pre-push review, 2026-10-24.
 
 ## Done
 
