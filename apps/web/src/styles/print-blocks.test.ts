@@ -123,6 +123,10 @@ describe('printBlocks', () => {
     expect(printBlocks('.a { content: "x\n} /* @media print { */ .c {}')).toEqual([]);
   });
 
+  it('continues a string after an escaped CRLF line break', () => {
+    expect(printBlocks('.a { content: "x\\\r\n@media print { y"; } .b {}')).toEqual([]);
+  });
+
   it('names the media query of an unclosed print block', () => {
     expect(() => printBlocks('@media screen, print { .a {}')).toThrow(
       'The @media screen, print block is not properly closed.',

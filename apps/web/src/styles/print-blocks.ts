@@ -25,10 +25,11 @@ const NEWLINE = /[\n\r\f]/;
 
 // The index of the quote that closes the string opened at `start`. A string
 // that never closes ends before the next newline, as in CSS (EN-84), or at the
-// last index. A backslash escapes the next character.
+// last index. A backslash escapes the next character, or the whole CRLF line
+// break.
 function stringEnd(css: string, start: number): number {
   for (let i = start + 1; i < css.length; i += 1) {
-    if (css[i] === '\\') i += 1;
+    if (css[i] === '\\') i += css.startsWith('\r\n', i + 1) ? 2 : 1;
     else if (NEWLINE.test(css[i])) return i - 1;
     else if (css[i] === css[start]) return i;
   }

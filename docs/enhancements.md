@@ -583,6 +583,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
 
+- **EN-87** (web tests): `checkAppNavPrintSuppression` takes the last print
+  block hiding the chrome as the one that wins in print (EN-84), but that
+  holds only when the block always applies when printing. A last hiding block
+  with a condition (`@media print and (orientation: landscape)`) or nested in
+  a non-print `@media` (`@media screen { @media print { ... } }`, which never
+  applies) lets a screen rule before it pass while the chrome still prints.
+  Treat only a plain `print`/`only print` block as the winner, or read the
+  enclosing `@media`. `index.css` has none of these today. Origin:
+  `en-84-print-check-edges` pre-push review, 2026-10-24.
+- **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
+  block as "@media print block is not properly closed." even for
+  `@media screen, print`, discarding the `printBlocks` error that names the
+  query (EN-84). Pass that message through. Origin: `en-84-print-check-edges`
+  pre-push review, 2026-10-24.
+
 ## Done
 
 - **EN-84** (web tests): `printBlocks` skips `@media` inside strings, ends an

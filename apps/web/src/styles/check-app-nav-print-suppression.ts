@@ -46,7 +46,9 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
   for (const earlier of blocks) {
     const start = earlier.before.length;
     if (start >= block.before.length) break;
-    if (start < cursor) continue; // nested inside a block already cut out
+    // Defensive: printBlocks no longer returns a print block nested in
+    // another (EN-84), but one would already be cut out.
+    if (start < cursor) continue;
     text += block.before.slice(cursor, start);
     cursor = earlier.end;
   }
