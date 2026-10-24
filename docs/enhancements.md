@@ -595,20 +595,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   none of these today. Origin:
   `en-83-print-block-detection` (#277) pre-push and pre-merge reviews,
   2026-10-23.
-- **EN-85** (docs): The spec rule "Use RFC 2119 keywords (MUST, SHALL,
-  SHOULD, MAY)" lives only in `openspec/config.yaml`, which nothing reads
-  since the SDD tooling went away; `CLAUDE.md` carries only the
-  Given/When/Then rule, though the specs still use SHALL/MUST. Add the rule
-  to `CLAUDE.md` ("Keeping `openspec/specs/` Current"). Origin:
-  `en-79-sdd-docs` pre-push review, 2026-10-24.
-- **EN-86** (docs): ADR-006's addendum still names the SDD spec/design
-  phases (`sdd-spec`/`sdd-design`) as where per-slice design happens, and
-  `CLAUDE.md`'s walking-skeleton rule points to it; per-slice design now
-  happens in the slice's ODD feature document and spec edits. Origin:
-  `en-79-sdd-docs` pre-push review, 2026-10-24.
 
 ## Done
 
+- **EN-86** (docs): ADR-006's addendum now says per-slice design happens in
+  the slice's feature document and spec edits (ODD), naming the
+  `sdd-spec`/`sdd-design` phases only as what it was until 2026-10-22. Done
+  in `en-85-sdd-docs-followups`, PR #279.
+- **EN-85** (docs): `CLAUDE.md` ("Keeping `openspec/specs/` Current") now
+  asks for RFC 2119 keywords (MUST, SHALL, SHOULD, MAY) in spec
+  requirements, next to the Given/When/Then rule, so the rule no longer
+  lives only in the unread `openspec/config.yaml`. Done in
+  `en-85-sdd-docs-followups`, PR #279.
 - **EN-79** (docs): ADR-016 (strict TDD in `sdd-apply` / `sdd-verify`) is
   marked superseded by the ODD test-first policy, in the ADR and in
   `docs/adr/INDEX.md`. `openspec/config.yaml` opens with a comment that the
