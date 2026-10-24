@@ -64,7 +64,8 @@ trivial one-file fixes such as a typo need no question.
 
 - **Yes:** edit the affected main spec in `openspec/specs/<capability>/spec.md`
   in the same PR as the behavior, in the existing requirement and scenario
-  format (scenarios in Given/When/Then). A new domain or FR slice adds its
+  format (scenarios in Given/When/Then, requirements with RFC 2119
+  keywords: MUST, SHALL, SHOULD, MAY). A new domain or FR slice adds its
   own capability folder. Name the changed specs in the PR description, and
   in the feature document when there is one.
 - **No:** no spec change, for example a bug fix that restores behavior the
