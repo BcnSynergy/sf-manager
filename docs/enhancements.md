@@ -582,23 +582,32 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-- **EN-87** (web tests): `checkAppNavPrintSuppression` takes the last print
-  block hiding the chrome as the one that wins in print (EN-84), but that
-  holds only when the block always applies when printing. A last hiding block
-  with a condition (`@media print and (orientation: landscape)`) or nested in
-  a non-print `@media` (`@media screen { @media print { ... } }`, which never
-  applies) lets a screen rule before it pass while the chrome still prints.
-  Treat only a plain `print`/`only print` block as the winner, or read the
-  enclosing `@media`. `index.css` has none of these today. Origin:
-  `en-84-print-check-edges` pre-push review, 2026-10-24.
-- **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
-  block as "@media print block is not properly closed." even for
-  `@media screen, print`, discarding the `printBlocks` error that names the
-  query (EN-84). Pass that message through. Origin: `en-84-print-check-edges`
-  pre-push review, 2026-10-24.
+- **EN-89** (web tests): `checkAppNavPrintSuppression` reads a print block
+  as hiding the chrome when its body has the hiding rule anywhere, so a block
+  that hides and then shows it again
+  (`@media print { .app-nav { display: none } .app-nav { display: block } }`)
+  passes, and so does a hiding rule in a conditional group rule nested in a
+  plain block (`@media print { @media print and (color) { ... } }`, or
+  `@media print { @supports (display: grid) { ... } }`). Later hiding
+  blocks are cut from the text searched for a rule after the decisive block,
+  so a show rule inside one is never read either. All of these pass on `main`
+  before EN-87 too; `index.css` has none of them. Read the last rule for the
+  selector in each block, at its own nesting level. Origin:
+  `en-87-print-check-conditions` pre-push review, 2026-10-24.
 
 ## Done
 
+- **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
+  block with the `printBlocks` message, which names its query (for
+  `@media screen, print`, "The @media screen, print block is not properly
+  closed."). Done in `en-87-print-check-conditions`, PR #281.
+- **EN-87** (web tests): `printBlocks` tells whether a block applies whenever
+  the page prints (`alwaysApplies`: a plain `print`/`only print` query, not
+  nested in another rule). `checkAppNavPrintSuppression` takes the last such
+  block hiding the chrome as the one that wins in print, fails when the chrome
+  is hidden only in conditional blocks, and ignores later blocks that hide it
+  again when looking for a rule after it. Done in
+  `en-87-print-check-conditions`, PR #281.
 - **EN-84** (web tests): `printBlocks` skips `@media` inside strings, ends an
   unterminated string at the newline as CSS does, resumes after each print
   block so a nested one is not returned twice, and names the media query of

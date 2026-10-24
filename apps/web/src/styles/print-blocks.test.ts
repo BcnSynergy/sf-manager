@@ -157,4 +157,17 @@ describe('printBlocks', () => {
       /not properly closed/,
     );
   });
+
+  // EN-87: whether a block applies whenever the page prints.
+  it.each([
+    ['@media print { .a {} }', true],
+    ['@media only print { .a {} }', true],
+    ['@media screen, PRINT { .a {} }', true],
+    ['@media print and (orientation: landscape) { .a {} }', false],
+    ['@media screen { @media print { .a {} } }', false],
+    ['.x { @media print { .a {} } }', false],
+    ['.x { content: "{"; } @media print { .a {} }', true],
+  ])('tells whether "%s" always applies in print', (css, alwaysApplies) => {
+    expect(printBlocks(css).map((block) => block.alwaysApplies)).toEqual([alwaysApplies]);
+  });
 });
