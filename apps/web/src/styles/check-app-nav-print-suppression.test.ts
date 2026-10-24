@@ -323,7 +323,7 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
         ok: false,
         reason:
-          'A .app-nav rule appears after the @media print block; it would win the source-order tie and make it print again.',
+          'A .app-nav rule appears after the @media print block hides it; it would win the source-order tie and make it print again.',
       });
     });
 
@@ -480,6 +480,32 @@ describe('checkAppNavPrintSuppression', () => {
       });
     });
 
+    it('reports failure when a later plain block shows the nav again after hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        @media print { .app-nav { display: none; } .app-nav { display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block hides it'),
+      });
+    });
+
+    it('reports failure when a later conditional block shows the nav again after hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        ${LANDSCAPE} { .app-nav { display: none; } .app-nav { display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block hides it'),
+      });
+    });
+
     it('reports failure when a conditional block shows the nav again after the plain one', () => {
       const css = `
         .app-nav { display: flex; }
@@ -492,5 +518,60 @@ describe('checkAppNavPrintSuppression', () => {
         reason: expect.stringContaining('appears after the @media print block'),
       });
     });
+  });
+
+  // EN-89: inside a print block, only its last top-level hiding rule counts.
+  describe('with rule order inside a print block', () => {
+    it('reports failure when the block shows the nav again after hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } .app-nav { display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'A .app-nav rule appears after the @media print block hides it; it would win the source-order tie and make it print again.',
+      });
+    });
+
+    it('reports failure when a rule nested in the block shows the nav after hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          .app-nav { display: none; }
+          @supports (display: grid) { .app-nav { display: block; } }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block hides it'),
+      });
+    });
+
+    it('accepts a block that shows the nav before hiding it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: block; } .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it.each(['@media print and (color)', '@supports (display: grid)'])(
+      'reports failure when the nav is hidden only inside a nested "%s"',
+      (rule) => {
+        const css = `
+          .app-nav { display: flex; }
+          @media print { ${rule} { .app-nav { display: none; } } }
+        `;
+
+        expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+          ok: false,
+          reason: '.app-nav { display: none } is missing inside the @media print block.',
+        });
+      },
+    );
   });
 });

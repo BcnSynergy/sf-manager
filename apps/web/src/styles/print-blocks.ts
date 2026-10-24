@@ -70,6 +70,40 @@ function isPrintQuery(queryList: string): boolean {
   return queryList.split(',').some((query) => PRINT_MEDIA_QUERY.test(query));
 }
 
+export type StyleRule = {
+  readonly prelude: string;
+  readonly body: string;
+  // The offset just past the rule's closing brace.
+  readonly end: number;
+};
+
+// EN-89: the style rules directly in `css` (a print block's body), without
+// at-rules and the rules nested in them. `css` has no comments.
+export function topLevelStyleRules(css: string): StyleRule[] {
+  const rules: StyleRule[] = [];
+  let preludeStart = 0;
+  let bodyStart = 0;
+  let depth = 0;
+  for (let i = 0; i < css.length; i += 1) {
+    if (css[i] === '\\') i += 1;
+    else if (isQuote(css[i])) i = stringEnd(css, i);
+    else if (css[i] === ';' && depth === 0) preludeStart = i + 1;
+    else if (css[i] === '{') {
+      if (depth === 0) bodyStart = i + 1;
+      depth += 1;
+    } else if (css[i] === '}') {
+      depth -= 1;
+      if (depth !== 0) continue;
+      const prelude = css.slice(preludeStart, bodyStart - 1);
+      if (!prelude.trim().startsWith('@')) {
+        rules.push({ prelude, body: css.slice(bodyStart, i), end: i + 1 });
+      }
+      preludeStart = i + 1;
+    }
+  }
+  return rules;
+}
+
 export function printBlocks(rawCss: string): PrintBlock[] {
   const css = stripComments(rawCss);
   const blocks: PrintBlock[] = [];

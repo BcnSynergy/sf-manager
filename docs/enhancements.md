@@ -582,20 +582,32 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-- **EN-89** (web tests): `checkAppNavPrintSuppression` reads a print block
-  as hiding the chrome when its body has the hiding rule anywhere, so a block
-  that hides and then shows it again
-  (`@media print { .app-nav { display: none } .app-nav { display: block } }`)
-  passes, and so does a hiding rule in a conditional group rule nested in a
-  plain block (`@media print { @media print and (color) { ... } }`, or
-  `@media print { @supports (display: grid) { ... } }`). Later hiding
-  blocks are cut from the text searched for a rule after the decisive block,
-  so a show rule inside one is never read either. All of these pass on `main`
-  before EN-87 too; `index.css` has none of them. Read the last rule for the
-  selector in each block, at its own nesting level. Origin:
-  `en-87-print-check-conditions` pre-push review, 2026-10-24.
+- **EN-90** (web tests): `checkAppNavPrintSuppression` still misreads a few
+  selector and declaration shapes. These pass, also on `main`:
+  - a descendant hiding rule, `@media print { .foo .app-nav { display: none } }`;
+  - a rule that overrides its own hide,
+    `.app-nav { display: none; display: block }`;
+  - a custom property, `.app-nav { --nav-display: none }`;
+  - an earlier `display: block !important` show, which the check does not
+    model (for the screen rule either).
+
+  Since EN-89 it fails, on the safe side, for a descendant rule after the
+  hide in the same block (`.app-nav a { color: black }`) and for a hiding
+  rule that nests CSS (`.app-nav { display: none; &:hover { ... } }`).
+  `index.css` has none of them. Match each comma-separated selector of the
+  rule's prelude exactly, and read the last `display` declaration outside
+  nested rules, with its priority. Origin: `en-89-print-check-rule-order`
+  pre-push and pre-merge reviews, 2026-10-24.
 
 ## Done
+
+- **EN-89** (web tests): `checkAppNavPrintSuppression` counts only a
+  top-level `display: none` rule of a print block as hiding the chrome
+  (`topLevelStyleRules`), so a hiding rule nested in `@media` or `@supports`
+  inside a plain block no longer counts. The search for a later rule starts
+  after the block's last hiding rule, so a block that hides and then shows
+  the chrome fails, and of a later hiding block only the part up to its own
+  last hiding rule is cut. Done in `en-89-print-check-rule-order`, PR #282.
 
 - **EN-88** (web tests): `checkAppNavPrintSuppression` reports an unclosed
   block with the `printBlocks` message, which names its query (for

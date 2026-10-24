@@ -1,4 +1,4 @@
-import { printBlocks, type PrintBlock } from './print-blocks';
+import { printBlocks, topLevelStyleRules, type PrintBlock } from './print-blocks';
 
 // nav-menu/design.md Decision 6, verify-report CRITICAL-1 remediation: the
 // screen `.app-nav` rule and the `@media print` rule that hides it share
@@ -55,26 +55,48 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
   return text + block.before.slice(cursor);
 }
 
-// The text after `block` with every later block in `hiding` cut out, since
-// hiding the selector again cannot make it print.
-function textAfter(block: PrintBlock, hiding: readonly PrintBlock[]): string {
-  let text = '';
-  let cursor = block.end;
-  for (const later of hiding) {
-    const start = later.before.length;
-    if (start < cursor) continue;
-    text += block.after.slice(cursor - block.end, start - block.end);
-    cursor = later.end;
+// A print block that hides the selector, and the offset just past its last
+// top-level hiding rule.
+type Hider = { readonly block: PrintBlock; readonly hideEnd: number };
+
+// EN-89: only a top-level rule of the block hides the selector, and only
+// its last one counts, since a rule after it would win the tie.
+function hider(block: PrintBlock, hidden: RegExp): Hider | undefined {
+  const bodyStart = block.end - 1 - block.body.length;
+  let hideEnd = -1;
+  for (const rule of topLevelStyleRules(block.body)) {
+    // A nested rule (`.x { .app-nav { ... } }`) targets a descendant.
+    if (!rule.body.includes('{') && hidden.test(`${rule.prelude}{${rule.body}}`)) {
+      hideEnd = bodyStart + rule.end;
+    }
   }
-  return text + block.after.slice(cursor - block.end);
+  return hideEnd === -1 ? undefined : { block, hideEnd };
+}
+
+// The text after the last hiding rule of `decisive`, with every later span
+// from a block's start to its own last hiding rule cut out, since hiding the
+// selector again cannot make it print.
+function textAfter(decisive: Hider, hiders: readonly Hider[]): string {
+  const { block } = decisive;
+  const bodyStart = block.end - 1 - block.body.length;
+  const rest = `${block.body}}${block.after}`;
+  let text = '';
+  let cursor = decisive.hideEnd;
+  for (const later of hiders) {
+    const start = later.block.before.length;
+    if (start < cursor) continue;
+    text += rest.slice(cursor - bodyStart, start - bodyStart);
+    cursor = later.hideEnd;
+  }
+  return text + rest.slice(cursor - bodyStart);
 }
 
 // EN-83: reads every print block (printBlocks strips comments, so a stray
 // `{`/`}` inside explanatory prose can't desync the scan). The selector must
-// be hidden in a block that applies whenever the page prints (EN-87); its
-// screen rule must come before the last such block, which wins the tie in
-// print (EN-84); and no rule for it may follow that block, other than in
-// another block hiding it.
+// be hidden by a top-level rule of a block that applies whenever the page
+// prints (EN-87); its screen rule must come before the last such block, which
+// wins the tie in print (EN-84); and no rule for it may follow that block's
+// last hiding rule, other than in another block hiding it (EN-89).
 export function checkAppNavPrintSuppression(
   rawCss: string,
   selectors: readonly string[] = PRINT_CHROME_SELECTORS,
@@ -92,7 +114,9 @@ export function checkAppNavPrintSuppression(
 
   for (const selector of selectors) {
     const rules = selectorRules(selector);
-    const hiding = blocks.filter((block) => rules.hidden.test(block.body));
+    const hiding = blocks
+      .map((block) => hider(block, rules.hidden))
+      .filter((found): found is Hider => found !== undefined);
 
     if (hiding.length === 0) {
       return {
@@ -101,7 +125,7 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    const alwaysHiding = hiding.filter((block) => block.alwaysApplies);
+    const alwaysHiding = hiding.filter((found) => found.block.alwaysApplies);
     if (alwaysHiding.length === 0) {
       return {
         ok: false,
@@ -110,7 +134,7 @@ export function checkAppNavPrintSuppression(
     }
 
     const decisive = alwaysHiding[alwaysHiding.length - 1];
-    if (!rules.visible.test(screenTextBefore(blocks, decisive))) {
+    if (!rules.visible.test(screenTextBefore(blocks, decisive.block))) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
@@ -120,7 +144,7 @@ export function checkAppNavPrintSuppression(
     if (rules.any.test(textAfter(decisive, hiding))) {
       return {
         ok: false,
-        reason: `A ${selector} rule appears after the @media print block; it would win the source-order tie and make it print again.`,
+        reason: `A ${selector} rule appears after the @media print block hides it; it would win the source-order tie and make it print again.`,
       };
     }
   }
