@@ -583,14 +583,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
 - **EN-90** (web tests): `checkAppNavPrintSuppression` still misreads a few
-  selector shapes. It counts a descendant hiding rule as hiding the chrome,
-  so `@media print { .foo .app-nav { display: none } }` passes (also on
-  `main`). It fails, on the safe side, for a descendant rule after the hide
-  in the same block (`.app-nav a { color: black }`) and for a hiding rule
-  that nests CSS (`.app-nav { display: none; &:hover { ... } }`), since EN-89.
+  selector and declaration shapes. These pass, also on `main`:
+  - a descendant hiding rule, `@media print { .foo .app-nav { display: none } }`;
+  - a rule that overrides its own hide,
+    `.app-nav { display: none; display: block }`;
+  - a custom property, `.app-nav { --nav-display: none }`;
+  - an earlier `display: block !important` show, which the check does not
+    model (for the screen rule either).
+
+  Since EN-89 it fails, on the safe side, for a descendant rule after the
+  hide in the same block (`.app-nav a { color: black }`) and for a hiding
+  rule that nests CSS (`.app-nav { display: none; &:hover { ... } }`).
   `index.css` has none of them. Match each comma-separated selector of the
-  rule's prelude exactly, and read the declarations outside nested rules.
-  Origin: `en-89-print-check-rule-order` pre-push review, 2026-10-24.
+  rule's prelude exactly, and read the last `display` declaration outside
+  nested rules, with its priority. Origin: `en-89-print-check-rule-order`
+  pre-push and pre-merge reviews, 2026-10-24.
 
 ## Done
 
