@@ -575,15 +575,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-79** (docs): Two SDD-era documents still read as living guidance
-  after the SDD tooling went away (2026-10-22, `CLAUDE.md` "Keeping
-  `openspec/specs/` Current"). ADR-016 (strict TDD in `sdd-apply` /
-  `sdd-verify`) is still "Accepted" in `docs/adr/INDEX.md`; the ODD
-  test-first policy now covers it, so it could be marked superseded.
-  `openspec/config.yaml` is the SDD tooling's config: its context is stale
-  ("only the health-check slice exists"), though its Given/When/Then rule
-  for scenarios is now also in `CLAUDE.md`. Origin: `claude-md-odd-only`
-  fresh review, 2026-10-22.
 - **EN-80** (web UI): On a long form at phone width, the review session
   element page's save confirmation sits above the form, out of view of the
   Save button just pressed, and it stays up (with Continue as the primary
@@ -607,6 +598,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-79** (docs): ADR-016 (strict TDD in `sdd-apply` / `sdd-verify`) is
+  marked superseded by the ODD test-first policy, in the ADR and in
+  `docs/adr/INDEX.md`. `openspec/config.yaml` opens with a comment that the
+  SDD tooling is gone and nothing reads it, and its context no longer says
+  only the health-check slice exists. Done in `en-79-sdd-docs`.
 - **EN-83** (web tests): `printBlocks` now reads every `@media` whose query
   list has a `print` media type (`print and (...)`, `only print`,
   `screen, print`), and leaves comment markers and braces inside strings

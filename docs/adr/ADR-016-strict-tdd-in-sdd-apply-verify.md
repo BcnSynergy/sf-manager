@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Superseded by the ODD test-first policy (2026-10-22). The SDD tooling
+(`sdd-apply`, `sdd-verify`) is gone; every task now follows the ODD
+workflow (`CLAUDE.md`, "Keeping `openspec/specs/` Current"), whose
+test-first policy observes RED before GREEN for behavior changes. Kept for
+historical record.
 
 ## Context
 
