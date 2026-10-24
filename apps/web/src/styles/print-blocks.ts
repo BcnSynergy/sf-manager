@@ -43,7 +43,10 @@ function isQuote(char: string): boolean {
 function stripComments(css: string): string {
   let result = '';
   for (let i = 0; i < css.length; i += 1) {
-    if (isQuote(css[i])) {
+    if (css[i] === '\\') {
+      result += css.slice(i, i + 2);
+      i += 1;
+    } else if (isQuote(css[i])) {
       const end = stringEnd(css, i);
       result += css.slice(i, end + 1);
       i = end;
@@ -69,6 +72,10 @@ export function printBlocks(rawCss: string): PrintBlock[] {
   // EN-84: `@media` inside a string is not a rule, and the scan resumes after
   // each print block, so a print block nested in it is not returned again.
   for (let start = 0; start < css.length; start += 1) {
+    if (css[start] === '\\') {
+      start += 1; // an escaped quote or brace is part of an identifier
+      continue;
+    }
     if (isQuote(css[start])) {
       start = stringEnd(css, start);
       continue;
@@ -81,12 +88,14 @@ export function printBlocks(rawCss: string): PrintBlock[] {
     let depth = 1;
     let cursor = bodyStart;
     for (; cursor < css.length && depth > 0; cursor += 1) {
-      if (isQuote(css[cursor])) cursor = stringEnd(css, cursor);
+      if (css[cursor] === '\\') cursor += 1;
+      else if (isQuote(css[cursor])) cursor = stringEnd(css, cursor);
       else if (css[cursor] === '{') depth += 1;
       else if (css[cursor] === '}') depth -= 1;
     }
     if (depth !== 0) {
-      throw new Error(`The @media ${match[1].trim()} block is not properly closed.`);
+      const query = match[1].trim().replace(/\s+/g, ' ');
+      throw new Error(`The @media ${query} block is not properly closed.`);
     }
 
     blocks.push({

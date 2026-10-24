@@ -582,7 +582,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `review-session-ui` flow ("Saving is confirmed and the flow continues"),
   so it edits that spec. Split out of EN-76 by `alert-announcements`,
   2026-10-22.
-
 - **EN-87** (web tests): `checkAppNavPrintSuppression` takes the last print
   block hiding the chrome as the one that wins in print (EN-84), but that
   holds only when the block always applies when printing. A last hiding block

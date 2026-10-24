@@ -123,6 +123,25 @@ describe('printBlocks', () => {
     expect(printBlocks('.a { content: "x\n} /* @media print { */ .c {}')).toEqual([]);
   });
 
+  it.each(['\r', '\f'])('ends an unterminated string at a %j line break too', (lineBreak) => {
+    const [block] = printBlocks(`.a { content: "x${lineBreak}} @media print { .b {} }`);
+
+    expect(block?.body).toBe(' .b {} ');
+  });
+
+  it('does not take an escaped quote or brace in a selector as a string or brace', () => {
+    const [block] = printBlocks('.a\\"b {} @media print { .c\\{d { display: none; } } .e {}');
+
+    expect(block?.body).toBe(' .c\\{d { display: none; } ');
+    expect(block?.after).toBe(' .e {}');
+  });
+
+  it('collapses a multi-line query in the unclosed-block message', () => {
+    expect(() => printBlocks('@media screen,\n  print { .a {}')).toThrow(
+      'The @media screen, print block is not properly closed.',
+    );
+  });
+
   it('continues a string after an escaped CRLF line break', () => {
     expect(printBlocks('.a { content: "x\\\r\n@media print { y"; } .b {}')).toEqual([]);
   });
