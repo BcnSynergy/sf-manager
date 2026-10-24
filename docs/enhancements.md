@@ -595,6 +595,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   none of these today. Origin:
   `en-83-print-block-detection` (#277) pre-push and pre-merge reviews,
   2026-10-23.
+- **EN-85** (docs): The spec rule "Use RFC 2119 keywords (MUST, SHALL,
+  SHOULD, MAY)" lives only in `openspec/config.yaml`, which nothing reads
+  since the SDD tooling went away; `CLAUDE.md` carries only the
+  Given/When/Then rule, though the specs still use SHALL/MUST. Add the rule
+  to `CLAUDE.md` ("Keeping `openspec/specs/` Current"). Origin:
+  `en-79-sdd-docs` pre-push review, 2026-10-24.
+- **EN-86** (docs): ADR-006's addendum still names the SDD spec/design
+  phases (`sdd-spec`/`sdd-design`) as where per-slice design happens, and
+  `CLAUDE.md`'s walking-skeleton rule points to it; per-slice design now
+  happens in the slice's ODD feature document and spec edits. Origin:
+  `en-79-sdd-docs` pre-push review, 2026-10-24.
 
 ## Done
 
