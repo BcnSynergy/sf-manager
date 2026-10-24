@@ -288,8 +288,8 @@ describe('checkAppNavPrintSuppression', () => {
 
   // EN-83: the checker reads every print block (printBlocks), not only the
   // first. The selector must be hidden in one of them, its screen rule must
-  // come before the first block hiding it, and no rule for it may follow the
-  // last block hiding it.
+  // come before the last block hiding it (EN-84), and no rule for it may
+  // follow that block.
   describe('with several print blocks', () => {
     it('accepts the nav hidden in a later print block', () => {
       const css = `
@@ -327,17 +327,16 @@ describe('checkAppNavPrintSuppression', () => {
       });
     });
 
-    it('reports failure when the screen rule comes only after the first block hiding the nav', () => {
+    // EN-84: the last block hiding the nav wins the tie, so the page prints
+    // without the nav.
+    it('accepts a screen rule between two blocks hiding the nav', () => {
       const css = `
         @media print { .app-nav { display: none; } }
         .app-nav { display: flex; }
         @media print { .app-nav { display: none; } }
       `;
 
-      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
-        ok: false,
-        reason: expect.stringContaining('must be declared before the @media print block'),
-      });
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
 
     it('does not take a rule inside an earlier print block as the screen rule', () => {

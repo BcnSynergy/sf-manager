@@ -103,6 +103,32 @@ describe('printBlocks', () => {
     expect(first.end).toBe('.a {}  @media print { .b {} }'.length);
   });
 
+  // EN-84: strings, nesting and the unclosed-block message.
+  it('ignores @media print inside a string', () => {
+    expect(printBlocks('.a::before { content: "@media print {"; } .b {}')).toEqual([]);
+  });
+
+  it('returns a print block nested in another print block once', () => {
+    const blocks = printBlocks('@media print { @media print { .a {} } .b {} } .c {}');
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body.trim()).toBe('@media print { .a {} } .b {}');
+  });
+
+  it('ends an unterminated string at the newline, as CSS does', () => {
+    const [block] = printBlocks('@media print { .a { content: "x\n} .b { display: none; } } .c {}');
+
+    expect(block.body).toBe(' .a { content: "x\n} .b { display: none; } ');
+    expect(block.after).toBe(' .c {}');
+    expect(printBlocks('.a { content: "x\n} /* @media print { */ .c {}')).toEqual([]);
+  });
+
+  it('names the media query of an unclosed print block', () => {
+    expect(() => printBlocks('@media screen, print { .a {}')).toThrow(
+      'The @media screen, print block is not properly closed.',
+    );
+  });
+
   it('fails loudly on an unclosed print block', () => {
     expect(() => printBlocks('@media print { .a { display: none; }')).toThrow(
       /not properly closed/,
