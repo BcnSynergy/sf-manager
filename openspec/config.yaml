@@ -1,3 +1,6 @@
+# SDD tooling config. The SDD tooling is gone (2026-10-22) and nothing reads
+# this file; CLAUDE.md ("Keeping `openspec/specs/` Current") governs how
+# openspec/specs/ is kept. Kept for reference only.
 schema: spec-driven
 
 context: |
@@ -5,7 +8,7 @@ context: |
   (Clean Architecture, ADR-002/013), React/Vite frontend (ADR-004/015),
   Prisma 7.9.1 + PostgreSQL 18, TypeScript throughout, Node 24 LTS.
   Walking skeleton discipline (ADR-006): build one thin end-to-end
-  slice at a time — only the health-check slice exists so far.
+  slice at a time. openspec/specs/ holds one capability per shipped slice.
   Full context: docs/adr/INDEX.md, docs/architecture/domain-model-inspections.md,
   docs/requirements/functional-requirements.md.
 
