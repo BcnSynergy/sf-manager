@@ -288,14 +288,14 @@ describe('checkAppNavPrintSuppression', () => {
 
   // EN-83: the checker reads every print block (printBlocks), not only the
   // first. The selector must be hidden in one of them, its screen rule must
-  // come before the last block hiding it (EN-84), and no rule for it may
-  // follow that block.
+  // come before the last block hiding it (EN-84; EN-87 below for conditional
+  // blocks), and no rule for it may follow that block.
   describe('with several print blocks', () => {
     it('accepts the nav hidden in a later print block', () => {
       const css = `
         .app-nav { display: flex; }
         @media print { .page { margin: 0; } }
-        @media print and (min-width: 0) { .app-nav { display: none; } }
+        @media only print { .app-nav { display: none; } }
       `;
 
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
@@ -359,7 +359,115 @@ describe('checkAppNavPrintSuppression', () => {
 
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
         ok: false,
-        reason: '@media print block is not properly closed.',
+        reason: 'The @media print block is not properly closed.',
+      });
+    });
+
+    // EN-88: the reason names the query, as printBlocks does.
+    it('names the query of an unclosed print block', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media screen, print { .app-nav { display: none; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: 'The @media screen, print block is not properly closed.',
+      });
+    });
+  });
+
+  // EN-87: only a block that applies whenever the page prints (a plain
+  // `print` or `only print` query, not nested in another rule) decides the
+  // tie. A conditional block, or one nested in `@media screen`, does not.
+  describe('with conditional print blocks', () => {
+    const LANDSCAPE = '@media print and (orientation: landscape)';
+
+    it('reports failure when the nav is hidden only in a conditional print block', () => {
+      const css = `
+        .app-nav { display: flex; }
+        ${LANDSCAPE} { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          '.app-nav is hidden only in a conditional @media print block; it would still print when the condition does not hold.',
+      });
+    });
+
+    it('reports failure when the nav is hidden only in a print block nested in @media screen', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media screen { @media print { .app-nav { display: none; } } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('only in a conditional @media print block'),
+      });
+    });
+
+    it('reports failure when the screen rule comes after the last plain block hiding the nav', () => {
+      const css = `
+        @media print { .app-nav { display: none; } }
+        .app-nav { display: flex; }
+        ${LANDSCAPE} { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('must be declared before the @media print block'),
+      });
+    });
+
+    it('reports failure when the screen rule comes after a plain block and before a nested one', () => {
+      const css = `
+        @media print { .app-nav { display: none; } }
+        .app-nav { display: flex; }
+        @media screen { @media print { .app-nav { display: none; } } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('must be declared before the @media print block'),
+      });
+    });
+
+    it('accepts a conditional block hiding the nav after the plain one', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        ${LANDSCAPE} { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('reports failure when a nav rule follows the plain block, even before a conditional one', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        .app-nav { display: block; }
+        ${LANDSCAPE} { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block'),
+      });
+    });
+
+    it('reports failure when a conditional block shows the nav again after the plain one', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        ${LANDSCAPE} { .app-nav { display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('appears after the @media print block'),
       });
     });
   });

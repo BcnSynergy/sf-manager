@@ -55,11 +55,26 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
   return text + block.before.slice(cursor);
 }
 
+// The text after `block` with every later block in `hiding` cut out, since
+// hiding the selector again cannot make it print.
+function textAfter(block: PrintBlock, hiding: readonly PrintBlock[]): string {
+  let text = '';
+  let cursor = block.end;
+  for (const later of hiding) {
+    const start = later.before.length;
+    if (start < cursor) continue;
+    text += block.after.slice(cursor - block.end, start - block.end);
+    cursor = later.end;
+  }
+  return text + block.after.slice(cursor - block.end);
+}
+
 // EN-83: reads every print block (printBlocks strips comments, so a stray
 // `{`/`}` inside explanatory prose can't desync the scan). The selector must
-// be hidden in one of them, its screen rule must come before the last block
-// hiding it (EN-84: that block wins the tie in print), and no rule for it may
-// follow that block.
+// be hidden in a block that applies whenever the page prints (EN-87); its
+// screen rule must come before the last such block, which wins the tie in
+// print (EN-84); and no rule for it may follow that block, other than in
+// another block hiding it.
 export function checkAppNavPrintSuppression(
   rawCss: string,
   selectors: readonly string[] = PRINT_CHROME_SELECTORS,
@@ -67,8 +82,9 @@ export function checkAppNavPrintSuppression(
   let blocks: PrintBlock[];
   try {
     blocks = printBlocks(rawCss);
-  } catch {
-    return { ok: false, reason: '@media print block is not properly closed.' };
+  } catch (error) {
+    // EN-88: printBlocks names the query of the unclosed block.
+    return { ok: false, reason: (error as Error).message };
   }
   if (blocks.length === 0) {
     return { ok: false, reason: 'No @media print block found in the stylesheet.' };
@@ -85,15 +101,23 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    const lastHiding = hiding[hiding.length - 1];
-    if (!rules.visible.test(screenTextBefore(blocks, lastHiding))) {
+    const alwaysHiding = hiding.filter((block) => block.alwaysApplies);
+    if (alwaysHiding.length === 0) {
+      return {
+        ok: false,
+        reason: `${selector} is hidden only in a conditional @media print block; it would still print when the condition does not hold.`,
+      };
+    }
+
+    const decisive = alwaysHiding[alwaysHiding.length - 1];
+    if (!rules.visible.test(screenTextBefore(blocks, decisive))) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
       };
     }
 
-    if (rules.any.test(lastHiding.after)) {
+    if (rules.any.test(textAfter(decisive, hiding))) {
       return {
         ok: false,
         reason: `A ${selector} rule appears after the @media print block; it would win the source-order tie and make it print again.`,

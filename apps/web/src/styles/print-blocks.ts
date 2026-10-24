@@ -16,11 +16,16 @@ export type PrintBlock = {
   // The offset just past the closing brace in the comment-stripped text; the
   // block starts at `before.length`.
   readonly end: number;
+  // EN-87: the block applies whenever the page prints: its query list has a
+  // plain `print` or `only print` query and it is not nested in another rule
+  // (such as `@media screen`).
+  readonly alwaysApplies: boolean;
 };
 
 // Sticky: matched only at the `@` the scan in printBlocks is on.
 const MEDIA_RULE_START = /@media\s+([^{};]+)\{/iy;
 const PRINT_MEDIA_QUERY = /^\s*(?:only\s+)?print(?![\w-])/i;
+const PLAIN_PRINT_MEDIA_QUERY = /^\s*(?:only\s+)?print\s*$/i;
 const NEWLINE = /[\n\r\f]/;
 
 // The index of the quote that closes the string opened at `start`. A string
@@ -71,6 +76,8 @@ export function printBlocks(rawCss: string): PrintBlock[] {
 
   // EN-84: `@media` inside a string is not a rule, and the scan resumes after
   // each print block, so a print block nested in it is not returned again.
+  // `enclosing` counts the open braces around the scan outside print blocks.
+  let enclosing = 0;
   for (let start = 0; start < css.length; start += 1) {
     if (css[start] === '\\') {
       start += 1; // an escaped quote or brace is part of an identifier
@@ -80,6 +87,8 @@ export function printBlocks(rawCss: string): PrintBlock[] {
       start = stringEnd(css, start);
       continue;
     }
+    if (css[start] === '{') enclosing += 1;
+    else if (css[start] === '}') enclosing -= 1;
     MEDIA_RULE_START.lastIndex = start;
     const match = css[start] === '@' ? MEDIA_RULE_START.exec(css) : null;
     if (!match || !isPrintQuery(match[1])) continue;
@@ -103,6 +112,8 @@ export function printBlocks(rawCss: string): PrintBlock[] {
       body: css.slice(bodyStart, cursor - 1),
       after: css.slice(cursor),
       end: cursor,
+      alwaysApplies:
+        enclosing === 0 && match[1].split(',').some((query) => PLAIN_PRINT_MEDIA_QUERY.test(query)),
     });
     start = cursor - 1;
   }
