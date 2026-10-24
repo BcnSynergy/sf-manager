@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { printBlocks } from './print-blocks';
+import { printBlocks, topLevelStyleRules } from './print-blocks';
 
 // EN-81: the print CSS tests read the stylesheet through this helper, so it
 // is triangulated against synthetic fixtures independent of index.css.
@@ -169,5 +169,29 @@ describe('printBlocks', () => {
     ['.x { content: "{"; } @media print { .a {} }', true],
   ])('tells whether "%s" always applies in print', (css, alwaysApplies) => {
     expect(printBlocks(css).map((block) => block.alwaysApplies)).toEqual([alwaysApplies]);
+  });
+});
+
+// EN-89: the check reads the rules at a print block's own level.
+describe('topLevelStyleRules', () => {
+  it('returns the top-level style rules, skipping at-rules and what they nest', () => {
+    const css = ' .a { x } @supports (y) { .b { z } } .c, .d { w } ';
+
+    expect(topLevelStyleRules(css)).toEqual([
+      { prelude: ' .a ', body: ' x ', end: ' .a { x }'.length },
+      { prelude: ' .c, .d ', body: ' w ', end: css.length - 1 },
+    ]);
+  });
+
+  it('starts a prelude after a statement at-rule', () => {
+    expect(topLevelStyleRules('@import "x.css"; .a {}').map((rule) => rule.prelude)).toEqual([
+      ' .a ',
+    ]);
+  });
+
+  it('ignores braces inside strings and escaped braces', () => {
+    const css = '.a { content: "}"; } .b\\{c { x }';
+
+    expect(topLevelStyleRules(css).map((rule) => rule.prelude)).toEqual(['.a ', ' .b\\{c ']);
   });
 });
