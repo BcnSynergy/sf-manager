@@ -613,7 +613,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   marked superseded by the ODD test-first policy, in the ADR and in
   `docs/adr/INDEX.md`. `openspec/config.yaml` opens with a comment that the
   SDD tooling is gone and nothing reads it, and its context no longer says
-  only the health-check slice exists. Done in `en-79-sdd-docs`.
+  only the health-check slice exists. Done in `en-79-sdd-docs`, PR #278.
 - **EN-83** (web tests): `printBlocks` now reads every `@media` whose query
   list has a `print` media type (`print and (...)`, `only print`,
   `screen, print`), and leaves comment markers and braces inside strings
