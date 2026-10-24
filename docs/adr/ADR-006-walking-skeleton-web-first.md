@@ -44,17 +44,19 @@ native packaging, no offline requirements yet.
 
 ## Addendum: Tactical DDD Design Timing
 
+_Updated 2026-10-24 (EN-86): per-slice design moved from the SDD phases to
+ODD._
+
 Value Objects, application-layer use cases, and detailed domain-entity
-behavior (invariants, methods) are **not** designed exhaustively for the
-whole domain upfront — that would be Big Design Up Front, the opposite of
-this ADR's own premise. They're designed **per slice**, in that slice's
-feature document and spec edits (ODD; until 2026-10-22, the Spec Driven
-Development `sdd-spec`/`sdd-design` phases), scoped only to what that
-slice needs. The domain model doc
-(`architecture/domain-model-inspections.md`) and the FR list are the right
-level of upfront design for a walking skeleton: enough to scaffold the
-monorepo correctly and see the shape of the whole system, not a full
-tactical DDD design done before any code exists. Example: an entity field
+behavior (invariants, methods) are **not** designed exhaustively for the whole
+domain upfront — that would be Big Design Up Front, the opposite of this ADR's
+own premise. They're designed **per slice**, in that slice's feature document
+and spec edits (ODD; until 2026-10-22, the Spec Driven Development
+`sdd-spec`/`sdd-design` phases), scoped only to what that slice needs. The
+domain model doc (`architecture/domain-model-inspections.md`) and the FR list
+are the right level of upfront design for a walking skeleton: enough to
+scaffold the monorepo correctly and see the shape of the whole system, not a
+full tactical DDD design done before any code exists. Example: an entity field
 already described richly in prose (e.g. `InspectableElement.code`'s
 alphabet/uniqueness rules) becomes a real Value Object with a validating
 factory when — and only when — the slice that needs it is specced.
