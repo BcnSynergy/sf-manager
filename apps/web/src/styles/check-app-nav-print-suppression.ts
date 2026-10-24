@@ -105,7 +105,7 @@ export function checkAppNavPrintSuppression(
     if (alwaysHiding.length === 0) {
       return {
         ok: false,
-        reason: `${selector} is hidden only in @media print blocks that do not always apply (a conditional query, or nested in another rule); it would still print when they do not.`,
+        reason: `${selector} is hidden only in @media print blocks that do not always apply (a conditional query, or nested in another rule); it may still print, or the source-order tie cannot be confirmed.`,
       };
     }
 

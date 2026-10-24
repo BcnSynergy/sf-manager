@@ -586,8 +586,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   as hiding the chrome when its body has the hiding rule anywhere, so a block
   that hides and then shows it again
   (`@media print { .app-nav { display: none } .app-nav { display: block } }`)
-  passes, and so does a hiding rule in a conditional block nested in a plain
-  one (`@media print { @media print and (color) { ... } }`). Later hiding
+  passes, and so does a hiding rule in a conditional group rule nested in a
+  plain block (`@media print { @media print and (color) { ... } }`, or
+  `@media print { @supports (display: grid) { ... } }`). Later hiding
   blocks are cut from the text searched for a rule after the decisive block,
   so a show rule inside one is never read either. All of these pass on `main`
   before EN-87 too; `index.css` has none of them. Read the last rule for the

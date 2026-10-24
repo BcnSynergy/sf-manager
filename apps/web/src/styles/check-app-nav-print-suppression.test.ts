@@ -392,7 +392,7 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
         ok: false,
         reason:
-          '.app-nav is hidden only in @media print blocks that do not always apply (a conditional query, or nested in another rule); it would still print when they do not.',
+          '.app-nav is hidden only in @media print blocks that do not always apply (a conditional query, or nested in another rule); it may still print, or the source-order tie cannot be confirmed.',
       });
     });
 
@@ -432,6 +432,28 @@ describe('checkAppNavPrintSuppression', () => {
         ok: false,
         reason: expect.stringContaining('must be declared before the @media print block'),
       });
+    });
+
+    it('reports failure when the nav is hidden only in a print block nested in @layer', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @layer print-chrome { @media print { .app-nav { display: none; } } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('the source-order tie cannot be confirmed'),
+      });
+    });
+
+    it('accepts a second plain block hiding the nav right after the first', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
 
     it('accepts a conditional block hiding the nav after the plain one', () => {
