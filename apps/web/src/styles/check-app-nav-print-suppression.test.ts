@@ -392,7 +392,7 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
         ok: false,
         reason:
-          '.app-nav is hidden only in a conditional @media print block; it would still print when the condition does not hold.',
+          '.app-nav is hidden only in @media print blocks that do not always apply (a conditional query, or nested in another rule); it would still print when they do not.',
       });
     });
 
@@ -404,7 +404,7 @@ describe('checkAppNavPrintSuppression', () => {
 
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
         ok: false,
-        reason: expect.stringContaining('only in a conditional @media print block'),
+        reason: expect.stringContaining('that do not always apply'),
       });
     });
 
