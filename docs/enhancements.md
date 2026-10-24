@@ -601,12 +601,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-86** (docs): ADR-006's addendum now says per-slice design happens in
   the slice's feature document and spec edits (ODD), naming the
   `sdd-spec`/`sdd-design` phases only as what it was until 2026-10-22. Done
-  in `en-85-sdd-docs-followups`.
+  in `en-85-sdd-docs-followups`, PR #279.
 - **EN-85** (docs): `CLAUDE.md` ("Keeping `openspec/specs/` Current") now
   asks for RFC 2119 keywords (MUST, SHALL, SHOULD, MAY) in spec
   requirements, next to the Given/When/Then rule, so the rule no longer
   lives only in the unread `openspec/config.yaml`. Done in
-  `en-85-sdd-docs-followups`.
+  `en-85-sdd-docs-followups`, PR #279.
 - **EN-79** (docs): ADR-016 (strict TDD in `sdd-apply` / `sdd-verify`) is
   marked superseded by the ODD test-first policy, in the ADR and in
   `docs/adr/INDEX.md`. `openspec/config.yaml` opens with a comment that the
