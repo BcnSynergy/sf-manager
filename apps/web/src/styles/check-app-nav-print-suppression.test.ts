@@ -805,4 +805,49 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
   });
+
+  // Pre-push verification of print-check-cascade: the reasons main gave for
+  // these shapes stay the same.
+  describe('with the reasons kept from the previous check', () => {
+    it.each([
+      [
+        'an unclosed rule inside it',
+        '.app-nav { display: flex; }\n@media print { .app-nav { display: none;',
+      ],
+      [
+        'an unclosed at-rule inside it',
+        '.app-nav { display: flex; } @media print { .app-nav { display: none; } @supports (x: y) { .a { color: red; }',
+      ],
+      ['a byte order mark before it', '﻿@media print { .app-nav { display: none; }'],
+    ])('names an unclosed print block with %s', (_label, css) => {
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: 'The @media print block is not properly closed.',
+      });
+    });
+
+    it('reports an earlier important show before a later rule', () => {
+      const css = `
+        .app-nav { display: flex !important; }
+        @media print { .app-nav { display: none; } }
+        .app-nav { color: red; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'An earlier .app-nav rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.',
+      });
+    });
+
+    it('does not take an escaped longer class name for the nav', () => {
+      const css = `
+        .app-nav { display: flex; }
+        .app-nav\\:x { display: flex !important; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+  });
 });

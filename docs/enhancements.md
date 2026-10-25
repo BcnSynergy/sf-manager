@@ -606,6 +606,31 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   pinning covers GitHub Actions only. Evidence: `apps/api/Dockerfile`,
   `apps/web/Dockerfile`, `docker-compose.prod.yml`. Origin: `deployment`
   pre-merge review (PR #283), 2026-10-25.
+- **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
+  parses with `postcss`, which rejects stylesheets the old scan accepted: an
+  unclosed non-print rule, comment or string at the end of the file fails
+  with "The stylesheet could not be parsed: ...". It errs on the safe side,
+  and the message gives no line or column; add `error.line:column`.
+  Origin: `print-check-cascade` pre-push verification, 2026-10-25.
+- **EN-100** (web tests): the check's specificity tokenizer overcounts in
+  rare shapes, on the safe side: an escape followed by an identifier counts
+  an extra type (`.sm\:flex` scores [0,1,1]), and arguments nested more
+  than one level deep are not matched (`:where(:is(:not(#a))) .app-nav`
+  scores [1,1,0]). `:nth-child(... of S)` undercounts, with no reachable
+  unsafe shape found. Origin: `print-check-cascade` pre-push verification,
+  2026-10-25.
+- **EN-101** (web tests): the check does not model cascade layers. A
+  layered `!important` show (`@layer a { .app-nav { display: flex !important } }`)
+  beats an unlayered `!important` print hide, yet the check passes. True
+  before `print-check-cascade` as well; `index.css` has no `@layer`.
+  Origin: `print-check-cascade` pre-push verification, 2026-10-25.
+- **EN-102** (web tests): the check does not see shows that reach the
+  chrome without naming its class as a class: an attribute selector
+  (`[class~="app-nav"]`), a universal rule (`* { display: block !important }`),
+  or a double negation (`:not(:not(.app-nav))`, since the `:not` stripping
+  is not parenthesis-aware). They pass although the chrome may print. True
+  before `print-check-cascade` as well. Origin: `print-check-cascade`
+  pre-push verification, 2026-10-25.
 
 ## Done
 

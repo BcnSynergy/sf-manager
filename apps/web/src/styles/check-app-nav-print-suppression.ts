@@ -5,6 +5,7 @@ import postcss, {
   type Node,
   type Rule,
 } from 'postcss';
+import { printBlocks } from './print-blocks';
 
 // nav-menu/design.md Decision 6, verify-report CRITICAL-1 remediation: the
 // screen `.app-nav` rule and the `@media print` rule that hides it share
@@ -203,11 +204,13 @@ function readStylesheet(root: Container) {
       display: effectiveDisplay(node as Container),
       printBlock: isPrintBlock(node) && !outerPrint ? undefined : outerPrint,
       mayApplyInPrint: [...ancestors, node]
-        .filter((n): n is AtRule => n.type === 'atrule' && (n as AtRule).name === 'media')
+        .filter(
+          (n): n is AtRule => n.type === 'atrule' && (n as AtRule).name.toLowerCase() === 'media',
+        )
         .every(mayApplyInPrint),
     });
   });
-  return { styleBlocks, printBlocks, order };
+  return { styleBlocks, printBlocks };
 }
 
 function isInside(node: Node, ancestor: Node): boolean {
@@ -218,7 +221,16 @@ function isInside(node: Node, ancestor: Node): boolean {
 }
 
 // EN-88: the message names the query of an unclosed `@media` block.
+// postcss reports the innermost open block and drops a leading byte order
+// mark, so an unclosed print block is found by printBlocks' own scan first.
 function syntaxErrorReason(error: CssSyntaxError, rawCss: string): string {
+  if (error.reason === 'Unclosed block') {
+    try {
+      printBlocks(rawCss);
+    } catch (unclosed) {
+      return (unclosed as Error).message;
+    }
+  }
   if (error.reason === 'Unclosed block' && error.line !== undefined) {
     const lines = rawCss.split('\n');
     const offset =
@@ -265,13 +277,14 @@ export function checkAppNavPrintSuppression(
     throw error;
   }
 
-  const { styleBlocks, printBlocks } = readStylesheet(root);
-  if (printBlocks.length === 0) {
+  const { styleBlocks, printBlocks: blocks } = readStylesheet(root);
+  if (blocks.length === 0) {
     return { ok: false, reason: 'No @media print block found in the stylesheet.' };
   }
 
   for (const selector of selectors) {
-    const token = new RegExp(`${escapeRegExp(selector)}(?![\\w-])`);
+    // Not part of a longer class name, escaped characters included.
+    const token = new RegExp(`${escapeRegExp(selector)}(?![\\w\\\\-])`);
     // The selector entry that styles the chrome itself (EN-96): its subject,
     // without `:not(...)` arguments, names the selector.
     const target = (entry: string) => token.test(subject(entry).replace(/:not\([^)]*\)/gi, ''));
@@ -279,16 +292,22 @@ export function checkAppNavPrintSuppression(
       maxSpecificity(block.selectors.filter(target).map(specificity));
     const targets = (block: StyleBlock) => block.selectors.some(target);
 
+    // A top-level rule of a print block that hides the selector itself.
+    const hidesItself = (block: StyleBlock) =>
+      block.printBlock !== undefined &&
+      block.node.parent === block.printBlock &&
+      block.node.type === 'rule' &&
+      (block.node as Rule).selectors.some((entry) => entry.trim() === selector) &&
+      block.display?.value === 'none';
+    const toHide = (block: StyleBlock): Hide => ({
+      block,
+      rank: rank(block.display!, specificity(selector), block.order),
+    });
+
     // Per print block, its last top-level rule hiding the selector itself.
     const lastHides = new Map<AtRule, StyleBlock>();
     for (const block of styleBlocks) {
-      const hides =
-        block.printBlock !== undefined &&
-        block.node.parent === block.printBlock &&
-        block.node.type === 'rule' &&
-        (block.node as Rule).selectors.some((entry) => entry.trim() === selector) &&
-        block.display?.value === 'none';
-      if (hides) lastHides.set(block.printBlock!, block);
+      if (hidesItself(block)) lastHides.set(block.printBlock!, block);
     }
 
     if (lastHides.size === 0) {
@@ -298,7 +317,7 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    const always = printBlocks.filter((block) => block.alwaysApplies && lastHides.has(block.node));
+    const always = blocks.filter((block) => block.alwaysApplies && lastHides.has(block.node));
     if (always.length === 0) {
       return {
         ok: false,
@@ -333,6 +352,42 @@ export function checkAppNavPrintSuppression(
         (block.order <= hide.order || isInside(block.node as Node, hide.node as Node))
       );
     };
+    // The hides that apply whenever the page prints.
+    const alwaysHides = styleBlocks
+      .filter(
+        (block) => hidesItself(block) && always.some((found) => found.node === block.printBlock),
+      )
+      .map(toHide);
+
+    // Why a show outranks every hide that applies whenever it does, if it
+    // does. A hide in the show's own print block applies whenever it does.
+    const outranks = (show: StyleBlock): string | undefined => {
+      if (!show.mayApplyInPrint || !targets(show) || !show.display) return undefined;
+      if (show.display.value === 'none') return undefined;
+      const showRank = rank(show.display, targetSpecificity(show), show.order);
+      const sameBlockHides = styleBlocks
+        .filter((block) => show.printBlock !== undefined && block.printBlock === show.printBlock)
+        .filter(hidesItself)
+        .map(toHide);
+      const strongest = [...alwaysHides, ...sameBlockHides].reduce((max, next) =>
+        compare(next.rank, max.rank) > 0 ? next : max,
+      );
+      if (compare(showRank, strongest.rank) <= 0) return undefined;
+      return show.display.important &&
+        !strongest.block.display!.important &&
+        show.order < strongest.block.order
+        ? `An earlier ${selector} rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.`
+        : `A ${selector} rule that may apply in print (${show.selectors.filter(target).join(', ')}) shows it with more weight than the @media print block hiding it; it would still print.`;
+    };
+
+    // Shows before the deciding hide are reported before a later rule, as
+    // the earlier !important check was (EN-90).
+    const earlierShow = styleBlocks
+      .filter((block) => block.order < decisive.order)
+      .map(outranks)
+      .find((reason) => reason !== undefined);
+    if (earlierShow) return { ok: false, reason: earlierShow };
+
     const later = styleBlocks.find(
       (block) =>
         block.order > decisive.order &&
@@ -347,51 +402,11 @@ export function checkAppNavPrintSuppression(
       };
     }
 
-    // The hides that apply whenever the page prints, and the strongest one.
-    const alwaysHides: Hide[] = styleBlocks
-      .filter(
-        (block) =>
-          block.printBlock !== undefined &&
-          always.some((found) => found.node === block.printBlock) &&
-          block.node.parent === block.printBlock &&
-          block.node.type === 'rule' &&
-          (block.node as Rule).selectors.some((entry) => entry.trim() === selector) &&
-          block.display?.value === 'none',
-      )
-      .map((block) => ({ block, rank: rank(block.display!, specificity(selector), block.order) }));
-
-    for (const show of styleBlocks) {
-      if (!show.mayApplyInPrint || !targets(show) || !show.display) continue;
-      if (show.display.value === 'none') continue;
-      const showRank = rank(show.display, targetSpecificity(show), show.order);
-      // A hide in the show's own print block applies whenever the show does.
-      const sameBlockHides: Hide[] = styleBlocks
-        .filter(
-          (block) =>
-            show.printBlock !== undefined &&
-            block.printBlock === show.printBlock &&
-            block.node.parent === show.printBlock &&
-            block.node.type === 'rule' &&
-            (block.node as Rule).selectors.some((entry) => entry.trim() === selector) &&
-            block.display?.value === 'none',
-        )
-        .map((block) => ({
-          block,
-          rank: rank(block.display!, specificity(selector), block.order),
-        }));
-      const strongest = [...alwaysHides, ...sameBlockHides].reduce((max, next) =>
-        compare(next.rank, max.rank) > 0 ? next : max,
-      );
-      if (compare(showRank, strongest.rank) <= 0) continue;
-
-      const reason =
-        show.display.important &&
-        !strongest.block.display!.important &&
-        show.order < strongest.block.order
-          ? `An earlier ${selector} rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.`
-          : `A ${selector} rule that may apply in print (${show.selectors.filter(target).join(', ')}) shows it with more weight than the @media print block hiding it; it would still print.`;
-      return { ok: false, reason };
-    }
+    const laterShow = styleBlocks
+      .filter((block) => block.order >= decisive.order)
+      .map(outranks)
+      .find((reason) => reason !== undefined);
+    if (laterShow) return { ok: false, reason: laterShow };
   }
 
   return { ok: true };
