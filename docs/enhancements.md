@@ -575,23 +575,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-90** (web tests): `checkAppNavPrintSuppression` still misreads a few
-  selector and declaration shapes. These pass, also on `main`:
-  - a descendant hiding rule, `@media print { .foo .app-nav { display: none } }`;
-  - a rule that overrides its own hide,
-    `.app-nav { display: none; display: block }`;
-  - a custom property, `.app-nav { --nav-display: none }`;
-  - an earlier `display: block !important` show, which the check does not
-    model (for the screen rule either).
-
-  Since EN-89 it fails, on the safe side, for a descendant rule after the
-  hide in the same block (`.app-nav a { color: black }`) and for a hiding
-  rule that nests CSS (`.app-nav { display: none; &:hover { ... } }`).
-  `index.css` has none of them. Match each comma-separated selector of the
-  rule's prelude exactly, and read the last `display` declaration outside
-  nested rules, with its priority. Origin: `en-89-print-check-rule-order`
-  pre-push and pre-merge reviews, 2026-10-24.
-
 - **EN-91** (delivery): CI neither builds, publishes nor deploys the API and
   web images; today the operator builds them on the server with
   `docker compose ... up -d --build`. Build both images in CI so a broken
@@ -623,8 +606,28 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   pinning covers GitHub Actions only. Evidence: `apps/api/Dockerfile`,
   `apps/web/Dockerfile`, `docker-compose.prod.yml`. Origin: `deployment`
   pre-merge review (PR #283), 2026-10-25.
+- **EN-96** (web tests): `checkAppNavPrintSuppression` fails, on the safe
+  side, for a descendant rule after the hide in the same print block
+  (`.app-nav a { color: black }`) and for a hiding rule that nests CSS
+  (`.app-nav { display: none; &:hover { ... } }`). `index.css` has neither.
+  The later-rule check would need to count only rules whose selector list
+  names the selector itself, and the hiding rule's declarations would need
+  reading outside its nested rules. Split out of EN-90 by
+  `en-90-print-check-declarations`, 2026-10-25.
 
 ## Done
+
+- **EN-90** (web tests): `checkAppNavPrintSuppression` misread a few
+  selector and declaration shapes and passed them: a descendant hiding rule
+  (`.foo .app-nav { display: none }`), a rule that overrides its own hide
+  (`display: none; display: block`), a custom property
+  (`--nav-display: none`), and an earlier `display: block !important` show.
+  It now reads each rule's declarations: only `display` itself counts, the
+  last `!important` one wins (else the last one), a hiding rule must name
+  the selector itself in its list, and an earlier `!important` show fails
+  the check unless the print hide is `!important` too. A custom property no
+  longer counts as the screen rule either. Done in
+  `en-90-print-check-declarations`, PR #285.
 
 - **EN-80** (web UI): On a long form at phone width, the review session
   element page's save confirmation sat above the form, out of view of the

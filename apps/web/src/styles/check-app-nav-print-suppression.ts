@@ -1,4 +1,4 @@
-import { printBlocks, topLevelStyleRules, type PrintBlock } from './print-blocks';
+import { printBlocks, topLevelStyleRules, type PrintBlock, type StyleRule } from './print-blocks';
 
 // nav-menu/design.md Decision 6, verify-report CRITICAL-1 remediation: the
 // screen `.app-nav` rule and the `@media print` rule that hides it share
@@ -25,17 +25,55 @@ function escapeRegExp(text: string): string {
 // just a standalone `.app-nav { ... }`, so a valid grouped-selector CSS
 // refactor doesn't false-negative this check.
 function selectorRules(selector: string) {
-  const name = `${escapeRegExp(selector)}(?![\\w-])`;
-  const token = `${name}[^{}]*\\{`;
-  // The hidden rule must target the selector itself: only whitespace or a
-  // comma-separated list may follow it, so a descendant rule such as
-  // `.app-nav .x { display: none }` does not count as hiding the chrome.
-  const ownRule = `${name}\\s*(?:,[^{}]*)?\\{`;
+  const token = `${escapeRegExp(selector)}(?![\\w-])[^{}]*\\{`;
   return {
-    hidden: new RegExp(`${ownRule}[^}]*display:\\s*none[^}]*\\}`, 'i'),
-    visible: new RegExp(`${token}[^}]*display:\\s*(?!none)[a-z-]+[^}]*\\}`, 'i'),
+    // Every rule whose selector list mentions the selector, with its body.
+    bodies: new RegExp(`${token}([^{}]*)\\}`, 'g'),
     any: new RegExp(token),
   };
+}
+
+type Display = { readonly value: string; readonly important: boolean };
+
+// EN-90: the `display` value a declaration block ends up with: its last
+// `!important` one if there is any, otherwise its last one. A custom
+// property such as `--nav-display` is not `display`.
+function effectiveDisplay(body: string): Display | undefined {
+  let winner: Display | undefined;
+  for (const declaration of body.split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon === -1 || declaration.slice(0, colon).trim().toLowerCase() !== 'display') {
+      continue;
+    }
+    const raw = declaration.slice(colon + 1).trim();
+    const important = /!\s*important$/i.test(raw);
+    const value = raw
+      .replace(/!\s*important$/i, '')
+      .trim()
+      .toLowerCase();
+    if (important || !winner?.important) winner = { value, important };
+  }
+  return winner;
+}
+
+function isShown(display: Display | undefined): display is Display {
+  return display !== undefined && display.value !== 'none';
+}
+
+// The effective display of every rule for the selector in `text`.
+function displaysIn(text: string, bodies: RegExp): (Display | undefined)[] {
+  return [...text.matchAll(bodies)].map((match) => effectiveDisplay(match[1]));
+}
+
+// EN-90: a rule hides the selector only when one entry of its selector list
+// is the selector itself, so neither `.foo .app-nav` nor `.app-nav .x`
+// counts, and when its declarations end up at `display: none`.
+function hidingDisplay(rule: StyleRule, selector: string): Display | undefined {
+  // A nested rule (`.x { .app-nav { ... } }`) targets a descendant.
+  if (rule.body.includes('{')) return undefined;
+  if (!rule.prelude.split(',').some((entry) => entry.trim() === selector)) return undefined;
+  const display = effectiveDisplay(rule.body);
+  return display?.value === 'none' ? display : undefined;
 }
 
 // The text before `block` with every earlier print block cut out, so a rule
@@ -55,22 +93,34 @@ function screenTextBefore(blocks: readonly PrintBlock[], block: PrintBlock): str
   return text + block.before.slice(cursor);
 }
 
-// A print block that hides the selector, and the offset just past its last
-// top-level hiding rule.
-type Hider = { readonly block: PrintBlock; readonly hideEnd: number };
+// A print block that hides the selector, the offsets around its last
+// top-level hiding rule, and whether that rule hides with `!important`.
+type Hider = {
+  readonly block: PrintBlock;
+  readonly hideStart: number;
+  readonly hideEnd: number;
+  readonly important: boolean;
+};
 
 // EN-89: only a top-level rule of the block hides the selector, and only
 // its last one counts, since a rule after it would win the tie.
-function hider(block: PrintBlock, hidden: RegExp): Hider | undefined {
+function hider(block: PrintBlock, selector: string): Hider | undefined {
   const bodyStart = block.end - 1 - block.body.length;
-  let hideEnd = -1;
+  let found: Hider | undefined;
+  let ruleStart = 0;
   for (const rule of topLevelStyleRules(block.body)) {
-    // A nested rule (`.x { .app-nav { ... } }`) targets a descendant.
-    if (!rule.body.includes('{') && hidden.test(`${rule.prelude}{${rule.body}}`)) {
-      hideEnd = bodyStart + rule.end;
+    const display = hidingDisplay(rule, selector);
+    if (display) {
+      found = {
+        block,
+        hideStart: bodyStart + ruleStart,
+        hideEnd: bodyStart + rule.end,
+        important: display.important,
+      };
     }
+    ruleStart = rule.end;
   }
-  return hideEnd === -1 ? undefined : { block, hideEnd };
+  return found;
 }
 
 // The text after the last hiding rule of `decisive`, with every later span
@@ -115,7 +165,7 @@ export function checkAppNavPrintSuppression(
   for (const selector of selectors) {
     const rules = selectorRules(selector);
     const hiding = blocks
-      .map((block) => hider(block, rules.hidden))
+      .map((block) => hider(block, selector))
       .filter((found): found is Hider => found !== undefined);
 
     if (hiding.length === 0) {
@@ -134,10 +184,25 @@ export function checkAppNavPrintSuppression(
     }
 
     const decisive = alwaysHiding[alwaysHiding.length - 1];
-    if (!rules.visible.test(screenTextBefore(blocks, decisive.block))) {
+    if (!displaysIn(screenTextBefore(blocks, decisive.block), rules.bodies).some(isShown)) {
       return {
         ok: false,
         reason: `The screen ${selector} rule must be declared before the @media print block, or the source-order tie is undetermined.`,
+      };
+    }
+
+    // EN-90: an `!important` show before the hide outranks it whatever the
+    // source order, unless the hide is `!important` too.
+    const bodyStart = decisive.block.end - 1 - decisive.block.body.length;
+    const textBefore =
+      decisive.block.before + decisive.block.body.slice(0, decisive.hideStart - bodyStart);
+    const importantShow = displaysIn(textBefore, rules.bodies).some(
+      (display) => isShown(display) && display.important,
+    );
+    if (importantShow && !decisive.important) {
+      return {
+        ok: false,
+        reason: `An earlier ${selector} rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.`,
       };
     }
 
