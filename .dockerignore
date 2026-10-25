@@ -1,0 +1,15 @@
+# Build context for apps/api/Dockerfile and apps/web/Dockerfile (repository
+# root). Dependencies and build output are produced inside the image; local
+# env files hold secrets and must never reach an image layer.
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+.git
+.atl
+docs
+odd
+openspec
