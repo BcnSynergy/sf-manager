@@ -599,6 +599,19 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   nested rules, with its priority. Origin: `en-89-print-check-rule-order`
   pre-push and pre-merge reviews, 2026-10-24.
 
+- **EN-91** (delivery): CI neither builds, publishes nor deploys the API and
+  web images; today the operator builds them on the server with
+  `docker compose ... up -d --build`. Build both images in CI so a broken
+  Dockerfile fails the PR, and later publish them to a registry and deploy
+  from there. Evidence: `.github/workflows/ci.yml`, README "Production
+  deployment". Origin: `deployment` (S11), 2026-10-25; covers the deploy
+  part of TD-32.
+- **EN-92** (operations): The production stack has no monitoring or
+  alerting: nothing reports a down API, a restart loop after a failed
+  migration, or an expiring certificate. An external uptime check on
+  `/api/health` would cover the first two. Evidence:
+  `docker-compose.prod.yml`. Origin: `deployment` (S11), 2026-10-25.
+
 ## Done
 
 - **EN-89** (web tests): `checkAppNavPrintSuppression` counts only a

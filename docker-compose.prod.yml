@@ -1,0 +1,65 @@
+# Production stack (README "Production deployment"; spec `deployment`).
+#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build
+# The dev stack (docker-compose.yml) is a separate project, so both can run
+# on one machine without sharing containers or volumes.
+name: sf-manager-prod
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in prod.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in prod.env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in prod.env}
+    # No published port: only the API reaches the database.
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in prod.env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
+      CORS_ORIGIN: https://${SITE_ADDRESS:?set SITE_ADDRESS in prod.env}
+      # Caddy is the only hop in front of the API (ADR-011 open question 2).
+      TRUST_PROXY: '1'
+      # SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD are deliberately absent: the
+      # one-off admin seed run passes them with `-e` (README), so the
+      # long-running API never holds the admin password.
+    # No published port: Caddy forwards /api/* to it.
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      # Certificates and their account keys; losing them forces new ones.
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

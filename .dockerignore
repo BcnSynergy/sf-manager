@@ -13,3 +13,4 @@
 docs
 odd
 openspec
+**/prod.env
