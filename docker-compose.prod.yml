@@ -26,6 +26,9 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
+    # Node as PID 1 ignores SIGTERM, so without an init process every stop or
+    # upgrade waits for the timeout and then kills the API.
+    init: true
     depends_on:
       postgres:
         condition: service_healthy

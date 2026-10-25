@@ -609,8 +609,20 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-92** (operations): The production stack has no monitoring or
   alerting: nothing reports a down API, a restart loop after a failed
   migration, or an expiring certificate. An external uptime check on
-  `/api/health` would cover the first two. Evidence:
-  `docker-compose.prod.yml`. Origin: `deployment` (S11), 2026-10-25.
+  `/api/health` would cover the first two. The API service also has no
+  Compose healthcheck and `web` waits only for it to start, so Caddy answers
+  502 for `/api/*` during such a loop. Evidence: `docker-compose.prod.yml`.
+  Origin: `deployment` (S11) and its pre-push review, 2026-10-25.
+- **EN-93** (delivery): The API image is about 1.7 GB because it ships dev
+  dependencies, sources and tests: the Prisma CLI (`migrate deploy`) and
+  ts-node (admin seed) are dev dependencies. A multi-stage build with a
+  pruned runtime (Prisma CLI kept, seed compiled to JavaScript) would shrink
+  it. Evidence: `apps/api/Dockerfile`. Origin: `deployment` pre-push review,
+  2026-10-25.
+- **EN-94** (security): Caddy sends no HSTS or other security headers
+  (`Strict-Transport-Security`, `X-Content-Type-Options`,
+  `Referrer-Policy`, a Content Security Policy). Evidence:
+  `apps/web/Caddyfile`. Origin: `deployment` pre-push review, 2026-10-25.
 
 ## Done
 

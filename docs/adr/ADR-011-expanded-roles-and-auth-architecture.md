@@ -709,8 +709,10 @@ Answers the deployment question left open by open question 2 of the
 `deployment`) puts exactly one proxy, Caddy, in front of the API, and Caddy
 replaces any `X-Forwarded-For` a client sends with the address it sees. The
 stack therefore sets `TRUST_PROXY=1`. Checked on the running stack: failed
-logins carrying a different `X-Forwarded-For` each were still blocked after
-the fifth attempt. A CDN or a second proxy in front of Caddy changes the
+logins, each with a different email and a different `X-Forwarded-For`, all
+counted against one client key and were blocked after the tenth attempt, the
+per-client limit (the per-email limit of five never applied, since no email
+repeated). A CDN or a second proxy in front of Caddy changes the
 value (see the topology table above).
 
 The same stack serves the web app and the API on one origin (`/api/*` is

@@ -11,9 +11,20 @@
 		reverse_proxy api:3000
 	}
 
-	# Client-side routes have no file of their own, so they get index.html.
+	# Vite names built assets by content hash, so they never change. A missing
+	# one (an old tab after an upgrade) must be a real 404, not index.html.
+	handle /assets/* {
+		root * /srv
+		@exists file
+		header @exists Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Client-side routes have no file of their own, so they get index.html,
+	# which is revalidated on every load so an upgrade reaches open browsers.
 	handle {
 		root * /srv
+		header Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}

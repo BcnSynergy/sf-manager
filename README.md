@@ -239,7 +239,7 @@ spec is `openspec/specs/deployment/spec.md`.
 3. Create the first admin once. The credentials come from your shell, so they
    are not stored in `prod.env` or in the running API:
 
-   ```sh
+   ```bash
    export SEED_ADMIN_EMAIL=admin@your-domain.example
    read -rs SEED_ADMIN_PASSWORD && export SEED_ADMIN_PASSWORD
    docker compose -f docker-compose.prod.yml --env-file prod.env \

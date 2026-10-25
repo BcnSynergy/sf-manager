@@ -97,7 +97,7 @@ The production stack MUST set `TRUST_PROXY=1`, because Caddy is the only hop in 
 #### Scenario: Spoofed forwarding header
 
 - GIVEN the production stack is running
-- WHEN one client sends failed login attempts, each with a different `X-Forwarded-For` value
+- WHEN one client sends failed login attempts, each with a different email and a different `X-Forwarded-For` value
 - THEN they count against one client key, and the login limit blocks that client once it is reached
 
 ### Requirement: Persistent data and secrets
