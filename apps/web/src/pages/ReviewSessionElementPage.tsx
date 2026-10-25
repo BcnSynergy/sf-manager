@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import type { AnswerValue } from '@sf-manager/validation';
@@ -60,6 +60,8 @@ export function ReviewSessionElementPage() {
     clear: clearSaveError,
   } = useAlertMessage();
   const [saved, setSaved] = useState(false);
+  // Counts edits, so a save that resolves after one is not confirmed.
+  const editCount = useRef(0);
 
   const loadElement = useCallback(() => {
     if (sessionId === undefined || code === undefined) {
@@ -93,18 +95,23 @@ export function ReviewSessionElementPage() {
 
   // EN-80: after an edit the form no longer shows what was saved, so the
   // confirmation and its Continue step are withdrawn and Save leads again.
-  function setAnswer(questionId: string, value: AnswerValue) {
+  function markEdited() {
+    editCount.current += 1;
     setSaved(false);
+  }
+
+  function setAnswer(questionId: string, value: AnswerValue) {
+    markEdited();
     setAnswers((current) => new Map(current).set(questionId, value));
   }
 
   function changeMarkUnreviewed(value: boolean) {
-    setSaved(false);
+    markEdited();
     setMarkUnreviewed(value);
   }
 
   function changeObservations(value: string) {
-    setSaved(false);
+    markEdited();
     setObservations(value);
   }
 
@@ -115,6 +122,7 @@ export function ReviewSessionElementPage() {
     }
     clearSaveError();
     setSaved(false);
+    const editsAtSave = editCount.current;
 
     setSaving(true);
     try {
@@ -140,7 +148,9 @@ export function ReviewSessionElementPage() {
           })),
         });
       }
-      setSaved(true);
+      // An edit made while the request was in flight is not in what was
+      // saved, so it gets no confirmation.
+      setSaved(editCount.current === editsAtSave);
     } catch (caughtError) {
       // review-session-ui spec "A save failure is reported without losing
       // entered answers": no state reset here on failure — `answers`/

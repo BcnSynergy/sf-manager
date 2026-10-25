@@ -235,6 +235,8 @@ describe('ReviewSessionElementPage', () => {
     const questions = screen.getByTestId('review-session-element-questions');
     const save = screen.getByTestId('review-session-element-save');
     expect(region).toContainElement(screen.getByTestId('review-session-element-saved'));
+    // A descendant also reports FOLLOWING, so rule that out first.
+    expect(questions).not.toContainElement(region);
     expect(questions.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -266,6 +268,31 @@ describe('ReviewSessionElementPage', () => {
 
     expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
     expect(screen.queryByTestId('review-session-element-continue')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-session-element-save')).toHaveClass('sf-btn-primary');
+  });
+
+  it('shows no save confirmation when the form is edited while the save is in flight', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    let finishSave: (value: typeof recordedYesYes) => void = () => {};
+    mockedRecordEntry.mockReturnValue(
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+
+    renderPage();
+    await screen.findByTestId('review-session-element-question-q1');
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q2-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+    await waitFor(() => expect(mockedRecordEntry).toHaveBeenCalled());
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-NO'));
+    finishSave(recordedYesYes);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('review-session-element-save')).not.toBeDisabled(),
+    );
+    expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
     expect(screen.getByTestId('review-session-element-save')).toHaveClass('sf-btn-primary');
   });
 
