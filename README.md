@@ -204,6 +204,63 @@ merges until branch protection is updated. To roll back, remove branch
 protection first, then revert the workflow; see
 [ADR-017](docs/adr/ADR-017-ci-merge-barrier.md).
 
+## Production deployment
+
+`docker-compose.prod.yml` runs the whole system on one server with Docker:
+Postgres, the API, and Caddy, which serves the web app and forwards `/api/*`
+to the API on the same origin. Only Caddy publishes ports (80 and 443); it
+obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
+the domain's DNS must point at the server and both ports must be open. The
+spec is `openspec/specs/deployment/spec.md`.
+
+1. Create the env file from the example and fill in every value
+   (`openssl rand -hex 32` gives a URL-safe password or secret):
+
+   ```sh
+   cp prod.env.example prod.env
+   ```
+
+   `prod.env` holds the secrets and is ignored by Git and by the Docker build
+   context. `SITE_ADDRESS=localhost` runs the stack on a developer machine
+   with a certificate from Caddy's local authority, which the browser does
+   not trust until you accept it.
+
+2. Build and start the stack:
+
+   ```sh
+   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build
+   ```
+
+   The API applies pending migrations before it starts serving. If a
+   migration fails the API container exits and restarts, and the old schema
+   is never served; read why with
+   `docker compose -f docker-compose.prod.yml --env-file prod.env logs api`.
+
+3. Create the first admin once. The credentials come from your shell, so they
+   are not stored in `prod.env` or in the running API:
+
+   ```bash
+   export SEED_ADMIN_EMAIL=admin@your-domain.example
+   read -rs SEED_ADMIN_PASSWORD && export SEED_ADMIN_PASSWORD
+   docker compose -f docker-compose.prod.yml --env-file prod.env \
+     run --rm -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD api npx prisma db seed
+   unset SEED_ADMIN_PASSWORD
+   ```
+
+   The image runs with `NODE_ENV=production`, so the seed creates only the
+   admin, never the dev accounts. Running it again resets that admin's
+   password.
+
+4. To upgrade, check out the new version and run step 2 again.
+
+`TRUST_PROXY` is set to `1` in the compose file, because Caddy is the only
+proxy in front of the API and it replaces any `X-Forwarded-For` a client
+sends. Put another proxy or a CDN in front and the value must change (see
+the topology table above).
+
+Backups, monitoring and automated deploys are not part of this setup yet
+(TD-41, EN-91, EN-92). Swagger stays reachable at `/api/docs` (TD-40).
+
 ## Structure
 
 - `apps/api` — NestJS backend, Clean Architecture, module-first (ADR-002).

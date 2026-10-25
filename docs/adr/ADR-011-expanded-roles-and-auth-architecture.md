@@ -702,6 +702,24 @@ The 2026-10-12 addendum's remark that per-email keying and lockout remain out
 of scope is superseded by this addendum for the email limit; a persistent
 account lock remains out of scope.
 
+## Addendum (2026-10-25): `deployment` — production `TRUST_PROXY` value
+
+Answers the deployment question left open by open question 1 of the
+2026-10-07 addendum. The production stack (`docker-compose.prod.yml`, spec
+`deployment`) puts exactly one proxy, Caddy, in front of the API, and Caddy
+replaces any `X-Forwarded-For` a client sends with the address it sees. The
+stack therefore sets `TRUST_PROXY=1`. Checked on the running stack: failed
+logins, each with a different email and a different `X-Forwarded-For`, all
+counted against one client key and were blocked after the tenth attempt, the
+per-client limit (the per-email limit of five never applied, since no email
+repeated). A CDN or a second proxy in front of Caddy changes the
+value (see the topology table above).
+
+The same stack serves the web app and the API on one origin (`/api/*` is
+forwarded to the API without the prefix), which the production cookie needs:
+it is `Secure` and `SameSite=Strict`, so a separate API origin would not
+receive it.
+
 ## Alternatives Considered
 
 - **Full granular resource×action permission matrix, admin-configurable

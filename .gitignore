@@ -12,6 +12,7 @@ coverage/
 # Env
 .env
 .env.local
+prod.env
 
 # OS/editor
 .DS_Store

@@ -1,0 +1,31 @@
+# The stack's only public entry point (odd/tasks/deployment.md, S5-S7).
+# SITE_ADDRESS is the public domain, for which Caddy obtains and renews an
+# HTTPS certificate on its own; `localhost` gets a locally trusted one.
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	# The API keeps its routes: /api/auth/login reaches it as /auth/login.
+	# Caddy replaces any client-sent X-Forwarded-For with the real client
+	# address, which is why the API trusts exactly one hop (TRUST_PROXY=1).
+	handle_path /api/* {
+		reverse_proxy api:3000
+	}
+
+	# Vite names built assets by content hash, so they never change. A missing
+	# one (an old tab after an upgrade) must be a real 404, not index.html.
+	handle /assets/* {
+		root * /srv
+		@exists file
+		header @exists Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Client-side routes have no file of their own, so they get index.html,
+	# which is revalidated on every load so an upgrade reaches open browsers.
+	handle {
+		root * /srv
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

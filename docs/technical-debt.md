@@ -62,6 +62,18 @@ None.
   `td-32-api-typecheck` (#219). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
+  `deployment` added a manual production stack (README "Production
+  deployment"); deploying from CI is EN-91.
+- **TD-40**: Swagger UI and the OpenAPI document are public in production at
+  `/api/docs`, which lists every route and schema to anyone. Decide whether to
+  disable them when `NODE_ENV=production`, protect them, or keep them.
+  Evidence: `apps/api/src/main.ts` (`SwaggerModule.setup('docs', ...)`
+  unconditionally). Origin: `deployment`, 2026-10-25.
+- **TD-41**: The production stack has no database backups: the data lives
+  only in the `postgres-data` volume, so losing the server or the volume
+  loses everything. Needs a scheduled `pg_dump` (or volume snapshots) stored
+  off the server, and a tested restore. Evidence: `docker-compose.prod.yml`.
+  Origin: `deployment`, 2026-10-25.
 
 ## Resolved
 
