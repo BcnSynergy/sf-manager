@@ -574,4 +574,120 @@ describe('checkAppNavPrintSuppression', () => {
       },
     );
   });
+
+  // EN-90: the check reads each rule's declarations, so only the display
+  // value that wins in the cascade counts, and only for the selector itself.
+  describe('with declaration and selector shapes', () => {
+    it.each([
+      ['a descendant rule', '.foo .app-nav { display: none; }'],
+      ['a rule that shows the nav again', '.app-nav { display: none; display: block; }'],
+      ['a custom property', '.app-nav { --nav-display: none; }'],
+    ])('does not accept %s as hiding the nav in print', (_label, rule) => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { ${rule} }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: '.app-nav { display: none } is missing inside the @media print block.',
+      });
+    });
+
+    it('accepts a rule whose important hide outranks a later show', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none !important; display: block; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('does not accept a custom property as the screen rule', () => {
+      const css = `
+        .app-nav { --nav-display: flex; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'The screen .app-nav rule must be declared before the @media print block, or the source-order tie is undetermined.',
+      });
+    });
+
+    it('reports failure when an earlier important show outranks the print hide', () => {
+      const css = `
+        .app-nav { display: flex !important; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'An earlier .app-nav rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.',
+      });
+    });
+
+    it('accepts an important print hide after an important show', () => {
+      const css = `
+        .app-nav { display: flex !important; }
+        @media print { .app-nav { display: none !important; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it.each([
+      ['a selector', '&:hover { color: red; }'],
+      ['a media query', '@media (max-width: 600px) { gap: 0; }'],
+    ])('accepts a screen rule that nests %s', (_label, nested) => {
+      const css = `
+        .app-nav { display: flex; ${nested} }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    // The selector in an at-rule prelude must not hide the rule inside it.
+    it('reads a screen rule inside an at-rule that names the selector', () => {
+      const css = `
+        @supports selector(.app-nav) { .app-nav { display: flex; } }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('reports failure when an important show sits inside an at-rule that names the selector', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          @supports selector(.app-nav) { .app-nav { display: grid !important; } }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with !important'),
+      });
+    });
+
+    it('reports failure when an important show in an at-rule just before the hide outranks it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          @supports (display: grid) { .app-nav { display: grid !important; } }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with !important'),
+      });
+    });
+  });
 });
