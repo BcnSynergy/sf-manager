@@ -28,8 +28,10 @@ function selectorRules(selector: string) {
   const token = `${escapeRegExp(selector)}(?![\\w-])[^{}]*\\{`;
   return {
     // Every rule whose selector list mentions the selector, with its
-    // declarations up to any CSS nested in it.
-    bodies: new RegExp(`${token}([^{}]*)`, 'g'),
+    // declarations up to any CSS nested in it. The lookahead leaves them
+    // unconsumed, so a rule nested in an at-rule that names the selector
+    // (`@supports selector(.app-nav) { .app-nav { ... } }`) is still found.
+    bodies: new RegExp(`${token}(?=([^{}]*))`, 'g'),
     any: new RegExp(token),
   };
 }

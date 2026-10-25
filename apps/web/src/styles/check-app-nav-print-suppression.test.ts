@@ -650,6 +650,31 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
 
+    // The selector in an at-rule prelude must not hide the rule inside it.
+    it('reads a screen rule inside an at-rule that names the selector', () => {
+      const css = `
+        @supports selector(.app-nav) { .app-nav { display: flex; } }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('reports failure when an important show sits inside an at-rule that names the selector', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          @supports selector(.app-nav) { .app-nav { display: grid !important; } }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with !important'),
+      });
+    });
+
     it('reports failure when an important show in an at-rule just before the hide outranks it', () => {
       const css = `
         .app-nav { display: flex; }

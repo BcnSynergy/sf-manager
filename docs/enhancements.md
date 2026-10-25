@@ -615,9 +615,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   reading outside its nested rules. The `!important` show check (EN-90) also
   fails, on the safe side, for shows that cannot win in print: one in
   `@media screen { .app-nav { display: flex !important } }`, or one in a
-  descendant rule such as `.app-nav a { display: block !important }`. Split
-  out of EN-90 by `en-90-print-check-declarations` and its pre-push review,
-  2026-10-25.
+  descendant rule such as `.app-nav a { display: block !important }`. It
+  also fails for an `!important` hide followed by a plain hide in the same
+  block (only the last hiding rule's priority is compared), and for a hide
+  on a compound selector of the element itself
+  (`nav.app-nav { display: none }`), which `main` accepted. Split out of
+  EN-90 by `en-90-print-check-declarations` and its pre-push and pre-merge
+  reviews, 2026-10-25.
 - **EN-97** (web tests): `checkAppNavPrintSuppression` ignores specificity.
   It assumes every rule for the chrome has the specificity of one class, so
   `.shell .app-nav { display: flex !important }` before a print
@@ -625,6 +629,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   specific show wins and the nav prints. True before EN-90 as well;
   `index.css` has no such rule. Origin: `en-90-print-check-declarations`
   pre-push review, 2026-10-25.
+- **EN-98** (web tests): `checkAppNavPrintSuppression` misses an
+  `!important` show in a conditional print block after the deciding one,
+  e.g. `@media print and (min-width: 1px) { .app-nav { display: flex !important } .app-nav { display: none } }`:
+  the later-rule check cuts that block's span up to its own hide, so the
+  show is never read, and when the query applies the nav prints. True
+  before EN-90 as well; `index.css` has no such block. Origin:
+  `en-90-print-check-declarations` pre-merge review (PR #285), 2026-10-25.
 
 ## Done
 
