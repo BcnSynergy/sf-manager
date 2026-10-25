@@ -91,8 +91,21 @@ export function ReviewSessionElementPage() {
     void loadElement();
   }, [loadElement]);
 
+  // EN-80: after an edit the form no longer shows what was saved, so the
+  // confirmation and its Continue step are withdrawn and Save leads again.
   function setAnswer(questionId: string, value: AnswerValue) {
+    setSaved(false);
     setAnswers((current) => new Map(current).set(questionId, value));
+  }
+
+  function changeMarkUnreviewed(value: boolean) {
+    setSaved(false);
+    setMarkUnreviewed(value);
+  }
+
+  function changeObservations(value: string) {
+    setSaved(false);
+    setObservations(value);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -238,40 +251,13 @@ export function ReviewSessionElementPage() {
       <PageHeader title={t('reviewSession.element.title')} />
       {elementPanel}
 
-      <StatusRegion>
-        {saved && (
-          <Alert
-            tone="success"
-            testId="review-session-element-saved"
-            message={t('reviewSession.element.saveConfirmation')}
-          >
-            {/* spec "Saving is confirmed and the flow continues" — MUST be
-                returned to code entry for the next element. The code-entry
-                form lives on ReviewSessionDetailPage.tsx (design.md
-                Decision 10), so "returned to" is this explicit navigation
-                control rather than an automatic redirect that would hide the
-                confirmation the same requirement also demands. */}
-            <div className="sf-actions">
-              <button
-                type="button"
-                className="sf-btn sf-btn-primary"
-                data-testid="review-session-element-continue"
-                onClick={() => navigate(`/review-sessions/${sessionId}`)}
-              >
-                {t('reviewSession.element.backLabel')}
-              </button>
-            </div>
-          </Alert>
-        )}
-      </StatusRegion>
-
       <form className="sf-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         <label className="sf-choice" htmlFor="review-session-element-mark-unreviewed">
           <input
             id="review-session-element-mark-unreviewed"
             type="checkbox"
             checked={markUnreviewed}
-            onChange={(event) => setMarkUnreviewed(event.target.checked)}
+            onChange={(event) => changeMarkUnreviewed(event.target.checked)}
             data-testid="review-session-element-mark-unreviewed"
           />
           {t('reviewSession.element.markUnreviewedToggle')}
@@ -285,7 +271,7 @@ export function ReviewSessionElementPage() {
             <textarea
               id="review-session-element-observations-input"
               value={observations}
-              onChange={(event) => setObservations(event.target.value)}
+              onChange={(event) => changeObservations(event.target.value)}
               data-testid="review-session-element-observations"
             />
           </div>
@@ -316,6 +302,34 @@ export function ReviewSessionElementPage() {
           </section>
         )}
 
+        {/* EN-80: the confirmation sits by the Save button just pressed, so it
+            stays in view at the bottom of a long form on a phone. */}
+        <StatusRegion>
+          {saved && (
+            <Alert
+              tone="success"
+              testId="review-session-element-saved"
+              message={t('reviewSession.element.saveConfirmation')}
+            >
+              {/* spec "Saving is confirmed and the flow continues" — MUST be
+                  returned to code entry for the next element. The code-entry
+                  form lives on ReviewSessionDetailPage.tsx (design.md
+                  Decision 10), so "returned to" is this explicit navigation
+                  control rather than an automatic redirect that would hide the
+                  confirmation the same requirement also demands. */}
+              <div className="sf-actions">
+                <button
+                  type="button"
+                  className="sf-btn sf-btn-primary"
+                  data-testid="review-session-element-continue"
+                  onClick={() => navigate(`/review-sessions/${sessionId}`)}
+                >
+                  {t('reviewSession.element.backLabel')}
+                </button>
+              </div>
+            </Alert>
+          )}
+        </StatusRegion>
         {saveError && (
           <Alert
             key={saveErrorAlertKey}
@@ -325,7 +339,7 @@ export function ReviewSessionElementPage() {
           />
         )}
         <div className="sf-actions">
-          {/* Once saved, the next step is code entry (Continue above), so
+          {/* Once saved, the next step is code entry (Continue above it), so
               Save steps down to a secondary button: one primary per view. */}
           <button
             type="submit"

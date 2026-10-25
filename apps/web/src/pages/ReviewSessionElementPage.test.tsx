@@ -55,6 +55,25 @@ function renderPage() {
   );
 }
 
+const recordedYesYes = {
+  inspectableElementId: 'element-1',
+  reviewed: true,
+  observations: null,
+  answers: [
+    { questionId: 'q1', answer: 'YES' as const },
+    { questionId: 'q2', answer: 'YES' as const },
+  ],
+  recordedAt: '2026-09-08T00:00:00.000Z',
+};
+
+async function saveYesYes() {
+  await screen.findByTestId('review-session-element-question-q1');
+  fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+  fireEvent.click(screen.getByTestId('review-session-element-answer-q2-YES'));
+  fireEvent.click(screen.getByTestId('review-session-element-save'));
+  await screen.findByTestId('review-session-element-saved');
+}
+
 describe('ReviewSessionElementPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -201,6 +220,80 @@ describe('ReviewSessionElementPage', () => {
     expect(region).toContainElement(saved);
     expect(region).toContainElement(screen.getByTestId('review-session-element-continue'));
     expect(screen.getByRole('status')).toBe(region);
+  });
+
+  // EN-80: on a long form at phone width a confirmation above the form is
+  // out of view of the Save button just pressed.
+  it('shows the save confirmation between the questions and the Save button', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    mockedRecordEntry.mockResolvedValue(recordedYesYes);
+
+    renderPage();
+    await saveYesYes();
+
+    const region = screen.getByRole('status');
+    const questions = screen.getByTestId('review-session-element-questions');
+    const save = screen.getByTestId('review-session-element-save');
+    expect(region).toContainElement(screen.getByTestId('review-session-element-saved'));
+    expect(questions.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(region.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  // EN-80: once the user edits after a save, what is on screen is no longer
+  // what was saved, so the confirmation and its Continue step go away.
+  it.each([
+    [
+      'changing an answer',
+      () => fireEvent.click(screen.getByTestId('review-session-element-answer-q1-NO')),
+    ],
+    [
+      'toggling mark unreviewed',
+      () => fireEvent.click(screen.getByTestId('review-session-element-mark-unreviewed')),
+    ],
+  ])('withdraws the save confirmation after %s', async (_label, edit) => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    mockedRecordEntry.mockResolvedValue(recordedYesYes);
+
+    renderPage();
+    await saveYesYes();
+    expect(screen.getByTestId('review-session-element-save')).not.toHaveClass('sf-btn-primary');
+
+    edit();
+
+    expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('review-session-element-continue')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-session-element-save')).toHaveClass('sf-btn-primary');
+  });
+
+  it('withdraws the save confirmation after editing the observations', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    mockedRecordEntry.mockResolvedValue({
+      inspectableElementId: 'element-1',
+      reviewed: false,
+      observations: 'Room sealed',
+      answers: [],
+      recordedAt: '2026-09-08T00:00:00.000Z',
+    });
+
+    renderPage();
+    await screen.findByTestId('review-session-element-question-q1');
+    fireEvent.click(screen.getByTestId('review-session-element-mark-unreviewed'));
+    fireEvent.change(screen.getByTestId('review-session-element-observations'), {
+      target: { value: 'Room sealed' },
+    });
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+    await screen.findByTestId('review-session-element-saved');
+
+    fireEvent.change(screen.getByTestId('review-session-element-observations'), {
+      target: { value: 'Room sealed, key missing' },
+    });
+
+    expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-session-element-save')).toHaveClass('sf-btn-primary');
   });
 
   it('marks the element unreviewed with a reason instead of answering', async () => {
