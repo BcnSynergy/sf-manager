@@ -850,4 +850,32 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
   });
+  // Pre-merge review of print-check-cascade: `&`, and declarations directly
+  // in a group rule nested in a style rule, take the specificity of
+  // `:is(<the whole parent selector list>)`.
+  describe('with nesting under a selector list', () => {
+    it.each([
+      [
+        'a nested media query',
+        '.app-nav, .shell .nav { @media (min-width: 40rem) { display: flex; } }',
+        'display: none',
+      ],
+      ['a nested & rule', '.app-nav, .shell .nav { & { display: flex; } }', 'display: none'],
+      [
+        'a nested important media query',
+        '.app-nav, #x { @media (min-width: 40rem) { display: flex !important; } }',
+        'display: none !important',
+      ],
+    ])('reports failure when %s outranks the print hide', (_label, show, hide) => {
+      const css = `
+        ${show}
+        @media print { .app-nav { ${hide}; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with more weight'),
+      });
+    });
+  });
 });

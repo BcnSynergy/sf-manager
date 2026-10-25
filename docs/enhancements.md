@@ -645,7 +645,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   models the cascade in print: each rule is read with its media context,
   resolved nesting, the subject of its selector, its specificity and its
   own `display` declaration, and the hide must outrank every show that may
-  apply in print by `!important`, specificity, then order. A hide on a
+  apply in print by `!important`, specificity, then order. Nested `&`, and
+  declarations directly in a group rule nested in a style rule, take the
+  `:is()` specificity of the whole parent selector list. A hide on a
   compound selector (`nav.app-nav`) still fails on purpose: the check
   cannot know which element carries the class. Done in
   `print-check-cascade`, PR #286.

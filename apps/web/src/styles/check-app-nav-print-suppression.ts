@@ -8,11 +8,12 @@ import postcss, {
 import { printBlocks } from './print-blocks';
 
 // nav-menu/design.md Decision 6, verify-report CRITICAL-1 remediation: the
-// screen `.app-nav` rule and the `@media print` rule that hides it share
-// identical specificity (one class selector each), so CSS resolves the tie
-// by SOURCE ORDER, not by the media query — whichever is declared LATER in
-// the file wins during print. A pure, testable check so this invariant has
-// a regression guard instead of resting on a one-time by-eye review.
+// media query does not decide which of the screen `.app-nav` rule and the
+// `@media print` rule that hides it wins in print; the cascade does, by
+// `!important`, then specificity, then SOURCE ORDER. With one class selector
+// each, whichever is declared LATER in the file wins. A pure, testable check
+// so this invariant has a regression guard instead of resting on a one-time
+// by-eye review.
 export type PrintSuppressionResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
@@ -136,11 +137,17 @@ function subject(entry: string): string {
 function resolvedSelectors(rule: Rule): string[] {
   const parent = closestRule(rule.parent);
   if (!parent) return rule.selectors;
-  return resolvedSelectors(parent).flatMap((outer) =>
-    rule.selectors.map((inner) =>
-      inner.includes('&') ? inner.replaceAll('&', outer) : `${outer} ${inner}`,
-    ),
+  const outer = asOneSelector(resolvedSelectors(parent));
+  return rule.selectors.map((inner) =>
+    inner.includes('&') ? inner.replaceAll('&', outer) : `${outer} ${inner}`,
   );
+}
+
+// `&`, and declarations directly in a group rule nested in a style rule,
+// stand for `:is(<the whole parent list>)`, with its specificity: the most
+// specific entry of the list, not the entry that matched.
+function asOneSelector(list: readonly string[]): string {
+  return list.length === 1 ? list[0] : `:is(${list.join(', ')})`;
 }
 
 function closestRule(node: Node | Container | undefined): Rule | undefined {
@@ -200,7 +207,8 @@ function readStylesheet(root: Container) {
     styleBlocks.push({
       node: node as Container,
       order: order.get(node)!,
-      selectors: resolvedSelectors(rule),
+      selectors:
+        node.type === 'rule' ? resolvedSelectors(rule) : [asOneSelector(resolvedSelectors(rule))],
       display: effectiveDisplay(node as Container),
       printBlock: isPrintBlock(node) && !outerPrint ? undefined : outerPrint,
       mayApplyInPrint: [...ancestors, node]
@@ -224,14 +232,15 @@ function isInside(node: Node, ancestor: Node): boolean {
 // postcss reports the innermost open block and drops a leading byte order
 // mark, so an unclosed print block is found by printBlocks' own scan first.
 function syntaxErrorReason(error: CssSyntaxError, rawCss: string): string {
-  if (error.reason === 'Unclosed block') {
-    try {
-      printBlocks(rawCss);
-    } catch (unclosed) {
-      return (unclosed as Error).message;
-    }
+  if (error.reason !== 'Unclosed block') {
+    return `The stylesheet could not be parsed: ${error.reason}.`;
   }
-  if (error.reason === 'Unclosed block' && error.line !== undefined) {
+  try {
+    printBlocks(rawCss);
+  } catch (unclosed) {
+    return (unclosed as Error).message;
+  }
+  if (error.line !== undefined) {
     const lines = rawCss.split('\n');
     const offset =
       lines.slice(0, error.line - 1).reduce((sum, line) => sum + line.length + 1, 0) +
