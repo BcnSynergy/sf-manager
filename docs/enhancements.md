@@ -575,13 +575,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-80** (web UI): On a long form at phone width, the review session
-  element page's save confirmation sits above the form, out of view of the
-  Save button just pressed, and it stays up (with Continue as the primary
-  action) when the user then edits the answers. Changing either alters the
-  `review-session-ui` flow ("Saving is confirmed and the flow continues"),
-  so it edits that spec. Split out of EN-76 by `alert-announcements`,
-  2026-10-22.
 - **EN-90** (web tests): `checkAppNavPrintSuppression` still misreads a few
   selector and declaration shapes. These pass, also on `main`:
   - a descendant hiding rule, `@media print { .foo .app-nav { display: none } }`;
@@ -632,6 +625,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   pre-merge review (PR #283), 2026-10-25.
 
 ## Done
+
+- **EN-80** (web UI): On a long form at phone width, the review session
+  element page's save confirmation sat above the form, out of view of the
+  Save button just pressed, and stayed up (with Continue as the primary
+  action) when the user then edited the answers. The confirmation now sits
+  between the questions and Save, and any edit (an answer, the unreviewed
+  toggle, the observations) withdraws it and makes Save primary again; the
+  `review-session-ui` spec says so. Done in `en-80-save-confirmation`,
+  PR #284.
 
 - **EN-89** (web tests): `checkAppNavPrintSuppression` counts only a
   top-level `display: none` rule of a print block as hiding the chrome
