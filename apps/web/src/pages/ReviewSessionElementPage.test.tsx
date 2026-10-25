@@ -271,6 +271,20 @@ describe('ReviewSessionElementPage', () => {
     expect(screen.getByTestId('review-session-element-save')).toHaveClass('sf-btn-primary');
   });
 
+  it('confirms a save made after the confirmation was withdrawn', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    mockedRecordEntry.mockResolvedValue(recordedYesYes);
+
+    renderPage();
+    await saveYesYes();
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-NO'));
+    expect(screen.queryByTestId('review-session-element-saved')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+    expect(await screen.findByTestId('review-session-element-saved')).toBeInTheDocument();
+    expect(mockedRecordEntry).toHaveBeenCalledTimes(2);
+  });
+
   it('shows no save confirmation when the form is edited while the save is in flight', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
     let finishSave: (value: typeof recordedYesYes) => void = () => {};

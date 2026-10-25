@@ -177,7 +177,8 @@ recorded, the user MUST receive explicit confirmation that it was saved
 and MUST be returned to code entry for the next element. The confirmation
 MUST appear next to the Save control, and it MUST be withdrawn as soon as
 the user edits the form again, because what is on screen then differs from
-what was saved.
+what was saved. For the same reason, a save that completes after the user
+has edited the form MUST NOT be confirmed.
 
 #### Scenario: Questions are shown in snapshot order and answered
 
@@ -197,6 +198,13 @@ what was saved.
 - WHEN the user changes an answer, toggles marking the element unreviewed, or edits the observations
 - THEN the confirmation and its continue control MUST no longer be shown
 - AND Save MUST again be the primary action
+
+#### Scenario: An edit during the save is not confirmed
+
+- GIVEN a save is in progress
+- WHEN the user edits the form before it completes
+- THEN no save confirmation MUST be shown
+- AND Save MUST remain the primary action
 
 #### Scenario: A save failure is reported without losing entered answers
 
