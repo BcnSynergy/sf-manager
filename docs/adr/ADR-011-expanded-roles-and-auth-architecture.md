@@ -704,7 +704,7 @@ account lock remains out of scope.
 
 ## Addendum (2026-10-25): `deployment` — production `TRUST_PROXY` value
 
-Answers the deployment question left open by open question 2 of the
+Answers the deployment question left open by open question 1 of the
 2026-10-07 addendum. The production stack (`docker-compose.prod.yml`, spec
 `deployment`) puts exactly one proxy, Caddy, in front of the API, and Caddy
 replaces any `X-Forwarded-For` a client sends with the address it sees. The

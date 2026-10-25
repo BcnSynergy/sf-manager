@@ -623,6 +623,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`Strict-Transport-Security`, `X-Content-Type-Options`,
   `Referrer-Policy`, a Content Security Policy). Evidence:
   `apps/web/Caddyfile`. Origin: `deployment` pre-push review, 2026-10-25.
+- **EN-95** (delivery): The production images build from floating base tags
+  (`node:24-bookworm-slim`, `caddy:2-alpine`, `postgres:18-alpine`), so two
+  builds weeks apart can get different base layers and an upgrade is not
+  reproducible. Pin them by digest and let Dependabot update them; TD-32's
+  pinning covers GitHub Actions only. Evidence: `apps/api/Dockerfile`,
+  `apps/web/Dockerfile`, `docker-compose.prod.yml`. Origin: `deployment`
+  pre-merge review (PR #283), 2026-10-25.
 
 ## Done
 
