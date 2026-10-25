@@ -612,8 +612,19 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`.app-nav { display: none; &:hover { ... } }`). `index.css` has neither.
   The later-rule check would need to count only rules whose selector list
   names the selector itself, and the hiding rule's declarations would need
-  reading outside its nested rules. Split out of EN-90 by
-  `en-90-print-check-declarations`, 2026-10-25.
+  reading outside its nested rules. The `!important` show check (EN-90) also
+  fails, on the safe side, for shows that cannot win in print: one in
+  `@media screen { .app-nav { display: flex !important } }`, or one in a
+  descendant rule such as `.app-nav a { display: block !important }`. Split
+  out of EN-90 by `en-90-print-check-declarations` and its pre-push review,
+  2026-10-25.
+- **EN-97** (web tests): `checkAppNavPrintSuppression` ignores specificity.
+  It assumes every rule for the chrome has the specificity of one class, so
+  `.shell .app-nav { display: flex !important }` before a print
+  `.app-nav { display: none !important }` still passes, although the more
+  specific show wins and the nav prints. True before EN-90 as well;
+  `index.css` has no such rule. Origin: `en-90-print-check-declarations`
+  pre-push review, 2026-10-25.
 
 ## Done
 

@@ -637,5 +637,32 @@ describe('checkAppNavPrintSuppression', () => {
 
       expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
     });
+
+    it.each([
+      ['a selector', '&:hover { color: red; }'],
+      ['a media query', '@media (max-width: 600px) { gap: 0; }'],
+    ])('accepts a screen rule that nests %s', (_label, nested) => {
+      const css = `
+        .app-nav { display: flex; ${nested} }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('reports failure when an important show in an at-rule just before the hide outranks it', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          @supports (display: grid) { .app-nav { display: grid !important; } }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with !important'),
+      });
+    });
   });
 });

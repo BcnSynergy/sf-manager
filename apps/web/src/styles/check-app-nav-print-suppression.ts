@@ -27,8 +27,9 @@ function escapeRegExp(text: string): string {
 function selectorRules(selector: string) {
   const token = `${escapeRegExp(selector)}(?![\\w-])[^{}]*\\{`;
   return {
-    // Every rule whose selector list mentions the selector, with its body.
-    bodies: new RegExp(`${token}([^{}]*)\\}`, 'g'),
+    // Every rule whose selector list mentions the selector, with its
+    // declarations up to any CSS nested in it.
+    bodies: new RegExp(`${token}([^{}]*)`, 'g'),
     any: new RegExp(token),
   };
 }
@@ -107,10 +108,12 @@ type Hider = {
 function hider(block: PrintBlock, selector: string): Hider | undefined {
   const bodyStart = block.end - 1 - block.body.length;
   let found: Hider | undefined;
-  let ruleStart = 0;
   for (const rule of topLevelStyleRules(block.body)) {
     const display = hidingDisplay(rule, selector);
     if (display) {
+      // The rule's own start, so an at-rule just before it stays in the
+      // text before the hide.
+      const ruleStart = rule.end - 1 - rule.body.length - 1 - rule.prelude.length;
       found = {
         block,
         hideStart: bodyStart + ruleStart,
@@ -118,7 +121,6 @@ function hider(block: PrintBlock, selector: string): Hider | undefined {
         important: display.important,
       };
     }
-    ruleStart = rule.end;
   }
   return found;
 }
