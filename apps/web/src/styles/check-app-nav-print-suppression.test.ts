@@ -690,4 +690,192 @@ describe('checkAppNavPrintSuppression', () => {
       });
     });
   });
+
+  // EN-96, EN-97, EN-98: the check models the cascade in print, so a rule
+  // counts only when it styles the chrome itself and may apply in print, and
+  // a show must outrank the hide by !important, specificity, then order.
+  describe('with the cascade in print', () => {
+    it.each([
+      [
+        'a descendant rule after the hide',
+        '.app-nav { display: flex; } @media print { .app-nav { display: none; } .app-nav a { color: black; } }',
+      ],
+      [
+        'a hiding rule that nests CSS',
+        '.app-nav { display: flex; } @media print { .app-nav { display: none; &:hover { color: red; } } }',
+      ],
+      [
+        'an important show in @media screen',
+        '.app-nav { display: flex; } @media screen { .app-nav { display: flex !important; } } @media print { .app-nav { display: none; } }',
+      ],
+      [
+        'an important show on a descendant',
+        '.app-nav { display: flex; } .app-nav a { display: block !important; } @media print { .app-nav { display: none; } }',
+      ],
+      [
+        'an important hide followed by a plain hide',
+        '.app-nav { display: flex !important; } @media print { .app-nav { display: none !important; } .app-nav { display: none; } }',
+      ],
+      [
+        'a show whose extra selector counts nothing',
+        ':where(.shell) .app-nav { display: flex; } @media print { .app-nav { display: none; } }',
+      ],
+    ])('accepts %s', (_label, css) => {
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+
+    it('does not accept a hide on a compound selector, which may miss other elements', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { nav.app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: '.app-nav { display: none } is missing inside the @media print block.',
+      });
+    });
+
+    it.each([
+      [
+        'with !important',
+        '.shell .app-nav { display: flex !important; }',
+        'display: none !important',
+      ],
+      ['without !important', '.shell .app-nav { display: flex; }', 'display: none'],
+    ])(
+      'reports failure when a more specific show outranks the print hide %s',
+      (_label, show, hide) => {
+        const css = `
+          .app-nav { display: flex; }
+          ${show}
+          @media print { .app-nav { ${hide}; } }
+        `;
+
+        expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+          ok: false,
+          reason:
+            'A .app-nav rule that may apply in print (.shell .app-nav) shows it with more weight than the @media print block hiding it; it would still print.',
+        });
+      },
+    );
+
+    it('reports failure when a later important show outranks an earlier important hide', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print {
+          .app-nav { display: none !important; }
+          .app-nav { display: block !important; }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with more weight'),
+      });
+    });
+
+    it('reports failure when an important show sits in a later conditional print block', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        @media print and (min-width: 1px) {
+          .app-nav { display: flex !important; }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with !important'),
+      });
+    });
+
+    it('accepts a later conditional print block that shows the nav before hiding it again', () => {
+      const css = `
+        .app-nav { display: flex; }
+        @media print { .app-nav { display: none; } }
+        @media print and (min-width: 1px) {
+          .app-nav { display: flex; }
+          .app-nav { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+  });
+
+  // Pre-push verification of print-check-cascade: the reasons main gave for
+  // these shapes stay the same.
+  describe('with the reasons kept from the previous check', () => {
+    it.each([
+      [
+        'an unclosed rule inside it',
+        '.app-nav { display: flex; }\n@media print { .app-nav { display: none;',
+      ],
+      [
+        'an unclosed at-rule inside it',
+        '.app-nav { display: flex; } @media print { .app-nav { display: none; } @supports (x: y) { .a { color: red; }',
+      ],
+      ['a byte order mark before it', '﻿@media print { .app-nav { display: none; }'],
+    ])('names an unclosed print block with %s', (_label, css) => {
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason: 'The @media print block is not properly closed.',
+      });
+    });
+
+    it('reports an earlier important show before a later rule', () => {
+      const css = `
+        .app-nav { display: flex !important; }
+        @media print { .app-nav { display: none; } }
+        .app-nav { color: red; }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({
+        ok: false,
+        reason:
+          'An earlier .app-nav rule shows it with !important, which outranks the @media print block hiding it without !important; it would still print.',
+      });
+    });
+
+    it('does not take an escaped longer class name for the nav', () => {
+      const css = `
+        .app-nav { display: flex; }
+        .app-nav\\:x { display: flex !important; }
+        @media print { .app-nav { display: none; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toEqual({ ok: true });
+    });
+  });
+  // Pre-merge review of print-check-cascade: `&`, and declarations directly
+  // in a group rule nested in a style rule, take the specificity of
+  // `:is(<the whole parent selector list>)`.
+  describe('with nesting under a selector list', () => {
+    it.each([
+      [
+        'a nested media query',
+        '.app-nav, .shell .nav { @media (min-width: 40rem) { display: flex; } }',
+        'display: none',
+      ],
+      ['a nested & rule', '.app-nav, .shell .nav { & { display: flex; } }', 'display: none'],
+      [
+        'a nested important media query',
+        '.app-nav, #x { @media (min-width: 40rem) { display: flex !important; } }',
+        'display: none !important',
+      ],
+    ])('reports failure when %s outranks the print hide', (_label, show, hide) => {
+      const css = `
+        ${show}
+        @media print { .app-nav { ${hide}; } }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, NAV_ONLY)).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining('shows it with more weight'),
+      });
+    });
+  });
 });
