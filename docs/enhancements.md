@@ -647,6 +647,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   S3-compatible storage from the stack would close that gap, at the cost of
   storage credentials in `prod.env` and an upload tool in the backup image.
   Origin: `td-41-db-backups`, 2026-10-26 (user chose local dumps first).
+- **EN-105** (deployment tests): `deploy/postgres-backup.sh` was tested by
+  hand in an isolated compose project, but nothing automated runs it, and
+  two checks are missing: restoring a dump taken before the newest
+  migrations (the deployment spec's Restore scenario says the API then
+  applies them), and `shellcheck`, which is not part of CI. Origin:
+  `td-41-db-backups` pre-push review (#288), 2026-10-26.
 
 ## Done
 
