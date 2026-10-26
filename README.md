@@ -274,30 +274,35 @@ and by the Docker build context. Read what it did with
 
 These dumps live on the same server as the database, so **they do not
 survive losing the server**. Copy `backups/` somewhere else on a schedule,
-for example with `rsync` or `rclone` from cron, or include it in the
-provider's server snapshots.
+for example with `rsync` or `rclone` from root's cron, or include it in the
+provider's server snapshots. The dumps hold password hashes and personal
+data, so they are readable by root only.
+
+If `BACKUP_RETENTION_DAYS` is not a positive integer without a leading zero,
+the service fails at start and restarts in a loop; `logs backup` shows the
+error.
 
 Take a dump now:
 
 ```sh
-docker compose -f docker-compose.prod.yml --env-file prod.env \
-  exec backup sh /usr/local/bin/postgres-backup.sh once
+docker compose -f docker-compose.prod.yml --env-file prod.env   run --rm backup once
 ```
 
 Restore one. This replaces everything in the database with the dump, so
 stop the API first and start it again afterwards; it applies any migrations
-newer than the dump:
+newer than the dump. If the restore fails, the database is left empty: do
+not start the API, fix the cause and restore again.
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file prod.env stop api
-docker compose -f docker-compose.prod.yml --env-file prod.env \
-  exec backup sh /usr/local/bin/postgres-backup.sh restore sfmanager-<timestamp>.dump
+docker compose -f docker-compose.prod.yml --env-file prod.env   run --rm backup restore sfmanager-<timestamp>.dump
 docker compose -f docker-compose.prod.yml --env-file prod.env start api
 ```
 
-On a new server, put the dumps in `backups/`, start only
-`docker compose -f docker-compose.prod.yml --env-file prod.env up -d postgres backup`,
-run the restore command above, then run step 2.
+On a new server, put the dumps in `backups/`, run only the restore command
+(it starts Postgres but not the API or the daily backups), then run step 2.
+Starting the whole stack first would dump the empty database and could
+delete copied dumps older than the retention period.
 
 ## Structure
 

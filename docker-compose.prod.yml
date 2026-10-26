@@ -47,7 +47,7 @@ services:
     # No published port: Caddy forwards /api/* to it.
 
   # Daily pg_dump into ./backups on the host (TD-41). Copying the dumps off
-  # the server is the operator's job (README "Production deployment").
+  # the server is the operator's job (README "Database backups").
   backup:
     image: postgres:18-alpine
     restart: unless-stopped
