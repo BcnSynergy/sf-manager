@@ -2,8 +2,8 @@
 # Smoke test for the production stack (EN-91; spec `deployment`, "Images
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
 # starts the whole stack on https://localhost with throwaway secrets, checks
-# that the web app and the API answer, then removes the stack and its
-# volumes. CI runs it on every PR and push to main; run it from the
+# that the API and the web app answer and that the backup service writes a
+# dump, then removes the stack and its volumes. CI runs it on every PR and push to main; run it from the
 # repository root:
 #
 #   sh deploy/smoke-test.sh
@@ -32,6 +32,8 @@ cleanup() {
   rm -f "$env_file"
 }
 trap cleanup EXIT
+# dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
+trap 'exit 130' INT TERM
 
 fail() {
   echo "smoke: $1" >&2
@@ -55,7 +57,7 @@ done
   fail "/api/health never returned {\"status\":\"ok\",\"db\":\"ok\"} (last: '$health')"
 echo "smoke: /api/health ok"
 
-status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/)
+status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
 echo "smoke: web app 200"
 

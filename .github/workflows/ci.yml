@@ -80,18 +80,15 @@ jobs:
 
   # Publishes the images to GitHub Container Registry once main is green
   # (EN-91). It is the only job allowed to write packages; `ci` stays
-  # read-only. Each image gets the short commit SHA and `main` as tags.
+  # read-only. Every green push gets its `sha-<short SHA>` tag; `main` moves
+  # only while main still points at this commit, because the ci jobs of two
+  # quick merges run in parallel and can finish out of order.
   publish:
     name: publish
     needs: ci
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    # Two quick merges would otherwise publish in parallel, and the slower
-    # one could leave `main` on the older commit.
-    concurrency:
-      group: publish-main
-      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -108,6 +105,13 @@ jobs:
           short=$(git rev-parse --short=7 HEAD)
           for app in api web; do
             image="ghcr.io/bcnsynergy/sf-manager-$app"
-            docker build -f "apps/$app/Dockerfile" -t "$image:sha-$short" -t "$image:main" .
-            docker push --all-tags "$image"
+            docker build -f "apps/$app/Dockerfile" -t "$image:sha-$short" .
+            docker push "$image:sha-$short"
+            head=$(git ls-remote origin refs/heads/main | cut -f1)
+            if [ "$head" = "$GITHUB_SHA" ]; then
+              docker tag "$image:sha-$short" "$image:main"
+              docker push "$image:main"
+            else
+              echo "main moved on to $head; its own publish run moves $image:main"
+            fi
           done
