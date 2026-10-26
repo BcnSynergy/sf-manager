@@ -24,8 +24,7 @@ RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build --workspace=@sf-manager/w
 
 FROM caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-web, EN-91)
-# to this repository; it inherits the repository's access permissions (not its
-# visibility: GHCR makes a new package private).
+# to this repository, so it inherits the repository's access permissions.
 LABEL org.opencontainers.image.source=https://github.com/BcnSynergy/sf-manager
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv

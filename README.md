@@ -284,9 +284,9 @@ must be free; it uses its own Compose project and removes it afterwards).
 When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
 and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and
 moves their `main` tag while `main` still points at that commit. The packages are linked to this repository and inherit its access
-permissions, but GHCR creates them **private**: after the first publish, set
-each one to Public once (the package's Package settings, Change visibility)
-if anonymous `docker pull` should work. The server does not use them yet: it
+permissions. After the first publish (#291) both were public: an anonymous
+`docker pull` works. Check or change that in each package's Package
+settings. The server does not use them yet: it
 still builds with `up -d --build`, and deploying from the registry is EN-91.
 
 Monitoring and automated deploys are not part of this setup yet (EN-91,

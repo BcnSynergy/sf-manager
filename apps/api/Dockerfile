@@ -4,8 +4,7 @@
 FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
 
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-api, EN-91)
-# to this repository; it inherits the repository's access permissions (not its
-# visibility: GHCR makes a new package private).
+# to this repository, so it inherits the repository's access permissions.
 LABEL org.opencontainers.image.source=https://github.com/BcnSynergy/sf-manager
 
 # Prisma's schema engine (`prisma migrate deploy`) links against OpenSSL.
