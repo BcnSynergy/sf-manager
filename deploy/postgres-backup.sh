@@ -26,13 +26,16 @@ umask 077
 backup_dir=/backups
 retention_days="${BACKUP_RETENTION_DAYS:-14}"
 
-# A leading zero is rejected too: shell arithmetic would read it as octal.
-case "$retention_days" in
-  '' | *[!0-9]* | 0*)
-    echo "BACKUP_RETENTION_DAYS must be a positive integer, got \"$retention_days\"" >&2
-    exit 1
-    ;;
-esac
+# Only dumping uses the retention, so a bad value never blocks a restore.
+check_retention() {
+  # A leading zero is rejected too: shell arithmetic would read it as octal.
+  case "$retention_days" in
+    '' | *[!0-9]* | 0*)
+      echo "BACKUP_RETENTION_DAYS must be a positive integer, got \"$retention_days\"" >&2
+      exit 1
+      ;;
+  esac
+}
 
 backup_once() {
   # A stop or crash mid-dump leaves its temporary file behind (the shell
@@ -43,7 +46,8 @@ backup_once() {
 
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
   target="$backup_dir/sfmanager-$stamp.dump"
-  partial="$backup_dir/.sfmanager-$stamp.dump.partial"
+  # The PID keeps a manual dump and the loop's apart within the same second.
+  partial="$backup_dir/.sfmanager-$stamp-$$.dump.partial"
 
   if ! pg_dump --format=custom --file="$partial"; then
     rm -f "$partial"
@@ -70,7 +74,11 @@ restore() {
   fi
 
   dropdb --maintenance-db=postgres --force --if-exists "$PGDATABASE"
-  createdb --maintenance-db=postgres "$PGDATABASE"
+  if ! createdb --maintenance-db=postgres "$PGDATABASE"; then
+    echo "backup: restore failed and $PGDATABASE no longer exists;" \
+      "do not start the API, fix the cause and restore again" >&2
+    exit 1
+  fi
   if ! pg_restore --no-owner --exit-on-error --single-transaction \
     --dbname="$PGDATABASE" "$file"; then
     echo "backup: restore failed and $PGDATABASE is now empty;" \
@@ -81,8 +89,9 @@ restore() {
 }
 
 case "${1:-}" in
-  '') ;;
+  '') check_retention ;;
   once)
+    check_retention
     backup_once
     exit
     ;;

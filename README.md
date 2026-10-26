@@ -285,7 +285,8 @@ error.
 Take a dump now:
 
 ```sh
-docker compose -f docker-compose.prod.yml --env-file prod.env   run --rm backup once
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm backup once
 ```
 
 Restore one. This replaces everything in the database with the dump, so
@@ -295,13 +296,15 @@ not start the API, fix the cause and restore again.
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file prod.env stop api
-docker compose -f docker-compose.prod.yml --env-file prod.env   run --rm backup restore sfmanager-<timestamp>.dump
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm backup restore sfmanager-<timestamp>.dump
 docker compose -f docker-compose.prod.yml --env-file prod.env start api
 ```
 
 On a new server, put the dumps in `backups/`, run only the restore command
-(it starts Postgres but not the API or the daily backups), then run step 2.
-Starting the whole stack first would dump the empty database and could
+(it starts Postgres but not the API or the daily backups), then build and
+start the stack (step 2 of the list above). Skip step 3: the dump already
+holds the admin. Starting the whole stack first would dump the empty database and could
 delete copied dumps older than the retention period.
 
 ## Structure
