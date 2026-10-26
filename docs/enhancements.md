@@ -661,7 +661,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 ## Done
 
 - **EN-94** (security): Caddy now sends `X-Content-Type-Options: nosniff`
-  and `Referrer-Policy: strict-origin-when-cross-origin` on every response,
+  and `Referrer-Policy: strict-origin-when-cross-origin` on every HTTPS response,
   HSTS (`max-age=31536000`) unless the site is `localhost`, and a strict
   Content Security Policy outside `/api/*`. The web app sets Zod's
   `jitless` mode so its `new Function` probe is not reported as a CSP

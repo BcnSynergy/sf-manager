@@ -114,7 +114,7 @@ Every HTTPS response from Caddy MUST carry `X-Content-Type-Options: nosniff` and
 
 #### Scenario: No violations
 
-- GIVEN a signed-in user in a browser
+- GIVEN a signed-in user in a browser, with the web app served by the production stack
 - WHEN they open each section of the app and submit a form
 - THEN the browser reports no Content Security Policy violation
 
