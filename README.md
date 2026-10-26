@@ -259,6 +259,12 @@ proxy in front of the API and it replaces any `X-Forwarded-For` a client
 sends. Put another proxy or a CDN in front and the value must change (see
 the topology table above).
 
+Caddy adds security headers (`apps/web/Caddyfile`): `nosniff` and a
+referrer policy on every HTTPS response, HSTS unless `SITE_ADDRESS=localhost`, and a
+Content Security Policy that allows only same-origin resources (plus `data:`
+images and fonts) outside `/api/*`. Anything the web app loads from another
+origin, or any inline script or style, needs the policy widened first.
+
 Monitoring and automated deploys are not part of this setup yet (EN-91,
 EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
 `API_DOCS_ENABLED=true`.
