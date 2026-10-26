@@ -8,28 +8,29 @@ Makes screen readers announce the save confirmations and the action errors of th
 
 ### Requirement: Save Confirmations Appear Inside a Persistent Status Region
 
-A save confirmation MUST appear inside a `role="status"` live region that is on the page before the confirmation appears. The region MUST stay on the page, empty, while no confirmation is shown, and MUST NOT change the page layout while empty, on screen or in print. The confirmation itself MUST NOT carry its own `role`.
+A save confirmation MUST appear inside a `role="status"` live region that is on the page before the confirmation appears. Each covered form has its own region, next to it, so a confirmation shows where the user acted: a page has exactly one region per covered form. The region MUST stay on the page, empty, while no confirmation is shown, and MUST NOT change the page layout while empty, on screen or in print. The confirmation itself MUST NOT carry its own `role`.
 
 The confirmations covered are:
 
-| #   | Page                 | Confirmation                                    |
-| --- | -------------------- | ----------------------------------------------- |
-| 1   | OrganizationProfile  | the save confirmation                           |
-| 2   | ReviewSessionElement | the save confirmation, with its Continue action |
+| #   | Page                 | Form             | Confirmation                                    |
+| --- | -------------------- | ---------------- | ----------------------------------------------- |
+| 1   | OrganizationProfile  | the profile form | the save confirmation                           |
+| 2   | OrganizationProfile  | the logo section | the upload confirmation                         |
+| 3   | ReviewSessionElement | the entry form   | the save confirmation, with its Continue action |
 
 #### Scenario: The region is there before the save
 
-- GIVEN a covered page showing its save form, with nothing saved yet
+- GIVEN a covered page showing its covered forms, with nothing saved yet
 - WHEN the page renders
-- THEN exactly one `role="status"` region MUST be present and it MUST be empty
+- THEN exactly one `role="status"` region per covered form MUST be present, and each MUST be empty
 
 #### Scenario: The confirmation appears inside that region
 
-- GIVEN a covered page with its empty status region
-- WHEN the user saves successfully
-- THEN the confirmation MUST appear inside that same region
+- GIVEN a covered page with its empty status regions
+- WHEN the user saves a covered form successfully
+- THEN the confirmation MUST appear inside that form's region
 - AND the confirmation MUST NOT have a `role` of its own
-- AND the page MUST still have exactly one `role="status"` region
+- AND the page MUST still have exactly one `role="status"` region per covered form
 
 #### Scenario: The empty region takes no space
 

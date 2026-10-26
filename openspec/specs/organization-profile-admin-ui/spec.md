@@ -149,7 +149,9 @@ The file picker MUST offer PNG, JPEG and WebP only. A chosen file over
 2 MB, or whose type is not PNG, JPEG or WebP, MUST be rejected with a
 message and no request sent. The upload control MUST be disabled until a
 file is chosen and while an upload is in flight. On success the section
-MUST confirm the upload and show the new logo without a page reload. A
+MUST confirm the upload in its own status region, next to its controls
+(`web-alert-announcements`), and MUST show the new logo without a page
+reload; choosing another file withdraws the confirmation. A
 failed upload MUST show a message chosen by the response's status and
 code (413: too large; `LOGO_UNSUPPORTED_FORMAT`: wrong format; anything
 else: a generic failure) and MUST keep the previous logo.

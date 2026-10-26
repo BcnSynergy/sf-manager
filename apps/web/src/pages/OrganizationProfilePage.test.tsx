@@ -41,6 +41,18 @@ const filledProfile = {
   hasLogo: false,
 };
 
+// web-alert-announcements: one status region per covered form — the
+// profile form's and the logo section's.
+function statusRegions() {
+  const logoSection = screen.getByRole('region', { name: 'Logo' });
+  const all = screen.getAllByRole('status');
+  expect(all).toHaveLength(2);
+  return {
+    profile: all.find((region) => !logoSection.contains(region))!,
+    logo: all.find((region) => logoSection.contains(region))!,
+  };
+}
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/organization-profile']}>
@@ -67,6 +79,34 @@ describe('OrganizationProfilePage', () => {
       '/logo?v=0',
     );
     expect(screen.getByTestId('organization-logo-input')).toBeInTheDocument();
+  });
+
+  it('confirms a logo upload in the logo section status region, without saving the form (organization-logo S1)', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+    vi.mocked(organizationProfileApi.uploadOrganizationLogo).mockResolvedValue({
+      ...filledProfile,
+      hasLogo: true,
+    });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=1');
+    renderPage();
+    const name = await screen.findByTestId('organization-profile-name');
+    fireEvent.change(name, { target: { value: 'Unsaved Name' } });
+    const regions = statusRegions();
+    expect(regions.logo).toBeEmptyDOMElement();
+
+    fireEvent.change(screen.getByTestId('organization-logo-input'), {
+      target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] },
+    });
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    const confirmation = await screen.findByTestId('organization-logo-success');
+    expect(confirmation).toHaveTextContent('Logo uploaded.');
+    expect(confirmation).not.toHaveAttribute('role');
+    expect(regions.logo).toContainElement(confirmation);
+    expect(regions.profile).toBeEmptyDOMElement();
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
+    expect(name).toHaveValue('Unsaved Name');
   });
 
   it('shows the no-logo message when the profile has no logo', async () => {
@@ -509,8 +549,7 @@ describe('OrganizationProfilePage route access', () => {
       renderPage();
 
       const submit = await screen.findByTestId('organization-profile-submit');
-      // The logo section has its own status region after this one.
-      const region = screen.getAllByRole('status')[0];
+      const region = statusRegions().profile;
       expect(region).toBeEmptyDOMElement();
 
       fireEvent.click(submit);
@@ -518,7 +557,7 @@ describe('OrganizationProfilePage route access', () => {
       const success = await screen.findByTestId('organization-profile-success');
       expect(success).not.toHaveAttribute('role');
       expect(region).toContainElement(success);
-      expect(screen.getAllByRole('status')[0]).toBe(region);
+      expect(statusRegions().profile).toBe(region);
     });
 
     it('shows the save failure as a danger alert', async () => {

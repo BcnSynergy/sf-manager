@@ -102,7 +102,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
           data-testid="organization-logo-preview"
         />
       ) : (
-        <p data-testid="organization-logo-empty">
+        <p className="sf-empty" data-testid="organization-logo-empty">
           {t(imageFailed ? 'organizationProfile.logoLoadError' : 'organizationProfile.noLogo')}
         </p>
       )}
