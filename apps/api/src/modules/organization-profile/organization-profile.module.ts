@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ORGANIZATION_PROFILE_READER } from './application/ports/organization-profile.reader.port';
 import { ORGANIZATION_PROFILE_REPOSITORY } from './application/ports/organization-profile.repository.port';
+import { GetOrganizationLogoUseCase } from './application/use-cases/get-organization-logo.use-case';
 import { GetOrganizationProfileUseCase } from './application/use-cases/get-organization-profile.use-case';
 import { UpdateOrganizationProfileUseCase } from './application/use-cases/update-organization-profile.use-case';
+import { UploadOrganizationLogoUseCase } from './application/use-cases/upload-organization-logo.use-case';
 import { PrismaOrganizationProfileRepository } from './infrastructure/persistence/prisma-organization-profile.repository';
 import { OrganizationProfileController } from './presentation/organization-profile.controller';
 
@@ -38,6 +40,10 @@ import { OrganizationProfileController } from './presentation/organization-profi
     },
     GetOrganizationProfileUseCase,
     UpdateOrganizationProfileUseCase,
+    // organization-logo: FILE_STORAGE and ID_GENERATOR come from the global
+    // FileStorageModule and IdGeneratorModule.
+    GetOrganizationLogoUseCase,
+    UploadOrganizationLogoUseCase,
   ],
   exports: [ORGANIZATION_PROFILE_READER],
 })

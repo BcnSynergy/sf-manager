@@ -54,13 +54,21 @@ export class PrismaOrganizationProfileRepository implements OrganizationProfileR
   // returned to the caller. A missing sentinel row (P2025) is mapped to
   // OrganizationProfileMissingError, consistent with get() — see the
   // RECORD_NOT_FOUND comment above.
-  async update(
-    changes: OrganizationProfileChanges,
+  update(changes: OrganizationProfileChanges): Promise<OrganizationProfile> {
+    return this.updateSingleton(changes);
+  }
+
+  setLogoAssetId(logoAssetId: string): Promise<OrganizationProfile> {
+    return this.updateSingleton({ logoAssetId });
+  }
+
+  private async updateSingleton(
+    data: Prisma.OrganizationProfileUpdateInput,
   ): Promise<OrganizationProfile> {
     try {
       const record = await this.prisma.organizationProfile.update({
         where: { singleton: true },
-        data: changes,
+        data,
       });
 
       return OrganizationProfileMapper.toDomain(record);

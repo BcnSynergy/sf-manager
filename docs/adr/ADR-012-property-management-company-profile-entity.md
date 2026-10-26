@@ -109,3 +109,33 @@ Reasons for the rename, settled at proposal time
 
 A `grep -r "PropertyManagementCompany" apps/` guard (tasks.md 6.6) confirms
 the old name never leaked into the implementation.
+
+## Addendum (2026-10-26): The logo lives in a local volume behind a storage port, not in MinIO yet
+
+The `organization-logo` change makes the logo uploadable. It keeps this
+ADR's decision that `logoAssetId` is a reference and the bytes live
+outside the database, but stores them in a local Docker volume instead of
+object storage:
+
+- A `FileStorage` port (`apps/api/src/shared/application/ports/file-storage.port.ts`)
+  stores bytes by an opaque key (`put`, `get`, `delete`). Its only adapter,
+  `LocalFileStorage`, writes under `FILE_STORAGE_DIR`, the `api-files`
+  volume in production.
+- `logoAssetId` holds that key (`logos/<uuidv7>.<png|jpg|webp>`), never a
+  filesystem path.
+- The browser reads the logo from `GET /organization-profile/logo`, never
+  from a static path, so the URL does not depend on where the bytes are.
+
+Reasons: one logo of at most 2 MiB does not justify a new service with its
+own credentials, bucket setup, health check and backup (ADR-006: the
+thinnest slice that works). With ADR-001's single instance per property
+manager, a local volume has no multi-node problem to solve. The port keeps
+the switch to object storage to a new adapter plus a one-off copy of the
+files, with no change to the domain or the API.
+
+Accepted formats are PNG, JPEG and WebP, decided by the file's content. SVG
+is deferred (EN-109) because it can carry scripts. The `backup` service does
+not copy the volume yet (TD-42).
+
+**Open question**: when review photos are implemented, decide between this
+volume and object storage (MinIO) with their real volume and backup needs.

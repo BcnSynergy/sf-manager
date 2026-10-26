@@ -15,3 +15,5 @@ odd
 openspec
 **/prod.env
 backups
+# Development uploads (FILE_STORAGE_DIR default)
+apps/api/storage

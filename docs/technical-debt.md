@@ -64,6 +64,12 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
+- **TD-42**: The production `backup` service dumps only the database, not
+  the `api-files` volume holding uploaded files (the organization logo), so
+  a lost server loses the logo even when the dumps survive. Evidence:
+  `docker-compose.prod.yml` (`backup`, `api-files`), README "Uploaded
+  files". Origin: `organization-logo`, 2026-10-26; copying backups off the
+  server is EN-104.
 
 ## Resolved
 

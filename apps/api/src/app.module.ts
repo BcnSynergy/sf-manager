@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './shared/infrastructure/persistence/prisma.module';
 import { IdGeneratorModule } from './shared/infrastructure/id/id-generator.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
+import { FileStorageModule } from './shared/infrastructure/file-storage/file-storage.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -47,11 +48,14 @@ import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.
 // every module can inject CLOCK. ReviewScheduleModule (review-schedule PR 6)
 // registers the read-only GET /review-schedule surface, importing
 // CommunityModule and UsersModule for the two scope checkers.
+// FileStorageModule (organization-logo) is @Global() too: FILE_STORAGE for
+// the organization logo, reading FILE_STORAGE_DIR at boot.
 @Module({
   imports: [
     PrismaModule,
     IdGeneratorModule,
     ClockModule,
+    FileStorageModule,
     UsersModule,
     AuthModule,
     CommunityModule,

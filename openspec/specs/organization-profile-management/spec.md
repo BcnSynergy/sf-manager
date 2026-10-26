@@ -5,18 +5,20 @@
 The property management company's own corporate data (ADR-012, FR-013),
 modelled as a **singleton**: exactly one `OrganizationProfile` row per
 deployment, holding `id`, `name`, `legalName`, `taxId`, `address`,
-`phone`, `email` and a reserved, inert `logoAssetId`. No `deletedAt`
+`phone`, `email` and `logoAssetId`, the storage key of its logo. No `deletedAt`
 (ADR-010) — the row must always exist.
 
 The row is created by the schema migration, not by the application, so
 there is no create path and no "does it exist yet" branch anywhere. The
-only two operations are a read and a partial update. `taxId` is free
+only operations are a read, a partial update, and the logo's read and
+upload. `taxId` is free
 text with no format rule, no checksum and no uniqueness constraint
 (uniqueness is meaningless for a single row) — the same call
 `maintenance-company` made for the same field.
 
-Out of scope this slice (proposal Out of Scope): logo upload and all
-object storage, any consumer of this data other than the
+Out of scope: object storage (the logo lives in a local volume behind a
+storage port, ADR-012 addendum), SVG logos (EN-109), removing the logo
+without replacing it (EN-110), any consumer of this data other than the
 `review-document` read, which renders it as a letterhead; no branding
 surface and no "profile must be complete before X" rule, an
 audit trail of edits, change history, and any unauthenticated read.
@@ -58,13 +60,14 @@ second row.
 
 - GIVEN the application's use cases, repository port and adapter after this change
 - WHEN they are inspected for an insert of an `OrganizationProfile`
-- THEN none MUST exist — reading and updating MUST be the only two operations
+- THEN none MUST exist — no operation MUST insert a profile row
 
 ### Requirement: Read the Organization Profile
 
 The system MUST expose a single read of the organization profile at
 `GET /organization-profile`, taking no identifier. It MUST respond 200
-with `id`, `name`, `legalName`, `taxId`, `address`, `phone` and `email`.
+with `id`, `name`, `legalName`, `taxId`, `address`, `phone`, `email` and
+`hasLogo`.
 
 It MUST **never** respond 404, at any point in the lifecycle — a blank
 seeded row is a valid, readable resource, not a missing one. Blank
@@ -201,19 +204,14 @@ Unrecognized properties MUST be ignored and MUST NOT be persisted.
 - WHEN the update is submitted
 - THEN that property MUST NOT be persisted anywhere, and the response MUST carry only the profile's defined fields
 
-### Requirement: logoAssetId Is Reserved, Unwritable and Absent From the API
+### Requirement: logoAssetId Is a Storage Key, Absent From the API
 
-`logoAssetId` MUST exist on the schema and the domain entity as a
-nullable column reserved for a future logo-upload slice (ADR-012), and
-MUST be inert everywhere else. It MUST NOT appear in the read response
-or in the update response, and MUST NOT be accepted in the update body.
-Omitting it from the response is deliberate: a permanently-`null` field
-teaches clients to depend on a contract that has no meaning yet, and
-the upload slice would then have to change an already-consumed shape.
-It MUST remain `null` for the whole life of this slice.
-
-No object-storage service, client, credential, upload endpoint or
-upload control MUST exist anywhere as a result of this change.
+`logoAssetId` MUST be `null` until a logo is uploaded, and then MUST hold
+the opaque storage key of the current logo (for example
+`logos/<uuidv7>.png`), never a filesystem path. It MUST NOT appear in any
+response, and the partial update MUST NOT write it: only the logo upload
+does. Responses that carry the profile MUST instead carry `hasLogo`, `true`
+exactly when a logo has been uploaded.
 
 #### Scenario: The field is absent from the read response
 
@@ -223,21 +221,87 @@ upload control MUST exist anywhere as a result of this change.
 
 #### Scenario: Supplying the field writes nothing
 
-- GIVEN an authorized caller submits `logoAssetId` in the update body
+- GIVEN an authorized caller submits `logoAssetId` or `hasLogo` in the update body
 - WHEN the update is processed
-- THEN the stored `logoAssetId` MUST still be `null`
+- THEN the stored `logoAssetId` MUST be unchanged
 
-#### Scenario: No upload surface ships
+#### Scenario: A profile without a logo
 
-- GIVEN the API, the dependency manifests and the container composition after this change
-- WHEN each is inspected
-- THEN no object-storage service, client or credential MUST exist, and no upload endpoint MUST have been declared
+- GIVEN a profile with no logo ever uploaded
+- WHEN the profile is read
+- THEN the response MUST carry `hasLogo: false`, and the logo read MUST respond 404
+
+### Requirement: Upload the Organization Logo
+
+The system MUST accept a logo at `PUT /organization-profile/logo` as
+`multipart/form-data` with the file in the `file` field. It MUST accept
+PNG, JPEG and WebP images of at most 2 MiB (2,097,152 bytes), and MUST
+decide the format from the file's content, not from its name or declared
+content type. On success it MUST respond 200 with the profile, carrying
+`hasLogo: true`.
+
+A new upload MUST replace the previous logo, and the previous file MUST be
+deleted from storage. A rejected upload MUST change nothing: no file is
+stored and the current logo, if any, stays. The bytes MUST be stored
+through a storage port under a fresh key, outside the database.
+
+#### Scenario: A PNG, JPEG or WebP logo is stored
+
+- GIVEN an authorized caller
+- WHEN they upload a PNG, a JPEG or a WebP image of at most 2 MiB
+- THEN the response MUST be 200 with `hasLogo: true`, and the logo read MUST return the same bytes
+
+#### Scenario: The format is decided by the content
+
+- GIVEN a PNG image named `logo.jpg` and declared as `image/jpeg`
+- WHEN it is uploaded
+- THEN it MUST be stored as a PNG, and the logo read MUST answer `image/png`
+
+#### Scenario: Other formats are rejected
+
+- GIVEN a file that is not a PNG, JPEG or WebP image, an SVG included, whatever its name
+- WHEN it is uploaded
+- THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
+
+#### Scenario: A logo over the size limit is rejected
+
+- GIVEN a file larger than 2 MiB
+- WHEN it is uploaded
+- THEN the response MUST be 413, and nothing MUST change
+
+#### Scenario: An upload without a file is rejected
+
+- GIVEN a multipart request with no `file` part
+- WHEN it is submitted
+- THEN the response MUST be 400 with code `LOGO_FILE_MISSING`, and nothing MUST change
+
+#### Scenario: A new upload replaces the logo
+
+- GIVEN a profile that already has a logo
+- WHEN another logo is uploaded
+- THEN the logo read MUST return the new image, and only the new file MUST remain in storage
+
+### Requirement: Read the Organization Logo
+
+The system MUST serve the current logo at `GET /organization-profile/logo`
+with the stored bytes, the content type of their format (`image/png`,
+`image/jpeg` or `image/webp`) and `Cache-Control: no-store`. When there is
+no logo to serve — none uploaded, or its file is missing from storage — it
+MUST respond 404. Clients MUST read the logo through this endpoint, never
+from a static file path.
+
+#### Scenario: The logo is served with its content type
+
+- GIVEN an uploaded WebP logo
+- WHEN the logo is read
+- THEN the response MUST be 200 with `Content-Type: image/webp`, `Cache-Control: no-store` and the uploaded bytes
 
 ### Requirement: The Profile Has No Create and No Delete Surface
 
-The system MUST expose exactly two operations on the profile — the read
-and the partial update — and MUST NOT expose a create, a delete, a
-list, or any identifier-parameterised variant of the route. A `POST` or
+The system MUST expose exactly four operations on the profile — the read,
+the partial update, the logo read and the logo upload — and MUST NOT
+expose a create, a delete, a list, or any identifier-parameterised
+variant of the route. A `POST` or
 `DELETE` to `/organization-profile`, and any request to an
 `/organization-profile/:id`-shaped path, MUST NOT resolve to an
 organization-profile operation.
@@ -246,11 +310,11 @@ The entity MUST carry no `deletedAt` and MUST NOT participate in the
 soft-delete mechanism (ADR-010): the row representing the company
 running this very instance is not a deletable record.
 
-#### Scenario: Only two operations are declared
+#### Scenario: Only four operations are declared
 
 - GIVEN the organization-profile routes after this change
 - WHEN they are enumerated
-- THEN exactly two MUST exist — the read and the partial update — with no create, delete, list or `:id` variant among them
+- THEN exactly four MUST exist — the read, the partial update, the logo read and the logo upload — with no create, delete, list or `:id` variant among them
 
 #### Scenario: A create or delete attempt does not reach a profile operation
 
@@ -276,7 +340,7 @@ completeness: a review document MUST be readable whether the profile is
 blank, partially filled or complete.
 
 This capability's own endpoints MUST be unchanged by that consumer: the
-same two operations, the same response shape and the same permissions.
+same operations, the same response shape and the same permissions.
 
 #### Scenario: Only the document read consults the profile
 
@@ -292,6 +356,6 @@ same two operations, the same response shape and the same permissions.
 
 #### Scenario: The profile's own endpoints are unchanged
 
-- GIVEN `GET` and `PATCH /organization-profile` before and after this change
+- GIVEN the organization-profile endpoints with and without the `review-document` consumer
 - WHEN their permissions, request and response shapes are compared
-- THEN they MUST be identical, and both MUST remain reachable by `SYSTEM_ADMIN` only
+- THEN they MUST be identical, and all MUST remain reachable by `SYSTEM_ADMIN` only

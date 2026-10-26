@@ -1,11 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-// design.md: response body shared by GET/PATCH — organization-profile-
-// management spec.md's entity shape is id, name, legalName, taxId, address,
-// phone, email. `logoAssetId` is DELIBERATELY OMITTED — not exposed even as
-// `null` (spec.md "logoAssetId Is Reserved, Unwritable and Absent From the
-// API"): a permanently-null field would teach clients to depend on a
-// contract that has no meaning yet.
+// design.md: response body shared by GET/PATCH and the logo upload —
+// organization-profile-management spec.md's shape is id, name, legalName,
+// taxId, address, phone, email and hasLogo. `logoAssetId` is DELIBERATELY
+// OMITTED — not exposed even as `null`: it is a storage key, and clients
+// read the logo itself from GET /organization-profile/logo.
 export class OrganizationProfileResponseDto {
   @ApiProperty()
   id!: string;
@@ -27,4 +26,7 @@ export class OrganizationProfileResponseDto {
 
   @ApiProperty()
   email!: string;
+
+  @ApiProperty({ description: 'Whether a logo has been uploaded.' })
+  hasLogo!: boolean;
 }
