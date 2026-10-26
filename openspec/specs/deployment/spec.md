@@ -106,7 +106,7 @@ The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=product
 
 #### Scenario: Default production stack
 
-- GIVEN the production stack is running and `prod.env` leaves `API_DOCS_ENABLED` unset or `false`
+- GIVEN the production stack is running and `prod.env` leaves `API_DOCS_ENABLED` unset, empty or `false`
 - WHEN a client requests `https://<SITE_ADDRESS>/api/docs`
 - THEN the API answers 404
 

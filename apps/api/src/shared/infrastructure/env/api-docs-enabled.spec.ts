@@ -20,9 +20,27 @@ describe('isApiDocsEnabled', () => {
     ).toBe(true);
   });
 
+  it('is false in production when API_DOCS_ENABLED is "false"', () => {
+    expect(
+      isApiDocsEnabled({ NODE_ENV: 'production', API_DOCS_ENABLED: 'false' }),
+    ).toBe(false);
+  });
+
   it('is true outside production when API_DOCS_ENABLED is unset', () => {
     expect(isApiDocsEnabled({ NODE_ENV: 'development' })).toBe(true);
     expect(isApiDocsEnabled({})).toBe(true);
+  });
+
+  it('is true outside production when API_DOCS_ENABLED is empty', () => {
+    expect(
+      isApiDocsEnabled({ NODE_ENV: 'development', API_DOCS_ENABLED: '' }),
+    ).toBe(true);
+  });
+
+  it('is true outside production when API_DOCS_ENABLED is "true"', () => {
+    expect(
+      isApiDocsEnabled({ NODE_ENV: 'development', API_DOCS_ENABLED: 'true' }),
+    ).toBe(true);
   });
 
   it('is false outside production when API_DOCS_ENABLED is "false"', () => {
