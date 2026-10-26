@@ -1,0 +1,29 @@
+# Keeps the digest-pinned base images current (EN-95). Dependabot opens a
+# PR per update; nothing merges on its own. Major versions are ignored: a
+# Postgres major upgrade needs a dump and restore of the data volume, and
+# Node or Caddy majors are a deliberate upgrade, not a routine bump.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directories:
+      - /apps/api
+      - /apps/web
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']

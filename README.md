@@ -265,6 +265,11 @@ Content Security Policy that allows only same-origin resources (plus `data:`
 images and fonts) outside `/api/*`. Anything the web app loads from another
 origin, or any inline script or style, needs the policy widened first.
 
+The base images (`node`, `caddy`, `postgres`) are pinned by digest, so a
+rebuild weeks later uses the same layers. Dependabot (`.github/dependabot.yml`)
+opens a PR each week a newer digest or minor version exists; major versions
+are left to a deliberate upgrade.
+
 Monitoring and automated deploys are not part of this setup yet (EN-91,
 EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
 `API_DOCS_ENABLED=true`.
