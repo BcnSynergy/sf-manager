@@ -64,11 +64,6 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-40**: Swagger UI and the OpenAPI document are public in production at
-  `/api/docs`, which lists every route and schema to anyone. Decide whether to
-  disable them when `NODE_ENV=production`, protect them, or keep them.
-  Evidence: `apps/api/src/main.ts` (`SwaggerModule.setup('docs', ...)`
-  unconditionally). Origin: `deployment`, 2026-10-25.
 - **TD-41**: The production stack has no database backups: the data lives
   only in the `postgres-data` volume, so losing the server or the volume
   loses everything. Needs a scheduled `pg_dump` (or volume snapshots) stored
@@ -248,6 +243,11 @@ None.
   the completed notice, the recorded answers (or the not-reviewed reason, or
   that nothing was recorded) read-only, and Back to session as the only
   action. The API is unchanged.
+- **TD-40**: Swagger UI and the OpenAPI document were public in production at
+  `/api/docs`. Resolved by `td-40-api-docs` (#287): the API mounts them only
+  when `API_DOCS_ENABLED=true`, or when it is unset and `NODE_ENV` is not
+  `production`; any other value fails at startup. The production stack
+  passes `API_DOCS_ENABLED` from `prod.env`, default `false`.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

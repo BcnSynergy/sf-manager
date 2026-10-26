@@ -39,6 +39,8 @@ services:
       CORS_ORIGIN: https://${SITE_ADDRESS:?set SITE_ADDRESS in prod.env}
       # Caddy is the only hop in front of the API (ADR-011 open question 1).
       TRUST_PROXY: '1'
+      # Swagger UI at /api/docs lists every route and schema (TD-40).
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
       # SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD are deliberately absent: the
       # one-off admin seed run passes them with `-e` (README), so the
       # long-running API never holds the admin password.

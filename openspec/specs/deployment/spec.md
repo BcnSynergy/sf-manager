@@ -100,6 +100,28 @@ The production stack MUST set `TRUST_PROXY=1`, because Caddy is the only hop in 
 - WHEN one client sends failed login attempts, each with a different email and a different `X-Forwarded-For` value
 - THEN they count against one client key, and the login limit blocks that client once it is reached
 
+### Requirement: API documentation off in production
+
+The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=production`, unless `API_DOCS_ENABLED=true`. Outside production it SHALL serve them at `/docs` unless `API_DOCS_ENABLED=false`. Any other non-empty `API_DOCS_ENABLED` value MUST make the API fail at startup. The production stack MUST pass `API_DOCS_ENABLED` from `prod.env`, defaulting to `false`.
+
+#### Scenario: Default production stack
+
+- GIVEN the production stack is running and `prod.env` leaves `API_DOCS_ENABLED` unset, empty or `false`
+- WHEN a client requests `https://<SITE_ADDRESS>/api/docs`
+- THEN the API answers 404
+
+#### Scenario: Operator enables the docs
+
+- GIVEN `prod.env` sets `API_DOCS_ENABLED=true`
+- WHEN the operator restarts the stack and requests `https://<SITE_ADDRESS>/api/docs`
+- THEN Swagger UI is served
+
+#### Scenario: Invalid value
+
+- GIVEN `API_DOCS_ENABLED=yes`
+- WHEN the API starts
+- THEN it fails at startup with an error naming `API_DOCS_ENABLED`
+
 ### Requirement: Persistent data and secrets
 
 Postgres data MUST persist in a named volume across container restarts and upgrades. Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.

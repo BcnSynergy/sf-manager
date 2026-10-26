@@ -631,6 +631,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   is not parenthesis-aware). They pass although the chrome may print. True
   before `print-check-cascade` as well. Origin: `print-check-cascade`
   pre-push verification, 2026-10-25.
+- **EN-103** (api tests): only `isApiDocsEnabled` is tested; nothing
+  automated checks that `apps/api/src/main.ts` mounts Swagger only when it
+  returns true, so a regression that mounts it unconditionally would pass CI.
+  A bootstrap-level test (`/docs` 404 with `NODE_ENV=production`, 200 with
+  `API_DOCS_ENABLED=true`) would cover the deployment spec's scenarios. The
+  behaviour behind the real Caddy proxy was also not checked; a one-time
+  `curl -i https://<SITE_ADDRESS>/api/docs` and `/api/docs-json` after the
+  next deploy would confirm it. Origin: `td-40-api-docs` pre-merge review
+  (#287), 2026-10-26.
 
 ## Done
 
