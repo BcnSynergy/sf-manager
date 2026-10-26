@@ -549,6 +549,17 @@ describe('Organization Profile (e2e)', () => {
       },
     );
 
+    // authorization spec: an upload is rejected before its file is read.
+    // A body over the size limit would get 413 if multer read it first.
+    it('rejects a non-admin upload with 403 before reading an oversized file', async () => {
+      const agent = await loginAgent(app, managerEmail);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', Buffer.alloc(3 * 1024 * 1024), 'logo.png')
+        .expect(403);
+    });
+
     it('SYSTEM_ADMIN is permitted through the guard on every route (authorization spec: SYSTEM_ADMIN is permitted)', async () => {
       const agent = await loginAgent(app, adminEmail);
       await agent.get('/organization-profile').expect(200);

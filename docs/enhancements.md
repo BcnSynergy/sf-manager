@@ -691,6 +691,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   render. Decoding the image on upload would close the last one. Evidence:
   `apps/api/src/modules/organization-profile/presentation/organization-profile.controller.ts`
   (`uploadLogo`). Origin: `organization-logo` T1 verification, 2026-10-26.
+- **EN-112** (API): a logo read that starts just before a replacing upload
+  deletes the old file can answer 404 for that one request. Harmless today
+  (`Cache-Control: no-store`, and the web hides a logo that fails to load);
+  deleting the previous file after a short delay, or retrying the read once
+  with the current key, would close it. Origin: `organization-logo` PR #293
+  pre-merge review, 2026-10-26.
 
 ## Done
 
