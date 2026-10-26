@@ -46,6 +46,28 @@ services:
       # long-running API never holds the admin password.
     # No published port: Caddy forwards /api/* to it.
 
+  # Daily pg_dump into ./backups on the host (TD-41). Copying the dumps off
+  # the server is the operator's job (README "Production deployment").
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    # The script sleeps between dumps; without an init process a stop waits
+    # for the timeout and then kills it.
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    entrypoint: ['/bin/sh', '/usr/local/bin/postgres-backup.sh']
+    volumes:
+      - ./backups:/backups
+      - ./deploy/postgres-backup.sh:/usr/local/bin/postgres-backup.sh:ro
+
   web:
     build:
       context: .

@@ -8,13 +8,13 @@ Defines how SF-Manager runs in production: one Docker Compose stack on a single 
 
 ### Requirement: One-command production stack
 
-The repository MUST provide `docker-compose.prod.yml`, which builds the API and web images from the repository and starts Postgres, the API and Caddy with one `docker compose ... up -d --build` command. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
+The repository MUST provide `docker-compose.prod.yml`, which builds the API and web images from the repository and starts Postgres, the API, the backup service and Caddy with one `docker compose ... up -d --build` command. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
 
 #### Scenario: First start
 
 - GIVEN a server with Docker and a filled-in `prod.env`
 - WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`
-- THEN Postgres, the API and Caddy are running
+- THEN Postgres, the API, the backup service and Caddy are running
 - AND `https://<SITE_ADDRESS>/api/health` returns 200 with `{"status":"ok","db":"ok"}`
 
 #### Scenario: Missing configuration
@@ -121,6 +121,34 @@ The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=product
 - GIVEN `API_DOCS_ENABLED=yes`
 - WHEN the API starts
 - THEN it fails at startup with an error naming `API_DOCS_ENABLED`
+
+### Requirement: Database backups
+
+The production stack MUST dump the database with `pg_dump` when it starts and every 24 hours after that, into the `backups/` directory next to the compose file, which Git and the Docker build context MUST ignore. A dump MUST appear under its final name only once `pg_dump` has completed. After each successful dump, dumps older than `BACKUP_RETENTION_DAYS` days (default 14) MUST be deleted; a value that is not a positive integer MUST make the backup service fail with an error naming `BACKUP_RETENTION_DAYS`, without writing a dump. A failed dump SHALL be logged and retried on the next cycle. The operator MUST be able to take a dump and to restore one with one documented command each; restoring MUST replace the whole database with the dump's contents. Copying the dumps off the server is the operator's responsibility, and the README MUST say so.
+
+#### Scenario: Daily dump
+
+- GIVEN the production stack is running
+- WHEN it starts, and again every 24 hours
+- THEN a new `sfmanager-<UTC timestamp>.dump` appears in `backups/`
+
+#### Scenario: Retention
+
+- GIVEN `BACKUP_RETENTION_DAYS=14` and dumps in `backups/` older than 14 days
+- WHEN the next dump succeeds
+- THEN those older dumps are deleted and the newer ones are kept
+
+#### Scenario: Restore
+
+- GIVEN a dump in `backups/` and a database whose data has changed since it was taken
+- WHEN the operator stops the API, runs the documented restore command with that dump, and starts the API
+- THEN the database holds exactly the data in the dump, and any migrations newer than the dump are applied
+
+#### Scenario: Failed dump
+
+- GIVEN the database is unreachable when a dump runs
+- WHEN `pg_dump` fails
+- THEN no new file named `sfmanager-*.dump` appears, no older dump is deleted, and the service keeps running
 
 ### Requirement: Persistent data and secrets
 
