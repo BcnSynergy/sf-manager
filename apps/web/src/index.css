@@ -609,6 +609,15 @@ code {
   list-style: none;
 }
 
+/* The organization logo's preview on the profile page: shown whole, never
+   larger than a letterhead would print it. */
+.sf-logo-preview {
+  justify-self: start;
+  max-width: 240px;
+  max-height: 120px;
+  object-fit: contain;
+}
+
 /* Form layout: fields further apart than a label from its own control. The
    controls keep the global input/select styles above. */
 .sf-form {

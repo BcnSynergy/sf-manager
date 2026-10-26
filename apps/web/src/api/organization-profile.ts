@@ -1,9 +1,8 @@
-import { apiFetch } from './client';
+import { API_BASE_URL, apiFetch } from './client';
 
-// Mirrors apps/api's OrganizationProfileResponseDto — `logoAssetId` is
-// DELIBERATELY OMITTED (design.md Decision 4/5, dto/organization-profile-
-// response.dto.ts): reserved and unwritable this slice, never exposed even
-// as `null`.
+// Mirrors apps/api's OrganizationProfileResponseDto — `logoAssetId` (a
+// storage key) is never exposed; `hasLogo` says whether a logo exists, and
+// the image itself is read from organizationLogoUrl().
 export type OrganizationProfile = {
   id: string;
   name: string;
@@ -12,13 +11,13 @@ export type OrganizationProfile = {
   address: string;
   phone: string;
   email: string;
+  hasLogo: boolean;
 };
 
-// design Decision 4: zero statuses in this module have more than one
-// reachable cause, so there is no coded-error union here to mirror
-// (unlike api/maintenance-company.ts's MaintenanceCompanyErrorCode/
-// api/community.ts's CommunityErrorCode) — ApiError.status alone is enough
-// for the page to distinguish 400 (validation) from anything else.
+// Mirrors apps/api's OrganizationProfileErrorCode: the two 400 causes on the
+// logo upload (organization-logo). The profile update still has a single
+// 400 cause, so ApiError.status alone is enough there.
+export type OrganizationProfileErrorCode = 'LOGO_FILE_MISSING' | 'LOGO_UNSUPPORTED_FORMAT';
 export type UpdateOrganizationProfilePayload = {
   name?: string;
   legalName?: string;
@@ -39,4 +38,22 @@ export function updateOrganizationProfile(
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+// organization-logo: multipart upload, field `file`. Resolves to the profile
+// with `hasLogo: true`.
+export function uploadOrganizationLogo(file: File): Promise<OrganizationProfile> {
+  const body = new FormData();
+  body.append('file', file);
+  return apiFetch<OrganizationProfile>('/organization-profile/logo', {
+    method: 'PUT',
+    body,
+  });
+}
+
+// The logo is an <img> source, not a fetch: the browser sends the session
+// cookie itself. `version` changes the URL after an upload so the image is
+// requested again.
+export function organizationLogoUrl(version: number): string {
+  return `${API_BASE_URL}/organization-profile/logo?v=${version}`;
 }

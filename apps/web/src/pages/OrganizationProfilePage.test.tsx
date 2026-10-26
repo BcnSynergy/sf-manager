@@ -27,6 +27,7 @@ const blankProfile = {
   address: '',
   phone: '',
   email: '',
+  hasLogo: false,
 };
 
 const filledProfile = {
@@ -37,6 +38,7 @@ const filledProfile = {
   address: '123 Main St',
   phone: '+34600000000',
   email: 'admin@acme.example',
+  hasLogo: false,
 };
 
 function renderPage() {
@@ -52,6 +54,28 @@ function renderPage() {
 describe('OrganizationProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('renders the logo section with the profile hasLogo flag (organization-logo S1)', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
+
+    renderPage();
+
+    expect(await screen.findByTestId('organization-logo-preview')).toHaveAttribute(
+      'src',
+      '/logo?v=0',
+    );
+    expect(screen.getByTestId('organization-logo-input')).toBeInTheDocument();
+  });
+
+  it('shows the no-logo message when the profile has no logo', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    expect(await screen.findByTestId('organization-logo-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('organization-logo-preview')).not.toBeInTheDocument();
   });
 
   it('shows a loading state while the profile request is in flight', () => {
@@ -485,7 +509,8 @@ describe('OrganizationProfilePage route access', () => {
       renderPage();
 
       const submit = await screen.findByTestId('organization-profile-submit');
-      const region = screen.getByRole('status');
+      // The logo section has its own status region after this one.
+      const region = screen.getAllByRole('status')[0];
       expect(region).toBeEmptyDOMElement();
 
       fireEvent.click(submit);
@@ -493,7 +518,7 @@ describe('OrganizationProfilePage route access', () => {
       const success = await screen.findByTestId('organization-profile-success');
       expect(success).not.toHaveAttribute('role');
       expect(region).toContainElement(success);
-      expect(screen.getByRole('status')).toBe(region);
+      expect(screen.getAllByRole('status')[0]).toBe(region);
     });
 
     it('shows the save failure as a danger alert', async () => {

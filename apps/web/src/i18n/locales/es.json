@@ -206,7 +206,17 @@
     "emptySubmitError": "Introduce al menos un valor antes de guardar.",
     "validationError": "Introduce un valor válido para cada campo modificado.",
     "saveError": "No se ha podido guardar el perfil de la organización. Inténtalo de nuevo.",
-    "saveSuccess": "Perfil de la organización guardado."
+    "saveSuccess": "Perfil de la organización guardado.",
+    "logoTitle": "Logo",
+    "logoAlt": "Logo de la organización",
+    "noLogo": "Todavía no se ha subido ningún logo.",
+    "logoLoadError": "No se ha podido cargar el logo.",
+    "logoFileLabel": "Imagen del logo (PNG, JPEG o WebP, hasta 2 MB)",
+    "logoUploadLabel": "Subir logo",
+    "logoUploadSuccess": "Logo subido.",
+    "logoTooLargeError": "El logo debe ocupar 2 MB o menos.",
+    "logoUnsupportedError": "El logo debe ser una imagen PNG, JPEG o WebP.",
+    "logoUploadError": "No se ha podido subir el logo. Inténtalo de nuevo."
   },
   "inspectableElement": {
     "list": {

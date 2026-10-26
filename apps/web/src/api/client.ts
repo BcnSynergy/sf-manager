@@ -2,7 +2,7 @@
 // (design.md "Technical Approach") — every typed call in api/users.ts goes
 // through this seam so the "no English-message string comparison" success
 // criterion is auditable rather than aspirational.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const HTTP_NO_CONTENT = 204;
 
 // status 0 marks a network failure or a response body that could not be
@@ -68,7 +68,12 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: 'include',
-      headers: init.body ? { 'Content-Type': 'application/json', ...init.headers } : init.headers,
+      // A FormData body gets its multipart Content-Type, boundary included,
+      // from the browser; setting it here would drop the boundary.
+      headers:
+        init.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json', ...init.headers }
+          : init.headers,
     });
   } catch {
     // Network failure (offline, DNS, CORS, aborted, ...) never reaches an
