@@ -3,7 +3,9 @@
 # `2-alpine`, `18-alpine`) and majors ignored it only proposes a new digest
 # for the same tag; nothing merges on its own. Majors are ignored because a
 # Postgres major needs a dump and restore of the data volume, and Node or
-# Caddy majors (or a new Debian release) are a deliberate, manual upgrade.
+# Caddy majors are a deliberate, manual upgrade. A new Debian release
+# (bookworm to trixie) changes the tag suffix, which Dependabot never does,
+# so that is manual too.
 # CI's Postgres service image (.github/workflows/ci.yml) is not covered
 # (EN-107).
 version: 2

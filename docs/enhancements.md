@@ -655,7 +655,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   floating tag, and no Dependabot ecosystem updates workflow service images,
   so integration tests can run on a different Postgres build than dev and
   production. Two follow-ups as well: confirm on Dependabot's first run that
-  it lists both `docker-compose.yml` and `docker-compose.prod.yml`, and
+  it lists both `docker-compose.yml` and `docker-compose.prod.yml`, opens
+  one postgres PR for both, and whether grouped PRs keep the
+  `build(deps)` prefix (GitHub's reference says a group's identifier sets
+  their branch and title), and
   decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
   before every merge, and their titles do not follow `PR N/M`). Origin:
   `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
