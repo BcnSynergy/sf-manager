@@ -2,7 +2,7 @@
 # Vite build served by Caddy, which also forwards /api/* to the API. Build it
 # from the repository root, which holds the npm workspace:
 #   docker build -f apps/web/Dockerfile .
-FROM node:24-bookworm-slim AS build
+FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS build
 WORKDIR /app
 
 # `npm ci` only accepts the lockfile when every workspace manifest is
@@ -22,6 +22,6 @@ COPY apps/web apps/web
 ARG VITE_API_BASE_URL=/api
 RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build --workspace=@sf-manager/web
 
-FROM caddy:2-alpine
+FROM caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv

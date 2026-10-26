@@ -36,7 +36,7 @@ business features yet, just the toolchain wired end-to-end.
    ```
 
    If Docker Desktop is set to Windows containers, `docker compose up` will
-   fail pulling `postgres:17-alpine` (Linux-only image). Switch with
+   fail pulling `postgres:18-alpine` (Linux-only image). Switch with
    `docker desktop engine use linux` (or via the Docker Desktop tray icon).
 
    Auth-related env vars (`apps/api`):
@@ -264,6 +264,13 @@ referrer policy on every HTTPS response, HSTS unless `SITE_ADDRESS=localhost`, a
 Content Security Policy that allows only same-origin resources (plus `data:`
 images and fonts) outside `/api/*`. Anything the web app loads from another
 origin, or any inline script or style, needs the policy widened first.
+
+The base images (`node`, `caddy`, `postgres`) are pinned by digest, so a
+rebuild weeks later uses the same layers. Dependabot (`.github/dependabot.yml`)
+checks weekly and opens a PR when a pinned tag gets a new digest, one PR per
+image. A new major version (or a new Debian release for `node`) is a manual
+upgrade. CI does not build the images yet (EN-91), so build one locally
+before merging such a PR.
 
 Monitoring and automated deploys are not part of this setup yet (EN-91,
 EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
