@@ -8,6 +8,7 @@ import {
   AUTH_CONFIG,
   type AuthConfig,
 } from './modules/auth/infrastructure/config/auth.config';
+import { isApiDocsEnabled } from './shared/infrastructure/env/api-docs-enabled';
 import { getTrustProxySetting } from './shared/infrastructure/env/trust-proxy';
 
 async function bootstrap() {
@@ -32,15 +33,17 @@ async function bootstrap() {
   const { corsOrigin } = app.get<AuthConfig>(AUTH_CONFIG);
   app.enableCors({ origin: corsOrigin, credentials: true });
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('SF-Manager API')
-    .setDescription(
-      'RIPCI extinguisher review management — see docs/adr/INDEX.md',
-    )
-    .setVersion('0.0.0')
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, document);
+  if (isApiDocsEnabled(process.env)) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('SF-Manager API')
+      .setDescription(
+        'RIPCI extinguisher review management — see docs/adr/INDEX.md',
+      )
+      .setVersion('0.0.0')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }
