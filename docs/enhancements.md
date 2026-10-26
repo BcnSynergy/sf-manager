@@ -582,8 +582,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `docker-compose.prod.yml` to the published images (`image:` by tag or
   digest instead of `build:`), update the upgrade steps, and optionally
   deploy from CI, which needs server access as repository secrets. Both
-  packages were public after the first publish, so the server needs no
-  token to pull them. Note that `publish` rebuilds the images instead of pushing the ones `ci`
+  packages were public after the first publish (cause unconfirmed), so the
+  server needs no token to pull them while they stay public; check Package
+  settings before switching the compose file. Note that `publish` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
