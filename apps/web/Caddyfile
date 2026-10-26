@@ -12,7 +12,10 @@
 
 	# HSTS on a real domain only: on `localhost` it would make the browser
 	# refuse plain HTTP for every localhost port, the Vite dev server included.
-	# No includeSubDomains or preload, so other subdomains stay unaffected.
+	# An IP address or a *.localhost name still gets it (browsers ignore HSTS
+	# for IPs). No includeSubDomains or preload, so other subdomains stay
+	# unaffected. The automatic HTTP->HTTPS redirect gets none of these headers:
+	# Caddy serves it outside this site block.
 	@hsts not host localhost
 	header @hsts Strict-Transport-Security "max-age=31536000"
 

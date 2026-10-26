@@ -649,6 +649,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   migrations (the deployment spec's Restore scenario says the API then
   applies them), and `shellcheck`, which is not part of CI. Origin:
   `td-41-db-backups` pre-push review (#288), 2026-10-26.
+- **EN-106** (security): the Content Security Policy in `apps/web/Caddyfile`
+  has no `report-to`/`report-uri`, so a violation in production (a page the
+  policy breaks) is seen only in that user's console. The QR page
+  (`ElementQrCode.tsx`) and the print flow were not exercised under the
+  policy in a browser. Also, `zod-config.test.ts` checks the jitless flag
+  but not that `main.tsx` imports `./zod-config` first, which only a comment
+  guards. Origin: `en-94-security-headers` pre-push review (#289),
+  2026-10-26.
 
 ## Done
 

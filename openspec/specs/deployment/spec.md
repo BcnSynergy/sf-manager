@@ -92,7 +92,7 @@ Caddy MUST obtain and renew the HTTPS certificate for `SITE_ADDRESS` itself and 
 
 ### Requirement: Security headers
 
-Every response from Caddy MUST carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. When `SITE_ADDRESS` is not `localhost`, every HTTPS response MUST also carry `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload`; on `localhost` it MUST NOT, so the browser keeps allowing plain HTTP for other localhost ports. Every response outside `/api/*` MUST carry the Content Security Policy `default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, and the web app MUST work under it without the browser reporting a violation.
+Every HTTPS response from Caddy MUST carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. When `SITE_ADDRESS` is not `localhost`, every HTTPS response MUST also carry `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload`; on `localhost` it MUST NOT, so the browser keeps allowing plain HTTP for other localhost ports. Every response outside `/api/*` MUST carry the Content Security Policy `default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, and the web app MUST work under it without the browser reporting a violation.
 
 #### Scenario: Web app response
 
