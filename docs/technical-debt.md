@@ -70,6 +70,16 @@ None.
   `docker-compose.prod.yml` (`backup`, `api-files`), README "Uploaded
   files". Origin: `organization-logo`, 2026-10-26; copying backups off the
   server is EN-104.
+- **TD-43**: An empty status region inside a grid container adds one gap
+  when the page is printed. On screen its negative top margin cancels the
+  container's gap; the print rule resets that margin assuming a block
+  `main`, which breaks `web-alert-announcements` ("MUST NOT change the page
+  layout while empty … in print") for the regions inside `.sf-form`
+  (ReviewSessionElement) and `.sf-panel` (the organization logo section).
+  Fix: scope the print reset to `main > .sf-status-region:empty`. Evidence:
+  `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
+  Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
+  ReviewSessionElement case predates it.
 
 ## Resolved
 

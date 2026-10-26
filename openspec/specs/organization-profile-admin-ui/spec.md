@@ -145,9 +145,9 @@ the text fields. The section MUST preview the current logo from
 otherwise say that no logo has been uploaded. If the preview fails to
 load, it MUST be replaced by a message, never shown as a broken image.
 
-The file picker MUST offer PNG, JPEG and WebP only. A chosen file over
-2 MB, or whose type is not PNG, JPEG or WebP, MUST be rejected with a
-message and no request sent. The upload control MUST be disabled until a
+The file picker MUST offer PNG, JPEG and WebP only. An upload of a file
+over 2 MB, or whose type is not PNG, JPEG or WebP, MUST be rejected with
+a message and no request sent. The upload control MUST be disabled until a
 file is chosen and while an upload is in flight. On success the section
 MUST confirm the upload in its own status region, next to its controls
 (`web-alert-announcements`), and MUST show the new logo without a page

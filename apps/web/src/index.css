@@ -79,6 +79,9 @@
    design system). */
 
 :root {
+  /* Behind an uploaded logo in both themes: logos are drawn for white
+     paper, so a dark or transparent one stays visible in dark mode. */
+  --logo-backdrop: #ffffff;
   --ground: #f6f5f2;
   --surface: #ffffff;
   --surface-sunken: #eeece7;
@@ -610,12 +613,17 @@ code {
 }
 
 /* The organization logo's preview on the profile page: shown whole, never
-   larger than a letterhead would print it. */
+   larger than a letterhead would print it, on the white it prints on. */
 .sf-logo-preview {
   justify-self: start;
+  box-sizing: content-box;
   max-width: 240px;
   max-height: 120px;
   object-fit: contain;
+  padding: var(--space-2);
+  background: var(--logo-backdrop);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 /* Form layout: fields further apart than a label from its own control. The

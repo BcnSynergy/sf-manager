@@ -158,6 +158,20 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     },
   );
 
+  it('announces a repeated rejection again, as a new role="alert" element (web-alert-announcements)', () => {
+    render(<OrganizationLogoSection hasLogo={false} />);
+    chooseFile(pngFile(10, 'image/gif', 'logo.gif'));
+
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+    const first = screen.getByRole('alert');
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    expect(screen.getByRole('alert')).not.toBe(first);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The logo must be a PNG, JPEG or WebP image.',
+    );
+  });
+
   it('disables the picker and the button while the upload is in flight', () => {
     mockedUpload.mockReturnValue(new Promise(() => {}));
     render(<OrganizationLogoSection hasLogo={false} />);
