@@ -575,13 +575,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Either changes observable behavior, so it edits the spec. Evidence:
   `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
   Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
-- **EN-91** (delivery): CI neither builds, publishes nor deploys the API and
-  web images; today the operator builds them on the server with
-  `docker compose ... up -d --build`. Build both images in CI so a broken
-  Dockerfile fails the PR, and later publish them to a registry and deploy
-  from there. Evidence: `.github/workflows/ci.yml`, README "Production
-  deployment". Origin: `deployment` (S11), 2026-10-25; covers the deploy
-  part of TD-32.
+- **EN-91** (delivery): CI builds both images, smoke-tests the stack and
+  publishes the images to GitHub Container Registry (`en-91-ci-images`,
+  #291), but nothing deploys them: the operator still builds on the server
+  with `docker compose ... up -d --build`. Remaining: switch
+  `docker-compose.prod.yml` to the published images (`image:` by tag or
+  digest instead of `build:`), update the upgrade steps, and optionally
+  deploy from CI, which needs server access as repository secrets.
+  Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
+  `deployment` (S11), 2026-10-25; covers the deploy part of TD-32.
+- **EN-108** (delivery): every green push to `main` adds a new version of
+  `ghcr.io/bcnsynergy/sf-manager-api` (about 1.7 GB, EN-93) and
+  `sf-manager-web` to GitHub Container Registry, and nothing removes old
+  ones. Free for public packages, but the list grows without bound. Add a
+  retention rule, for example keep the last N `sha-*` versions. Origin:
+  `en-91-ci-images`, 2026-10-26.
 - **EN-92** (operations): The production stack has no monitoring or
   alerting: nothing reports a down API, a restart loop after a failed
   migration, or an expiring certificate. An external uptime check on

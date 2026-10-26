@@ -19,7 +19,8 @@ jobs:
   ci:
     name: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Raised from 15 for the image build and smoke test (EN-91).
+    timeout-minutes: 25
     env:
       # Dummy value for the throwaway service below, not a secret. Prisma's
       # config requires it to be set for every CLI call, including the
@@ -70,3 +71,38 @@ jobs:
       - name: Integration
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run test:integration -w apps/api
+      # Builds the production images and starts the whole stack on
+      # https://localhost, so a broken Dockerfile or base-image update
+      # (Dependabot) fails the PR (EN-91).
+      - name: Images
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: sh deploy/smoke-test.sh
+
+  # Publishes the images to GitHub Container Registry once main is green
+  # (EN-91). It is the only job allowed to write packages; `ci` stays
+  # read-only. Each image gets the short commit SHA and `main` as tags.
+  publish:
+    name: publish
+    needs: ci
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and push
+        run: |
+          short=$(git rev-parse --short=7 HEAD)
+          for app in api web; do
+            image="ghcr.io/bcnsynergy/sf-manager-$app"
+            docker build -f "apps/$app/Dockerfile" -t "$image:sha-$short" -t "$image:main" .
+            docker push --all-tags "$image"
+          done

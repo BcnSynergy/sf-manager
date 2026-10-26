@@ -269,8 +269,23 @@ The base images (`node`, `caddy`, `postgres`) are pinned by digest, so a
 rebuild weeks later uses the same layers. Dependabot (`.github/dependabot.yml`)
 checks weekly and opens a PR when a pinned tag gets a new digest, one PR per
 image. A new major version (or a new Debian release for `node`) is a manual
-upgrade. CI does not build the images yet (EN-91), so build one locally
-before merging such a PR.
+upgrade. CI builds both images and starts the whole stack for every PR,
+these included.
+
+### Images in CI
+
+CI builds the production images and runs `deploy/smoke-test.sh` on every PR
+and push to `main`: it starts the whole stack on `https://localhost` with
+throwaway secrets and fails unless `/api/health` reports the database ok,
+the web app answers 200 and the backup service writes a dump. Run it locally
+from the repository root with `sh deploy/smoke-test.sh` (ports 80 and 443
+must be free; it uses its own Compose project and removes it afterwards).
+
+When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
+and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>` and
+`main`. The packages are linked to this public repository and inherit its
+visibility. The server does not use them yet: it still builds with
+`up -d --build`, and deploying from the registry is EN-91.
 
 Monitoring and automated deploys are not part of this setup yet (EN-91,
 EN-92). Swagger is off at `/api/docs` unless `prod.env` sets

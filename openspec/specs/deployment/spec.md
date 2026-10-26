@@ -178,6 +178,28 @@ The production stack MUST dump the database with `pg_dump` when it starts and ev
 - WHEN `pg_dump` fails
 - THEN no new file named `sfmanager-*.dump` appears, no older dump is deleted, and the service keeps running
 
+### Requirement: Images built and published by CI
+
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200 and the backup service writes a dump. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>` and `main`. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+
+#### Scenario: Broken image fails the PR
+
+- GIVEN a pull request whose change stops an image from building or the stack from starting
+- WHEN CI runs
+- THEN the `ci` check fails, and its log shows the build error or the containers' state and recent logs
+
+#### Scenario: Green main publishes
+
+- GIVEN a push to `main` whose `ci` job passes
+- WHEN the `publish` job runs
+- THEN both images are in GitHub Container Registry tagged `sha-<short commit SHA>` and `main`, and `main` points at that commit's build
+
+#### Scenario: Pull request does not publish
+
+- GIVEN a pull request, Dependabot's included
+- WHEN CI runs
+- THEN no image is pushed to any registry
+
 ### Requirement: Persistent data and secrets
 
 Postgres data MUST persist in a named volume across container restarts and upgrades. Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.
