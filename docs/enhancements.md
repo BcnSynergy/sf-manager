@@ -595,10 +595,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   pruned runtime (Prisma CLI kept, seed compiled to JavaScript) would shrink
   it. Evidence: `apps/api/Dockerfile`. Origin: `deployment` pre-push review,
   2026-10-25.
-- **EN-94** (security): Caddy sends no HSTS or other security headers
-  (`Strict-Transport-Security`, `X-Content-Type-Options`,
-  `Referrer-Policy`, a Content Security Policy). Evidence:
-  `apps/web/Caddyfile`. Origin: `deployment` pre-push review, 2026-10-25.
 - **EN-95** (delivery): The production images build from floating base tags
   (`node:24-bookworm-slim`, `caddy:2-alpine`, `postgres:18-alpine`), so two
   builds weeks apart can get different base layers and an upgrade is not
@@ -656,6 +652,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-94** (security): Caddy now sends `X-Content-Type-Options: nosniff`
+  and `Referrer-Policy: strict-origin-when-cross-origin` on every response,
+  HSTS (`max-age=31536000`) unless the site is `localhost`, and a strict
+  Content Security Policy outside `/api/*`. The web app sets Zod's
+  `jitless` mode so its `new Function` probe is not reported as a CSP
+  violation. Done in `en-94-security-headers`, PR #289.
 - **EN-96, EN-97, EN-98** (web tests): `checkAppNavPrintSuppression` failed,
   on the safe side, for rules that cannot show the chrome in print (a
   descendant rule after the hide, a hiding rule that nests CSS, an

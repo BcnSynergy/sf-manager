@@ -90,6 +90,34 @@ Caddy MUST obtain and renew the HTTPS certificate for `SITE_ADDRESS` itself and 
 - WHEN a client requests `http://<SITE_ADDRESS>/`
 - THEN Caddy redirects it to `https://<SITE_ADDRESS>/`
 
+### Requirement: Security headers
+
+Every response from Caddy MUST carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. When `SITE_ADDRESS` is not `localhost`, every HTTPS response MUST also carry `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload`; on `localhost` it MUST NOT, so the browser keeps allowing plain HTTP for other localhost ports. Every response outside `/api/*` MUST carry the Content Security Policy `default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, and the web app MUST work under it without the browser reporting a violation.
+
+#### Scenario: Web app response
+
+- GIVEN the production stack is running on a public domain
+- WHEN a client requests `https://<SITE_ADDRESS>/` or any client-side route
+- THEN the response carries all four headers: the CSP, HSTS, `nosniff` and the referrer policy
+
+#### Scenario: API response
+
+- GIVEN the production stack is running on a public domain
+- WHEN a client requests `https://<SITE_ADDRESS>/api/health`
+- THEN the response carries HSTS, `nosniff` and the referrer policy, but no Content Security Policy
+
+#### Scenario: Local stack
+
+- GIVEN the production stack is running with `SITE_ADDRESS=localhost`
+- WHEN a client requests `https://localhost/`
+- THEN the response carries no `Strict-Transport-Security` header
+
+#### Scenario: No violations
+
+- GIVEN a signed-in user in a browser
+- WHEN they open each section of the app and submit a form
+- THEN the browser reports no Content Security Policy violation
+
 ### Requirement: Proxy trust
 
 The production stack MUST set `TRUST_PROXY=1`, because Caddy is the only hop in front of the API and replaces any client-sent `X-Forwarded-For`.

@@ -4,6 +4,25 @@
 {$SITE_ADDRESS:localhost} {
 	encode zstd gzip
 
+	# Security headers (EN-94; spec `deployment`, "Security headers").
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# HSTS on a real domain only: on `localhost` it would make the browser
+	# refuse plain HTTP for every localhost port, the Vite dev server included.
+	# No includeSubDomains or preload, so other subdomains stay unaffected.
+	@hsts not host localhost
+	header @hsts Strict-Transport-Security "max-age=31536000"
+
+	# The web app loads everything from its own origin and has no inline
+	# script or style. /api/* is left out: its JSON needs no policy, and
+	# Swagger UI (API_DOCS_ENABLED) uses inline styles. Vite may inline small
+	# assets as data: URLs.
+	@web not path /api/*
+	header @web Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
 	# The API keeps its routes: /api/auth/login reaches it as /auth/login.
 	# Caddy replaces any client-sent X-Forwarded-For with the real client
 	# address, which is why the API trusts exactly one hop (TRUST_PROXY=1).
