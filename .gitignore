@@ -16,3 +16,6 @@ prod.env
 
 # OS/editor
 .DS_Store
+
+# Production database dumps (docker-compose.prod.yml `backup` service)
+backups/

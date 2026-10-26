@@ -208,7 +208,7 @@ protection first, then revert the workflow; see
 ## Production deployment
 
 `docker-compose.prod.yml` runs the whole system on one server with Docker:
-Postgres, the API, and Caddy, which serves the web app and forwards `/api/*`
+Postgres, the API, a backup service (below), and Caddy, which serves the web app and forwards `/api/*`
 to the API on the same origin. Only Caddy publishes ports (80 and 443); it
 obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
 the domain's DNS must point at the server and both ports must be open. The
@@ -259,9 +259,53 @@ proxy in front of the API and it replaces any `X-Forwarded-For` a client
 sends. Put another proxy or a CDN in front and the value must change (see
 the topology table above).
 
-Backups, monitoring and automated deploys are not part of this setup yet
-(TD-41, EN-91, EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
+Monitoring and automated deploys are not part of this setup yet (EN-91,
+EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
 `API_DOCS_ENABLED=true`.
+
+### Database backups
+
+The `backup` service dumps the database with `pg_dump` when the stack starts
+and every 24 hours after that, into `backups/` next to the compose file
+(`sfmanager-<UTC timestamp>.dump`, custom format). It deletes dumps older
+than `BACKUP_RETENTION_DAYS` (default 14), and `backups/` is ignored by Git
+and by the Docker build context. Read what it did with
+`docker compose -f docker-compose.prod.yml --env-file prod.env logs backup`.
+
+These dumps live on the same server as the database, so **they do not
+survive losing the server**. Copy `backups/` somewhere else on a schedule,
+for example with `rsync` or `rclone` from root's cron, or include it in the
+provider's server snapshots. The dumps hold password hashes and personal
+data, so they are readable by root only.
+
+If `BACKUP_RETENTION_DAYS` is not a positive integer without a leading zero,
+the service fails at start and restarts in a loop; `logs backup` shows the
+error.
+
+Take a dump now:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm backup once
+```
+
+Restore one. This replaces everything in the database with the dump, so
+stop the API first and start it again afterwards; it applies any migrations
+newer than the dump. If the restore fails, the database is left empty: do
+not start the API, fix the cause and restore again.
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file prod.env stop api
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm backup restore sfmanager-<timestamp>.dump
+docker compose -f docker-compose.prod.yml --env-file prod.env start api
+```
+
+On a new server, put the dumps in `backups/`, run only the restore command
+(it starts Postgres but not the API or the daily backups), then build and
+start the stack (step 2 of the list above). Skip step 3: the dump already
+holds the admin. Starting the whole stack first would dump the empty database and could
+delete copied dumps older than the retention period.
 
 ## Structure
 

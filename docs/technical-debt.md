@@ -64,11 +64,6 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-41**: The production stack has no database backups: the data lives
-  only in the `postgres-data` volume, so losing the server or the volume
-  loses everything. Needs a scheduled `pg_dump` (or volume snapshots) stored
-  off the server, and a tested restore. Evidence: `docker-compose.prod.yml`.
-  Origin: `deployment`, 2026-10-25.
 
 ## Resolved
 
@@ -248,6 +243,13 @@ None.
   when `API_DOCS_ENABLED=true`, or when it is unset and `NODE_ENV` is not
   `production`; any other value fails at startup. The production stack
   passes `API_DOCS_ENABLED` from `prod.env`, default `false`.
+- **TD-41**: The production stack had no database backups. Resolved by
+  `td-41-db-backups` (#288): a `backup` service runs
+  `deploy/postgres-backup.sh`, which dumps the database at start and every
+  24 hours into `backups/`, keeps `BACKUP_RETENTION_DAYS` days (default 14),
+  and restores a dump with one command; the restore was tested against the
+  real schema. Copying the dumps off the server is a documented operator
+  step (README "Database backups"); doing it from the stack is EN-104.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
