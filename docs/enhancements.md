@@ -650,14 +650,24 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   but not that `main.tsx` imports `./zod-config` first, which only a comment
   guards. Origin: `en-94-security-headers` pre-push review (#289),
   2026-10-26.
+- **EN-107** (delivery): after EN-95, CI's Postgres service image
+  (`.github/workflows/ci.yml`, `image: postgres:18-alpine`) is still a
+  floating tag, and no Dependabot ecosystem updates workflow service images,
+  so integration tests can run on a different Postgres build than dev and
+  production. Two follow-ups as well: confirm on Dependabot's first run that
+  it lists both `docker-compose.yml` and `docker-compose.prod.yml`, and
+  decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
+  before every merge, and their titles do not follow `PR N/M`). Origin:
+  `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
 
 ## Done
 
 - **EN-95** (delivery): `node:24-bookworm-slim`, `caddy:2-alpine` and
   `postgres:18-alpine` are pinned as `tag@sha256:digest` in both Dockerfiles
-  and both compose files, and `.github/dependabot.yml` opens weekly PRs for
-  new digests and minor versions (majors ignored: a Postgres major needs a
-  dump and restore). Done in `en-95-pin-base-images`, PR #290.
+  and both compose files, and `.github/dependabot.yml` checks weekly and
+  opens one PR per image when a pinned tag gets a new digest (majors
+  ignored: a Postgres major needs a dump and restore). Done in
+  `en-95-pin-base-images`, PR #290.
 - **EN-94** (security): Caddy now sends `X-Content-Type-Options: nosniff`
   and `Referrer-Policy: strict-origin-when-cross-origin` on every HTTPS response,
   HSTS (`max-age=31536000`) unless the site is `localhost`, and a strict

@@ -1,7 +1,11 @@
-# Keeps the digest-pinned base images current (EN-95). Dependabot opens a
-# PR per update; nothing merges on its own. Major versions are ignored: a
-# Postgres major upgrade needs a dump and restore of the data volume, and
-# Node or Caddy majors are a deliberate upgrade, not a routine bump.
+# Keeps the digest-pinned base images current (EN-95). Dependabot keeps each
+# tag's precision and suffix, so with single-number tags (`24-bookworm-slim`,
+# `2-alpine`, `18-alpine`) and majors ignored it only proposes a new digest
+# for the same tag; nothing merges on its own. Majors are ignored because a
+# Postgres major needs a dump and restore of the data volume, and Node or
+# Caddy majors (or a new Debian release) are a deliberate, manual upgrade.
+# CI's Postgres service image (.github/workflows/ci.yml) is not covered
+# (EN-107).
 version: 2
 updates:
   - package-ecosystem: docker
@@ -10,6 +14,12 @@ updates:
       - /apps/web
     schedule:
       interval: weekly
+    # One PR per image across both Dockerfiles, so api and web never sit on
+    # different node digests between two PRs.
+    groups:
+      base-images:
+        patterns: ['*']
+        group-by: dependency-name
     commit-message:
       prefix: build
       include: scope
