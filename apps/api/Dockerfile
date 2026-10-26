@@ -32,6 +32,10 @@ RUN npm run build --workspace=@sf-manager/validation \
     npm run build --workspace=@sf-manager/api
 
 ENV NODE_ENV=production
+# Uploaded files such as the organization logo (FileStorage). Created here,
+# owned by `node`, so a named volume mounted on it starts writable.
+ENV FILE_STORAGE_DIR=/var/lib/sf-manager/files
+RUN mkdir -p "$FILE_STORAGE_DIR" && chown node:node "$FILE_STORAGE_DIR"
 # Keeps npm's update notice out of the migration and seed output.
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 WORKDIR /app/apps/api

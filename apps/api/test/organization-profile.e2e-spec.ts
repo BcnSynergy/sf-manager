@@ -18,6 +18,8 @@ import {
 import { ORGANIZATION_PROFILE_REPOSITORY } from '../src/modules/organization-profile/application/ports/organization-profile.repository.port';
 import { InMemoryOrganizationProfileRepository } from '../src/modules/organization-profile/application/use-cases/testing/in-memory-organization-profile.repository';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
+import { FILE_STORAGE } from '../src/shared/application/ports/file-storage.port';
+import { InMemoryFileStorage } from '../src/shared/testing/in-memory-file-storage';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
 
@@ -79,6 +81,7 @@ async function buildSeedUser(input: SeedUserInput): Promise<User> {
 async function buildApp(seed: { users?: User[] } = {}): Promise<{
   app: INestApplication<App>;
   organizationProfileRepository: InMemoryOrganizationProfileRepository;
+  fileStorage: InMemoryFileStorage;
 }> {
   const userRepository = new InMemoryUserRepository();
   for (const user of seed.users ?? []) {
@@ -88,6 +91,7 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
   const tokenDenylist = new InMemoryTokenDenylist();
   const organizationProfileRepository =
     new InMemoryOrganizationProfileRepository();
+  const fileStorage = new InMemoryFileStorage();
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -98,6 +102,8 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
     .useValue(tokenDenylist)
     .overrideProvider(ORGANIZATION_PROFILE_REPOSITORY)
     .useValue(organizationProfileRepository)
+    .overrideProvider(FILE_STORAGE)
+    .useValue(fileStorage)
     .overrideProvider(ThrottlerStorage)
     .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(LOGIN_FAILURE_LIMITER)
@@ -116,8 +122,18 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
   app.enableCors({ origin: 'http://localhost:5173', credentials: true });
   await app.init();
 
-  return { app, organizationProfileRepository };
+  return { app, organizationProfileRepository, fileStorage };
 }
+
+const PNG_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+]);
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const WEBP_BYTES = Buffer.concat([
+  Buffer.from('RIFF'),
+  Buffer.from([0x10, 0x00, 0x00, 0x00]),
+  Buffer.from('WEBPVP8 '),
+]);
 
 async function loginAgent(app: INestApplication<App>, email: string) {
   const agent = request.agent(app.getHttpServer());
@@ -439,6 +455,7 @@ describe('Organization Profile (e2e)', () => {
 
   describe('Anonymous and non-admin access control on every /organization-profile route (tasks.md 4.5, authorization spec)', () => {
     let app: INestApplication<App>;
+    let fileStorage: InMemoryFileStorage;
     const adminEmail = 'op-guard-admin@example.com';
     const managerEmail = 'op-guard-manager@example.com';
     const maintenanceCompanyManagerEmail = 'op-guard-mc-manager@example.com';
@@ -471,7 +488,7 @@ describe('Organization Profile (e2e)', () => {
         email: communityRepresentativeEmail,
         role: 'COMMUNITY_REPRESENTATIVE',
       });
-      ({ app } = await buildApp({
+      ({ app, fileStorage } = await buildApp({
         users: [
           admin,
           manager,
@@ -489,6 +506,8 @@ describe('Organization Profile (e2e)', () => {
     const routes = [
       ['GET', '/organization-profile'],
       ['PATCH', '/organization-profile'],
+      ['GET', '/organization-profile/logo'],
+      ['PUT', '/organization-profile/logo'],
     ] as const;
 
     function sendRoute(
@@ -496,39 +515,256 @@ describe('Organization Profile (e2e)', () => {
       method: (typeof routes)[number][0],
       path: string,
     ) {
-      return method === 'GET' ? agent.get(path) : agent.patch(path).send({});
+      if (method === 'GET') return agent.get(path);
+      if (method === 'PUT') {
+        return agent.put(path).attach('file', PNG_BYTES, 'logo.png');
+      }
+      return agent.patch(path).send({});
     }
 
     // authorization spec: "Unauthenticated caller is rejected before role
-    // check" — 401 on both routes, no session cookie at all.
+    // check" — 401 on every route, no session cookie at all.
     it.each(routes)('anonymous %s %s -> 401', async (method, path) => {
       const req = request(app.getHttpServer());
       const response = await sendRoute(req, method, path);
       expect(response.status).toBe(401);
     });
 
-    // authorization spec: "Every non-admin role is rejected on both
-    // endpoints" — 403 for each of the 4 non-admin roles.
+    // authorization spec: "Every non-admin role is rejected on every
+    // endpoint" — 403 for each of the 4 non-admin roles.
     it.each([
       ['MANAGER', managerEmail],
       ['MAINTENANCE_COMPANY_MANAGER', maintenanceCompanyManagerEmail],
       ['MAINTENANCE_TECHNICIAN', maintenanceTechnicianEmail],
       ['COMMUNITY_REPRESENTATIVE', communityRepresentativeEmail],
     ] as const)(
-      '%s is rejected with 403 on both routes',
+      '%s is rejected with 403 on every route',
       async (_role, email) => {
         const agent = await loginAgent(app, email);
         for (const [method, path] of routes) {
           const response = await sendRoute(agent, method, path);
           expect(response.status).toBe(403);
         }
+        expect(fileStorage.keys()).toEqual([]);
       },
     );
 
-    it('SYSTEM_ADMIN is permitted through the guard on both routes (authorization spec: SYSTEM_ADMIN is permitted)', async () => {
+    // authorization spec: an upload is rejected before its file is read.
+    // A body over the size limit would get 413 if multer read it first.
+    it('rejects a non-admin upload with 403 before reading an oversized file', async () => {
+      const agent = await loginAgent(app, managerEmail);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', Buffer.alloc(3 * 1024 * 1024), 'logo.png')
+        .expect(403);
+    });
+
+    it('SYSTEM_ADMIN is permitted through the guard on every route (authorization spec: SYSTEM_ADMIN is permitted)', async () => {
       const agent = await loginAgent(app, adminEmail);
       await agent.get('/organization-profile').expect(200);
       await agent.patch('/organization-profile').send({}).expect(200);
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, 'logo.png')
+        .expect(200);
+      await agent.get('/organization-profile/logo').expect(200);
+    });
+  });
+
+  describe('Organization logo (organization-logo S1-S3, spec: Upload the Organization Logo / Read the Organization Logo)', () => {
+    let app: INestApplication<App>;
+    let fileStorage: InMemoryFileStorage;
+    let organizationProfileRepository: InMemoryOrganizationProfileRepository;
+    const adminEmail = 'op-logo-admin@example.com';
+
+    beforeEach(async () => {
+      const admin = await buildSeedUser({
+        id: 'op-logo-admin-id',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      ({ app, fileStorage, organizationProfileRepository } = await buildApp({
+        users: [admin],
+      }));
+    });
+
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it('starts with no logo: hasLogo is false and the logo read is 404 (spec: A profile without a logo)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const profile = await agent.get('/organization-profile').expect(200);
+      expect(profile.body).toMatchObject({ hasLogo: false });
+
+      await agent.get('/organization-profile/logo').expect(404);
+    });
+
+    it.each([
+      ['PNG', PNG_BYTES, 'logo.png', 'image/png'],
+      ['JPEG', JPEG_BYTES, 'logo.jpg', 'image/jpeg'],
+      ['WebP', WEBP_BYTES, 'logo.webp', 'image/webp'],
+    ])(
+      'uploads a %s logo and reads it back with its content type (spec: A PNG, JPEG or WebP logo is stored)',
+      async (_name, bytes, filename, contentType) => {
+        const agent = await loginAgent(app, adminEmail);
+
+        const upload = await agent
+          .put('/organization-profile/logo')
+          .attach('file', bytes, filename)
+          .expect(200);
+        expect(upload.body).toMatchObject({ hasLogo: true });
+        expect(upload.body).not.toHaveProperty('logoAssetId');
+
+        const logo = await agent.get('/organization-profile/logo').expect(200);
+        expect(logo.headers['content-type']).toBe(contentType);
+        expect(logo.headers['cache-control']).toBe('no-store');
+        expect(Buffer.from(logo.body as Buffer)).toEqual(bytes);
+
+        const profile = await agent.get('/organization-profile').expect(200);
+        expect(profile.body).toMatchObject({ hasLogo: true });
+      },
+    );
+
+    it('decides the format by content, not by file name or declared type (spec: The format is decided by the content)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, {
+          filename: 'logo.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(200);
+
+      const logo = await agent.get('/organization-profile/logo').expect(200);
+      expect(logo.headers['content-type']).toBe('image/png');
+    });
+
+    it('replaces the previous logo and keeps one stored file (spec: A new upload replaces the logo)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, 'logo.png')
+        .expect(200);
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', JPEG_BYTES, 'logo.jpg')
+        .expect(200);
+
+      const logo = await agent.get('/organization-profile/logo').expect(200);
+      expect(logo.headers['content-type']).toBe('image/jpeg');
+      expect(fileStorage.keys()).toHaveLength(1);
+      expect(fileStorage.keys()[0]).toMatch(/^logos\/[0-9a-f-]{36}\.jpg$/);
+    });
+
+    it.each([
+      [
+        'an SVG',
+        Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+        'logo.svg',
+        'image/svg+xml',
+      ],
+      ['a GIF', Buffer.from('GIF89a\x01\x00'), 'logo.gif', 'image/gif'],
+      [
+        'a text file named .png',
+        Buffer.from('not an image'),
+        'logo.png',
+        'image/png',
+      ],
+    ])(
+      'rejects %s with 400 LOGO_UNSUPPORTED_FORMAT and changes nothing (spec: Other formats are rejected)',
+      async (_name, bytes, filename, contentType) => {
+        const agent = await loginAgent(app, adminEmail);
+
+        const response = await agent
+          .put('/organization-profile/logo')
+          .attach('file', bytes, { filename, contentType })
+          .expect(400);
+
+        expect(response.body).toMatchObject({
+          code: 'LOGO_UNSUPPORTED_FORMAT',
+        });
+        expect(fileStorage.keys()).toEqual([]);
+        expect(
+          (await organizationProfileRepository.get()).logoAssetId,
+        ).toBeNull();
+      },
+    );
+
+    it('accepts a file of exactly 2 MiB (spec: A PNG, JPEG or WebP logo is stored)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const atLimit = Buffer.concat([
+        PNG_BYTES,
+        Buffer.alloc(2 * 1024 * 1024 - PNG_BYTES.length),
+      ]);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', atLimit, 'logo.png')
+        .expect(200);
+    });
+
+    it('rejects a file one byte over 2 MiB with 413 and changes nothing (spec: A logo over the size limit is rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      const tooLarge = Buffer.concat([
+        PNG_BYTES,
+        Buffer.alloc(2 * 1024 * 1024 + 1 - PNG_BYTES.length),
+      ]);
+
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', tooLarge, 'logo.png')
+        .expect(413);
+
+      expect(fileStorage.keys()).toEqual([]);
+      expect(
+        (await organizationProfileRepository.get()).logoAssetId,
+      ).toBeNull();
+    });
+
+    it('answers 404 when the recorded logo file is missing from storage (spec: Read the Organization Logo)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, 'logo.png')
+        .expect(200);
+      await fileStorage.delete(fileStorage.keys()[0]);
+
+      await agent.get('/organization-profile/logo').expect(404);
+    });
+
+    it('rejects a request without a file with 400 LOGO_FILE_MISSING (spec: An upload without a file is rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .put('/organization-profile/logo')
+        .field('name', 'not a file')
+        .expect(400);
+
+      expect(response.body).toMatchObject({ code: 'LOGO_FILE_MISSING' });
+      expect(fileStorage.keys()).toEqual([]);
+    });
+
+    it('does not change the logo through PATCH (spec: Supplying the field writes nothing)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, 'logo.png')
+        .expect(200);
+      const before = (await organizationProfileRepository.get()).logoAssetId;
+
+      await agent
+        .patch('/organization-profile')
+        .send({ logoAssetId: 'logos/other.png', hasLogo: false })
+        .expect(200);
+
+      expect((await organizationProfileRepository.get()).logoAssetId).toBe(
+        before,
+      );
     });
   });
 });

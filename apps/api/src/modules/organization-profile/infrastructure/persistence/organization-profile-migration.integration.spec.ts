@@ -54,8 +54,8 @@ describe('OrganizationProfile schema (migration integration guard)', () => {
   //     the life of this table: `id` is the hand-picked literal from the
   //     migration and application code never references it (design.md
   //     Decision 1); `singleton` never changes (the CHECK requires it);
-  //     `logoAssetId` is permanently unwritable this slice (ADR-012). These
-  //     are safe to assert directly against the live row, read-only, and
+  //     `logoAssetId` starts null and only a logo upload writes it, which
+  //     this freshly created test database never runs. These are safe to assert directly against the live row, read-only, and
   //     doing so is what actually proves "the seeded row" (this specific
   //     `id`) is the one and only row, rather than merely that *some* row
   //     exists.

@@ -11,9 +11,10 @@ import { OrganizationProfileReader } from './organization-profile.reader.port';
 // Derived from OrganizationProfileProps rather than hand-declared, so the
 // six writable fields cannot drift from the entity's own field list. `id`
 // is never writable (no id parameter, design.md Decision 3) and
-// `logoAssetId` is reserved and inert this slice (ADR-012 Consequences) —
-// both omitted, so `logoAssetId` is unwritable by construction rather than
-// by a rejection rule (design.md Interfaces/Contracts).
+// `logoAssetId` is written only by setLogoAssetId() (organization-logo) —
+// both omitted, so the partial update can never write `logoAssetId`, by
+// construction rather than by a rejection rule (design.md
+// Interfaces/Contracts).
 export type OrganizationProfileChanges = Partial<
   Omit<OrganizationProfileProps, 'id' | 'logoAssetId'>
 >;
@@ -31,6 +32,10 @@ export interface OrganizationProfileRepository extends OrganizationProfileReader
   // the authoritative post-state (design.md Decision 3). No id parameter,
   // and no preliminary read.
   update(changes: OrganizationProfileChanges): Promise<OrganizationProfile>;
+
+  // organization-logo S3: records the storage key of the current logo and
+  // resolves to the post-state, like update().
+  setLogoAssetId(logoAssetId: string): Promise<OrganizationProfile>;
 
   // No create(), no softDeleteById(), no findAll(), no transactional() —
   // the profile has no create/delete/list surface (design.md, spec.md "The

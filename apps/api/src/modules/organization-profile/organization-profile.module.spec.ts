@@ -1,4 +1,6 @@
 import { Test } from '@nestjs/testing';
+import { FileStorageModule } from '../../shared/infrastructure/file-storage/file-storage.module';
+import { IdGeneratorModule } from '../../shared/infrastructure/id/id-generator.module';
 import { PrismaModule } from '../../shared/infrastructure/persistence/prisma.module';
 import {
   ORGANIZATION_PROFILE_READER,
@@ -23,6 +25,8 @@ import { OrganizationProfileModule } from './organization-profile.module';
 // Only .compile() is called (provider instantiation/DI resolution), never
 // .init(), so this never reaches PrismaService.onModuleInit()'s $connect()
 // and needs no real database connection — mirroring app.module.spec.ts.
+// The logo use cases need the global FileStorageModule and
+// IdGeneratorModule, which AppModule provides in the running app.
 describe('OrganizationProfileModule (DI)', () => {
   const originalEnv = process.env;
 
@@ -39,7 +43,12 @@ describe('OrganizationProfileModule (DI)', () => {
 
   it('resolves ORGANIZATION_PROFILE_READER and ORGANIZATION_PROFILE_REPOSITORY to one instance', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [PrismaModule, OrganizationProfileModule],
+      imports: [
+        PrismaModule,
+        IdGeneratorModule,
+        FileStorageModule,
+        OrganizationProfileModule,
+      ],
     }).compile();
 
     const reader = moduleRef.get<OrganizationProfileReader>(

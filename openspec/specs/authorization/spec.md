@@ -364,8 +364,11 @@ Delete Surface_); declaring them would be a permission with no call
 site. Both MUST be granted only on the `SYSTEM_ADMIN` row of
 `ROLE_PERMISSIONS`. The read endpoint MUST require
 `organizationProfile:read` and the update endpoint MUST require
-`organizationProfile:update`; neither MUST be reachable on
-authentication alone.
+`organizationProfile:update`; likewise the logo read
+(`GET /organization-profile/logo`) MUST require `organizationProfile:read`
+and the logo upload (`PUT /organization-profile/logo`) MUST require
+`organizationProfile:update`. None MUST be reachable on authentication
+alone, and an upload MUST be rejected before its file is read or stored.
 
 `ROLE_PERMISSIONS` MUST remain an exhaustive `Record<Role, Permission[]>`,
 and `PermissionChecker.can(role, permission)`'s signature MUST be
@@ -378,23 +381,23 @@ read.
 - WHEN they call an `/organization-profile` endpoint
 - THEN the request MUST proceed to the endpoint's own logic
 
-#### Scenario: Every non-admin role is rejected on both endpoints
+#### Scenario: Every non-admin role is rejected on every endpoint
 
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
-- WHEN they call the organization-profile read endpoint and then the update endpoint
-- THEN both responses MUST be 403, for each of the four roles, with no profile data disclosed and no write performed
+- WHEN they call the profile read, the profile update, the logo read and the logo upload
+- THEN every response MUST be 403, for each of the four roles, with no profile data or logo disclosed, no write performed and no file stored
 
 #### Scenario: Unauthenticated caller is rejected before role check
 
 - GIVEN no valid session (no cookie, expired, or tampered token)
-- WHEN the caller calls either `/organization-profile` endpoint
+- WHEN the caller calls any `/organization-profile` endpoint
 - THEN the response MUST be 401, and the permission check MUST NOT execute
 
 #### Scenario: Each endpoint declares its own permission
 
-- GIVEN the two organization-profile routes' permission metadata
+- GIVEN the four organization-profile routes' permission metadata
 - WHEN it is inspected
-- THEN the read MUST require `organizationProfile:read`, the update MUST require `organizationProfile:update`, and neither MUST be reachable on authentication alone
+- THEN the profile read and the logo read MUST require `organizationProfile:read`, the update and the logo upload MUST require `organizationProfile:update`, and none MUST be reachable on authentication alone
 
 #### Scenario: Exactly two members are declared and only the admin holds them
 

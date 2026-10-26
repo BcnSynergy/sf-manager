@@ -467,8 +467,9 @@ model QuestionAnswer {
 // design.md Decision 2: all six text fields are plain strings — no Value
 // Objects, mirroring MaintenanceCompany/Community.
 //
-// `logoAssetId` is reserved and permanently null this slice (ADR-012,
-// spec.md "logoAssetId Is Reserved, Unwritable and Absent From the API").
+// `logoAssetId` holds the FileStorage key of the uploaded logo, never a
+// filesystem path (ADR-012 and its addendum); it is never returned by the
+// API (spec.md "logoAssetId Is a Storage Key, Absent From the API").
 //
 // `singleton` is a persistence-only sentinel guard (design.md Decision 1),
 // never mapped onto the domain entity or any DTO. `@unique` makes this the
@@ -494,7 +495,7 @@ model OrganizationProfile {
   address     String @default("")
   phone       String @default("")
   email       String @default("")
-  logoAssetId String? // reserved, inert this slice (ADR-012)
+  logoAssetId String? // FileStorage key of the current logo, null until one is uploaded (organization-logo)
   singleton   Boolean @unique @default(true) // design.md Decision 1 — Prisma-visible half of the guard; the CHECK is hand-written in migration.sql
 }
 

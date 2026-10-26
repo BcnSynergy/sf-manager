@@ -44,6 +44,10 @@ services:
       # SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD are deliberately absent: the
       # one-off admin seed run passes them with `-e` (README), so the
       # long-running API never holds the admin password.
+    volumes:
+      # Uploaded files (the organization logo). The image sets
+      # FILE_STORAGE_DIR to this path. Not covered by the backup service yet.
+      - api-files:/var/lib/sf-manager/files
     # No published port: Caddy forwards /api/* to it.
 
   # Daily pg_dump into ./backups on the host (TD-41). Copying the dumps off
@@ -88,5 +92,6 @@ services:
 
 volumes:
   postgres-data:
+  api-files:
   caddy-data:
   caddy-config:

@@ -25,7 +25,7 @@ export interface OrganizationProfileProps {
   address: string;
   phone: string;
   email: string;
-  logoAssetId: string | null; // reserved, inert this slice (ADR-012)
+  logoAssetId: string | null; // FileStorage key of the logo (organization-logo)
 }
 
 export class OrganizationProfile {

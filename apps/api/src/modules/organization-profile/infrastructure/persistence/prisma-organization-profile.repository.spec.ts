@@ -88,3 +88,51 @@ describe('PrismaOrganizationProfileRepository.update()', () => {
     });
   });
 });
+
+describe('PrismaOrganizationProfileRepository.setLogoAssetId() (organization-logo S3)', () => {
+  it('writes only logoAssetId on the singleton row and maps the post-state', async () => {
+    const update = jest.fn().mockResolvedValue({
+      id: '01997a00-0000-7000-8000-000000000001',
+      name: 'Acme',
+      legalName: '',
+      taxId: '',
+      address: '',
+      phone: '',
+      email: '',
+      logoAssetId: 'logos/abc.png',
+      singleton: true,
+    });
+    const repository = new PrismaOrganizationProfileRepository({
+      organizationProfile: { update },
+    } as unknown as PrismaService);
+
+    const profile = await repository.setLogoAssetId('logos/abc.png');
+
+    expect(update).toHaveBeenCalledWith({
+      where: { singleton: true },
+      data: { logoAssetId: 'logos/abc.png' },
+    });
+    expect(profile.logoAssetId).toBe('logos/abc.png');
+    expect(profile.name).toBe('Acme');
+  });
+
+  it('maps a P2025 record-not-found error to OrganizationProfileMissingError', async () => {
+    const repository = new PrismaOrganizationProfileRepository({
+      organizationProfile: {
+        update: jest.fn().mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError(
+            'Record to update not found.',
+            {
+              code: 'P2025',
+              clientVersion: 'test',
+            },
+          ),
+        ),
+      },
+    } as unknown as PrismaService);
+
+    await expect(
+      repository.setLogoAssetId('logos/abc.png'),
+    ).rejects.toBeInstanceOf(OrganizationProfileMissingError);
+  });
+});

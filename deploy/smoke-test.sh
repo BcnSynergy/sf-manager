@@ -2,8 +2,8 @@
 # Smoke test for the production stack (EN-91; spec `deployment`, "Images
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
 # starts the whole stack on https://localhost with throwaway secrets, checks
-# that the API and the web app answer and that the backup service writes a
-# dump, then removes the stack and its volumes. CI runs it on every PR and push to main; run it from the
+# that the API and the web app answer, that the API can write uploaded
+# files and that the backup service writes a dump, then removes the stack and its volumes. CI runs it on every PR and push to main; run it from the
 # repository root:
 #
 #   sh deploy/smoke-test.sh
@@ -60,6 +60,13 @@ echo "smoke: /api/health ok"
 status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
 echo "smoke: web app 200"
+
+# Uploaded files (the organization logo) go to the api-files volume, so the
+# API's user must be able to write there (spec `deployment`, "Persistent
+# data and secrets").
+compose exec -T api sh -c 'probe="$FILE_STORAGE_DIR/.smoke-probe" && touch "$probe" && rm "$probe"' ||
+  fail "the API cannot write to FILE_STORAGE_DIR"
+echo "smoke: API can write uploaded files"
 
 # The first dump starts with the API, so it is normally done already.
 attempt=0

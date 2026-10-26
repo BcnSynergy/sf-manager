@@ -675,6 +675,28 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
   before every merge, and their titles do not follow `PR N/M`). Origin:
   `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
+- **EN-109** (feature): accept SVG organization logos. Rejected today
+  because an SVG can carry scripts that run when its URL is opened
+  directly; accepting it needs sanitizing on upload, or serving it with a
+  `sandbox` Content Security Policy, plus checking that print and the
+  letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
+  Origin: `organization-logo` (S2), 2026-10-26.
+- **EN-110** (feature): remove the organization logo without uploading a
+  new one. Today a logo can only be replaced. Origin: `organization-logo`
+  (S6), 2026-10-26.
+- **EN-111** (API): harden the logo upload's edges. A file in a field other
+  than `file`, or a second file, gets multer's 400 without a `code`; non-file
+  multipart fields have no count or size limit; and only the leading bytes
+  are checked, so a 3-byte `FF D8 FF` passes as a JPEG the browser cannot
+  render. Decoding the image on upload would close the last one. Evidence:
+  `apps/api/src/modules/organization-profile/presentation/organization-profile.controller.ts`
+  (`uploadLogo`). Origin: `organization-logo` T1 verification, 2026-10-26.
+- **EN-112** (API): a logo read that starts just before a replacing upload
+  deletes the old file can answer 404 for that one request. Harmless today
+  (`Cache-Control: no-store`, and the web hides a logo that fails to load);
+  deleting the previous file after a short delay, or retrying the read once
+  with the current key, would close it. Origin: `organization-logo` PR #293
+  pre-merge review, 2026-10-26.
 
 ## Done
 

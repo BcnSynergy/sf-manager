@@ -17,5 +17,8 @@ prod.env
 # OS/editor
 .DS_Store
 
+# Uploaded files in development (FILE_STORAGE_DIR defaults to ./storage)
+apps/api/storage/
+
 # Production database dumps (docker-compose.prod.yml `backup` service)
 backups/

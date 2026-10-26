@@ -180,7 +180,7 @@ The production stack MUST dump the database with `pg_dump` when it starts and ev
 
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200 and the backup service writes a dump. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 
@@ -202,13 +202,13 @@ CI MUST build the API and web images from `docker-compose.prod.yml` on every pul
 
 ### Requirement: Persistent data and secrets
 
-Postgres data MUST persist in a named volume across container restarts and upgrades. Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.
+Postgres data MUST persist in a named volume across container restarts and upgrades. Uploaded files (the organization logo) MUST persist in their own named volume, mounted at the API's `FILE_STORAGE_DIR`, which the API image MUST set and own as its non-root user. The API MUST fail at startup in production when `FILE_STORAGE_DIR` is unset or empty. The `backup` service does not copy that volume yet (TD-42). Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.
 
 #### Scenario: Upgrade keeps data
 
 - GIVEN a running production stack with data
 - WHEN the operator checks out a newer version and runs the start command again
-- THEN the data is still there and any new migrations are applied
+- THEN the data and the uploaded logo are still there and any new migrations are applied
 
 #### Scenario: Secrets not committed
 
