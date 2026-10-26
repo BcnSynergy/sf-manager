@@ -15,7 +15,8 @@ Its one non-obvious job is the **not-completed-yet** state: the seeded
 profile is blank, and an admin must be able to tell "nobody has entered
 this yet" apart from "the page is loading" and "the request failed".
 
-Out of scope: a logo control of any kind, an edit history or audit view,
+Out of scope: SVG logos (EN-109), removing the logo without replacing it
+(EN-110), an edit history or audit view,
 a completeness gate on anything, and any surface for a non-`SYSTEM_ADMIN`
 role. The navigation entry itself is owned by `app-navigation`; the API
 contract is owned by `organization-profile-management`.
@@ -135,18 +136,55 @@ still be present after one.
 - WHEN the failure is handled
 - THEN an error MUST be shown and the values they entered MUST remain in the form
 
-### Requirement: No Logo Control
+### Requirement: Uploading the Logo
 
-The page MUST offer no logo affordance of any kind: no file input, no
-upload button, no image preview, no placeholder and no "coming soon"
-control. `logoAssetId` is reserved on the entity and absent from the
-API this slice ships, so the UI MUST have nothing to bind to.
+The page MUST show a logo section, separate from the profile form, with
+its own upload: choosing a file and uploading it MUST NOT save or change
+the text fields. The section MUST preview the current logo from
+`GET /organization-profile/logo` when the profile has one, and MUST
+otherwise say that no logo has been uploaded. If the preview fails to
+load, it MUST be replaced by a message, never shown as a broken image.
 
-#### Scenario: No logo affordance is rendered
+The file picker MUST offer PNG, JPEG and WebP only. An upload of a file
+over 2 MB, or whose type is not PNG, JPEG or WebP, MUST be rejected with
+a message and no request sent. The upload control MUST be disabled until a
+file is chosen and while an upload is in flight. On success the section
+MUST confirm the upload in its own status region, next to its controls
+(`web-alert-announcements`), and MUST show the new logo without a page
+reload; choosing another file withdraws the confirmation. A
+failed upload MUST show a message chosen by the response's status and
+code (413: too large; `LOGO_UNSUPPORTED_FORMAT`: wrong format; anything
+else: a generic failure) and MUST keep the previous logo.
 
-- GIVEN the organization profile page rendered for a `SYSTEM_ADMIN`
-- WHEN every control and image it renders is enumerated
-- THEN none MUST relate to a logo, and no file-upload control MUST exist anywhere in this surface
+#### Scenario: A profile without a logo
+
+- GIVEN a profile with no logo
+- WHEN a `SYSTEM_ADMIN` opens the page
+- THEN the logo section MUST say that no logo has been uploaded, and no logo image MUST be shown
+
+#### Scenario: A logo is uploaded and previewed
+
+- GIVEN a `SYSTEM_ADMIN` chooses a PNG, JPEG or WebP file of at most 2 MB
+- WHEN they upload it
+- THEN the upload MUST be confirmed and the new logo MUST be previewed, without a page reload and without saving the profile form
+
+#### Scenario: A wrong file is rejected before any network call
+
+- GIVEN a `SYSTEM_ADMIN` chooses a file over 2 MB, or an SVG, GIF or other non-PNG/JPEG/WebP file
+- WHEN they try to upload it
+- THEN a message MUST be shown and no request MUST be sent
+
+#### Scenario: A rejected upload keeps the previous logo
+
+- GIVEN a profile with a logo, and an upload the API rejects or that fails
+- WHEN the failure is handled
+- THEN a message chosen by status and code MUST be shown, and the previous logo MUST still be previewed
+
+#### Scenario: A logo that cannot be loaded
+
+- GIVEN a profile whose logo image fails to load
+- WHEN the page renders it
+- THEN a message MUST replace the image
 
 ### Requirement: No Server-Message String Coupling
 

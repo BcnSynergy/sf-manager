@@ -1,6 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ApiError } from './client';
-import { getOrganizationProfile, updateOrganizationProfile } from './organization-profile';
+import {
+  getOrganizationProfile,
+  organizationLogoUrl,
+  updateOrganizationProfile,
+  uploadOrganizationLogo,
+} from './organization-profile';
 
 function mockResponse(init: {
   ok: boolean;
@@ -85,5 +90,39 @@ describe('api/organization-profile', () => {
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(400);
+  });
+
+  it('uploadOrganizationLogo() PUTs the file as multipart field "file" and returns the profile', async () => {
+    const fetchMock = stubFetchOnce(
+      mockResponse({ ok: true, status: 200, json: async () => ({ ...profile, hasLogo: true }) }),
+    );
+    const file = new File(['png-bytes'], 'logo.png', { type: 'image/png' });
+
+    await expect(uploadOrganizationLogo(file)).resolves.toEqual({ ...profile, hasLogo: true });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/organization-profile\/logo$/);
+    expect(init.method).toBe('PUT');
+    expect((init.body as FormData).get('file')).toBe(file);
+  });
+
+  it('uploadOrganizationLogo() rejects with the coded ApiError on a 400', async () => {
+    stubFetchOnce(
+      mockResponse({
+        ok: false,
+        status: 400,
+        json: async () => ({ statusCode: 400, code: 'LOGO_UNSUPPORTED_FORMAT' }),
+      }),
+    );
+
+    const error = await uploadOrganizationLogo(new File(['x'], 'a.png')).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe('LOGO_UNSUPPORTED_FORMAT');
+  });
+
+  it('organizationLogoUrl() points at the logo endpoint, with a version that changes the URL', () => {
+    expect(organizationLogoUrl(0)).toMatch(/\/organization-profile\/logo\?v=0$/);
+    expect(organizationLogoUrl(1)).not.toBe(organizationLogoUrl(0));
   });
 });

@@ -206,7 +206,17 @@
     "emptySubmitError": "Introdueix almenys un valor abans de desar.",
     "validationError": "Introdueix un valor vàlid per a cada camp modificat.",
     "saveError": "No s'ha pogut desar el perfil de l'organització. Torna-ho a provar.",
-    "saveSuccess": "Perfil de l'organització desat."
+    "saveSuccess": "Perfil de l'organització desat.",
+    "logoTitle": "Logotip",
+    "logoAlt": "Logotip de l'organització",
+    "noLogo": "Encara no s'ha pujat cap logotip.",
+    "logoLoadError": "No s'ha pogut carregar el logotip.",
+    "logoFileLabel": "Imatge del logotip (PNG, JPEG o WebP, fins a 2 MB)",
+    "logoUploadLabel": "Puja el logotip",
+    "logoUploadSuccess": "Logotip pujat.",
+    "logoTooLargeError": "El logotip ha d'ocupar 2 MB o menys.",
+    "logoUnsupportedError": "El logotip ha de ser una imatge PNG, JPEG o WebP.",
+    "logoUploadError": "No s'ha pogut pujar el logotip. Torna-ho a provar."
   },
   "inspectableElement": {
     "list": {

@@ -11,6 +11,7 @@ import { PageHeader } from '../components/PageHeader';
 import { Alert, StatusRegion } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
 import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
+import { OrganizationLogoSection } from '../organization-profile/OrganizationLogoSection';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -46,7 +47,8 @@ function toFieldValues(profile: OrganizationProfile): Record<ProfileFieldKey, st
 }
 
 // spec.md "One Combined View and Edit Page" — no create/delete/list
-// affordance exists; this is the whole surface.
+// affordance exists; this is the whole surface. The logo has its own section
+// below the form, with its own upload (organization-logo).
 //
 // design.md Decision 5: `incomplete` is derived from `saved` — the last
 // server-confirmed snapshot — never from the live `values` the admin is
@@ -77,6 +79,7 @@ export function OrganizationProfilePage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [values, setValues] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
   const [saved, setSaved] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
+  const [hasLogo, setHasLogo] = useState(false);
   const {
     message: error,
     key: errorAlertKey,
@@ -105,6 +108,7 @@ export function OrganizationProfilePage() {
         const fieldValues = toFieldValues(profile);
         setValues(fieldValues);
         setSaved(fieldValues);
+        setHasLogo(profile.hasLogo);
         setLoadState('loaded');
       })
       .catch(() => {
@@ -251,6 +255,7 @@ export function OrganizationProfilePage() {
           </button>
         </div>
       </form>
+      <OrganizationLogoSection hasLogo={hasLogo} />
     </main>
   );
 }

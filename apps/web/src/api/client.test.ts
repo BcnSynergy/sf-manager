@@ -197,6 +197,29 @@ describe('apiFetch', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(0);
   });
+
+  it('sends a JSON body with Content-Type application/json', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ a: 1 }) });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
+  });
+
+  it('leaves Content-Type unset for a FormData body, so the browser adds the multipart boundary', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const body = new FormData();
+    body.append('file', new Blob(['x']), 'logo.png');
+
+    await apiFetch('/organization-profile/logo', { method: 'PUT', body });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(body);
+    expect(init.headers).toBeUndefined();
+  });
 });
 
 describe('apiFetch — unauthorized handler', () => {
