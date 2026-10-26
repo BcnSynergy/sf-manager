@@ -87,6 +87,11 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Two quick merges would otherwise publish in parallel, and the slower
+    # one could leave `main` on the older commit.
+    concurrency:
+      group: publish-main
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write

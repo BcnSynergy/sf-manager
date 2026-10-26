@@ -8,8 +8,9 @@
 #
 #   sh deploy/smoke-test.sh
 #
-# Ports 80 and 443 must be free. It uses its own Compose project, so it
-# never touches a dev or production stack on the same machine.
+# Ports 80 and 443 must be free. It uses its own Compose project and
+# volumes, but the backup service's bind mount is the checkout's backups/,
+# so its dump lands next to a production stack's dumps in the same checkout.
 set -eu
 
 project=sf-manager-smoke
@@ -39,13 +40,13 @@ fail() {
   exit 1
 }
 
-compose up -d --build
+compose up -d --build || fail "docker compose up failed"
 
 # The API applies migrations before it listens, so allow it a while.
 health=''
 attempt=0
 while [ "$attempt" -lt 60 ]; do
-  health=$(curl -fsk https://localhost/api/health 2>/dev/null || true)
+  health=$(curl -fsk --max-time 5 https://localhost/api/health 2>/dev/null || true)
   [ "$health" = '{"status":"ok","db":"ok"}' ] && break
   attempt=$((attempt + 1))
   sleep 2
@@ -54,10 +55,15 @@ done
   fail "/api/health never returned {\"status\":\"ok\",\"db\":\"ok\"} (last: '$health')"
 echo "smoke: /api/health ok"
 
-status=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/)
+status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/)
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
 echo "smoke: web app 200"
 
-compose logs backup | grep -q 'backup: wrote ' ||
-  fail "the backup service wrote no dump"
+# The first dump starts with the API, so it is normally done already.
+attempt=0
+until compose logs backup | grep -q 'backup: wrote '; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 15 ] || fail "the backup service wrote no dump"
+  sleep 2
+done
 echo "smoke: backup service wrote a dump"

@@ -581,7 +581,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   with `docker compose ... up -d --build`. Remaining: switch
   `docker-compose.prod.yml` to the published images (`image:` by tag or
   digest instead of `build:`), update the upgrade steps, and optionally
-  deploy from CI, which needs server access as repository secrets.
+  deploy from CI, which needs server access as repository secrets. Before
+  that: GHCR creates the packages private, so either set both to Public
+  once after the first publish or give the server a read token; and
+  `publish` rebuilds the images instead of pushing the ones `ci`
+  smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
+  registry state).
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
   `deployment` (S11), 2026-10-25; covers the deploy part of TD-32.
 - **EN-108** (delivery): every green push to `main` adds a new version of
