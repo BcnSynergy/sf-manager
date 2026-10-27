@@ -240,6 +240,20 @@ decide the format from the file's content, not from its name or declared
 content type. On success it MUST respond 200 with the profile, carrying
 `hasLogo: true`.
 
+A file MUST count as a PNG, JPEG or WebP image only when it carries both
+the format's signature and its image header with a width and a height
+above zero: for PNG the `IHDR` chunk right after the signature; for JPEG
+a start-of-frame segment before any image data; for WebP a `VP8 `,
+`VP8L` or `VP8X` chunk. The pixel data itself is not decoded. Anything
+else MUST be rejected as an unsupported format.
+(Previously: the format was decided by the leading bytes alone, so a
+signature without an image passed.)
+
+The form MUST carry exactly one file, in the `file` field, and no text
+field. A file in another field, a second file, any text field, or a
+malformed multipart body MUST be rejected with 400 and code
+`LOGO_UPLOAD_INVALID`.
+
 A new upload MUST replace the previous logo, and the previous file MUST be
 deleted from storage. A rejected upload MUST change nothing: no file is
 stored and the current logo, if any, stays. The bytes MUST be stored
@@ -263,6 +277,18 @@ through a storage port under a fresh key, outside the database.
 - WHEN it is uploaded
 - THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
 
+#### Scenario: A signature without an image header is rejected
+
+- GIVEN a file holding only the JPEG signature `FF D8 FF`, or a PNG whose header gives a width of 0
+- WHEN it is uploaded
+- THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
+
+#### Scenario: A malformed upload form is rejected
+
+- GIVEN a profile with a logo, and a form with the file in another field, a second file, or a text field
+- WHEN it is submitted
+- THEN the response MUST be 400 with code `LOGO_UPLOAD_INVALID`, and the logo and storage MUST be unchanged
+
 #### Scenario: A logo over the size limit is rejected
 
 - GIVEN a file larger than 2 MiB
@@ -271,9 +297,10 @@ through a storage port under a fresh key, outside the database.
 
 #### Scenario: An upload without a file is rejected
 
-- GIVEN a multipart request with no `file` part
+- GIVEN a request that carries no file and no text field
 - WHEN it is submitted
 - THEN the response MUST be 400 with code `LOGO_FILE_MISSING`, and nothing MUST change
+  (Previously: "a multipart request with no `file` part"; a form with only a text field now gets `LOGO_UPLOAD_INVALID`.)
 
 #### Scenario: A new upload replaces the logo
 
