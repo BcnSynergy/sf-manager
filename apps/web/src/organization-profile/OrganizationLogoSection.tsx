@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import {
@@ -39,6 +39,8 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const removeRef = useRef<HTMLButtonElement>(null);
+  const refocusRemoveRef = useRef(false);
   const [hasLogo, setHasLogo] = useState(initialHasLogo);
   const [version, setVersion] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);
@@ -110,10 +112,21 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       headingRef.current?.focus();
     } catch {
       showError(t('organizationProfile.logoRemoveError'));
+      refocusRemoveRef.current = true;
     } finally {
       setRemoving(false);
     }
   }
+
+  // After a failed removal the Remove button is still there, but it was
+  // disabled when the dialog handed focus back to it; focus it once it is
+  // enabled again.
+  useEffect(() => {
+    if (!removing && refocusRemoveRef.current) {
+      refocusRemoveRef.current = false;
+      removeRef.current?.focus();
+    }
+  }, [removing]);
 
   const busy = uploading || removing;
   const showPreview = hasLogo && !imageFailed;
@@ -173,6 +186,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
           </button>
           {hasLogo && (
             <button
+              ref={removeRef}
               type="button"
               className="sf-btn sf-btn-danger"
               onClick={() => setConfirmingRemoval(true)}

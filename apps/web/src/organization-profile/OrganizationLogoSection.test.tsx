@@ -281,11 +281,35 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
   it('disables upload and remove while a removal is in flight', () => {
     mockedRemove.mockReturnValue(new Promise(() => {}));
     render(<OrganizationLogoSection hasLogo />);
+    chooseFile(pngFile());
+    expect(screen.getByTestId('organization-logo-upload')).toBeEnabled();
 
     fireEvent.click(screen.getByTestId('organization-logo-remove'));
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
     expect(screen.getByTestId('organization-logo-remove')).toBeDisabled();
+    expect(screen.getByTestId('organization-logo-upload')).toBeDisabled();
     expect(screen.getByTestId('organization-logo-input')).toBeDisabled();
+  });
+
+  it('disables remove while an upload is in flight', () => {
+    mockedUpload.mockReturnValue(new Promise(() => {}));
+    render(<OrganizationLogoSection hasLogo />);
+    chooseFile(pngFile());
+
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    expect(screen.getByTestId('organization-logo-remove')).toBeDisabled();
+  });
+
+  it('gives focus back to the remove control when the removal fails', async () => {
+    mockedRemove.mockRejectedValue(new ApiError(500));
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByRole('alert');
+    await waitFor(() => expect(screen.getByTestId('organization-logo-remove')).toHaveFocus());
   });
 });

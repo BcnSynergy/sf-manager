@@ -194,9 +194,10 @@ on the profile or on review documents; cancelling MUST send no request
 and keep the logo. On success the section MUST say that no logo has been
 uploaded, MUST no longer offer the remove control, and MUST confirm the
 removal in its own status region (`web-alert-announcements`), without a
-page reload, and keyboard focus MUST move to the logo section's heading. A failed removal MUST show a message and keep the logo.
-Upload and remove MUST be disabled while a removal is in flight, and
-removing MUST NOT save or change the text fields.
+page reload, and keyboard focus MUST move to the logo section's heading. A failed removal MUST show a message, keep the logo and give
+keyboard focus back to the remove control. Upload and remove MUST be
+disabled while an upload or a removal is in flight, and removing MUST NOT
+save or change the text fields.
 
 #### Scenario: No logo, no remove control
 
@@ -220,7 +221,7 @@ removing MUST NOT save or change the text fields.
 
 - GIVEN a profile with a logo, and a removal that fails
 - WHEN the failure is handled
-- THEN a message MUST be shown and the logo MUST still be previewed
+- THEN a message MUST be shown, the logo MUST still be previewed, and focus MUST be on the remove control
 
 ### Requirement: No Server-Message String Coupling
 
