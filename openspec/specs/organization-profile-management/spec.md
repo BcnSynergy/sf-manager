@@ -243,16 +243,19 @@ content type. On success it MUST respond 200 with the profile, carrying
 A file MUST count as a PNG, JPEG or WebP image only when it carries both
 the format's signature and its image header with a width and a height
 above zero: for PNG the `IHDR` chunk right after the signature; for JPEG
-a start-of-frame segment before any image data; for WebP a `VP8 `,
+a start-of-frame segment before any image data, with the first segment
+right after the start marker; for WebP a `VP8 `,
 `VP8L` or `VP8X` chunk. The pixel data itself is not decoded. Anything
 else MUST be rejected as an unsupported format.
 (Previously: the format was decided by the leading bytes alone, so a
 signature without an image passed.)
 
-The form MUST carry exactly one file, in the `file` field, and no text
-field. A file in another field, a second file, any text field, or a
-malformed multipart body MUST be rejected with 400 and code
-`LOGO_UPLOAD_INVALID`.
+The upload MUST be a `multipart/form-data` form carrying exactly one
+file, in the `file` field, and no text field. In such a form, a file in
+another field, a second file, any text field, or a body that cannot be
+parsed MUST be rejected with 400 and code `LOGO_UPLOAD_INVALID`. A request
+that is not `multipart/form-data` carries no file and is rejected as
+such, with `LOGO_FILE_MISSING`.
 
 A new upload MUST replace the previous logo, and the previous file MUST be
 deleted from storage. A rejected upload MUST change nothing: no file is

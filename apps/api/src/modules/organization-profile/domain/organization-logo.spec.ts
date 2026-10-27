@@ -65,6 +65,19 @@ describe('organization logo (organization-logo S2)', () => {
     expect(detectLogoFormat(withMarkers)?.extension).toBe('jpg');
   });
 
+  // DHT (C4), JPG (C8) and DAC (CC) sit in the start-of-frame range but
+  // carry no image size, so they must not be read as one.
+  it('detects a JPEG with a table segment before its size segment', () => {
+    const jpeg = jpegHeader();
+    const withTable = Buffer.concat([
+      jpeg.subarray(0, 2),
+      Buffer.from([0xff, 0xc4, 0x00, 0x05, 0x00, 0x00, 0x00]),
+      jpeg.subarray(2),
+    ]);
+
+    expect(detectLogoFormat(withTable)?.extension).toBe('jpg');
+  });
+
   it('detects a progressive JPEG (SOF2)', () => {
     const progressive = Buffer.from(jpegHeader());
     progressive[21] = 0xc2;
@@ -108,6 +121,15 @@ describe('organization logo (organization-logo S2)', () => {
     [
       'a JPEG with only stray bytes after its start marker',
       Buffer.from([0xff, 0xd8, 0x00, 0xe0, 0x00, 0x02]),
+    ],
+    // Stray bytes are tolerated only between complete segments: the first
+    // segment must follow the start marker right away.
+    [
+      'a JPEG with stray bytes right after its start marker',
+      Buffer.concat([
+        Buffer.from([0xff, 0xd8, 0x00]),
+        jpegHeader().subarray(2),
+      ]),
     ],
     [
       'a JPEG whose size segment is too short to hold a size',
