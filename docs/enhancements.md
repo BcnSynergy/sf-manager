@@ -708,8 +708,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-111** (API): the logo upload's edges are hardened. A file counts as
   PNG, JPEG or WebP only with its image header and a size above zero (read
   by hand, no new dependency), and a form with the file in another field, a
-  second file or any text field gets 400 `LOGO_UPLOAD_INVALID`. Done in
-  `en-111-logo-upload-edges`, 2026-10-27.
+  second file or any text field gets 400 `LOGO_UPLOAD_INVALID`. Decoding
+  the whole image on upload was deliberately left out: a file with a valid
+  header but broken pixel data is still accepted, and the web hides an
+  image that fails to load. Done in `en-111-logo-upload-edges`, 2026-10-27.
 - **EN-110** (feature): the organization logo can be removed without
   uploading a new one: `DELETE /organization-profile/logo`
   (`organizationProfile:update`) and a confirmed Remove control on the

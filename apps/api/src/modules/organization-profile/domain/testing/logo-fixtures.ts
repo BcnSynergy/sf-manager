@@ -1,7 +1,7 @@
-// EN-111: the smallest byte sequences detectLogoFormat accepts for each
-// format — the signature plus a header carrying the image size. They are
-// not complete images (no pixel data), so they serve the API's checks, not
-// a browser. Each builder takes the size so tests can probe zero sizes.
+// EN-111: short byte sequences detectLogoFormat accepts for each format —
+// the signature plus a well-formed header carrying the image size. They
+// are not complete images (no pixel data), so they serve the API's checks,
+// not a browser. Each builder takes the size so tests can probe zero sizes.
 
 export function pngHeader(width = 1, height = 1): Buffer {
   const ihdr = Buffer.alloc(25);

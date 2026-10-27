@@ -840,6 +840,11 @@ describe('Organization Profile (e2e)', () => {
         'a text field alone',
         (req: request.Test) => req.field('name', 'not a file'),
       ],
+      [
+        'a multipart body without a boundary',
+        (req: request.Test) =>
+          req.set('Content-Type', 'multipart/form-data').send('not a form'),
+      ],
     ])(
       'rejects %s with 400 LOGO_UPLOAD_INVALID and changes nothing',
       async (_name, build) => {

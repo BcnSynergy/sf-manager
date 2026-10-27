@@ -77,13 +77,14 @@ function isStartOfFrame(marker: number): boolean {
 }
 
 // SOI, then marker segments until a start-of-frame segment with a height
-// and width above zero. Image data (SOS) or the end (EOI) before it, a
-// segment not introduced by FF, or a length running past the end rejects.
+// and width above zero. Stray bytes between segments are skipped, as
+// libjpeg and browsers do. Image data (SOS) or the end (EOI) before it, or
+// a length running past the end, rejects.
 function isJpeg(content: Uint8Array): boolean {
   if (!startsWith(content, JPEG_SOI)) return false;
   let offset = 2;
   while (offset < content.length) {
-    if (content[offset] !== 0xff) return false;
+    while (offset < content.length && content[offset] !== 0xff) offset++;
     while (offset < content.length && content[offset] === 0xff) offset++;
     if (offset >= content.length) return false;
     const marker = content[offset];
