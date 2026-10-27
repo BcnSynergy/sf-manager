@@ -104,9 +104,11 @@ describe('GetOrganizationLogoUseCase (organization-logo S3)', () => {
     it('does not retry when the key is unchanged and the file is gone', async () => {
       await storage.delete('logos/old.png');
       const readSpy = jest.spyOn(repository, 'get');
+      const fileSpy = jest.spyOn(storage, 'get');
 
       expect(await useCase.execute()).toBeNull();
       expect(readSpy).toHaveBeenCalledTimes(2);
+      expect(fileSpy).toHaveBeenCalledTimes(1);
     });
   });
 });
