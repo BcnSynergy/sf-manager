@@ -681,12 +681,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `sandbox` Content Security Policy, plus checking that print and the
   letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
   Origin: `organization-logo` (S2), 2026-10-26.
-- **EN-112** (API): a logo read that starts just before a replacing upload
-  deletes the old file can answer 404 for that one request. Harmless today
-  (`Cache-Control: no-store`, and the web hides a logo that fails to load);
-  deleting the previous file after a short delay, or retrying the read once
-  with the current key, would close it. Origin: `organization-logo` PR #293
-  pre-merge review, 2026-10-26.
 - **EN-113** (tests): no module test proves that `ORGANIZATION_LOGO_READER`
   resolves to the same `GetOrganizationLogoUseCase` instance, as
   `organization-profile.module.spec.ts` does for `ORGANIZATION_PROFILE_READER`.
@@ -705,6 +699,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-112** (API): a logo read that finds its file deleted by a replacing
+  upload reads the key once more and serves the new logo, instead of
+  answering 404. One retry only. Covers the document logo read too, which
+  uses the same use case. Done in `en-112-logo-read-race` (PR #298), 2026-10-27.
 - **EN-111** (API): the logo upload's edges are hardened. A file counts as
   PNG, JPEG or WebP only with its image header and a size above zero (read
   by hand, no new dependency), and a form with the file in another field, a
