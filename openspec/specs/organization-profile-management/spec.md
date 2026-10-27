@@ -320,11 +320,22 @@ no logo to serve — none uploaded, or its file is missing from storage — it
 MUST respond 404. Clients MUST read the logo through this endpoint, never
 from a static file path.
 
+A read that overlaps a replacing upload MUST serve either the previous or
+the new logo, never a 404: when the recorded file is missing, the key MUST
+be read once more and, if it changed, the new file served. If the key is
+unchanged, or the logo was removed in the meantime, the read MUST respond 404. The key MUST be read at most twice per request.
+
 #### Scenario: The logo is served with its content type
 
 - GIVEN an uploaded WebP logo
 - WHEN the logo is read
 - THEN the response MUST be 200 with `Content-Type: image/webp`, `Cache-Control: no-store` and the uploaded bytes
+
+#### Scenario: A read overlapping a replacing upload
+
+- GIVEN a read that has taken the current key, and an upload that then records a new key and deletes the previous file
+- WHEN the read looks for the previous file
+- THEN it MUST find it missing, read the key again, and serve the new logo with its content type
 
 ### Requirement: Remove the Organization Logo
 
