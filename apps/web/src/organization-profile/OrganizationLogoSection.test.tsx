@@ -143,6 +143,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     [new ApiError(400, 'LOGO_UNSUPPORTED_FORMAT'), 'The logo must be a PNG, JPEG or WebP image.'],
     [new ApiError(413), 'The logo must be 2 MB or smaller.'],
     [new ApiError(400, 'LOGO_FILE_MISSING'), 'Could not upload the logo. Please try again.'],
+    [new ApiError(400, 'LOGO_UPLOAD_INVALID'), 'Could not upload the logo. Please try again.'],
     [new ApiError(500), 'Could not upload the logo. Please try again.'],
     [new ApiError(0), 'Could not upload the logo. Please try again.'],
   ])(

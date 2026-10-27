@@ -681,13 +681,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `sandbox` Content Security Policy, plus checking that print and the
   letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
   Origin: `organization-logo` (S2), 2026-10-26.
-- **EN-111** (API): harden the logo upload's edges. A file in a field other
-  than `file`, or a second file, gets multer's 400 without a `code`; non-file
-  multipart fields have no count or size limit; and only the leading bytes
-  are checked, so a 3-byte `FF D8 FF` passes as a JPEG the browser cannot
-  render. Decoding the image on upload would close the last one. Evidence:
-  `apps/api/src/modules/organization-profile/presentation/organization-profile.controller.ts`
-  (`uploadLogo`). Origin: `organization-logo` T1 verification, 2026-10-26.
 - **EN-112** (API): a logo read that starts just before a replacing upload
   deletes the old file can answer 404 for that one request. Harmless today
   (`Cache-Control: no-store`, and the web hides a logo that fails to load);
@@ -712,6 +705,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-111** (API): the logo upload's edges are hardened. A file counts as
+  PNG, JPEG or WebP only with its image header and a size above zero (read
+  by hand, no new dependency), and a form with the file in another field, a
+  second file or any text field gets 400 `LOGO_UPLOAD_INVALID`. Decoding
+  the whole image on upload was deliberately left out: a file with a valid
+  header but broken pixel data is still accepted, and the web hides an
+  image that fails to load. Done in `en-111-logo-upload-edges` (PR #297), 2026-10-27.
 - **EN-110** (feature): the organization logo can be removed without
   uploading a new one: `DELETE /organization-profile/logo`
   (`organizationProfile:update`) and a confirmed Remove control on the

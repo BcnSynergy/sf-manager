@@ -20,6 +20,11 @@ import { InMemoryOrganizationProfileRepository } from '../src/modules/organizati
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import { FILE_STORAGE } from '../src/shared/application/ports/file-storage.port';
 import { InMemoryFileStorage } from '../src/shared/testing/in-memory-file-storage';
+import {
+  jpegHeader,
+  pngHeader,
+  webpLossyHeader,
+} from '../src/modules/organization-profile/domain/testing/logo-fixtures';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
 
@@ -125,15 +130,9 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
   return { app, organizationProfileRepository, fileStorage };
 }
 
-const PNG_BYTES = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
-]);
-const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
-const WEBP_BYTES = Buffer.concat([
-  Buffer.from('RIFF'),
-  Buffer.from([0x10, 0x00, 0x00, 0x00]),
-  Buffer.from('WEBPVP8 '),
-]);
+const PNG_BYTES = pngHeader();
+const JPEG_BYTES = jpegHeader();
+const WEBP_BYTES = webpLossyHeader();
 
 async function loginAgent(app: INestApplication<App>, email: string) {
   const agent = request.agent(app.getHttpServer());
@@ -737,6 +736,14 @@ describe('Organization Profile (e2e)', () => {
         'logo.png',
         'image/png',
       ],
+      // EN-111: a signature without an image header is not an image.
+      [
+        'the 3-byte JPEG signature alone',
+        Buffer.from([0xff, 0xd8, 0xff]),
+        'logo.jpg',
+        'image/jpeg',
+      ],
+      ['a PNG of width 0', pngHeader(0, 1), 'logo.png', 'image/png'],
     ])(
       'rejects %s with 400 LOGO_UNSUPPORTED_FORMAT and changes nothing (spec: Other formats are rejected)',
       async (_name, bytes, filename, contentType) => {
@@ -804,12 +811,64 @@ describe('Organization Profile (e2e)', () => {
 
       const response = await agent
         .put('/organization-profile/logo')
-        .field('name', 'not a file')
+        .send({})
         .expect(400);
 
       expect(response.body).toMatchObject({ code: 'LOGO_FILE_MISSING' });
       expect(fileStorage.keys()).toEqual([]);
     });
+
+    // EN-111, spec: A malformed upload form is rejected.
+    it.each([
+      [
+        'the file in another field',
+        (req: request.Test) => req.attach('logo', PNG_BYTES, 'logo.png'),
+      ],
+      [
+        'a second file',
+        (req: request.Test) =>
+          req
+            .attach('file', PNG_BYTES, 'logo.png')
+            .attach('file', JPEG_BYTES, 'logo.jpg'),
+      ],
+      [
+        'a text field next to the file',
+        (req: request.Test) =>
+          req.field('name', 'x').attach('file', PNG_BYTES, 'logo.png'),
+      ],
+      [
+        'a text field alone',
+        (req: request.Test) => req.field('name', 'not a file'),
+      ],
+      [
+        'a multipart body without a boundary',
+        (req: request.Test) =>
+          req.set('Content-Type', 'multipart/form-data').send('not a form'),
+      ],
+    ])(
+      'rejects %s with 400 LOGO_UPLOAD_INVALID and changes nothing',
+      async (_name, build) => {
+        const agent = await loginAgent(app, adminEmail);
+        await agent
+          .put('/organization-profile/logo')
+          .attach('file', JPEG_BYTES, 'current.jpg')
+          .expect(200);
+        const current = (await organizationProfileRepository.get()).logoAssetId;
+
+        const response = await build(
+          agent.put('/organization-profile/logo'),
+        ).expect(400);
+
+        expect(response.body).toMatchObject({
+          statusCode: 400,
+          code: 'LOGO_UPLOAD_INVALID',
+        });
+        expect((await organizationProfileRepository.get()).logoAssetId).toBe(
+          current,
+        );
+        expect(fileStorage.keys()).toEqual([current]);
+      },
+    );
 
     it('does not change the logo through PATCH (spec: Supplying the field writes nothing)', async () => {
       const agent = await loginAgent(app, adminEmail);

@@ -80,6 +80,15 @@ None.
   `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
   Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
   ReviewSessionElement case predates it.
+- **TD-44**: `PUT /organization-profile/logo` answers 500 instead of 400 for
+  some request content types: busboy throws a plain `Error` for
+  `multipart/mixed`, an unsupported or a malformed content type, which
+  Nest's multer error mapping does not translate, so it reaches the default
+  handler as a server error. No browser sends these, and the behaviour
+  predates EN-111. Fix: wrap `FileInterceptor` so those setup errors become
+  a coded 400 (without turning real server errors into 400s). Evidence:
+  `apps/api/src/modules/organization-profile/presentation/logo-upload-error.filter.ts`.
+  Origin: EN-111 PR #297 pre-merge review, 2026-10-27.
 
 ## Resolved
 

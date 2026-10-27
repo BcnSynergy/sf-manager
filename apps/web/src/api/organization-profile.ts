@@ -14,10 +14,11 @@ export type OrganizationProfile = {
   hasLogo: boolean;
 };
 
-// Mirrors apps/api's OrganizationProfileErrorCode: the two 400 causes on the
-// logo upload (organization-logo). The profile update still has a single
-// 400 cause, so ApiError.status alone is enough there.
-export type OrganizationProfileErrorCode = 'LOGO_FILE_MISSING' | 'LOGO_UNSUPPORTED_FORMAT';
+// Mirrors apps/api's OrganizationProfileErrorCode: the three 400 causes on
+// the logo upload (organization-logo, EN-111). The profile update still has
+// a single 400 cause, so ApiError.status alone is enough there.
+export type OrganizationProfileErrorCode =
+  'LOGO_FILE_MISSING' | 'LOGO_UNSUPPORTED_FORMAT' | 'LOGO_UPLOAD_INVALID';
 export type UpdateOrganizationProfilePayload = {
   name?: string;
   legalName?: string;
