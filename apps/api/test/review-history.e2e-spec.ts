@@ -4449,12 +4449,19 @@ describe('Review History (e2e)', () => {
         .expect(401);
     });
 
-    it('answers 404 when the recorded logo file is missing', async () => {
+    it('answers 404 when the recorded logo file is missing, and the document is still returned', async () => {
       const agent = await loginAgent(built.app, technicianUEmail);
       await built.fileStorage.delete(LOGO_KEY);
 
       try {
         await agent.get(logoPath(completedSessionId)).expect(404);
+        const document = await agent
+          .get(`/review-history/${completedSessionId}/document`)
+          .expect(200);
+        expect(
+          (document.body as { letterhead: { hasLogo: boolean } }).letterhead
+            .hasLogo,
+        ).toBe(true);
       } finally {
         await built.fileStorage.put(LOGO_KEY, PNG_BYTES);
       }

@@ -345,7 +345,11 @@ export function ReviewDocumentPage() {
     <main className="review-document-print">
       <h1 data-print-hide>{t('reviewDocument.title')}</h1>
       <div data-testid="review-document-content" data-review-document-id={document.id}>
-        <LetterheadRegion letterhead={document.letterhead} sessionId={document.id} />
+        <LetterheadRegion
+          key={document.id}
+          letterhead={document.letterhead}
+          sessionId={document.id}
+        />
         <SessionDataRegion document={document} locale={i18n.language} />
         <RecordRegion document={document} />
         <SignatureFooter document={document} locale={i18n.language} />

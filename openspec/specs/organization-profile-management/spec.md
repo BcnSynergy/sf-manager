@@ -331,13 +331,18 @@ running this very instance is not a deletable record.
 ### Requirement: An Incomplete Profile Blocks Nothing
 
 A profile with blank fields MUST NOT block, gate or degrade any other
-behaviour in the system. Exactly **one** read of the profile MAY exist
-outside this capability: the `review-document` read, which returns the
-six text fields as a letterhead. No other endpoint, use case or domain
-rule outside this capability MUST read the profile, and **no** reader —
-the document read included — MUST condition itself on the profile's
-completeness: a review document MUST be readable whether the profile is
-blank, partially filled or complete.
+behaviour in the system. Exactly **one** consumer of the profile MAY
+exist outside this capability: the `review-document` capability, through
+its document read, which returns the six text fields and `hasLogo` as a
+letterhead, and its document logo read
+(`GET /review-history/:sessionId/document/logo`), which returns the
+logo through this capability's own logo read and never the storage key.
+No other endpoint, use case or domain rule outside this capability MUST
+read the profile, and **no** reader — the document reads included — MUST
+condition itself on the profile's completeness: a review document MUST
+be readable whether the profile is blank, partially filled or complete.
+(Previously: exactly one read, the `review-document` read, returning the
+six text fields.)
 
 This capability's own endpoints MUST be unchanged by that consumer: the
 same operations, the same response shape and the same permissions.
@@ -346,7 +351,8 @@ same operations, the same response shape and the same permissions.
 
 - GIVEN the application after this change
 - WHEN every read of the organization profile is enumerated
-- THEN each MUST originate from this capability's own read endpoint or from the `review-document` read, and no other module MUST depend on the profile
+- THEN each MUST originate from this capability's own read endpoints or from the `review-document` document read and document logo read, and no other module MUST depend on the profile
+  (Previously: from this capability's own read endpoint or from the `review-document` read.)
 
 #### Scenario: A blank profile does not block the document
 

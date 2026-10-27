@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -237,6 +237,31 @@ describe('letterhead region', () => {
     expect(within(content).getByTestId('review-document-letterhead-logo')).toBeInTheDocument();
     expect(within(content).queryAllByRole('paragraph')).toHaveLength(0);
     expect(screen.getByTestId('review-document-letterhead-warning')).toBeInTheDocument();
+  });
+
+  it('a logo that failed on one document still shows on the next one', async () => {
+    mockedReadReviewDocument.mockImplementation((sessionId) =>
+      Promise.resolve({
+        ...withLetterhead({ hasLogo: true }),
+        id: sessionId,
+      }),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId/document', element: <ReviewDocumentPage /> }],
+      { initialEntries: [`/review-history/${SESSION_ID}/document`] },
+    );
+
+    render(<RouterProvider router={router} />);
+    fireEvent.error(await screen.findByTestId('review-document-letterhead-logo'));
+    expect(screen.queryByTestId('review-document-letterhead-logo')).not.toBeInTheDocument();
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    const logo = await screen.findByTestId('review-document-letterhead-logo');
+    expect(logo).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/review-history\/session-2\/document\/logo$/),
+    );
   });
 
   it('a blank profile whose logo fails to load renders no letterhead content', async () => {

@@ -119,15 +119,17 @@ signer name other than the email.
 The page MUST remain printable whatever the profile's state. Blank
 profile fields MUST be omitted from the letterhead, with no empty label.
 When **every** field is blank and no logo is shown, no letterhead MUST
-render at all. When
+render at all (_The Letterhead Shows the Organization Logo_). When
 **at least one** field is blank, the page MUST show an on-screen warning
 that the organization profile is incomplete; that warning MUST NOT
 appear in the printed output. When all six fields hold a value, no
 warning MUST render.
+(Previously: "When **every** field is blank, no letterhead MUST render at
+all", before the letterhead could show a logo.)
 
 #### Scenario: A fully blank profile prints without letterhead
 
-- GIVEN every organization profile field is blank
+- GIVEN every organization profile field is blank and the organization has no logo
 - WHEN the document page renders and is printed
 - THEN the screen MUST show the warning, and the print output MUST contain no letterhead and no warning
 

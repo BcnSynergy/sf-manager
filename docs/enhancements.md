@@ -697,6 +697,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   deleting the previous file after a short delay, or retrying the read once
   with the current key, would close it. Origin: `organization-logo` PR #293
   pre-merge review, 2026-10-26.
+- **EN-113** (tests): no module test proves that `ORGANIZATION_LOGO_READER`
+  resolves to the same `GetOrganizationLogoUseCase` instance, as
+  `organization-profile.module.spec.ts` does for `ORGANIZATION_PROFILE_READER`.
+  The review-history e2e tests exercise the wiring. Origin:
+  `organization-logo` T3 pre-push review, 2026-10-27.
 
 ## Done
 
