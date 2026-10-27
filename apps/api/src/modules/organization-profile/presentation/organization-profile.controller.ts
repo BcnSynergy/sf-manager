@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   HttpStatus,
@@ -33,6 +34,7 @@ import { GetOrganizationLogoUseCase } from '../application/use-cases/get-organiz
 import { GetOrganizationProfileUseCase } from '../application/use-cases/get-organization-profile.use-case';
 import { UpdateOrganizationProfileUseCase } from '../application/use-cases/update-organization-profile.use-case';
 import { UploadOrganizationLogoUseCase } from '../application/use-cases/upload-organization-logo.use-case';
+import { RemoveOrganizationLogoUseCase } from '../application/use-cases/remove-organization-logo.use-case';
 import {
   LogoTooLargeError,
   UnsupportedLogoFormatError,
@@ -53,8 +55,9 @@ import { OrganizationProfileResponseDto } from './dto/organization-profile-respo
 // (thrown only by the adapter on a skipped migration) is deliberately left
 // unmapped, surfacing as Nest's default 500 (design.md Decision 1).
 //
-// The profile read and update, plus the logo read and upload
-// (organization-logo) — no create, no delete, no `:id` variant (spec.md
+// The profile read and update, plus the logo read, upload (organization-logo)
+// and removal (EN-110) — no create, no delete of the profile, no `:id`
+// variant (spec.md
 // "The Profile Has No Create and No Delete Surface"). The logo upload's 400
 // has two causes, so it carries a code (OrganizationProfileErrorCode).
 @ApiTags('organization-profile')
@@ -65,6 +68,7 @@ export class OrganizationProfileController {
     private readonly updateOrganizationProfileUseCase: UpdateOrganizationProfileUseCase,
     private readonly getOrganizationLogoUseCase: GetOrganizationLogoUseCase,
     private readonly uploadOrganizationLogoUseCase: UploadOrganizationLogoUseCase,
+    private readonly removeOrganizationLogoUseCase: RemoveOrganizationLogoUseCase,
   ) {}
 
   @Get()
@@ -184,6 +188,19 @@ export class OrganizationProfileController {
       }
       throw error;
     }
+  }
+
+  // EN-110: removes the logo; succeeds and changes nothing when there is none.
+  @Delete('logo')
+  @RequirePermission('organizationProfile:update')
+  @ApiOkResponse({ type: OrganizationProfileResponseDto })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({
+    description: 'Caller lacks organizationProfile:update.',
+  })
+  async removeLogo(): Promise<OrganizationProfileResponseDto> {
+    const profile = await this.removeOrganizationLogoUseCase.execute();
+    return OrganizationProfileController.toResponse(profile);
   }
 
   // Shared by every route that returns the profile — strips `logoAssetId`

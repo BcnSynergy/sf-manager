@@ -1,12 +1,14 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import {
   organizationLogoUrl,
+  removeOrganizationLogo,
   uploadOrganizationLogo,
   type OrganizationProfileErrorCode,
 } from '../api/organization-profile';
 import { Alert, StatusRegion } from '../components/Alert';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAlertMessage } from '../components/use-alert-message';
 
 // organization-logo S2: the API's own limits, checked here first so an
@@ -29,15 +31,24 @@ type Props = {
 // its URL after each upload so the browser fetches the new image. If the
 // image fails to load (for example its file was lost), the preview gives
 // way to a message instead of a broken image.
+//
+// EN-110: Remove, shown whenever the profile records a logo (also when its
+// image fails to load), asks for confirmation first. The section's one
+// status region confirms either an upload or a removal.
 export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const removeRef = useRef<HTMLButtonElement>(null);
+  const refocusRemoveRef = useRef(false);
   const [hasLogo, setHasLogo] = useState(initialHasLogo);
   const [version, setVersion] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
+  const [successKey, setSuccessKey] = useState<string | null>(null);
   const {
     message: error,
     key: errorAlertKey,
@@ -47,7 +58,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
 
   function handleFileChange(chosen: File | null) {
     setFile(chosen);
-    setSuccess(false);
+    setSuccessKey(null);
     clearError();
   }
 
@@ -57,7 +68,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       return;
     }
     clearError();
-    setSuccess(false);
+    setSuccessKey(null);
 
     if (file.size > LOGO_MAX_BYTES) {
       showError(t('organizationProfile.logoTooLargeError'));
@@ -78,7 +89,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       if (inputRef.current) {
         inputRef.current.value = '';
       }
-      setSuccess(true);
+      setSuccessKey('organizationProfile.logoUploadSuccess');
     } catch (uploadError) {
       showError(t(uploadErrorKey(uploadError)));
     } finally {
@@ -86,11 +97,43 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
     }
   }
 
+  async function handleRemove() {
+    setConfirmingRemoval(false);
+    clearError();
+    setSuccessKey(null);
+    setRemoving(true);
+    try {
+      const profile = await removeOrganizationLogo();
+      setHasLogo(profile.hasLogo);
+      setImageFailed(false);
+      setSuccessKey('organizationProfile.logoRemoveSuccess');
+      // The Remove button that had focus is gone; keep the keyboard user
+      // in the section.
+      headingRef.current?.focus();
+    } catch {
+      showError(t('organizationProfile.logoRemoveError'));
+      refocusRemoveRef.current = true;
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  // After a failed removal the Remove button is still there, but it was
+  // disabled when the dialog handed focus back to it; focus it once it is
+  // enabled again.
+  useEffect(() => {
+    if (!removing && refocusRemoveRef.current) {
+      refocusRemoveRef.current = false;
+      removeRef.current?.focus();
+    }
+  }, [removing]);
+
+  const busy = uploading || removing;
   const showPreview = hasLogo && !imageFailed;
 
   return (
     <section className="sf-panel" aria-labelledby="organization-logo-title">
-      <h2 id="organization-logo-title" className="sf-section-title">
+      <h2 ref={headingRef} id="organization-logo-title" className="sf-section-title" tabIndex={-1}>
         {t('organizationProfile.logoTitle')}
       </h2>
       {showPreview ? (
@@ -107,12 +150,8 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
         </p>
       )}
       <StatusRegion>
-        {success && (
-          <Alert
-            tone="success"
-            testId="organization-logo-success"
-            message={t('organizationProfile.logoUploadSuccess')}
-          />
+        {successKey && (
+          <Alert tone="success" testId="organization-logo-success" message={t(successKey)} />
         )}
       </StatusRegion>
       <form className="sf-form" onSubmit={handleSubmit} noValidate>
@@ -124,7 +163,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
             type="file"
             accept={LOGO_TYPES.join(',')}
             onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
-            disabled={uploading}
+            disabled={busy}
             data-testid="organization-logo-input"
           />
         </div>
@@ -140,13 +179,34 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
           <button
             type="submit"
             className="sf-btn sf-btn-primary"
-            disabled={!file || uploading}
+            disabled={!file || busy}
             data-testid="organization-logo-upload"
           >
             {t('organizationProfile.logoUploadLabel')}
           </button>
+          {hasLogo && (
+            <button
+              ref={removeRef}
+              type="button"
+              className="sf-btn sf-btn-danger"
+              onClick={() => setConfirmingRemoval(true)}
+              disabled={busy}
+              data-testid="organization-logo-remove"
+            >
+              {t('organizationProfile.logoRemoveLabel')}
+            </button>
+          )}
         </div>
       </form>
+      <ConfirmDialog
+        open={confirmingRemoval}
+        title={t('organizationProfile.logoRemoveConfirmTitle')}
+        message={t('organizationProfile.logoRemoveConfirmMessage')}
+        confirmLabel={t('organizationProfile.logoRemoveLabel')}
+        tone="danger"
+        onConfirm={() => void handleRemove()}
+        onCancel={() => setConfirmingRemoval(false)}
+      />
     </section>
   );
 }

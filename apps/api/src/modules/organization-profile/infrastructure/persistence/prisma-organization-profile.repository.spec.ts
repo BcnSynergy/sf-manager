@@ -116,6 +116,32 @@ describe('PrismaOrganizationProfileRepository.setLogoAssetId() (organization-log
     expect(profile.name).toBe('Acme');
   });
 
+  // EN-110: removing the logo records no key.
+  it('clears logoAssetId when given null', async () => {
+    const update = jest.fn().mockResolvedValue({
+      id: '01997a00-0000-7000-8000-000000000001',
+      name: 'Acme',
+      legalName: '',
+      taxId: '',
+      address: '',
+      phone: '',
+      email: '',
+      logoAssetId: null,
+      singleton: true,
+    });
+    const repository = new PrismaOrganizationProfileRepository({
+      organizationProfile: { update },
+    } as unknown as PrismaService);
+
+    const profile = await repository.setLogoAssetId(null);
+
+    expect(update).toHaveBeenCalledWith({
+      where: { singleton: true },
+      data: { logoAssetId: null },
+    });
+    expect(profile.logoAssetId).toBeNull();
+  });
+
   it('maps a P2025 record-not-found error to OrganizationProfileMissingError', async () => {
     const repository = new PrismaOrganizationProfileRepository({
       organizationProfile: {

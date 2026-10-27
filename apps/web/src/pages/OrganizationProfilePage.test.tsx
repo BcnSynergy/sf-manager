@@ -109,6 +109,30 @@ describe('OrganizationProfilePage', () => {
     expect(name).toHaveValue('Unsaved Name');
   });
 
+  // EN-110: removing the logo neither saves the form nor touches its fields.
+  it('confirms a logo removal in the logo section status region, without saving the form', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
+    vi.mocked(organizationProfileApi.removeOrganizationLogo).mockResolvedValue({
+      ...filledProfile,
+      hasLogo: false,
+    });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
+    renderPage();
+    const name = await screen.findByTestId('organization-profile-name');
+    fireEvent.change(name, { target: { value: 'Unsaved Name' } });
+    const regions = statusRegions();
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    const confirmation = await screen.findByTestId('organization-logo-success');
+    expect(confirmation).toHaveTextContent('Logo removed.');
+    expect(regions.logo).toContainElement(confirmation);
+    expect(regions.profile).toBeEmptyDOMElement();
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
+    expect(name).toHaveValue('Unsaved Name');
+  });
+
   it('shows the no-logo message when the profile has no logo', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
 

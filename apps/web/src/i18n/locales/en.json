@@ -214,6 +214,11 @@
     "logoFileLabel": "Logo image (PNG, JPEG or WebP, up to 2 MB)",
     "logoUploadLabel": "Upload logo",
     "logoUploadSuccess": "Logo uploaded.",
+    "logoRemoveLabel": "Remove logo",
+    "logoRemoveConfirmTitle": "Remove logo",
+    "logoRemoveConfirmMessage": "The logo will no longer appear on the profile or on review documents.",
+    "logoRemoveSuccess": "Logo removed.",
+    "logoRemoveError": "Could not remove the logo. Please try again.",
     "logoTooLargeError": "The logo must be 2 MB or smaller.",
     "logoUnsupportedError": "The logo must be a PNG, JPEG or WebP image.",
     "logoUploadError": "Could not upload the logo. Please try again."

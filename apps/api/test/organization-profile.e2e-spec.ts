@@ -433,7 +433,7 @@ describe('Organization Profile (e2e)', () => {
       expect([404, 405]).toContain(response.status);
     });
 
-    it('does not resolve an /organization-profile/:id-shaped path (spec: Only two operations are declared)', async () => {
+    it('does not resolve an /organization-profile/:id-shaped path (spec: Only five operations are declared)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent.get('/organization-profile/some-id');
@@ -456,6 +456,7 @@ describe('Organization Profile (e2e)', () => {
   describe('Anonymous and non-admin access control on every /organization-profile route (tasks.md 4.5, authorization spec)', () => {
     let app: INestApplication<App>;
     let fileStorage: InMemoryFileStorage;
+    let organizationProfileRepository: InMemoryOrganizationProfileRepository;
     const adminEmail = 'op-guard-admin@example.com';
     const managerEmail = 'op-guard-manager@example.com';
     const maintenanceCompanyManagerEmail = 'op-guard-mc-manager@example.com';
@@ -488,7 +489,7 @@ describe('Organization Profile (e2e)', () => {
         email: communityRepresentativeEmail,
         role: 'COMMUNITY_REPRESENTATIVE',
       });
-      ({ app, fileStorage } = await buildApp({
+      ({ app, fileStorage, organizationProfileRepository } = await buildApp({
         users: [
           admin,
           manager,
@@ -508,6 +509,7 @@ describe('Organization Profile (e2e)', () => {
       ['PATCH', '/organization-profile'],
       ['GET', '/organization-profile/logo'],
       ['PUT', '/organization-profile/logo'],
+      ['DELETE', '/organization-profile/logo'],
     ] as const;
 
     function sendRoute(
@@ -516,6 +518,7 @@ describe('Organization Profile (e2e)', () => {
       path: string,
     ) {
       if (method === 'GET') return agent.get(path);
+      if (method === 'DELETE') return agent.delete(path);
       if (method === 'PUT') {
         return agent.put(path).attach('file', PNG_BYTES, 'logo.png');
       }
@@ -560,6 +563,31 @@ describe('Organization Profile (e2e)', () => {
         .expect(403);
     });
 
+    // EN-110, authorization spec: a non-admin removal changes nothing.
+    it('a non-admin removal is rejected with 403 and keeps the logo', async () => {
+      await fileStorage.put('logos/kept.png', PNG_BYTES);
+      await organizationProfileRepository.setLogoAssetId('logos/kept.png');
+
+      try {
+        for (const email of [
+          managerEmail,
+          maintenanceCompanyManagerEmail,
+          maintenanceTechnicianEmail,
+          communityRepresentativeEmail,
+        ]) {
+          const agent = await loginAgent(app, email);
+          await agent.delete('/organization-profile/logo').expect(403);
+        }
+        expect((await organizationProfileRepository.get()).logoAssetId).toBe(
+          'logos/kept.png',
+        );
+        expect(fileStorage.keys()).toEqual(['logos/kept.png']);
+      } finally {
+        await organizationProfileRepository.setLogoAssetId(null);
+        await fileStorage.delete('logos/kept.png');
+      }
+    });
+
     it('SYSTEM_ADMIN is permitted through the guard on every route (authorization spec: SYSTEM_ADMIN is permitted)', async () => {
       const agent = await loginAgent(app, adminEmail);
       await agent.get('/organization-profile').expect(200);
@@ -569,6 +597,7 @@ describe('Organization Profile (e2e)', () => {
         .attach('file', PNG_BYTES, 'logo.png')
         .expect(200);
       await agent.get('/organization-profile/logo').expect(200);
+      await agent.delete('/organization-profile/logo').expect(200);
     });
   });
 
@@ -627,6 +656,39 @@ describe('Organization Profile (e2e)', () => {
         expect(profile.body).toMatchObject({ hasLogo: true });
       },
     );
+
+    it('removes the logo: hasLogo becomes false, the file is deleted and the logo read is 404 (spec: The logo is removed)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+      await agent
+        .put('/organization-profile/logo')
+        .attach('file', PNG_BYTES, 'logo.png')
+        .expect(200);
+
+      const removed = await agent
+        .delete('/organization-profile/logo')
+        .expect(200);
+
+      expect(removed.body).toMatchObject({ hasLogo: false });
+      expect(removed.body).not.toHaveProperty('logoAssetId');
+      expect(fileStorage.keys()).toEqual([]);
+      expect(
+        (await organizationProfileRepository.get()).logoAssetId,
+      ).toBeNull();
+      await agent.get('/organization-profile/logo').expect(404);
+      const profile = await agent.get('/organization-profile').expect(200);
+      expect(profile.body).toMatchObject({ hasLogo: false });
+    });
+
+    it('removing when there is no logo succeeds and changes nothing (spec: Removing without a logo)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .delete('/organization-profile/logo')
+        .expect(200);
+
+      expect(response.body).toMatchObject({ hasLogo: false });
+      expect(fileStorage.keys()).toEqual([]);
+    });
 
     it('decides the format by content, not by file name or declared type (spec: The format is decided by the content)', async () => {
       const agent = await loginAgent(app, adminEmail);

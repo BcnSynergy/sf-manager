@@ -681,9 +681,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `sandbox` Content Security Policy, plus checking that print and the
   letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
   Origin: `organization-logo` (S2), 2026-10-26.
-- **EN-110** (feature): remove the organization logo without uploading a
-  new one. Today a logo can only be replaced. Origin: `organization-logo`
-  (S6), 2026-10-26.
 - **EN-111** (API): harden the logo upload's edges. A file in a field other
   than `file`, or a second file, gets multer's 400 without a `code`; non-file
   multipart fields have no count or size limit; and only the leading bytes
@@ -703,8 +700,22 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
+- **EN-114** (API): removing the logo while an upload is in flight can
+  silently undo that upload: the removal reads the old key, the upload
+  records its new key, then the removal clears it. The upload answered 200
+  with `hasLogo: true`, its file is orphaned, and no key ever points at a
+  missing file. Two concurrent uploads already behave last-writer-wins. A
+  conditional clear (only when the recorded key is still the one read)
+  would close it. Orphaned logo files have no cleanup job. Evidence:
+  `apps/api/src/modules/organization-profile/application/use-cases/remove-organization-logo.use-case.ts`.
+  Origin: EN-110 pre-push review, 2026-10-27.
+
 ## Done
 
+- **EN-110** (feature): the organization logo can be removed without
+  uploading a new one: `DELETE /organization-profile/logo`
+  (`organizationProfile:update`) and a confirmed Remove control on the
+  profile page. Done in `en-110-remove-logo` (PR #296), 2026-10-27.
 - **EN-95** (delivery): `node:24-bookworm-slim`, `caddy:2-alpine` and
   `postgres:18-alpine` are pinned as `tag@sha256:digest` in both Dockerfiles
   and both compose files, and `.github/dependabot.yml` checks weekly and

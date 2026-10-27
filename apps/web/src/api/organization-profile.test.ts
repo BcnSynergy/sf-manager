@@ -3,6 +3,7 @@ import { ApiError } from './client';
 import {
   getOrganizationProfile,
   organizationLogoUrl,
+  removeOrganizationLogo,
   updateOrganizationProfile,
   uploadOrganizationLogo,
 } from './organization-profile';
@@ -104,6 +105,19 @@ describe('api/organization-profile', () => {
     expect(url).toMatch(/\/organization-profile\/logo$/);
     expect(init.method).toBe('PUT');
     expect((init.body as FormData).get('file')).toBe(file);
+  });
+
+  // EN-110
+  it('removeOrganizationLogo() sends DELETE to the logo endpoint and returns the profile', async () => {
+    const fetchMock = stubFetchOnce(
+      mockResponse({ ok: true, status: 200, json: async () => ({ ...profile, hasLogo: false }) }),
+    );
+
+    await expect(removeOrganizationLogo()).resolves.toEqual({ ...profile, hasLogo: false });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/organization-profile\/logo$/);
+    expect(init.method).toBe('DELETE');
   });
 
   it('uploadOrganizationLogo() rejects with the coded ApiError on a 400', async () => {
