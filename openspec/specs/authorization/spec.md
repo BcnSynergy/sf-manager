@@ -366,9 +366,13 @@ site. Both MUST be granted only on the `SYSTEM_ADMIN` row of
 `organizationProfile:read` and the update endpoint MUST require
 `organizationProfile:update`; likewise the logo read
 (`GET /organization-profile/logo`) MUST require `organizationProfile:read`
-and the logo upload (`PUT /organization-profile/logo`) MUST require
+and the logo upload (`PUT /organization-profile/logo`) and the logo
+removal (`DELETE /organization-profile/logo`) MUST require
 `organizationProfile:update`. None MUST be reachable on authentication
-alone, and an upload MUST be rejected before its file is read or stored.
+alone, an upload MUST be rejected before its file is read or stored, and
+a rejected removal MUST change nothing. The logo removal clears a field
+of the profile; it does not delete the profile, so it needs no
+`organizationProfile:delete`.
 
 `ROLE_PERMISSIONS` MUST remain an exhaustive `Record<Role, Permission[]>`,
 and `PermissionChecker.can(role, permission)`'s signature MUST be
@@ -384,8 +388,8 @@ read.
 #### Scenario: Every non-admin role is rejected on every endpoint
 
 - GIVEN an authenticated caller whose role is any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
-- WHEN they call the profile read, the profile update, the logo read and the logo upload
-- THEN every response MUST be 403, for each of the four roles, with no profile data or logo disclosed, no write performed and no file stored
+- WHEN they call the profile read, the profile update, the logo read, the logo upload and the logo removal
+- THEN every response MUST be 403, for each of the four roles, with no profile data or logo disclosed, no write performed, no file stored and no logo removed
 
 #### Scenario: Unauthenticated caller is rejected before role check
 
@@ -395,9 +399,9 @@ read.
 
 #### Scenario: Each endpoint declares its own permission
 
-- GIVEN the four organization-profile routes' permission metadata
+- GIVEN the five organization-profile routes' permission metadata
 - WHEN it is inspected
-- THEN the profile read and the logo read MUST require `organizationProfile:read`, the update and the logo upload MUST require `organizationProfile:update`, and none MUST be reachable on authentication alone
+- THEN the profile read and the logo read MUST require `organizationProfile:read`, the update, the logo upload and the logo removal MUST require `organizationProfile:update`, and none MUST be reachable on authentication alone
 
 #### Scenario: Exactly two members are declared and only the admin holds them
 

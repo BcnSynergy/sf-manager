@@ -10,6 +10,7 @@ vi.mock('../api/organization-profile');
 
 const mockedUpload = vi.mocked(organizationProfileApi.uploadOrganizationLogo);
 const mockedLogoUrl = vi.mocked(organizationProfileApi.organizationLogoUrl);
+const mockedRemove = vi.mocked(organizationProfileApi.removeOrganizationLogo);
 
 const profile = {
   id: 'profile-1',
@@ -193,5 +194,95 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     chooseFile(pngFile());
 
     expect(screen.queryByTestId('organization-logo-success')).not.toBeInTheDocument();
+  });
+});
+
+// EN-110: removing the logo, confirmed in a dialog.
+describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedLogoUrl.mockImplementation((version: number) => `/logo?v=${version}`);
+    void i18n.changeLanguage('en');
+  });
+
+  it('offers no remove control when there is no logo', () => {
+    render(<OrganizationLogoSection hasLogo={false} />);
+
+    expect(screen.queryByTestId('organization-logo-remove')).not.toBeInTheDocument();
+  });
+
+  it('asks for confirmation, and cancelling keeps the logo without a request', () => {
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    const dialog = screen.getByTestId('confirm-dialog');
+    expect(dialog).toHaveAttribute('open');
+    expect(dialog).toHaveTextContent('Remove logo');
+    expect(dialog).toHaveTextContent(
+      'The logo will no longer appear on the profile or on review documents.',
+    );
+    fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+    expect(mockedRemove).not.toHaveBeenCalled();
+    expect(screen.getByTestId('organization-logo-preview')).toBeInTheDocument();
+  });
+
+  it('removes the logo on confirmation and says so', async () => {
+    mockedRemove.mockResolvedValue({
+      id: 'profile-1',
+      name: 'Acme',
+      legalName: 'Acme S.L.',
+      taxId: 'B1',
+      address: 'Main St',
+      phone: '600',
+      email: 'a@acme.example',
+      hasLogo: false,
+    });
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByTestId('organization-logo-success')).toHaveTextContent(
+      'Logo removed.',
+    );
+    expect(mockedRemove).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('organization-logo-preview')).not.toBeInTheDocument();
+    expect(screen.getByTestId('organization-logo-empty')).toHaveTextContent(
+      'No logo uploaded yet.',
+    );
+    expect(screen.queryByTestId('organization-logo-remove')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps the logo and shows an error when the removal fails', async () => {
+    mockedRemove.mockRejectedValue(new ApiError(500, 'boom'));
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The logo could not be removed.');
+    expect(screen.getByTestId('organization-logo-preview')).toBeInTheDocument();
+    expect(screen.queryByTestId('organization-logo-success')).not.toBeInTheDocument();
+  });
+
+  it('can remove a logo whose image failed to load', () => {
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.error(screen.getByTestId('organization-logo-preview'));
+
+    expect(screen.getByTestId('organization-logo-remove')).toBeEnabled();
+  });
+
+  it('disables upload and remove while a removal is in flight', () => {
+    mockedRemove.mockReturnValue(new Promise(() => {}));
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(screen.getByTestId('organization-logo-remove')).toBeDisabled();
+    expect(screen.getByTestId('organization-logo-input')).toBeDisabled();
   });
 });

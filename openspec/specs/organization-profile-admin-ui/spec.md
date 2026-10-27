@@ -15,8 +15,7 @@ Its one non-obvious job is the **not-completed-yet** state: the seeded
 profile is blank, and an admin must be able to tell "nobody has entered
 this yet" apart from "the page is loading" and "the request failed".
 
-Out of scope: SVG logos (EN-109), removing the logo without replacing it
-(EN-110), an edit history or audit view,
+Out of scope: SVG logos (EN-109), an edit history or audit view,
 a completeness gate on anything, and any surface for a non-`SYSTEM_ADMIN`
 role. The navigation entry itself is owned by `app-navigation`; the API
 contract is owned by `organization-profile-management`.
@@ -185,6 +184,43 @@ else: a generic failure) and MUST keep the previous logo.
 - GIVEN a profile whose logo image fails to load
 - WHEN the page renders it
 - THEN a message MUST replace the image
+
+### Requirement: Removing the Logo
+
+When the profile has a logo, the logo section MUST offer a control to
+remove it, also when the logo image fails to load. It MUST ask for
+confirmation first in a dialog that says the logo will no longer appear
+on the profile or on review documents; cancelling MUST send no request
+and keep the logo. On success the section MUST say that no logo has been
+uploaded, MUST no longer offer the remove control, and MUST confirm the
+removal in its own status region (`web-alert-announcements`), without a
+page reload. A failed removal MUST show a message and keep the logo.
+Upload and remove MUST be disabled while a removal is in flight, and
+removing MUST NOT save or change the text fields.
+
+#### Scenario: No logo, no remove control
+
+- GIVEN a profile with no logo
+- WHEN a `SYSTEM_ADMIN` opens the page
+- THEN no remove control MUST be shown
+
+#### Scenario: Cancelling keeps the logo
+
+- GIVEN a profile with a logo
+- WHEN a `SYSTEM_ADMIN` chooses to remove it and cancels the confirmation
+- THEN no request MUST be sent and the logo MUST still be previewed
+
+#### Scenario: The logo is removed
+
+- GIVEN a profile with a logo
+- WHEN a `SYSTEM_ADMIN` confirms its removal
+- THEN the removal MUST be confirmed, the section MUST say that no logo has been uploaded, and no remove control MUST be shown
+
+#### Scenario: A failed removal keeps the logo
+
+- GIVEN a profile with a logo, and a removal that fails
+- WHEN the failure is handled
+- THEN a message MUST be shown and the logo MUST still be previewed
 
 ### Requirement: No Server-Message String Coupling
 

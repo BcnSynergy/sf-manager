@@ -58,7 +58,7 @@ export class PrismaOrganizationProfileRepository implements OrganizationProfileR
     return this.updateSingleton(changes);
   }
 
-  setLogoAssetId(logoAssetId: string): Promise<OrganizationProfile> {
+  setLogoAssetId(logoAssetId: string | null): Promise<OrganizationProfile> {
     return this.updateSingleton({ logoAssetId });
   }
 

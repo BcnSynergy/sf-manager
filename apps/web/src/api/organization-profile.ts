@@ -51,6 +51,14 @@ export function uploadOrganizationLogo(file: File): Promise<OrganizationProfile>
   });
 }
 
+// EN-110: removes the logo. Resolves to the profile with `hasLogo: false`,
+// also when there was no logo.
+export function removeOrganizationLogo(): Promise<OrganizationProfile> {
+  return apiFetch<OrganizationProfile>('/organization-profile/logo', {
+    method: 'DELETE',
+  });
+}
+
 // The logo is an <img> source, not a fetch: the browser sends the session
 // cookie itself. `version` changes the URL after an upload so the image is
 // requested again.

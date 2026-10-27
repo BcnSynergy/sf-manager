@@ -34,8 +34,8 @@ export interface OrganizationProfileRepository extends OrganizationProfileReader
   update(changes: OrganizationProfileChanges): Promise<OrganizationProfile>;
 
   // organization-logo S3: records the storage key of the current logo and
-  // resolves to the post-state, like update().
-  setLogoAssetId(logoAssetId: string): Promise<OrganizationProfile>;
+  // resolves to the post-state, like update(). `null` removes it (EN-110).
+  setLogoAssetId(logoAssetId: string | null): Promise<OrganizationProfile>;
 
   // No create(), no softDeleteById(), no findAll(), no transactional() —
   // the profile has no create/delete/list surface (design.md, spec.md "The

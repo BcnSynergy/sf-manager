@@ -681,9 +681,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `sandbox` Content Security Policy, plus checking that print and the
   letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
   Origin: `organization-logo` (S2), 2026-10-26.
-- **EN-110** (feature): remove the organization logo without uploading a
-  new one. Today a logo can only be replaced. Origin: `organization-logo`
-  (S6), 2026-10-26.
 - **EN-111** (API): harden the logo upload's edges. A file in a field other
   than `file`, or a second file, gets multer's 400 without a `code`; non-file
   multipart fields have no count or size limit; and only the leading bytes
@@ -705,6 +702,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-110** (feature): the organization logo can be removed without
+  uploading a new one: `DELETE /organization-profile/logo`
+  (`organizationProfile:update`) and a confirmed Remove control on the
+  profile page. Done in `en-110-remove-logo`, 2026-10-27.
 - **EN-95** (delivery): `node:24-bookworm-slim`, `caddy:2-alpine` and
   `postgres:18-alpine` are pinned as `tag@sha256:digest` in both Dockerfiles
   and both compose files, and `.github/dependabot.yml` checks weekly and

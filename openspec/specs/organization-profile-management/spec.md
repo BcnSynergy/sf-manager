@@ -10,15 +10,15 @@ deployment, holding `id`, `name`, `legalName`, `taxId`, `address`,
 
 The row is created by the schema migration, not by the application, so
 there is no create path and no "does it exist yet" branch anywhere. The
-only operations are a read, a partial update, and the logo's read and
-upload. `taxId` is free
+only operations are a read, a partial update, and the logo's read,
+upload and removal. `taxId` is free
 text with no format rule, no checksum and no uniqueness constraint
 (uniqueness is meaningless for a single row) — the same call
 `maintenance-company` made for the same field.
 
 Out of scope: object storage (the logo lives in a local volume behind a
-storage port, ADR-012 addendum), SVG logos (EN-109), removing the logo
-without replacing it (EN-110), any consumer of this data other than the
+storage port, ADR-012 addendum), SVG logos (EN-109), any consumer of
+this data other than the
 `review-document` read, which renders it as a letterhead; no branding
 surface and no "profile must be complete before X" rule, an
 audit trail of edits, change history, and any unauthenticated read.
@@ -296,25 +296,53 @@ from a static file path.
 - WHEN the logo is read
 - THEN the response MUST be 200 with `Content-Type: image/webp`, `Cache-Control: no-store` and the uploaded bytes
 
+### Requirement: Remove the Organization Logo
+
+The system MUST let a caller with `organizationProfile:update` remove the
+logo with `DELETE /organization-profile/logo`. The response MUST be the
+profile with `hasLogo: false`. The recorded key MUST be cleared first and
+the file deleted from storage after it, so a failure never leaves the
+profile pointing at a deleted file: if clearing the key fails, the logo
+and its file MUST be kept; if only the file deletion fails, the removal
+MUST still succeed and the file is left orphaned. Removing when there is
+no logo MUST succeed and change nothing. The other profile fields MUST be
+unchanged.
+
+#### Scenario: The logo is removed
+
+- GIVEN a profile with an uploaded logo
+- WHEN a `SYSTEM_ADMIN` removes it
+- THEN the response MUST be 200 with `hasLogo: false` and no `logoAssetId`, the file MUST be deleted from storage, and the logo read MUST respond 404
+
+#### Scenario: Removing without a logo
+
+- GIVEN a profile with no logo
+- WHEN a `SYSTEM_ADMIN` removes the logo
+- THEN the response MUST be 200 with `hasLogo: false`, and nothing MUST be written or deleted
+
 ### Requirement: The Profile Has No Create and No Delete Surface
 
-The system MUST expose exactly four operations on the profile — the read,
-the partial update, the logo read and the logo upload — and MUST NOT
-expose a create, a delete, a list, or any identifier-parameterised
-variant of the route. A `POST` or
+The system MUST expose exactly five operations on the profile — the read,
+the partial update, the logo read, the logo upload and the logo removal —
+and MUST NOT expose a create, a delete of the profile, a list, or any
+identifier-parameterised variant of the route. A `POST` or
 `DELETE` to `/organization-profile`, and any request to an
 `/organization-profile/:id`-shaped path, MUST NOT resolve to an
 organization-profile operation.
 
 The entity MUST carry no `deletedAt` and MUST NOT participate in the
 soft-delete mechanism (ADR-010): the row representing the company
-running this very instance is not a deletable record.
+running this very instance is not a deletable record. Removing the logo
+(`DELETE /organization-profile/logo`) clears one field and deletes a file;
+it is not a delete of the profile.
+(Previously: exactly four operations, without the logo removal.)
 
-#### Scenario: Only four operations are declared
+#### Scenario: Only five operations are declared
 
 - GIVEN the organization-profile routes after this change
 - WHEN they are enumerated
-- THEN exactly four MUST exist — the read, the partial update, the logo read and the logo upload — with no create, delete, list or `:id` variant among them
+- THEN exactly five MUST exist — the read, the partial update, the logo read, the logo upload and the logo removal — with no create, profile delete, list or `:id` variant among them
+  (Previously: exactly four, without the logo removal.)
 
 #### Scenario: A create or delete attempt does not reach a profile operation
 
