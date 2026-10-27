@@ -20,6 +20,7 @@ import { OpenReviewSessionUseCase } from './application/use-cases/open-review-se
 import { ReadReviewHistoryUseCase } from './application/use-cases/read-review-history.use-case';
 import { ReadElementReviewHistoryUseCase } from './application/use-cases/read-element-review-history.use-case';
 import { ReadReviewDocumentUseCase } from './application/use-cases/read-review-document.use-case';
+import { ReadReviewDocumentLogoUseCase } from './application/use-cases/read-review-document-logo.use-case';
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -49,7 +50,9 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
 // pre-work (`UsersModule` imports nothing from any module).
 // review-export/design.md Decision 4: gains ONE import,
 // `OrganizationProfileModule` (imports nothing itself, so no cycle) — for
-// `ORGANIZATION_PROFILE_READER`, injected by `ReadReviewDocumentUseCase`.
+// `ORGANIZATION_PROFILE_READER`, injected by `ReadReviewDocumentUseCase`,
+// and `ORGANIZATION_LOGO_READER`, injected by `ReadReviewDocumentLogoUseCase`
+// (organization-logo S8).
 // No new export: `REVIEW_DOCUMENT_NAME_DIRECTORY` stays module-local
 // (spec.md "The lookup port is not exported").
 @Module({
@@ -86,6 +89,7 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ReadReviewHistoryUseCase,
     ReadElementReviewHistoryUseCase,
     ReadReviewDocumentUseCase,
+    ReadReviewDocumentLogoUseCase,
     ReadReviewSessionUseCase,
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,

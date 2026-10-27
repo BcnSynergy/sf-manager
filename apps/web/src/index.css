@@ -626,6 +626,19 @@ code {
   border-radius: var(--radius-md);
 }
 
+/* The organization logo at the head of the review document's letterhead,
+   on screen and in print: never taller than a letterhead line block, on the
+   white it prints on (dark or transparent logos stay visible in dark mode). */
+.sf-letterhead-logo {
+  display: block;
+  max-width: 200px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+  padding: var(--space-1);
+  background: var(--logo-backdrop);
+}
+
 /* Form layout: fields further apart than a label from its own control. The
    controls keep the global input/select styles above. */
 .sf-form {

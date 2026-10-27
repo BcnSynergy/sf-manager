@@ -125,6 +125,11 @@ object storage:
   filesystem path.
 - The browser reads the logo from `GET /organization-profile/logo`, never
   from a static path, so the URL does not depend on where the bytes are.
+- Roles without `organizationProfile:read` see the logo only on a review
+  document they may open, through `GET /review-history/:sessionId/document/logo`
+  (same scope check as the document read). Review-session reaches it
+  through the `ORGANIZATION_LOGO_READER` port, never through storage
+  (organization-logo PR 3, 2026-10-27).
 
 Reasons: one logo of at most 2 MiB does not justify a new service with its
 own credentials, bucket setup, health check and backup (ADR-006: the

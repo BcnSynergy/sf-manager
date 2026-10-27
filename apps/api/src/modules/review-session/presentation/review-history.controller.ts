@@ -1,9 +1,18 @@
-import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  StreamableFile,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -20,6 +29,8 @@ import { ListReviewHistoryUseCase } from '../application/use-cases/list-review-h
 import { ReadReviewHistoryUseCase } from '../application/use-cases/read-review-history.use-case';
 import { ReadElementReviewHistoryUseCase } from '../application/use-cases/read-element-review-history.use-case';
 import { ReadReviewDocumentUseCase } from '../application/use-cases/read-review-document.use-case';
+import { ReadReviewDocumentLogoUseCase } from '../application/use-cases/read-review-document-logo.use-case';
+import type { OrganizationLogo } from '../../organization-profile/application/ports/organization-logo.reader.port';
 import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
 import { ElementReviewHistoryResponseDto } from './dto/element-review-history-response.dto';
@@ -45,6 +56,7 @@ export class ReviewHistoryController {
     private readonly readReviewHistoryUseCase: ReadReviewHistoryUseCase,
     private readonly readElementReviewHistoryUseCase: ReadElementReviewHistoryUseCase,
     private readonly readReviewDocumentUseCase: ReadReviewDocumentUseCase,
+    private readonly readReviewDocumentLogoUseCase: ReadReviewDocumentLogoUseCase,
   ) {}
 
   @Get('review-history')
@@ -130,6 +142,45 @@ export class ReviewHistoryController {
     } catch (error) {
       throw this.mapError(error);
     }
+  }
+
+  // organization-logo S8: the organization logo for a document the caller
+  // may open — same gate and same 404 as the document read above, so a
+  // non-admin never needs `organizationProfile:read` to see it.
+  @Get('review-history/:sessionId/document/logo')
+  @RequirePermission('reviewSession:read')
+  @Header('Cache-Control', 'no-store')
+  @ApiProduces('image/png', 'image/jpeg', 'image/webp')
+  @ApiOkResponse({ description: 'The organization logo.' })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: INVALID_SESSION_ID.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The document is unreachable, exactly as for the document read ' +
+      '(code: REVIEW_SESSION_NOT_FOUND), or the organization has no logo.',
+  })
+  async readDocumentLogo(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
+  ): Promise<StreamableFile> {
+    let logo: OrganizationLogo | null;
+    try {
+      logo = await this.readReviewDocumentLogoUseCase.execute(sessionId, {
+        userId: user.sub,
+        role: user.role,
+      });
+    } catch (error) {
+      throw this.mapError(error);
+    }
+    if (!logo) throw new NotFoundException('The organization has no logo.');
+    return new StreamableFile(logo.content, {
+      type: logo.contentType,
+      length: logo.content.length,
+    });
   }
 
   // review-history-per-element/design.md Decision 6: one nested route on

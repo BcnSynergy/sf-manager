@@ -13,7 +13,8 @@ may open is decided entirely by the server.
 
 Shipped in the same change as its API, per ADR-006's 2026-08-25
 addendum. Out of scope (slice 2): signer full name and signature image.
-Also out of scope: any download, email or share control, and any logo.
+Also out of scope: any download, email or share control.
+(Previously: also out of scope was "any logo".)
 
 ## Requirements
 
@@ -117,15 +118,18 @@ signer name other than the email.
 
 The page MUST remain printable whatever the profile's state. Blank
 profile fields MUST be omitted from the letterhead, with no empty label.
-When **every** field is blank, no letterhead MUST render at all. When
+When **every** field is blank and no logo is shown, no letterhead MUST
+render at all (_The Letterhead Shows the Organization Logo_). When
 **at least one** field is blank, the page MUST show an on-screen warning
 that the organization profile is incomplete; that warning MUST NOT
 appear in the printed output. When all six fields hold a value, no
 warning MUST render.
+(Previously: "When **every** field is blank, no letterhead MUST render at
+all", before the letterhead could show a logo.)
 
 #### Scenario: A fully blank profile prints without letterhead
 
-- GIVEN every organization profile field is blank
+- GIVEN every organization profile field is blank and the organization has no logo
 - WHEN the document page renders and is printed
 - THEN the screen MUST show the warning, and the print output MUST contain no letterhead and no warning
 
@@ -140,6 +144,43 @@ warning MUST render.
 - GIVEN all six profile fields hold values
 - WHEN the document page renders
 - THEN the full letterhead MUST render and no warning MUST be shown
+
+### Requirement: The Letterhead Shows the Organization Logo
+
+When the document's letterhead carries `hasLogo: true`, the page MUST
+show the organization logo at the head of the letterhead content,
+before the filled text fields (the on-screen incomplete-profile warning,
+when shown, stays above it), read from
+`GET /review-history/:sessionId/document/logo`, with a localized
+alternative text, on screen **and** in the printed output. When
+`hasLogo` is `false`, no logo MUST render. A logo that fails to load
+MUST be dropped without an error message, and the rest of the document
+MUST be unaffected. The logo does not change the incomplete-profile
+warning, which depends only on the six text fields.
+
+#### Scenario: The logo heads the letterhead
+
+- GIVEN the document's letterhead carries `hasLogo: true`
+- WHEN the document page renders and is printed
+- THEN the logo MUST appear before the letterhead's text fields on screen and in the print output, and at the top of the letterhead in print
+
+#### Scenario: No logo recorded
+
+- GIVEN the document's letterhead carries `hasLogo: false`
+- WHEN the document page renders
+- THEN no logo MUST render
+
+#### Scenario: A logo that fails to load is dropped
+
+- GIVEN the letterhead carries `hasLogo: true` and the logo read fails
+- WHEN the document page renders
+- THEN no logo and no error message MUST be shown, and the letterhead's filled fields MUST still render
+
+#### Scenario: A blank profile with a logo
+
+- GIVEN every organization profile text field is blank and the organization has a logo
+- WHEN the document page renders
+- THEN the letterhead MUST show the logo alone, and the incomplete-profile warning MUST still be shown on screen only
 
 ### Requirement: Print Through the Browser, Document Only
 

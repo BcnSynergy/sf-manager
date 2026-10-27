@@ -53,8 +53,8 @@ export class ReviewDocumentTemplateDto {
   version!: number | null;
 }
 
-// spec.md "The document exposes only the letterhead fields" — exactly the
-// six text fields, never `id`/`logoAssetId`.
+// spec.md "The document exposes only the letterhead fields" — the six text
+// fields and `hasLogo`, never `id`/`logoAssetId`.
 export class ReviewDocumentLetterheadDto {
   @ApiProperty()
   name!: string;
@@ -73,6 +73,12 @@ export class ReviewDocumentLetterheadDto {
 
   @ApiProperty()
   email!: string;
+
+  @ApiProperty({
+    description:
+      'Whether the organization has a logo; read it from GET /review-history/:sessionId/document/logo.',
+  })
+  hasLogo!: boolean;
 }
 
 export class ReviewDocumentResponseDto {

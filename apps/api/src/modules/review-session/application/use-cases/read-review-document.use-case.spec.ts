@@ -157,7 +157,7 @@ describe('ReadReviewDocumentUseCase', () => {
   // attributed company has no company", "The document exposes only the
   // letterhead fields", "A session completed before this change is signed
   // by its performer"
-  it('carries labels, an empty-string fallback, a null company, the performer as signer and only six letterhead keys', async () => {
+  it('carries labels, an empty-string fallback, a null company, the performer as signer and only the letterhead keys', async () => {
     const template = buildTemplate();
     templateRepository.seed(template, [
       { questionId: 'question-1', order: 1, text: 'Is the seal intact?' },
@@ -259,10 +259,12 @@ describe('ReadReviewDocumentUseCase', () => {
       address: 'Calle Falsa 123',
       phone: '+34 600 000 000',
       email: 'contact@acme.example',
+      hasLogo: false,
     });
     expect(Object.keys(result.letterhead).sort()).toEqual([
       'address',
       'email',
+      'hasLogo',
       'legalName',
       'name',
       'phone',
@@ -301,8 +303,38 @@ describe('ReadReviewDocumentUseCase', () => {
       address: '',
       phone: '',
       email: '',
+      hasLogo: false,
     });
     expect(result.entries).toEqual([]);
+  });
+
+  // organization-logo S8, review-document "The letterhead says whether a
+  // logo exists": `hasLogo` only, never the stored key.
+  it('the letterhead says a logo exists without exposing its key', async () => {
+    const template = buildTemplate();
+    templateRepository.seed(template, []);
+    sessionRepository.seed(
+      new ReviewSession({
+        id: 'session-1',
+        communityId: 'community-1',
+        templateId: template.id,
+        performedById: 'user-1',
+        status: 'completed',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        completedAt: new Date('2026-01-02T00:00:00.000Z'),
+        entries: [],
+      }),
+    );
+    scopeChecker.assign('user-1', 'community-1');
+    await profileRepository.setLogoAssetId('logos/logo-1.png');
+
+    const result = await useCase.execute('session-1', {
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(result.letterhead.hasLogo).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('logos/logo-1.png');
   });
 
   // spec.md "Deleted context still labels the document" (company half): a

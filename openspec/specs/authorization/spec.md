@@ -418,13 +418,18 @@ surface, and no other permission family MUST be widened to reach the
 profile, with exactly **one** exception: the review-document read
 (`review-document`, gated by the existing `reviewSession:read`
 permission) MAY return the organization profile's six letterhead
-fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — to
-a caller holding no `organizationProfile:*` permission. That exception
-MUST NOT extend to `id` or `logoAssetId`, MUST NOT add any
+fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` —
+plus `hasLogo`, and the document logo read
+(`GET /review-history/:sessionId/document/logo`, gated by the same
+`reviewSession:read` permission and the same scope check) MAY return the
+organization logo, to a caller holding no `organizationProfile:*`
+permission. That exception MUST NOT extend to `id` or `logoAssetId`, MUST NOT add any
 `organizationProfile:*` member to any row of `ROLE_PERMISSIONS`, MUST
 NOT create a new `Permission` member, `ROLE_PERMISSIONS` grant or
 capability, and MUST NOT be reachable other than through the scoped
-review-document read itself.
+review-document read and its logo read.
+(Previously: exactly the six letterhead fields, through the document read
+alone.)
 
 No `ManagerCapability` member MUST be declared for this slice: in
 particular `MANAGE_ORGANIZATION_PROFILE`, which ADR-011 Decision 2
@@ -475,7 +480,8 @@ slice they describe or to state the property directly.)
 
 - GIVEN a `MAINTENANCE_TECHNICIAN` holding no `organizationProfile:*` permission, reading the document of a `completed` session in their scope
 - WHEN the response's letterhead is inspected
-- THEN it MUST carry exactly the six letterhead fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — and MUST NOT carry `id` or `logoAssetId`
+- THEN it MUST carry exactly the six letterhead fields — `name`, `legalName`, `taxId`, `address`, `phone`, `email` — and `hasLogo`, and MUST NOT carry `id` or `logoAssetId`; the same technician MUST read the logo through `GET /review-history/:sessionId/document/logo` and MUST still get `403` on `GET /organization-profile/logo`
+  (Previously: exactly the six letterhead fields.)
 
 #### Scenario: No permission is added to reach the exception
 

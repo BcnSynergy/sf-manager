@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ORGANIZATION_LOGO_READER } from './application/ports/organization-logo.reader.port';
 import { ORGANIZATION_PROFILE_READER } from './application/ports/organization-profile.reader.port';
 import { ORGANIZATION_PROFILE_REPOSITORY } from './application/ports/organization-profile.repository.port';
 import { GetOrganizationLogoUseCase } from './application/use-cases/get-organization-logo.use-case';
@@ -27,6 +28,10 @@ import { OrganizationProfileController } from './presentation/organization-profi
 // review-document *The Organization Profile Gains One Reader, Not a Wider
 // Endpoint* and authorization *The Organization Profile Grants Nothing
 // Beyond Itself* both describe.
+//
+// organization-logo S8: ORGANIZATION_LOGO_READER is exported the same way,
+// an alias of GetOrganizationLogoUseCase, so the review document can show
+// the logo without the upload or the storage key.
 @Module({
   controllers: [OrganizationProfileController],
   providers: [
@@ -44,7 +49,11 @@ import { OrganizationProfileController } from './presentation/organization-profi
     // FileStorageModule and IdGeneratorModule.
     GetOrganizationLogoUseCase,
     UploadOrganizationLogoUseCase,
+    {
+      provide: ORGANIZATION_LOGO_READER,
+      useExisting: GetOrganizationLogoUseCase,
+    },
   ],
-  exports: [ORGANIZATION_PROFILE_READER],
+  exports: [ORGANIZATION_PROFILE_READER, ORGANIZATION_LOGO_READER],
 })
 export class OrganizationProfileModule {}

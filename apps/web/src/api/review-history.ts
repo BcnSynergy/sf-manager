@@ -1,5 +1,5 @@
 import type { AnswerValue, ElementType, ReviewFrequency } from '@sf-manager/validation';
-import { apiFetch } from './client';
+import { API_BASE_URL, apiFetch } from './client';
 
 // Mirrors apps/api/src/modules/review-session/presentation/
 // review-history.controller.ts's `mapError` (design.md Decision 4/7): only
@@ -133,8 +133,8 @@ export type ReviewDocumentEntry = {
   answers: ReviewHistoryEntryAnswer[];
   recordedAt: string;
 };
-// spec.md "The document exposes only the letterhead fields" — exactly the
-// six text fields, never `id`/`logoAssetId`.
+// spec.md "The document exposes only the letterhead fields" — the six text
+// fields and `hasLogo`, never `id`/`logoAssetId`.
 export type ReviewDocumentLetterhead = {
   name: string;
   legalName: string;
@@ -142,6 +142,7 @@ export type ReviewDocumentLetterhead = {
   address: string;
   phone: string;
   email: string;
+  hasLogo: boolean;
 };
 export type ReviewDocument = {
   id: string;
@@ -161,4 +162,11 @@ export type ReviewDocument = {
 
 export function readReviewDocument(sessionId: string): Promise<ReviewDocument> {
   return apiFetch<ReviewDocument>(`/review-history/${sessionId}/document`);
+}
+
+// organization-logo S8: the logo as an <img> source, read through the
+// document so any role that may open it sees the logo; the browser sends
+// the session cookie itself.
+export function reviewDocumentLogoUrl(sessionId: string): string {
+  return `${API_BASE_URL}/review-history/${sessionId}/document/logo`;
 }

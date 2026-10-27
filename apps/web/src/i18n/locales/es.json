@@ -536,7 +536,8 @@
     "loading": "Cargando el documento de revisión...",
     "unreachable": "Este documento no está disponible.",
     "letterhead": {
-      "incompleteWarning": "El perfil de la organización está incompleto. Faltan algunos datos de la cabecera en este documento."
+      "incompleteWarning": "El perfil de la organización está incompleto. Faltan algunos datos de la cabecera en este documento.",
+      "logoAlt": "Logo de la organización"
     },
     "session": {
       "title": "Datos de la sesión",

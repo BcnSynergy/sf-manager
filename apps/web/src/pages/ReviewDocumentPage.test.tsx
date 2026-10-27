@@ -1,12 +1,17 @@
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewHistoryApi from '../api/review-history';
 import { ReviewDocumentPage } from './ReviewDocumentPage';
 
-vi.mock('../api/review-history');
+// Only the fetch is mocked: the logo URL helper stays real, so the tests
+// see the address the browser would request.
+vi.mock('../api/review-history', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/review-history')>()),
+  readReviewDocument: vi.fn(),
+}));
 
 const mockedReadReviewDocument = vi.mocked(reviewHistoryApi.readReviewDocument);
 
@@ -37,6 +42,7 @@ const document: reviewHistoryApi.ReviewDocument = {
     address: 'Main St 1',
     phone: '111222333',
     email: 'org@sf-manager.example',
+    hasLogo: false,
   },
 };
 
@@ -171,6 +177,111 @@ describe('letterhead region', () => {
 
     expect(screen.queryByTestId('review-document-letterhead-content')).not.toBeInTheDocument();
     expect(screen.getByTestId('review-document-letterhead-warning')).toBeInTheDocument();
+  });
+
+  // review-document-ui "The Letterhead Shows the Organization Logo"
+  it('shows the logo from the document logo route, printed with the letterhead', async () => {
+    mockedReadReviewDocument.mockResolvedValue(withLetterhead({ hasLogo: true }));
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const logo = screen.getByTestId('review-document-letterhead-logo');
+    expect(logo).toHaveAttribute(
+      'src',
+      expect.stringMatching(new RegExp(`/review-history/${SESSION_ID}/document/logo$`)),
+    );
+    expect(logo).toHaveAccessibleName('Organization logo');
+    expect(logo).not.toHaveAttribute('data-print-hide');
+    expect(screen.getByTestId('review-document-letterhead-content')).toContainElement(logo);
+  });
+
+  it('shows no logo when the organization has none', async () => {
+    mockedReadReviewDocument.mockResolvedValue(document);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    expect(screen.queryByTestId('review-document-letterhead-logo')).not.toBeInTheDocument();
+  });
+
+  it('drops a logo that fails to load, with no error, keeping the text fields', async () => {
+    mockedReadReviewDocument.mockResolvedValue(withLetterhead({ hasLogo: true }));
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+    fireEvent.error(screen.getByTestId('review-document-letterhead-logo'));
+
+    expect(screen.queryByTestId('review-document-letterhead-logo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-document-letterhead-name')).toHaveTextContent('ACME');
+  });
+
+  it('a blank profile with a logo shows the logo alone, and still the warning', async () => {
+    mockedReadReviewDocument.mockResolvedValue(
+      withLetterhead({
+        name: '',
+        legalName: '',
+        taxId: '',
+        address: '',
+        phone: '',
+        email: '',
+        hasLogo: true,
+      }),
+    );
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const content = screen.getByTestId('review-document-letterhead-content');
+    expect(within(content).getByTestId('review-document-letterhead-logo')).toBeInTheDocument();
+    expect(within(content).queryAllByRole('paragraph')).toHaveLength(0);
+    expect(screen.getByTestId('review-document-letterhead-warning')).toBeInTheDocument();
+  });
+
+  it('a logo that failed on one document still shows on the next one', async () => {
+    mockedReadReviewDocument.mockImplementation((sessionId) =>
+      Promise.resolve({
+        ...withLetterhead({ hasLogo: true }),
+        id: sessionId,
+      }),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId/document', element: <ReviewDocumentPage /> }],
+      { initialEntries: [`/review-history/${SESSION_ID}/document`] },
+    );
+
+    render(<RouterProvider router={router} />);
+    fireEvent.error(await screen.findByTestId('review-document-letterhead-logo'));
+    expect(screen.queryByTestId('review-document-letterhead-logo')).not.toBeInTheDocument();
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    const logo = await screen.findByTestId('review-document-letterhead-logo');
+    expect(logo).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/review-history\/session-2\/document\/logo$/),
+    );
+  });
+
+  it('a blank profile whose logo fails to load renders no letterhead content', async () => {
+    mockedReadReviewDocument.mockResolvedValue(
+      withLetterhead({
+        name: '',
+        legalName: '',
+        taxId: '',
+        address: '',
+        phone: '',
+        email: '',
+        hasLogo: true,
+      }),
+    );
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+    fireEvent.error(screen.getByTestId('review-document-letterhead-logo'));
+
+    expect(screen.queryByTestId('review-document-letterhead-content')).not.toBeInTheDocument();
   });
 });
 
