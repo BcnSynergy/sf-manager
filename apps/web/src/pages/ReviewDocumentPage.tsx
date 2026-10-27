@@ -4,6 +4,7 @@ import { useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import {
   readReviewDocument,
+  reviewDocumentLogoUrl,
   type ReviewDocument,
   type ReviewDocumentEntry,
   type ReviewDocumentLetterhead,
@@ -11,7 +12,10 @@ import {
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
-import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
+import {
+  isProfileIncomplete,
+  type ProfileFields,
+} from '../organization-profile/is-profile-incomplete';
 import { formatDocumentDate, formatDocumentDateTime } from '../review-session/format-date';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -45,7 +49,7 @@ const HTTP_NOT_FOUND = 404;
 // Profile Still Prints". The letterhead has no per-field label — it prints
 // like a physical letterhead, not a data table — so only non-blank values
 // render, in a fixed field order.
-const LETTERHEAD_FIELDS: (keyof ReviewDocumentLetterhead)[] = [
+const LETTERHEAD_FIELDS: (keyof ProfileFields)[] = [
   'name',
   'legalName',
   'taxId',
@@ -56,14 +60,26 @@ const LETTERHEAD_FIELDS: (keyof ReviewDocumentLetterhead)[] = [
 
 // name -> name, legalName -> legal-name, taxId -> tax-id (mirrors
 // OrganizationProfilePage.tsx's toTestIdSegment).
-function letterheadTestId(field: keyof ReviewDocumentLetterhead): string {
+function letterheadTestId(field: keyof ProfileFields): string {
   return `review-document-letterhead-${field.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
 }
 
-function LetterheadRegion({ letterhead }: { letterhead: ReviewDocumentLetterhead }) {
+// review-document-ui "The Letterhead Shows the Organization Logo": the logo
+// heads the letterhead on screen and in print. `hasLogo` can be true while
+// the file is gone (the logo read then answers 404), so an image that fails
+// to load is dropped without an error, like a blank field.
+function LetterheadRegion({
+  letterhead,
+  sessionId,
+}: {
+  letterhead: ReviewDocumentLetterhead;
+  sessionId: string;
+}) {
   const { t } = useTranslation();
+  const [logoFailed, setLogoFailed] = useState(false);
   const incomplete = isProfileIncomplete(letterhead);
   const filledFields = LETTERHEAD_FIELDS.filter((field) => letterhead[field] !== '');
+  const showLogo = letterhead.hasLogo && !logoFailed;
 
   return (
     <section data-testid="review-document-letterhead">
@@ -72,8 +88,17 @@ function LetterheadRegion({ letterhead }: { letterhead: ReviewDocumentLetterhead
           {t('reviewDocument.letterhead.incompleteWarning')}
         </p>
       )}
-      {filledFields.length > 0 && (
+      {(showLogo || filledFields.length > 0) && (
         <div data-testid="review-document-letterhead-content">
+          {showLogo && (
+            <img
+              className="sf-letterhead-logo"
+              src={reviewDocumentLogoUrl(sessionId)}
+              alt={t('reviewDocument.letterhead.logoAlt')}
+              onError={() => setLogoFailed(true)}
+              data-testid="review-document-letterhead-logo"
+            />
+          )}
           {filledFields.map((field) => (
             <p key={field} data-testid={letterheadTestId(field)}>
               {letterhead[field]}
@@ -320,7 +345,7 @@ export function ReviewDocumentPage() {
     <main className="review-document-print">
       <h1 data-print-hide>{t('reviewDocument.title')}</h1>
       <div data-testid="review-document-content" data-review-document-id={document.id}>
-        <LetterheadRegion letterhead={document.letterhead} />
+        <LetterheadRegion letterhead={document.letterhead} sessionId={document.id} />
         <SessionDataRegion document={document} locale={i18n.language} />
         <RecordRegion document={document} />
         <SignatureFooter document={document} locale={i18n.language} />

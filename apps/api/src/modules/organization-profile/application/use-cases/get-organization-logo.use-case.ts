@@ -4,22 +4,21 @@ import {
   type FileStorage,
 } from '../../../../shared/application/ports/file-storage.port';
 import { logoContentTypeForKey } from '../../domain/organization-logo';
+import type {
+  OrganizationLogo,
+  OrganizationLogoReader,
+} from '../ports/organization-logo.reader.port';
 import {
   ORGANIZATION_PROFILE_READER,
   type OrganizationProfileReader,
 } from '../ports/organization-profile.reader.port';
-
-export interface OrganizationLogo {
-  content: Buffer;
-  contentType: string;
-}
 
 // organization-logo S3: the browser reads the logo through the API, never
 // from a static path, so the URL stays the same whatever stores the bytes.
 // Resolves null when there is no logo to show: none uploaded, or a recorded
 // key whose file is gone.
 @Injectable()
-export class GetOrganizationLogoUseCase {
+export class GetOrganizationLogoUseCase implements OrganizationLogoReader {
   constructor(
     @Inject(ORGANIZATION_PROFILE_READER)
     private readonly organizationProfileReader: OrganizationProfileReader,

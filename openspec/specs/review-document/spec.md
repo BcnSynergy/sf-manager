@@ -16,7 +16,10 @@ printable page is owned by `review-document-ui`.
 
 Out of scope (slice 2, next change): signer full name, signature image,
 and snapshotting reference labels onto the session at signing time. Also
-out of scope: any PDF, file, download or email, and any logo.
+out of scope: any PDF, file, download or email. The organization logo
+is shown through the document since organization-logo (_The Document
+Carries the Organization Logo_).
+(Previously: also out of scope was "any logo".)
 
 ## Requirements
 
@@ -241,11 +244,13 @@ module.
 ### Requirement: The Organization Profile Gains One Reader, Not a Wider Endpoint
 
 The document read MUST be the only read of the profile outside the
-capability's own endpoint. It MUST expose only
-the six letterhead fields — never the profile's `id` or `logoAssetId`.
-`GET /organization-profile` and `PATCH /organization-profile` MUST keep
+capability's own endpoint, together with the document logo read below.
+It MUST expose only the six letterhead fields and `hasLogo` — never the
+profile's `id` or `logoAssetId`. `GET /organization-profile`,
+`PATCH /organization-profile` and the profile's own logo routes MUST keep
 their exact current permissions: a non-admin role MUST obtain letterhead
-data only through a document it may already open.
+data and the logo only through a document it may already open.
+(Previously: exactly the six letterhead fields, with no logo.)
 
 #### Scenario: The profile endpoint stays admin-only
 
@@ -257,7 +262,45 @@ data only through a document it may already open.
 
 - GIVEN any successful document response
 - WHEN its letterhead is inspected
-- THEN it MUST carry exactly the six text fields, and no `id` or `logoAssetId`
+- THEN it MUST carry exactly the six text fields and the boolean `hasLogo`, and no `id` or `logoAssetId`
+  (Previously: exactly the six text fields.)
+
+### Requirement: The Document Carries the Organization Logo
+
+The letterhead MUST carry `hasLogo`: `true` when the organization
+profile records a logo, `false` otherwise. The storage key MUST NOT
+appear anywhere in the response.
+
+`GET /review-history/:sessionId/document/logo` MUST return the
+organization logo's bytes with its content type (`image/png`,
+`image/jpeg` or `image/webp`) and `Cache-Control: no-store`. It MUST be
+gated by `reviewSession:read` and MUST run the same scope check as the
+document read **before** reading the logo: it MUST be reachable if and
+only if the document read of the same session is reachable by the same
+caller, and a session that is out of scope, nonexistent or not
+`completed` MUST be rejected with the document read's
+`404 REVIEW_SESSION_NOT_FOUND`. A malformed `sessionId` MUST be rejected
+with `400 INVALID_SESSION_ID`. When the organization has no logo, or its
+recorded file is missing, the route MUST answer `404`. No
+`organizationProfile:*` permission MUST be needed or granted.
+
+#### Scenario: A technician sees the logo of their own document
+
+- GIVEN the organization has a logo and a `MAINTENANCE_TECHNICIAN` holding no `organizationProfile:*` permission performed a `completed` session
+- WHEN they read that session's document and its logo
+- THEN the letterhead MUST carry `hasLogo: true` and no storage key, and the logo read MUST return the logo's bytes with its content type and `Cache-Control: no-store`
+
+#### Scenario: An unreachable document has no logo
+
+- GIVEN a session the caller cannot open as a document: out of scope, nonexistent or a draft
+- WHEN they read its logo
+- THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`, exactly as for the document read, and no image MUST be returned
+
+#### Scenario: No logo to show
+
+- GIVEN the organization has no logo, or its recorded file is missing
+- WHEN a caller reads the logo of a document they may open
+- THEN the response MUST be `404`, and the document itself MUST still be returned, with `hasLogo: false` when no logo is recorded
 
 ### Requirement: Reference Labels Are Read Live in This Slice
 

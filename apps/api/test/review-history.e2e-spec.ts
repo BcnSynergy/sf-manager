@@ -12,6 +12,8 @@ import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use
 import { getLoginEmailRateLimitConfig } from '../src/modules/auth/infrastructure/config/login-rate-limit.config';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.service';
+import { FILE_STORAGE } from '../src/shared/application/ports/file-storage.port';
+import { InMemoryFileStorage } from '../src/shared/testing/in-memory-file-storage';
 import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.repository.port';
 import {
   TOKEN_DENYLIST,
@@ -174,6 +176,8 @@ interface BuiltApp {
   // name directory (absent id -> null/absent, never a thrown error).
   nameDirectory: InMemoryReviewDocumentNameDirectory;
   organizationProfileRepository: InMemoryOrganizationProfileRepository;
+  // organization-logo S8: the document logo route reads the logo bytes here.
+  fileStorage: InMemoryFileStorage;
 }
 
 async function buildApp(seed: {
@@ -200,6 +204,7 @@ async function buildApp(seed: {
   const sessionRepository = new InMemoryReviewSessionRepository();
   const tokenDenylist = new InMemoryTokenDenylist();
   const nameDirectory = new InMemoryReviewDocumentNameDirectory();
+  const fileStorage = new InMemoryFileStorage();
   const organizationProfileRepository =
     new InMemoryOrganizationProfileRepository();
 
@@ -240,6 +245,8 @@ async function buildApp(seed: {
     .useValue(nameDirectory)
     .overrideProvider(ORGANIZATION_PROFILE_REPOSITORY)
     .useValue(organizationProfileRepository)
+    .overrideProvider(FILE_STORAGE)
+    .useValue(fileStorage)
     .overrideProvider(ThrottlerStorage)
     .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(LOGIN_FAILURE_LIMITER)
@@ -258,7 +265,13 @@ async function buildApp(seed: {
   app.enableCors({ origin: 'http://localhost:5173', credentials: true });
   await app.init();
 
-  return { app, userRepository, nameDirectory, organizationProfileRepository };
+  return {
+    app,
+    userRepository,
+    nameDirectory,
+    organizationProfileRepository,
+    fileStorage,
+  };
 }
 
 type Agent = ReturnType<typeof request.agent>;
@@ -3793,6 +3806,7 @@ describe('Review History (e2e)', () => {
           address: 'Carrer Major 1, Girona',
           phone: '+34 972 000 000',
           email: 'org@example.com',
+          hasLogo: false,
         },
       });
     });
@@ -3970,8 +3984,8 @@ describe('Review History (e2e)', () => {
     );
 
     // spec.md review-document "The document exposes only the letterhead
-    // fields" — exactly the six text keys, never `id`/`logoAssetId`.
-    it('the letterhead carries exactly the six text keys, never id or logoAssetId', async () => {
+    // fields" — the six text keys and `hasLogo`, never `id`/`logoAssetId`.
+    it('the letterhead carries exactly the six text keys and hasLogo, never id or logoAssetId', async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
       const response = await technicianUAgent
@@ -3980,7 +3994,15 @@ describe('Review History (e2e)', () => {
 
       const letterhead = (response.body as { letterhead: object }).letterhead;
       expect(Object.keys(letterhead).sort()).toEqual(
-        ['address', 'email', 'legalName', 'name', 'phone', 'taxId'].sort(),
+        [
+          'address',
+          'email',
+          'hasLogo',
+          'legalName',
+          'name',
+          'phone',
+          'taxId',
+        ].sort(),
       );
     });
 
@@ -4236,9 +4258,223 @@ describe('Review History (e2e)', () => {
         address: '',
         phone: '',
         email: '',
+        hasLogo: false,
       });
       expect(letterhead).not.toHaveProperty('complete');
       expect(letterhead).not.toHaveProperty('incomplete');
+    });
+  });
+  // organization-logo S8, review-document "The Document Carries the
+  // Organization Logo": the logo is reachable through a document exactly
+  // when the document is, with no `organizationProfile:*` permission.
+  describe('GET /review-history/:sessionId/document/logo', () => {
+    const PNG_BYTES = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    ]);
+    const LOGO_KEY = 'logos/01997a00-0000-7000-8000-0000000000aa.png';
+    let built: BuiltApp;
+    const adminEmail = 'rhlogo-admin@example.com';
+    const technicianUEmail = 'rhlogo-technician-u@example.com';
+    const technicianWEmail = 'rhlogo-technician-w@example.com';
+    const ungrantedManagerEmail = 'rhlogo-manager@example.com';
+
+    let completedSessionId: string;
+    let draftSessionId: string;
+    let otherSessionId: string;
+
+    function logoPath(sessionId: string): string {
+      return `/review-history/${sessionId}/document/logo`;
+    }
+
+    beforeAll(async () => {
+      built = await buildApp({
+        users: [
+          await buildSeedUser({
+            id: 'rhlogo-admin-id',
+            email: adminEmail,
+            role: 'SYSTEM_ADMIN',
+          }),
+          await buildSeedUser({
+            id: 'rhlogo-technician-u-id',
+            email: technicianUEmail,
+            role: 'MAINTENANCE_TECHNICIAN',
+          }),
+          await buildSeedUser({
+            id: 'rhlogo-technician-w-id',
+            email: technicianWEmail,
+            role: 'MAINTENANCE_TECHNICIAN',
+          }),
+          await buildSeedUser({
+            id: 'rhlogo-manager-id',
+            email: ungrantedManagerEmail,
+            role: 'MANAGER',
+          }),
+        ],
+      });
+      await built.fileStorage.put(LOGO_KEY, PNG_BYTES);
+      await built.organizationProfileRepository.setLogoAssetId(LOGO_KEY);
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const communityA = await createCommunity(adminAgent, 'Logo community A');
+      const communityB = await createCommunity(adminAgent, 'Logo community B');
+      await assignTechnician(
+        adminAgent,
+        communityA.id,
+        'rhlogo-technician-u-id',
+      );
+      await assignTechnician(
+        adminAgent,
+        communityB.id,
+        'rhlogo-technician-w-id',
+      );
+      const question = await createQuestion(adminAgent, 'Is the logo shown?');
+      const template = await createActiveTemplate(adminAgent, 'Logo template', [
+        question.id,
+      ]);
+
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const openedByU = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityA.id, templateId: template.id })
+          .expect(201)
+      ).body as { id: string };
+      completedSessionId = (
+        (
+          await technicianUAgent
+            .post(`/review-sessions/${openedByU.id}/complete`)
+            .expect(200)
+        ).body as SessionBody
+      ).id;
+      draftSessionId = (
+        (
+          await technicianUAgent
+            .post('/review-sessions')
+            .send({ communityId: communityA.id, templateId: template.id })
+            .expect(201)
+        ).body as { id: string }
+      ).id;
+
+      const technicianWAgent = await loginAgent(built.app, technicianWEmail);
+      const openedByW = (
+        await technicianWAgent
+          .post('/review-sessions')
+          .send({ communityId: communityB.id, templateId: template.id })
+          .expect(201)
+      ).body as { id: string };
+      otherSessionId = (
+        (
+          await technicianWAgent
+            .post(`/review-sessions/${openedByW.id}/complete`)
+            .expect(200)
+        ).body as SessionBody
+      ).id;
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it('a technician without organizationProfile:read gets the logo of their own document', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+
+      const document = await agent
+        .get(`/review-history/${completedSessionId}/document`)
+        .expect(200);
+      expect(
+        (document.body as { letterhead: { hasLogo: boolean } }).letterhead
+          .hasLogo,
+      ).toBe(true);
+      expect(JSON.stringify(document.body)).not.toContain(LOGO_KEY);
+
+      const logo = await agent.get(logoPath(completedSessionId)).expect(200);
+      expect(logo.headers['content-type']).toBe('image/png');
+      expect(logo.headers['cache-control']).toBe('no-store');
+      expect(Buffer.from(logo.body as Buffer)).toEqual(PNG_BYTES);
+
+      await agent.get('/organization-profile/logo').expect(403);
+    });
+
+    it('the admin gets the logo of any document', async () => {
+      const agent = await loginAgent(built.app, adminEmail);
+
+      await agent.get(logoPath(otherSessionId)).expect(200);
+    });
+
+    it.each([
+      ['another technician', () => technicianWEmail, () => completedSessionId],
+      [
+        'an ungranted MANAGER',
+        () => ungrantedManagerEmail,
+        () => completedSessionId,
+      ],
+      [
+        'the performer, for a draft',
+        () => technicianUEmail,
+        () => draftSessionId,
+      ],
+      [
+        'the performer, for an unknown session',
+        () => technicianUEmail,
+        () => '01997a00-0000-7000-8000-0000000000ff',
+      ],
+    ])(
+      '%s gets the document 404 and no logo',
+      async (_label, getEmail: () => string, getSessionId: () => string) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        const document = await agent.get(
+          `/review-history/${getSessionId()}/document`,
+        );
+        const logo = await agent.get(logoPath(getSessionId()));
+
+        expect(document.status).toBe(404);
+        expect(logo.status).toBe(404);
+        expect((logo.body as ErrorBody).code).toBe('REVIEW_SESSION_NOT_FOUND');
+        expect(logo.headers['content-type']).not.toMatch(/^image\//);
+      },
+    );
+
+    it('rejects a malformed session id with 400 INVALID_SESSION_ID', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await agent.get(logoPath('not-a-uuid')).expect(400);
+
+      expect((response.body as ErrorBody).code).toBe('INVALID_SESSION_ID');
+    });
+
+    it('rejects an unauthenticated caller with 401', async () => {
+      await request(built.app.getHttpServer())
+        .get(logoPath(completedSessionId))
+        .expect(401);
+    });
+
+    it('answers 404 when the recorded logo file is missing', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+      await built.fileStorage.delete(LOGO_KEY);
+
+      try {
+        await agent.get(logoPath(completedSessionId)).expect(404);
+      } finally {
+        await built.fileStorage.put(LOGO_KEY, PNG_BYTES);
+      }
+    });
+
+    it('answers 404 and hasLogo false when the organization has no logo', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+      const profile = await built.organizationProfileRepository.get();
+      built.organizationProfileRepository.seed(
+        new OrganizationProfile({ ...profile, logoAssetId: null }),
+      );
+
+      const document = await agent
+        .get(`/review-history/${completedSessionId}/document`)
+        .expect(200);
+      expect(
+        (document.body as { letterhead: { hasLogo: boolean } }).letterhead
+          .hasLogo,
+      ).toBe(false);
+      await agent.get(logoPath(completedSessionId)).expect(404);
     });
   });
 });

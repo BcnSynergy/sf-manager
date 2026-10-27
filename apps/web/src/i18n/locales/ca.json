@@ -536,7 +536,8 @@
     "loading": "Carregant el document de revisió...",
     "unreachable": "Aquest document no està disponible.",
     "letterhead": {
-      "incompleteWarning": "El perfil de l'organització està incomplet. Falten algunes dades de la capçalera en aquest document."
+      "incompleteWarning": "El perfil de l'organització està incomplet. Falten algunes dades de la capçalera en aquest document.",
+      "logoAlt": "Logotip de l'organització"
     },
     "session": {
       "title": "Dades de la sessió",

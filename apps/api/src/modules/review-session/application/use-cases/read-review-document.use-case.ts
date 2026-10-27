@@ -63,6 +63,7 @@ export interface ReadReviewDocumentResult {
     address: string;
     phone: string;
     email: string;
+    hasLogo: boolean;
   };
 }
 
@@ -190,7 +191,8 @@ export class ReadReviewDocumentUseCase {
       entries,
       questions: template.questions,
       // spec.md "The document exposes only the letterhead fields" — never
-      // the profile's `id`/`logoAssetId`.
+      // the profile's `id`/`logoAssetId`; organization-logo S8 adds only
+      // whether a logo exists.
       letterhead: {
         name: profile.name,
         legalName: profile.legalName,
@@ -198,6 +200,7 @@ export class ReadReviewDocumentUseCase {
         address: profile.address,
         phone: profile.phone,
         email: profile.email,
+        hasLogo: profile.logoAssetId !== null,
       },
     };
   }

@@ -536,7 +536,8 @@
     "loading": "Loading the review document...",
     "unreachable": "This document is not available.",
     "letterhead": {
-      "incompleteWarning": "The organization profile is incomplete. Some letterhead fields are missing from this document."
+      "incompleteWarning": "The organization profile is incomplete. Some letterhead fields are missing from this document.",
+      "logoAlt": "Organization logo"
     },
     "session": {
       "title": "Session data",
