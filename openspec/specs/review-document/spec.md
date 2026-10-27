@@ -29,12 +29,12 @@ The system MUST let an authorized caller read the review document of one
 `completed` session by its identifier. A successful response MUST carry
 four parts, returned as structured data:
 
-| Part            | Required content                                                                                                                                                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Letterhead      | The organization profile's `name`, `legalName`, `taxId`, `address`, `phone` and `email`, verbatim — blank values as empty strings, no substitution and no completeness flag                                                       |
-| Session data    | The community's name, the template's element type, frequency, name and version, the session's `startedAt` and `completedAt`, and the attributed maintenance company's name when the session carries an attribution                |
-| Recorded record | Every entry the history read-back returns for that session — each with its element's `code`, `name` and `location`, its answers paired with the snapshotted question wording, and, for an unreviewed element, its recorded reason |
-| Signature       | The signer, identified by the performer's email, and the signing date, equal to `completedAt`                                                                                                                                     |
+| Part            | Required content                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Letterhead      | The organization profile's `name`, `legalName`, `taxId`, `address`, `phone` and `email`, verbatim — blank values as empty strings, no substitution and no completeness flag — and `hasLogo` (_The Document Carries the Organization Logo_) |
+| Session data    | The community's name, the template's element type, frequency, name and version, the session's `startedAt` and `completedAt`, and the attributed maintenance company's name when the session carries an attribution                         |
+| Recorded record | Every entry the history read-back returns for that session — each with its element's `code`, `name` and `location`, its answers paired with the snapshotted question wording, and, for an unreviewed element, its recorded reason          |
+| Signature       | The signer, identified by the performer's email, and the signing date, equal to `completedAt`                                                                                                                                              |
 
 The recorded record MUST match _Scoped Read-Back of One Historical
 Session_ for the same session in its **entry set, answers, snapshotted
@@ -334,7 +334,10 @@ endpoint returning the document as a PDF, image or other downloadable
 file, MUST NOT store a generated document, MUST NOT send it by email or
 any other channel, and MUST NOT introduce a PDF-generation,
 headless-browser or mailer dependency. No schema change and no data
-migration MUST ship.
+migration MUST ship. The document logo read
+(_The Document Carries the Organization Logo_) returns the organization's
+stored logo as uploaded, never a generated rendering of the document,
+and is not such an endpoint.
 
 #### Scenario: No file-returning endpoint exists
 

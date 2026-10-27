@@ -4277,6 +4277,8 @@ describe('Review History (e2e)', () => {
     const technicianUEmail = 'rhlogo-technician-u@example.com';
     const technicianWEmail = 'rhlogo-technician-w@example.com';
     const ungrantedManagerEmail = 'rhlogo-manager@example.com';
+    const representativeEmail = 'rhlogo-representative@example.com';
+    const companyManagerEmail = 'rhlogo-company-manager@example.com';
 
     let completedSessionId: string;
     let draftSessionId: string;
@@ -4298,6 +4300,18 @@ describe('Review History (e2e)', () => {
             id: 'rhlogo-technician-u-id',
             email: technicianUEmail,
             role: 'MAINTENANCE_TECHNICIAN',
+            maintenanceCompanyId: 'rhlogo-company-id',
+          }),
+          await buildSeedUser({
+            id: 'rhlogo-representative-id',
+            email: representativeEmail,
+            role: 'COMMUNITY_REPRESENTATIVE',
+          }),
+          await buildSeedUser({
+            id: 'rhlogo-company-manager-id',
+            email: companyManagerEmail,
+            role: 'MAINTENANCE_COMPANY_MANAGER',
+            maintenanceCompanyId: 'rhlogo-company-id',
           }),
           await buildSeedUser({
             id: 'rhlogo-technician-w-id',
@@ -4321,6 +4335,11 @@ describe('Review History (e2e)', () => {
         adminAgent,
         communityA.id,
         'rhlogo-technician-u-id',
+      );
+      await assignRepresentative(
+        adminAgent,
+        communityA.id,
+        'rhlogo-representative-id',
       );
       await assignTechnician(
         adminAgent,
@@ -4394,6 +4413,21 @@ describe('Review History (e2e)', () => {
 
       await agent.get('/organization-profile/logo').expect(403);
     });
+
+    it.each([
+      ['an assigned representative', () => representativeEmail],
+      ["the performer's company manager", () => companyManagerEmail],
+    ])(
+      '%s gets the logo of a document in their scope',
+      async (_label, getEmail: () => string) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        const logo = await agent.get(logoPath(completedSessionId)).expect(200);
+
+        expect(logo.headers['content-type']).toBe('image/png');
+        expect(Buffer.from(logo.body as Buffer)).toEqual(PNG_BYTES);
+      },
+    );
 
     it('the admin gets the logo of any document', async () => {
       const agent = await loginAgent(built.app, adminEmail);
@@ -4474,14 +4508,18 @@ describe('Review History (e2e)', () => {
         new OrganizationProfile({ ...profile, logoAssetId: null }),
       );
 
-      const document = await agent
-        .get(`/review-history/${completedSessionId}/document`)
-        .expect(200);
-      expect(
-        (document.body as { letterhead: { hasLogo: boolean } }).letterhead
-          .hasLogo,
-      ).toBe(false);
-      await agent.get(logoPath(completedSessionId)).expect(404);
+      try {
+        const document = await agent
+          .get(`/review-history/${completedSessionId}/document`)
+          .expect(200);
+        expect(
+          (document.body as { letterhead: { hasLogo: boolean } }).letterhead
+            .hasLogo,
+        ).toBe(false);
+        await agent.get(logoPath(completedSessionId)).expect(404);
+      } finally {
+        built.organizationProfileRepository.seed(profile);
+      }
     });
   });
 });

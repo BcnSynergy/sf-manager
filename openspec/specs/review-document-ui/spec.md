@@ -148,7 +148,9 @@ all", before the letterhead could show a logo.)
 ### Requirement: The Letterhead Shows the Organization Logo
 
 When the document's letterhead carries `hasLogo: true`, the page MUST
-show the organization logo at the head of the letterhead, read from
+show the organization logo at the head of the letterhead content,
+before the filled text fields (the on-screen incomplete-profile warning,
+when shown, stays above it), read from
 `GET /review-history/:sessionId/document/logo`, with a localized
 alternative text, on screen **and** in the printed output. When
 `hasLogo` is `false`, no logo MUST render. A logo that fails to load
@@ -160,7 +162,7 @@ warning, which depends only on the six text fields.
 
 - GIVEN the document's letterhead carries `hasLogo: true`
 - WHEN the document page renders and is printed
-- THEN the logo MUST appear at the head of the letterhead on screen and in the print output
+- THEN the logo MUST appear before the letterhead's text fields on screen and in the print output, and at the top of the letterhead in print
 
 #### Scenario: No logo recorded
 
