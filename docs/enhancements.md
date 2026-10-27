@@ -715,7 +715,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-110** (feature): the organization logo can be removed without
   uploading a new one: `DELETE /organization-profile/logo`
   (`organizationProfile:update`) and a confirmed Remove control on the
-  profile page. Done in `en-110-remove-logo`, 2026-10-27.
+  profile page. Done in `en-110-remove-logo` (PR #296), 2026-10-27.
 - **EN-95** (delivery): `node:24-bookworm-slim`, `caddy:2-alpine` and
   `postgres:18-alpine` are pinned as `tag@sha256:digest` in both Dockerfiles
   and both compose files, and `.github/dependabot.yml` checks weekly and
