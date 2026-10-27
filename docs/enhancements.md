@@ -700,6 +700,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
+- **EN-114** (API): removing the logo while an upload is in flight can
+  silently undo that upload: the removal reads the old key, the upload
+  records its new key, then the removal clears it. The upload answered 200
+  with `hasLogo: true`, its file is orphaned, and no key ever points at a
+  missing file. Two concurrent uploads already behave last-writer-wins. A
+  conditional clear (only when the recorded key is still the one read)
+  would close it. Orphaned logo files have no cleanup job. Evidence:
+  `apps/api/src/modules/organization-profile/application/use-cases/remove-organization-logo.use-case.ts`.
+  Origin: EN-110 pre-push review, 2026-10-27.
+
 ## Done
 
 - **EN-110** (feature): the organization logo can be removed without

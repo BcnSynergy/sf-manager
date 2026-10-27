@@ -243,9 +243,10 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
     fireEvent.click(screen.getByTestId('organization-logo-remove'));
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
-    expect(await screen.findByTestId('organization-logo-success')).toHaveTextContent(
-      'Logo removed.',
-    );
+    const success = await screen.findByTestId('organization-logo-success');
+    expect(success).toHaveTextContent('Logo removed.');
+    expect(screen.getByRole('status')).toContainElement(success);
+    expect(screen.getByRole('heading', { name: 'Logo' })).toHaveFocus();
     expect(mockedRemove).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('organization-logo-preview')).not.toBeInTheDocument();
     expect(screen.getByTestId('organization-logo-empty')).toHaveTextContent(
@@ -262,7 +263,9 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
     fireEvent.click(screen.getByTestId('organization-logo-remove'));
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('The logo could not be removed.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not remove the logo. Please try again.',
+    );
     expect(screen.getByTestId('organization-logo-preview')).toBeInTheDocument();
     expect(screen.queryByTestId('organization-logo-success')).not.toBeInTheDocument();
   });

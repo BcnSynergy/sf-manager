@@ -218,7 +218,7 @@
     "logoRemoveConfirmTitle": "Remove logo",
     "logoRemoveConfirmMessage": "The logo will no longer appear on the profile or on review documents.",
     "logoRemoveSuccess": "Logo removed.",
-    "logoRemoveError": "The logo could not be removed.",
+    "logoRemoveError": "Could not remove the logo. Please try again.",
     "logoTooLargeError": "The logo must be 2 MB or smaller.",
     "logoUnsupportedError": "The logo must be a PNG, JPEG or WebP image.",
     "logoUploadError": "Could not upload the logo. Please try again."

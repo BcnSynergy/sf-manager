@@ -194,7 +194,7 @@ on the profile or on review documents; cancelling MUST send no request
 and keep the logo. On success the section MUST say that no logo has been
 uploaded, MUST no longer offer the remove control, and MUST confirm the
 removal in its own status region (`web-alert-announcements`), without a
-page reload. A failed removal MUST show a message and keep the logo.
+page reload, and keyboard focus MUST move to the logo section's heading. A failed removal MUST show a message and keep the logo.
 Upload and remove MUST be disabled while a removal is in flight, and
 removing MUST NOT save or change the text fields.
 

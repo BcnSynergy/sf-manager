@@ -433,7 +433,7 @@ describe('Organization Profile (e2e)', () => {
       expect([404, 405]).toContain(response.status);
     });
 
-    it('does not resolve an /organization-profile/:id-shaped path (spec: Only two operations are declared)', async () => {
+    it('does not resolve an /organization-profile/:id-shaped path (spec: Only five operations are declared)', async () => {
       const agent = await loginAgent(app, adminEmail);
 
       const response = await agent.get('/organization-profile/some-id');

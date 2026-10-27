@@ -15,8 +15,11 @@ The confirmations covered are:
 | #   | Page                 | Form             | Confirmation                                    |
 | --- | -------------------- | ---------------- | ----------------------------------------------- |
 | 1   | OrganizationProfile  | the profile form | the save confirmation                           |
-| 2   | OrganizationProfile  | the logo section | the upload confirmation                         |
+| 2   | OrganizationProfile  | the logo section | the upload or removal confirmation              |
 | 3   | ReviewSessionElement | the entry form   | the save confirmation, with its Continue action |
+
+(Previously: row 2 covered the upload confirmation only, before the logo
+could be removed.)
 
 #### Scenario: The region is there before the save
 

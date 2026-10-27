@@ -70,5 +70,7 @@ describe('RemoveOrganizationLogoUseCase (EN-110)', () => {
     const profile = await useCase.execute();
 
     expect(profile.logoAssetId).toBeNull();
+    expect((await repository.get()).logoAssetId).toBeNull();
+    expect(storage.keys()).toEqual(['logos/id-1.png']);
   });
 });

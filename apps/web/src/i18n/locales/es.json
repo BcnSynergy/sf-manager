@@ -218,7 +218,7 @@
     "logoRemoveConfirmTitle": "Quitar logo",
     "logoRemoveConfirmMessage": "El logo dejará de aparecer en el perfil y en los documentos de revisión.",
     "logoRemoveSuccess": "Logo quitado.",
-    "logoRemoveError": "No se ha podido quitar el logo.",
+    "logoRemoveError": "No se ha podido quitar el logo. Inténtalo de nuevo.",
     "logoTooLargeError": "El logo debe ocupar 2 MB o menos.",
     "logoUnsupportedError": "El logo debe ser una imagen PNG, JPEG o WebP.",
     "logoUploadError": "No se ha podido subir el logo. Inténtalo de nuevo."

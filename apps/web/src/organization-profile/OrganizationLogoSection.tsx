@@ -38,6 +38,7 @@ type Props = {
 export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [hasLogo, setHasLogo] = useState(initialHasLogo);
   const [version, setVersion] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);
@@ -104,6 +105,9 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       setHasLogo(profile.hasLogo);
       setImageFailed(false);
       setSuccessKey('organizationProfile.logoRemoveSuccess');
+      // The Remove button that had focus is gone; keep the keyboard user
+      // in the section.
+      headingRef.current?.focus();
     } catch {
       showError(t('organizationProfile.logoRemoveError'));
     } finally {
@@ -116,7 +120,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
 
   return (
     <section className="sf-panel" aria-labelledby="organization-logo-title">
-      <h2 id="organization-logo-title" className="sf-section-title">
+      <h2 ref={headingRef} id="organization-logo-title" className="sf-section-title" tabIndex={-1}>
         {t('organizationProfile.logoTitle')}
       </h2>
       {showPreview ? (
