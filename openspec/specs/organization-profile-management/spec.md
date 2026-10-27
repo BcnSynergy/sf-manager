@@ -349,7 +349,7 @@ the new file is missing too (a second replacement overlapped the read).
 
 - GIVEN a recorded key whose file is missing from storage, with no upload or removal in progress
 - WHEN the logo is read
-- THEN the response MUST be 404, after reading the key at most twice and the file once
+- THEN the response MUST be 404
 
 ### Requirement: Remove the Organization Logo
 

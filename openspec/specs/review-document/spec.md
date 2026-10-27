@@ -281,8 +281,10 @@ caller, and a session that is out of scope, nonexistent or not
 `completed` MUST be rejected with the document read's
 `404 REVIEW_SESSION_NOT_FOUND`. A malformed `sessionId` MUST be rejected
 with `400 INVALID_SESSION_ID`. When the organization has no logo, or its
-recorded file is missing, the route MUST answer `404`. No
-`organizationProfile:*` permission MUST be needed or granted.
+recorded file is missing, the route MUST answer `404`; a read overlapping
+a replacing upload follows `organization-profile-management`, _Read the
+Organization Logo_, and serves the new logo. No `organizationProfile:*`
+permission MUST be needed or granted.
 
 #### Scenario: A technician sees the logo of their own document
 
