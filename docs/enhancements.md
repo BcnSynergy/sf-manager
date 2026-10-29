@@ -720,8 +720,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   another provider, encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they
   leave the server. It is off until every `OFFSITE_*` value is set, only
   adds files (expiry is the bucket's lifecycle rule), and `pull` downloads
-  and decrypts the copies for a restore. Done in `en-104-offsite-backups`,
-  2026-10-29.
+  and decrypts the copies for a restore. Done in `en-104-offsite-backups`
+  (PR #302), 2026-10-29.
 - **EN-114** (API): a logo removal clears the key only if it is still the
   one it read, with one conditional write (`updateManyAndReturn` on the expected
   key). An upload that recorded a new logo in between wins: the removal
