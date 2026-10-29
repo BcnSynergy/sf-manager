@@ -704,6 +704,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   swapping it in would close it. Evidence: `deploy/postgres-backup.sh`
   (`restore`). Origin: TD-42 pre-push verification, 2026-10-29.
 
+- **EN-118** (deploy): `offsite-copy.sh pull` overwrites a local backup of
+  the same name with the bucket's copy, because it does not use
+  `--ignore-existing` the way the upload does. Kept on purpose: when
+  restoring, the local file may be the damaged one and the bucket's copy
+  should win, and the README says to pull into an empty `backups/`. Revisit
+  if pulling into a populated directory becomes a normal step. Evidence:
+  `deploy/offsite-copy.sh` (`pull`). Origin: EN-104 pre-push verification
+  recheck, 2026-10-29.
+
 ## Done
 
 - **EN-104** (deployment): an `offsite` service (rclone) copies the dumps
