@@ -13,6 +13,9 @@ import {
 // order as a replacing upload, so a failure never leaves the profile
 // pointing at a deleted file; the worst outcome is an orphaned file.
 // Removing when there is no logo succeeds and changes nothing.
+// EN-114: the key is cleared only if it is still the one read. An upload
+// that recorded a new key in between wins: nothing is written or deleted
+// and the current profile, with its new logo, is returned.
 @Injectable()
 export class RemoveOrganizationLogoUseCase {
   private readonly logger = new Logger(RemoveOrganizationLogoUseCase.name);
@@ -28,8 +31,10 @@ export class RemoveOrganizationLogoUseCase {
     const current = await this.organizationProfileRepository.get();
     if (!current.logoAssetId) return current;
 
-    const profile =
-      await this.organizationProfileRepository.setLogoAssetId(null);
+    const profile = await this.organizationProfileRepository.clearLogoAssetId(
+      current.logoAssetId,
+    );
+    if (!profile) return this.organizationProfileRepository.get();
     try {
       await this.fileStorage.delete(current.logoAssetId);
     } catch (error) {

@@ -371,6 +371,11 @@ MUST still succeed and the file is left orphaned. Removing when there is
 no logo MUST succeed and change nothing. The other profile fields MUST be
 unchanged.
 
+The key MUST be cleared only if it is still the one the removal read. When
+an upload records a new logo after the removal read the key, the upload
+MUST win: the removal MUST write and delete nothing and MUST respond 200
+with the current profile, `hasLogo: true`.
+
 #### Scenario: The logo is removed
 
 - GIVEN a profile with an uploaded logo
@@ -382,6 +387,12 @@ unchanged.
 - GIVEN a profile with no logo
 - WHEN a `SYSTEM_ADMIN` removes the logo
 - THEN the response MUST be 200 with `hasLogo: false`, and nothing MUST be written or deleted
+
+#### Scenario: An upload that overlaps a removal is kept
+
+- GIVEN a profile with a logo, and a removal that has read its key
+- WHEN an upload records a new logo before the removal clears the key
+- THEN the removal MUST respond 200 with `hasLogo: true`, the new logo and its file MUST be kept, and the logo read MUST return the new logo
 
 ### Requirement: The Profile Has No Create and No Delete Surface
 

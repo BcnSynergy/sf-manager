@@ -687,16 +687,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
-- **EN-114** (API): removing the logo while an upload is in flight can
-  silently undo that upload: the removal reads the old key, the upload
-  records its new key, then the removal clears it. The upload answered 200
-  with `hasLogo: true`, its file is orphaned, and no key ever points at a
-  missing file. Two concurrent uploads already behave last-writer-wins. A
-  conditional clear (only when the recorded key is still the one read)
-  would close it. Orphaned logo files have no cleanup job. Evidence:
-  `apps/api/src/modules/organization-profile/application/use-cases/remove-organization-logo.use-case.ts`.
-  Origin: EN-110 pre-push review, 2026-10-27.
-
 - **EN-115** (API): the spec says a logo upload whose content type cannot
   be parsed answers `LOGO_FILE_MISSING`, which holds because multer's own
   content-type check drops it before busboy. `LogoFileInterceptor` still
@@ -715,6 +705,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-114** (API): a logo removal clears the key only if it is still the
+  one it read, with one conditional write (`updateMany` on the expected
+  key). An upload that recorded a new logo in between wins: the removal
+  writes and deletes nothing and answers 200 with `hasLogo: true`, so the
+  upload is no longer silently undone and its file no longer orphaned. Done
+  in `en-114-logo-removal-race`, 2026-10-29.
 - **EN-112** (API): a logo read that finds its file deleted by a replacing
   upload reads the key once more and serves the new logo, instead of
   answering 404. One retry only. Covers the document logo read too, which

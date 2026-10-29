@@ -162,3 +162,47 @@ describe('PrismaOrganizationProfileRepository.setLogoAssetId() (organization-log
     ).rejects.toBeInstanceOf(OrganizationProfileMissingError);
   });
 });
+
+describe('PrismaOrganizationProfileRepository.clearLogoAssetId() (EN-114)', () => {
+  const record = {
+    id: '01997a00-0000-7000-8000-000000000001',
+    name: 'Acme',
+    legalName: '',
+    taxId: '',
+    address: '',
+    phone: '',
+    email: '',
+    logoAssetId: null,
+    singleton: true,
+  };
+
+  it('clears the key only where it is still the expected one, and maps the post-state', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const findUnique = jest.fn().mockResolvedValue(record);
+    const repository = new PrismaOrganizationProfileRepository({
+      organizationProfile: { updateMany, findUnique },
+    } as unknown as PrismaService);
+
+    const profile = await repository.clearLogoAssetId('logos/abc.png');
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { singleton: true, logoAssetId: 'logos/abc.png' },
+      data: { logoAssetId: null },
+    });
+    expect(profile?.logoAssetId).toBeNull();
+    expect(profile?.name).toBe('Acme');
+  });
+
+  it('resolves to null when the key is no longer the expected one', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    const findUnique = jest.fn();
+    const repository = new PrismaOrganizationProfileRepository({
+      organizationProfile: { updateMany, findUnique },
+    } as unknown as PrismaService);
+
+    await expect(
+      repository.clearLogoAssetId('logos/abc.png'),
+    ).resolves.toBeNull();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+});

@@ -62,6 +62,19 @@ export class PrismaOrganizationProfileRepository implements OrganizationProfileR
     return this.updateSingleton({ logoAssetId });
   }
 
+  // EN-114: updateMany, unlike update(), takes the non-unique logoAssetId
+  // condition and reports a miss as count 0 rather than P2025, which would
+  // be indistinguishable from a missing row. The post-state is read after.
+  async clearLogoAssetId(
+    expected: string,
+  ): Promise<OrganizationProfile | null> {
+    const { count } = await this.prisma.organizationProfile.updateMany({
+      where: { singleton: true, logoAssetId: expected },
+      data: { logoAssetId: null },
+    });
+    return count === 0 ? null : this.get();
+  }
+
   private async updateSingleton(
     data: Prisma.OrganizationProfileUpdateInput,
   ): Promise<OrganizationProfile> {

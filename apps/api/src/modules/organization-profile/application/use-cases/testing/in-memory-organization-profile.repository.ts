@@ -38,4 +38,9 @@ export class InMemoryOrganizationProfileRepository implements OrganizationProfil
     this.profile = new OrganizationProfile({ ...this.profile, logoAssetId });
     return Promise.resolve(this.profile);
   }
+
+  clearLogoAssetId(expected: string): Promise<OrganizationProfile | null> {
+    if (this.profile.logoAssetId !== expected) return Promise.resolve(null);
+    return this.setLogoAssetId(null);
+  }
 }
