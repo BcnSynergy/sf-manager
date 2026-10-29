@@ -26,7 +26,8 @@
 # Each file is written under a temporary name and renamed when complete, so
 # a failed or interrupted backup never leaves a file that looks like one.
 # Backups older than BACKUP_RETENTION_DAYS are deleted after each successful
-# backup; a failed archive skips that, so old backups stay while it is broken. Copying them off the server is the operator's job (README
+# backup; a failed archive skips that, so old backups stay while it is
+# broken. Copying them off the server is the operator's job (README
 # "Database backups").
 set -eu
 
