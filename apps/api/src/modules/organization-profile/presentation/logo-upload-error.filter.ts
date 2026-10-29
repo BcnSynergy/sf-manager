@@ -12,6 +12,8 @@ import type { OrganizationProfileErrorCode } from './organization-profile-error-
 // EN-111: multer rejects a malformed upload form (the file in another
 // field, a second file, a text field, a broken multipart body) with a bare
 // BadRequestException from inside FileInterceptor, before the handler runs.
+// TD-44: LogoFileInterceptor also turns busboy's content-type errors (a
+// multipart type other than form-data) into one.
 // This filter gives those the LOGO_UPLOAD_INVALID code. The handler's own
 // 400s are built by buildCodedError as plain HttpExceptions, so they are not
 // caught here and keep their codes.

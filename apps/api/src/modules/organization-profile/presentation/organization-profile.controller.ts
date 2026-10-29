@@ -14,7 +14,6 @@ import {
   UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -40,9 +39,9 @@ import {
   LogoTooLargeError,
   UnsupportedLogoFormatError,
 } from '../domain/errors/organization-logo.errors';
-import { LOGO_MAX_BYTES } from '../domain/organization-logo';
 import { OrganizationProfile } from '../domain/organization-profile.entity';
 import type { OrganizationProfileErrorCode } from './organization-profile-error-code';
+import { LogoFileInterceptor } from './logo-file.interceptor';
 import { LogoUploadErrorFilter } from './logo-upload-error.filter';
 import type { UpdateOrganizationProfileRequestDto } from './dto/update-organization-profile-request.dto';
 import { OrganizationProfileResponseDto } from './dto/organization-profile-response.dto';
@@ -132,23 +131,12 @@ export class OrganizationProfileController {
     });
   }
 
-  // Multer keeps the file in memory and stops reading once it reaches its
-  // fileSize limit, answering 413 itself. Busboy flags a file as too large
-  // when it reaches exactly that limit, so the limit is LOGO_MAX_BYTES + 1
-  // for a file of exactly LOGO_MAX_BYTES to pass; the use case enforces the
-  // real maximum, so the rule does not depend on this interceptor.
-  // EN-111: one file and no text field (`files: 1` rejects a second file,
-  // `fields: 0` any text field); anything else multer rejects is coded by
-  // LogoUploadErrorFilter. No `parts` limit: busboy, as with fileSize, trips
-  // it on reaching the limit, so `parts: 1` would reject the file itself.
+  // LogoFileInterceptor parses the form; its size limit and the form rules
+  // (EN-111, TD-44) are documented there.
   @Put('logo')
   @RequirePermission('organizationProfile:update')
   @UseFilters(LogoUploadErrorFilter)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: { fileSize: LOGO_MAX_BYTES + 1, files: 1, fields: 0 },
-    }),
-  )
+  @UseInterceptors(LogoFileInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -160,7 +148,7 @@ export class OrganizationProfileController {
   @ApiOkResponse({ type: OrganizationProfileResponseDto })
   @ApiBadRequestResponse({
     description:
-      'No file (LOGO_FILE_MISSING), not a PNG, JPEG or WebP image (LOGO_UNSUPPORTED_FORMAT), or a malformed form: the file in another field, a second file or a text field (LOGO_UPLOAD_INVALID).',
+      'No file (LOGO_FILE_MISSING), not a PNG, JPEG or WebP image (LOGO_UNSUPPORTED_FORMAT), or a malformed form: the file in another field, a second file, a text field or a multipart type other than form-data (LOGO_UPLOAD_INVALID).',
   })
   @ApiPayloadTooLargeResponse({ description: 'The file is over 2 MiB.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })

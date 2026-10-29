@@ -80,15 +80,6 @@ None.
   `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
   Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
   ReviewSessionElement case predates it.
-- **TD-44**: `PUT /organization-profile/logo` answers 500 instead of 400 for
-  some request content types: busboy throws a plain `Error` for
-  `multipart/mixed`, an unsupported or a malformed content type, which
-  Nest's multer error mapping does not translate, so it reaches the default
-  handler as a server error. No browser sends these, and the behaviour
-  predates EN-111. Fix: wrap `FileInterceptor` so those setup errors become
-  a coded 400 (without turning real server errors into 400s). Evidence:
-  `apps/api/src/modules/organization-profile/presentation/logo-upload-error.filter.ts`.
-  Origin: EN-111 PR #297 pre-merge review, 2026-10-27.
 
 ## Resolved
 
@@ -275,6 +266,13 @@ None.
   and restores a dump with one command; the restore was tested against the
   real schema. Copying the dumps off the server is a documented operator
   step (README "Database backups"); doing it from the stack is EN-104.
+- **TD-44**: `PUT /organization-profile/logo` answered 500 for a multipart
+  type other than form-data, such as `multipart/mixed`, because busboy
+  rejects it with a plain `Error`. Resolved by `td-44-logo-content-type` (#299):
+  `LogoFileInterceptor` turns busboy's content-type errors into a 400
+  `LOGO_UPLOAD_INVALID` and lets every other error through. A malformed
+  content type never reached busboy (multer does not take it as multipart)
+  and already answered 400 `LOGO_FILE_MISSING`; the spec now says so.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

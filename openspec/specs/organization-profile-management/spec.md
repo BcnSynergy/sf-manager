@@ -253,9 +253,11 @@ signature without an image passed.)
 The upload MUST be a `multipart/form-data` form carrying exactly one
 file, in the `file` field, and no text field. In such a form, a file in
 another field, a second file, any text field, or a body that cannot be
-parsed MUST be rejected with 400 and code `LOGO_UPLOAD_INVALID`. A request
-that is not `multipart/form-data` carries no file and is rejected as
-such, with `LOGO_FILE_MISSING`.
+parsed MUST be rejected with 400 and code `LOGO_UPLOAD_INVALID`. A
+multipart request of another subtype, such as `multipart/mixed`, MUST be
+rejected the same way, never as a server error. A request that is not
+multipart, or whose content type cannot be parsed, carries no file and is
+rejected as such, with `LOGO_FILE_MISSING`.
 
 A new upload MUST replace the previous logo, and the previous file MUST be
 deleted from storage. A rejected upload MUST change nothing: no file is
@@ -289,6 +291,12 @@ through a storage port under a fresh key, outside the database.
 #### Scenario: A malformed upload form is rejected
 
 - GIVEN a profile with a logo, and a form with the file in another field, a second file, or a text field
+- WHEN it is submitted
+- THEN the response MUST be 400 with code `LOGO_UPLOAD_INVALID`, and the logo and storage MUST be unchanged
+
+#### Scenario: A multipart type other than form-data is rejected
+
+- GIVEN a profile with a logo, and a request sent as `multipart/mixed`
 - WHEN it is submitted
 - THEN the response MUST be 400 with code `LOGO_UPLOAD_INVALID`, and the logo and storage MUST be unchanged
 
