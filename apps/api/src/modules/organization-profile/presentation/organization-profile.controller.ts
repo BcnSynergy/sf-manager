@@ -188,7 +188,11 @@ export class OrganizationProfileController {
   // EN-110: removes the logo; succeeds and changes nothing when there is none.
   @Delete('logo')
   @RequirePermission('organizationProfile:update')
-  @ApiOkResponse({ type: OrganizationProfileResponseDto })
+  @ApiOkResponse({
+    type: OrganizationProfileResponseDto,
+    description:
+      'The profile without its logo; when an upload recorded a new logo during the removal, the current profile, which normally has it (EN-114).',
+  })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({
     description: 'Caller lacks organizationProfile:update.',

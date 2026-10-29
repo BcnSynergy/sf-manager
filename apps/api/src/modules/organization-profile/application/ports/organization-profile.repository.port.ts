@@ -37,6 +37,11 @@ export interface OrganizationProfileRepository extends OrganizationProfileReader
   // resolves to the post-state, like update(). `null` removes it (EN-110).
   setLogoAssetId(logoAssetId: string | null): Promise<OrganizationProfile>;
 
+  // EN-114: clears the key only if it is still `expected`, in one atomic
+  // conditional write, and resolves to the post-state. Resolves to null and
+  // writes nothing when another write changed the key since it was read.
+  clearLogoAssetId(expected: string): Promise<OrganizationProfile | null>;
+
   // No create(), no softDeleteById(), no findAll(), no transactional() —
   // the profile has no create/delete/list surface (design.md, spec.md "The
   // Profile Has No Create and No Delete Surface").
