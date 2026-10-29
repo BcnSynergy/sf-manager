@@ -26,7 +26,7 @@
 # Each file is written under a temporary name and renamed when complete, so
 # a failed or interrupted backup never leaves a file that looks like one.
 # Backups older than BACKUP_RETENTION_DAYS are deleted after each successful
-# backup. Copying them off the server is the operator's job (README
+# backup; a failed archive skips that, so old backups stay while it is broken. Copying them off the server is the operator's job (README
 # "Database backups").
 set -eu
 
@@ -97,7 +97,7 @@ restore() {
   # A files archive passed by mistake would otherwise be found out only
   # after the database was dropped.
   if ! pg_restore --list "$file" >/dev/null; then
-    echo "backup: $(basename "$file") is not a dump, nothing restored" >&2
+    echo "backup: $(basename "$file") is not a dump or cannot be read, nothing restored" >&2
     exit 1
   fi
   files_archive="${file%.dump}.files.tar.gz"

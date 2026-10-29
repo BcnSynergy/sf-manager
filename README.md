@@ -343,9 +343,9 @@ docker compose -f docker-compose.prod.yml --env-file prod.env \
 docker compose -f docker-compose.prod.yml --env-file prod.env start api
 ```
 
-On a new server, put the dumps and archives in `backups/`, run only the restore command
-(it starts Postgres but not the API or the daily backups), then build and
-start the stack (step 2 of the list above). Skip step 3: the dump already
+On a new server, put the dumps and archives in `backups/`, run only the
+restore command (it starts Postgres but not the API or the daily backups),
+then build and start the stack (step 2 of the list above). Skip step 3: the dump already
 holds the admin. Starting the whole stack first would back up the empty
 database and could delete copied dumps and archives older than the retention
 period.
