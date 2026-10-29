@@ -15,7 +15,7 @@ import {
 // Removing when there is no logo succeeds and changes nothing.
 // EN-114: the key is cleared only if it is still the one read. An upload
 // that recorded a new key in between wins: nothing is written or deleted
-// and the current profile, with its new logo, is returned.
+// and the current profile is returned, normally with the new logo.
 @Injectable()
 export class RemoveOrganizationLogoUseCase {
   private readonly logger = new Logger(RemoveOrganizationLogoUseCase.name);

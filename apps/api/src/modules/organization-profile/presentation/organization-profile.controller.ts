@@ -191,7 +191,7 @@ export class OrganizationProfileController {
   @ApiOkResponse({
     type: OrganizationProfileResponseDto,
     description:
-      'The profile without its logo; with hasLogo true when an upload recorded a new logo during the removal (EN-114).',
+      'The profile without its logo; when an upload recorded a new logo during the removal, the current profile, which normally has it (EN-114).',
   })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({

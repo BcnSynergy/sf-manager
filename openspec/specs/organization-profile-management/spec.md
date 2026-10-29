@@ -374,7 +374,8 @@ unchanged.
 The key MUST be cleared only if it is still the one the removal read. When
 an upload records a new logo after the removal read the key, the upload
 MUST win: the removal MUST write and delete nothing and MUST respond 200
-with the current profile, `hasLogo: true`.
+with the current profile, which normally has the upload's logo (another
+removal may have cleared it meanwhile).
 
 #### Scenario: The logo is removed
 
