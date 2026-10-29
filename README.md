@@ -380,7 +380,9 @@ the bucket if your provider offers it to guard against that.
 2. Add a lifecycle rule to the bucket that deletes objects after the number
    of days you want to keep, for example 90; without one they are kept
    forever.
-3. Fill in the `OFFSITE_*` values and restart the stack (step 2 above).
+3. Fill in the `OFFSITE_*` values, including `OFFSITE_S3_REGION` (the
+   bucket's region) for any provider other than Cloudflare R2, and restart
+   the stack (step 2 of "Production deployment").
    Check it with
    `docker compose -f docker-compose.prod.yml --env-file prod.env logs offsite`.
 
