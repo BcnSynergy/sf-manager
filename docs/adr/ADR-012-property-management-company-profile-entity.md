@@ -139,8 +139,8 @@ the switch to object storage to a new adapter plus a one-off copy of the
 files, with no change to the domain or the API.
 
 Accepted formats are PNG, JPEG and WebP, decided by the file's content. SVG
-is deferred (EN-109) because it can carry scripts. The `backup` service does
-not copy the volume yet (TD-42).
+is deferred (EN-109) because it can carry scripts. The `backup` service
+archives the volume with each database dump (TD-42).
 
 **Open question**: when review photos are implemented, decide between this
 volume and object storage (MinIO) with their real volume and backup needs.

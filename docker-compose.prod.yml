@@ -46,12 +46,13 @@ services:
       # long-running API never holds the admin password.
     volumes:
       # Uploaded files (the organization logo). The image sets
-      # FILE_STORAGE_DIR to this path. Not covered by the backup service yet.
+      # FILE_STORAGE_DIR to this path. The backup service archives it (TD-42).
       - api-files:/var/lib/sf-manager/files
     # No published port: Caddy forwards /api/* to it.
 
-  # Daily pg_dump into ./backups on the host (TD-41). Copying the dumps off
-  # the server is the operator's job (README "Database backups").
+  # Daily pg_dump and uploaded-files archive into ./backups on the host
+  # (TD-41, TD-42). Copying them off the server is the operator's job
+  # (README "Database backups").
   backup:
     image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     restart: unless-stopped
@@ -70,6 +71,8 @@ services:
     entrypoint: ['/bin/sh', '/usr/local/bin/postgres-backup.sh']
     volumes:
       - ./backups:/backups
+      # Writable: restore replaces the uploaded files with an archive.
+      - api-files:/files
       - ./deploy/postgres-backup.sh:/usr/local/bin/postgres-backup.sh:ro
 
   web:
