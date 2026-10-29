@@ -642,13 +642,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `curl -i https://<SITE_ADDRESS>/api/docs` and `/api/docs-json` after the
   next deploy would confirm it. Origin: `td-40-api-docs` pre-merge review
   (#287), 2026-10-26.
-- **EN-104** (deployment): the `backup` service writes its dumps only to
-  `backups/` on the same server, and copying them elsewhere is a manual
-  operator step (README "Database backups"), so a server that is lost before
-  anyone sets that up loses its backups too. Uploading each dump to
-  S3-compatible storage from the stack would close that gap, at the cost of
-  storage credentials in `prod.env` and an upload tool in the backup image.
-  Origin: `td-41-db-backups`, 2026-10-26 (user chose local dumps first).
 - **EN-105** (deployment tests): `deploy/postgres-backup.sh` was tested by
   hand in an isolated compose project, but nothing automated runs it, and
   two checks are missing: restoring a dump taken before the newest
@@ -713,6 +706,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-104** (deployment): an `offsite` service (rclone) copies the dumps
+  and files archives in `backups/` every hour to an S3-compatible bucket at
+  another provider, encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they
+  leave the server. It is off until every `OFFSITE_*` value is set, only
+  adds files (expiry is the bucket's lifecycle rule), and `pull` downloads
+  and decrypts the copies for a restore. Done in `en-104-offsite-backups`,
+  2026-10-29.
 - **EN-114** (API): a logo removal clears the key only if it is still the
   one it read, with one conditional write (`updateManyAndReturn` on the expected
   key). An upload that recorded a new logo in between wins: the removal
