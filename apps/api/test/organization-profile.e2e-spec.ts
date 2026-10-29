@@ -818,6 +818,21 @@ describe('Organization Profile (e2e)', () => {
       expect(fileStorage.keys()).toEqual([]);
     });
 
+    // TD-44: multer does not take a malformed content type as multipart, so
+    // the request carries no file.
+    it('rejects a malformed multipart content type with 400 LOGO_FILE_MISSING (spec: An upload without a file is rejected)', async () => {
+      const agent = await loginAgent(app, adminEmail);
+
+      const response = await agent
+        .put('/organization-profile/logo')
+        .set('Content-Type', 'multipart/form-data; boundary')
+        .send('not a form')
+        .expect(400);
+
+      expect(response.body).toMatchObject({ code: 'LOGO_FILE_MISSING' });
+      expect(fileStorage.keys()).toEqual([]);
+    });
+
     // EN-111, spec: A malformed upload form is rejected.
     it.each([
       [
@@ -844,6 +859,14 @@ describe('Organization Profile (e2e)', () => {
         'a multipart body without a boundary',
         (req: request.Test) =>
           req.set('Content-Type', 'multipart/form-data').send('not a form'),
+      ],
+      // TD-44: busboy rejects this content type with a plain Error.
+      [
+        'a multipart type other than form-data',
+        (req: request.Test) =>
+          req
+            .set('Content-Type', 'multipart/mixed; boundary=x')
+            .send('--x--\r\n'),
       ],
     ])(
       'rejects %s with 400 LOGO_UPLOAD_INVALID and changes nothing',
