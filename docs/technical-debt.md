@@ -269,7 +269,7 @@ None.
   and already answered 400 `LOGO_FILE_MISSING`; the spec now says so.
 - **TD-42**: The production `backup` service dumped only the database, not
   the `api-files` volume holding uploaded files (the organization logo).
-  Resolved by `td-42-files-backup`: after each dump it writes
+  Resolved by `td-42-files-backup` (#301): after each dump it writes
   `sfmanager-<same timestamp>.files.tar.gz` with the same temporary-name
   rename and retention, and `restore` replaces the uploaded files with the
   archive of the dump's timestamp (owner kept); a dump without one restores
