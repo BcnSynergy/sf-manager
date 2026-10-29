@@ -177,15 +177,14 @@ describe('PrismaOrganizationProfileRepository.clearLogoAssetId() (EN-114)', () =
   };
 
   it('clears the key only where it is still the expected one, and maps the post-state', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
-    const findUnique = jest.fn().mockResolvedValue(record);
+    const updateManyAndReturn = jest.fn().mockResolvedValue([record]);
     const repository = new PrismaOrganizationProfileRepository({
-      organizationProfile: { updateMany, findUnique },
+      organizationProfile: { updateManyAndReturn },
     } as unknown as PrismaService);
 
     const profile = await repository.clearLogoAssetId('logos/abc.png');
 
-    expect(updateMany).toHaveBeenCalledWith({
+    expect(updateManyAndReturn).toHaveBeenCalledWith({
       where: { singleton: true, logoAssetId: 'logos/abc.png' },
       data: { logoAssetId: null },
     });
@@ -194,15 +193,13 @@ describe('PrismaOrganizationProfileRepository.clearLogoAssetId() (EN-114)', () =
   });
 
   it('resolves to null when the key is no longer the expected one', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 0 });
-    const findUnique = jest.fn();
+    const updateManyAndReturn = jest.fn().mockResolvedValue([]);
     const repository = new PrismaOrganizationProfileRepository({
-      organizationProfile: { updateMany, findUnique },
+      organizationProfile: { updateManyAndReturn },
     } as unknown as PrismaService);
 
     await expect(
       repository.clearLogoAssetId('logos/abc.png'),
     ).resolves.toBeNull();
-    expect(findUnique).not.toHaveBeenCalled();
   });
 });

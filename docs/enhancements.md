@@ -706,7 +706,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 ## Done
 
 - **EN-114** (API): a logo removal clears the key only if it is still the
-  one it read, with one conditional write (`updateMany` on the expected
+  one it read, with one conditional write (`updateManyAndReturn` on the expected
   key). An upload that recorded a new logo in between wins: the removal
   writes and deletes nothing and answers 200 with `hasLogo: true`, so the
   upload is no longer silently undone and its file no longer orphaned. Done

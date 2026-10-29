@@ -4,7 +4,9 @@ import { PrismaOrganizationProfileRepository } from './prisma-organization-profi
 
 // EN-114: the conditional clear is what keeps a logo removal from undoing an
 // upload that recorded its key in between, so it is checked against a real
-// Postgres instead of a mocked updateMany. The organization profile row is
+// Postgres instead of a mocked updateManyAndReturn. The tests run the writes
+// one after another: the conditional write is a single UPDATE, so Postgres
+// itself makes the check and the clear atomic. The organization profile row is
 // shared with the migration guard, which expects logoAssetId to be null, so
 // every test restores it.
 describe('PrismaOrganizationProfileRepository.clearLogoAssetId() (integration, EN-114)', () => {
