@@ -710,7 +710,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   key). An upload that recorded a new logo in between wins: the removal
   writes and deletes nothing and answers 200 with `hasLogo: true`, so the
   upload is no longer silently undone and its file no longer orphaned. Done
-  in `en-114-logo-removal-race`, 2026-10-29.
+  in `en-114-logo-removal-race` (PR #300), 2026-10-29.
 - **EN-112** (API): a logo read that finds its file deleted by a replacing
   upload reads the key once more and serves the new logo, instead of
   answering 404. One retry only. Covers the document logo read too, which
