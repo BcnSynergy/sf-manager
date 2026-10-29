@@ -9,15 +9,16 @@ import type { Observable } from 'rxjs';
 import { LOGO_MAX_BYTES } from '../domain/organization-logo';
 
 // TD-44: multer hands any multipart request to busboy, which rejects a
-// multipart type other than form-data (or a content type it cannot parse)
-// with a plain Error that Nest's multer error mapping does not translate, so
-// it would answer 500. Only those two busboy messages become a
-// BadRequestException, which LogoUploadErrorFilter codes LOGO_UPLOAD_INVALID;
-// every other error passes through unchanged.
+// multipart type other than form-data with a plain Error that Nest's multer
+// error mapping does not translate, so it would answer 500. Only busboy's
+// content-type messages become a BadRequestException, which
+// LogoUploadErrorFilter codes LOGO_UPLOAD_INVALID; every other error passes
+// through unchanged. The 'Malformed content type' branch is defensive:
+// multer's own content-type check normally drops those requests before
+// busboy, so they arrive without a file (LOGO_FILE_MISSING).
 export function toLogoUploadSetupError(error: unknown): unknown {
   if (
     error instanceof Error &&
-    !(error instanceof BadRequestException) &&
     (error.message.startsWith('Unsupported content type: ') ||
       error.message === 'Malformed content type')
   ) {
