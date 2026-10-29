@@ -5,7 +5,8 @@
 # Postgres major needs a dump and restore of the data volume, and Node or
 # Caddy majors are a deliberate, manual upgrade. A new Debian release
 # (bookworm to trixie) changes the tag suffix, which Dependabot never does,
-# so that is manual too.
+# so that is manual too. The rclone image (`offsite` service) uses a full
+# version tag, so for it Dependabot also proposes minor and patch versions.
 # CI's Postgres service image (.github/workflows/ci.yml) is not covered
 # (EN-107).
 version: 2

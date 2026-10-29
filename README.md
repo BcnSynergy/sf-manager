@@ -363,16 +363,23 @@ the missing ones.
 Once on, it copies every dump and files archive not yet in the bucket when
 the stack starts and every hour after that. The contents are encrypted with
 `OFFSITE_ENCRYPTION_PASSWORD` before they leave the server; file names stay
-readable (they are only timestamps). **Without that password the copies
+readable (they are only timestamps) and get a `.bin` suffix, for example
+`sfmanager-<timestamp>.dump.bin`. **Without that password the copies
 cannot be restored**, so keep it in a password manager or anywhere other
 than this server.
+
+The service only adds files: a backup already in the bucket is never
+uploaded again, even if the local file is later damaged or encrypted by
+ransomware, and it never deletes anything in the bucket. The access key,
+however, can usually delete too, so someone who takes over this server
+could use it to remove the copies. Turn on versioning or object lock on
+the bucket if your provider offers it to guard against that.
 
 1. Create the bucket at the provider, and an access key that can read and
    write only that bucket. The service never creates buckets.
 2. Add a lifecycle rule to the bucket that deletes objects after the number
-   of days you want to keep, for example 90. The service only adds files and
-   never deletes anything in the bucket, so a problem on this server cannot
-   remove the copies; without a rule they are kept forever.
+   of days you want to keep, for example 90; without one they are kept
+   forever.
 3. Fill in the `OFFSITE_*` values and restart the stack (step 2 above).
    Check it with
    `docker compose -f docker-compose.prod.yml --env-file prod.env logs offsite`.

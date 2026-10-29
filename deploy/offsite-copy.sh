@@ -11,11 +11,13 @@
 # It copies the complete dumps and files archives (never a temporary
 # .partial file) to an S3-compatible bucket, encrypted with
 # OFFSITE_ENCRYPTION_PASSWORD before they leave the server. A copy only
-# adds: files already in the bucket are skipped, and nothing in the bucket
-# is ever deleted, so a problem on the server cannot remove the copies.
-# Expiring old copies is a lifecycle rule on the bucket (README "Off-site
-# copies"). Without the password the copies cannot be read, so it must be
-# kept somewhere other than this server.
+# adds: a file already in the bucket is never uploaded again, even when the
+# local one changed, and nothing in the bucket is deleted, so a damaged or
+# deleted local backup never replaces or removes its copy. (The access key
+# itself can usually delete; bucket versioning or object lock guards
+# against that, README "Off-site copies".) Expiring old copies is a
+# lifecycle rule on the bucket. Without the password the copies cannot be
+# read, so it must be kept somewhere other than this server.
 #
 # With every OFFSITE_* variable empty the copy is off: the service logs that
 # and idles. Setting only some of them is an error.
@@ -26,6 +28,14 @@ set -eu
 umask 077
 
 backup_dir=/backups
+
+case "${1:-}" in
+  '' | once | pull) ;;
+  *)
+    echo "usage: offsite-copy.sh [once | pull]" >&2
+    exit 1
+    ;;
+esac
 
 missing=''
 for name in OFFSITE_S3_ENDPOINT OFFSITE_S3_BUCKET OFFSITE_S3_ACCESS_KEY_ID \
@@ -56,8 +66,9 @@ export RCLONE_STATS_LOG_LEVEL=DEBUG
 # rclone reads its remotes from RCLONE_CONFIG_<NAME>_<OPTION>. `bucket` is
 # the S3 bucket; `offsite` encrypts file contents on the way to it. The
 # bucket must already exist, so the access key needs no right to create
-# buckets. File names stay readable (they are only timestamps), so the
-# bucket's lifecycle rule and a listing remain usable.
+# buckets. File names stay readable (they are only timestamps, stored with
+# a .bin suffix), so the bucket's lifecycle rule and a listing remain
+# usable.
 export RCLONE_CONFIG_BUCKET_TYPE=s3
 export RCLONE_CONFIG_BUCKET_PROVIDER="${OFFSITE_S3_PROVIDER:-Other}"
 export RCLONE_CONFIG_BUCKET_ENDPOINT="$OFFSITE_S3_ENDPOINT"
@@ -69,11 +80,17 @@ export RCLONE_CONFIG_OFFSITE_TYPE=crypt
 export RCLONE_CONFIG_OFFSITE_REMOTE="bucket:$OFFSITE_S3_BUCKET"
 export RCLONE_CONFIG_OFFSITE_FILENAME_ENCRYPTION=off
 export RCLONE_CONFIG_OFFSITE_DIRECTORY_NAME_ENCRYPTION=false
-RCLONE_CONFIG_OFFSITE_PASSWORD=$(rclone obscure "$OFFSITE_ENCRYPTION_PASSWORD")
+# Through stdin (printf is a shell builtin), so the password never shows
+# in a process's arguments.
+RCLONE_CONFIG_OFFSITE_PASSWORD=$(printf '%s' "$OFFSITE_ENCRYPTION_PASSWORD" |
+  rclone obscure -)
 export RCLONE_CONFIG_OFFSITE_PASSWORD
 
 copy_once() {
-  if ! rclone copy "$backup_dir" offsite: --max-depth 1 \
+  # --ignore-existing: the crypt remote cannot compare contents, so without
+  # it a changed size or time would replace the good copy with the local
+  # file, however damaged.
+  if ! rclone copy "$backup_dir" offsite: --max-depth 1 --ignore-existing \
     --include 'sfmanager-*.dump' --include 'sfmanager-*.files.tar.gz' \
     --log-level INFO; then
     echo "offsite: copy failed, retrying next cycle" >&2
@@ -96,10 +113,6 @@ case "${1:-}" in
     fi
     echo "offsite: pulled the copies into backups/"
     exit
-    ;;
-  *)
-    echo "usage: offsite-copy.sh [once | pull]" >&2
-    exit 1
     ;;
 esac
 

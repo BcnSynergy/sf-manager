@@ -201,7 +201,7 @@ The production stack MUST dump the database with `pg_dump` when it starts and ev
 
 The production stack MUST be able to copy the backups in `backups/` to an S3-compatible bucket on another provider. The copy is configured with `OFFSITE_S3_ENDPOINT`, `OFFSITE_S3_BUCKET`, `OFFSITE_S3_ACCESS_KEY_ID`, `OFFSITE_S3_SECRET_ACCESS_KEY` and `OFFSITE_ENCRYPTION_PASSWORD` in `prod.env`, which `prod.env.example` MUST list. With all of them empty the copy MUST be off: the service MUST say so in its log and keep running. With only some of them set, the service MUST fail with an error naming the missing ones.
 
-When configured, the stack MUST copy every complete dump and files archive that is not yet in the bucket when it starts and every hour after that, and MUST NOT upload temporary files or any other file. The contents MUST be encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they leave the server. A copy MUST only add files: a backup deleted from `backups/` MUST stay in the bucket, and the stack MUST NOT delete anything in it; expiring old copies is the bucket's own lifecycle rule, which the README MUST explain. A failed copy SHALL be logged and retried on the next cycle. The operator MUST be able to download and decrypt every copy into `backups/` with one documented command, which MUST fail without writing a file when the password is wrong. The README MUST say that the copies cannot be restored without the password, so it must be kept somewhere other than the server.
+When configured, the stack MUST copy every complete dump and files archive that is not yet in the bucket when it starts and every hour after that, and MUST NOT upload temporary files or any other file. The contents MUST be encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they leave the server. A copy MUST only add files: a backup already in the bucket MUST NOT be uploaded again, even when the local file has changed, a backup deleted from `backups/` MUST stay in the bucket, and the stack MUST NOT delete anything in it; expiring old copies is the bucket's own lifecycle rule, which the README MUST explain. A failed copy SHALL be logged and retried on the next cycle. The operator MUST be able to download and decrypt every copy into `backups/` with one documented command, which MUST fail without writing a file when the password is wrong. The README MUST say that the copies cannot be restored without the password, so it must be kept somewhere other than the server.
 
 #### Scenario: Off-site copy is off by default
 
@@ -226,6 +226,12 @@ When configured, the stack MUST copy every complete dump and files archive that 
 - GIVEN a backup already copied to the bucket
 - WHEN it is deleted from `backups/`, for example by the retention, and the next copy runs
 - THEN it is still in the bucket
+
+#### Scenario: A damaged local backup does not replace its copy
+
+- GIVEN a backup already copied to the bucket
+- WHEN the local file changes, for example truncated or encrypted in place, and the next copy runs
+- THEN the copy in the bucket is unchanged
 
 #### Scenario: Restoring from the off-site copies
 
