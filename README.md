@@ -328,9 +328,11 @@ docker compose -f docker-compose.prod.yml --env-file prod.env \
 Restore one. This replaces everything in the database with the dump, and
 the uploaded files with the archive of the same timestamp, so stop the API
 first and start it again afterwards; it applies any migrations newer than
-the dump. A dump without an archive (taken before files were archived)
-restores the database only and leaves the files as they are. An archive
-that cannot be read stops the restore before anything changes. If the
+the dump. A dump without an archive (taken before files were archived, or
+whose archiving failed, which the `backup` logs report) restores the
+database only and leaves the files as they are. A file that is not a dump,
+such as an archive, or an archive that cannot be read stops the restore
+before anything changes. If the
 database restore fails, the database is left empty: do not start the API,
 fix the cause and restore again.
 
@@ -344,8 +346,9 @@ docker compose -f docker-compose.prod.yml --env-file prod.env start api
 On a new server, put the dumps and archives in `backups/`, run only the restore command
 (it starts Postgres but not the API or the daily backups), then build and
 start the stack (step 2 of the list above). Skip step 3: the dump already
-holds the admin. Starting the whole stack first would dump the empty database and could
-delete copied dumps older than the retention period.
+holds the admin. Starting the whole stack first would back up the empty
+database and could delete copied dumps and archives older than the retention
+period.
 
 ### Uploaded files
 

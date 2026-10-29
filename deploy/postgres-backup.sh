@@ -17,9 +17,11 @@
 # restore drops and recreates the database before pg_restore, so a dump
 # taken on an older version restores cleanly and the API applies the newer
 # migrations when it starts again. It then replaces the uploaded files with
-# the archive of the same stamp; a dump without one (taken before TD-42)
-# restores the database only and says so. Stop the API first. FILE is a name
-# in /backups or an absolute path.
+# the archive of the same stamp; a dump without one (taken before TD-42, or
+# whose archiving failed) restores the database only and says so. A FILE that
+# is not a dump, or an archive that cannot be read, stops the restore before
+# anything changes. Stop the API first. FILE is a name in /backups or an
+# absolute path.
 #
 # Each file is written under a temporary name and renamed when complete, so
 # a failed or interrupted backup never leaves a file that looks like one.
@@ -92,6 +94,12 @@ restore() {
     echo "backup: no such dump: $file" >&2
     exit 1
   fi
+  # A files archive passed by mistake would otherwise be found out only
+  # after the database was dropped.
+  if ! pg_restore --list "$file" >/dev/null; then
+    echo "backup: $(basename "$file") is not a dump, nothing restored" >&2
+    exit 1
+  fi
   files_archive="${file%.dump}.files.tar.gz"
   # Checked before anything is dropped, so a broken archive changes nothing.
   if [ -f "$files_archive" ] && ! tar -tzf "$files_archive" >/dev/null; then
@@ -114,7 +122,7 @@ restore() {
   echo "backup: restored $(basename "$file") into $PGDATABASE"
 
   if [ ! -f "$files_archive" ]; then
-    echo "backup: no $(basename "$files_archive"), uploaded files left as they are"
+    echo "backup: no $(basename "$files_archive") for this dump, uploaded files left as they are"
     return
   fi
   # Extracting as root keeps the files' owner, the API's user.
