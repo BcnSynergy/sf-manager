@@ -4,7 +4,9 @@
 # starts the whole stack on https://localhost with throwaway secrets, checks
 # that the API and the web app answer, that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
-# uploaded files (TD-42), then removes the stack and its volumes. CI runs it
+# uploaded files (TD-42), and that the off-site copy service, unconfigured,
+# reports that it is disabled (EN-104), then removes the stack and its
+# volumes. CI runs it
 # on every PR and push to main; run it from the
 # repository root:
 #
@@ -82,3 +84,15 @@ done
 compose logs backup | grep -q 'backup: wrote sfmanager-.*\.dump' ||
   fail "the backup service wrote no dump"
 echo "smoke: backup service wrote a dump and a files archive"
+
+# Off-site copies are off without OFFSITE_* settings, and the service must
+# say so and keep running instead of failing (EN-104).
+attempt=0
+until compose logs offsite | grep -q 'offsite: off-site copy disabled'; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 15 ] || fail "the offsite service did not report that it is disabled"
+  sleep 2
+done
+[ "$(compose ps -q offsite)" ] && [ "$(docker inspect -f '{{.State.Running}}' "$(compose ps -q offsite)")" = true ] ||
+  fail "the offsite service is not running"
+echo "smoke: offsite service disabled and idle"

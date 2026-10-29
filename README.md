@@ -209,7 +209,7 @@ protection first, then revert the workflow; see
 ## Production deployment
 
 `docker-compose.prod.yml` runs the whole system on one server with Docker:
-Postgres, the API, a backup service (below), and Caddy, which serves the web app and forwards `/api/*`
+Postgres, the API, a backup service and an off-site copy service (below), and Caddy, which serves the web app and forwards `/api/*`
 to the API on the same origin. Only Caddy publishes ports (80 and 443); it
 obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
 the domain's DNS must point at the server and both ports must be open. The
@@ -309,10 +309,11 @@ Git and by the Docker build context. Read what it did with
 `docker compose -f docker-compose.prod.yml --env-file prod.env logs backup`.
 
 These backups live on the same server as the database, so **they do not
-survive losing the server**. Copy `backups/` somewhere else on a schedule,
-for example with `rsync` or `rclone` from root's cron, or include it in the
-provider's server snapshots. The dumps hold password hashes and personal
-data, so they and the archives are readable by root only.
+survive losing the server**. Turn on the off-site copies (below), or copy
+`backups/` somewhere else yourself on a schedule, for example with `rsync`
+from root's cron or the provider's server snapshots. The dumps hold
+password hashes and personal data, so they and the archives are readable by
+root only.
 
 If `BACKUP_RETENTION_DAYS` is not a positive integer without a leading zero,
 the service fails at start and restarts in a loop; `logs backup` shows the
@@ -349,6 +350,58 @@ then build and start the stack (step 2 of the list above). Skip step 3: the
 dump already holds the admin. Starting the whole stack first would back up
 the empty database and could delete copied dumps and archives older than the
 retention period.
+
+### Off-site copies
+
+The `offsite` service copies `backups/` to an S3-compatible bucket at
+another provider, so the backups survive losing the server. Cloudflare R2,
+Backblaze B2, Wasabi, AWS S3 and a MinIO on another machine all work. It is
+off until you set all five `OFFSITE_*` values in `prod.env` (see
+`prod.env.example`); with only some of them set it fails at start and names
+the missing ones.
+
+Once on, it copies every dump and files archive not yet in the bucket when
+the stack starts and every hour after that. The contents are encrypted with
+`OFFSITE_ENCRYPTION_PASSWORD` before they leave the server; file names stay
+readable (they are only timestamps) and get a `.bin` suffix, for example
+`sfmanager-<timestamp>.dump.bin`. **Without that password the copies
+cannot be restored**, so keep it in a password manager or anywhere other
+than this server.
+
+The service only adds files: a backup already in the bucket is never
+uploaded again, even if the local file is later damaged or encrypted by
+ransomware, and it never deletes anything in the bucket. The access key,
+however, can usually delete too, so someone who takes over this server
+could use it to remove the copies. Turn on versioning or object lock on
+the bucket if your provider offers it to guard against that.
+
+1. Create the bucket at the provider, and an access key that can read and
+   write only that bucket. The service never creates buckets.
+2. Add a lifecycle rule to the bucket that deletes objects after the number
+   of days you want to keep, for example 90; without one they are kept
+   forever.
+3. Fill in the `OFFSITE_*` values, including `OFFSITE_S3_REGION` (the
+   bucket's region) for any provider other than Cloudflare R2, and restart
+   the stack (step 2 of "Production deployment").
+   Check it with
+   `docker compose -f docker-compose.prod.yml --env-file prod.env logs offsite`.
+
+Copy now:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm offsite once
+```
+
+To restore on a new server, fill in the same `OFFSITE_*` values, download
+the copies into `backups/`, then follow the restore steps above:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file prod.env \
+  run --rm offsite pull
+```
+
+A wrong password makes the download fail without writing any file.
 
 ### Uploaded files
 

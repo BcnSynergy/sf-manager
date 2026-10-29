@@ -8,13 +8,13 @@ Defines how SF-Manager runs in production: one Docker Compose stack on a single 
 
 ### Requirement: One-command production stack
 
-The repository MUST provide `docker-compose.prod.yml`, which builds the API and web images from the repository and starts Postgres, the API, the backup service and Caddy with one `docker compose ... up -d --build` command. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
+The repository MUST provide `docker-compose.prod.yml`, which builds the API and web images from the repository and starts Postgres, the API, the backup service, the off-site copy service and Caddy with one `docker compose ... up -d --build` command. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
 
 #### Scenario: First start
 
 - GIVEN a server with Docker and a filled-in `prod.env`
 - WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`
-- THEN Postgres, the API, the backup service and Caddy are running
+- THEN Postgres, the API, the backup service, the off-site copy service and Caddy are running
 - AND `https://<SITE_ADDRESS>/api/health` returns 200 with `{"status":"ok","db":"ok"}`
 
 #### Scenario: Missing configuration
@@ -152,7 +152,7 @@ The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=product
 
 ### Requirement: Database backups
 
-The production stack MUST dump the database with `pg_dump` when it starts and every 24 hours after that, into the `backups/` directory next to the compose file, which Git and the Docker build context MUST ignore. A dump MUST appear under its final name only once `pg_dump` has completed. After each successful backup (the dump and its files archive), dumps older than `BACKUP_RETENTION_DAYS` days (default 14) MUST be deleted; a value that is not a positive integer written without a leading zero MUST make the backup service fail with an error naming `BACKUP_RETENTION_DAYS`, without writing a dump. A failed dump SHALL be logged and retried on the next cycle. After each dump, the stack MUST also write an archive of the uploaded files, `sfmanager-<same UTC timestamp>.files.tar.gz`, which MUST likewise appear under its final name only once complete and follows the same retention. The operator MUST be able to take a dump and to restore one with one documented command each; restoring MUST replace the whole database with the dump's contents and, when the dump has its files archive, the uploaded files with the archive's contents, keeping the API's user as their owner. A dump without a files archive MUST restore the database only, leave the uploaded files unchanged and say so. A file that is not a dump, or a files archive that cannot be read, MUST stop the restore before anything is changed. Copying the dumps and archives off the server is the operator's responsibility, and the README MUST say so.
+The production stack MUST dump the database with `pg_dump` when it starts and every 24 hours after that, into the `backups/` directory next to the compose file, which Git and the Docker build context MUST ignore. A dump MUST appear under its final name only once `pg_dump` has completed. After each successful backup (the dump and its files archive), dumps older than `BACKUP_RETENTION_DAYS` days (default 14) MUST be deleted; a value that is not a positive integer written without a leading zero MUST make the backup service fail with an error naming `BACKUP_RETENTION_DAYS`, without writing a dump. A failed dump SHALL be logged and retried on the next cycle. After each dump, the stack MUST also write an archive of the uploaded files, `sfmanager-<same UTC timestamp>.files.tar.gz`, which MUST likewise appear under its final name only once complete and follows the same retention. The operator MUST be able to take a dump and to restore one with one documented command each; restoring MUST replace the whole database with the dump's contents and, when the dump has its files archive, the uploaded files with the archive's contents, keeping the API's user as their owner. A dump without a files archive MUST restore the database only, leave the uploaded files unchanged and say so. A file that is not a dump, or a files archive that cannot be read, MUST stop the restore before anything is changed. Unless off-site copies are configured (see "Off-site backup copies"), copying the dumps and archives off the server is the operator's responsibility, and the README MUST say so.
 
 #### Scenario: Daily dump
 
@@ -197,9 +197,57 @@ The production stack MUST dump the database with `pg_dump` when it starts and ev
 - WHEN `pg_dump` fails
 - THEN no new file named `sfmanager-*.dump` appears, no older dump is deleted, and the service keeps running
 
+### Requirement: Off-site backup copies
+
+The production stack MUST be able to copy the backups in `backups/` to an S3-compatible bucket on another provider. The copy is configured with `OFFSITE_S3_ENDPOINT`, `OFFSITE_S3_BUCKET`, `OFFSITE_S3_ACCESS_KEY_ID`, `OFFSITE_S3_SECRET_ACCESS_KEY` and `OFFSITE_ENCRYPTION_PASSWORD` in `prod.env`, which `prod.env.example` MUST list. With all of them empty the copy MUST be off: the service MUST say so in its log and keep running. With only some of them set, the service MUST fail with an error naming the missing ones.
+
+When configured, the stack MUST copy every complete dump and files archive that is not yet in the bucket when it starts and every hour after that, and MUST NOT upload temporary files or any other file. The contents MUST be encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they leave the server. A copy MUST only add files: a backup already in the bucket MUST NOT be uploaded again, even when the local file has changed, a backup deleted from `backups/` MUST stay in the bucket, and the stack MUST NOT delete anything in it; expiring old copies is the bucket's own lifecycle rule, which the README MUST explain. A failed copy SHALL be logged and retried on the next cycle. The operator MUST be able to download and decrypt every copy into `backups/` with one documented command, which MUST fail without writing a file when the password is wrong. The README MUST say that the copies cannot be restored without the password, so it must be kept somewhere other than the server.
+
+#### Scenario: Off-site copy is off by default
+
+- GIVEN a `prod.env` with every `OFFSITE_*` variable empty
+- WHEN the stack starts
+- THEN the off-site copy service logs that it is disabled, keeps running, and uploads nothing
+
+#### Scenario: Partial off-site configuration
+
+- GIVEN a `prod.env` with `OFFSITE_S3_BUCKET` set and the other `OFFSITE_*` variables empty
+- WHEN the off-site copy service starts
+- THEN it fails with an error naming the missing variables
+
+#### Scenario: Backups are copied encrypted
+
+- GIVEN a configured off-site copy, and a dump, its files archive and a temporary `.partial` file in `backups/`
+- WHEN the next copy runs
+- THEN the dump and the archive are in the bucket, their contents unreadable without the password, and the temporary file is not
+
+#### Scenario: Copies outlive the local backups
+
+- GIVEN a backup already copied to the bucket
+- WHEN it is deleted from `backups/`, for example by the retention, and the next copy runs
+- THEN it is still in the bucket
+
+#### Scenario: A damaged local backup does not replace its copy
+
+- GIVEN a backup already copied to the bucket
+- WHEN the local file changes, for example truncated or encrypted in place, and the next copy runs
+- THEN the copy in the bucket is unchanged
+
+#### Scenario: Restoring from the off-site copies
+
+- GIVEN copies in the bucket and an empty `backups/` on a new server
+- WHEN the operator runs the documented download command with the same `OFFSITE_*` settings
+- THEN `backups/` holds the decrypted dumps and archives, readable by root only, ready for the restore command
+
+#### Scenario: Wrong encryption password
+
+- GIVEN copies in the bucket
+- WHEN the operator runs the download command with a different `OFFSITE_ENCRYPTION_PASSWORD`
+- THEN it fails and writes no file in `backups/`
+
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, and the off-site copy service, left unconfigured, reports that it is disabled and keeps running. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 
