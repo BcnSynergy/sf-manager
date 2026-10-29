@@ -301,16 +301,18 @@ EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
 
 The `backup` service dumps the database with `pg_dump` when the stack starts
 and every 24 hours after that, into `backups/` next to the compose file
-(`sfmanager-<UTC timestamp>.dump`, custom format). It deletes dumps older
-than `BACKUP_RETENTION_DAYS` (default 14), and `backups/` is ignored by Git
-and by the Docker build context. Read what it did with
+(`sfmanager-<UTC timestamp>.dump`, custom format). Right after each dump it
+archives the uploaded files (see below) as
+`sfmanager-<same timestamp>.files.tar.gz`. It deletes dumps and archives
+older than `BACKUP_RETENTION_DAYS` (default 14), and `backups/` is ignored by
+Git and by the Docker build context. Read what it did with
 `docker compose -f docker-compose.prod.yml --env-file prod.env logs backup`.
 
-These dumps live on the same server as the database, so **they do not
+These backups live on the same server as the database, so **they do not
 survive losing the server**. Copy `backups/` somewhere else on a schedule,
 for example with `rsync` or `rclone` from root's cron, or include it in the
 provider's server snapshots. The dumps hold password hashes and personal
-data, so they are readable by root only.
+data, so they and the archives are readable by root only.
 
 If `BACKUP_RETENTION_DAYS` is not a positive integer without a leading zero,
 the service fails at start and restarts in a loop; `logs backup` shows the
@@ -323,10 +325,16 @@ docker compose -f docker-compose.prod.yml --env-file prod.env \
   run --rm backup once
 ```
 
-Restore one. This replaces everything in the database with the dump, so
-stop the API first and start it again afterwards; it applies any migrations
-newer than the dump. If the restore fails, the database is left empty: do
-not start the API, fix the cause and restore again.
+Restore one. This replaces everything in the database with the dump, and
+the uploaded files with the archive of the same timestamp, so stop the API
+first and start it again afterwards; it applies any migrations newer than
+the dump. A dump without an archive (taken before files were archived, or
+whose archiving failed, which the `backup` logs report) restores the
+database only and leaves the files as they are. A file that is not a dump,
+such as an archive, or an archive that cannot be read stops the restore
+before anything changes. If the
+database restore fails, the database is left empty: do not start the API,
+fix the cause and restore again.
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file prod.env stop api
@@ -335,20 +343,22 @@ docker compose -f docker-compose.prod.yml --env-file prod.env \
 docker compose -f docker-compose.prod.yml --env-file prod.env start api
 ```
 
-On a new server, put the dumps in `backups/`, run only the restore command
-(it starts Postgres but not the API or the daily backups), then build and
-start the stack (step 2 of the list above). Skip step 3: the dump already
-holds the admin. Starting the whole stack first would dump the empty database and could
-delete copied dumps older than the retention period.
+On a new server, put the dumps and archives in `backups/`, run only the
+restore command (it starts Postgres but not the API or the daily backups),
+then build and start the stack (step 2 of the list above). Skip step 3: the
+dump already holds the admin. Starting the whole stack first would back up
+the empty database and could delete copied dumps and archives older than the
+retention period.
 
 ### Uploaded files
 
 Uploaded files, for now only the organization logo, live in the `api-files`
 named volume, mounted at `FILE_STORAGE_DIR` (`/var/lib/sf-manager/files`).
-The `backup` service does not copy them (TD-42): a dump records which logo is
-current, not the image itself. Include the volume in whatever copies
-`backups/` off the server, or keep the logo file at hand. If the volume is
-lost, the profile and the documents show no logo until it is uploaded again.
+The `backup` service archives them with each dump (see "Database backups"),
+because a dump records which logo is current, not the image itself. The
+archive is taken a moment after the dump, so a logo changed in between can
+be missing after a restore; the profile and the documents then show no logo
+until it is uploaded again.
 
 ## Structure
 

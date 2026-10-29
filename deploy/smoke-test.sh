@@ -3,14 +3,17 @@
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
 # starts the whole stack on https://localhost with throwaway secrets, checks
 # that the API and the web app answer, that the API can write uploaded
-# files and that the backup service writes a dump, then removes the stack and its volumes. CI runs it on every PR and push to main; run it from the
+# files and that the backup service writes a dump and an archive of the
+# uploaded files (TD-42), then removes the stack and its volumes. CI runs it
+# on every PR and push to main; run it from the
 # repository root:
 #
 #   sh deploy/smoke-test.sh
 #
 # Ports 80 and 443 must be free. It uses its own Compose project and
 # volumes, but the backup service's bind mount is the checkout's backups/,
-# so its dump lands next to a production stack's dumps in the same checkout.
+# so its dump and archive land next to a production stack's backups in the
+# same checkout.
 set -eu
 
 project=sf-manager-smoke
@@ -68,11 +71,14 @@ compose exec -T api sh -c 'probe="$FILE_STORAGE_DIR/.smoke-probe" && touch "$pro
   fail "the API cannot write to FILE_STORAGE_DIR"
 echo "smoke: API can write uploaded files"
 
-# The first dump starts with the API, so it is normally done already.
+# The first backup starts with the API, so it is normally done already. The
+# files archive is written after the dump.
 attempt=0
-until compose logs backup | grep -q 'backup: wrote '; do
+until compose logs backup | grep -q 'backup: wrote sfmanager-.*\.files\.tar\.gz'; do
   attempt=$((attempt + 1))
-  [ "$attempt" -lt 15 ] || fail "the backup service wrote no dump"
+  [ "$attempt" -lt 15 ] || fail "the backup service wrote no files archive"
   sleep 2
 done
-echo "smoke: backup service wrote a dump"
+compose logs backup | grep -q 'backup: wrote sfmanager-.*\.dump' ||
+  fail "the backup service wrote no dump"
+echo "smoke: backup service wrote a dump and a files archive"

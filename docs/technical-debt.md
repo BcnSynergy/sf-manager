@@ -64,12 +64,6 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-42**: The production `backup` service dumps only the database, not
-  the `api-files` volume holding uploaded files (the organization logo), so
-  a lost server loses the logo even when the dumps survive. Evidence:
-  `docker-compose.prod.yml` (`backup`, `api-files`), README "Uploaded
-  files". Origin: `organization-logo`, 2026-10-26; copying backups off the
-  server is EN-104.
 - **TD-43**: An empty status region inside a grid container adds one gap
   when the page is printed. On screen its negative top margin cancels the
   container's gap; the print rule resets that margin assuming a block
@@ -273,6 +267,14 @@ None.
   `LOGO_UPLOAD_INVALID` and lets every other error through. A malformed
   content type never reached busboy (multer does not take it as multipart)
   and already answered 400 `LOGO_FILE_MISSING`; the spec now says so.
+- **TD-42**: The production `backup` service dumped only the database, not
+  the `api-files` volume holding uploaded files (the organization logo).
+  Resolved by `td-42-files-backup` (#301): after each dump it writes
+  `sfmanager-<same timestamp>.files.tar.gz` with the same temporary-name
+  rename and retention, and `restore` replaces the uploaded files with the
+  archive of the dump's timestamp (owner kept); a dump without one restores
+  the database only, and an unreadable archive stops the restore before
+  anything changes.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

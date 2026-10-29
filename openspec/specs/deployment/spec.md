@@ -152,25 +152,44 @@ The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=product
 
 ### Requirement: Database backups
 
-The production stack MUST dump the database with `pg_dump` when it starts and every 24 hours after that, into the `backups/` directory next to the compose file, which Git and the Docker build context MUST ignore. A dump MUST appear under its final name only once `pg_dump` has completed. After each successful dump, dumps older than `BACKUP_RETENTION_DAYS` days (default 14) MUST be deleted; a value that is not a positive integer written without a leading zero MUST make the backup service fail with an error naming `BACKUP_RETENTION_DAYS`, without writing a dump. A failed dump SHALL be logged and retried on the next cycle. The operator MUST be able to take a dump and to restore one with one documented command each; restoring MUST replace the whole database with the dump's contents. Copying the dumps off the server is the operator's responsibility, and the README MUST say so.
+The production stack MUST dump the database with `pg_dump` when it starts and every 24 hours after that, into the `backups/` directory next to the compose file, which Git and the Docker build context MUST ignore. A dump MUST appear under its final name only once `pg_dump` has completed. After each successful backup (the dump and its files archive), dumps older than `BACKUP_RETENTION_DAYS` days (default 14) MUST be deleted; a value that is not a positive integer written without a leading zero MUST make the backup service fail with an error naming `BACKUP_RETENTION_DAYS`, without writing a dump. A failed dump SHALL be logged and retried on the next cycle. After each dump, the stack MUST also write an archive of the uploaded files, `sfmanager-<same UTC timestamp>.files.tar.gz`, which MUST likewise appear under its final name only once complete and follows the same retention. The operator MUST be able to take a dump and to restore one with one documented command each; restoring MUST replace the whole database with the dump's contents and, when the dump has its files archive, the uploaded files with the archive's contents, keeping the API's user as their owner. A dump without a files archive MUST restore the database only, leave the uploaded files unchanged and say so. A file that is not a dump, or a files archive that cannot be read, MUST stop the restore before anything is changed. Copying the dumps and archives off the server is the operator's responsibility, and the README MUST say so.
 
 #### Scenario: Daily dump
 
 - GIVEN the production stack is running
 - WHEN it starts, and again every 24 hours
-- THEN a new `sfmanager-<UTC timestamp>.dump` appears in `backups/`
+- THEN a new `sfmanager-<UTC timestamp>.dump` and `sfmanager-<UTC timestamp>.files.tar.gz`, with the same timestamp, appear in `backups/`
 
 #### Scenario: Retention
 
-- GIVEN `BACKUP_RETENTION_DAYS=14` and dumps in `backups/` older than 14 days
-- WHEN the next dump succeeds
-- THEN those older dumps are deleted and the newer ones are kept
+- GIVEN `BACKUP_RETENTION_DAYS=14` and dumps and files archives in `backups/` older than 14 days
+- WHEN the next backup succeeds
+- THEN those older dumps and archives are deleted and the newer ones are kept
 
 #### Scenario: Restore
 
 - GIVEN a dump in `backups/` and a database whose data has changed since it was taken
 - WHEN the operator stops the API, runs the documented restore command with that dump, and starts the API
 - THEN the database holds exactly the data in the dump, and any migrations newer than the dump are applied
+- AND the uploaded files are exactly those in the dump's files archive, owned by the API's user
+
+#### Scenario: Restoring a dump without a files archive
+
+- GIVEN a dump in `backups/` with no `.files.tar.gz` of the same timestamp, such as one taken before files were archived
+- WHEN the operator runs the documented restore command with that dump
+- THEN the database holds exactly the data in the dump, the uploaded files are unchanged, and the output says the files were left as they are
+
+#### Scenario: Unreadable files archive
+
+- GIVEN a dump whose `.files.tar.gz` cannot be read
+- WHEN the operator runs the documented restore command with that dump
+- THEN the restore fails before changing the database or the uploaded files
+
+#### Scenario: Restoring a file that is not a dump
+
+- GIVEN a files archive, or any other file that is not a dump, in `backups/`
+- WHEN the operator runs the documented restore command with it
+- THEN the restore fails before changing the database or the uploaded files
 
 #### Scenario: Failed dump
 
@@ -180,7 +199,7 @@ The production stack MUST dump the database with `pg_dump` when it starts and ev
 
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 
@@ -202,7 +221,7 @@ CI MUST build the API and web images from `docker-compose.prod.yml` on every pul
 
 ### Requirement: Persistent data and secrets
 
-Postgres data MUST persist in a named volume across container restarts and upgrades. Uploaded files (the organization logo) MUST persist in their own named volume, mounted at the API's `FILE_STORAGE_DIR`, which the API image MUST set and own as its non-root user. The API MUST fail at startup in production when `FILE_STORAGE_DIR` is unset or empty. The `backup` service does not copy that volume yet (TD-42). Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.
+Postgres data MUST persist in a named volume across container restarts and upgrades. Uploaded files (the organization logo) MUST persist in their own named volume, mounted at the API's `FILE_STORAGE_DIR`, which the API image MUST set and own as its non-root user. The API MUST fail at startup in production when `FILE_STORAGE_DIR` is unset or empty. The `backup` service archives that volume with each dump (see "Database backups"). Secrets MUST come from `prod.env`, which Git and the Docker build context MUST ignore; `prod.env.example` MUST list every variable the stack reads from it.
 
 #### Scenario: Upgrade keeps data
 

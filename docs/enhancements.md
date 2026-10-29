@@ -703,6 +703,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `toLogoUploadSetupError` mapping. Origin: TD-44 PR #299 pre-merge review,
   2026-10-29.
 
+- **EN-117** (deploy): `restore` checks the files archive by listing it,
+  not by extracting it, before it drops the database. A failure that only
+  shows while extracting, such as a full disk, happens after the uploaded
+  files were removed; the restore then exits with a clear error, the
+  database already restored. Extracting into a temporary directory first and
+  swapping it in would close it. Evidence: `deploy/postgres-backup.sh`
+  (`restore`). Origin: TD-42 pre-push verification, 2026-10-29.
+
 ## Done
 
 - **EN-114** (API): a logo removal clears the key only if it is still the
