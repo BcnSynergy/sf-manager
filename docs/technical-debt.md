@@ -268,7 +268,7 @@ None.
   step (README "Database backups"); doing it from the stack is EN-104.
 - **TD-44**: `PUT /organization-profile/logo` answered 500 for a multipart
   type other than form-data, such as `multipart/mixed`, because busboy
-  rejects it with a plain `Error`. Resolved by `td-44-logo-content-type`:
+  rejects it with a plain `Error`. Resolved by `td-44-logo-content-type` (#299):
   `LogoFileInterceptor` turns busboy's content-type errors into a 400
   `LOGO_UPLOAD_INVALID` and lets every other error through. A malformed
   content type never reached busboy (multer does not take it as multipart)
