@@ -722,7 +722,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   small `logo-errors.ts` in the same folder would be the cleaner home if a
   third one appears. Evidence:
   `apps/api/src/modules/organization-profile/presentation/`. Origin:
-  `en-115-logo-interceptor` (PR #TBD) pre-push review, 2026-10-30.
+  `en-115-logo-interceptor` (PR #304) pre-push review, 2026-10-30.
 
 ## Done
 
@@ -731,12 +731,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   unparseable content type, instead of `LOGO_UPLOAD_INVALID`. The branch
   stays defensive, since multer normally drops those requests first. The
   controller and the interceptor share `logoFileMissingError()`. Done in
-  `en-115-logo-interceptor` (PR #TBD), 2026-10-30.
+  `en-115-logo-interceptor` (PR #304), 2026-10-30.
 
 - **EN-116** (tests): unit tests now cover `LogoFileInterceptor.intercept`
   with multer stubbed: the accepted request passes through, a content-type
   error is translated, and any other error is rethrown unchanged. Done in
-  `en-115-logo-interceptor` (PR #TBD), 2026-10-30.
+  `en-115-logo-interceptor` (PR #304), 2026-10-30.
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
   `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` test
