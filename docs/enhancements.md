@@ -714,7 +714,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Compose project and its volumes. The README says where they land, but
   they pile up next to a real stack's backups. A throwaway directory for
   the smoke project (for example a Compose override of the bind mount)
-  would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` pre-push
+  would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` (PR #303) pre-push
   review, 2026-10-30.
 
 ## Done
@@ -725,7 +725,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Postgres, and `rclone serve s3` as the bucket), covering the scenarios of
   "Database backups" and "Off-site backup copies". `deploy/smoke-test.sh`
   now also restores a dump taken before the newest migration and checks
-  that the API applies it. Done in `en-105-deploy-tests`, 2026-10-30.
+  that the API applies it. Done in `en-105-deploy-tests` (PR #303),
+  2026-10-30.
 - **EN-104** (deployment): an `offsite` service (rclone) copies the dumps
   and files archives in `backups/` every hour to an S3-compatible bucket at
   another provider, encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they
