@@ -247,13 +247,19 @@ When configured, the stack MUST copy every complete dump and files archive that 
 
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, and the off-site copy service, left unconfigured, reports that it is disabled and keeps running. `deploy/smoke-test.sh` MUST run the same check locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, the off-site copy service, left unconfigured, reports that it is disabled and keeps running, and a dump taken before the newest migration restores and the API then applies that migration and serves `/api/health` ok. `deploy/smoke-test.sh` MUST run the same check locally. CI MUST also fail unless ShellCheck passes on every script in `deploy/`, and unless the backup and off-site copy scripts pass their tests, which run them against throwaway containers and cover the scenarios of "Database backups" and "Off-site backup copies"; `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` MUST run those tests locally. After CI passes on a push to `main`, a separate job, the only one allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 
 - GIVEN a pull request whose change stops an image from building or the stack from starting
 - WHEN CI runs
 - THEN the `ci` check fails, and its log shows the build error or the containers' state and recent logs
+
+#### Scenario: Broken deploy script fails the PR
+
+- GIVEN a pull request whose change to `deploy/postgres-backup.sh` or `deploy/offsite-copy.sh` breaks a behavior of "Database backups" or "Off-site backup copies", or adds a ShellCheck finding to a script in `deploy/`
+- WHEN CI runs
+- THEN the `ci` check fails, and its log names the failing case or the finding
 
 #### Scenario: Green main publishes
 

@@ -642,12 +642,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `curl -i https://<SITE_ADDRESS>/api/docs` and `/api/docs-json` after the
   next deploy would confirm it. Origin: `td-40-api-docs` pre-merge review
   (#287), 2026-10-26.
-- **EN-105** (deployment tests): `deploy/postgres-backup.sh` was tested by
-  hand in an isolated compose project, but nothing automated runs it, and
-  two checks are missing: restoring a dump taken before the newest
-  migrations (the deployment spec's Restore scenario says the API then
-  applies them), and `shellcheck`, which is not part of CI. Origin:
-  `td-41-db-backups` pre-push review (#288), 2026-10-26.
 - **EN-106** (security): the Content Security Policy in `apps/web/Caddyfile`
   has no `report-to`/`report-uri`, so a violation in production (a page the
   policy breaks) is seen only in that user's console. The QR page
@@ -715,6 +709,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 ## Done
 
+- **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
+  `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` test
+  the backup and off-site copy scripts against throwaway containers (a
+  Postgres, and `rclone serve s3` as the bucket), covering the scenarios of
+  "Database backups" and "Off-site backup copies". `deploy/smoke-test.sh`
+  now also restores a dump taken before the newest migration and checks
+  that the API applies it. Done in `en-105-deploy-tests`, 2026-10-30.
 - **EN-104** (deployment): an `offsite` service (rclone) copies the dumps
   and files archives in `backups/` every hour to an S3-compatible bucket at
   another provider, encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they
