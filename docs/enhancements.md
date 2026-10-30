@@ -734,8 +734,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `en-115-logo-interceptor` (PR #304), 2026-10-30.
 
 - **EN-116** (tests): unit tests now cover `LogoFileInterceptor.intercept`
-  with multer stubbed: the accepted request passes through, a content-type
-  error is translated, and any other error is rethrown unchanged. Done in
+  with the base class's `intercept` (multer) stubbed: the accepted request
+  passes through, both busboy content-type errors are translated, and any
+  other error is rethrown unchanged. Done in
   `en-115-logo-interceptor` (PR #304), 2026-10-30.
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
