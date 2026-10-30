@@ -139,9 +139,40 @@ function isWebp(content: Uint8Array): boolean {
 }
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-// The root's start tag: `<svg`, then attributes up to the first `>`.
-const SVG_ROOT = /^<svg(\s[^>]*)?\/?>/;
-const SVG_DEFAULT_NAMESPACE = /\sxmlns\s*=\s*(["'])(.*?)\1/;
+const WHITESPACE = /\s/;
+
+// Reads the `<svg` start tag at the start of `text` attribute by attribute
+// (a name, `=`, then a quoted value, which may hold `>`) and returns its
+// `xmlns` value. A malformed or unterminated tag, or a second `xmlns`,
+// returns null. One pass, so its cost stays linear in the input.
+function svgRootNamespace(text: string): string | null {
+  if (!/^<svg[\s/>]/.test(text)) return null;
+  let namespace: string | null = null;
+  let index = 4;
+  const skipWhitespace = () => {
+    while (index < text.length && WHITESPACE.test(text[index])) index++;
+  };
+  for (;;) {
+    skipWhitespace();
+    if (text[index] === '>' || text.startsWith('/>', index)) return namespace;
+    const nameStart = index;
+    while (index < text.length && !/[\s=/>]/.test(text[index])) index++;
+    const name = text.slice(nameStart, index);
+    skipWhitespace();
+    if (name === '' || text[index] !== '=') return null;
+    index++;
+    skipWhitespace();
+    const quote = text[index];
+    if (quote !== '"' && quote !== "'") return null;
+    const valueEnd = text.indexOf(quote, index + 1);
+    if (valueEnd === -1) return null;
+    if (name === 'xmlns') {
+      if (namespace !== null) return null;
+      namespace = text.slice(index + 1, valueEnd);
+    }
+    index = valueEnd + 1;
+  }
+}
 
 // EN-109: valid UTF-8 text whose root element is `<svg>` in the SVG
 // namespace, after an optional byte order mark, XML declaration, comments
@@ -155,8 +186,11 @@ function isSvg(content: Uint8Array): boolean {
     return false;
   }
   if (/<!(DOCTYPE|ENTITY)/i.test(text)) return false;
-  let rest = text.replace(/^\uFEFF/, '').trimStart();
-  if (rest.startsWith('<?xml')) {
+  // trimStart also drops a byte order mark (U+FEFF).
+  let rest = text.trimStart();
+  // The XML declaration only, not another instruction such as
+  // <?xml-stylesheet?>.
+  if (/^<\?xml\s/.test(rest)) {
     const end = rest.indexOf('?>');
     if (end === -1) return false;
     rest = rest.slice(end + 2).trimStart();
@@ -166,10 +200,7 @@ function isSvg(content: Uint8Array): boolean {
     if (end === -1) return false;
     rest = rest.slice(end + 3).trimStart();
   }
-  const root = SVG_ROOT.exec(rest);
-  return (
-    root !== null && SVG_DEFAULT_NAMESPACE.exec(root[0])?.[2] === SVG_NAMESPACE
-  );
+  return svgRootNamespace(rest) === SVG_NAMESPACE;
 }
 
 export function detectLogoFormat(content: Uint8Array): LogoFormat | null {

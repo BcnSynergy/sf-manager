@@ -100,6 +100,14 @@ describe('organization logo (organization-logo S2)', () => {
       '\uFEFF<svg\n  viewBox="0 0 10 10"\n  xmlns="http://www.w3.org/2000/svg">\n</svg>',
     ],
     [
+      'an SVG with a > inside an attribute value',
+      '<svg data-note="a>b" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'an SVG with spaces around the namespace and other xmlns attributes',
+      "<svg xmlns:xlink='http://www.w3.org/1999/xlink' xmlns = 'http://www.w3.org/2000/svg' ></svg>",
+    ],
+    [
       'an SVG that carries a script (served sandboxed)',
       '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
     ],
@@ -137,6 +145,24 @@ describe('organization logo (organization-logo S2)', () => {
       '<!-- <svg xmlns="http://www.w3.org/2000/svg"/>',
     ],
     ['an element named svgx', '<svgx xmlns="http://www.w3.org/2000/svg"/>'],
+    [
+      'an SVG namespace only inside another attribute value',
+      `<svg data-note="x xmlns='http://www.w3.org/2000/svg'"/>`,
+    ],
+    [
+      'an SVG with two xmlns attributes',
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    ['an unterminated root tag', '<svg xmlns="http://www.w3.org/2000/svg"'],
+    [
+      'an attribute value without quotes',
+      '<svg xmlns=http://www.w3.org/2000/svg/>',
+    ],
+    // Only the XML declaration may precede the root, not a stylesheet.
+    [
+      'a stylesheet processing instruction before the root',
+      '<?xml-stylesheet href="logo.css"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
     ['plain text', 'svg xmlns="http://www.w3.org/2000/svg"'],
   ])('rejects %s', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toBeNull();

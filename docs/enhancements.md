@@ -703,10 +703,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-109** (feature): SVG organization logos are accepted. A file counts
   as SVG when it is UTF-8 text with an `<svg>` root in the SVG namespace
   and no DOCTYPE or entity declaration. It is stored as uploaded, and both
-  logo reads serve every logo with `Content-Security-Policy: default-src
-'none'; sandbox` and `X-Content-Type-Options: nosniff`, so a script in
-  it never runs; pages show it through `<img>`. The file picker offers
-  SVG. Done in `en-109-svg-logos` (PR #TBD), 2026-10-30.
+  logo reads serve every logo with
+  `Content-Security-Policy: default-src 'none'; sandbox` and
+  `X-Content-Type-Options: nosniff`, so a script in it never runs; pages
+  show it through `<img>`. The file picker offers SVG. Done in
+  `en-109-svg-logos` (PR #TBD), 2026-10-30.
 
 - **EN-113** (tests): `organization-profile.module.spec.ts` now proves
   that `ORGANIZATION_LOGO_READER` resolves to the same
