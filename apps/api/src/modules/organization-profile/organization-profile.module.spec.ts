@@ -46,8 +46,8 @@ describe('OrganizationProfileModule (DI)', () => {
     process.env = originalEnv;
   });
 
-  it('resolves ORGANIZATION_PROFILE_READER and ORGANIZATION_PROFILE_REPOSITORY to one instance', async () => {
-    const moduleRef = await Test.createTestingModule({
+  const compileModule = () =>
+    Test.createTestingModule({
       imports: [
         PrismaModule,
         IdGeneratorModule,
@@ -55,6 +55,9 @@ describe('OrganizationProfileModule (DI)', () => {
         OrganizationProfileModule,
       ],
     }).compile();
+
+  it('resolves ORGANIZATION_PROFILE_READER and ORGANIZATION_PROFILE_REPOSITORY to one instance', async () => {
+    const moduleRef = await compileModule();
 
     const reader = moduleRef.get<OrganizationProfileReader>(
       ORGANIZATION_PROFILE_READER,
@@ -69,14 +72,7 @@ describe('OrganizationProfileModule (DI)', () => {
   // EN-113: organization-logo S8 exports ORGANIZATION_LOGO_READER the same
   // way, as an alias of GetOrganizationLogoUseCase.
   it('resolves ORGANIZATION_LOGO_READER and GetOrganizationLogoUseCase to one instance', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        PrismaModule,
-        IdGeneratorModule,
-        FileStorageModule,
-        OrganizationProfileModule,
-      ],
-    }).compile();
+    const moduleRef = await compileModule();
 
     const reader = moduleRef.get<OrganizationLogoReader>(
       ORGANIZATION_LOGO_READER,
