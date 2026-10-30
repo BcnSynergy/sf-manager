@@ -23,7 +23,7 @@ p="sfm-backup-test-$$"
 export MSYS_NO_PATHCONV=1
 
 cleanup() {
-  docker rm -f "$p-db" >/dev/null 2>&1 || true
+  docker rm -f "$p-db" "$p-loop" >/dev/null 2>&1 || true
   docker volume rm "$p-files" "$p-backups" "$p-script" >/dev/null 2>&1 || true
   docker network rm "$p" >/dev/null 2>&1 || true
 }
@@ -36,7 +36,11 @@ fail() {
   [ -z "${out:-}" ] || printf '%s\n' "--- last output:" "$out" >&2
   exit 1
 }
-pass() { echo "test-postgres-backup: ok: $1"; }
+# Clears $out, so a later failure never shows an unrelated run's output.
+pass() {
+  echo "test-postgres-backup: ok: $1"
+  out=''
+}
 
 # Runs a command in the backup service's image, with its PG* variables and
 # mounts. pghost, retention and files_at override PGHOST,
@@ -126,7 +130,7 @@ expect_out "is not a dump or cannot be read, nothing restored" "restore of the a
 pass "restoring a file that is not a dump fails before changing anything"
 
 # --- An unreadable files archive changes nothing.
-run -c "cp /backups/$archive /tmp/good && echo junk >/backups/$archive" ||
+run -c "echo junk >/backups/$archive" ||
   fail "could not damage the archive"
 backup restore "$dump"
 [ "$status" = 1 ] || fail "restore with a damaged archive exited $status, expected 1"
@@ -155,23 +159,33 @@ expect_out "usage: postgres-backup.sh" "bogus"
 pass "a missing dump or an unknown command fails with a message"
 
 # --- Retention deletes old backups and stale partial files only.
+# With BACKUP_RETENTION_DAYS=1, a backup 2 days old goes and one 12 hours
+# old stays, so the cutoff must follow the setting.
 # shellcheck disable=SC2016 # expanded in the container
 run -c 'cd /backups && rm -f sfmanager-* &&
   for f in sfmanager-20200101T000000Z.dump sfmanager-20200101T000000Z.files.tar.gz \
     .sfmanager-20200101T000000Z-7.dump.partial other.txt; do
-    echo old >"$f" && touch -d "2020-01-01 00:00:00" "$f"; done'
+    echo old >"$f" && touch -d "2020-01-01 00:00:00" "$f"; done &&
+  now=$(date +%s) &&
+  echo old >sfmanager-20210101T000000Z.dump &&
+  touch -d "@$((now - 2 * 86400))" sfmanager-20210101T000000Z.dump &&
+  echo recent >sfmanager-20220101T000000Z.dump &&
+  touch -d "@$((now - 43200))" sfmanager-20220101T000000Z.dump'
 retention=1
 backup once
 retention=''
 [ "$status" = 0 ] || fail "backup with retention exited $status"
 expect_out "backup: deleted sfmanager-20200101T000000Z.dump" "retention"
 expect_out "backup: deleted sfmanager-20200101T000000Z.files.tar.gz" "retention"
+expect_out "backup: deleted sfmanager-20210101T000000Z.dump" "retention"
 left=$(backups_list)
-printf '%s\n' "$left" | grep -q 2020 && fail "retention left $left"
+printf '%s\n' "$left" | grep -q -e 2020 -e 2021 && fail "retention left $left"
 printf '%s\n' "$left" | grep -qx other.txt || fail "retention deleted other.txt"
-[ "$(printf '%s\n' "$left" | grep -c '^sfmanager-')" = 2 ] ||
-  fail "retention: expected the new dump and archive, got $left"
-pass "retention deletes old dumps, archives and partial files, nothing else"
+printf '%s\n' "$left" | grep -qx sfmanager-20220101T000000Z.dump ||
+  fail "retention deleted a backup younger than BACKUP_RETENTION_DAYS"
+[ "$(printf '%s\n' "$left" | grep -c '^sfmanager-')" = 3 ] ||
+  fail "retention: expected the new dump and archive and the recent dump, got $left"
+pass "retention deletes backups older than BACKUP_RETENTION_DAYS and stale partial files only"
 
 # --- A bad BACKUP_RETENTION_DAYS writes nothing.
 before=$(backups_list)
@@ -181,6 +195,16 @@ for value in 0 07 x -1; do
   [ "$status" = 1 ] || fail "BACKUP_RETENTION_DAYS=$value exited $status, expected 1"
   expect_out "BACKUP_RETENTION_DAYS must be a positive integer" "BACKUP_RETENTION_DAYS=$value"
 done
+# The service itself (no argument) must fail too, not start its loop; the
+# timeout turns a loop that started into a failure instead of a hang. The
+# trailing command keeps sh from exec'ing it: as PID 1 the script would
+# ignore the timeout's SIGTERM.
+retention=x
+status=0
+# shellcheck disable=SC2016 # expanded in the container
+out=$(run -c 'timeout 30 sh /s/postgres-backup.sh; exit $?' 2>&1) || status=$?
+[ "$status" = 1 ] || fail "the service with BACKUP_RETENTION_DAYS=x exited $status, expected 1"
+expect_out "BACKUP_RETENTION_DAYS must be a positive integer" "the service with BACKUP_RETENTION_DAYS=x"
 [ "$(backups_list)" = "$before" ] || fail "a bad BACKUP_RETENTION_DAYS wrote a backup"
 retention=''
 pass "a bad BACKUP_RETENTION_DAYS fails without writing a dump"
@@ -196,6 +220,23 @@ expect_out "backup: pg_dump failed, no backup written" "unreachable database"
 [ "$(backups_list)" = "$before" ] || fail "a failed pg_dump changed backups/: $(backups_list)"
 pass "a failed pg_dump writes no dump and deletes no old backup"
 
+# --- The service logs a failed backup and keeps running.
+docker run -d --name "$p-loop" --network "$p" -e PGHOST="$p-nowhere" -e PGUSER=u \
+  -e PGPASSWORD=p -e PGDATABASE=sfmanager -v "$p-backups:/backups" \
+  -v "$p-files:/files" -v "$p-script:/s:ro" --entrypoint /bin/sh "$image" \
+  /s/postgres-backup.sh >/dev/null
+attempt=0
+until docker logs "$p-loop" 2>&1 | grep -q 'backup: pg_dump failed'; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 30 ] || fail "the service did not log the failed backup"
+  sleep 1
+done
+sleep 2
+[ "$(docker inspect -f '{{.State.Running}}' "$p-loop")" = true ] ||
+  fail "the service stopped after a failed backup"
+docker rm -f "$p-loop" >/dev/null
+pass "the service logs a failed backup and keeps running"
+
 # --- A failed archive keeps the dump and skips the retention.
 # With the files volume mounted elsewhere, /files does not exist.
 files_at=/elsewhere retention=1
@@ -207,7 +248,8 @@ left=$(backups_list)
 for f in $before; do
   printf '%s\n' "$left" | grep -qx "$f" || fail "a failed archive deleted $f"
 done
-[ "$(printf '%s\n' "$left" | grep -c '\.dump$')" = 2 ] || fail "a failed archive did not keep the dump: $left"
+[ "$(printf '%s\n' "$left" | grep -c '\.dump$')" = $(($(printf '%s\n' "$before" | grep -c '\.dump$') + 1)) ] ||
+  fail "a failed archive did not keep the dump: $left"
 printf '%s\n' "$left" | grep -q partial && fail "a failed archive left a partial file: $left"
 pass "a failed archive keeps the dump, deletes no old backup and leaves no partial file"
 

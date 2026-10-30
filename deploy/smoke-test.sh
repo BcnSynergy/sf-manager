@@ -97,8 +97,10 @@ until compose logs offsite | grep -q 'offsite: off-site copy disabled'; do
   [ "$attempt" -lt 15 ] || fail "the offsite service did not report that it is disabled"
   sleep 2
 done
-[ "$(compose ps -q offsite)" ] && [ "$(docker inspect -f '{{.State.Running}}' "$(compose ps -q offsite)")" = true ] ||
+offsite=$(compose ps -q offsite)
+if [ -z "$offsite" ] || [ "$(docker inspect -f '{{.State.Running}}' "$offsite")" != true ]; then
   fail "the offsite service is not running"
+fi
 echo "smoke: offsite service disabled and idle"
 
 # A dump taken on an older version restores, and the API then applies the

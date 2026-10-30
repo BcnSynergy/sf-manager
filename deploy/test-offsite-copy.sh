@@ -38,7 +38,11 @@ fail() {
   [ -z "${out:-}" ] || printf '%s\n' "--- last output:" "$out" >&2
   exit 1
 }
-pass() { echo "test-offsite-copy: ok: $1"; }
+# Clears $out, so a later failure never shows an unrelated run's output.
+pass() {
+  echo "test-offsite-copy: ok: $1"
+  out=''
+}
 
 # Settings of a configured copy; cases change them and restore them.
 configure() {

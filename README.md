@@ -291,8 +291,9 @@ off-site copy scripts against throwaway containers, with their own network
 and volumes: `sh deploy/test-postgres-backup.sh` and
 `sh deploy/test-offsite-copy.sh`, also from the repository root. Each
 accepts a modified copy of its script as its argument, to see which case
-catches a change. Locally, without ShellCheck installed, check a script
-with `docker run --rm -i koalaman/shellcheck:stable - < deploy/<script>.sh`.
+catches a change. CI uses the runner's ShellCheck (0.9.0 on ubuntu-24.04),
+which reports some findings newer versions do not, so check locally with
+that version: `docker run --rm -i koalaman/shellcheck:v0.9.0 - < deploy/<script>.sh`.
 
 When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
 and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and

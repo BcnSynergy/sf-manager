@@ -57,8 +57,8 @@ jobs:
       - name: Format
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run format:check
-      # The runner image ships ShellCheck; `#!/bin/sh` makes it check POSIX sh
-      # (EN-105).
+      # The runner image ships ShellCheck (0.9.0 on ubuntu-24.04; README
+      # "Images in CI"); `#!/bin/sh` makes it check POSIX sh (EN-105).
       - name: Shellcheck
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: shellcheck deploy/*.sh
@@ -76,11 +76,14 @@ jobs:
       - name: Integration
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run test:integration -w apps/api
-      # Runs the backup and off-site copy scripts against throwaway
+      # Run the backup and off-site copy scripts against throwaway
       # containers (EN-105).
-      - name: Deploy scripts
+      - name: Backup script
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: sh deploy/test-postgres-backup.sh && sh deploy/test-offsite-copy.sh
+        run: sh deploy/test-postgres-backup.sh
+      - name: Off-site copy script
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: sh deploy/test-offsite-copy.sh
       # Builds the production images and starts the whole stack on
       # https://localhost, so a broken Dockerfile or base-image update
       # (Dependabot) fails the PR (EN-91).

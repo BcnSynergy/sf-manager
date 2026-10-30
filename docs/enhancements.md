@@ -707,6 +707,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `deploy/offsite-copy.sh` (`pull`). Origin: EN-104 pre-push verification
   recheck, 2026-10-29.
 
+- **EN-119** (deploy tests): each local run of `deploy/smoke-test.sh`
+  leaves root-owned dumps and files archives in the checkout's `backups/`
+  (the backup service's first backup, plus one from the restore check),
+  because that directory is a bind mount and `cleanup` only removes the
+  Compose project and its volumes. The README says where they land, but
+  they pile up next to a real stack's backups. A throwaway directory for
+  the smoke project (for example a Compose override of the bind mount)
+  would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` pre-push
+  review, 2026-10-30.
+
 ## Done
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
