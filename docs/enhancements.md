@@ -668,12 +668,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `sandbox` Content Security Policy, plus checking that print and the
   letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
   Origin: `organization-logo` (S2), 2026-10-26.
-- **EN-113** (tests): no module test proves that `ORGANIZATION_LOGO_READER`
-  resolves to the same `GetOrganizationLogoUseCase` instance, as
-  `organization-profile.module.spec.ts` does for `ORGANIZATION_PROFILE_READER`.
-  The review-history e2e tests exercise the wiring. Origin:
-  `organization-logo` T3 pre-push review, 2026-10-27.
-
 - **EN-118** (deploy): `offsite-copy.sh pull` overwrites a local backup of
   the same name with the bucket's copy, because it does not use
   `--ignore-existing` the way the upload does. Kept on purpose: when
@@ -711,6 +705,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   2026-10-30.
 
 ## Done
+
+- **EN-113** (tests): `organization-profile.module.spec.ts` now proves
+  that `ORGANIZATION_LOGO_READER` resolves to the same
+  `GetOrganizationLogoUseCase` instance, as it does for
+  `ORGANIZATION_PROFILE_READER`. Done in `en-113-logo-reader-wiring`
+  (PR #TBD), 2026-10-30.
 
 - **EN-117** (deploy): `restore` extracts the files archive into
   `/files/.restore.partial` first and only then swaps it in by renames, so

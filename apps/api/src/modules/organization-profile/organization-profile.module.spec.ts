@@ -3,6 +3,10 @@ import { FileStorageModule } from '../../shared/infrastructure/file-storage/file
 import { IdGeneratorModule } from '../../shared/infrastructure/id/id-generator.module';
 import { PrismaModule } from '../../shared/infrastructure/persistence/prisma.module';
 import {
+  ORGANIZATION_LOGO_READER,
+  OrganizationLogoReader,
+} from './application/ports/organization-logo.reader.port';
+import {
   ORGANIZATION_PROFILE_READER,
   OrganizationProfileReader,
 } from './application/ports/organization-profile.reader.port';
@@ -10,6 +14,7 @@ import {
   ORGANIZATION_PROFILE_REPOSITORY,
   OrganizationProfileRepository,
 } from './application/ports/organization-profile.repository.port';
+import { GetOrganizationLogoUseCase } from './application/use-cases/get-organization-logo.use-case';
 import { OrganizationProfileModule } from './organization-profile.module';
 
 // review-export/design.md Decision 3, tasks.md 3.1/3.3: ORGANIZATION_PROFILE_READER
@@ -59,5 +64,25 @@ describe('OrganizationProfileModule (DI)', () => {
     );
 
     expect(reader).toBe(repository);
+  });
+
+  // EN-113: organization-logo S8 exports ORGANIZATION_LOGO_READER the same
+  // way, as an alias of GetOrganizationLogoUseCase.
+  it('resolves ORGANIZATION_LOGO_READER and GetOrganizationLogoUseCase to one instance', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        PrismaModule,
+        IdGeneratorModule,
+        FileStorageModule,
+        OrganizationProfileModule,
+      ],
+    }).compile();
+
+    const reader = moduleRef.get<OrganizationLogoReader>(
+      ORGANIZATION_LOGO_READER,
+    );
+    const useCase = moduleRef.get(GetOrganizationLogoUseCase);
+
+    expect(reader).toBe(useCase);
   });
 });
