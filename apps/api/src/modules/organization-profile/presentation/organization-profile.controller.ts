@@ -124,7 +124,20 @@ export class OrganizationProfileController {
   @Header('Content-Security-Policy', "default-src 'none'; sandbox")
   @Header('X-Content-Type-Options', 'nosniff')
   @ApiProduces('image/png', 'image/jpeg', 'image/webp', 'image/svg+xml')
-  @ApiOkResponse({ description: 'The logo image.' })
+  @ApiOkResponse({
+    description: 'The logo image.',
+    headers: {
+      'Content-Security-Policy': {
+        description:
+          "default-src 'none'; sandbox, so a script in an SVG logo never runs (EN-109).",
+        schema: { type: 'string' },
+      },
+      'X-Content-Type-Options': {
+        description: 'nosniff',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiNotFoundResponse({ description: 'The organization has no logo.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({

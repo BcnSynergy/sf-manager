@@ -247,7 +247,8 @@ a start-of-frame segment before any image data, with the first segment
 right after the start marker; for WebP a `VP8 `,
 `VP8L` or `VP8X` chunk. The pixel data itself is not decoded. A file
 MUST count as an SVG image only when it is valid UTF-8 text whose root
-element is `<svg>` with the default namespace `http://www.w3.org/2000/svg`,
+element is `<svg>` with exactly one `xmlns` attribute, the default namespace
+`http://www.w3.org/2000/svg`,
 preceded at most by a byte order mark, an XML declaration, comments and
 whitespace, and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
 rest of the document is not parsed. An SVG is stored as uploaded, scripts
