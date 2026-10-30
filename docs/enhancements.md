@@ -705,7 +705,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   sandboxed and shown through `<img>`; matching XML's whitespace would make
   the check exact. Evidence:
   `apps/api/src/modules/organization-profile/domain/organization-logo.ts`
-  (`isSvg`). Origin: `en-109-svg-logos` (PR #TBD) pre-push review recheck,
+  (`isSvg`). Origin: `en-109-svg-logos` (PR #307) pre-push review recheck,
   2026-10-30.
 
 ## Done
@@ -717,7 +717,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `Content-Security-Policy: default-src 'none'; sandbox` and
   `X-Content-Type-Options: nosniff`, so a script in it never runs; pages
   show it through `<img>`. The file picker offers SVG. Done in
-  `en-109-svg-logos` (PR #TBD), 2026-10-30.
+  `en-109-svg-logos` (PR #307), 2026-10-30.
 
 - **EN-113** (tests): `organization-profile.module.spec.ts` now proves
   that `ORGANIZATION_LOGO_READER` resolves to the same
