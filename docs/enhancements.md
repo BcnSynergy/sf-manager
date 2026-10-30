@@ -642,12 +642,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `curl -i https://<SITE_ADDRESS>/api/docs` and `/api/docs-json` after the
   next deploy would confirm it. Origin: `td-40-api-docs` pre-merge review
   (#287), 2026-10-26.
-- **EN-105** (deployment tests): `deploy/postgres-backup.sh` was tested by
-  hand in an isolated compose project, but nothing automated runs it, and
-  two checks are missing: restoring a dump taken before the newest
-  migrations (the deployment spec's Restore scenario says the API then
-  applies them), and `shellcheck`, which is not part of CI. Origin:
-  `td-41-db-backups` pre-push review (#288), 2026-10-26.
 - **EN-106** (security): the Content Security Policy in `apps/web/Caddyfile`
   has no `report-to`/`report-uri`, so a violation in production (a page the
   policy breaks) is seen only in that user's console. The QR page
@@ -713,8 +707,41 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `deploy/offsite-copy.sh` (`pull`). Origin: EN-104 pre-push verification
   recheck, 2026-10-29.
 
+- **EN-119** (deploy tests): each local run of `deploy/smoke-test.sh`
+  leaves root-owned dumps and files archives in the checkout's `backups/`
+  (the backup service's first backup, plus one from the restore check),
+  because that directory is a bind mount and `cleanup` only removes the
+  Compose project and its volumes. The README says where they land, but
+  they pile up next to a real stack's backups. A throwaway directory for
+  the smoke project (for example a Compose override of the bind mount)
+  would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` (PR #303) pre-push
+  review, 2026-10-30.
+
+- **EN-120** (deploy tests): the restore check in `deploy/smoke-test.sh`
+  verifies the restored database but not the restored uploaded files. The
+  files half of the README's restore is covered by
+  `deploy/test-postgres-backup.sh`, so this only matters if the smoke test
+  should prove the whole documented restore on the real stack. Origin:
+  `en-105-deploy-tests` (PR #303) pre-merge review, 2026-10-30.
+
+- **EN-121** (deploy tests): in `deploy/test-postgres-backup.sh`, the case
+  that runs the service with `BACKUP_RETENTION_DAYS=x` only fails after its
+  30-second `timeout` when the script wrongly starts its loop, so a
+  regression there costs 30 s before it shows. A shorter timeout would
+  speed that up, at the risk of a slow runner failing a correct script.
+  Origin: `en-105-deploy-tests` (PR #303) pre-push review recheck,
+  2026-10-30.
+
 ## Done
 
+- **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
+  `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` test
+  the backup and off-site copy scripts against throwaway containers (a
+  Postgres, and `rclone serve s3` as the bucket), covering the scenarios of
+  "Database backups" and "Off-site backup copies". `deploy/smoke-test.sh`
+  now also restores a dump taken before the newest migration and checks
+  that the API applies it. Done in `en-105-deploy-tests` (PR #303),
+  2026-10-30.
 - **EN-104** (deployment): an `offsite` service (rclone) copies the dumps
   and files archives in `backups/` every hour to an S3-compatible bucket at
   another provider, encrypted with `OFFSITE_ENCRYPTION_PASSWORD` before they

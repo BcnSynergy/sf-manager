@@ -192,8 +192,9 @@ manual and destructive to `sfmanager` — it is never run by
 
 Every pull request and every push to `main` runs the `ci` job
 (`.github/workflows/ci.yml`) on Node 24: install, build, lint, format
-check, API typecheck, unit tests, API e2e tests and API integration tests,
-in that order. The integration
+check, ShellCheck, API typecheck, unit tests, API e2e tests, API
+integration tests, the deploy script tests and the image smoke test (see
+"Images in CI"), in that order. The integration
 tier runs against a throwaway Postgres service container, and the workflow
 uses no secrets and a read-only token.
 
@@ -278,10 +279,21 @@ these included.
 CI builds the production images and runs `deploy/smoke-test.sh` on every PR
 and push to `main`: it starts the whole stack on `https://localhost` with
 throwaway secrets and fails unless `/api/health` reports the database ok,
-the web app answers 200, the API can write uploaded files and the backup
-service writes a dump. Run it locally
+the web app answers 200, the API can write uploaded files, the backup
+service writes a dump and a files archive, the off-site copy service,
+unconfigured, says it is disabled, and a dump taken before the newest
+migration restores and the API then applies that migration. Run it locally
 from the repository root with `sh deploy/smoke-test.sh` (ports 80 and 443
 must be free; it uses its own Compose project and removes it afterwards).
+
+Before that, CI runs `shellcheck deploy/*.sh` and tests the backup and
+off-site copy scripts against throwaway containers, with their own network
+and volumes: `sh deploy/test-postgres-backup.sh` and
+`sh deploy/test-offsite-copy.sh`, also from the repository root. Each
+accepts a modified copy of its script as its argument, to see which case
+catches a change. CI uses the runner's ShellCheck (0.9.0 on ubuntu-24.04),
+which reports some findings newer versions do not, so check locally with
+that version: `docker run --rm -i koalaman/shellcheck:v0.9.0 - < deploy/<script>.sh`.
 
 When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
 and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and
