@@ -674,14 +674,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
-- **EN-117** (deploy): `restore` checks the files archive by listing it,
-  not by extracting it, before it drops the database. A failure that only
-  shows while extracting, such as a full disk, happens after the uploaded
-  files were removed; the restore then exits with a clear error, the
-  database already restored. Extracting into a temporary directory first and
-  swapping it in would close it. Evidence: `deploy/postgres-backup.sh`
-  (`restore`). Origin: TD-42 pre-push verification, 2026-10-29.
-
 - **EN-118** (deploy): `offsite-copy.sh pull` overwrites a local backup of
   the same name with the bucket's copy, because it does not use
   `--ignore-existing` the way the upload does. Kept on purpose: when
@@ -690,23 +682,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   if pulling into a populated directory becomes a normal step. Evidence:
   `deploy/offsite-copy.sh` (`pull`). Origin: EN-104 pre-push verification
   recheck, 2026-10-29.
-
-- **EN-119** (deploy tests): each local run of `deploy/smoke-test.sh`
-  leaves root-owned dumps and files archives in the checkout's `backups/`
-  (the backup service's first backup, plus one from the restore check),
-  because that directory is a bind mount and `cleanup` only removes the
-  Compose project and its volumes. The README says where they land, but
-  they pile up next to a real stack's backups. A throwaway directory for
-  the smoke project (for example a Compose override of the bind mount)
-  would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` (PR #303) pre-push
-  review, 2026-10-30.
-
-- **EN-120** (deploy tests): the restore check in `deploy/smoke-test.sh`
-  verifies the restored database but not the restored uploaded files. The
-  files half of the README's restore is covered by
-  `deploy/test-postgres-backup.sh`, so this only matters if the smoke test
-  should prove the whole documented restore on the real stack. Origin:
-  `en-105-deploy-tests` (PR #303) pre-merge review, 2026-10-30.
 
 - **EN-121** (deploy tests): in `deploy/test-postgres-backup.sh`, the case
   that runs the service with `BACKUP_RETENTION_DAYS=x` only fails after its
@@ -725,6 +700,23 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `en-115-logo-interceptor` (PR #304) pre-push review, 2026-10-30.
 
 ## Done
+
+- **EN-117** (deploy): `restore` extracts the files archive into
+  `/files/.restore.partial` first and only then swaps it in by renames, so
+  an archive that cannot be extracted, such as on a full disk, leaves the
+  uploaded files as they were and says so. Backups exclude that directory
+  and a restore removes a leftover one. Done in
+  `en-117-restore-files` (PR #TBD), 2026-10-30.
+
+- **EN-119** (deploy tests): `deploy/smoke-test.sh` adds a Compose
+  override that mounts a volume at `/backups` for the backup and offsite
+  services, so a local run no longer leaves dumps in the checkout's
+  `backups/`. Done in `en-117-restore-files` (PR #TBD), 2026-10-30.
+
+- **EN-120** (deploy tests): the smoke test's restore check also writes
+  an uploaded file as the API's user before the dump, changes it, and
+  checks that the restore brings it back with that owner. Done in
+  `en-117-restore-files` (PR #TBD), 2026-10-30.
 
 - **EN-115** (API): `LogoFileInterceptor` now answers busboy's
   `Malformed content type` with `LOGO_FILE_MISSING`, the code the spec gives an

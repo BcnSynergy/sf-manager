@@ -149,6 +149,52 @@ expect_out "no $archive for this dump, uploaded files left as they are" "restore
 [ "$(files_state)" = "$files_changed" ] || fail "restore without an archive changed the uploaded files"
 pass "a dump without an archive restores the database only and says so"
 
+# --- A files archive that cannot be extracted leaves the uploaded files as
+# they were (EN-117). Here /files is a 1 MiB tmpfs and the archive holds
+# 2 MB of random data, so extracting it runs out of space, as on a full
+# disk.
+big=sfmanager-29990101T000000Z
+run -c "cp /backups/$dump /backups/$big.dump && mkdir /tmp/big &&
+  head -c 2000000 /dev/urandom >/tmp/big/big.bin &&
+  tar -czf /backups/$big.files.tar.gz -C /tmp/big ." || fail "could not write the large archive"
+sql "update t set v = 'changed'" >/dev/null
+status=0
+# shellcheck disable=SC2016 # expanded in the container
+out=$(docker run --rm -i --network "$p" -e PGHOST="$p-db" -e PGUSER=u -e PGPASSWORD=p \
+  -e PGDATABASE=sfmanager --tmpfs /files:size=1m -v "$p-backups:/backups" \
+  -v "$p-script:/s:ro" --entrypoint /bin/sh "$image" -c '
+  state() { (cd /files && find . -mindepth 1 -exec stat -c "%n %u:%g %a" {} + | sort &&
+    cat logos/a.png); }
+  mkdir /files/logos && echo logo-a >/files/logos/a.png && chown -R 1000:1000 /files/logos &&
+    before=$(state) || exit 2
+  sh /s/postgres-backup.sh restore "$0"
+  status=$?
+  [ "$(state)" = "$before" ] || { echo "uploaded files now: $(state)"; exit 3; }
+  exit "$status"' "$big.dump" 2>&1) || status=$?
+[ "$status" = 1 ] ||
+  fail "restore with an archive that does not fit exited $status, expected 1 with the files unchanged"
+expect_out "restoring the uploaded files failed, they are left as they were" \
+  "restore with an archive that does not fit"
+[ "$(db_value)" = before ] ||
+  fail "restore with an archive that does not fit left the database at '$(db_value)'"
+run -c "rm /backups/$big.dump /backups/$big.files.tar.gz"
+pass "a files archive that cannot be extracted leaves the uploaded files as they were"
+
+# --- A restore's leftover staging directory is neither archived nor kept.
+run -c 'mkdir /files/.restore.partial && echo junk >/files/.restore.partial/x'
+backup once
+[ "$status" = 0 ] || fail "backup with a leftover staging directory exited $status"
+second=$(printf '%s\n' "$out" | sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\)\.dump.*/\1/p')
+[ -n "$second" ] || fail "backup with a leftover staging directory wrote no dump"
+run -c "tar -tzf /backups/$second.files.tar.gz" | grep -q restore.partial &&
+  fail "the files archive holds the leftover staging directory"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore over a leftover staging directory exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore over a leftover staging directory left $(files_state), expected $files_changed"
+run -c "rm /backups/$second.dump /backups/$second.files.tar.gz"
+pass "a leftover staging directory is neither archived nor kept by a restore"
+
 # --- A missing dump and a bad command fail.
 backup restore sfmanager-19700101T000000Z.dump
 [ "$status" = 1 ] || fail "restore of a missing dump exited $status, expected 1"

@@ -20,7 +20,8 @@
 # the archive of the same stamp; a dump without one (taken before TD-42, or
 # whose archiving failed) restores the database only and says so. A FILE that
 # is not a dump, or an archive that cannot be read, stops the restore before
-# anything changes. Stop the API first. FILE is a name in /backups or an
+# anything changes; an archive that cannot be extracted (a full disk) leaves
+# the uploaded files as they were. Stop the API first. FILE is a name in /backups or an
 # absolute path.
 #
 # Each file is written under a temporary name and renamed when complete, so
@@ -36,6 +37,9 @@ umask 077
 
 backup_dir=/backups
 files_dir=/files
+# Where restore extracts an archive before swapping it in (EN-117).
+staging_name=.restore.partial
+staging="$files_dir/$staging_name"
 retention_days="${BACKUP_RETENTION_DAYS:-14}"
 
 # Only backing up uses the retention, so a bad value never blocks a restore.
@@ -72,7 +76,7 @@ backup_once() {
 
   files_target="$backup_dir/sfmanager-$stamp.files.tar.gz"
   files_partial="$backup_dir/.sfmanager-$stamp-$$.files.tar.gz.partial"
-  if ! tar -czf "$files_partial" -C "$files_dir" .; then
+  if ! tar -czf "$files_partial" --exclude="./$staging_name" -C "$files_dir" .; then
     rm -f "$files_partial"
     echo "backup: archiving the uploaded files failed, the dump has none" >&2
     return 1
@@ -126,11 +130,22 @@ restore() {
     echo "backup: no $(basename "$files_archive") for this dump, uploaded files left as they are"
     return
   fi
-  # Extracting as root keeps the files' owner, the API's user.
-  find "$files_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-  if ! tar -xzf "$files_archive" -C "$files_dir"; then
-    echo "backup: restoring the uploaded files failed; the database is" \
-      "restored, fix the cause and restore again" >&2
+  # Extracted beside the current files first, on the same volume, so a
+  # failure such as a full disk leaves them as they were and the swap is
+  # only renames. Extracting as root keeps the files' owner, the API's user.
+  rm -rf "$staging"
+  mkdir "$staging"
+  if ! tar -xzf "$files_archive" -C "$staging"; then
+    rm -rf "$staging"
+    echo "backup: restoring the uploaded files failed, they are left as they" \
+      "were; the database is restored, fix the cause and restore again" >&2
+    exit 1
+  fi
+  if ! find "$files_dir" -mindepth 1 -maxdepth 1 ! -name "$staging_name" -exec rm -rf {} + ||
+    ! find "$staging" -mindepth 1 -maxdepth 1 -exec mv {} "$files_dir/" \; ||
+    ! rmdir "$staging"; then
+    echo "backup: swapping in the restored uploaded files failed; the database" \
+      "is restored, fix the cause and restore again" >&2
     exit 1
   fi
   echo "backup: restored $(basename "$files_archive") into the uploaded files"
