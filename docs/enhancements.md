@@ -674,22 +674,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
-- **EN-115** (API): the spec says a logo upload whose content type cannot
-  be parsed answers `LOGO_FILE_MISSING`, which holds because multer's own
-  content-type check drops it before busboy. `LogoFileInterceptor` still
-  maps busboy's `Malformed content type` to `LOGO_UPLOAD_INVALID` as a
-  defensive guard, so if a multer upgrade ever let such a request reach
-  busboy, the code would differ from the spec. Align them (map it to
-  `LOGO_FILE_MISSING`, or reword the spec) if that happens. Evidence:
-  `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
-  Origin: TD-44 PR #299 pre-merge review, 2026-10-29.
-
-- **EN-116** (tests): `LogoFileInterceptor`'s `intercept` override (the
-  try/catch around `super.intercept`) has no unit test; only the
-  `multipart/mixed` e2e case covers it. The unit tests cover the pure
-  `toLogoUploadSetupError` mapping. Origin: TD-44 PR #299 pre-merge review,
-  2026-10-29.
-
 - **EN-117** (deploy): `restore` checks the files archive by listing it,
   not by extracting it, before it drops the database. A failure that only
   shows while extracting, such as a full disk, happens after the uploaded
@@ -732,7 +716,28 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-105-deploy-tests` (PR #303) pre-push review recheck,
   2026-10-30.
 
+- **EN-122** (API): `logoFileMissingError()` lives in
+  `logo-file.interceptor.ts` and the controller imports it from there, so
+  an error factory sits in the interceptor's file. Fine for two callers; a
+  small `logo-errors.ts` in the same folder would be the cleaner home if a
+  third one appears. Evidence:
+  `apps/api/src/modules/organization-profile/presentation/`. Origin:
+  `en-115-logo-interceptor` (PR #304) pre-push review, 2026-10-30.
+
 ## Done
+
+- **EN-115** (API): `LogoFileInterceptor` now answers busboy's
+  `Malformed content type` with `LOGO_FILE_MISSING`, the code the spec gives an
+  unparseable content type, instead of `LOGO_UPLOAD_INVALID`. The branch
+  stays defensive, since multer normally drops those requests first. The
+  controller and the interceptor share `logoFileMissingError()`. Done in
+  `en-115-logo-interceptor` (PR #304), 2026-10-30.
+
+- **EN-116** (tests): unit tests now cover `LogoFileInterceptor.intercept`
+  with the base class's `intercept` (multer) stubbed: the accepted request
+  passes through, both busboy content-type errors are translated, and any
+  other error is rethrown unchanged. Done in
+  `en-115-logo-interceptor` (PR #304), 2026-10-30.
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
   `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` test

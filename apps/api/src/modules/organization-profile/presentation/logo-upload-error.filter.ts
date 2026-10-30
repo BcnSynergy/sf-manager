@@ -15,8 +15,9 @@ import type { OrganizationProfileErrorCode } from './organization-profile-error-
 // TD-44: LogoFileInterceptor also turns busboy's content-type errors (a
 // multipart type other than form-data) into one.
 // This filter gives those the LOGO_UPLOAD_INVALID code. The handler's own
-// 400s are built by buildCodedError as plain HttpExceptions, so they are not
-// caught here and keep their codes.
+// 400s, and the LOGO_FILE_MISSING that LogoFileInterceptor gives a malformed
+// content type (EN-115), are built by buildCodedError as plain
+// HttpExceptions, so they are not caught here and keep their codes.
 @Catch(BadRequestException)
 export class LogoUploadErrorFilter implements ExceptionFilter {
   catch(_exception: BadRequestException, host: ArgumentsHost): void {
