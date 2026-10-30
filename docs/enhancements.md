@@ -707,7 +707,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   the `./` prefix would keep a `.restore.partial` it holds. Checking for the
   root entry first would close it, if hand-made archives ever become a
   documented input. Evidence: `deploy/postgres-backup.sh` (`restore`).
-  Origin: `en-117-restore-files` (PR #TBD) pre-push review recheck,
+  Origin: `en-117-restore-files` (PR #305) pre-push review recheck,
   2026-10-30.
 
 ## Done
@@ -717,17 +717,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   an archive that cannot be extracted, such as on a full disk, leaves the
   uploaded files as they were and says so. Backups exclude that directory
   and a restore removes a leftover one. Done in
-  `en-117-restore-files` (PR #TBD), 2026-10-30.
+  `en-117-restore-files` (PR #305), 2026-10-30.
 
 - **EN-119** (deploy tests): `deploy/smoke-test.sh` adds a Compose
   override that mounts a volume at `/backups` for the backup and offsite
   services, so a local run no longer leaves dumps in the checkout's
-  `backups/`. Done in `en-117-restore-files` (PR #TBD), 2026-10-30.
+  `backups/`. Done in `en-117-restore-files` (PR #305), 2026-10-30.
 
 - **EN-120** (deploy tests): the smoke test's restore check also writes
   an uploaded file as the API's user before the dump, changes it, and
   checks that the restore brings it back with that owner. Done in
-  `en-117-restore-files` (PR #TBD), 2026-10-30.
+  `en-117-restore-files` (PR #305), 2026-10-30.
 
 - **EN-115** (API): `LogoFileInterceptor` now answers busboy's
   `Malformed content type` with `LOGO_FILE_MISSING`, the code the spec gives an
