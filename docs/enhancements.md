@@ -716,6 +716,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-105-deploy-tests` (PR #303) pre-push review recheck,
   2026-10-30.
 
+- **EN-122** (API): `logoFileMissingError()` lives in
+  `logo-file.interceptor.ts` and the controller imports it from there, so
+  an error factory sits in the interceptor's file. Fine for two callers; a
+  small `logo-errors.ts` in the same folder would be the cleaner home if a
+  third one appears. Evidence:
+  `apps/api/src/modules/organization-profile/presentation/`. Origin:
+  `en-115-logo-interceptor` (PR #TBD) pre-push review, 2026-10-30.
+
 ## Done
 
 - **EN-115** (API): `LogoFileInterceptor` now answers busboy's

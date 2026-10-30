@@ -82,6 +82,20 @@ describe('LogoFileInterceptor.intercept', () => {
     await expect(rejection).rejects.toThrow(message);
   });
 
+  it('answers a malformed content type with LOGO_FILE_MISSING', async () => {
+    jest
+      .spyOn(base, 'intercept')
+      .mockRejectedValue(new Error('Malformed content type'));
+
+    const rejection = new LogoFileInterceptor().intercept(context, next);
+
+    await expect(rejection).rejects.not.toBeInstanceOf(BadRequestException);
+    await expect(rejection).rejects.toMatchObject({
+      response: { code: 'LOGO_FILE_MISSING' },
+      status: 400,
+    });
+  });
+
   it('rethrows any other error unchanged', async () => {
     const error = new Error('Storage unavailable');
     jest.spyOn(base, 'intercept').mockRejectedValue(error);
