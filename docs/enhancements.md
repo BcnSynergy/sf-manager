@@ -717,6 +717,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   would avoid it. Harmless in CI. Origin: `en-105-deploy-tests` (PR #303) pre-push
   review, 2026-10-30.
 
+- **EN-120** (deploy tests): the restore check in `deploy/smoke-test.sh`
+  verifies the restored database but not the restored uploaded files. The
+  files half of the README's restore is covered by
+  `deploy/test-postgres-backup.sh`, so this only matters if the smoke test
+  should prove the whole documented restore on the real stack. Origin:
+  `en-105-deploy-tests` (PR #303) pre-merge review, 2026-10-30.
+
+- **EN-121** (deploy tests): in `deploy/test-postgres-backup.sh`, the case
+  that runs the service with `BACKUP_RETENTION_DAYS=x` only fails after its
+  30-second `timeout` when the script wrongly starts its loop, so a
+  regression there costs 30 s before it shows. A shorter timeout would
+  speed that up, at the risk of a slow runner failing a correct script.
+  Origin: `en-105-deploy-tests` (PR #303) pre-push review recheck,
+  2026-10-30.
+
 ## Done
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and

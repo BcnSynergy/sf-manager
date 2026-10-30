@@ -49,7 +49,8 @@ fail() {
 
 compose up -d --build || fail "docker compose up failed"
 
-# The API applies migrations before it listens, so allow it a while.
+# The API applies migrations before it listens, so allow it a while. $1
+# names the phase for the failure message.
 wait_healthy() {
   health=''
   attempt=0
@@ -60,9 +61,9 @@ wait_healthy() {
     sleep 2
   done
   [ "$health" = '{"status":"ok","db":"ok"}' ] ||
-    fail "/api/health never returned {\"status\":\"ok\",\"db\":\"ok\"} (last: '$health')"
+    fail "$1: /api/health never returned {\"status\":\"ok\",\"db\":\"ok\"} (last: '$health')"
 }
-wait_healthy
+wait_healthy "first start"
 echo "smoke: /api/health ok"
 
 status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
@@ -127,11 +128,11 @@ compose run --rm --no-deps -T -u root api sh -c 'for m in prisma/migrations/2*; 
   fail "expected $((migrations - 1)) migrations before the dump, found $(applied)"
 sql "create table smoke_marker (v text); insert into smoke_marker values ('from-dump')" >/dev/null
 # The README's commands, so they are checked too.
-dump=$(compose run --rm -T backup once |
-  sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\.dump\).*/\1/p')
+backup=$(compose run --rm -T backup once) || fail "backup once failed on the older database"
+dump=$(printf '%s\n' "$backup" | sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\.dump\).*/\1/p')
 [ -n "$dump" ] || fail "the backup service wrote no dump of the older database"
 compose start api >/dev/null 2>&1 || fail "could not start the API"
-wait_healthy
+wait_healthy "after the dump"
 sql 'drop table smoke_marker' >/dev/null
 compose stop api >/dev/null 2>&1 || fail "could not stop the API"
 compose run --rm -T backup restore "$dump" >/dev/null ||
@@ -139,7 +140,7 @@ compose run --rm -T backup restore "$dump" >/dev/null ||
 [ "$(applied)" = $((migrations - 1)) ] ||
   fail "after the restore, expected $((migrations - 1)) migrations, found $(applied)"
 compose start api >/dev/null 2>&1 || fail "could not start the API"
-wait_healthy
+wait_healthy "after the restore"
 [ "$(applied)" = "$migrations" ] ||
   fail "after the restore, the API applied $(applied) of $migrations migrations"
 [ "$(sql 'select v from smoke_marker')" = from-dump ] ||

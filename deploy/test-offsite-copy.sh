@@ -117,8 +117,10 @@ expect_out "offsite: copy complete" "once"
 [ "$(bucket_list)" = "$(printf '%s\n' "sfmanager-$stamp.dump.bin" "sfmanager-$stamp.files.tar.gz.bin")" ] ||
   fail "once: the bucket holds $(bucket_list)"
 pass "a copy uploads the dump and the files archive, not partial or other files"
-docker exec "$p-s3" sh -c "cat /data/$bucket/*" | grep -q -e PGDMP-secret -e TARDATA-secret &&
-  fail "the bucket holds plaintext"
+# grep exits 1 only when it read every copy and found no plaintext.
+clean=$(docker exec "$p-s3" sh -c "grep -q -e PGDMP-secret -e TARDATA-secret /data/$bucket/*
+  [ \$? = 1 ] && echo clean") || true
+[ "$clean" = clean ] || fail "the bucket holds plaintext, or its copies could not be read"
 pass "the copies are encrypted"
 
 # --- A copy only adds.
