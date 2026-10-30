@@ -143,14 +143,22 @@ restore() {
       "were; the database is restored, fix the cause and restore again" >&2
     exit 1
   fi
+  owner=$(stat -c %u:%g "$staging")
+  mode=$(stat -c %a "$staging")
+  # Both finds use -exec ... +, because busybox find reports a failed
+  # command only in that form; rmdir, which fails while anything is left in
+  # the staging directory, also runs before /files gets the archive's owner
+  # and mode.
+  # shellcheck disable=SC2016 # expanded by the inner sh
   if ! find "$files_dir" -mindepth 1 -maxdepth 1 ! -name "$staging_name" -exec rm -rf {} + ||
-    ! find "$staging" -mindepth 1 -maxdepth 1 -exec mv {} "$files_dir/" \; ||
-    ! chown "$(stat -c %u:%g "$staging")" "$files_dir" ||
-    ! chmod "$(stat -c %a "$staging")" "$files_dir" ||
-    ! rmdir "$staging"; then
+    ! find "$staging" -mindepth 1 -maxdepth 1 -exec sh -c 'mv "$@" "$0"' "$files_dir/" {} + ||
+    ! rmdir "$staging" ||
+    ! chown "$owner" "$files_dir" ||
+    ! chmod "$mode" "$files_dir"; then
     echo "backup: swapping in the restored uploaded files failed, so they may" \
-      "be partly replaced, with the rest in $staging; the database is" \
-      "restored, fix the cause and restore again" >&2
+      "be partly replaced, with the rest in $staging (a new restore" \
+      "extracts the archive again); the database is restored, fix the" \
+      "cause and restore again" >&2
     exit 1
   fi
   echo "backup: restored $(basename "$files_archive") into the uploaded files"

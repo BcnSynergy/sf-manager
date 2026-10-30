@@ -203,6 +203,28 @@ backup restore "$second.dump"
 [ "$status" = 0 ] || fail "restore of an archive holding a staging directory exited $status"
 [ "$(files_state)" = "$files_changed" ] ||
   fail "restore of an archive holding a staging directory left $(files_state), expected $files_changed"
+
+# A swap that fails halfway (here logos/ is a mount point, so it cannot be
+# replaced) is reported, leaves /files's owner and mode alone, and a later
+# restore recovers.
+status=0
+# shellcheck disable=SC2016 # expanded in the container
+out=$(docker run --rm -i --network "$p" -e PGHOST="$p-db" -e PGUSER=u -e PGPASSWORD=p \
+  -e PGDATABASE=sfmanager -v "$p-files:/files" --tmpfs /files/logos \
+  -v "$p-backups:/backups" -v "$p-script:/s:ro" --entrypoint /bin/sh "$image" -c '
+  chown 0:0 /files && chmod 711 /files
+  sh /s/postgres-backup.sh restore "$0"
+  status=$?
+  [ "$(stat -c "%u:%g %a" /files)" = "0:0 711" ] ||
+    { echo "/files is now $(stat -c "%u:%g %a" /files)"; exit 3; }
+  exit "$status"' "$second.dump" 2>&1) || status=$?
+[ "$status" = 1 ] || fail "restore with a failing swap exited $status, expected 1"
+expect_out "swapping in the restored uploaded files failed" "restore with a failing swap"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore after a failed swap exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore after a failed swap left $(files_state), expected $files_changed"
+pass "a failed swap is reported, leaves /files's owner and mode, and a new restore recovers"
 run -c "rm /backups/$second.dump /backups/$second.files.tar.gz"
 pass "a staging directory is neither archived, nor kept, nor restored from an archive"
 
