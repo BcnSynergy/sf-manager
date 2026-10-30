@@ -698,6 +698,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-117-restore-files` (PR #305) pre-push review recheck,
   2026-10-30.
 
+- **EN-124** (API): SVG logo detection treats JavaScript whitespace (`\s`
+  and `trimStart`, which include U+00A0, U+2028 and U+FEFF) as whitespace,
+  where XML allows only space, tab, CR and LF, so a root tag strict XML
+  calls malformed can pass. Harmless, since every logo is served
+  sandboxed and shown through `<img>`; matching XML's whitespace would make
+  the check exact. Evidence:
+  `apps/api/src/modules/organization-profile/domain/organization-logo.ts`
+  (`isSvg`). Origin: `en-109-svg-logos` (PR #TBD) pre-push review recheck,
+  2026-10-30.
+
 ## Done
 
 - **EN-109** (feature): SVG organization logos are accepted. A file counts
