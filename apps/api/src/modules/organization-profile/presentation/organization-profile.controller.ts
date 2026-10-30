@@ -41,7 +41,10 @@ import {
 } from '../domain/errors/organization-logo.errors';
 import { OrganizationProfile } from '../domain/organization-profile.entity';
 import type { OrganizationProfileErrorCode } from './organization-profile-error-code';
-import { LogoFileInterceptor } from './logo-file.interceptor';
+import {
+  LogoFileInterceptor,
+  logoFileMissingError,
+} from './logo-file.interceptor';
 import { LogoUploadErrorFilter } from './logo-upload-error.filter';
 import type { UpdateOrganizationProfileRequestDto } from './dto/update-organization-profile-request.dto';
 import { OrganizationProfileResponseDto } from './dto/organization-profile-response.dto';
@@ -159,11 +162,7 @@ export class OrganizationProfileController {
     @UploadedFile() file: { buffer: Buffer } | undefined,
   ): Promise<OrganizationProfileResponseDto> {
     if (!file) {
-      throw buildCodedError<OrganizationProfileErrorCode>(
-        HttpStatus.BAD_REQUEST,
-        'A logo file is required in the "file" field.',
-        'LOGO_FILE_MISSING',
-      );
+      throw logoFileMissingError();
     }
     try {
       const profile = await this.uploadOrganizationLogoUseCase.execute(

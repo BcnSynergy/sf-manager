@@ -674,22 +674,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The review-history e2e tests exercise the wiring. Origin:
   `organization-logo` T3 pre-push review, 2026-10-27.
 
-- **EN-115** (API): the spec says a logo upload whose content type cannot
-  be parsed answers `LOGO_FILE_MISSING`, which holds because multer's own
-  content-type check drops it before busboy. `LogoFileInterceptor` still
-  maps busboy's `Malformed content type` to `LOGO_UPLOAD_INVALID` as a
-  defensive guard, so if a multer upgrade ever let such a request reach
-  busboy, the code would differ from the spec. Align them (map it to
-  `LOGO_FILE_MISSING`, or reword the spec) if that happens. Evidence:
-  `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
-  Origin: TD-44 PR #299 pre-merge review, 2026-10-29.
-
-- **EN-116** (tests): `LogoFileInterceptor`'s `intercept` override (the
-  try/catch around `super.intercept`) has no unit test; only the
-  `multipart/mixed` e2e case covers it. The unit tests cover the pure
-  `toLogoUploadSetupError` mapping. Origin: TD-44 PR #299 pre-merge review,
-  2026-10-29.
-
 - **EN-117** (deploy): `restore` checks the files archive by listing it,
   not by extracting it, before it drops the database. A failure that only
   shows while extracting, such as a full disk, happens after the uploaded
@@ -733,6 +717,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   2026-10-30.
 
 ## Done
+
+- **EN-115** (API): `LogoFileInterceptor` now answers busboy's
+  `Malformed content type` with `LOGO_FILE_MISSING`, the code the spec gives an
+  unparseable content type, instead of `LOGO_UPLOAD_INVALID`. The branch
+  stays defensive, since multer normally drops those requests first. The
+  controller and the interceptor share `logoFileMissingError()`. Done in
+  `en-115-logo-interceptor` (PR #TBD), 2026-10-30.
+
+- **EN-116** (tests): unit tests now cover `LogoFileInterceptor.intercept`
+  with multer stubbed: the accepted request passes through, a content-type
+  error is translated, and any other error is rethrown unchanged. Done in
+  `en-115-logo-interceptor` (PR #TBD), 2026-10-30.
 
 - **EN-105** (deployment tests): CI runs ShellCheck on `deploy/*.sh`, and
   `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` test

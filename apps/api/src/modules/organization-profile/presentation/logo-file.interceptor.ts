@@ -2,27 +2,42 @@ import {
   BadRequestException,
   CallHandler,
   ExecutionContext,
+  HttpException,
+  HttpStatus,
   Injectable,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Observable } from 'rxjs';
+import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { LOGO_MAX_BYTES } from '../domain/organization-logo';
+import type { OrganizationProfileErrorCode } from './organization-profile-error-code';
+
+export function logoFileMissingError(): HttpException {
+  return buildCodedError<OrganizationProfileErrorCode>(
+    HttpStatus.BAD_REQUEST,
+    'A logo file is required in the "file" field.',
+    'LOGO_FILE_MISSING',
+  );
+}
 
 // TD-44: multer hands any multipart request to busboy, which rejects a
 // multipart type other than form-data with a plain Error that Nest's multer
-// error mapping does not translate, so it would answer 500. Only busboy's
-// content-type messages become a BadRequestException, which
-// LogoUploadErrorFilter codes LOGO_UPLOAD_INVALID; every other error passes
-// through unchanged. The 'Malformed content type' branch is defensive:
-// multer's own content-type check normally drops those requests before
-// busboy, so they arrive without a file (LOGO_FILE_MISSING).
+// error mapping does not translate, so it would answer 500. That message
+// becomes a BadRequestException, which LogoUploadErrorFilter codes
+// LOGO_UPLOAD_INVALID; every other error passes through unchanged.
+// EN-115: the 'Malformed content type' branch is defensive. Multer's own
+// content-type check normally drops those requests before busboy, so they
+// arrive without a file; if one reaches busboy, it gets the same
+// LOGO_FILE_MISSING, as the spec says.
 export function toLogoUploadSetupError(error: unknown): unknown {
-  if (
-    error instanceof Error &&
-    (error.message.startsWith('Unsupported content type: ') ||
-      error.message === 'Malformed content type')
-  ) {
+  if (!(error instanceof Error)) {
+    return error;
+  }
+  if (error.message.startsWith('Unsupported content type: ')) {
     return new BadRequestException(error.message);
+  }
+  if (error.message === 'Malformed content type') {
+    return logoFileMissingError();
   }
   return error;
 }
