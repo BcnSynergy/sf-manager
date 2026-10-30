@@ -710,7 +710,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   that `ORGANIZATION_LOGO_READER` resolves to the same
   `GetOrganizationLogoUseCase` instance, as it does for
   `ORGANIZATION_PROFILE_READER`. Done in `en-113-logo-reader-wiring`
-  (PR #TBD), 2026-10-30.
+  (PR #306), 2026-10-30.
 
 - **EN-117** (deploy): `restore` extracts the files archive into
   `/files/.restore.partial` first and only then swaps it in by renames, so
