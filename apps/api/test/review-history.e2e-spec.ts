@@ -4409,6 +4409,11 @@ describe('Review History (e2e)', () => {
       const logo = await agent.get(logoPath(completedSessionId)).expect(200);
       expect(logo.headers['content-type']).toBe('image/png');
       expect(logo.headers['cache-control']).toBe('no-store');
+      // EN-109: the same sandbox as the profile's logo read.
+      expect(logo.headers['content-security-policy']).toBe(
+        "default-src 'none'; sandbox",
+      );
+      expect(logo.headers['x-content-type-options']).toBe('nosniff');
       expect(Buffer.from(logo.body as Buffer)).toEqual(PNG_BYTES);
 
       await agent.get('/organization-profile/logo').expect(403);

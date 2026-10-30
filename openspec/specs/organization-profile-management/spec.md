@@ -17,7 +17,7 @@ text with no format rule, no checksum and no uniqueness constraint
 `maintenance-company` made for the same field.
 
 Out of scope: object storage (the logo lives in a local volume behind a
-storage port, ADR-012 addendum), SVG logos (EN-109), any consumer of
+storage port, ADR-012 addendum), any consumer of
 this data other than the
 `review-document` read, which renders it as a letterhead; no branding
 surface and no "profile must be complete before X" rule, an
@@ -235,7 +235,7 @@ exactly when a logo has been uploaded.
 
 The system MUST accept a logo at `PUT /organization-profile/logo` as
 `multipart/form-data` with the file in the `file` field. It MUST accept
-PNG, JPEG and WebP images of at most 2 MiB (2,097,152 bytes), and MUST
+PNG, JPEG, WebP and SVG images of at most 2 MiB (2,097,152 bytes), and MUST
 decide the format from the file's content, not from its name or declared
 content type. On success it MUST respond 200 with the profile, carrying
 `hasLogo: true`.
@@ -245,8 +245,15 @@ the format's signature and its image header with a width and a height
 above zero: for PNG the `IHDR` chunk right after the signature; for JPEG
 a start-of-frame segment before any image data, with the first segment
 right after the start marker; for WebP a `VP8 `,
-`VP8L` or `VP8X` chunk. The pixel data itself is not decoded. Anything
-else MUST be rejected as an unsupported format.
+`VP8L` or `VP8X` chunk. The pixel data itself is not decoded. A file
+MUST count as an SVG image only when it is valid UTF-8 text whose root
+element is `<svg>` with the default namespace `http://www.w3.org/2000/svg`,
+preceded at most by a byte order mark, an XML declaration, comments and
+whitespace, and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
+rest of the document is not parsed. An SVG is stored as uploaded, scripts
+included: the logo reads serve it sandboxed (see "Read the Organization
+Logo"). Anything else MUST be rejected as an unsupported format.
+(Previously: SVG was rejected, EN-109.)
 (Previously: the format was decided by the leading bytes alone, so a
 signature without an image passed.)
 
@@ -264,10 +271,10 @@ deleted from storage. A rejected upload MUST change nothing: no file is
 stored and the current logo, if any, stays. The bytes MUST be stored
 through a storage port under a fresh key, outside the database.
 
-#### Scenario: A PNG, JPEG or WebP logo is stored
+#### Scenario: A PNG, JPEG, WebP or SVG logo is stored
 
 - GIVEN an authorized caller
-- WHEN they upload a PNG, a JPEG or a WebP image of at most 2 MiB
+- WHEN they upload a PNG, a JPEG, a WebP or an SVG image of at most 2 MiB
 - THEN the response MUST be 200 with `hasLogo: true`, and the logo read MUST return the same bytes
 
 #### Scenario: The format is decided by the content
@@ -278,7 +285,7 @@ through a storage port under a fresh key, outside the database.
 
 #### Scenario: Other formats are rejected
 
-- GIVEN a file that is not a PNG, JPEG or WebP image, an SVG included, whatever its name
+- GIVEN a file that is not a PNG, JPEG, WebP or SVG image, such as a GIF or an `<svg>` root without the SVG namespace, whatever its name
 - WHEN it is uploaded
 - THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
 
@@ -323,7 +330,10 @@ through a storage port under a fresh key, outside the database.
 
 The system MUST serve the current logo at `GET /organization-profile/logo`
 with the stored bytes, the content type of their format (`image/png`,
-`image/jpeg` or `image/webp`) and `Cache-Control: no-store`. When there is
+`image/jpeg`, `image/webp` or `image/svg+xml`), `Cache-Control: no-store`,
+`Content-Security-Policy: default-src 'none'; sandbox` and
+`X-Content-Type-Options: nosniff`, so a script in an SVG never runs, even
+when the logo's URL is opened directly. When there is
 no logo to serve — none uploaded, or its file is missing from storage — it
 MUST respond 404. Clients MUST read the logo through this endpoint, never
 from a static file path.
@@ -340,6 +350,12 @@ the new file is missing too (a second replacement overlapped the read).
 - GIVEN an uploaded WebP logo
 - WHEN the logo is read
 - THEN the response MUST be 200 with `Content-Type: image/webp`, `Cache-Control: no-store` and the uploaded bytes
+
+#### Scenario: An SVG logo is served sandboxed
+
+- GIVEN an uploaded SVG logo that contains a `<script>` element
+- WHEN the logo is read
+- THEN the response MUST be 200 with `Content-Type: image/svg+xml`, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff` and the uploaded bytes
 
 #### Scenario: A read overlapping a replacing upload
 

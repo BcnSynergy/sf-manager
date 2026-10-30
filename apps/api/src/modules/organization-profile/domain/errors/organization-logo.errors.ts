@@ -2,7 +2,7 @@ import { LOGO_MAX_BYTES } from '../organization-logo';
 
 export class UnsupportedLogoFormatError extends Error {
   constructor() {
-    super('The logo must be a PNG, JPEG or WebP image.');
+    super('The logo must be a PNG, JPEG, WebP or SVG image.');
     this.name = 'UnsupportedLogoFormatError';
   }
 }

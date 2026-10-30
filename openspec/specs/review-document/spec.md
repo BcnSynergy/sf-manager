@@ -273,7 +273,9 @@ appear anywhere in the response.
 
 `GET /review-history/:sessionId/document/logo` MUST return the
 organization logo's bytes with its content type (`image/png`,
-`image/jpeg` or `image/webp`) and `Cache-Control: no-store`. It MUST be
+`image/jpeg`, `image/webp` or `image/svg+xml`), `Cache-Control: no-store`,
+`Content-Security-Policy: default-src 'none'; sandbox` and
+`X-Content-Type-Options: nosniff`, like the profile's logo read. It MUST be
 gated by `reviewSession:read` and MUST run the same scope check as the
 document read **before** reading the logo: it MUST be reachable if and
 only if the document read of the same session is reachable by the same

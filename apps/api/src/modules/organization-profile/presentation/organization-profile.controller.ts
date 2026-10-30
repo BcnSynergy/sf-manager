@@ -118,7 +118,12 @@ export class OrganizationProfileController {
   @Get('logo')
   @RequirePermission('organizationProfile:read')
   @Header('Cache-Control', 'no-store')
-  @ApiProduces('image/png', 'image/jpeg', 'image/webp')
+  // EN-109: an SVG logo can carry scripts. The sandbox keeps them from
+  // running if the URL is opened directly; nosniff keeps any logo from
+  // being read as another type.
+  @Header('Content-Security-Policy', "default-src 'none'; sandbox")
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiProduces('image/png', 'image/jpeg', 'image/webp', 'image/svg+xml')
   @ApiOkResponse({ description: 'The logo image.' })
   @ApiNotFoundResponse({ description: 'The organization has no logo.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
@@ -151,7 +156,7 @@ export class OrganizationProfileController {
   @ApiOkResponse({ type: OrganizationProfileResponseDto })
   @ApiBadRequestResponse({
     description:
-      'No file (LOGO_FILE_MISSING), not a PNG, JPEG or WebP image (LOGO_UNSUPPORTED_FORMAT), or a malformed form: the file in another field, a second file, a text field or a multipart type other than form-data (LOGO_UPLOAD_INVALID).',
+      'No file (LOGO_FILE_MISSING), not a PNG, JPEG, WebP or SVG image (LOGO_UNSUPPORTED_FORMAT), or a malformed form: the file in another field, a second file, a text field or a multipart type other than form-data (LOGO_UPLOAD_INVALID).',
   })
   @ApiPayloadTooLargeResponse({ description: 'The file is over 2 MiB.' })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })

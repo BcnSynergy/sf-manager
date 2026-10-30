@@ -68,12 +68,12 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     );
   });
 
-  it('only accepts PNG, JPEG and WebP in the file picker', () => {
+  it('only accepts PNG, JPEG, WebP and SVG in the file picker (EN-109)', () => {
     render(<OrganizationLogoSection hasLogo={false} />);
 
     expect(screen.getByTestId('organization-logo-input')).toHaveAttribute(
       'accept',
-      'image/png,image/jpeg,image/webp',
+      'image/png,image/jpeg,image/webp,image/svg+xml',
     );
   });
 
@@ -123,8 +123,18 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     await waitFor(() => expect(mockedUpload).toHaveBeenCalled());
   });
 
+  it('uploads an SVG (EN-109)', async () => {
+    mockedUpload.mockResolvedValue(profile);
+    render(<OrganizationLogoSection hasLogo={false} />);
+    const file = pngFile(10, 'image/svg+xml', 'logo.svg');
+
+    chooseFile(file);
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await waitFor(() => expect(mockedUpload).toHaveBeenCalledWith(file));
+  });
+
   it.each([
-    ['an SVG', 'image/svg+xml', 'logo.svg'],
     ['a GIF', 'image/gif', 'logo.gif'],
     ['a file of unknown type', '', 'logo'],
   ])('rejects %s before any request', (_name, type, name) => {
@@ -134,13 +144,16 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     expect(screen.getByTestId('organization-logo-error')).toHaveTextContent(
-      'The logo must be a PNG, JPEG or WebP image.',
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
     );
     expect(mockedUpload).not.toHaveBeenCalled();
   });
 
   it.each([
-    [new ApiError(400, 'LOGO_UNSUPPORTED_FORMAT'), 'The logo must be a PNG, JPEG or WebP image.'],
+    [
+      new ApiError(400, 'LOGO_UNSUPPORTED_FORMAT'),
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
+    ],
     [new ApiError(413), 'The logo must be 2 MB or smaller.'],
     [new ApiError(400, 'LOGO_FILE_MISSING'), 'Could not upload the logo. Please try again.'],
     [new ApiError(400, 'LOGO_UPLOAD_INVALID'), 'Could not upload the logo. Please try again.'],
@@ -170,7 +183,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
 
     expect(screen.getByRole('alert')).not.toBe(first);
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'The logo must be a PNG, JPEG or WebP image.',
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
     );
   });
 
