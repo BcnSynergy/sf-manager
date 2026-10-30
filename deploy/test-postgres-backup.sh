@@ -59,9 +59,9 @@ backup() {
 }
 sql() { docker exec "$p-db" psql -U u -d sfmanager -tAc "$1"; }
 db_value() { sql 'select v from t'; }
-# Names, owners, modes and contents of the uploaded files.
+# Names, owners, modes and contents of the uploaded files, /files included.
 files_state() {
-  run -c 'cd /files && find . -mindepth 1 -exec stat -c "%n %u:%g %a" {} + | sort &&
+  run -c 'cd /files && find . -exec stat -c "%n %u:%g %a" {} + | sort &&
     find . -type f -exec cat {} + | sort'
 }
 backups_list() { run -c 'ls -A /backups | sort'; }
@@ -86,9 +86,9 @@ until docker exec "$p-db" pg_isready -U u -d sfmanager -h localhost >/dev/null 2
   sleep 1
 done
 sql "create table t (v text); insert into t values ('before')" >/dev/null
-# The API's user (node, 1000) owns the uploaded files.
+# The API's user (node, 1000) owns the uploaded files and /files itself.
 run -c 'mkdir /files/logos && echo logo-a >/files/logos/a.png &&
-  chown -R 1000:1000 /files/logos && chmod 755 /files/logos &&
+  chown -R 1000:1000 /files && chmod 750 /files && chmod 755 /files/logos &&
   chmod 644 /files/logos/a.png'
 files_before=$(files_state)
 
@@ -109,7 +109,10 @@ pass "backup writes a dump and a files archive with the same stamp, mode 600"
 
 # --- Restore replaces the database and the uploaded files.
 sql "update t set v = 'after'" >/dev/null
-run -c 'rm /files/logos/a.png && echo logo-b >/files/logos/b.png'
+# /files changes owner and mode too, as on a new server where the backup
+# image created the volume, so the restore must bring back the archive's.
+run -c 'rm /files/logos/a.png && echo logo-b >/files/logos/b.png &&
+  chown 0:0 /files && chmod 711 /files'
 backup restore "$dump"
 [ "$status" = 0 ] || fail "restore exited $status"
 [ "$(db_value)" = before ] || fail "restore: database holds '$(db_value)', expected 'before'"
@@ -192,8 +195,16 @@ backup restore "$second.dump"
 [ "$status" = 0 ] || fail "restore over a leftover staging directory exited $status"
 [ "$(files_state)" = "$files_changed" ] ||
   fail "restore over a leftover staging directory left $(files_state), expected $files_changed"
+# An archive taken by hand (or before the exclusion) that holds one.
+run -c "cp -a /files /tmp/f && mkdir /tmp/f/.restore.partial &&
+  echo junk >/tmp/f/.restore.partial/x &&
+  tar -czf /backups/$second.files.tar.gz -C /tmp/f ." || fail "could not write the archive"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore of an archive holding a staging directory exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore of an archive holding a staging directory left $(files_state), expected $files_changed"
 run -c "rm /backups/$second.dump /backups/$second.files.tar.gz"
-pass "a leftover staging directory is neither archived nor kept by a restore"
+pass "a staging directory is neither archived, nor kept, nor restored from an archive"
 
 # --- A missing dump and a bad command fail.
 backup restore sfmanager-19700101T000000Z.dump

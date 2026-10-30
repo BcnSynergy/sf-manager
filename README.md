@@ -351,7 +351,9 @@ before anything changes. If the
 database restore fails, the database is left empty: do not start the API,
 fix the cause and restore again. If the archive cannot be extracted, for
 example because the disk is full, the database is restored but the
-uploaded files are left as they were: fix the cause and restore again.
+uploaded files are left as they were: fix the cause and restore again. The
+archive is extracted next to the current files before it replaces them, so
+the disk needs room for both while the restore runs.
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file prod.env stop api

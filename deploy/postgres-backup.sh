@@ -21,8 +21,8 @@
 # whose archiving failed) restores the database only and says so. A FILE that
 # is not a dump, or an archive that cannot be read, stops the restore before
 # anything changes; an archive that cannot be extracted (a full disk) leaves
-# the uploaded files as they were. Stop the API first. FILE is a name in /backups or an
-# absolute path.
+# the uploaded files as they were. Stop the API first. FILE is a name in
+# /backups or an absolute path.
 #
 # Each file is written under a temporary name and renamed when complete, so
 # a failed or interrupted backup never leaves a file that looks like one.
@@ -132,10 +132,12 @@ restore() {
   fi
   # Extracted beside the current files first, on the same volume, so a
   # failure such as a full disk leaves them as they were and the swap is
-  # only renames. Extracting as root keeps the files' owner, the API's user.
+  # only renames; it needs room for both sets meanwhile. Extracting as root
+  # keeps the files' owner, the API's user. The archive's ./ entry lands on
+  # the staging directory, so its owner and mode are copied to /files.
   rm -rf "$staging"
   mkdir "$staging"
-  if ! tar -xzf "$files_archive" -C "$staging"; then
+  if ! tar -xzf "$files_archive" --exclude="./$staging_name" -C "$staging"; then
     rm -rf "$staging"
     echo "backup: restoring the uploaded files failed, they are left as they" \
       "were; the database is restored, fix the cause and restore again" >&2
@@ -143,9 +145,12 @@ restore() {
   fi
   if ! find "$files_dir" -mindepth 1 -maxdepth 1 ! -name "$staging_name" -exec rm -rf {} + ||
     ! find "$staging" -mindepth 1 -maxdepth 1 -exec mv {} "$files_dir/" \; ||
+    ! chown "$(stat -c %u:%g "$staging")" "$files_dir" ||
+    ! chmod "$(stat -c %a "$staging")" "$files_dir" ||
     ! rmdir "$staging"; then
-    echo "backup: swapping in the restored uploaded files failed; the database" \
-      "is restored, fix the cause and restore again" >&2
+    echo "backup: swapping in the restored uploaded files failed, so they may" \
+      "be partly replaced, with the rest in $staging; the database is" \
+      "restored, fix the cause and restore again" >&2
     exit 1
   fi
   echo "backup: restored $(basename "$files_archive") into the uploaded files"
