@@ -282,9 +282,11 @@ throwaway secrets and fails unless `/api/health` reports the database ok,
 the web app answers 200, the API can write uploaded files, the backup
 service writes a dump and a files archive, the off-site copy service,
 unconfigured, says it is disabled, and a dump taken before the newest
-migration restores and the API then applies that migration. Run it locally
-from the repository root with `sh deploy/smoke-test.sh` (ports 80 and 443
-must be free; it uses its own Compose project and removes it afterwards).
+migration restores, with its uploaded files, and the API then applies that
+migration. Run it locally from the repository root with
+`sh deploy/smoke-test.sh` (ports 80 and 443 must be free; it uses its own
+Compose project, keeps its backups in a volume instead of `backups/`, and
+removes both afterwards).
 
 Before that, CI runs `shellcheck deploy/*.sh` and tests the backup and
 off-site copy scripts against throwaway containers, with their own network
@@ -347,7 +349,11 @@ database only and leaves the files as they are. A file that is not a dump,
 such as an archive, or an archive that cannot be read stops the restore
 before anything changes. If the
 database restore fails, the database is left empty: do not start the API,
-fix the cause and restore again.
+fix the cause and restore again. If the archive cannot be extracted, for
+example because the disk is full, the database is restored but the
+uploaded files are left as they were: fix the cause and restore again. The
+archive is extracted next to the current files before it replaces them, so
+the disk needs room for both while the restore runs.
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file prod.env stop api

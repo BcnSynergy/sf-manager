@@ -59,9 +59,9 @@ backup() {
 }
 sql() { docker exec "$p-db" psql -U u -d sfmanager -tAc "$1"; }
 db_value() { sql 'select v from t'; }
-# Names, owners, modes and contents of the uploaded files.
+# Names, owners, modes and contents of the uploaded files, /files included.
 files_state() {
-  run -c 'cd /files && find . -mindepth 1 -exec stat -c "%n %u:%g %a" {} + | sort &&
+  run -c 'cd /files && find . -exec stat -c "%n %u:%g %a" {} + | sort &&
     find . -type f -exec cat {} + | sort'
 }
 backups_list() { run -c 'ls -A /backups | sort'; }
@@ -86,9 +86,9 @@ until docker exec "$p-db" pg_isready -U u -d sfmanager -h localhost >/dev/null 2
   sleep 1
 done
 sql "create table t (v text); insert into t values ('before')" >/dev/null
-# The API's user (node, 1000) owns the uploaded files.
+# The API's user (node, 1000) owns the uploaded files and /files itself.
 run -c 'mkdir /files/logos && echo logo-a >/files/logos/a.png &&
-  chown -R 1000:1000 /files/logos && chmod 755 /files/logos &&
+  chown -R 1000:1000 /files && chmod 750 /files && chmod 755 /files/logos &&
   chmod 644 /files/logos/a.png'
 files_before=$(files_state)
 
@@ -109,7 +109,10 @@ pass "backup writes a dump and a files archive with the same stamp, mode 600"
 
 # --- Restore replaces the database and the uploaded files.
 sql "update t set v = 'after'" >/dev/null
-run -c 'rm /files/logos/a.png && echo logo-b >/files/logos/b.png'
+# /files changes owner and mode too, as on a new server where the backup
+# image created the volume, so the restore must bring back the archive's.
+run -c 'rm /files/logos/a.png && echo logo-b >/files/logos/b.png &&
+  chown 0:0 /files && chmod 711 /files'
 backup restore "$dump"
 [ "$status" = 0 ] || fail "restore exited $status"
 [ "$(db_value)" = before ] || fail "restore: database holds '$(db_value)', expected 'before'"
@@ -148,6 +151,82 @@ expect_out "no $archive for this dump, uploaded files left as they are" "restore
 [ "$(db_value)" = before ] || fail "restore without an archive did not restore the database"
 [ "$(files_state)" = "$files_changed" ] || fail "restore without an archive changed the uploaded files"
 pass "a dump without an archive restores the database only and says so"
+
+# --- A files archive that cannot be extracted leaves the uploaded files as
+# they were (EN-117). Here /files is a 1 MiB tmpfs and the archive holds
+# 2 MB of random data, so extracting it runs out of space, as on a full
+# disk.
+big=sfmanager-29990101T000000Z
+run -c "cp /backups/$dump /backups/$big.dump && mkdir /tmp/big &&
+  head -c 2000000 /dev/urandom >/tmp/big/big.bin &&
+  tar -czf /backups/$big.files.tar.gz -C /tmp/big ." || fail "could not write the large archive"
+sql "update t set v = 'changed'" >/dev/null
+status=0
+# shellcheck disable=SC2016 # expanded in the container
+out=$(docker run --rm -i --network "$p" -e PGHOST="$p-db" -e PGUSER=u -e PGPASSWORD=p \
+  -e PGDATABASE=sfmanager --tmpfs /files:size=1m -v "$p-backups:/backups" \
+  -v "$p-script:/s:ro" --entrypoint /bin/sh "$image" -c '
+  state() { (cd /files && find . -mindepth 1 -exec stat -c "%n %u:%g %a" {} + | sort &&
+    cat logos/a.png); }
+  mkdir /files/logos && echo logo-a >/files/logos/a.png && chown -R 1000:1000 /files/logos &&
+    before=$(state) || exit 2
+  sh /s/postgres-backup.sh restore "$0"
+  status=$?
+  [ "$(state)" = "$before" ] || { echo "uploaded files now: $(state)"; exit 3; }
+  exit "$status"' "$big.dump" 2>&1) || status=$?
+[ "$status" = 1 ] ||
+  fail "restore with an archive that does not fit exited $status, expected 1 with the files unchanged"
+expect_out "restoring the uploaded files failed, they are left as they were" \
+  "restore with an archive that does not fit"
+[ "$(db_value)" = before ] ||
+  fail "restore with an archive that does not fit left the database at '$(db_value)'"
+run -c "rm /backups/$big.dump /backups/$big.files.tar.gz"
+pass "a files archive that cannot be extracted leaves the uploaded files as they were"
+
+# --- A restore's leftover staging directory is neither archived nor kept.
+run -c 'mkdir /files/.restore.partial && echo junk >/files/.restore.partial/x'
+backup once
+[ "$status" = 0 ] || fail "backup with a leftover staging directory exited $status"
+second=$(printf '%s\n' "$out" | sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\)\.dump.*/\1/p')
+[ -n "$second" ] || fail "backup with a leftover staging directory wrote no dump"
+run -c "tar -tzf /backups/$second.files.tar.gz" | grep -q restore.partial &&
+  fail "the files archive holds the leftover staging directory"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore over a leftover staging directory exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore over a leftover staging directory left $(files_state), expected $files_changed"
+# An archive taken by hand (or before the exclusion) that holds one.
+run -c "cp -a /files /tmp/f && mkdir /tmp/f/.restore.partial &&
+  echo junk >/tmp/f/.restore.partial/x &&
+  tar -czf /backups/$second.files.tar.gz -C /tmp/f ." || fail "could not write the archive"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore of an archive holding a staging directory exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore of an archive holding a staging directory left $(files_state), expected $files_changed"
+
+# A swap that fails halfway (here logos/ is a mount point, so it cannot be
+# replaced) is reported, leaves /files's owner and mode alone, and a later
+# restore recovers.
+status=0
+# shellcheck disable=SC2016 # expanded in the container
+out=$(docker run --rm -i --network "$p" -e PGHOST="$p-db" -e PGUSER=u -e PGPASSWORD=p \
+  -e PGDATABASE=sfmanager -v "$p-files:/files" --tmpfs /files/logos \
+  -v "$p-backups:/backups" -v "$p-script:/s:ro" --entrypoint /bin/sh "$image" -c '
+  chown 0:0 /files && chmod 711 /files
+  sh /s/postgres-backup.sh restore "$0"
+  status=$?
+  [ "$(stat -c "%u:%g %a" /files)" = "0:0 711" ] ||
+    { echo "/files is now $(stat -c "%u:%g %a" /files)"; exit 3; }
+  exit "$status"' "$second.dump" 2>&1) || status=$?
+[ "$status" = 1 ] || fail "restore with a failing swap exited $status, expected 1"
+expect_out "swapping in the restored uploaded files failed" "restore with a failing swap"
+backup restore "$second.dump"
+[ "$status" = 0 ] || fail "restore after a failed swap exited $status"
+[ "$(files_state)" = "$files_changed" ] ||
+  fail "restore after a failed swap left $(files_state), expected $files_changed"
+pass "a failed swap is reported, leaves /files's owner and mode, and a new restore recovers"
+run -c "rm /backups/$second.dump /backups/$second.files.tar.gz"
+pass "a staging directory is neither archived, nor kept, nor restored from an archive"
 
 # --- A missing dump and a bad command fail.
 backup restore sfmanager-19700101T000000Z.dump

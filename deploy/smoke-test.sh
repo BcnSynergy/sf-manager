@@ -6,19 +6,32 @@
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), and that a dump taken before the
-# newest migration restores and the API then applies that migration
-# (EN-105), then removes the stack and its volumes. CI runs it on every PR
-# and push to main; run it from the repository root:
+# newest migration restores, with its uploaded files, and the API then
+# applies that migration (EN-105, EN-120), then removes the stack and its
+# volumes. CI runs it on every PR and push to main; run it from the
+# repository root:
 #
 #   sh deploy/smoke-test.sh
 #
 # Ports 80 and 443 must be free. It uses its own Compose project and
-# volumes, but the backup service's bind mount is the checkout's backups/,
-# so its dump and archive land next to a production stack's backups in the
-# same checkout.
+# volumes, and a Compose override puts backups in a volume instead of the
+# checkout's backups/, so nothing lands next to a real stack's backups
+# (EN-119).
 set -eu
 
 project=sf-manager-smoke
+override=$(mktemp)
+cat >"$override" <<'EOF'
+services:
+  backup:
+    volumes:
+      - smoke-backups:/backups
+  offsite:
+    volumes:
+      - smoke-backups:/backups
+volumes:
+  smoke-backups:
+EOF
 env_file=$(mktemp)
 cat >"$env_file" <<EOF
 SITE_ADDRESS=localhost
@@ -29,12 +42,13 @@ JWT_SECRET=$(openssl rand -hex 32)
 EOF
 
 compose() {
-  docker compose -p "$project" -f docker-compose.prod.yml --env-file "$env_file" "$@"
+  docker compose -p "$project" -f docker-compose.prod.yml -f "$override" \
+    --env-file "$env_file" "$@"
 }
 
 cleanup() {
   compose down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$env_file"
+  rm -f "$env_file" "$override"
 }
 trap cleanup EXIT
 # dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
@@ -104,10 +118,11 @@ if [ -z "$offsite" ] || [ "$(docker inspect -f '{{.State.Running}}' "$offsite")"
 fi
 echo "smoke: offsite service disabled and idle"
 
-# A dump taken on an older version restores, and the API then applies the
-# newer migrations (spec `deployment`, "Restore"). The database is rebuilt
-# without the newest migration by a one-off API container whose copy of
-# the migrations lacks it; the image itself is unchanged.
+# A dump taken on an older version restores, with its uploaded files, and
+# the API then applies the newer migrations (spec `deployment`, "Restore").
+# The database is rebuilt without the newest migration by a one-off API
+# container whose copy of the migrations lacks it; the image itself is
+# unchanged.
 sql() {
   compose exec -T postgres psql -U smoke -d sfmanager -tAc "$1"
 }
@@ -127,6 +142,10 @@ compose run --rm --no-deps -T -u root api sh -c 'for m in prisma/migrations/2*; 
 [ "$(applied)" = $((migrations - 1)) ] ||
   fail "expected $((migrations - 1)) migrations before the dump, found $(applied)"
 sql "create table smoke_marker (v text); insert into smoke_marker values ('from-dump')" >/dev/null
+# Written as the API's user, so the restore must keep that owner (EN-120).
+# shellcheck disable=SC2016 # expanded in the container
+compose run --rm --no-deps -T api sh -c 'echo from-dump >"$FILE_STORAGE_DIR/smoke-marker"' ||
+  fail "could not write the uploaded-file marker"
 # The README's commands, so they are checked too.
 backup=$(compose run --rm -T backup once) || fail "backup once failed on the older database"
 dump=$(printf '%s\n' "$backup" | sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\.dump\).*/\1/p')
@@ -134,6 +153,9 @@ dump=$(printf '%s\n' "$backup" | sed -n 's/^backup: wrote \(sfmanager-[0-9TZ]*\.
 compose start api >/dev/null 2>&1 || fail "could not start the API"
 wait_healthy "after the dump"
 sql 'drop table smoke_marker' >/dev/null
+# shellcheck disable=SC2016 # expanded in the container
+compose exec -T api sh -c 'echo changed >"$FILE_STORAGE_DIR/smoke-marker"' ||
+  fail "could not change the uploaded-file marker"
 compose stop api >/dev/null 2>&1 || fail "could not stop the API"
 compose run --rm -T backup restore "$dump" >/dev/null ||
   fail "restoring $dump failed"
@@ -145,4 +167,9 @@ wait_healthy "after the restore"
   fail "after the restore, the API applied $(applied) of $migrations migrations"
 [ "$(sql 'select v from smoke_marker')" = from-dump ] ||
   fail "the restored database lacks the dump's data"
-echo "smoke: a dump from before the newest migration restores and the API migrates it"
+# shellcheck disable=SC2016 # expanded in the container
+marker=$(compose exec -T api sh -c 'm="$FILE_STORAGE_DIR/smoke-marker" && [ -O "$m" ] && cat "$m"') ||
+  marker=''
+[ "$marker" = from-dump ] ||
+  fail "the restored uploaded files lack the dump's marker owned by the API's user (got '$marker')"
+echo "smoke: a dump from before the newest migration restores with its uploaded files and the API migrates it"
