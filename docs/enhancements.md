@@ -699,6 +699,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `apps/api/src/modules/organization-profile/presentation/`. Origin:
   `en-115-logo-interceptor` (PR #304) pre-push review, 2026-10-30.
 
+- **EN-123** (deploy): `restore` copies the owner and mode of the archive's
+  `./` entry to `/files`, and excludes `./.restore.partial` from it. Both
+  assume the archive was made like the script's own (`tar -C /files .`).
+  An archive built by hand without that root entry would set `/files` to
+  root, mode 755, so the API could no longer write there, and one without
+  the `./` prefix would keep a `.restore.partial` it holds. Checking for the
+  root entry first would close it, if hand-made archives ever become a
+  documented input. Evidence: `deploy/postgres-backup.sh` (`restore`).
+  Origin: `en-117-restore-files` (PR #TBD) pre-push review recheck,
+  2026-10-30.
+
 ## Done
 
 - **EN-117** (deploy): `restore` extracts the files archive into
