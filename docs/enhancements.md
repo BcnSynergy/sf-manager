@@ -662,12 +662,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
   before every merge, and their titles do not follow `PR N/M`). Origin:
   `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
-- **EN-109** (feature): accept SVG organization logos. Rejected today
-  because an SVG can carry scripts that run when its URL is opened
-  directly; accepting it needs sanitizing on upload, or serving it with a
-  `sandbox` Content Security Policy, plus checking that print and the
-  letterhead render it. Evidence: `apps/api/src/modules/organization-profile/domain/organization-logo.ts`.
-  Origin: `organization-logo` (S2), 2026-10-26.
 - **EN-118** (deploy): `offsite-copy.sh pull` overwrites a local backup of
   the same name with the bucket's copy, because it does not use
   `--ignore-existing` the way the upload does. Kept on purpose: when
@@ -704,7 +698,26 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-117-restore-files` (PR #305) pre-push review recheck,
   2026-10-30.
 
+- **EN-124** (API): SVG logo detection treats JavaScript whitespace (`\s`
+  and `trimStart`, which include U+00A0, U+2028 and U+FEFF) as whitespace,
+  where XML allows only space, tab, CR and LF, so a root tag strict XML
+  calls malformed can pass. Harmless, since every logo is served
+  sandboxed and shown through `<img>`; matching XML's whitespace would make
+  the check exact. Evidence:
+  `apps/api/src/modules/organization-profile/domain/organization-logo.ts`
+  (`isSvg`). Origin: `en-109-svg-logos` (PR #307) pre-push review recheck,
+  2026-10-30.
+
 ## Done
+
+- **EN-109** (feature): SVG organization logos are accepted. A file counts
+  as SVG when it is UTF-8 text with an `<svg>` root in the SVG namespace
+  and no DOCTYPE or entity declaration. It is stored as uploaded, and both
+  logo reads serve every logo with
+  `Content-Security-Policy: default-src 'none'; sandbox` and
+  `X-Content-Type-Options: nosniff`, so a script in it never runs; pages
+  show it through `<img>`. The file picker offers SVG. Done in
+  `en-109-svg-logos` (PR #307), 2026-10-30.
 
 - **EN-113** (tests): `organization-profile.module.spec.ts` now proves
   that `ORGANIZATION_LOGO_READER` resolves to the same

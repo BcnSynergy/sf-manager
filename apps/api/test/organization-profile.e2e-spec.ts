@@ -133,6 +133,12 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
 const PNG_BYTES = pngHeader();
 const JPEG_BYTES = jpegHeader();
 const WEBP_BYTES = webpLossyHeader();
+// EN-109: a script in an SVG is stored as uploaded; the read's sandbox
+// policy keeps it from running.
+const SVG_BYTES = Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">' +
+    '<script>alert(1)</script><rect width="10" height="10"/></svg>',
+);
 
 async function loginAgent(app: INestApplication<App>, email: string) {
   const agent = request.agent(app.getHttpServer());
@@ -634,8 +640,9 @@ describe('Organization Profile (e2e)', () => {
       ['PNG', PNG_BYTES, 'logo.png', 'image/png'],
       ['JPEG', JPEG_BYTES, 'logo.jpg', 'image/jpeg'],
       ['WebP', WEBP_BYTES, 'logo.webp', 'image/webp'],
+      ['SVG', SVG_BYTES, 'logo.svg', 'image/svg+xml'],
     ])(
-      'uploads a %s logo and reads it back with its content type (spec: A PNG, JPEG or WebP logo is stored)',
+      'uploads a %s logo and reads it back with its content type (spec: A PNG, JPEG, WebP or SVG logo is stored)',
       async (_name, bytes, filename, contentType) => {
         const agent = await loginAgent(app, adminEmail);
 
@@ -649,6 +656,10 @@ describe('Organization Profile (e2e)', () => {
         const logo = await agent.get('/organization-profile/logo').expect(200);
         expect(logo.headers['content-type']).toBe(contentType);
         expect(logo.headers['cache-control']).toBe('no-store');
+        expect(logo.headers['content-security-policy']).toBe(
+          "default-src 'none'; sandbox",
+        );
+        expect(logo.headers['x-content-type-options']).toBe('nosniff');
         expect(Buffer.from(logo.body as Buffer)).toEqual(bytes);
 
         const profile = await agent.get('/organization-profile').expect(200);
@@ -723,9 +734,10 @@ describe('Organization Profile (e2e)', () => {
     });
 
     it.each([
+      // EN-109: an SVG root must be in the SVG namespace.
       [
-        'an SVG',
-        Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+        'an SVG without the SVG namespace',
+        Buffer.from('<svg width="10" height="10"/>'),
         'logo.svg',
         'image/svg+xml',
       ],
@@ -764,7 +776,7 @@ describe('Organization Profile (e2e)', () => {
       },
     );
 
-    it('accepts a file of exactly 2 MiB (spec: A PNG, JPEG or WebP logo is stored)', async () => {
+    it('accepts a file of exactly 2 MiB (spec: A PNG, JPEG, WebP or SVG logo is stored)', async () => {
       const agent = await loginAgent(app, adminEmail);
       const atLimit = Buffer.concat([
         PNG_BYTES,

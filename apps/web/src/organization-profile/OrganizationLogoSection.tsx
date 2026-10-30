@@ -15,7 +15,7 @@ import { useAlertMessage } from '../components/use-alert-message';
 // obviously wrong file never costs a request. The API still decides by the
 // file's content, so a mislabelled file is caught there.
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
 
 const HTTP_PAYLOAD_TOO_LARGE = 413;
 const UNSUPPORTED_FORMAT: OrganizationProfileErrorCode = 'LOGO_UNSUPPORTED_FORMAT';

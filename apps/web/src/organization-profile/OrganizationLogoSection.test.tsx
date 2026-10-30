@@ -23,7 +23,7 @@ const profile = {
   hasLogo: true,
 };
 
-function pngFile(size = 10, type = 'image/png', name = 'logo.png'): File {
+function logoFile(size = 10, type = 'image/png', name = 'logo.png'): File {
   return new File([new Uint8Array(size)], name, { type });
 }
 
@@ -68,12 +68,12 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     );
   });
 
-  it('only accepts PNG, JPEG and WebP in the file picker', () => {
+  it('only accepts PNG, JPEG, WebP and SVG in the file picker (EN-109)', () => {
     render(<OrganizationLogoSection hasLogo={false} />);
 
     expect(screen.getByTestId('organization-logo-input')).toHaveAttribute(
       'accept',
-      'image/png,image/jpeg,image/webp',
+      'image/png,image/jpeg,image/webp,image/svg+xml',
     );
   });
 
@@ -81,14 +81,14 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     render(<OrganizationLogoSection hasLogo={false} />);
 
     expect(screen.getByTestId('organization-logo-upload')).toBeDisabled();
-    chooseFile(pngFile());
+    chooseFile(logoFile());
     expect(screen.getByTestId('organization-logo-upload')).toBeEnabled();
   });
 
   it('uploads the chosen file, confirms it and reloads the preview', async () => {
     mockedUpload.mockResolvedValue(profile);
     render(<OrganizationLogoSection hasLogo={false} />);
-    const file = pngFile();
+    const file = logoFile();
 
     chooseFile(file);
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
@@ -104,7 +104,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
   it('rejects a file over 2 MB before any request', () => {
     render(<OrganizationLogoSection hasLogo={false} />);
 
-    chooseFile(pngFile(2 * 1024 * 1024 + 1));
+    chooseFile(logoFile(2 * 1024 * 1024 + 1));
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     expect(screen.getByTestId('organization-logo-error')).toHaveTextContent(
@@ -117,30 +117,43 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     mockedUpload.mockResolvedValue(profile);
     render(<OrganizationLogoSection hasLogo={false} />);
 
-    chooseFile(pngFile(2 * 1024 * 1024));
+    chooseFile(logoFile(2 * 1024 * 1024));
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     await waitFor(() => expect(mockedUpload).toHaveBeenCalled());
   });
 
+  it('uploads an SVG (EN-109)', async () => {
+    mockedUpload.mockResolvedValue(profile);
+    render(<OrganizationLogoSection hasLogo={false} />);
+    const file = logoFile(10, 'image/svg+xml', 'logo.svg');
+
+    chooseFile(file);
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await waitFor(() => expect(mockedUpload).toHaveBeenCalledWith(file));
+  });
+
   it.each([
-    ['an SVG', 'image/svg+xml', 'logo.svg'],
     ['a GIF', 'image/gif', 'logo.gif'],
     ['a file of unknown type', '', 'logo'],
   ])('rejects %s before any request', (_name, type, name) => {
     render(<OrganizationLogoSection hasLogo={false} />);
 
-    chooseFile(pngFile(10, type, name));
+    chooseFile(logoFile(10, type, name));
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     expect(screen.getByTestId('organization-logo-error')).toHaveTextContent(
-      'The logo must be a PNG, JPEG or WebP image.',
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
     );
     expect(mockedUpload).not.toHaveBeenCalled();
   });
 
   it.each([
-    [new ApiError(400, 'LOGO_UNSUPPORTED_FORMAT'), 'The logo must be a PNG, JPEG or WebP image.'],
+    [
+      new ApiError(400, 'LOGO_UNSUPPORTED_FORMAT'),
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
+    ],
     [new ApiError(413), 'The logo must be 2 MB or smaller.'],
     [new ApiError(400, 'LOGO_FILE_MISSING'), 'Could not upload the logo. Please try again.'],
     [new ApiError(400, 'LOGO_UPLOAD_INVALID'), 'Could not upload the logo. Please try again.'],
@@ -152,7 +165,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
       mockedUpload.mockRejectedValue(error);
       render(<OrganizationLogoSection hasLogo />);
 
-      chooseFile(pngFile());
+      chooseFile(logoFile());
       fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
       expect(await screen.findByTestId('organization-logo-error')).toHaveTextContent(message);
@@ -162,7 +175,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
 
   it('announces a repeated rejection again, as a new role="alert" element (web-alert-announcements)', () => {
     render(<OrganizationLogoSection hasLogo={false} />);
-    chooseFile(pngFile(10, 'image/gif', 'logo.gif'));
+    chooseFile(logoFile(10, 'image/gif', 'logo.gif'));
 
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
     const first = screen.getByRole('alert');
@@ -170,7 +183,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
 
     expect(screen.getByRole('alert')).not.toBe(first);
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'The logo must be a PNG, JPEG or WebP image.',
+      'The logo must be a PNG, JPEG, WebP or SVG image.',
     );
   });
 
@@ -178,7 +191,7 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     mockedUpload.mockReturnValue(new Promise(() => {}));
     render(<OrganizationLogoSection hasLogo={false} />);
 
-    chooseFile(pngFile());
+    chooseFile(logoFile());
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     expect(screen.getByTestId('organization-logo-input')).toBeDisabled();
@@ -188,11 +201,11 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
   it('clears a previous confirmation when another file is chosen', async () => {
     mockedUpload.mockResolvedValue(profile);
     render(<OrganizationLogoSection hasLogo={false} />);
-    chooseFile(pngFile());
+    chooseFile(logoFile());
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
     await screen.findByTestId('organization-logo-success');
 
-    chooseFile(pngFile());
+    chooseFile(logoFile());
 
     expect(screen.queryByTestId('organization-logo-success')).not.toBeInTheDocument();
   });
@@ -282,7 +295,7 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
   it('disables upload and remove while a removal is in flight', () => {
     mockedRemove.mockReturnValue(new Promise(() => {}));
     render(<OrganizationLogoSection hasLogo />);
-    chooseFile(pngFile());
+    chooseFile(logoFile());
     expect(screen.getByTestId('organization-logo-upload')).toBeEnabled();
 
     fireEvent.click(screen.getByTestId('organization-logo-remove'));
@@ -296,7 +309,7 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
   it('disables remove while an upload is in flight', () => {
     mockedUpload.mockReturnValue(new Promise(() => {}));
     render(<OrganizationLogoSection hasLogo />);
-    chooseFile(pngFile());
+    chooseFile(logoFile());
 
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 

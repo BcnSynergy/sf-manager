@@ -150,8 +150,26 @@ export class ReviewHistoryController {
   @Get('review-history/:sessionId/document/logo')
   @RequirePermission('reviewSession:read')
   @Header('Cache-Control', 'no-store')
-  @ApiProduces('image/png', 'image/jpeg', 'image/webp')
-  @ApiOkResponse({ description: 'The organization logo.' })
+  // EN-109: an SVG logo can carry scripts. The sandbox keeps them from
+  // running if the URL is opened directly; nosniff keeps any logo from
+  // being read as another type.
+  @Header('Content-Security-Policy', "default-src 'none'; sandbox")
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiProduces('image/png', 'image/jpeg', 'image/webp', 'image/svg+xml')
+  @ApiOkResponse({
+    description: 'The organization logo.',
+    headers: {
+      'Content-Security-Policy': {
+        description:
+          "default-src 'none'; sandbox, so a script in an SVG logo never runs (EN-109).",
+        schema: { type: 'string' },
+      },
+      'X-Content-Type-Options': {
+        description: 'nosniff',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
   @ApiBadRequestResponse({

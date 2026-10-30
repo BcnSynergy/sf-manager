@@ -85,11 +85,100 @@ describe('organization logo (organization-logo S2)', () => {
     expect(detectLogoFormat(progressive)?.extension).toBe('jpg');
   });
 
+  // EN-109: UTF-8 text whose root element is an SVG <svg>, after an
+  // optional XML declaration, comments and whitespace.
   it.each([
+    ['a bare SVG root', '<svg xmlns="http://www.w3.org/2000/svg"/>'],
     [
-      'an SVG document',
-      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+      'an SVG with an XML declaration, a comment and content',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<!-- logo -->\n' +
+        "<svg width='10' height='10' xmlns='http://www.w3.org/2000/svg'>" +
+        '<rect width="10" height="10"/></svg>',
     ],
+    [
+      'an SVG with a byte order mark and the namespace on a later line',
+      '\uFEFF<svg\n  viewBox="0 0 10 10"\n  xmlns="http://www.w3.org/2000/svg">\n</svg>',
+    ],
+    [
+      'an SVG with a > inside an attribute value',
+      '<svg data-note="a>b" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'an SVG with spaces around the namespace and other xmlns attributes',
+      "<svg xmlns:xlink='http://www.w3.org/1999/xlink' xmlns = 'http://www.w3.org/2000/svg' ></svg>",
+    ],
+    [
+      'an SVG that carries a script (served sandboxed)',
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    ],
+  ])('detects %s as SVG', (_name, text) => {
+    expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toEqual({
+      extension: 'svg',
+      contentType: 'image/svg+xml',
+    });
+  });
+
+  it.each([
+    ['an SVG root without the SVG namespace', '<svg width="10" height="10"/>'],
+    [
+      'an SVG root in another namespace',
+      '<svg xmlns="http://www.w3.org/1999/xhtml"/>',
+    ],
+    [
+      'an HTML page holding an SVG',
+      '<html><body><svg xmlns="http://www.w3.org/2000/svg"/></body></html>',
+    ],
+    [
+      'an SVG with a DOCTYPE',
+      '<!DOCTYPE svg><svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'an SVG declaring an entity',
+      '<svg xmlns="http://www.w3.org/2000/svg"><!ENTITY a "b"></svg>',
+    ],
+    [
+      'an SVG namespace only inside a comment',
+      '<!-- xmlns="http://www.w3.org/2000/svg" --><svg/>',
+    ],
+    [
+      'an unterminated comment',
+      '<!-- <svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    ['an element named svgx', '<svgx xmlns="http://www.w3.org/2000/svg"/>'],
+    [
+      'an SVG namespace only inside another attribute value',
+      `<svg data-note="x xmlns='http://www.w3.org/2000/svg'"/>`,
+    ],
+    [
+      'an SVG with two xmlns attributes',
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    ['an unterminated root tag', '<svg xmlns="http://www.w3.org/2000/svg"'],
+    [
+      'an attribute value without quotes',
+      '<svg xmlns=http://www.w3.org/2000/svg/>',
+    ],
+    // Only the XML declaration may precede the root, not a stylesheet.
+    [
+      'a stylesheet processing instruction before the root',
+      '<?xml-stylesheet href="logo.css"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    ['plain text', 'svg xmlns="http://www.w3.org/2000/svg"'],
+  ])('rejects %s', (_name, text) => {
+    expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toBeNull();
+  });
+
+  it('rejects an SVG that is not valid UTF-8', () => {
+    const content = Buffer.concat([
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg">'),
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from('</svg>'),
+    ]);
+
+    expect(detectLogoFormat(content)).toBeNull();
+  });
+
+  it.each([
     ['a GIF', Buffer.from('GIF89a\x01\x00')],
     [
       'a RIFF file that is not WebP',
@@ -163,12 +252,13 @@ describe('organization logo (organization-logo S2)', () => {
     ['logos/0192.png', 'image/png'],
     ['logos/0192.jpg', 'image/jpeg'],
     ['logos/0192.webp', 'image/webp'],
+    ['logos/0192.svg', 'image/svg+xml'],
   ])('derives the content type of %s from its key', (key, contentType) => {
     expect(logoContentTypeForKey(key)).toBe(contentType);
   });
 
   it('derives no content type from a key with an unknown extension', () => {
-    expect(logoContentTypeForKey('logos/0192.svg')).toBeNull();
+    expect(logoContentTypeForKey('logos/0192.gif')).toBeNull();
   });
 
   it('derives no content type from a key without an extension', () => {

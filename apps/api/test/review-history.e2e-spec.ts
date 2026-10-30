@@ -4409,9 +4409,36 @@ describe('Review History (e2e)', () => {
       const logo = await agent.get(logoPath(completedSessionId)).expect(200);
       expect(logo.headers['content-type']).toBe('image/png');
       expect(logo.headers['cache-control']).toBe('no-store');
+      // EN-109: the same sandbox as the profile's logo read.
+      expect(logo.headers['content-security-policy']).toBe(
+        "default-src 'none'; sandbox",
+      );
+      expect(logo.headers['x-content-type-options']).toBe('nosniff');
       expect(Buffer.from(logo.body as Buffer)).toEqual(PNG_BYTES);
 
       await agent.get('/organization-profile/logo').expect(403);
+    });
+
+    it('serves an SVG logo as image/svg+xml, sandboxed (EN-109)', async () => {
+      const svgKey = 'logos/01997a00-0000-7000-8000-0000000000ab.svg';
+      const svgBytes = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+      );
+      await built.fileStorage.put(svgKey, svgBytes);
+      await built.organizationProfileRepository.setLogoAssetId(svgKey);
+      try {
+        const agent = await loginAgent(built.app, technicianUEmail);
+
+        const logo = await agent.get(logoPath(completedSessionId)).expect(200);
+        expect(logo.headers['content-type']).toBe('image/svg+xml');
+        expect(logo.headers['content-security-policy']).toBe(
+          "default-src 'none'; sandbox",
+        );
+        expect(logo.headers['x-content-type-options']).toBe('nosniff');
+        expect(Buffer.from(logo.body as Buffer)).toEqual(svgBytes);
+      } finally {
+        await built.organizationProfileRepository.setLogoAssetId(LOGO_KEY);
+      }
     });
 
     it.each([

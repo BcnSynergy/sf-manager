@@ -1,8 +1,11 @@
-// organization-logo S2: the logo is a PNG, JPEG or WebP image of at most
-// 2 MiB. The format is decided by the file's content, never by its name or
-// the declared content type. SVG is deliberately not accepted: it can carry
-// scripts, and serving it safely needs sanitizing (see the register entry
-// that defers it).
+// organization-logo S2: the logo is a PNG, JPEG, WebP or SVG image of at
+// most 2 MiB. The format is decided by the file's content, never by its name
+// or the declared content type.
+//
+// EN-109: an SVG can carry scripts. It is stored as uploaded, and every logo
+// response is sent with a `sandbox` Content Security Policy, so nothing in
+// it runs even when its URL is opened directly; pages show it through
+// <img>, where scripts never run.
 //
 // EN-111: a signature alone is not enough. The content must also carry the
 // format's image header with a width and height above zero: PNG's IHDR
@@ -11,13 +14,14 @@
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 export interface LogoFormat {
-  extension: 'png' | 'jpg' | 'webp';
-  contentType: 'image/png' | 'image/jpeg' | 'image/webp';
+  extension: 'png' | 'jpg' | 'webp' | 'svg';
+  contentType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/svg+xml';
 }
 
 const PNG: LogoFormat = { extension: 'png', contentType: 'image/png' };
 const JPEG: LogoFormat = { extension: 'jpg', contentType: 'image/jpeg' };
 const WEBP: LogoFormat = { extension: 'webp', contentType: 'image/webp' };
+const SVG: LogoFormat = { extension: 'svg', contentType: 'image/svg+xml' };
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const JPEG_SOI = [0xff, 0xd8];
@@ -134,10 +138,76 @@ function isWebp(content: Uint8Array): boolean {
   return false;
 }
 
+const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+const WHITESPACE = /\s/;
+
+// Reads the `<svg` start tag at the start of `text` attribute by attribute
+// (a name, `=`, then a quoted value, which may hold `>`) and returns its
+// `xmlns` value. A malformed or unterminated tag, or a second `xmlns`,
+// returns null. One pass, so its cost stays linear in the input.
+function svgRootNamespace(text: string): string | null {
+  if (!/^<svg[\s/>]/.test(text)) return null;
+  let namespace: string | null = null;
+  let index = 4;
+  const skipWhitespace = () => {
+    while (index < text.length && WHITESPACE.test(text[index])) index++;
+  };
+  for (;;) {
+    skipWhitespace();
+    if (text[index] === '>' || text.startsWith('/>', index)) return namespace;
+    const nameStart = index;
+    while (index < text.length && !/[\s=/>]/.test(text[index])) index++;
+    const name = text.slice(nameStart, index);
+    skipWhitespace();
+    if (name === '' || text[index] !== '=') return null;
+    index++;
+    skipWhitespace();
+    const quote = text[index];
+    if (quote !== '"' && quote !== "'") return null;
+    const valueEnd = text.indexOf(quote, index + 1);
+    if (valueEnd === -1) return null;
+    if (name === 'xmlns') {
+      if (namespace !== null) return null;
+      namespace = text.slice(index + 1, valueEnd);
+    }
+    index = valueEnd + 1;
+  }
+}
+
+// EN-109: valid UTF-8 text whose root element is `<svg>` in the SVG
+// namespace, after an optional byte order mark, XML declaration, comments
+// and whitespace. A DOCTYPE or entity declaration anywhere rejects it. The
+// rest of the document is not parsed.
+function isSvg(content: Uint8Array): boolean {
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(content);
+  } catch {
+    return false;
+  }
+  if (/<!(DOCTYPE|ENTITY)/i.test(text)) return false;
+  // trimStart also drops a byte order mark (U+FEFF).
+  let rest = text.trimStart();
+  // The XML declaration only, not another instruction such as
+  // <?xml-stylesheet?>.
+  if (/^<\?xml\s/.test(rest)) {
+    const end = rest.indexOf('?>');
+    if (end === -1) return false;
+    rest = rest.slice(end + 2).trimStart();
+  }
+  while (rest.startsWith('<!--')) {
+    const end = rest.indexOf('-->');
+    if (end === -1) return false;
+    rest = rest.slice(end + 3).trimStart();
+  }
+  return svgRootNamespace(rest) === SVG_NAMESPACE;
+}
+
 export function detectLogoFormat(content: Uint8Array): LogoFormat | null {
   if (isPng(content)) return PNG;
   if (isJpeg(content)) return JPEG;
   if (isWebp(content)) return WEBP;
+  if (isSvg(content)) return SVG;
   return null;
 }
 
@@ -150,7 +220,7 @@ export function logoContentTypeForKey(
   if (dot === -1) return null;
   const extension = key.slice(dot + 1);
   return (
-    [PNG, JPEG, WEBP].find((format) => format.extension === extension)
+    [PNG, JPEG, WEBP, SVG].find((format) => format.extension === extension)
       ?.contentType ?? null
   );
 }

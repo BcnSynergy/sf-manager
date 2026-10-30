@@ -61,10 +61,10 @@ describe('UploadOrganizationLogoUseCase (organization-logo S1-S3)', () => {
     expect(profile.name).toBe('Acme');
   });
 
-  it('rejects content that is not PNG, JPEG or WebP and changes nothing', async () => {
-    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
+  it('rejects content that is not PNG, JPEG, WebP or SVG and changes nothing', async () => {
+    const gif = Buffer.from('GIF89a\x01\x00');
 
-    await expect(useCase.execute(svg)).rejects.toBeInstanceOf(
+    await expect(useCase.execute(gif)).rejects.toBeInstanceOf(
       UnsupportedLogoFormatError,
     );
     expect(storage.keys()).toEqual([]);

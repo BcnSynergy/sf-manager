@@ -15,7 +15,7 @@ Its one non-obvious job is the **not-completed-yet** state: the seeded
 profile is blank, and an admin must be able to tell "nobody has entered
 this yet" apart from "the page is loading" and "the request failed".
 
-Out of scope: SVG logos (EN-109), an edit history or audit view,
+Out of scope: an edit history or audit view,
 a completeness gate on anything, and any surface for a non-`SYSTEM_ADMIN`
 role. The navigation entry itself is owned by `app-navigation`; the API
 contract is owned by `organization-profile-management`.
@@ -144,8 +144,8 @@ the text fields. The section MUST preview the current logo from
 otherwise say that no logo has been uploaded. If the preview fails to
 load, it MUST be replaced by a message, never shown as a broken image.
 
-The file picker MUST offer PNG, JPEG and WebP only. An upload of a file
-over 2 MB, or whose type is not PNG, JPEG or WebP, MUST be rejected with
+The file picker MUST offer PNG, JPEG, WebP and SVG only. An upload of a file
+over 2 MB, or whose type is not PNG, JPEG, WebP or SVG, MUST be rejected with
 a message and no request sent. The upload control MUST be disabled until a
 file is chosen and while an upload is in flight. On success the section
 MUST confirm the upload in its own status region, next to its controls
@@ -163,13 +163,13 @@ else: a generic failure) and MUST keep the previous logo.
 
 #### Scenario: A logo is uploaded and previewed
 
-- GIVEN a `SYSTEM_ADMIN` chooses a PNG, JPEG or WebP file of at most 2 MB
+- GIVEN a `SYSTEM_ADMIN` chooses a PNG, JPEG, WebP or SVG file of at most 2 MB
 - WHEN they upload it
 - THEN the upload MUST be confirmed and the new logo MUST be previewed, without a page reload and without saving the profile form
 
 #### Scenario: A wrong file is rejected before any network call
 
-- GIVEN a `SYSTEM_ADMIN` chooses a file over 2 MB, or an SVG, GIF or other non-PNG/JPEG/WebP file
+- GIVEN a `SYSTEM_ADMIN` chooses a file over 2 MB, or a GIF or other non-PNG/JPEG/WebP/SVG file
 - WHEN they try to upload it
 - THEN a message MUST be shown and no request MUST be sent
 
