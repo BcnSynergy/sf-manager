@@ -698,16 +698,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-117-restore-files` (PR #305) pre-push review recheck,
   2026-10-30.
 
-- **EN-126** (API tests): the SVG detection rules from EN-124 (XML
-  whitespace only) and EN-125 (whitespace between the root's attributes)
-  are tested at domain level only; their spec scenarios promise a 400 with
-  `LOGO_UNSUPPORTED_FORMAT`, which the e2e proves for an SVG without the
-  namespace but not for these inputs. Adding one row each to the e2e
-  rejection table in `apps/api/test/organization-profile.e2e-spec.ts` would
-  pin the HTTP path. Origin: `en-125-svg-attribute-separator` (PR #309)
-  pre-push and pre-merge reviews, 2026-10-31.
-
 ## Done
+
+- **EN-126** (API tests): the e2e rejection table now has one row for an
+  SVG preceded by a no-break space (EN-124) and one for an SVG whose
+  attribute is glued to the previous value (EN-125), so both rules are
+  proven to return 400 `LOGO_UNSUPPORTED_FORMAT` over HTTP. Done in
+  `en-126-svg-e2e-rejections` (PR #310), 2026-10-31.
 
 - **EN-125** (API): SVG logo detection now requires each attribute of the
   `<svg>` root to be followed by XML whitespace, `>` or `/>`, as XML does,
