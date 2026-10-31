@@ -705,7 +705,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   XML whitespace, `>` or `/>` after each closing quote would make the check
   exact. Evidence:
   `apps/api/src/modules/organization-profile/domain/organization-logo.ts`
-  (`svgRootNamespace`). Origin: `en-124-svg-xml-whitespace` pre-push
+  (`svgRootNamespace`). Origin: `en-124-svg-xml-whitespace` (PR #308) pre-push
   review, 2026-10-31.
 
 ## Done
@@ -714,7 +714,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (space, tab, CR and LF) before and inside the `<svg>` root tag, and
   accepts one byte order mark only at the very start; a no-break space, a
   line separator or a second byte order mark rejects the file, also inside
-  an attribute name. Done in `en-124-svg-xml-whitespace`, 2026-10-31.
+  an attribute name. Done in `en-124-svg-xml-whitespace` (PR #308), 2026-10-31.
 
 - **EN-109** (feature): SVG organization logos are accepted. A file counts
   as SVG when it is UTF-8 text with an `<svg>` root in the SVG namespace
