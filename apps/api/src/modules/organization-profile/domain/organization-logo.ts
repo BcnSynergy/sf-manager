@@ -141,10 +141,14 @@ function isWebp(content: Uint8Array): boolean {
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 // EN-124: XML whitespace is only space, tab, CR and LF; JavaScript's \s and
 // trimStart also match characters such as U+00A0, U+2028 and U+FEFF.
-const WHITESPACE = /[ \t\r\n]/;
+const XML_WHITESPACE = ' \\t\\r\\n';
+const WHITESPACE = new RegExp(`[${XML_WHITESPACE}]`);
+const LEADING_WHITESPACE = new RegExp(`^[${XML_WHITESPACE}]+`);
+const SVG_START = new RegExp(`^<svg[${XML_WHITESPACE}/>]`);
+const XML_DECLARATION_START = new RegExp(`^<\\?xml[${XML_WHITESPACE}]`);
 
 function trimXmlWhitespace(text: string): string {
-  return text.replace(/^[ \t\r\n]+/, '');
+  return text.replace(LEADING_WHITESPACE, '');
 }
 
 // Reads the `<svg` start tag at the start of `text` attribute by attribute
@@ -152,7 +156,7 @@ function trimXmlWhitespace(text: string): string {
 // `xmlns` value. A malformed or unterminated tag, or a second `xmlns`,
 // returns null. One pass, so its cost stays linear in the input.
 function svgRootNamespace(text: string): string | null {
-  if (!/^<svg[ \t\r\n/>]/.test(text)) return null;
+  if (!SVG_START.test(text)) return null;
   let namespace: string | null = null;
   let index = 4;
   const skipWhitespace = () => {
@@ -162,7 +166,9 @@ function svgRootNamespace(text: string): string | null {
     skipWhitespace();
     if (text[index] === '>' || text.startsWith('/>', index)) return namespace;
     const nameStart = index;
-    while (index < text.length && !/[ \t\r\n=/>]/.test(text[index])) index++;
+    // Any other whitespace ends the name too, so the `=` check below
+    // rejects it instead of reading it as part of the name.
+    while (index < text.length && !/[\s=/>"']/.test(text[index])) index++;
     const name = text.slice(nameStart, index);
     skipWhitespace();
     if (name === '' || text[index] !== '=') return null;
@@ -181,8 +187,8 @@ function svgRootNamespace(text: string): string | null {
 }
 
 // EN-109: valid UTF-8 text whose root element is `<svg>` in the SVG
-// namespace, after an optional byte order mark, XML declaration, comments
-// and whitespace. A DOCTYPE or entity declaration anywhere rejects it. The
+// namespace, after one leading byte order mark, an XML declaration,
+// comments and XML whitespace (space, tab, CR and LF), all optional. A DOCTYPE or entity declaration anywhere rejects it. The
 // rest of the document is not parsed.
 function isSvg(content: Uint8Array): boolean {
   let text: string;
@@ -197,7 +203,7 @@ function isSvg(content: Uint8Array): boolean {
   let rest = trimXmlWhitespace(text);
   // The XML declaration only, not another instruction such as
   // <?xml-stylesheet?>.
-  if (/^<\?xml[ \t\r\n]/.test(rest)) {
+  if (XML_DECLARATION_START.test(rest)) {
     const end = rest.indexOf('?>');
     if (end === -1) return false;
     rest = trimXmlWhitespace(rest.slice(end + 2));
