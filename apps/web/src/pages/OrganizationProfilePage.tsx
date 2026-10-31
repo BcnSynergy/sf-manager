@@ -209,6 +209,14 @@ export function OrganizationProfilePage() {
           <p>{t('organizationProfile.incomplete')}</p>
         </div>
       )}
+      {/* Above the form: the logo has its own upload button, and below the
+          form's save button it looked as if that button saved it too. */}
+      <OrganizationLogoSection hasLogo={hasLogo} />
+      {/* Its own heading, so the fields after the logo section are not heard
+          as part of it when moving by headings. */}
+      <h2 id="organization-profile-details-title" className="sf-section-title">
+        {t('organizationProfile.detailsTitle')}
+      </h2>
       <StatusRegion>
         {success && (
           <Alert
@@ -220,7 +228,12 @@ export function OrganizationProfilePage() {
       </StatusRegion>
       {/* noValidate: validation messages are ours, not the browser's native,
           locale-inconsistent constraint-validation UI. */}
-      <form className="sf-form" onSubmit={handleSubmit} noValidate>
+      <form
+        className="sf-form"
+        onSubmit={handleSubmit}
+        noValidate
+        aria-labelledby="organization-profile-details-title"
+      >
         {REQUIRED_FIELDS.map((field) => (
           <div key={field} className="sf-field">
             <label htmlFor={`organization-profile-${field}-input`}>
@@ -255,7 +268,6 @@ export function OrganizationProfilePage() {
           </button>
         </div>
       </form>
-      <OrganizationLogoSection hasLogo={hasLogo} />
     </main>
   );
 }

@@ -81,6 +81,42 @@ describe('OrganizationProfilePage', () => {
     expect(screen.getByTestId('organization-logo-input')).toBeInTheDocument();
   });
 
+  // The logo has its own upload button; placed above the data form, the
+  // form's save button no longer looks like it also saves the logo.
+  it('places the logo section above the profile form and its save button', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    const logoInput = await screen.findByTestId('organization-logo-input');
+    const firstField = await screen.findByTestId('organization-profile-legal-name');
+    expect(
+      logoInput.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  // With the logo section first, the form needs its own heading; otherwise a
+  // screen reader moving by headings hears the fields as part of the logo.
+  it('gives the profile form its own heading, after the logo section', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    const heading = await screen.findByRole('heading', {
+      level: 2,
+      name: 'Organization details',
+    });
+    const logoInput = screen.getByTestId('organization-logo-input');
+    const firstField = screen.getByTestId('organization-profile-legal-name');
+    expect(
+      logoInput.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      heading.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByRole('form', { name: 'Organization details' })).toContainElement(firstField);
+  });
+
   it('confirms a logo upload in the logo section status region, without saving the form (organization-logo S1)', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
     vi.mocked(organizationProfileApi.uploadOrganizationLogo).mockResolvedValue({
