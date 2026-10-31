@@ -275,16 +275,15 @@ None.
   and a server that read the file first gets no reply and fails the test.
 - **TD-43**: An empty status region inside a grid container (`.sf-form`,
   `.sf-panel`) added one gap. The entry blamed print only, but measuring in
-  the browser showed it on screen too: its negative top margin cancels a
-  gap in `main`'s flex column, never a grid's row gap, so the empty region
-  doubled the gap (32 px instead of 16) in the organization logo section
-  and in ReviewSessionElement's form, breaking `web-alert-announcements`
-  ("MUST NOT change the page layout while empty"). Resolved by
-  `td-43-print-status-region-gap`: while empty, a region that is a direct
+  the browser showed it on screen too: its negative top margin cancels a gap
+  in `main`'s flex column, never a grid's row gap, so the empty region
+  doubled the gap (32 px instead of 16) in the organization logo section and
+  in ReviewSessionElement's form, breaking `web-alert-announcements` ("MUST
+  NOT change the page layout while empty"). Resolved by
+  `td-43-status-region-grid-gap`: while empty, a region that is a direct
   child of a form or panel is positioned out of the grid flow (not
   `display: none`, so screen readers keep tracking it) and rejoins it when
-  an alert fills it; the print reset of the negative margin now applies only
-  to `main`'s own regions.
+  an alert fills it.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

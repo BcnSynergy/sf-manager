@@ -1041,10 +1041,9 @@ main.sf-login {
   }
 
   /* EN-76: the block `main` above has no flex gap for an empty status
-     region to cancel. Only its own children: `.sf-form` and `.sf-panel`
-     stay grids in print, so a region inside them keeps cancelling their
-     gap (TD-43). */
-  main > .sf-status-region:empty {
+     region to cancel. Regions in a form or panel are already out of the
+     grid flow with no margin (TD-43). */
+  .sf-status-region:empty {
     margin-block-start: 0;
   }
 
