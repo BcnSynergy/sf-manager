@@ -74,17 +74,6 @@ None.
   `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
   Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
   ReviewSessionElement case predates it.
-- **TD-45**: The e2e test "rejects a non-admin upload with 403 before
-  reading an oversized file" is flaky. It uploads 3 MiB, and the server
-  answers 403 and closes the socket while supertest is still sending, so
-  depending on timing the client gets `read ECONNRESET` instead of the 403.
-  It failed 4 of 24 runs across three sessions. Fix: treat a connection
-  reset as a pass only if the server can still be shown to have rejected the
-  request before reading the file (for example, nothing stored), or
-  restructure the upload so the reply always arrives. Evidence:
-  `apps/api/test/organization-profile.e2e-spec.ts` (that test, from
-  `973ce98`). Origin: `en-126-svg-e2e-rejections` (PR #310) pre-push review,
-  2026-10-31.
 
 ## Resolved
 
@@ -286,6 +275,14 @@ None.
   archive of the dump's timestamp (owner kept); a dump without one restores
   the database only, and an unreadable archive stops the restore before
   anything changes.
+- **TD-45**: The e2e test "rejects a non-admin upload with 403 before
+  reading an oversized file" was flaky: it sent the whole 3 MiB body, and
+  the server answering 403 and closing the connection mid-send sometimes
+  made the client see `read ECONNRESET`. Resolved by
+  `td-45-oversized-upload-flake`: the test now sends the headers and only
+  the first 64 KiB of the declared 3 MiB file and waits for the reply, so a
+  403 proves the upload was rejected before its file was read, and a server
+  that read the file first gets no reply and fails the test.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
