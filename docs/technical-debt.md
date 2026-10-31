@@ -64,16 +64,6 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-43**: An empty status region inside a grid container adds one gap
-  when the page is printed. On screen its negative top margin cancels the
-  container's gap; the print rule resets that margin assuming a block
-  `main`, which breaks `web-alert-announcements` ("MUST NOT change the page
-  layout while empty … in print") for the regions inside `.sf-form`
-  (ReviewSessionElement) and `.sf-panel` (the organization logo section).
-  Fix: scope the print reset to `main > .sf-status-region:empty`. Evidence:
-  `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
-  Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
-  ReviewSessionElement case predates it.
 
 ## Resolved
 
@@ -283,6 +273,18 @@ None.
   but sends only the headers, without any of its bytes, and waits for the
   reply, so a 403 proves the upload was rejected before its file was read,
   and a server that read the file first gets no reply and fails the test.
+- **TD-43**: An empty status region inside a grid container (`.sf-form`,
+  `.sf-panel`) added one gap. The entry blamed print only, but measuring in
+  the browser showed it on screen too: its negative top margin cancels a
+  gap in `main`'s flex column, never a grid's row gap, so the empty region
+  doubled the gap (32 px instead of 16) in the organization logo section
+  and in ReviewSessionElement's form, breaking `web-alert-announcements`
+  ("MUST NOT change the page layout while empty"). Resolved by
+  `td-43-print-status-region-gap`: while empty, a region that is a direct
+  child of a form or panel is positioned out of the grid flow (not
+  `display: none`, so screen readers keep tracking it) and rejoins it when
+  an alert fills it; the print reset of the negative margin now applies only
+  to `main`'s own regions.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 

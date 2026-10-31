@@ -463,6 +463,15 @@ code {
 .sf-status-region:empty {
   margin-block-start: calc(-1 * var(--space-4));
 }
+/* TD-43: the negative margin cancels a gap only in a flex column. In a grid
+   (a form or a panel) the empty region would still take a row and add a gap,
+   so it leaves the grid flow while empty. Positioned, not display:none, so
+   screen readers keep tracking the live region; it rejoins the grid as soon
+   as an alert fills it. */
+:is(.sf-form, .sf-panel) > .sf-status-region:empty {
+  position: absolute;
+  margin: 0;
+}
 
 .sf-credit {
   display: inline-flex;
@@ -1032,8 +1041,10 @@ main.sf-login {
   }
 
   /* EN-76: the block `main` above has no flex gap for an empty status
-     region to cancel. */
-  .sf-status-region:empty {
+     region to cancel. Only its own children: `.sf-form` and `.sf-panel`
+     stay grids in print, so a region inside them keeps cancelling their
+     gap (TD-43). */
+  main > .sf-status-region:empty {
     margin-block-start: 0;
   }
 
