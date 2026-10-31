@@ -207,6 +207,7 @@
     "validationError": "Introduce un valor válido para cada campo modificado.",
     "saveError": "No se ha podido guardar el perfil de la organización. Inténtalo de nuevo.",
     "saveSuccess": "Perfil de la organización guardado.",
+    "detailsTitle": "Datos de la organización",
     "logoTitle": "Logo",
     "logoAlt": "Logo de la organización",
     "noLogo": "Todavía no se ha subido ningún logo.",

@@ -207,6 +207,7 @@
     "validationError": "Introdueix un valor vàlid per a cada camp modificat.",
     "saveError": "No s'ha pogut desar el perfil de l'organització. Torna-ho a provar.",
     "saveSuccess": "Perfil de l'organització desat.",
+    "detailsTitle": "Dades de l'organització",
     "logoTitle": "Logotip",
     "logoAlt": "Logotip de l'organització",
     "noLogo": "Encara no s'ha pujat cap logotip.",
