@@ -280,9 +280,10 @@ done
 # `sleep` in its loop, so a loop that started ends with 99 right after its
 # first cycle instead of waiting out the timeout (EN-121). If either of
 # those stops holding, the loop runs until the timeout, which stays as a
-# backstop, and the status check below still fails. The trailing command
-# keeps sh from exec'ing it: as PID 1 the script would ignore the timeout's
-# SIGTERM.
+# backstop: the script killed by the timeout exits 143, not 1, so the
+# second status check below still fails, only 30 s later. The trailing
+# command keeps sh from exec'ing it: as PID 1 the script would ignore the
+# timeout's SIGTERM.
 retention=x
 status=0
 # shellcheck disable=SC2016 # expanded in the container
