@@ -698,8 +698,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   restoring on a new server, whose `backups/` is empty. Backup names carry
   their timestamp and an upload never replaces a copy, so the same name is
   always the same backup. Revisit only if pulling into a populated directory
-  becomes a normal step. Decided in `en-118-offsite-pull-overwrite`,
-  2026-10-31.
+  becomes a normal step. Decided in `en-118-offsite-pull-overwrite` (PR
+  #312), 2026-10-31.
 
 - **EN-126** (API tests): the e2e rejection table now has one row for an
   SVG preceded by a no-break space (EN-124) and one for an SVG whose
