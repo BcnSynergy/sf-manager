@@ -188,8 +188,16 @@ describe('organization logo (organization-logo S2)', () => {
       '<svg xmlns="http://www.w3.org/2000/svg"\u2028width="10"/>',
     ],
     [
+      'a no-break space between the namespace name and =',
+      '<svg xmlns\u00A0="http://www.w3.org/2000/svg"/>',
+    ],
+    [
       'a no-break space inside an attribute name',
       '<svg a\u00A0b="1" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a quote inside an attribute name',
+      '<svg a"b="1" xmlns="http://www.w3.org/2000/svg"/>',
     ],
     [
       'a no-break space after the declaration target',

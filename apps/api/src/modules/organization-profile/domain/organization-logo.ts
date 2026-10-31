@@ -166,8 +166,8 @@ function svgRootNamespace(text: string): string | null {
     skipWhitespace();
     if (text[index] === '>' || text.startsWith('/>', index)) return namespace;
     const nameStart = index;
-    // Any other whitespace ends the name too, so the `=` check below
-    // rejects it instead of reading it as part of the name.
+    // Any other whitespace, or a quote, ends the name too, so the `=` check
+    // below rejects it instead of reading it as part of the name.
     while (index < text.length && !/[\s=/>"']/.test(text[index])) index++;
     const name = text.slice(nameStart, index);
     skipWhitespace();
