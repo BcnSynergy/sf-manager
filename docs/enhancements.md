@@ -662,15 +662,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
   before every merge, and their titles do not follow `PR N/M`). Origin:
   `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
-- **EN-118** (deploy): `offsite-copy.sh pull` overwrites a local backup of
-  the same name with the bucket's copy, because it does not use
-  `--ignore-existing` the way the upload does. Kept on purpose: when
-  restoring, the local file may be the damaged one and the bucket's copy
-  should win, and the README says to pull into an empty `backups/`. Revisit
-  if pulling into a populated directory becomes a normal step. Evidence:
-  `deploy/offsite-copy.sh` (`pull`). Origin: EN-104 pre-push verification
-  recheck, 2026-10-29.
-
 - **EN-121** (deploy tests): in `deploy/test-postgres-backup.sh`, the case
   that runs the service with `BACKUP_RETENTION_DAYS=x` only fails after its
   30-second `timeout` when the script wrongly starts its loop, so a
@@ -699,6 +690,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   2026-10-30.
 
 ## Done
+
+- **EN-118** (deploy): closed without a change, by decision.
+  `offsite-copy.sh pull` keeps overwriting a local backup of the same name
+  with the bucket's copy. When restoring, the local file may be the damaged
+  one and the bucket's copy should win, and the README's pull step is for
+  restoring on a new server, whose `backups/` is empty. Backup names carry
+  their timestamp and an upload never replaces a copy, so the same name is
+  always the same backup. Revisit only if pulling into a populated directory
+  becomes a normal step. Decided in `en-118-offsite-pull-overwrite`,
+  2026-10-31.
 
 - **EN-126** (API tests): the e2e rejection table now has one row for an
   SVG preceded by a no-break space (EN-124) and one for an SVG whose
