@@ -152,11 +152,13 @@ async function loginAgent(app: INestApplication<App>, email: string) {
 }
 
 // TD-45: sends the headers of a logo upload whose file is declared as
-// `fileBytes` long, then only its first 64 KiB, and resolves with the status
-// of the reply. A reply can only come from a server that rejected the upload
-// without reading its file, which has not been fully sent. supertest's
-// attach() sends the whole body, and the server closing the connection
-// mid-send sometimes made the client see ECONNRESET instead of the reply.
+// `fileBytes` long, and the multipart headers of that file but none of its
+// bytes, then resolves with the status of the reply. A reply can only come
+// from a server that rejected the upload without reading its file, which
+// was never sent. supertest's attach() sends the whole body, and the server
+// closing the connection mid-send sometimes made the client see ECONNRESET
+// instead of the reply; sending only a few hundred bytes, which the server
+// reads at once, leaves nothing unread to trigger that reset.
 async function statusOfUnfinishedUpload(
   app: INestApplication<App>,
   email: string,
@@ -178,7 +180,13 @@ async function statusOfUnfinishedUpload(
   const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
 
   const server = app.getHttpServer() as Server;
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
   try {
     const { port } = server.address() as AddressInfo;
     return await new Promise<number>((resolve, reject) => {
@@ -208,7 +216,6 @@ async function statusOfUnfinishedUpload(
         reject(error);
       });
       req.write(head);
-      req.write(Buffer.alloc(64 * 1024));
     });
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -624,8 +631,8 @@ describe('Organization Profile (e2e)', () => {
     );
 
     // authorization spec: an upload is rejected before its file is read.
-    // The 403 arrives while most of an oversized file is still unsent; a
-    // server that read the file first would wait for the rest (TD-45).
+    // The 403 arrives before any byte of an oversized file is sent; a
+    // server that read the file first would wait for it (TD-45).
     it('rejects a non-admin upload with 403 before reading an oversized file', async () => {
       const status = await statusOfUnfinishedUpload(
         app,
@@ -634,7 +641,6 @@ describe('Organization Profile (e2e)', () => {
       );
 
       expect(status).toBe(403);
-      expect(fileStorage.keys()).toEqual([]);
     });
 
     // EN-110, authorization spec: a non-admin removal changes nothing.

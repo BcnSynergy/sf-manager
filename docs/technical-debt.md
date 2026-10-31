@@ -279,10 +279,10 @@ None.
   reading an oversized file" was flaky: it sent the whole 3 MiB body, and
   the server answering 403 and closing the connection mid-send sometimes
   made the client see `read ECONNRESET`. Resolved by
-  `td-45-oversized-upload-flake`: the test now sends the headers and only
-  the first 64 KiB of the declared 3 MiB file and waits for the reply, so a
-  403 proves the upload was rejected before its file was read, and a server
-  that read the file first gets no reply and fails the test.
+  `td-45-oversized-upload-flake`: the test now declares a 3 MiB file but
+  sends only the headers, without any of its bytes, and waits for the
+  reply, so a 403 proves the upload was rejected before its file was read,
+  and a server that read the file first gets no reply and fails the test.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
   hermetic Jest version skew.
 
