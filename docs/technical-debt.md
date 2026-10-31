@@ -82,7 +82,7 @@ None.
   have rejected the request before reading the file (for example, nothing
   stored), or restructure the upload so the reply always arrives. Evidence:
   `apps/api/test/organization-profile.e2e-spec.ts` (that test, from
-  `973ce98`). Origin: `en-126-svg-e2e-rejections` pre-push review,
+  `973ce98`). Origin: `en-126-svg-e2e-rejections` (PR #310) pre-push review,
   2026-10-31.
 
 ## Resolved

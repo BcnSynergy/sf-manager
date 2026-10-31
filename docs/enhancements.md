@@ -704,7 +704,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   SVG preceded by a no-break space (EN-124) and one for an SVG whose
   attribute is glued to the previous value (EN-125), so both rules are
   proven to return 400 `LOGO_UNSUPPORTED_FORMAT` over HTTP. Done in
-  `en-126-svg-e2e-rejections`, 2026-10-31.
+  `en-126-svg-e2e-rejections` (PR #310), 2026-10-31.
 
 - **EN-125** (API): SVG logo detection now requires each attribute of the
   `<svg>` root to be followed by XML whitespace, `>` or `/>`, as XML does,
