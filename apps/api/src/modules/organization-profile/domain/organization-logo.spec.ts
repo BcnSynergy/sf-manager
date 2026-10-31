@@ -116,6 +116,11 @@ describe('organization logo (organization-logo S2)', () => {
       'an SVG with tabs, CR and LF around the declaration and in the root tag',
       '\uFEFF\t\r\n<?xml\tversion="1.0"?>\r\n\t<svg\r\n\txmlns\t=\r\n"http://www.w3.org/2000/svg"\t/>',
     ],
+    // EN-125: XML whitespace separates the root's attributes.
+    [
+      'an SVG whose attributes are separated by LF and tab',
+      '<svg width="10"\n\theight="10"\txmlns="http://www.w3.org/2000/svg"></svg>',
+    ],
   ])('detects %s as SVG', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toEqual({
       extension: 'svg',
@@ -198,6 +203,15 @@ describe('organization logo (organization-logo S2)', () => {
     [
       'a quote inside an attribute name',
       '<svg a"b="1" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    // EN-125: an attribute right after a closing quote, with no whitespace.
+    [
+      'an attribute glued to the previous value',
+      '<svg width="10"xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'an attribute glued to the namespace value',
+      "<svg xmlns='http://www.w3.org/2000/svg'width='10'/>",
     ],
     [
       'a no-break space after the declaration target',

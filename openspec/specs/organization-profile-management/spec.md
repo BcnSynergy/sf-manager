@@ -248,7 +248,8 @@ right after the start marker; for WebP a `VP8 `,
 `VP8L` or `VP8X` chunk. The pixel data itself is not decoded. A file
 MUST count as an SVG image only when it is valid UTF-8 text whose root
 element is `<svg>` with exactly one `xmlns` attribute, the default namespace
-`http://www.w3.org/2000/svg`,
+`http://www.w3.org/2000/svg`, and with each of its attributes followed by
+XML whitespace, `>` or `/>`,
 preceded at most by one byte order mark at the very start, an XML
 declaration, comments and XML whitespace (space, tab, carriage return and
 line feed only), and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
@@ -258,6 +259,8 @@ Logo"). Anything else MUST be rejected as an unsupported format.
 (Previously: SVG was rejected, EN-109.)
 (Previously: any Unicode whitespace, such as a no-break space, passed as
 whitespace, EN-124.)
+(Previously: an attribute could follow the previous attribute's closing
+quote with no whitespace, EN-125.)
 (Previously: the format was decided by the leading bytes alone, so a
 signature without an image passed.)
 
@@ -296,6 +299,12 @@ through a storage port under a fresh key, outside the database.
 #### Scenario: Only XML whitespace may precede or split the SVG root
 
 - GIVEN an `<svg>` root in the SVG namespace preceded or split by a character XML does not count as whitespace, such as a no-break space, a line separator or a second byte order mark
+- WHEN it is uploaded
+- THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
+
+#### Scenario: The SVG root's attributes must be separated by whitespace
+
+- GIVEN an `<svg>` root in the SVG namespace where an attribute follows the previous attribute's closing quote with no whitespace, such as `<svg width="10"xmlns="http://www.w3.org/2000/svg"/>`
 - WHEN it is uploaded
 - THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
 
