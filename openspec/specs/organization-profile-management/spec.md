@@ -249,10 +249,9 @@ right after the start marker; for WebP a `VP8 `,
 MUST count as an SVG image only when it is valid UTF-8 text whose root
 element is `<svg>` with exactly one `xmlns` attribute, the default namespace
 `http://www.w3.org/2000/svg`, and with each of its attributes followed by
-XML whitespace, `>` or `/>`,
-preceded at most by one byte order mark at the very start, an XML
-declaration, comments and XML whitespace (space, tab, carriage return and
-line feed only), and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
+XML whitespace (space, tab, carriage return and line feed only), `>` or
+`/>`, preceded at most by one byte order mark at the very start, an XML
+declaration, comments and XML whitespace, and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
 rest of the document is not parsed. An SVG is stored as uploaded, scripts
 included: the logo reads serve it sandboxed (see "Read the Organization
 Logo"). Anything else MUST be rejected as an unsupported format.

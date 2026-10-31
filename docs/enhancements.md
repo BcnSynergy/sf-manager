@@ -703,7 +703,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-125** (API): SVG logo detection now requires each attribute of the
   `<svg>` root to be followed by XML whitespace, `>` or `/>`, as XML does,
   so `<svg width="10"xmlns="http://www.w3.org/2000/svg"/>` is rejected.
-  Done in `en-125-svg-attribute-separator`, 2026-10-31.
+  Done in `en-125-svg-attribute-separator` (PR #309), 2026-10-31.
 
 - **EN-124** (API): SVG logo detection now counts only XML whitespace
   (space, tab, CR and LF) before and inside the `<svg>` root tag, and
