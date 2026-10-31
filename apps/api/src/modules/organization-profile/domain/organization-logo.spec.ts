@@ -111,6 +111,11 @@ describe('organization logo (organization-logo S2)', () => {
       'an SVG that carries a script (served sandboxed)',
       '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
     ],
+    // EN-124: XML whitespace is space, tab, CR and LF.
+    [
+      'an SVG with tabs, CR and LF around the declaration and in the root tag',
+      '﻿\t\r\n<?xml\tversion="1.0"?>\r\n\t<svg\r\n\txmlns\t=\r\n"http://www.w3.org/2000/svg"\t/>',
+    ],
   ])('detects %s as SVG', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toEqual({
       extension: 'svg',
@@ -164,6 +169,29 @@ describe('organization logo (organization-logo S2)', () => {
       '<?xml-stylesheet href="logo.css"?><svg xmlns="http://www.w3.org/2000/svg"/>',
     ],
     ['plain text', 'svg xmlns="http://www.w3.org/2000/svg"'],
+    // EN-124: JavaScript whitespace that XML does not allow, and a byte
+    // order mark anywhere but the very start.
+    [
+      'a no-break space before the root',
+      ' <svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a no-break space after the element name',
+      '<svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a line separator between attributes',
+      '<svg width="10" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a no-break space after the declaration target',
+      '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a byte order mark after the XML declaration',
+      '<?xml version="1.0"?>﻿<svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    ['two byte order marks', '﻿﻿<svg xmlns="http://www.w3.org/2000/svg"/>'],
   ])('rejects %s', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toBeNull();
   });

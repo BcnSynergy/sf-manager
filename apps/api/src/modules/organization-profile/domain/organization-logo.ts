@@ -139,14 +139,20 @@ function isWebp(content: Uint8Array): boolean {
 }
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-const WHITESPACE = /\s/;
+// EN-124: XML whitespace is only space, tab, CR and LF; JavaScript's \s and
+// trimStart also match characters such as U+00A0, U+2028 and U+FEFF.
+const WHITESPACE = /[ \t\r\n]/;
+
+function trimXmlWhitespace(text: string): string {
+  return text.replace(/^[ \t\r\n]+/, '');
+}
 
 // Reads the `<svg` start tag at the start of `text` attribute by attribute
 // (a name, `=`, then a quoted value, which may hold `>`) and returns its
 // `xmlns` value. A malformed or unterminated tag, or a second `xmlns`,
 // returns null. One pass, so its cost stays linear in the input.
 function svgRootNamespace(text: string): string | null {
-  if (!/^<svg[\s/>]/.test(text)) return null;
+  if (!/^<svg[ \t\r\n/>]/.test(text)) return null;
   let namespace: string | null = null;
   let index = 4;
   const skipWhitespace = () => {
@@ -156,7 +162,7 @@ function svgRootNamespace(text: string): string | null {
     skipWhitespace();
     if (text[index] === '>' || text.startsWith('/>', index)) return namespace;
     const nameStart = index;
-    while (index < text.length && !/[\s=/>]/.test(text[index])) index++;
+    while (index < text.length && !/[ \t\r\n=/>]/.test(text[index])) index++;
     const name = text.slice(nameStart, index);
     skipWhitespace();
     if (name === '' || text[index] !== '=') return null;
@@ -186,19 +192,20 @@ function isSvg(content: Uint8Array): boolean {
     return false;
   }
   if (/<!(DOCTYPE|ENTITY)/i.test(text)) return false;
-  // trimStart also drops a byte order mark (U+FEFF).
-  let rest = text.trimStart();
+  // The decoder has already dropped one leading byte order mark (U+FEFF);
+  // one anywhere else is not whitespace and rejects.
+  let rest = trimXmlWhitespace(text);
   // The XML declaration only, not another instruction such as
   // <?xml-stylesheet?>.
-  if (/^<\?xml\s/.test(rest)) {
+  if (/^<\?xml[ \t\r\n]/.test(rest)) {
     const end = rest.indexOf('?>');
     if (end === -1) return false;
-    rest = rest.slice(end + 2).trimStart();
+    rest = trimXmlWhitespace(rest.slice(end + 2));
   }
   while (rest.startsWith('<!--')) {
     const end = rest.indexOf('-->');
     if (end === -1) return false;
-    rest = rest.slice(end + 3).trimStart();
+    rest = trimXmlWhitespace(rest.slice(end + 3));
   }
   return svgRootNamespace(rest) === SVG_NAMESPACE;
 }

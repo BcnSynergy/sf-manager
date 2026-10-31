@@ -249,12 +249,15 @@ right after the start marker; for WebP a `VP8 `,
 MUST count as an SVG image only when it is valid UTF-8 text whose root
 element is `<svg>` with exactly one `xmlns` attribute, the default namespace
 `http://www.w3.org/2000/svg`,
-preceded at most by a byte order mark, an XML declaration, comments and
-whitespace, and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
+preceded at most by one byte order mark at the very start, an XML
+declaration, comments and XML whitespace (space, tab, carriage return and
+line feed only), and containing no `<!DOCTYPE` or `<!ENTITY` declaration; the
 rest of the document is not parsed. An SVG is stored as uploaded, scripts
 included: the logo reads serve it sandboxed (see "Read the Organization
 Logo"). Anything else MUST be rejected as an unsupported format.
 (Previously: SVG was rejected, EN-109.)
+(Previously: any Unicode whitespace, such as a no-break space, passed as
+whitespace, EN-124.)
 (Previously: the format was decided by the leading bytes alone, so a
 signature without an image passed.)
 
@@ -287,6 +290,12 @@ through a storage port under a fresh key, outside the database.
 #### Scenario: Other formats are rejected
 
 - GIVEN a file that is not a PNG, JPEG, WebP or SVG image, such as a GIF or an `<svg>` root without the SVG namespace, whatever its name
+- WHEN it is uploaded
+- THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
+
+#### Scenario: Only XML whitespace may precede or split the SVG root
+
+- GIVEN an `<svg>` root in the SVG namespace preceded or split by a character XML does not count as whitespace, such as a no-break space, a line separator or a second byte order mark
 - WHEN it is uploaded
 - THEN the response MUST be 400 with code `LOGO_UNSUPPORTED_FORMAT`, and nothing MUST change
 
