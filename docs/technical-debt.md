@@ -74,6 +74,16 @@ None.
   `apps/web/src/index.css` (the print `.sf-status-region:empty` rule).
   Origin: `organization-logo` PR #294 pre-merge review, 2026-10-26; the
   ReviewSessionElement case predates it.
+- **TD-45**: The e2e test "rejects a non-admin upload with 403 before
+  reading an oversized file" is flaky. It uploads 3 MiB, and the server
+  answers 403 and closes the socket while supertest is still sending, so
+  depending on timing the client gets `read ECONNRESET` instead of the 403. It failed 2 of 17 runs, plus 1 of 6 in a separate session. Fix: treat
+  a connection reset as a pass only if the server can still be shown to
+  have rejected the request before reading the file (for example, nothing
+  stored), or restructure the upload so the reply always arrives. Evidence:
+  `apps/api/test/organization-profile.e2e-spec.ts` (that test, from
+  `973ce98`). Origin: `en-126-svg-e2e-rejections` pre-push review,
+  2026-10-31.
 
 ## Resolved
 
