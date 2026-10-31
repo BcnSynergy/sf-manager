@@ -214,6 +214,10 @@ describe('organization logo (organization-logo S2)', () => {
       "<svg xmlns='http://www.w3.org/2000/svg'width='10'/>",
     ],
     [
+      'a slash after a value that does not close the tag',
+      '<svg width="10"/x="1" xmlns="http://www.w3.org/2000/svg">',
+    ],
+    [
       'a no-break space after the declaration target',
       '<?xml\u00A0version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"/>',
     ],
