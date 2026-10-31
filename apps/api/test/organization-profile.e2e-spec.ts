@@ -27,6 +27,8 @@ import {
 } from '../src/modules/organization-profile/domain/testing/logo-fixtures';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
+import { request as httpRequest, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 // design.md Testing Strategy (E2E row) + tasks.md 4.x: hermetic, no real DB —
 // mirrors test/maintenance-company.e2e-spec.ts's / test/community.e2e-spec.ts's
@@ -147,6 +149,77 @@ async function loginAgent(app: INestApplication<App>, email: string) {
     .send({ email, password: DEFAULT_PASSWORD })
     .expect(200);
   return agent;
+}
+
+// TD-45: sends the headers of a logo upload whose file is declared as
+// `fileBytes` long, and the multipart headers of that file but none of its
+// bytes, then resolves with the status of the reply. A reply can only come
+// from a server that rejected the upload without reading its file, which
+// was never sent. supertest's attach() sends the whole body, and the server
+// closing the connection mid-send sometimes made the client see ECONNRESET
+// instead of the reply; sending only a few hundred bytes, which the server
+// reads at once, leaves nothing unread to trigger that reset.
+async function statusOfUnfinishedUpload(
+  app: INestApplication<App>,
+  email: string,
+  fileBytes: number,
+): Promise<number> {
+  const login = await request(app.getHttpServer())
+    .post('/auth/login')
+    .send({ email, password: DEFAULT_PASSWORD })
+    .expect(200);
+  const setCookie = login.headers['set-cookie'] as unknown as string[];
+  const cookie = setCookie.map((c) => c.split(';')[0]).join('; ');
+
+  const boundary = 'td45-boundary';
+  const head = Buffer.from(
+    `--${boundary}\r\n` +
+      'Content-Disposition: form-data; name="file"; filename="logo.png"\r\n' +
+      'Content-Type: image/png\r\n\r\n',
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+
+  const server = app.getHttpServer() as Server;
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
+  try {
+    const { port } = server.address() as AddressInfo;
+    return await new Promise<number>((resolve, reject) => {
+      const req = httpRequest({
+        host: '127.0.0.1',
+        port,
+        method: 'PUT',
+        path: '/organization-profile/logo',
+        headers: {
+          cookie,
+          'content-type': `multipart/form-data; boundary=${boundary}`,
+          'content-length': head.length + fileBytes + tail.length,
+        },
+      });
+      const timer = setTimeout(() => {
+        req.destroy();
+        reject(new Error('no reply before the file was sent'));
+      }, 3000);
+      req.on('response', (res) => {
+        clearTimeout(timer);
+        resolve(res.statusCode ?? 0);
+        res.resume();
+        req.destroy();
+      });
+      req.on('error', (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+      req.write(head);
+    });
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 }
 
 describe('Organization Profile (e2e)', () => {
@@ -558,14 +631,16 @@ describe('Organization Profile (e2e)', () => {
     );
 
     // authorization spec: an upload is rejected before its file is read.
-    // A body over the size limit would get 413 if multer read it first.
+    // The 403 arrives before any byte of an oversized file is sent; a
+    // server that read the file first would wait for it (TD-45).
     it('rejects a non-admin upload with 403 before reading an oversized file', async () => {
-      const agent = await loginAgent(app, managerEmail);
+      const status = await statusOfUnfinishedUpload(
+        app,
+        managerEmail,
+        3 * 1024 * 1024,
+      );
 
-      await agent
-        .put('/organization-profile/logo')
-        .attach('file', Buffer.alloc(3 * 1024 * 1024), 'logo.png')
-        .expect(403);
+      expect(status).toBe(403);
     });
 
     // EN-110, authorization spec: a non-admin removal changes nothing.
