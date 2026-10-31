@@ -89,7 +89,7 @@ describe('OrganizationProfilePage', () => {
     renderPage();
 
     const logoInput = await screen.findByTestId('organization-logo-input');
-    const firstField = screen.getByTestId('organization-profile-legal-name');
+    const firstField = await screen.findByTestId('organization-profile-legal-name');
     expect(
       logoInput.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
