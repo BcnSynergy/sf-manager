@@ -741,6 +741,20 @@ describe('Organization Profile (e2e)', () => {
         'logo.svg',
         'image/svg+xml',
       ],
+      // EN-124: only XML whitespace may precede or split the SVG root.
+      [
+        'an SVG preceded by a no-break space',
+        Buffer.from('\u00A0<svg xmlns="http://www.w3.org/2000/svg"/>'),
+        'logo.svg',
+        'image/svg+xml',
+      ],
+      // EN-125: the SVG root's attributes must be separated by whitespace.
+      [
+        'an SVG whose attribute is glued to the previous value',
+        Buffer.from('<svg width="10"xmlns="http://www.w3.org/2000/svg"/>'),
+        'logo.svg',
+        'image/svg+xml',
+      ],
       ['a GIF', Buffer.from('GIF89a\x01\x00'), 'logo.gif', 'image/gif'],
       [
         'a text file named .png',
