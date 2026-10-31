@@ -111,6 +111,11 @@ describe('organization logo (organization-logo S2)', () => {
       'an SVG that carries a script (served sandboxed)',
       '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
     ],
+    // EN-124: XML whitespace is space, tab, CR and LF.
+    [
+      'an SVG with tabs, CR and LF around the declaration and in the root tag',
+      '\uFEFF\t\r\n<?xml\tversion="1.0"?>\r\n\t<svg\r\n\txmlns\t=\r\n"http://www.w3.org/2000/svg"\t/>',
+    ],
   ])('detects %s as SVG', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toEqual({
       extension: 'svg',
@@ -164,6 +169,48 @@ describe('organization logo (organization-logo S2)', () => {
       '<?xml-stylesheet href="logo.css"?><svg xmlns="http://www.w3.org/2000/svg"/>',
     ],
     ['plain text', 'svg xmlns="http://www.w3.org/2000/svg"'],
+    // EN-124: JavaScript whitespace that XML does not allow, and a byte
+    // order mark anywhere but the very start.
+    [
+      'a no-break space before the root',
+      '\u00A0<svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a no-break space after the element name',
+      '<svg\u00A0xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a line separator between attributes',
+      '<svg width="10"\u2028xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a line separator after the namespace',
+      '<svg xmlns="http://www.w3.org/2000/svg"\u2028width="10"/>',
+    ],
+    [
+      'a no-break space between the namespace name and =',
+      '<svg xmlns\u00A0="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a no-break space inside an attribute name',
+      '<svg a\u00A0b="1" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a quote inside an attribute name',
+      '<svg a"b="1" xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a no-break space after the declaration target',
+      '<?xml\u00A0version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'a byte order mark after the XML declaration',
+      '<?xml version="1.0"?>\uFEFF<svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
+    [
+      'two byte order marks',
+      '\uFEFF\uFEFF<svg xmlns="http://www.w3.org/2000/svg"/>',
+    ],
   ])('rejects %s', (_name, text) => {
     expect(detectLogoFormat(Buffer.from(text, 'utf8'))).toBeNull();
   });
