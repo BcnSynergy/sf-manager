@@ -280,8 +280,8 @@ None.
   doubled the gap (32 px instead of 16) in the organization logo section and
   in ReviewSessionElement's form, breaking `web-alert-announcements` ("MUST
   NOT change the page layout while empty"). Resolved by
-  `td-43-status-region-grid-gap`: while empty, a region that is a direct
-  child of a form or panel is positioned out of the grid flow (not
+  `td-43-status-region-grid-gap` (#315): while empty, a region that is a
+  direct child of a form or panel is positioned out of the grid flow (not
   `display: none`, so screen readers keep tracking it) and rejoins it when
   an alert fills it.
 - Earlier, before numbering: export S-1 and S-2, manager-cap S4, W2, and the
