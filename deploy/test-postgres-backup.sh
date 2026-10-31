@@ -275,15 +275,18 @@ for value in 0 07 x -1; do
   expect_out "BACKUP_RETENTION_DAYS must be a positive integer" "BACKUP_RETENTION_DAYS=$value"
 done
 # The service itself (no argument) must fail too, not start its loop. A
-# `sleep` placed first on PATH exits 99 at once, so a loop that started
-# fails right after its first cycle instead of waiting out the timeout
-# (EN-121); the timeout stays as a backstop against a hang. The trailing
-# command keeps sh from exec'ing it: as PID 1 the script would ignore the
-# timeout's SIGTERM.
+# `sleep` placed first on PATH exits 99 at once: busybox sh finds `sleep`
+# through PATH, and the script runs under `set -eu` with an unguarded
+# `sleep` in its loop, so a loop that started ends with 99 right after its
+# first cycle instead of waiting out the timeout (EN-121). If either of
+# those stops holding, the loop runs until the timeout, which stays as a
+# backstop, and the status check below still fails. The trailing command
+# keeps sh from exec'ing it: as PID 1 the script would ignore the timeout's
+# SIGTERM.
 retention=x
 status=0
 # shellcheck disable=SC2016 # expanded in the container
-out=$(run -c 'mkdir /tmp/bin && printf "#!/bin/sh\nexit 99\n" >/tmp/bin/sleep &&
+out=$(run -c 'mkdir -p /tmp/bin && printf "#!/bin/sh\nexit 99\n" >/tmp/bin/sleep &&
   chmod +x /tmp/bin/sleep && PATH=/tmp/bin:$PATH timeout 30 sh /s/postgres-backup.sh
   exit $?' 2>&1) || status=$?
 [ "$status" != 99 ] || fail "the service with BACKUP_RETENTION_DAYS=x started its loop"
