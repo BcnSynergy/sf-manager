@@ -252,9 +252,9 @@ element is `<svg>` with exactly one `xmlns` attribute, the default namespace
 XML whitespace (space, tab, carriage return and line feed only), `>` or
 `/>`, preceded at most by one byte order mark at the very start, an XML
 declaration, comments and XML whitespace, and containing no `<!DOCTYPE`
-or `<!ENTITY` declaration; the rest of the document is not parsed. An SVG is stored as uploaded, scripts
-included: the logo reads serve it sandboxed (see "Read the Organization
-Logo"). Anything else MUST be rejected as an unsupported format.
+or `<!ENTITY` declaration; the rest of the document is not parsed. An
+SVG is stored as uploaded, scripts included: the logo reads serve it
+sandboxed (see "Read the Organization Logo"). Anything else MUST be rejected as an unsupported format.
 (Previously: SVG was rejected, EN-109.)
 (Previously: any Unicode whitespace, such as a no-break space, passed as
 whitespace, EN-124.)
