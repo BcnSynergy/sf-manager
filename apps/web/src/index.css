@@ -467,7 +467,8 @@ code {
    (a form or a panel) the empty region would still take a row and add a gap,
    so it leaves the grid flow while empty. Positioned, not display:none, so
    screen readers keep tracking the live region; it rejoins the grid as soon
-   as an alert fills it. */
+   as an alert fills it. Direct children only: a StatusRegion placed in
+   another grid container needs that container added here. */
 :is(.sf-form, .sf-panel) > .sf-status-region:empty {
   position: absolute;
   margin: 0;

@@ -11,7 +11,10 @@ const css = readFileSync(join(process.cwd(), 'src', 'index.css'), 'utf8');
 
 describe('index.css print rules for the status region', () => {
   it('drops the empty status region negative margin in print', () => {
-    const resetsMargin = /\.sf-status-region:empty\s*{\s*margin-block-start:\s*0;?\s*}/;
+    // Every empty region, not only `main > ...` (TD-43): not after `>` nor
+    // inside a longer selector.
+    const resetsMargin =
+      /(?<!>\s*)(?<![\w-])\.sf-status-region:empty\s*{\s*margin-block-start:\s*0;?\s*}/;
     expect(printBlocks(css).filter((block) => resetsMargin.test(block.body))).not.toHaveLength(0);
   });
 });
