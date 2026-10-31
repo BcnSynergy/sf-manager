@@ -691,6 +691,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   section was moved above the form instead. Origin:
   `organization-logo-placement` (PR #314), 2026-10-31, user suggestion.
 
+- **EN-128** (web tests): tighten the TD-43 CSS tests in
+  `apps/web/src/styles/index-css-print-status-region.test.ts`. The print
+  reset check rejects a re-scope to `main >` but not to a descendant
+  selector such as `.sf-main .sf-status-region:empty`; the grid rule check
+  `/margin:\s*0/` would also accept `margin: 0 auto`. The grid rule covers
+  only direct children of `.sf-form` and `.sf-panel` (noted in its CSS
+  comment), so a StatusRegion nested deeper in a grid, or placed in another
+  grid container, would double the gap again with no test failing; a
+  rendered layout test would need Playwright (TD-32). Origin:
+  `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
+
 ## Done
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
