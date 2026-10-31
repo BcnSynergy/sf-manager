@@ -209,6 +209,9 @@ export function OrganizationProfilePage() {
           <p>{t('organizationProfile.incomplete')}</p>
         </div>
       )}
+      {/* Above the form: the logo has its own upload button, and below the
+          form's save button it looked as if that button saved it too. */}
+      <OrganizationLogoSection hasLogo={hasLogo} />
       <StatusRegion>
         {success && (
           <Alert
@@ -255,7 +258,6 @@ export function OrganizationProfilePage() {
           </button>
         </div>
       </form>
-      <OrganizationLogoSection hasLogo={hasLogo} />
     </main>
   );
 }

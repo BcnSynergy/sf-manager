@@ -81,6 +81,20 @@ describe('OrganizationProfilePage', () => {
     expect(screen.getByTestId('organization-logo-input')).toBeInTheDocument();
   });
 
+  // The logo has its own upload button; placed above the data form, the
+  // form's save button no longer looks like it also saves the logo.
+  it('places the logo section above the profile form and its save button', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    const logoInput = await screen.findByTestId('organization-logo-input');
+    const firstField = screen.getByTestId('organization-profile-legal-name');
+    expect(
+      logoInput.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('confirms a logo upload in the logo section status region, without saving the form (organization-logo S1)', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
     vi.mocked(organizationProfileApi.uploadOrganizationLogo).mockResolvedValue({
