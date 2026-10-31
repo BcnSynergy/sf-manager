@@ -153,8 +153,9 @@ function trimXmlWhitespace(text: string): string {
 
 // Reads the `<svg` start tag at the start of `text` attribute by attribute
 // (a name, `=`, then a quoted value, which may hold `>`) and returns its
-// `xmlns` value. A malformed or unterminated tag, or a second `xmlns`,
-// returns null. One pass, so its cost stays linear in the input.
+// `xmlns` value. A malformed or unterminated tag, attributes not separated
+// by XML whitespace, or a second `xmlns` return null. One pass, so its cost
+// stays linear in the input.
 function svgRootNamespace(text: string): string | null {
   if (!SVG_START.test(text)) return null;
   let namespace: string | null = null;
@@ -183,6 +184,12 @@ function svgRootNamespace(text: string): string | null {
       namespace = text.slice(index + 1, valueEnd);
     }
     index = valueEnd + 1;
+    // EN-125: XML requires whitespace between attributes; a `/` not
+    // followed by `>` is rejected by the name check above.
+    const next = text[index];
+    if (next !== '>' && next !== '/' && !WHITESPACE.test(next ?? '')) {
+      return null;
+    }
   }
 }
 
