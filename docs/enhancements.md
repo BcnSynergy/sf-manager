@@ -684,12 +684,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-127** (web): move the logo operations to a page of their own. The
   organization profile would show the logo, or a placeholder when there is
   none, with a visible "Change logo" link (an image alone is not an obvious
-  or accessible control) to a page that uploads and removes it. It keeps
-  the profile page to its data and its save button. Not done now: the logo
+  or accessible control) to a page that uploads and removes it. It keeps the
+  profile page to its data and its save button. Not done now: the logo
   changes rarely, so a separate page adds a navigation step for little gain,
   and it needs a route, translations, tests and a spec change. The logo
   section was moved above the form instead. Origin:
-  `organization-logo-placement`, 2026-10-31, user suggestion.
+  `organization-logo-placement` (PR #314), 2026-10-31, user suggestion.
 
 ## Done
 
