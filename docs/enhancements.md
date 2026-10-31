@@ -662,14 +662,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
   before every merge, and their titles do not follow `PR N/M`). Origin:
   `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
-- **EN-121** (deploy tests): in `deploy/test-postgres-backup.sh`, the case
-  that runs the service with `BACKUP_RETENTION_DAYS=x` only fails after its
-  30-second `timeout` when the script wrongly starts its loop, so a
-  regression there costs 30 s before it shows. A shorter timeout would
-  speed that up, at the risk of a slow runner failing a correct script.
-  Origin: `en-105-deploy-tests` (PR #303) pre-push review recheck,
-  2026-10-30.
-
 - **EN-122** (API): `logoFileMissingError()` lives in
   `logo-file.interceptor.ts` and the controller imports it from there, so
   an error factory sits in the interceptor's file. Fine for two callers; a
@@ -690,6 +682,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   2026-10-30.
 
 ## Done
+
+- **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
+  `deploy/test-postgres-backup.sh` no longer waits out its 30-second
+  `timeout` when the script wrongly starts its loop. A `sleep` placed first
+  on `PATH` exits 99, so the loop fails right after its first cycle with
+  "started its loop"; the timeout stays as a backstop against a hang. Done
+  in `en-121-retention-loop-fast-fail`, 2026-10-31.
 
 - **EN-118** (deploy): closed without a change, by decision.
   `offsite-copy.sh pull` keeps overwriting a local backup of the same name
