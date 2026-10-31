@@ -188,8 +188,9 @@ function svgRootNamespace(text: string): string | null {
 
 // EN-109: valid UTF-8 text whose root element is `<svg>` in the SVG
 // namespace, after one leading byte order mark, an XML declaration,
-// comments and XML whitespace (space, tab, CR and LF), all optional. A DOCTYPE or entity declaration anywhere rejects it. The
-// rest of the document is not parsed.
+// comments and XML whitespace (space, tab, CR and LF), all optional. A
+// DOCTYPE or entity declaration anywhere rejects it. The rest of the
+// document is not parsed.
 function isSvg(content: Uint8Array): boolean {
   let text: string;
   try {
