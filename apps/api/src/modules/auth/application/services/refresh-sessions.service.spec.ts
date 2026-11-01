@@ -46,7 +46,7 @@ class FakeTokens implements OpaqueTokenGenerator {
   }
 }
 
-function setup() {
+function setup(overrides: Partial<RefreshTokenPolicy> = {}) {
   const clock = new FakeClock();
   const store = new InMemoryRefreshTokenStore();
   const sessions = new RefreshSessionsService(
@@ -54,7 +54,7 @@ function setup() {
     new FakeTokens(),
     new SequentialIds(),
     clock,
-    policy,
+    { ...policy, ...overrides },
   );
   return { clock, store, sessions };
 }
@@ -310,7 +310,41 @@ describe('RefreshSessionsService', () => {
       expect(error.reason).toBe('revoked');
     });
 
-    it('leaves the token unconsumed when its successor cannot be stored, so a later retry is a normal refresh', async () => {
+    it('with a zero grace window, gives a lost race no grace exchange (strict rotation)', async () => {
+      const { sessions, store } = setup({ reuseGraceMs: 0 });
+      const first = await sessions.start('user-1');
+      jest.spyOn(store, 'exchange').mockResolvedValueOnce(false);
+
+      const error = await rejection(sessions.rotate(first.token));
+
+      expect(error.reason).toBe('superseded');
+      expect(store.exchange).toHaveBeenCalledTimes(1);
+      expect(store.tokens.size).toBe(1);
+    });
+
+    it('settles three refreshes of one token launched at once: one rotation, one grace exchange, one turned away', async () => {
+      const { store, sessions } = setup();
+      const first = await sessions.start('user-1');
+
+      const results = await Promise.allSettled([
+        sessions.rotate(first.token),
+        sessions.rotate(first.token),
+        sessions.rotate(first.token),
+      ]);
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason).toMatchObject({
+        reason: 'superseded',
+      });
+      expect(store.tokens.size).toBe(3);
+    });
+
+    // Relies on the store contract (exchange rolls the consume back when the
+    // successor cannot be stored), here through the fake; the Prisma
+    // transaction is proven by the adapter's integration test.
+    it('store contract: a successor that cannot be stored leaves the token unconsumed, so a later retry is a normal refresh', async () => {
       const { clock, store, sessions } = setup();
       const first = await sessions.start('user-1');
       jest

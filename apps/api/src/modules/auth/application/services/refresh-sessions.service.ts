@@ -80,15 +80,20 @@ export class RefreshSessionsService {
     // Each exchange consumes and stores the successor atomically, so a lost
     // attempt stores nothing and a failed store consumes nothing.
     const issued = this.successorOf(stored, now);
-    const won =
-      (stored.rotatedAt === null &&
-        (await this.store.exchange(
-          stored.id,
-          'rotation',
-          now,
-          issued.record,
-        ))) ||
-      (await this.store.exchange(stored.id, 'grace', now, issued.record));
+    let won = false;
+    if (stored.rotatedAt === null) {
+      won = await this.store.exchange(
+        stored.id,
+        'rotation',
+        now,
+        issued.record,
+      );
+    }
+    // Consumed already (by an earlier request or by the one that just beat
+    // us): only the grace exchange is left, and none in strict mode.
+    if (!won && this.policy.reuseGraceMs > 0) {
+      won = await this.store.exchange(stored.id, 'grace', now, issued.record);
+    }
     if (!won) {
       throw new RefreshRejectedError('superseded');
     }

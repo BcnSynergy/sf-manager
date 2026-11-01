@@ -46,8 +46,15 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
     if (!token || token[field] !== null) {
       return false;
     }
-    await this.create(successor);
+    // Claim synchronously, like the conditional UPDATE: a concurrent call
+    // sees the field set. Undo the claim if storing the successor fails.
     token[field] = at;
+    try {
+      await this.create(successor);
+    } catch (error) {
+      token[field] = null;
+      throw error;
+    }
     return true;
   }
 
