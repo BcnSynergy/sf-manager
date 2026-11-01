@@ -17,12 +17,17 @@ import { RefreshSessionsService } from './application/services/refresh-sessions.
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
 import { RolePermissionChecker } from './infrastructure/authorization/role-permission.checker';
 import {
   AUTH_CONFIG,
   type AuthConfig,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
+import {
+  getRefreshRateLimitConfig,
+  REFRESH_RATE_LIMIT_CONFIG,
+} from './infrastructure/config/refresh-rate-limit.config';
 import {
   getLoginEmailRateLimitConfig,
   getLoginRateLimitConfig,
@@ -96,6 +101,7 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     LoginUseCase,
     LogoutUseCase,
     GetCurrentUserUseCase,
+    RefreshSessionUseCase,
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },
@@ -103,6 +109,11 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     RefreshSessionsService,
     { provide: REFRESH_TOKEN_STORE, useClass: PrismaRefreshTokenStore },
     { provide: OPAQUE_TOKEN_GENERATOR, useClass: CryptoOpaqueTokenGenerator },
+    // Read at boot: an invalid REFRESH_RATE_LIMIT_* stops startup.
+    {
+      provide: REFRESH_RATE_LIMIT_CONFIG,
+      useFactory: getRefreshRateLimitConfig,
+    },
     {
       provide: REFRESH_TOKEN_POLICY,
       inject: [AUTH_CONFIG],

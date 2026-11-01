@@ -720,6 +720,61 @@ forwarded to the API without the prefix), which the production cookie needs:
 it is `Secure` and `SameSite=Strict`, so a separate API origin would not
 receive it.
 
+## Addendum (2026-11-01): `td-5-refresh-token-rotation` — Decision 4's refresh tokens (TD-5)
+
+Closes deviation 2 of the 2026-08-21 addendum ("a single non-rotating access
+token") for the web client, in three PRs (feature document
+`odd/tasks/td-5-refresh-token-rotation.md`, spec `authentication`, "Session
+Refresh"). Decision 4 itself stands; this records the shape it took.
+
+1. **Opaque refresh token, hashed at rest.** 256 random bits, base64url, in
+   the `sf_refresh_token` cookie; the `RefreshToken` table stores only its
+   SHA-256. Not a JWT: it is only ever checked against the table.
+2. **Families with rotation.** A login starts a family; each refresh
+   consumes the presented token and stores its successor in one transaction
+   (a conditional `UPDATE` plus the `INSERT`, so exactly one of two
+   concurrent refreshes wins and a failed insert consumes nothing).
+   Revocation is a family state: any revoked row makes the whole family
+   dead, including a successor a racing refresh adds after a logout.
+3. **Reuse detection with a grace window.** A consumed token presented
+   again after `REFRESH_TOKEN_REUSE_GRACE` (10 s) revokes the family. Inside
+   the window it is honoured once, for two tabs refreshing at once; further
+   attempts inside the window get 401 without revoking, so a third tab does
+   not log the user out everywhere. Residual, accepted: a thief who replays
+   a stolen token within 10 s of the real refresh gets that one exchange. A
+   zero grace turns the window off. The web serializes refreshes across tabs
+   (Web Locks, PR 3/3), which keeps legitimate overlaps rare.
+4. **Lifetimes.** 8 hours idle and 7 days absolute
+   (`REFRESH_TOKEN_IDLE_TTL`, `REFRESH_TOKEN_ABSOLUTE_TTL`), the user's
+   choice. Consumed tokens are kept until their family expires, so a late
+   reuse is still recognised; cleanup is opportunistic on login and logout,
+   like the deny-list.
+5. **Endpoint.** `POST /auth/refresh` is public (the access token may have
+   expired), reads the user live like the guard, refuses a foreign `Origin`
+   with 403 (CSRF; SameSite covers production, the check also covers
+   development's `lax`), and has its own per-client-key limit, apart from
+   login's (60 per minute by default), read at boot so an invalid value
+   stops startup. Reading the user and signing the access token run before
+   the rotation commits, so a failure there leaves the token unconsumed. A
+   database error during the exchange (including Prisma's transaction
+   timeout, P2028, which also signals an exhausted pool) answers 500 and
+   keeps the cookie: the transaction rolled back, so a retry is a normal
+   refresh, and a load spike does not log users out.
+6. **Cookie scope.** The refresh cookie's path is the auth routes as the
+   browser sees them: `/auth` in development, `/api/auth` behind Caddy
+   (`REFRESH_TOKEN_COOKIE_PATH`), so it reaches the auth routes (refresh and
+   logout among them; a cookie path matches by prefix) and no other API
+   call.
+7. **Logout.** Public now: once the short-lived access cookie has expired,
+   only the refresh cookie may be left. It revokes the access token's `jti`
+   when one verifies and the refresh family when a refresh cookie is sent;
+   with neither it stays 401. This also changes item 4 of the 2026-10-06
+   addendum: a deleted user's logout is no longer refused by the guard; it
+   revokes what it is given.
+8. **Access-token lifetime.** `JWT_EXPIRES_IN` stays `2h` until the web
+   renews silently (PR 3/3), which then lowers the default to Decision 4's
+   15 minutes, so no release logs users out every 15 minutes.
+
 ## Alternatives Considered
 
 - **Full granular resource×action permission matrix, admin-configurable

@@ -37,6 +37,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in prod.env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
       CORS_ORIGIN: https://${SITE_ADDRESS:?set SITE_ADDRESS in prod.env}
+      # TD-5: the refresh cookie is scoped to the auth routes as the browser
+      # sees them, and Caddy serves the API under /api.
+      REFRESH_TOKEN_COOKIE_PATH: /api/auth
+      REFRESH_TOKEN_IDLE_TTL: ${REFRESH_TOKEN_IDLE_TTL:-8h}
+      REFRESH_TOKEN_ABSOLUTE_TTL: ${REFRESH_TOKEN_ABSOLUTE_TTL:-7d}
       # Caddy is the only hop in front of the API (ADR-011 open question 1).
       TRUST_PROXY: '1'
       # Swagger UI at /api/docs lists every route and schema (TD-40).

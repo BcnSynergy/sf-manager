@@ -18,6 +18,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { User } from '../src/modules/users/domain/user.entity';
 import type { Role } from '../src/modules/users/domain/role';
 import {
@@ -133,6 +135,8 @@ async function buildApp(
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(REFRESH_TOKEN_STORE)
+    .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
     .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)
     .useValue(companyLookup)
     .overrideProvider(ThrottlerStorage)

@@ -17,6 +17,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { CHECKLIST_QUESTION_REPOSITORY } from '../src/modules/checklist-question/application/ports/checklist-question.repository.port';
 import { DRAFT_SELECTION_CLEANER } from '../src/modules/checklist-question/application/ports/draft-selection-cleaner.port';
 import { InMemoryChecklistQuestionRepository } from '../src/modules/checklist-question/application/use-cases/testing/in-memory-checklist-question.repository';
@@ -137,6 +139,8 @@ async function buildApp(seed: { users?: User[] }): Promise<{
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(REFRESH_TOKEN_STORE)
+    .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
     .overrideProvider(CHECKLIST_QUESTION_REPOSITORY)
     .useValue(questionRepository)
     .overrideProvider(REVIEW_TEMPLATE_REPOSITORY)
@@ -1335,6 +1339,8 @@ describe('Review Templates (e2e)', () => {
         .useValue(userRepository)
         .overrideProvider(TOKEN_DENYLIST)
         .useValue(new InMemoryTokenDenylist())
+        .overrideProvider(REFRESH_TOKEN_STORE)
+        .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
         .overrideProvider(CHECKLIST_QUESTION_REPOSITORY)
         .useValue(questionRepository)
         .overrideProvider(REVIEW_TEMPLATE_REPOSITORY)

@@ -100,13 +100,23 @@ export class RefreshSessionsService {
     return { ...issued.result, userId: stored.userId };
   }
 
-  // Logout: kills the family of the presented token. Unknown tokens are
-  // ignored, so logging out twice is harmless.
-  async revoke(token: string): Promise<void> {
+  // The token's user, without consuming it (null when unknown), so a caller
+  // can do everything that may fail before rotate() commits.
+  async ownerOf(token: string): Promise<string | null> {
     const stored = await this.store.findByHash(this.tokens.hash(token));
-    if (stored) {
-      await this.store.revokeFamily(stored.familyId, this.clock.now());
+    return stored?.userId ?? null;
+  }
+
+  // Logout: kills the family of the presented token. Unknown tokens are
+  // ignored, so logging out twice is harmless; the result says whether the
+  // token was one of ours.
+  async revoke(token: string): Promise<boolean> {
+    const stored = await this.store.findByHash(this.tokens.hash(token));
+    if (!stored) {
+      return false;
     }
+    await this.store.revokeFamily(stored.familyId, this.clock.now());
+    return true;
   }
 
   async deleteExpired(): Promise<void> {

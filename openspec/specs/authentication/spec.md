@@ -5,23 +5,27 @@ Source: `sdd/auth-minimal-skeleton` (merged into main specs at archive, 2026-08-
 ## Purpose
 
 Answers one question end-to-end: is the request authenticated, yes/no.
-Covers seeded-admin credential verification, single access-token
-issuance via httpOnly cookie, logout, and a guard with a public
-opt-out. Excludes registration, roles/RBAC, refresh tokens, password
-reset, demo mode (proposal Out of Scope).
+Covers seeded-admin credential verification, access-token and rotating
+refresh-token issuance via httpOnly cookies, session refresh, logout, and
+a guard with a public opt-out. Excludes registration, roles/RBAC, password
+reset, demo mode (proposal Out of Scope). (Refresh tokens added by TD-5,
+ADR-011 Decision 4.)
 
 ## Requirements
 
 ### Requirement: Successful Login
 
 The system MUST verify credentials against the seeded admin user and,
-when valid, MUST issue one JWT access token in an httpOnly cookie.
+when valid, MUST issue one JWT access token in an httpOnly cookie and MUST
+start a refresh session ("Session Refresh") whose refresh token is set in
+a second httpOnly cookie.
 
 #### Scenario: Valid credentials
 
 - GIVEN the seeded admin user exists
 - WHEN the client POSTs valid credentials to the login endpoint
 - THEN status MUST be 2xx and an httpOnly access-token cookie MUST be set
+- AND an httpOnly refresh-token cookie MUST be set, scoped to the auth routes and expiring with the refresh token
 - AND the body MUST contain only public identity fields (e.g. id, email) — never the hash or raw token
 
 ### Requirement: Failed Login — Generic Error
@@ -143,26 +147,150 @@ token claims. Public endpoints MUST NOT be affected.
 
 ### Requirement: Logout
 
-The system MUST provide a logout action that clears the access-token
-cookie.
+The system MUST provide a logout action that ends the session and clears
+both the access-token and the refresh-token cookie. A valid access token (correctly signed, unexpired and not already revoked)
+MUST be revoked; a presented refresh token MUST have its whole refresh
+session revoked. Either one MUST be enough, so that logout works when
+only the refresh cookie is left after the access token expired; with
+neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.) A request whose `Origin` header is present and is not
+`CORS_ORIGIN` MUST be refused with 403.
 
 #### Scenario: Logout clears cookie
 
 - GIVEN an authenticated session
 - WHEN the client calls the logout endpoint
-- THEN the cookie MUST be cleared/expired
-- AND reusing the old cookie value on a protected endpoint MUST return 401
+- THEN both cookies MUST be cleared/expired
+- AND reusing the old access-token cookie value on a protected endpoint MUST return 401
+- AND presenting the old refresh token to the refresh endpoint MUST return 401
+
+#### Scenario: Logout with only the refresh cookie
+
+- GIVEN a session whose access-token cookie has expired and whose refresh cookie remains
+- WHEN the client calls the logout endpoint
+- THEN the response MUST be 2xx, both cookies MUST be cleared, and the refresh session MUST be revoked
+
+#### Scenario: Logout without a session
+
+- GIVEN no valid access token and no refresh cookie
+- WHEN the client calls the logout endpoint
+- THEN the response MUST be 401
+
+### Requirement: Session Refresh
+
+The system MUST let a client exchange its refresh token, sent in the
+refresh-token cookie to `POST /auth/refresh`, for a new access token and a
+new refresh token, set in the same two cookies, answering 2xx with the
+same public identity fields as login. (ADR-011 Decision 4, TD-5.)
+
+- **Opaque and hashed.** A refresh token MUST be an opaque random value,
+  not a JWT, and only a one-way hash of it MAY be stored.
+- **Rotation.** Every successful refresh MUST consume the presented token
+  and issue its successor in the same refresh session; a login starts a
+  new session.
+- **Reuse detection.** A consumed token presented again after the grace
+  window MUST be rejected with 401 and MUST revoke the whole refresh
+  session, so neither the client nor a thief can refresh it again. Inside
+  the grace window a consumed token MUST be honoured once (two tabs
+  refreshing at the same time); further attempts inside the window MUST be
+  rejected with 401 without revoking and without clearing the cookie (the
+  browser may already hold the successor). With a zero grace window there
+  is no such exchange.
+- **Lifetime.** A refresh session MUST expire when it has not been
+  refreshed for the idle timeout and, whatever the activity, when the
+  absolute maximum after its login has passed. The defaults MUST be 8 hours
+  idle and 7 days absolute (`REFRESH_TOKEN_IDLE_TTL`,
+  `REFRESH_TOKEN_ABSOLUTE_TTL`) and a 10-second grace window
+  (`REFRESH_TOKEN_REUSE_GRACE`), in the format of `JWT_EXPIRES_IN`. The two
+  lifetimes MUST be greater than zero; an invalid value MUST make startup
+  fail. The refresh cookie MUST expire with its token.
+- **Live user.** The user MUST be read on every refresh: a deleted or
+  soft-deleted user MUST be rejected with 401 and the refresh session
+  revoked, and the new access token MUST carry the stored role.
+- **Rejections.** A missing, unknown, expired, revoked or reused refresh
+  token MUST be answered with the same bare 401; when a refresh cookie was
+  presented and rejected for any reason other than a concurrent refresh
+  (below), the response MUST clear it.
+- **Same origin.** A request whose `Origin` header is present and is not
+  `CORS_ORIGIN` MUST be refused with 403 without consuming the token.
+- **Rate limit.** Refreshes MUST be limited per client key, separately
+  from login attempts, with 429 and `Retry-After` past the limit. The
+  defaults MUST be 60 refreshes per 60 seconds
+  (`REFRESH_RATE_LIMIT_MAX_ATTEMPTS`, `REFRESH_RATE_LIMIT_WINDOW_SECONDS`,
+  positive integers; an invalid value MUST make startup fail).
+- **Cookie scope.** The refresh cookie MUST be httpOnly, Secure and
+  SameSite like the access-token cookie, and scoped to the auth routes by
+  its path (`REFRESH_TOKEN_COOKIE_PATH`, default `/auth`), so it is not
+  sent with other API calls.
+
+#### Scenario: Refresh issues a new pair
+
+- GIVEN a client logged in and holding its refresh cookie
+- WHEN it POSTs to the refresh endpoint
+- THEN the response MUST be 2xx with the public identity fields
+- AND new access-token and refresh-token cookies MUST be set, the refresh token MUST differ from the presented one, and the new access token MUST authenticate a protected request
+
+#### Scenario: Reused refresh token revokes the session
+
+- GIVEN a refresh token that was already exchanged, presented after the grace window
+- WHEN the client POSTs it to the refresh endpoint
+- THEN the response MUST be 401
+- AND the successor issued by the earlier exchange MUST be rejected with 401 too
+
+#### Scenario: Concurrent refresh within the grace window
+
+- GIVEN a refresh token exchanged a moment ago, within the grace window
+- WHEN a second request presents it
+- THEN that request MUST succeed once without revoking the session
+- AND a third request presenting it within the window MUST be rejected with 401 without revoking the session
+
+#### Scenario: Idle and absolute expiry
+
+- GIVEN a refresh session not refreshed for 8 hours, or one whose login was 7 days ago
+- WHEN its refresh token is presented
+- THEN the response MUST be 401
+
+#### Scenario: Deleted user cannot refresh
+
+- GIVEN a user deleted after logging in
+- WHEN their refresh token is presented
+- THEN the response MUST be 401
+
+#### Scenario: Role change applies on refresh
+
+- GIVEN a user whose role changed after logging in
+- WHEN their refresh token is presented
+- THEN the response MUST carry the new role
+
+#### Scenario: Request from another origin
+
+- GIVEN a valid refresh token
+- WHEN it is presented with an `Origin` header other than `CORS_ORIGIN`
+- THEN the response MUST be 403 and the token MUST remain usable from the web app's origin
+
+#### Scenario: Missing or unknown refresh token
+
+- GIVEN no refresh cookie, or one the system never issued
+- WHEN the client POSTs to the refresh endpoint
+- THEN the response MUST be 401, and an unknown cookie MUST be cleared
+
+#### Scenario: Too many refreshes
+
+- GIVEN a client key that has used up its refreshes in the window
+- WHEN it POSTs to the refresh endpoint again
+- THEN the response MUST be 429 with a `Retry-After` header
 
 ### Requirement: Public Endpoint Opt-Out
 
 The system MUST support marking endpoints public, exempt from the
-guard, and MUST mark `/health` and the login endpoint public.
+guard, and MUST mark `/health`, the login endpoint, the refresh endpoint
+and the logout endpoint public. The refresh and logout endpoints check
+their own cookies ("Session Refresh", "Logout").
 
 #### Scenario: Health and login stay reachable
 
 - GIVEN no access-token cookie
-- WHEN the client calls `/health` or the login endpoint
-- THEN neither call MUST be blocked by the guard
+- WHEN the client calls `/health`, the login endpoint or the refresh endpoint
+- THEN no call MUST be blocked by the guard
 
 ### Requirement: CORS Configuration
 

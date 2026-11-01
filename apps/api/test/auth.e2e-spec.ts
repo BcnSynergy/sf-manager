@@ -15,6 +15,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import { User } from '../src/modules/users/domain/user.entity';
 
@@ -89,6 +91,8 @@ describe('Auth (e2e)', () => {
       .useValue(userRepository)
       .overrideProvider(TOKEN_DENYLIST)
       .useValue(tokenDenylist)
+      .overrideProvider(REFRESH_TOKEN_STORE)
+      .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
       .overrideProvider(ThrottlerStorage)
       .useFactory({ factory: () => new ThrottlerStorageService() })
       .overrideProvider(LOGIN_FAILURE_LIMITER)
@@ -168,6 +172,39 @@ describe('Auth (e2e)', () => {
         Buffer.from(rawToken.split('.')[1], 'base64url').toString('utf8'),
       ) as { sub: string; email: string; role: string };
       expect(decodedPayload.role).toBe('SYSTEM_ADMIN');
+    });
+
+    // TD-5 S2: the login also starts a refresh family, in its own cookie
+    // scoped to the auth routes.
+    it('sets an httpOnly refresh-token cookie scoped to /auth that expires with the 8-hour idle timeout', async () => {
+      const before = Date.now();
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD })
+        .expect(200);
+
+      const setCookieHeader = response.headers['set-cookie'] as unknown as
+        string[] | string;
+      const cookies = Array.isArray(setCookieHeader)
+        ? setCookieHeader
+        : [setCookieHeader];
+      const refreshCookie = cookies.find((cookie) =>
+        cookie.startsWith('sf_refresh_token='),
+      );
+      expect(refreshCookie).toBeDefined();
+      const attributes = (refreshCookie as string).split('; ');
+      expect(attributes[0]).toMatch(/^sf_refresh_token=[A-Za-z0-9_-]{43}$/);
+      expect(attributes).toContain('HttpOnly');
+      expect(attributes).toContain('Path=/auth');
+      expect(attributes).toContain('SameSite=Lax');
+      const expires = attributes.find((part) => part.startsWith('Expires='));
+      const expiresAt = Date.parse(
+        (expires as string).slice('Expires='.length),
+      );
+      const eightHours = 8 * 60 * 60 * 1000;
+      // Expires has second precision.
+      expect(expiresAt).toBeGreaterThanOrEqual(before + eightHours - 1000);
+      expect(expiresAt).toBeLessThanOrEqual(Date.now() + eightHours);
     });
 
     it('rejects wrong credentials with a generic 401', () => {

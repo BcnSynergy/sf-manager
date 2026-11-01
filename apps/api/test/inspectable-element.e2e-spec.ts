@@ -18,6 +18,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { COMMUNITY_REPOSITORY } from '../src/modules/community/application/ports/community.repository.port';
 import { InMemoryCommunityRepository } from '../src/modules/community/application/use-cases/testing/in-memory-community.repository';
 import {
@@ -139,6 +141,8 @@ async function buildApp(seed: {
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(REFRESH_TOKEN_STORE)
+    .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
     .overrideProvider(COMMUNITY_REPOSITORY)
     .useValue(communityRepository)
     .overrideProvider(INSPECTABLE_ELEMENT_REPOSITORY)

@@ -759,6 +759,43 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   with the two TTLs. Origin: `td-5-refresh-token-rotation` (PR #318) native
   review, 2026-11-01.
 
+- **EN-138** (api): refresh follow-ups from the TD-5 PR 2/3 native review.
+  `RefreshSessionUseCase` looks the token up (`ownerOf`), reads the user and
+  signs an access token before `rotate()` decides validity, so a replayed,
+  expired or revoked token costs a user read and a JWT sign before its 401
+  (bounded by the refresh rate limit); `ownerOf` could return null for a
+  token that cannot be exchanged, at the cost of repeating `rotate()`'s
+  rules. The two refresh e2e suites (`refresh.e2e-spec.ts`,
+  `refresh-rate-limit.e2e-spec.ts`) each carry their own
+  `InMemoryTokenDenylist` and env save/restore loop; a shared test helper
+  would keep them from drifting. Origin: `td-5-refresh-token-rotation` PR
+  2/3 native review, 2026-11-01.
+
+- **EN-139** (api): two notes on `RefreshThrottlerGuard` (TD-5). Its
+  `handleRequest` replaces the limit, window and block duration of every
+  named throttler the module registers; today there is only one (login's),
+  but a second module-wide throttler would be silently overwritten for the
+  refresh route. Check `requestProps.throttler.name`, or say so in a
+  comment. Its unit spec restores the `ThrottlerGuard.prototype` spy at the
+  end of the test body, so a failing assertion would leave it mocked for
+  later tests in the worker; restore it in `afterEach`. In `auth.controller.spec.ts`, the type alias `RefreshRequest` also casts logout requests; a neutral name such as `ControllerRequest` reads better. Origin:
+  `td-5-refresh-token-rotation` PR 2/3 native review, 2026-11-01.
+
+- **EN-140** (api, docs): leftovers from the TD-5 PR 2/3 pre-merge review.
+  `apps/api/.env.example` still lacks the six refresh variables
+  (`REFRESH_TOKEN_IDLE_TTL`, `REFRESH_TOKEN_ABSOLUTE_TTL`,
+  `REFRESH_TOKEN_REUSE_GRACE`, `REFRESH_TOKEN_COOKIE_PATH`,
+  `REFRESH_RATE_LIMIT_MAX_ATTEMPTS`, `REFRESH_RATE_LIMIT_WINDOW_SECONDS`);
+  the agent cannot edit that file. `SameOriginGuard` compares `Origin`
+  with `CORS_ORIGIN` exactly, so a `CORS_ORIGIN` with a trailing slash
+  would answer every refresh and logout with 403; normalize it or reject it
+  at boot. The refresh e2e suites do not cover over HTTP: the grace
+  exchange and `superseded` (they run with a zero grace), that logout with
+  both cookies kills the refresh family, that a deleted user's family is
+  revoked, and the refreshed JWT's `role` claim (each was checked by the
+  reviewer's probes). Origin: `td-5-refresh-token-rotation` (PR #319)
+  pre-merge review, 2026-11-01.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app

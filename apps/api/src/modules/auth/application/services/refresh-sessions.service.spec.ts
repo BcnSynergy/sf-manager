@@ -399,24 +399,35 @@ describe('RefreshSessionsService', () => {
     });
   });
 
+  describe('ownerOf', () => {
+    it("returns the token's user without consuming it, and null for an unknown token", async () => {
+      const { store, sessions } = setup();
+      const first = await sessions.start('user-1');
+
+      await expect(sessions.ownerOf(first.token)).resolves.toBe('user-1');
+      await expect(sessions.ownerOf('never-issued')).resolves.toBeNull();
+      expect((await store.findByHash('hash(token-1)'))?.rotatedAt).toBeNull();
+    });
+  });
+
   describe('revoke', () => {
     it('revokes every token of the family', async () => {
       const { clock, store, sessions } = setup();
       const first = await sessions.start('user-1');
       const second = await sessions.rotate(first.token);
 
-      await sessions.revoke(second.token);
+      await expect(sessions.revoke(second.token)).resolves.toBe(true);
 
       for (const token of store.tokens.values()) {
         expect(token.revokedAt).toEqual(clock.now());
       }
     });
 
-    it('ignores an unknown token', async () => {
+    it('ignores an unknown token, reporting that nothing was found', async () => {
       const { store, sessions } = setup();
       await sessions.start('user-1');
 
-      await expect(sessions.revoke('never-issued')).resolves.toBeUndefined();
+      await expect(sessions.revoke('never-issued')).resolves.toBe(false);
       expect([...store.tokens.values()][0].revokedAt).toBeNull();
     });
   });

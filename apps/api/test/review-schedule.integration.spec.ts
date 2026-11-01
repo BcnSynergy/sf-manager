@@ -222,6 +222,10 @@ describe('GET /review-schedule through the real Prisma reader (integration)', ()
       where: { communityId: { in: communityIds } },
     });
     await prisma.community.deleteMany({ where: { id: { in: communityIds } } });
+    // TD-5: logins create refresh tokens, whose FK restricts the delete.
+    await prisma.refreshToken.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     await app.close();
   });

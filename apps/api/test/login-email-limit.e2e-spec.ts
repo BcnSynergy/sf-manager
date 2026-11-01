@@ -11,6 +11,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
 import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter';
 import { getLoginEmailRateLimitConfig } from '../src/modules/auth/infrastructure/config/login-rate-limit.config';
@@ -100,6 +102,8 @@ describe('Login email limit (e2e)', () => {
       .useValue(userRepository)
       .overrideProvider(TOKEN_DENYLIST)
       .useValue(new InMemoryTokenDenylist())
+      .overrideProvider(REFRESH_TOKEN_STORE)
+      .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
       .overrideProvider(ThrottlerStorage)
       .useFactory({ factory: () => new ThrottlerStorageService() })
       .overrideProvider(LOGIN_FAILURE_LIMITER)
