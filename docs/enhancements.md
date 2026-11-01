@@ -721,6 +721,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   clean while blocked. Origin: `en-129-unsaved-changes-guard` pre-push
   review, 2026-11-01.
 
+- **EN-134** (web): since the data router (EN-129), a render error that
+  escapes the page-level boundaries (`AppLayout`, `ProtectedRoute`) shows
+  React Router's built-in "Unexpected Application Error!" screen instead of
+  unmounting the app to a blank page. Give the catch-all route in `App.tsx`
+  an `errorElement` with the app's own, translated message. Origin:
+  `en-129-unsaved-changes-guard` (PR #317) pre-merge review, 2026-11-01.
+
+- **EN-135** (web tests): the EN-129 leave guard is pinned for the back
+  button but not for forward. Both are POP navigations through the same
+  blocker, so the gap is small. Origin: `en-129-unsaved-changes-guard` (PR
+  #317) pre-merge review, 2026-11-01.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app

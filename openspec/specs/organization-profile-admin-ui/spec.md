@@ -159,7 +159,8 @@ the admin to confirm leaving. Cancelling MUST keep them on the page with
 their edits intact; confirming MUST leave and drop the edits, with no save
 request. With no such difference (nothing edited, edits typed back to the
 saved values, or edits already saved) the page MUST be left without
-asking. Reloading or closing the browser tab is not covered. (Added by
+asking. Reloading or closing the browser tab is not covered, nor is logging out
+or the session ending, which end the session before any navigation. (Added by
 EN-129.)
 
 #### Scenario: Cancelling keeps the edits

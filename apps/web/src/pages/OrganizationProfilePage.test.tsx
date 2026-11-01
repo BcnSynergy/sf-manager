@@ -702,14 +702,18 @@ describe('OrganizationProfilePage leave guard', () => {
   });
 
   it('asks on any in-app navigation, not only Change logo', async () => {
-    const { router } = renderPage();
+    const { router } = renderAt([
+      { path: '/organization-profile', element: <OrganizationProfilePage /> },
+      { path: '/users', element: <div data-testid="users-stub">users</div> },
+    ]);
     await editName('Edited name');
 
-    // What a nav-menu link does: a navigation that does not start on this page.
-    await act(() => router.navigate('/organization-profile/logo'));
+    // What a nav-menu link does: navigate the router to another page.
+    await act(() => router.navigate('/users'));
 
     expect(leaveDialog()).toHaveAttribute('open');
     expect(router.state.location.pathname).toBe('/organization-profile');
+    expect(screen.queryByTestId('users-stub')).not.toBeInTheDocument();
   });
 
   it('asks on the browser back button too, and leaving completes the back step', async () => {
@@ -760,6 +764,10 @@ describe('OrganizationProfilePage leave guard', () => {
     await editName('Edited name');
     fireEvent.click(screen.getByTestId('organization-profile-submit'));
     await screen.findByTestId('organization-profile-success');
+    // The save resolves outside act, and useBlocker swaps in the now-clean
+    // check in an effect after the paint; flush it before clicking, as any
+    // real click lands frames later.
+    await act(async () => {});
 
     fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
 
