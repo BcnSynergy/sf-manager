@@ -195,6 +195,19 @@ describe('LogoutUseCase', () => {
       expect(refreshSessions.deleteExpired).not.toHaveBeenCalled();
     });
 
+    // The endpoint is public, so no guard checked the deny-list first.
+    it('treats an already revoked access token as no session (401) and does not revoke it again', async () => {
+      tokenIssuer.verify.mockResolvedValue(payload);
+      tokenDenylist.isRevoked.mockResolvedValue(true);
+
+      await expect(
+        useCase.execute({ accessToken: 'revoked-access' }),
+      ).rejects.toThrow(InvalidCredentialsError);
+
+      expect(tokenDenylist.isRevoked).toHaveBeenCalledWith('jti-1');
+      expect(tokenDenylist.revoke).not.toHaveBeenCalled();
+    });
+
     it('ignores a failure of the refresh-token cleanup', async () => {
       refreshSessions.deleteExpired.mockRejectedValue(new Error('transient'));
 

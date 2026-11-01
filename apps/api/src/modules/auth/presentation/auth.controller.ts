@@ -125,7 +125,7 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthUserResponseDto> {
-    const presented = request.cookies?.[this.authConfig.refreshCookie.name];
+    const presented = cookieValue(request, this.authConfig.refreshCookie.name);
     if (!presented) {
       throw new UnauthorizedException();
     }
@@ -150,8 +150,10 @@ export class AuthController {
 
   // TD-5 S6: public, because only the refresh cookie may be left once the
   // access cookie has expired; LogoutUseCase still answers 401 when there
-  // is no session at all.
+  // is no session at all. Same-origin only, so another site cannot log the
+  // user out (development's cookies are SameSite=lax).
   @Public()
+  @UseGuards(SameOriginGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
@@ -160,8 +162,8 @@ export class AuthController {
   ): Promise<void> {
     try {
       await this.logoutUseCase.execute({
-        accessToken: request.cookies?.[this.authConfig.cookie.name],
-        refreshToken: request.cookies?.[this.authConfig.refreshCookie.name],
+        accessToken: cookieValue(request, this.authConfig.cookie.name),
+        refreshToken: cookieValue(request, this.authConfig.refreshCookie.name),
       });
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
@@ -215,4 +217,14 @@ export class AuthController {
       expires: refreshToken.expiresAt,
     });
   }
+}
+
+// cookie-parser turns a `j:`-prefixed value into an object; only a string is
+// a cookie this API could have set.
+function cookieValue(
+  request: AuthenticatedRequest,
+  name: string,
+): string | undefined {
+  const value: unknown = request.cookies?.[name];
+  return typeof value === 'string' ? value : undefined;
 }

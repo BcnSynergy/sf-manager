@@ -178,6 +178,14 @@ describe('POST /auth/refresh (e2e)', () => {
     await refresh(undefined).expect(401);
   });
 
+  it('answers 401, not 500, for a crafted cookie that cookie-parser turns into an object', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Origin', TEST_ORIGIN)
+      .set('Cookie', 'sf_refresh_token=j:{}')
+      .expect(401);
+  });
+
   it('answers 401 for an unknown refresh token, and clears the cookie', async () => {
     const response = await refresh('A'.repeat(43)).expect(401);
 
@@ -240,6 +248,18 @@ describe('POST /auth/refresh (e2e)', () => {
         expect.arrayContaining(['sf_access_token', 'sf_refresh_token']),
       );
       await refresh(token).expect(401);
+    });
+
+    it('refuses a logout from another origin with 403, leaving the session alive', async () => {
+      const { refresh: token } = await loggedInUser();
+
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Origin', 'https://evil.example')
+        .set('Cookie', `sf_refresh_token=${token}`)
+        .expect(403);
+
+      await refresh(token).expect(200);
     });
 
     it('still answers 401 with neither a valid access token nor a refresh cookie', async () => {

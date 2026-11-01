@@ -15,6 +15,9 @@ import { LoginBlockedError } from '../domain/login-blocked.error';
 import { AUTH_CONFIG, AuthConfig } from '../infrastructure/config/auth.config';
 import { AuthController } from './auth.controller';
 
+// Requests whose cookies cookie-parser did not leave as strings.
+type RefreshRequest = Parameters<AuthController['refresh']>[0];
+
 describe('AuthController', () => {
   const authConfig: AuthConfig = {
     jwtSecret: 'test-secret',
@@ -194,6 +197,20 @@ describe('AuthController', () => {
     });
   });
 
+  it('logout treats cookies that are not strings as absent', async () => {
+    await controller.logout(
+      {
+        cookies: { sf_access_token: {}, sf_refresh_token: ['x'] },
+      } as unknown as RefreshRequest,
+      res,
+    );
+
+    expect(logoutUseCase.execute).toHaveBeenCalledWith({
+      accessToken: undefined,
+      refreshToken: undefined,
+    });
+  });
+
   it('maps a logout InvalidCredentialsError (e.g. verify failed) to a clean 401 and does not clear the cookie', async () => {
     logoutUseCase.execute.mockRejectedValue(new InvalidCredentialsError());
     const request = { cookies: { sf_access_token: 'expired-token' } };
@@ -252,6 +269,17 @@ describe('AuthController', () => {
         email: 'admin@example.com',
         role: 'SYSTEM_ADMIN',
       });
+    });
+
+    // cookie-parser turns a `j:`-prefixed value into an object.
+    it('answers 401 for a refresh cookie that is not a string, without calling the use case', async () => {
+      await expect(
+        controller.refresh(
+          { cookies: { sf_refresh_token: {} } } as unknown as RefreshRequest,
+          res,
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(refreshSessionUseCase.execute).not.toHaveBeenCalled();
     });
 
     it('answers 401 without a refresh cookie, without calling the use case', async () => {

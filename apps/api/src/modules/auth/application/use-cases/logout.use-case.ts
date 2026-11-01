@@ -61,11 +61,15 @@ export class LogoutUseCase {
     }
   }
 
+  // A valid access token: correctly signed, unexpired and not on the
+  // deny-list (no guard checked it, the endpoint being public).
   private async verified(token: string): Promise<VerifiedAccessToken | null> {
+    let payload: VerifiedAccessToken;
     try {
-      return await this.tokenIssuer.verify(token);
+      payload = await this.tokenIssuer.verify(token);
     } catch {
       return null;
     }
+    return (await this.tokenDenylist.isRevoked(payload.jti)) ? null : payload;
   }
 }

@@ -148,11 +148,12 @@ token claims. Public endpoints MUST NOT be affected.
 ### Requirement: Logout
 
 The system MUST provide a logout action that ends the session and clears
-both the access-token and the refresh-token cookie. A valid access token
+both the access-token and the refresh-token cookie. A valid access token (correctly signed, unexpired and not already revoked)
 MUST be revoked; a presented refresh token MUST have its whole refresh
 session revoked. Either one MUST be enough, so that logout works when
 only the refresh cookie is left after the access token expired; with
-neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.)
+neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.) A request whose `Origin` header is present and is not
+`CORS_ORIGIN` MUST be refused with 403.
 
 #### Scenario: Logout clears cookie
 
