@@ -23,7 +23,7 @@ function lazyPage(load: () => Promise<ComponentType>) {
   return { element: <Page />, load };
 }
 
-// nav-menu/design.md Decision 1: the 29 authenticated routes are declared
+// nav-menu/design.md Decision 1: the 32 authenticated routes are declared
 // once, here, and App.tsx's <Routes> tree is generated FROM this table by
 // .map() — not hand-copied into a parallel array. Each entry keeps the
 // ordering comment that used to sit above its <Route> in App.tsx, verbatim,
@@ -364,6 +364,14 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
     ...lazyPage(() =>
       import('../pages/OrganizationProfilePage').then((m) => m.OrganizationProfilePage),
     ),
+    allowedRoles: ['SYSTEM_ADMIN'],
+  },
+  // EN-127: the logo's own page, SYSTEM_ADMIN-only like the profile. A static
+  // child of /organization-profile, so the profile's nav entry (no `end`)
+  // stays highlighted here.
+  {
+    path: '/organization-profile/logo',
+    ...lazyPage(() => import('../pages/OrganizationLogoPage').then((m) => m.OrganizationLogoPage)),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
 ];

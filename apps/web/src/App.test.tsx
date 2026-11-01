@@ -161,6 +161,11 @@ vi.mock('./pages/OrganizationProfilePage', () => ({
     <div data-testid="page-stub-OrganizationProfilePage">OrganizationProfilePage</div>
   ),
 }));
+vi.mock('./pages/OrganizationLogoPage', () => ({
+  OrganizationLogoPage: () => (
+    <div data-testid="page-stub-OrganizationLogoPage">OrganizationLogoPage</div>
+  ),
+}));
 
 const ALL_ROLES: Role[] = [
   'SYSTEM_ADMIN',
@@ -231,7 +236,7 @@ async function expectedMarkerOf(route: AuthenticatedRoute): Promise<string> {
 
 describe('AppRoutes structural wiring (exhaustive)', () => {
   // nav-menu/design.md Decision 1, step 2: iterates the real, imported
-  // AUTHENTICATED_ROUTES array (not a hand-typed sample) — 29 entries.
+  // AUTHENTICATED_ROUTES array (not a hand-typed sample) — 32 entries.
   it.each(AUTHENTICATED_ROUTES.map((route) => [route.path, route] as const))(
     '%s renders under AppLayout with its paired component and an allowed role',
     async (path, route) => {
@@ -303,7 +308,7 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
     expect(screen.queryByTestId('page-stub-ReviewSchedulePage')).not.toBeInTheDocument();
   });
 
-  // The 30th case: /login is declared OUTSIDE AUTHENTICATED_ROUTES and
+  // The last case: /login is declared OUTSIDE AUTHENTICATED_ROUTES and
   // outside the AppLayout wrapper entirely — structural, not conditional.
   it('renders /login with no nav', async () => {
     vi.stubGlobal('fetch', mockFetch());

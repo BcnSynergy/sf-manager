@@ -18,6 +18,7 @@ import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPag
 import { MaintenanceCompaniesListPage } from '../pages/MaintenanceCompaniesListPage';
 import { MaintenanceCompanyCreatePage } from '../pages/MaintenanceCompanyCreatePage';
 import { MaintenanceCompanyEditPage } from '../pages/MaintenanceCompanyEditPage';
+import { OrganizationLogoPage } from '../pages/OrganizationLogoPage';
 import { OrganizationProfilePage } from '../pages/OrganizationProfilePage';
 import { ReviewDocumentPage } from '../pages/ReviewDocumentPage';
 import { ReviewHistoryDetailPage } from '../pages/ReviewHistoryDetailPage';
@@ -206,11 +207,17 @@ const EXPECTED_ROUTES: {
     allowedRoles: ['SYSTEM_ADMIN'],
     elementType: OrganizationProfilePage,
   },
+  // EN-127: the logo's own page, SYSTEM_ADMIN-only like the profile.
+  {
+    path: '/organization-profile/logo',
+    allowedRoles: ['SYSTEM_ADMIN'],
+    elementType: OrganizationLogoPage,
+  },
 ];
 
 describe('AUTHENTICATED_ROUTES', () => {
-  it('has exactly 31 entries', () => {
-    expect(AUTHENTICATED_ROUTES).toHaveLength(31);
+  it('has exactly 32 entries', () => {
+    expect(AUTHENTICATED_ROUTES).toHaveLength(32);
   });
 
   it('matches path, allowedRoles and paired page component exactly, in order', async () => {
@@ -236,7 +243,7 @@ describe('AUTHENTICATED_ROUTES', () => {
     );
 
     expect(source).not.toMatch(/^import[^;]*from '\.\.\/pages\//m);
-    expect(source.match(/import\('\.\.\/pages\//g)).toHaveLength(31);
+    expect(source.match(/import\('\.\.\/pages\//g)).toHaveLength(32);
   });
 
   // TD-8: the same holds for /login, declared in App.tsx outside this table.

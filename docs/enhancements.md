@@ -681,16 +681,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: `en-117-restore-files` (PR #305) pre-push review recheck,
   2026-10-30.
 
-- **EN-127** (web): move the logo operations to a page of their own. The
-  organization profile would show the logo, or a placeholder when there is
-  none, with a visible "Change logo" link (an image alone is not an obvious
-  or accessible control) to a page that uploads and removes it. It keeps the
-  profile page to its data and its save button. Not done now: the logo
-  changes rarely, so a separate page adds a navigation step for little gain,
-  and it needs a route, translations, tests and a spec change. The logo
-  section was moved above the form instead. Origin:
-  `organization-logo-placement` (PR #314), 2026-10-31, user suggestion.
-
 - **EN-128** (web tests): tighten the TD-43 CSS tests in
   `apps/web/src/styles/index-css-print-status-region.test.ts`. The print
   reset check rejects a re-scope to `main >` but not to a descendant
@@ -702,6 +692,22 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   rendered layout test would need Playwright (TD-32). Origin:
   `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
 
+- **EN-129** (web): warn before leaving the organization profile with
+  unsaved edits. Since EN-127, "Change logo" navigates to the logo page, so
+  edits typed into the profile form and not saved are dropped without a
+  word; before, the upload sat on the same page and kept them. The same
+  holds for any nav link today. A leave-page guard (React Router's
+  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #316)
+  pre-push review, 2026-11-01.
+
+- **EN-130** (web tests): walk the EN-127 round trip in one router session.
+  The spec scenario "Coming back shows the current logo" is pinned per
+  component: each preview gets a fresh URL on mount and after an upload,
+  with a mocked clock. No test renders the profile and the logo page under
+  one router, uploads, goes back and checks the profile's preview URL
+  changed. It was checked in the browser for PR #316. Origin:
+  `en-127-logo-page` (PR #316) native review, 2026-11-01.
+
 ## Done
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
@@ -710,6 +716,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   on `PATH` exits 99, so the loop fails right after its first cycle with
   "started its loop"; the timeout stays as a backstop against a hang. Done
   in `en-121-retention-loop-fast-fail` (PR #313), 2026-10-31.
+
+- **EN-127** (web): the logo has a page of its own,
+  `/organization-profile/logo`, which uploads and removes it. The profile
+  page shows the logo, or says there is none, with a "Change logo" button
+  (a button-styled link, like the page's other actions) to that page, and
+  keeps to its data and its save button. Done in `en-127-logo-page` (PR
+  #316), 2026-11-01.
 
 - **EN-118** (deploy): closed without a change, by decision.
   `offsite-copy.sh pull` keeps overwriting a local backup of the same name
