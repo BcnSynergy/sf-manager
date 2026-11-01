@@ -137,7 +137,11 @@ export class AuthController {
       return user;
     } catch (error) {
       if (error instanceof RefreshRejectedError) {
-        this.clearRefreshCookie(response);
+        // A superseded token lost to another tab's concurrent refresh, whose
+        // successor cookie the browser may already hold: keep it.
+        if (error.reason !== 'superseded') {
+          this.clearRefreshCookie(response);
+        }
         throw new UnauthorizedException();
       }
       throw error;

@@ -208,7 +208,7 @@ describe('POST /auth/refresh (e2e)', () => {
     await refresh(token).expect(200);
   });
 
-  it('refuses a user deleted since the login, and the family stays dead', async () => {
+  it('refuses a user deleted since the login', async () => {
     const { id, refresh: token } = await loggedInUser();
     await users.softDeleteById(id);
 

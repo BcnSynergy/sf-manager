@@ -123,7 +123,13 @@ describe('Login email limit (integration)', () => {
   afterAll(async () => {
     if (userIds.length > 0) {
       const app = await createApp();
-      await app.get(PrismaService).user.deleteMany({
+      const prisma = app.get(PrismaService);
+      // TD-5: a login creates refresh tokens, whose FK to User restricts
+      // deleting the user.
+      await prisma.refreshToken.deleteMany({
+        where: { userId: { in: userIds } },
+      });
+      await prisma.user.deleteMany({
         where: { id: { in: userIds } },
       });
     }

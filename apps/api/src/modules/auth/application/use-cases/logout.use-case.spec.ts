@@ -23,7 +23,7 @@ describe('LogoutUseCase', () => {
       deleteExpired: jest.fn(),
     };
     refreshSessions = {
-      revoke: jest.fn().mockResolvedValue(undefined),
+      revoke: jest.fn().mockResolvedValue(true),
       deleteExpired: jest.fn().mockResolvedValue(undefined),
     };
     useCase = new LogoutUseCase(
@@ -181,6 +181,18 @@ describe('LogoutUseCase', () => {
       await expect(
         useCase.execute({ refreshToken: 'refresh-cookie' }),
       ).rejects.toThrow('db unreachable');
+    });
+
+    // The endpoint is public: an anonymous client sending any cookie value
+    // must not make the API run a cleanup DELETE per request.
+    it('skips the cleanup when the refresh cookie is not a token we issued', async () => {
+      refreshSessions.revoke.mockResolvedValue(false);
+
+      await expect(
+        useCase.execute({ refreshToken: 'garbage' }),
+      ).resolves.toBeUndefined();
+
+      expect(refreshSessions.deleteExpired).not.toHaveBeenCalled();
     });
 
     it('ignores a failure of the refresh-token cleanup', async () => {

@@ -762,8 +762,9 @@ Refresh"). Decision 4 itself stands; this records the shape it took.
    refresh, and a load spike does not log users out.
 6. **Cookie scope.** The refresh cookie's path is the auth routes as the
    browser sees them: `/auth` in development, `/api/auth` behind Caddy
-   (`REFRESH_TOKEN_COOKIE_PATH`), so it reaches refresh and logout and no
-   other API call.
+   (`REFRESH_TOKEN_COOKIE_PATH`), so it reaches the auth routes (refresh and
+   logout among them; a cookie path matches by prefix) and no other API
+   call.
 7. **Logout.** Public now: once the short-lived access cookie has expired,
    only the refresh cookie may be left. It revokes the access token's `jti`
    when one verifies and the refresh family when a refresh cookie is sent;

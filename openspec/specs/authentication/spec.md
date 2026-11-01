@@ -191,8 +191,9 @@ same public identity fields as login. (ADR-011 Decision 4, TD-5.)
   session, so neither the client nor a thief can refresh it again. Inside
   the grace window a consumed token MUST be honoured once (two tabs
   refreshing at the same time); further attempts inside the window MUST be
-  rejected with 401 without revoking. With a zero grace window there is no
-  such exchange.
+  rejected with 401 without revoking and without clearing the cookie (the
+  browser may already hold the successor). With a zero grace window there
+  is no such exchange.
 - **Lifetime.** A refresh session MUST expire when it has not been
   refreshed for the idle timeout and, whatever the activity, when the
   absolute maximum after its login has passed. The defaults MUST be 8 hours
@@ -205,8 +206,9 @@ same public identity fields as login. (ADR-011 Decision 4, TD-5.)
   soft-deleted user MUST be rejected with 401 and the refresh session
   revoked, and the new access token MUST carry the stored role.
 - **Rejections.** A missing, unknown, expired, revoked or reused refresh
-  token MUST be answered with the same bare 401, and the response MUST
-  clear the refresh cookie.
+  token MUST be answered with the same bare 401; when a refresh cookie was
+  presented and rejected for any reason other than a concurrent refresh
+  (below), the response MUST clear it.
 - **Same origin.** A request whose `Origin` header is present and is not
   `CORS_ORIGIN` MUST be refused with 403 without consuming the token.
 - **Rate limit.** Refreshes MUST be limited per client key, separately

@@ -50,8 +50,9 @@ export class LogoutUseCase {
       }
     }
 
-    if (refreshToken) {
-      await this.refreshSessions.revoke(refreshToken);
+    // The endpoint is public: only a token we issued earns the cleanup, so
+    // arbitrary cookie values cannot make the API write on every request.
+    if (refreshToken && (await this.refreshSessions.revoke(refreshToken))) {
       try {
         await this.refreshSessions.deleteExpired();
       } catch {

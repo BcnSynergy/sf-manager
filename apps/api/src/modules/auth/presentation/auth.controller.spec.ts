@@ -280,6 +280,20 @@ describe('AuthController', () => {
       });
     });
 
+    // Another tab's concurrent refresh may already have set the successor
+    // cookie; clearing it here would end that browser's session.
+    it('answers a superseded refresh with 401 but keeps the cookie', async () => {
+      refreshSessionUseCase.execute.mockRejectedValue(
+        new RefreshRejectedError('superseded'),
+      );
+
+      await expect(
+        controller.refresh({ cookies: { sf_refresh_token: 'spent' } }, res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(response.clearCookie).not.toHaveBeenCalled();
+    });
+
     it('rethrows unexpected errors unchanged', async () => {
       const storageError = new Error('storage down');
       refreshSessionUseCase.execute.mockRejectedValue(storageError);

@@ -416,18 +416,18 @@ describe('RefreshSessionsService', () => {
       const first = await sessions.start('user-1');
       const second = await sessions.rotate(first.token);
 
-      await sessions.revoke(second.token);
+      await expect(sessions.revoke(second.token)).resolves.toBe(true);
 
       for (const token of store.tokens.values()) {
         expect(token.revokedAt).toEqual(clock.now());
       }
     });
 
-    it('ignores an unknown token', async () => {
+    it('ignores an unknown token, reporting that nothing was found', async () => {
       const { store, sessions } = setup();
       await sessions.start('user-1');
 
-      await expect(sessions.revoke('never-issued')).resolves.toBeUndefined();
+      await expect(sessions.revoke('never-issued')).resolves.toBe(false);
       expect([...store.tokens.values()][0].revokedAt).toBeNull();
     });
   });
