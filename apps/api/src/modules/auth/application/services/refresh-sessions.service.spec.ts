@@ -120,6 +120,29 @@ describe('RefreshSessionsService', () => {
       expect(issued?.familyExpiresAt).toEqual(consumed?.familyExpiresAt);
     });
 
+    it("returns the stored family's user, never another one", async () => {
+      const { sessions } = setup();
+      await sessions.start('user-1');
+      const other = await sessions.start('user-2');
+
+      await expect(sessions.rotate(other.token)).resolves.toMatchObject({
+        userId: 'user-2',
+      });
+    });
+
+    it('with a zero grace window, treats a same-millisecond replay as reuse', async () => {
+      const { store, sessions } = setup({ reuseGraceMs: 0 });
+      const first = await sessions.start('user-1');
+      await sessions.rotate(first.token);
+
+      const error = await rejection(sessions.rotate(first.token));
+
+      expect(error.reason).toBe('reused');
+      for (const token of store.tokens.values()) {
+        expect(token.revokedAt).not.toBeNull();
+      }
+    });
+
     it('rejects an unknown token', async () => {
       const { sessions } = setup();
 

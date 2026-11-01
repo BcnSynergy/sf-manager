@@ -113,8 +113,13 @@ export class RefreshSessionsService {
     await this.store.deleteExpired(this.clock.now());
   }
 
+  // Strict mode (zero grace) has no window at all, not even within the same
+  // millisecond.
   private withinGrace(rotatedAt: Date, now: Date): boolean {
-    return now.getTime() - rotatedAt.getTime() <= this.policy.reuseGraceMs;
+    return (
+      this.policy.reuseGraceMs > 0 &&
+      now.getTime() - rotatedAt.getTime() <= this.policy.reuseGraceMs
+    );
   }
 
   private async issue(

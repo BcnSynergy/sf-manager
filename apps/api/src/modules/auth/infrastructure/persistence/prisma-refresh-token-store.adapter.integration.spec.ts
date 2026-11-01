@@ -107,6 +107,31 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     },
   );
 
+  it('refuses an exchange on a token whose family was revoked after it was read (logout racing a refresh)', async () => {
+    const token = newToken();
+    await store.create(token);
+    await store.revokeFamily(token.familyId, at('2026-11-01T09:00:00.000Z'));
+    const successor = newToken({ familyId: token.familyId });
+
+    await expect(
+      store.exchange(
+        token.id,
+        'rotation',
+        at('2026-11-01T09:00:01.000Z'),
+        successor,
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      store.exchange(
+        token.id,
+        'grace',
+        at('2026-11-01T09:00:01.000Z'),
+        successor,
+      ),
+    ).resolves.toBe(false);
+    await expect(store.findByHash(successor.tokenHash)).resolves.toBeNull();
+  });
+
   it('rolls the consume back when the successor cannot be stored', async () => {
     const token = newToken();
     const other = newToken();

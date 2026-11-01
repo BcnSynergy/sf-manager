@@ -43,7 +43,7 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
   ): Promise<boolean> {
     const token = this.tokens.get(id);
     const field = kind === 'rotation' ? 'rotatedAt' : 'graceUsedAt';
-    if (!token || token[field] !== null) {
+    if (!token || token[field] !== null || token.revokedAt !== null) {
       return false;
     }
     // Claim synchronously, like the conditional UPDATE: a concurrent call

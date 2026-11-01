@@ -32,7 +32,9 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
 
   // A conditional UPDATE plus the INSERT, in one transaction: Postgres row
   // locking lets exactly one of two concurrent exchanges see the field null,
-  // and a failed INSERT rolls the consume back.
+  // and a failed INSERT rolls the consume back. `revokedAt: null` refuses a
+  // token whose family a logout revoked after it was read (revokeFamily
+  // stamps every row, this one included).
   async exchange(
     id: string,
     kind: RefreshExchangeKind,
@@ -41,8 +43,14 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
   ): Promise<boolean> {
     const consume: Prisma.RefreshTokenUpdateManyArgs =
       kind === 'rotation'
-        ? { where: { id, rotatedAt: null }, data: { rotatedAt: at } }
-        : { where: { id, graceUsedAt: null }, data: { graceUsedAt: at } };
+        ? {
+            where: { id, rotatedAt: null, revokedAt: null },
+            data: { rotatedAt: at },
+          }
+        : {
+            where: { id, graceUsedAt: null, revokedAt: null },
+            data: { graceUsedAt: at },
+          };
     return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.refreshToken.updateMany(consume);
       if (count !== 1) {
