@@ -78,6 +78,7 @@ Caddy MUST serve the built web app and forward `/api/*` to the API with the `/ap
 - GIVEN the production stack is running
 - WHEN a user logs in through `https://<SITE_ADDRESS>/api/auth/login`
 - THEN the access-token cookie is `HttpOnly`, `Secure` and `SameSite=Strict`
+- AND the refresh-token cookie is `HttpOnly`, `Secure` and `SameSite=Strict` with `Path=/api/auth`, so the browser sends it to `/api/auth/refresh` and `/api/auth/logout` through the proxy and to no other API route (TD-5)
 - AND the following `/api/auth/me` request on the same origin is authenticated
 
 ### Requirement: HTTPS
