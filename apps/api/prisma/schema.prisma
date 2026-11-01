@@ -78,6 +78,31 @@ model RevokedToken {
   @@index([expiresAt])
 }
 
+// TD-5 (ADR-011 Decision 4): one row per issued refresh token. A login starts
+// a family; each refresh consumes its token (rotatedAt) and adds the next one
+// to the same family. Only the SHA-256 of the opaque token is stored. The FK
+// to User(id) is hand-written in migration.sql, invisible to Prisma (ADR-013).
+model RefreshToken {
+  id              String    @id @db.Uuid
+  tokenHash       String    @unique
+  familyId        String    @db.Uuid
+  userId          String    @db.Uuid
+  createdAt       DateTime
+  // min(createdAt + idle TTL, familyExpiresAt): the token is dead after it.
+  expiresAt       DateTime
+  // login + absolute TTL, copied to every token of the family.
+  familyExpiresAt DateTime
+  rotatedAt       DateTime?
+  // The one grace exchange a consumed token allows (two tabs at once).
+  graceUsedAt     DateTime?
+  revokedAt       DateTime?
+
+  @@index([familyId])
+  // Cleanup deletes whole families past their absolute expiry, keeping
+  // consumed tokens until then so a late reuse is still recognised.
+  @@index([familyExpiresAt])
+}
+
 // community/design.md Decision 5: closed enum, mirroring `Role`'s
 // precedent — no i18n behavior implemented for it in this slice.
 enum Locale {

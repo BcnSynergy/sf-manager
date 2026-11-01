@@ -737,6 +737,28 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   blocker, so the gap is small. Origin: `en-129-unsaved-changes-guard` (PR
   #317) pre-merge review, 2026-11-01.
 
+- **EN-136** (api tests): the in-memory `RefreshTokenStore.exchange`
+  (`apps/api/src/modules/auth/application/services/testing/`) claims the
+  consume before awaiting `create`. If that `create` fails, a concurrent
+  exchange may already have won the grace exchange on the briefly consumed
+  token, leaving a grace successor on a token that ends up unconsumed. The
+  Prisma adapter cannot reach this (the row lock makes the second UPDATE
+  wait for the first transaction). No test hits it today. Serialize
+  exchanges per token id in the fake, or note the gap. Origin:
+  `td-5-refresh-token-rotation` (PR #318) native review, 2026-11-01.
+
+- **EN-137** (api): tidy the refresh-token rejection reasons and docs. A
+  logout that commits between `findByHash` and `exchange` makes both
+  exchanges return false (they require `revokedAt: null`), and
+  `RefreshSessionsService.rotate` reports it as `superseded`, not `revoked`;
+  the client is refused either way, but reason counts would mislabel it,
+  and no service-level test covers that path. The `exchange` port comment
+  says false only means "another request got there first", omitting the
+  revoked case. `auth.config.ts` inlines the env lookup for
+  `REFRESH_TOKEN_REUSE_GRACE` instead of sharing a `durationFromEnv` helper
+  with the two TTLs. Origin: `td-5-refresh-token-rotation` (PR #318) native
+  review, 2026-11-01.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app
