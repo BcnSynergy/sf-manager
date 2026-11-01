@@ -718,8 +718,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   a save is in flight opens the leave dialog; if the save then succeeds,
   the form is clean but the dialog stays open until the admin chooses
   (either choice still works). Polish: call `proceed()` when the form turns
-  clean while blocked. Origin: `en-129-unsaved-changes-guard` pre-push
-  review, 2026-11-01.
+  clean while blocked. Related: for one effect pass after a save resolves,
+  `useBlocker` still holds the dirty check (it installs the new one in an
+  effect), so a click in that window would still ask; the "after the edits
+  were saved" test flushes effects first and no test pins the window.
+  Origin: `en-129-unsaved-changes-guard` pre-push review, 2026-11-01; window
+  note from the PR #317 native review.
 
 - **EN-134** (web): since the data router (EN-129), a render error that
   escapes the page-level boundaries (`AppLayout`, `ProtectedRoute`) shows
