@@ -7,3 +7,4 @@ process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = '1000';
 // would trip the per-email failure limit (default 5). Raise it for every
 // suite; login-email-limit.*-spec.ts set and restore low values explicitly.
 process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES = '1000';
+process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = '1000';

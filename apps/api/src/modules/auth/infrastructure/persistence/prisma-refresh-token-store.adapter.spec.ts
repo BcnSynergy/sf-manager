@@ -1,0 +1,55 @@
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import type { NewRefreshToken } from '../../application/ports/refresh-token-store.port';
+import { PrismaRefreshTokenStore } from './prisma-refresh-token-store.adapter';
+
+// Unit test with a mocked Prisma client, for what a real database cannot
+// produce on demand: the interactive-transaction timeout (P2028) under
+// contention. Real-database behaviour is in the integration spec.
+describe('PrismaRefreshTokenStore', () => {
+  const successor = {} as NewRefreshToken;
+  const at = new Date('2026-11-01T09:00:00.000Z');
+
+  function storeWhoseTransactionRejects(error: Error): PrismaRefreshTokenStore {
+    const prisma = { $transaction: jest.fn().mockRejectedValue(error) };
+    return new PrismaRefreshTokenStore(prisma as unknown as PrismaService);
+  }
+
+  it('treats a transaction timeout (P2028) as a lost exchange, so the caller answers 401 rather than 500', async () => {
+    const timeout = new Prisma.PrismaClientKnownRequestError(
+      'Transaction API error',
+      {
+        code: 'P2028',
+        clientVersion: 'test',
+      },
+    );
+
+    await expect(
+      storeWhoseTransactionRejects(timeout).exchange(
+        'id',
+        'rotation',
+        at,
+        successor,
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it('rethrows any other database error', async () => {
+    const other = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint',
+      {
+        code: 'P2002',
+        clientVersion: 'test',
+      },
+    );
+
+    await expect(
+      storeWhoseTransactionRejects(other).exchange(
+        'id',
+        'grace',
+        at,
+        successor,
+      ),
+    ).rejects.toBe(other);
+  });
+});

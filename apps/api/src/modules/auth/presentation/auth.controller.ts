@@ -13,12 +13,13 @@ import {
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ThrottlerException } from '@nestjs/throttler';
+import { Throttle, ThrottlerException } from '@nestjs/throttler';
 import { loginRequestSchema } from '@sf-manager/validation';
 import type { Response } from 'express';
 import { Public } from '../../../shared/presentation/decorators/public.decorator';
@@ -38,6 +39,11 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';
 import type { LoginRequestDto } from './dto/login-request.dto';
 import { LoginThrottlerGuard } from './guards/login-throttler.guard';
+import { RefreshThrottlerGuard } from './guards/refresh-throttler.guard';
+import { SameOriginGuard } from './guards/same-origin.guard';
+import { RefreshSessionUseCase } from '../application/use-cases/refresh-session.use-case';
+import { RefreshRejectedError } from '../domain/refresh-rejected.error';
+import { getRefreshRateLimitConfig } from '../infrastructure/config/login-rate-limit.config';
 import type { AuthenticatedRequest } from './types';
 
 // design.md Data Flow. Cookie name/httpOnly/path/secure/sameSite/maxAge all
@@ -50,6 +56,7 @@ export class AuthController {
     private readonly loginUseCase: LoginUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getCurrentUserUseCase: GetCurrentUserUseCase,
+    private readonly refreshSessionUseCase: RefreshSessionUseCase,
     @Inject(AUTH_CONFIG) private readonly authConfig: AuthConfig,
   ) {}
 
@@ -81,13 +88,7 @@ export class AuthController {
       const { user, accessToken, refreshToken } =
         await this.loginUseCase.execute(body.email, body.password);
 
-      response.cookie(this.authConfig.cookie.name, accessToken, {
-        httpOnly: this.authConfig.cookie.httpOnly,
-        path: this.authConfig.cookie.path,
-        secure: this.authConfig.cookie.secure,
-        sameSite: this.authConfig.cookie.sameSite,
-        maxAge: this.authConfig.cookie.maxAge,
-      });
+      this.setAccessCookie(response, accessToken);
       this.setRefreshCookie(response, refreshToken);
 
       return user;
@@ -101,6 +102,50 @@ export class AuthController {
         // Decision 6). Nest keeps headers set before the exception.
         response.setHeader('Retry-After', String(error.retryAfterSeconds));
         throw new ThrottlerException();
+      }
+      throw error;
+    }
+  }
+
+  // TD-5 S3, S7: exchanges the refresh cookie for a new access cookie and
+  // the next refresh cookie. Public, since the access token may have
+  // expired; same-origin only (CSRF) and rate-limited per client key.
+  @Public()
+  @UseGuards(SameOriginGuard, RefreshThrottlerGuard)
+  @Throttle({
+    default: {
+      limit: () => getRefreshRateLimitConfig().maxAttempts,
+      ttl: () => getRefreshRateLimitConfig().windowMs,
+    },
+  })
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AuthUserResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, unknown, expired, revoked or reused refresh token.',
+  })
+  @ApiForbiddenResponse({ description: 'Request from another origin.' })
+  @ApiTooManyRequestsResponse({
+    description: 'Too many refreshes from this client; see Retry-After.',
+  })
+  async refresh(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthUserResponseDto> {
+    const presented = request.cookies?.[this.authConfig.refreshCookie.name];
+    if (!presented) {
+      throw new UnauthorizedException();
+    }
+    try {
+      const { user, accessToken, refreshToken } =
+        await this.refreshSessionUseCase.execute(presented);
+      this.setAccessCookie(response, accessToken);
+      this.setRefreshCookie(response, refreshToken);
+      return user;
+    } catch (error) {
+      if (error instanceof RefreshRejectedError) {
+        this.clearRefreshCookie(response);
+        throw new UnauthorizedException();
       }
       throw error;
     }
@@ -144,6 +189,24 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   getMe(@CurrentUser() user: VerifiedAccessToken): AuthUserResponseDto {
     return this.getCurrentUserUseCase.execute(user);
+  }
+
+  private setAccessCookie(response: Response, accessToken: string): void {
+    const { name, httpOnly, path, secure, sameSite, maxAge } =
+      this.authConfig.cookie;
+    response.cookie(name, accessToken, {
+      httpOnly,
+      path,
+      secure,
+      sameSite,
+      maxAge,
+    });
+  }
+
+  private clearRefreshCookie(response: Response): void {
+    const { name, httpOnly, path, secure, sameSite } =
+      this.authConfig.refreshCookie;
+    response.clearCookie(name, { httpOnly, path, secure, sameSite });
   }
 
   // TD-5 S2: the refresh cookie lives exactly as long as its token.

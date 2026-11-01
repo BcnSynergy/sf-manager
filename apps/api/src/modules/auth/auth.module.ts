@@ -17,6 +17,7 @@ import { RefreshSessionsService } from './application/services/refresh-sessions.
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
 import { RolePermissionChecker } from './infrastructure/authorization/role-permission.checker';
 import {
   AUTH_CONFIG,
@@ -96,6 +97,7 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     LoginUseCase,
     LogoutUseCase,
     GetCurrentUserUseCase,
+    RefreshSessionUseCase,
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },

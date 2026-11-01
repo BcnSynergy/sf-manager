@@ -3,6 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerException } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { LoginThrottlerGuard } from './guards/login-throttler.guard';
+import { RefreshThrottlerGuard } from './guards/refresh-throttler.guard';
+import { SameOriginGuard } from './guards/same-origin.guard';
+import { RefreshSessionUseCase } from '../application/use-cases/refresh-session.use-case';
+import { RefreshRejectedError } from '../domain/refresh-rejected.error';
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
@@ -41,6 +45,7 @@ describe('AuthController', () => {
   const loginUseCase = { execute: jest.fn() };
   const logoutUseCase = { execute: jest.fn() };
   const getCurrentUserUseCase = { execute: jest.fn() };
+  const refreshSessionUseCase = { execute: jest.fn() };
   const response = {
     cookie: jest.fn(),
     clearCookie: jest.fn(),
@@ -58,12 +63,18 @@ describe('AuthController', () => {
         { provide: LoginUseCase, useValue: loginUseCase },
         { provide: LogoutUseCase, useValue: logoutUseCase },
         { provide: GetCurrentUserUseCase, useValue: getCurrentUserUseCase },
+        { provide: RefreshSessionUseCase, useValue: refreshSessionUseCase },
         { provide: AUTH_CONFIG, useValue: authConfig },
       ],
     })
       // Throttling is covered by login-rate-limit.e2e-spec.ts; this unit
       // test only exercises the handler's own logic.
       .overrideGuard(LoginThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      // Same for the refresh endpoint's guards (refresh.e2e-spec.ts).
+      .overrideGuard(RefreshThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(SameOriginGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -178,6 +189,92 @@ describe('AuthController', () => {
     );
 
     expect(response.clearCookie).not.toHaveBeenCalled();
+  });
+
+  describe('refresh (TD-5)', () => {
+    const refreshExpiresAt = new Date('2026-11-01T16:00:00.000Z');
+
+    it('exchanges the refresh cookie for new access and refresh cookies and returns the public user fields', async () => {
+      refreshSessionUseCase.execute.mockResolvedValue({
+        user: {
+          id: 'user-1',
+          email: 'admin@example.com',
+          role: 'SYSTEM_ADMIN',
+        },
+        accessToken: 'new-jwt',
+        refreshToken: { token: 'next-refresh', expiresAt: refreshExpiresAt },
+      });
+      const request = { cookies: { sf_refresh_token: 'presented-refresh' } };
+
+      const result = await controller.refresh(request, res);
+
+      expect(refreshSessionUseCase.execute).toHaveBeenCalledWith(
+        'presented-refresh',
+      );
+      expect(response.cookie).toHaveBeenCalledWith(
+        'sf_access_token',
+        'new-jwt',
+        {
+          httpOnly: true,
+          path: '/',
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 7_200_000,
+        },
+      );
+      expect(response.cookie).toHaveBeenCalledWith(
+        'sf_refresh_token',
+        'next-refresh',
+        {
+          httpOnly: true,
+          path: '/auth',
+          secure: false,
+          sameSite: 'lax',
+          expires: refreshExpiresAt,
+        },
+      );
+      expect(result).toEqual({
+        id: 'user-1',
+        email: 'admin@example.com',
+        role: 'SYSTEM_ADMIN',
+      });
+    });
+
+    it('answers 401 without a refresh cookie, without calling the use case', async () => {
+      await expect(controller.refresh({ cookies: {} }, res)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(refreshSessionUseCase.execute).not.toHaveBeenCalled();
+      expect(response.cookie).not.toHaveBeenCalled();
+    });
+
+    it('answers a rejected refresh token with 401 and clears the dead refresh cookie', async () => {
+      refreshSessionUseCase.execute.mockRejectedValue(
+        new RefreshRejectedError('reused'),
+      );
+
+      await expect(
+        controller.refresh({ cookies: { sf_refresh_token: 'stolen' } }, res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(response.cookie).not.toHaveBeenCalled();
+      expect(response.clearCookie).toHaveBeenCalledWith('sf_refresh_token', {
+        httpOnly: true,
+        path: '/auth',
+        secure: false,
+        sameSite: 'lax',
+      });
+    });
+
+    it('rethrows unexpected errors unchanged', async () => {
+      const storageError = new Error('storage down');
+      refreshSessionUseCase.execute.mockRejectedValue(storageError);
+
+      await expect(
+        controller.refresh({ cookies: { sf_refresh_token: 'token' } }, res),
+      ).rejects.toBe(storageError);
+      expect(response.clearCookie).not.toHaveBeenCalled();
+    });
   });
 
   it('me maps the guard-attached user to {id, email, role} via GetCurrentUserUseCase', () => {

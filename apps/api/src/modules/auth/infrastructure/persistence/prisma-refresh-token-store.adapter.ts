@@ -51,14 +51,27 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
             where: { id, graceUsedAt: null, revokedAt: null },
             data: { graceUsedAt: at },
           };
-    return this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.refreshToken.updateMany(consume);
-      if (count !== 1) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.refreshToken.updateMany(consume);
+        if (count !== 1) {
+          return false;
+        }
+        await tx.refreshToken.create({ data: successor });
+        return true;
+      });
+    } catch (error) {
+      // P2028: the interactive transaction could not start or timed out
+      // (heavy contention on one token). Nothing was committed, so it is a
+      // lost exchange (401 'superseded'), not a server error.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2028'
+      ) {
         return false;
       }
-      await tx.refreshToken.create({ data: successor });
-      return true;
-    });
+      throw error;
+    }
   }
 
   async revokeFamily(familyId: string, at: Date): Promise<void> {
