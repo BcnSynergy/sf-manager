@@ -63,22 +63,18 @@ export function advanceSessionEpoch(): void {
 // response resolves to undefined regardless of T (design.md Interfaces).
 export async function apiFetch<T = undefined>(path: string, init: RequestInit = {}): Promise<T> {
   const epochAtStart = sessionEpoch;
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      credentials: 'include',
-      // A FormData body gets its multipart Content-Type, boundary included,
-      // from the browser; setting it here would drop the boundary.
-      headers:
-        init.body && !(init.body instanceof FormData)
-          ? { 'Content-Type': 'application/json', ...init.headers }
-          : init.headers,
-    });
-  } catch {
-    // Network failure (offline, DNS, CORS, aborted, ...) never reaches an
-    // HTTP status — status 0 is the client-only sentinel for that.
-    throw new ApiError(0);
+  let response = await send(path, init);
+
+  // TD-5 S8: the access token is short-lived. A 401 first tries one silent
+  // refresh, then retries the request once; only a refused refresh ends the
+  // session. A session change during the refresh (logout, another login)
+  // means this request belongs to the old session: neither retried nor
+  // reported.
+  if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
+    const refreshed = await refreshSession();
+    if (refreshed !== null && epochAtStart === sessionEpoch) {
+      response = await send(path, init);
+    }
   }
 
   if (!response.ok) {
@@ -112,4 +108,65 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
   } catch {
     throw new ApiError(0);
   }
+}
+
+async function send(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers:
+        init.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json', ...init.headers }
+          : init.headers,
+    });
+  } catch {
+    throw new ApiError(0);
+  }
+}
+
+// TD-5 S8: one refresh at a time. Within a tab, concurrent callers share the
+// one in flight; across tabs, a Web Lock serializes them, so the second tab
+// sends the cookie the first one just received instead of the spent one.
+const REFRESH_LOCK = 'sf-manager.refresh';
+let refreshInFlight: Promise<unknown> | null = null;
+
+// Exchanges the refresh cookie for a new session. Resolves with the user
+// the API answers with, or null when the refresh is refused or unreachable.
+export function refreshSession<T = unknown>(): Promise<T | null> {
+  refreshInFlight ??= withRefreshLock(postRefresh).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight as Promise<T | null>;
+}
+
+function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
+  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  return locks ? locks.request(REFRESH_LOCK, work) : work();
+}
+
+async function postRefresh(): Promise<unknown> {
+  // A response lost to the network may have consumed the token server-side:
+  // retry once at once, inside the API's grace window, where that consumed
+  // token is still honoured once.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      continue;
+    }
+    if (!response.ok) {
+      return null;
+    }
+    try {
+      return (await response.json()) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }

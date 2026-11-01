@@ -1,5 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { advanceSessionEpoch, apiFetch, ApiError, setUnauthorizedHandler } from './client';
+import {
+  advanceSessionEpoch,
+  apiFetch,
+  ApiError,
+  refreshSession,
+  setUnauthorizedHandler,
+} from './client';
 
 function mockResponse(init: {
   ok: boolean;
@@ -308,5 +314,151 @@ describe('apiFetch — unauthorized handler', () => {
     await apiFetch('/users').catch(() => undefined);
 
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+});
+
+// TD-5 S8: a 401 first tries one silent refresh (POST /auth/refresh with the
+// refresh cookie), serialized across tabs, then retries the request once.
+// Only a failed refresh ends the session.
+describe('apiFetch — silent refresh (TD-5)', () => {
+  afterEach(() => {
+    setUnauthorizedHandler(null);
+    vi.unstubAllGlobals();
+  });
+
+  function respond(...responses: Array<Response | Error>) {
+    const fetchMock = vi.fn();
+    for (const response of responses) {
+      if (response instanceof Error) {
+        fetchMock.mockRejectedValueOnce(response);
+      } else {
+        fetchMock.mockResolvedValueOnce(response);
+      }
+    }
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  const unauthorized = () => mockResponse({ ok: false, status: 401 });
+  const ok = (body: unknown) => mockResponse({ ok: true, status: 200, json: async () => body });
+
+  function urls(fetchMock: ReturnType<typeof vi.fn>): string[] {
+    return fetchMock.mock.calls.map(([url]) => String(url).replace(/^https?:\/\/[^/]+/, ''));
+  }
+
+  it('refreshes once on a 401 and retries the request, without ending the session', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'fresh' });
+
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+    const [, refreshInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(refreshInit).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('ends the session when the refresh itself is refused, without retrying the request', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = respond(unauthorized(), unauthorized());
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
+
+  it('retries only once: a 401 on the retried request ends the session without another refresh', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), unauthorized());
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+  });
+
+  it('shares one refresh between requests that get a 401 at the same time', async () => {
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.endsWith('/auth/refresh')) {
+        return Promise.resolve(ok({ id: '1' }));
+      }
+      const firstTry = fetchMock.mock.calls.filter(([u]) => String(u) === href).length === 1;
+      return Promise.resolve(firstTry ? unauthorized() : ok({ path: href }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await Promise.all([apiFetch('/a'), apiFetch('/b')]);
+
+    expect(urls(fetchMock).filter((u) => u === '/auth/refresh')).toHaveLength(1);
+  });
+
+  it('retries a refresh whose response was lost to a network error once, at once', async () => {
+    const fetchMock = respond(
+      unauthorized(),
+      new TypeError('Failed to fetch'),
+      ok({ id: '1' }),
+      ok({ data: 'fresh' }),
+    );
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'fresh' });
+
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/auth/refresh', '/users']);
+  });
+
+  it('serializes the refresh across tabs with a Web Lock when the browser has them', async () => {
+    const request = vi.fn((_name: string, callback: () => Promise<unknown>) => callback());
+    vi.stubGlobal('navigator', { ...navigator, locks: { request } });
+    respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
+
+    await apiFetch('/users');
+
+    expect(request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
+  });
+
+  it('neither retries nor ends the session when the session changed during the refresh (logout or new login)', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(unauthorized())
+      .mockImplementationOnce(() => {
+        advanceSessionEpoch();
+        return Promise.resolve(ok({ id: '1' }));
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
+});
+
+describe('refreshSession (TD-5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the user the refresh answers with, and null when it is refused', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockResponse({ ok: true, status: 200, json: async () => ({ id: '7' }) }),
+        )
+        .mockResolvedValueOnce(mockResponse({ ok: false, status: 401 })),
+    );
+
+    await expect(refreshSession()).resolves.toEqual({ id: '7' });
+    await expect(refreshSession()).resolves.toBeNull();
   });
 });

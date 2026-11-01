@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Role } from '@sf-manager/validation';
-import { ApiError, advanceSessionEpoch, setUnauthorizedHandler } from '../api/client';
+import {
+  ApiError,
+  advanceSessionEpoch,
+  refreshSession,
+  setUnauthorizedHandler,
+} from '../api/client';
 
 // role is returned as-is by both POST /auth/login and GET /auth/me
 // (design.md "Data Flow") — the frontend does not decide or cache it
@@ -44,8 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // TD-5 S8: the access cookie may have expired while the refresh cookie
+    // is still good, so a refused /auth/me tries one refresh before the
+    // visitor counts as logged out.
     fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
-      .then((response) => (response.ok ? (response.json() as Promise<AuthUser>) : null))
+      .then((response) =>
+        response.ok ? (response.json() as Promise<AuthUser>) : refreshSession<AuthUser>(),
+      )
       .then((data) => updateUser(data))
       .catch(() => updateUser(null))
       .finally(() => setIsLoading(false));

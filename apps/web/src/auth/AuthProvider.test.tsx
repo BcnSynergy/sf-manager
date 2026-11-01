@@ -36,6 +36,8 @@ function mockFetch(
     meRole?: string;
     meFails?: boolean;
     loginRole?: string;
+    // TD-5: answer to POST /auth/refresh (default: refused).
+    refreshRole?: string;
   } = {},
 ) {
   return vi.fn((url: RequestInfo | URL) => {
@@ -50,6 +52,19 @@ function mockFetch(
           id: '1',
           email: 'admin@sf-manager.example',
           role: options.meRole ?? 'SYSTEM_ADMIN',
+        }),
+      } as Response);
+    }
+    if (href.includes('/auth/refresh')) {
+      if (options.refreshRole === undefined) {
+        return Promise.resolve({ ok: false, status: 401 } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: '1',
+          email: 'admin@sf-manager.example',
+          role: options.refreshRole,
         }),
       } as Response);
     }
@@ -92,6 +107,44 @@ describe('AuthProvider — role propagation', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+  });
+
+  // TD-5 S8: the access cookie may have expired while the refresh cookie is
+  // still good; the mount-time restore tries a refresh before giving up.
+  it('restores the session through a refresh when /auth/me is refused on mount', async () => {
+    const fetchMock = mockFetch({ meFails: true, refreshRole: 'MANAGER' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+    const refreshCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/auth/refresh'));
+    expect((refreshCall as unknown[] | undefined)?.[1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+    });
+  });
+
+  it('stays logged out when both /auth/me and the refresh are refused on mount', async () => {
+    const fetchMock = mockFetch({ meFails: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(
+        true,
+      ),
+    );
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
   });
 
   it('exposes role returned by POST /auth/login', async () => {
