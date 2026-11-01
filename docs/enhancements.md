@@ -692,13 +692,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   rendered layout test would need Playwright (TD-32). Origin:
   `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
 
-- **EN-129** (web): warn before leaving the organization profile with
-  unsaved edits. Since EN-127, "Change logo" navigates to the logo page, so
-  edits typed into the profile form and not saved are dropped without a
-  word; before, the upload sat on the same page and kept them. The same
-  holds for any nav link today. A leave-page guard (React Router's
-  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #316)
-  pre-push review, 2026-11-01.
+- **EN-131** (web): warn before reloading or closing the tab with unsaved
+  edits on the organization profile. EN-129's leave guard only catches
+  in-app navigation; a reload or a closed tab still drops the edits without
+  a word. A `beforeunload` handler (the browser's own prompt, its text not
+  ours) would cover it. Origin: `en-129-unsaved-changes-guard`, 2026-11-01.
 
 - **EN-130** (web tests): walk the EN-127 round trip in one router session.
   The spec scenario "Coming back shows the current logo" is pinned per
@@ -709,6 +707,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `en-127-logo-page` (PR #316) native review, 2026-11-01.
 
 ## Done
+
+- **EN-129** (web): the organization profile asks before any in-app
+  navigation ("Change logo", a nav link, back/forward) while the form holds
+  unsaved edits; cancelling keeps them, confirming leaves without saving.
+  The app now runs on a data router (`createBrowserRouter`, one catch-all
+  route rendering `AppRoutes`, no loaders or actions) so the page can use
+  `useBlocker`. Reload and tab close are EN-131. Done in
+  `en-129-unsaved-changes-guard`, 2026-11-01.
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
   `deploy/test-postgres-backup.sh` no longer waits out its 30-second

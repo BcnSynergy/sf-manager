@@ -150,6 +150,36 @@ still be present after one.
 - WHEN the failure is handled
 - THEN an error MUST be shown and the values they entered MUST remain in the form
 
+### Requirement: Leaving With Unsaved Edits
+
+When the profile form holds a value that differs from the last loaded or
+saved profile, any in-app navigation away from the profile page ("Change
+logo", a navigation link, the browser's back or forward) MUST first ask
+the admin to confirm leaving. Cancelling MUST keep them on the page with
+their edits intact; confirming MUST leave and drop the edits, with no save
+request. With no such difference (nothing edited, edits typed back to the
+saved values, or edits already saved) the page MUST be left without
+asking. Reloading or closing the browser tab is not covered. (Added by
+EN-129.)
+
+#### Scenario: Cancelling keeps the edits
+
+- GIVEN a `SYSTEM_ADMIN` has edited a profile field without saving
+- WHEN they activate "Change logo" and then cancel the confirmation
+- THEN they MUST stay on the profile page with the edited value still in the form, and no save request MUST be sent
+
+#### Scenario: Confirming leaves without saving
+
+- GIVEN a `SYSTEM_ADMIN` has edited a profile field without saving
+- WHEN they navigate away and confirm leaving
+- THEN the destination page MUST be shown and no save request MUST be sent
+
+#### Scenario: No unsaved edits, no confirmation
+
+- GIVEN the profile form matches the last loaded or saved profile
+- WHEN a `SYSTEM_ADMIN` navigates away
+- THEN the destination page MUST be shown without a confirmation
+
 ### Requirement: The Profile Page Shows the Logo and Links to Its Page
 
 The profile page MUST show a logo section above the profile form. It MUST

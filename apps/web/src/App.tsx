@@ -1,5 +1,5 @@
-import { lazy } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { lazy, useState } from 'react';
+import { createBrowserRouter, Route, RouterProvider, Routes } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
@@ -48,12 +48,17 @@ export function AppRoutes() {
   );
 }
 
+// EN-129: a data router, so pages can use useBlocker (it throws under
+// <BrowserRouter>). One catch-all route renders AppRoutes, which keeps the
+// declarative <Routes> tree above as the single route table and lets tests
+// keep mounting it in a MemoryRouter. Navigation only: no loaders or
+// actions, so data fetching stays in the pages and api/ modules, not in
+// route definitions.
 function App() {
+  const [router] = useState(() => createBrowserRouter([{ path: '*', element: <AppRoutes /> }]));
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }
