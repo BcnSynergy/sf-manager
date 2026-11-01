@@ -41,16 +41,12 @@ const filledProfile = {
   hasLogo: false,
 };
 
-// web-alert-announcements: one status region per covered form — the
-// profile form's and the logo section's.
+// web-alert-announcements: the profile form's status region. The logo's
+// upload and removal, with their own region, live on the logo page (EN-127).
 function statusRegions() {
-  const logoSection = screen.getByRole('region', { name: 'Logo' });
   const all = screen.getAllByRole('status');
-  expect(all).toHaveLength(2);
-  return {
-    profile: all.find((region) => !logoSection.contains(region))!,
-    logo: all.find((region) => logoSection.contains(region))!,
-  };
+  expect(all).toHaveLength(1);
+  return { profile: all[0] };
 }
 
 function renderPage() {
@@ -58,6 +54,10 @@ function renderPage() {
     <MemoryRouter initialEntries={['/organization-profile']}>
       <Routes>
         <Route path="/organization-profile" element={<OrganizationProfilePage />} />
+        <Route
+          path="/organization-profile/logo"
+          element={<div data-testid="logo-page-stub">logo page</div>}
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -68,30 +68,81 @@ describe('OrganizationProfilePage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the logo section with the profile hasLogo flag (organization-logo S1)', async () => {
+  // EN-127: the profile only shows the logo; uploading and removing it
+  // happen on the logo page.
+  it('previews the current logo, with no upload or remove control', async () => {
     mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
     vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
 
     renderPage();
 
-    expect(await screen.findByTestId('organization-logo-preview')).toHaveAttribute(
-      'src',
-      '/logo?v=0',
-    );
-    expect(screen.getByTestId('organization-logo-input')).toBeInTheDocument();
+    const preview = await screen.findByTestId('organization-profile-logo-preview');
+    expect(preview).toHaveAttribute('src', '/logo?v=0');
+    expect(preview).toHaveAttribute('alt', 'Organization logo');
+    expect(screen.getByRole('region', { name: 'Logo' })).toContainElement(preview);
+    expect(screen.queryByTestId('organization-profile-logo-empty')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('organization-logo-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('organization-logo-upload')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('organization-logo-remove')).not.toBeInTheDocument();
   });
 
-  // The logo has its own upload button; placed above the data form, the
-  // form's save button no longer looks like it also saves the logo.
+  it('says that no logo has been uploaded when the profile has none', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    expect(await screen.findByTestId('organization-profile-logo-empty')).toHaveTextContent(
+      'No logo uploaded yet.',
+    );
+    expect(screen.queryByTestId('organization-profile-logo-preview')).not.toBeInTheDocument();
+  });
+
+  it('replaces a logo that cannot be loaded with a message', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
+
+    renderPage();
+
+    fireEvent.error(await screen.findByTestId('organization-profile-logo-preview'));
+
+    expect(screen.getByTestId('organization-profile-logo-empty')).toHaveTextContent(
+      'The logo could not be loaded.',
+    );
+    expect(screen.queryByTestId('organization-profile-logo-preview')).not.toBeInTheDocument();
+  });
+
+  // EN-127: a button-styled link, so it matches the page's other actions and
+  // is a real, keyboard-reachable control, which an image alone is not.
+  it.each([
+    ['with a logo', true],
+    ['without a logo', false],
+  ])('offers a Change logo button that opens the logo page, %s', async (_label, hasLogo) => {
+    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
+
+    renderPage();
+
+    const change = await screen.findByRole('link', { name: 'Change logo' });
+    expect(change).toHaveAttribute('href', '/organization-profile/logo');
+    expect(change).toHaveClass('sf-btn');
+    expect(screen.getByRole('region', { name: 'Logo' })).toContainElement(change);
+
+    fireEvent.click(change);
+
+    expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
+  });
+
+  // Placed above the data form, so the form's save button does not look as
+  // if it also saved the logo.
   it('places the logo section above the profile form and its save button', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
 
     renderPage();
 
-    const logoInput = await screen.findByTestId('organization-logo-input');
-    const firstField = await screen.findByTestId('organization-profile-legal-name');
+    const change = await screen.findByRole('link', { name: 'Change logo' });
+    const firstField = screen.getByTestId('organization-profile-legal-name');
     expect(
-      logoInput.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
+      change.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -106,76 +157,13 @@ describe('OrganizationProfilePage', () => {
       level: 2,
       name: 'Organization details',
     });
-    const logoInput = screen.getByTestId('organization-logo-input');
+    const change = screen.getByRole('link', { name: 'Change logo' });
     const firstField = screen.getByTestId('organization-profile-legal-name');
-    expect(
-      logoInput.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(change.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       heading.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.getByRole('form', { name: 'Organization details' })).toContainElement(firstField);
-  });
-
-  it('confirms a logo upload in the logo section status region, without saving the form (organization-logo S1)', async () => {
-    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
-    vi.mocked(organizationProfileApi.uploadOrganizationLogo).mockResolvedValue({
-      ...filledProfile,
-      hasLogo: true,
-    });
-    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=1');
-    renderPage();
-    const name = await screen.findByTestId('organization-profile-name');
-    fireEvent.change(name, { target: { value: 'Unsaved Name' } });
-    const regions = statusRegions();
-    expect(regions.logo).toBeEmptyDOMElement();
-
-    fireEvent.change(screen.getByTestId('organization-logo-input'), {
-      target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] },
-    });
-    fireEvent.click(screen.getByTestId('organization-logo-upload'));
-
-    const confirmation = await screen.findByTestId('organization-logo-success');
-    expect(confirmation).toHaveTextContent('Logo uploaded.');
-    expect(confirmation).not.toHaveAttribute('role');
-    expect(regions.logo).toContainElement(confirmation);
-    expect(regions.profile).toBeEmptyDOMElement();
-    expect(screen.getAllByRole('status')).toHaveLength(2);
-    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
-    expect(name).toHaveValue('Unsaved Name');
-  });
-
-  // EN-110: removing the logo neither saves the form nor touches its fields.
-  it('confirms a logo removal in the logo section status region, without saving the form', async () => {
-    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
-    vi.mocked(organizationProfileApi.removeOrganizationLogo).mockResolvedValue({
-      ...filledProfile,
-      hasLogo: false,
-    });
-    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=0');
-    renderPage();
-    const name = await screen.findByTestId('organization-profile-name');
-    fireEvent.change(name, { target: { value: 'Unsaved Name' } });
-    const regions = statusRegions();
-
-    fireEvent.click(screen.getByTestId('organization-logo-remove'));
-    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
-
-    const confirmation = await screen.findByTestId('organization-logo-success');
-    expect(confirmation).toHaveTextContent('Logo removed.');
-    expect(regions.logo).toContainElement(confirmation);
-    expect(regions.profile).toBeEmptyDOMElement();
-    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
-    expect(name).toHaveValue('Unsaved Name');
-  });
-
-  it('shows the no-logo message when the profile has no logo', async () => {
-    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
-
-    renderPage();
-
-    expect(await screen.findByTestId('organization-logo-empty')).toBeInTheDocument();
-    expect(screen.queryByTestId('organization-logo-preview')).not.toBeInTheDocument();
   });
 
   it('shows a loading state while the profile request is in flight', () => {

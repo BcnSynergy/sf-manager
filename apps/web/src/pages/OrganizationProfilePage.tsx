@@ -11,7 +11,7 @@ import { PageHeader } from '../components/PageHeader';
 import { Alert, StatusRegion } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
 import { isProfileIncomplete } from '../organization-profile/is-profile-incomplete';
-import { OrganizationLogoSection } from '../organization-profile/OrganizationLogoSection';
+import { OrganizationLogoSummary } from '../organization-profile/OrganizationLogoSummary';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -47,8 +47,9 @@ function toFieldValues(profile: OrganizationProfile): Record<ProfileFieldKey, st
 }
 
 // spec.md "One Combined View and Edit Page" — no create/delete/list
-// affordance exists; this is the whole surface. The logo has its own section
-// below the form, with its own upload (organization-logo).
+// affordance exists; this is the whole surface. The logo is shown in its own
+// section above the form, which links to the logo page where it is uploaded
+// and removed (EN-127).
 //
 // design.md Decision 5: `incomplete` is derived from `saved` — the last
 // server-confirmed snapshot — never from the live `values` the admin is
@@ -209,9 +210,9 @@ export function OrganizationProfilePage() {
           <p>{t('organizationProfile.incomplete')}</p>
         </div>
       )}
-      {/* Above the form: the logo has its own upload button, and below the
-          form's save button it looked as if that button saved it too. */}
-      <OrganizationLogoSection hasLogo={hasLogo} />
+      {/* Above the form: below the form's save button, the logo looked as if
+          that button saved it too. */}
+      <OrganizationLogoSummary hasLogo={hasLogo} />
       {/* Its own heading, so the fields after the logo section are not heard
           as part of it when moving by headings. */}
       <h2 id="organization-profile-details-title" className="sf-section-title">

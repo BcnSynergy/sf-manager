@@ -6,9 +6,11 @@ The `SYSTEM_ADMIN`-gated settings surface for the organization profile
 (ADR-006's 2026-08-25 addendum: a domain slice ships its own minimal UI
 in the same change, not as a later retrofit).
 
-**One** page, combining view and edit. There is no list page, no create
-page and no delete control, because there is nothing to list, create or
-delete — this is settings about ourselves, not a managed catalog
+**One** page, combining view and edit, plus a page of its own for the
+logo (EN-127): the profile page shows the logo and links to it, so the
+profile keeps to its data and its save button. There is no list page, no
+create page and no delete control for the profile, because there is
+nothing to list, create or delete — this is settings about ourselves, not a managed catalog
 parallel to `/maintenance-companies`.
 
 Its one non-obvious job is the **not-completed-yet** state: the seeded
@@ -24,9 +26,10 @@ contract is owned by `organization-profile-management`.
 
 ### Requirement: Role-Gated Route Access
 
-The system MUST restrict the organization-profile route to
-authenticated users holding the `SYSTEM_ADMIN` role. An authenticated
-non-`SYSTEM_ADMIN` who reaches it MUST see the explicit "not authorized"
+The system MUST restrict the organization-profile route and the logo
+route, `/organization-profile/logo`, to authenticated users holding the
+`SYSTEM_ADMIN` role. An authenticated non-`SYSTEM_ADMIN` who reaches
+either MUST see the explicit "not authorized"
 surface, not a silent redirect and not a blank page. An unauthenticated
 visitor MUST be redirected to `/login`.
 
@@ -40,6 +43,18 @@ visitor MUST be redirected to `/login`.
 
 - GIVEN the caller is authenticated as any of `MANAGER`, `MAINTENANCE_COMPANY_MANAGER`, `MAINTENANCE_TECHNICIAN` or `COMMUNITY_REPRESENTATIVE`
 - WHEN they type the organization profile route directly into the address bar
+- THEN the explicit "not authorized" surface MUST be shown, not a redirect and not a blank page
+
+#### Scenario: Admin reaches the logo page
+
+- GIVEN the caller is authenticated as `SYSTEM_ADMIN`
+- WHEN they navigate to `/organization-profile/logo`
+- THEN the logo page MUST be shown
+
+#### Scenario: Non-admin reaching the logo route by URL is denied explicitly
+
+- GIVEN the caller is authenticated as any role other than `SYSTEM_ADMIN`
+- WHEN they type `/organization-profile/logo` directly into the address bar
 - THEN the explicit "not authorized" surface MUST be shown, not a redirect and not a blank page
 
 #### Scenario: Unauthenticated visitor redirected to login
@@ -135,11 +150,56 @@ still be present after one.
 - WHEN the failure is handled
 - THEN an error MUST be shown and the values they entered MUST remain in the form
 
+### Requirement: The Profile Page Shows the Logo and Links to Its Page
+
+The profile page MUST show a logo section above the profile form. It MUST
+preview the current logo from `GET /organization-profile/logo` when the
+profile has one, and MUST otherwise say that no logo has been uploaded.
+If the preview fails to load, it MUST be replaced by a message, never
+shown as a broken image. The section MUST offer no upload or remove
+control; it MUST offer a visible "Change logo" control, styled as a button
+like the page's other actions, that opens the logo page, whether or not a
+logo exists. (Previously: the profile page held the upload and the
+removal itself, until EN-127.)
+
+#### Scenario: The profile previews the logo
+
+- GIVEN a profile with a logo
+- WHEN a `SYSTEM_ADMIN` opens the profile page
+- THEN the logo MUST be previewed above the profile form, and no upload or remove control MUST be shown
+
+#### Scenario: The profile has no logo
+
+- GIVEN a profile with no logo
+- WHEN a `SYSTEM_ADMIN` opens the profile page
+- THEN the logo section MUST say that no logo has been uploaded, and no logo image MUST be shown
+
+#### Scenario: Change logo opens the logo page
+
+- GIVEN the profile page rendered for a `SYSTEM_ADMIN`
+- WHEN they activate "Change logo"
+- THEN the logo page MUST be shown
+
+### Requirement: The Logo Page
+
+The logo page MUST show a page title, a control styled as a button that
+returns to the profile page, and the logo section where the logo is
+uploaded and removed. It MUST read the profile to know whether a logo
+exists, and MUST show distinct loading and error states while it cannot;
+the control back to the profile MUST be available in every state. The
+page MUST stay put after an upload or a removal.
+
+#### Scenario: Back to the profile
+
+- GIVEN the logo page rendered for a `SYSTEM_ADMIN`
+- WHEN they activate the control back to the profile
+- THEN the profile page MUST be shown
+
 ### Requirement: Uploading the Logo
 
-The page MUST show a logo section, separate from the profile form, with
-its own upload: choosing a file and uploading it MUST NOT save or change
-the text fields. The section MUST preview the current logo from
+The logo page's section MUST have its own upload, outside the profile
+form: choosing a file and uploading it MUST NOT save or change the
+profile's text fields. The section MUST preview the current logo from
 `GET /organization-profile/logo` when the profile has one, and MUST
 otherwise say that no logo has been uploaded. If the preview fails to
 load, it MUST be replaced by a message, never shown as a broken image.
@@ -158,7 +218,7 @@ else: a generic failure) and MUST keep the previous logo.
 #### Scenario: A profile without a logo
 
 - GIVEN a profile with no logo
-- WHEN a `SYSTEM_ADMIN` opens the page
+- WHEN a `SYSTEM_ADMIN` opens the logo page
 - THEN the logo section MUST say that no logo has been uploaded, and no logo image MUST be shown
 
 #### Scenario: A logo is uploaded and previewed
@@ -187,8 +247,8 @@ else: a generic failure) and MUST keep the previous logo.
 
 ### Requirement: Removing the Logo
 
-When the profile has a logo, the logo section MUST offer a control to
-remove it, also when the logo image fails to load. It MUST ask for
+When the profile has a logo, the logo page's section MUST offer a control
+to remove it, also when the logo image fails to load. It MUST ask for
 confirmation first in a dialog that says the logo will no longer appear
 on the profile or on review documents; cancelling MUST send no request
 and keep the logo. On success the section MUST say that no logo has been
@@ -202,7 +262,7 @@ save or change the text fields.
 #### Scenario: No logo, no remove control
 
 - GIVEN a profile with no logo
-- WHEN a `SYSTEM_ADMIN` opens the page
+- WHEN a `SYSTEM_ADMIN` opens the logo page
 - THEN no remove control MUST be shown
 
 #### Scenario: Cancelling keeps the logo
