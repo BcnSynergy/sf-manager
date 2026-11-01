@@ -86,6 +86,32 @@ describe('OrganizationProfilePage', () => {
     expect(screen.queryByTestId('organization-logo-remove')).not.toBeInTheDocument();
   });
 
+  // EN-127 review: the logo is replaced on its own page and the SPA does not
+  // reload, so a fixed URL could let the browser reuse the old image when the
+  // admin comes back. Each mount asks for a URL of its own.
+  it('requests the logo with a fresh version each time the page mounts', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue({ ...filledProfile, hasLogo: true });
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockImplementation(
+      (version) => `/logo?v=${version}`,
+    );
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+    const first = renderPage();
+    const firstSrc = (await screen.findByTestId('organization-profile-logo-preview')).getAttribute(
+      'src',
+    );
+    first.unmount();
+
+    now.mockReturnValue(2000);
+    renderPage();
+    const secondSrc = (await screen.findByTestId('organization-profile-logo-preview')).getAttribute(
+      'src',
+    );
+    now.mockRestore();
+
+    expect(firstSrc).toBe('/logo?v=1000');
+    expect(secondSrc).toBe('/logo?v=2000');
+  });
+
   it('says that no logo has been uploaded when the profile has none', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
 

@@ -16,6 +16,10 @@ type Props = {
 export function OrganizationLogoSummary({ hasLogo }: Props) {
   const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
+  // A version of its own per mount: the logo is replaced on the logo page and
+  // the SPA does not reload, so a fixed URL could let the browser show the
+  // image it already holds for it instead of the new one.
+  const [version] = useState(() => Date.now());
   const showPreview = hasLogo && !imageFailed;
 
   return (
@@ -26,7 +30,7 @@ export function OrganizationLogoSummary({ hasLogo }: Props) {
       {showPreview ? (
         <img
           className="sf-logo-preview"
-          src={organizationLogoUrl(0)}
+          src={organizationLogoUrl(version)}
           alt={t('organizationProfile.logoAlt')}
           onError={() => setImageFailed(true)}
           data-testid="organization-profile-logo-preview"
