@@ -7,6 +7,7 @@ import type { PasswordHasher } from '../../../../shared/application/ports/passwo
 import type { LoginFailureLimiter } from '../ports/login-failure-limiter.port';
 import type { TokenDenylist } from '../ports/token-denylist.port';
 import type { TokenIssuer } from '../ports/token-issuer.port';
+import type { RefreshSessionsService } from '../services/refresh-sessions.service';
 import { LoginUseCase } from './login.use-case';
 
 describe('LoginUseCase', () => {
@@ -25,7 +26,11 @@ describe('LoginUseCase', () => {
   let tokenIssuer: jest.Mocked<TokenIssuer>;
   let tokenDenylist: jest.Mocked<TokenDenylist>;
   let loginFailureLimiter: jest.Mocked<LoginFailureLimiter>;
+  let refreshSessions: jest.Mocked<
+    Pick<RefreshSessionsService, 'start' | 'deleteExpired'>
+  >;
   let useCase: LoginUseCase;
+  const refreshExpiresAt = new Date('2026-11-01T16:00:00.000Z');
 
   beforeEach(() => {
     userRepository = {
@@ -60,12 +65,21 @@ describe('LoginUseCase', () => {
       recordFailure: jest.fn().mockResolvedValue(undefined),
       reset: jest.fn().mockResolvedValue(undefined),
     };
+    // TD-5: a login starts a refresh-token family.
+    refreshSessions = {
+      start: jest.fn().mockResolvedValue({
+        token: 'refresh-token',
+        expiresAt: refreshExpiresAt,
+      }),
+      deleteExpired: jest.fn().mockResolvedValue(undefined),
+    };
     useCase = new LoginUseCase(
       userRepository,
       passwordHasher,
       tokenIssuer,
       tokenDenylist,
       loginFailureLimiter,
+      refreshSessions as unknown as RefreshSessionsService,
     );
   });
 
@@ -96,9 +110,31 @@ describe('LoginUseCase', () => {
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
     });
+    expect(refreshSessions.start).toHaveBeenCalledWith('user-1');
+    expect(refreshSessions.deleteExpired).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed.jwt.token',
+      refreshToken: { token: 'refresh-token', expiresAt: refreshExpiresAt },
+    });
+  });
+
+  it('still logs in when the refresh-token cleanup rejects (opportunistic, like the denylist one)', async () => {
+    userRepository.findByEmail.mockResolvedValue(activeUser);
+    passwordHasher.verify.mockResolvedValue(true);
+    refreshSessions.deleteExpired.mockRejectedValue(
+      new Error('transient db error'),
+    );
+    tokenIssuer.sign.mockResolvedValue('signed.jwt.token');
+
+    const result = await useCase.execute(
+      'admin@example.com',
+      'correct-password',
+    );
+
+    expect(result.refreshToken).toEqual({
+      token: 'refresh-token',
+      expiresAt: refreshExpiresAt,
     });
   });
 
@@ -118,6 +154,7 @@ describe('LoginUseCase', () => {
     expect(result).toEqual({
       user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed.jwt.token',
+      refreshToken: { token: 'refresh-token', expiresAt: refreshExpiresAt },
     });
   });
 
@@ -132,6 +169,7 @@ describe('LoginUseCase', () => {
     expect(passwordHasher.verifyAgainstDummy).not.toHaveBeenCalled();
     expect(tokenDenylist.deleteExpired).not.toHaveBeenCalled();
     expect(tokenIssuer.sign).not.toHaveBeenCalled();
+    expect(refreshSessions.start).not.toHaveBeenCalled();
   });
 
   it('runs the dummy-hash verify for an unknown email (comparable timing) and rejects generically', async () => {

@@ -28,6 +28,13 @@ describe('AuthenticatedGuard', () => {
       absoluteTtlMs: 604_800_000,
       reuseGraceMs: 10_000,
     },
+    refreshCookie: {
+      name: 'sf_refresh_token',
+      httpOnly: true,
+      path: '/auth',
+      secure: false,
+      sameSite: 'lax',
+    },
   };
 
   let reflector: jest.Mocked<Pick<Reflector, 'getAllAndOverride'>>;

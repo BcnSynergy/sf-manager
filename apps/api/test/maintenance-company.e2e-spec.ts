@@ -18,6 +18,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import {
   MAINTENANCE_COMPANY_LOOKUP,
   type MaintenanceCompanyLookup,
@@ -129,6 +131,8 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(REFRESH_TOKEN_STORE)
+    .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
     .overrideProvider(MAINTENANCE_COMPANY_REPOSITORY)
     .useValue(maintenanceCompanyRepository)
     .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)

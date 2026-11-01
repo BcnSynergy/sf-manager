@@ -14,6 +14,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 import { User } from '../src/modules/users/domain/user.entity';
 import { getTrustProxySetting } from '../src/shared/infrastructure/env/trust-proxy';
@@ -84,6 +86,8 @@ describe('Login rate limit (e2e)', () => {
       .useValue(userRepository)
       .overrideProvider(TOKEN_DENYLIST)
       .useValue(new InMemoryTokenDenylist())
+      .overrideProvider(REFRESH_TOKEN_STORE)
+      .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
       .overrideProvider(ThrottlerStorage)
       .useFactory({ factory: () => new ThrottlerStorageService() })
       .overrideProvider(LOGIN_FAILURE_LIMITER)

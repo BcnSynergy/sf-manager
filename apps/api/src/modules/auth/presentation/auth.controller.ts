@@ -26,6 +26,7 @@ import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-valida
 import { GetCurrentUserUseCase } from '../application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
+import type { IssuedRefreshToken } from '../application/services/refresh-sessions.service';
 import { InvalidCredentialsError } from '../domain/invalid-credentials.error';
 import { LoginBlockedError } from '../domain/login-blocked.error';
 import type { VerifiedAccessToken } from '../application/ports/token-issuer.port';
@@ -77,10 +78,8 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthUserResponseDto> {
     try {
-      const { user, accessToken } = await this.loginUseCase.execute(
-        body.email,
-        body.password,
-      );
+      const { user, accessToken, refreshToken } =
+        await this.loginUseCase.execute(body.email, body.password);
 
       response.cookie(this.authConfig.cookie.name, accessToken, {
         httpOnly: this.authConfig.cookie.httpOnly,
@@ -89,6 +88,7 @@ export class AuthController {
         sameSite: this.authConfig.cookie.sameSite,
         maxAge: this.authConfig.cookie.maxAge,
       });
+      this.setRefreshCookie(response, refreshToken);
 
       return user;
     } catch (error) {
@@ -144,5 +144,21 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   getMe(@CurrentUser() user: VerifiedAccessToken): AuthUserResponseDto {
     return this.getCurrentUserUseCase.execute(user);
+  }
+
+  // TD-5 S2: the refresh cookie lives exactly as long as its token.
+  private setRefreshCookie(
+    response: Response,
+    refreshToken: IssuedRefreshToken,
+  ): void {
+    const { name, httpOnly, path, secure, sameSite } =
+      this.authConfig.refreshCookie;
+    response.cookie(name, refreshToken.token, {
+      httpOnly,
+      path,
+      secure,
+      sameSite,
+      expires: refreshToken.expiresAt,
+    });
   }
 }

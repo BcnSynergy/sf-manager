@@ -36,6 +36,7 @@ describe('getAuthConfig', () => {
     delete process.env.REFRESH_TOKEN_IDLE_TTL;
     delete process.env.REFRESH_TOKEN_ABSOLUTE_TTL;
     delete process.env.REFRESH_TOKEN_REUSE_GRACE;
+    delete process.env.REFRESH_TOKEN_COOKIE_PATH;
 
     expect(getAuthConfig()).toEqual({
       jwtSecret: 'test-secret',
@@ -54,6 +55,15 @@ describe('getAuthConfig', () => {
         idleTtlMs: 8 * 60 * 60 * 1000,
         absoluteTtlMs: 7 * 24 * 60 * 60 * 1000,
         reuseGraceMs: 10 * 1000,
+      },
+      // TD-5 S2: scoped to the auth routes (login, refresh, logout), not
+      // sent with every API call.
+      refreshCookie: {
+        name: 'sf_refresh_token',
+        httpOnly: true,
+        path: '/auth',
+        secure: false,
+        sameSite: 'lax',
       },
     });
   });
@@ -138,6 +148,36 @@ describe('getAuthConfig', () => {
       expect(() => getAuthConfig()).toThrow(
         new RegExp(`${variable}.*greater than zero`),
       );
+    },
+  );
+
+  it('gives the refresh cookie the production flags of the access cookie', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'https://app.sf-manager.example';
+    process.env.NODE_ENV = 'production';
+
+    expect(getAuthConfig().refreshCookie).toMatchObject({
+      secure: true,
+      sameSite: 'strict',
+    });
+  });
+
+  it('reads the refresh cookie path from REFRESH_TOKEN_COOKIE_PATH (the browser sees /api/auth behind Caddy)', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+    process.env.REFRESH_TOKEN_COOKIE_PATH = '/api/auth';
+
+    expect(getAuthConfig().refreshCookie.path).toBe('/api/auth');
+  });
+
+  it.each(['auth', 'api/auth', ''])(
+    'throws naming REFRESH_TOKEN_COOKIE_PATH when it does not start with a slash ("%s")',
+    (value) => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.CORS_ORIGIN = 'http://localhost:5173';
+      process.env.REFRESH_TOKEN_COOKIE_PATH = value;
+
+      expect(() => getAuthConfig()).toThrow(/REFRESH_TOKEN_COOKIE_PATH/);
     },
   );
 

@@ -15,6 +15,8 @@ import {
   TOKEN_DENYLIST,
   type TokenDenylist,
 } from '../src/modules/auth/application/ports/token-denylist.port';
+import { REFRESH_TOKEN_STORE } from '../src/modules/auth/application/ports/refresh-token-store.port';
+import { InMemoryRefreshTokenStore } from '../src/modules/auth/application/services/testing/in-memory-refresh-token-store';
 import { ORGANIZATION_PROFILE_REPOSITORY } from '../src/modules/organization-profile/application/ports/organization-profile.repository.port';
 import { InMemoryOrganizationProfileRepository } from '../src/modules/organization-profile/application/use-cases/testing/in-memory-organization-profile.repository';
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
@@ -107,6 +109,8 @@ async function buildApp(seed: { users?: User[] } = {}): Promise<{
     .useValue(userRepository)
     .overrideProvider(TOKEN_DENYLIST)
     .useValue(tokenDenylist)
+    .overrideProvider(REFRESH_TOKEN_STORE)
+    .useFactory({ factory: () => new InMemoryRefreshTokenStore() })
     .overrideProvider(ORGANIZATION_PROFILE_REPOSITORY)
     .useValue(organizationProfileRepository)
     .overrideProvider(FILE_STORAGE)

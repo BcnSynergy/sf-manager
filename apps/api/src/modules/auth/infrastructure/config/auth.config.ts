@@ -2,6 +2,7 @@ import type { RefreshTokenPolicy } from '../../application/services/refresh-toke
 import { isProduction } from '../../../../shared/infrastructure/env/is-production';
 
 export const ACCESS_TOKEN_COOKIE_NAME = 'sf_access_token';
+export const REFRESH_TOKEN_COOKIE_NAME = 'sf_refresh_token';
 export const AUTH_CONFIG = Symbol('AUTH_CONFIG');
 
 export interface AuthConfig {
@@ -18,6 +19,16 @@ export interface AuthConfig {
   };
   // TD-5: refresh-token lifetimes, in milliseconds.
   refreshToken: RefreshTokenPolicy;
+  // TD-5 S2: the refresh token's cookie. Its lifetime is the token's own
+  // expiry, set per response. The path keeps it to the auth routes; it is
+  // configurable because Caddy serves the API under /api in production.
+  refreshCookie: {
+    name: string;
+    httpOnly: true;
+    path: string;
+    secure: boolean;
+    sameSite: 'lax' | 'strict';
+  };
 }
 
 const DURATION_UNIT_MS: Record<string, number> = {
@@ -78,6 +89,13 @@ export function getAuthConfig(): AuthConfig {
       sameSite: production ? 'strict' : 'lax',
       maxAge,
     },
+    refreshCookie: {
+      name: REFRESH_TOKEN_COOKIE_NAME,
+      httpOnly: true,
+      path: refreshCookiePath(),
+      secure: production,
+      sameSite: production ? 'strict' : 'lax',
+    },
     // TD-5 S5 defaults: "8 h inactiv. / 7 d máx."; S4 grace window 10s.
     refreshToken: {
       idleTtlMs: positiveDurationFromEnv('REFRESH_TOKEN_IDLE_TTL', '8h'),
@@ -92,6 +110,16 @@ export function getAuthConfig(): AuthConfig {
       ),
     },
   };
+}
+
+function refreshCookiePath(): string {
+  const path = process.env.REFRESH_TOKEN_COOKIE_PATH ?? '/auth';
+  if (!path.startsWith('/')) {
+    throw new Error(
+      `REFRESH_TOKEN_COOKIE_PATH must start with "/", got "${path}"`,
+    );
+  }
+  return path;
 }
 
 // A zero lifetime would reject every refresh, so it fails fast at boot.

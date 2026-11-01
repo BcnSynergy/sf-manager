@@ -29,6 +29,13 @@ describe('AuthController', () => {
       absoluteTtlMs: 604_800_000,
       reuseGraceMs: 10_000,
     },
+    refreshCookie: {
+      name: 'sf_refresh_token',
+      httpOnly: true,
+      path: '/auth',
+      secure: false,
+      sameSite: 'lax',
+    },
   };
 
   const loginUseCase = { execute: jest.fn() };
@@ -63,10 +70,12 @@ describe('AuthController', () => {
     controller = module.get(AuthController);
   });
 
-  it('sets the access-token cookie and returns only the public user fields on successful login', async () => {
+  it('sets the access-token and refresh-token cookies and returns only the public user fields on successful login', async () => {
+    const refreshExpiresAt = new Date('2026-11-01T16:00:00.000Z');
     loginUseCase.execute.mockResolvedValue({
       user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },
       accessToken: 'signed-jwt',
+      refreshToken: { token: 'opaque-refresh', expiresAt: refreshExpiresAt },
     });
 
     const result = await controller.login(
@@ -89,6 +98,19 @@ describe('AuthController', () => {
         maxAge: 7_200_000,
       },
     );
+    // TD-5: the refresh cookie lives exactly as long as its token.
+    expect(response.cookie).toHaveBeenCalledWith(
+      'sf_refresh_token',
+      'opaque-refresh',
+      {
+        httpOnly: true,
+        path: '/auth',
+        secure: false,
+        sameSite: 'lax',
+        expires: refreshExpiresAt,
+      },
+    );
+    expect(response.cookie).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       id: 'user-1',
       email: 'admin@example.com',

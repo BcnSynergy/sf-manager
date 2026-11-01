@@ -19,10 +19,16 @@ import {
   type TokenDenylist,
 } from '../ports/token-denylist.port';
 import { TOKEN_ISSUER, type TokenIssuer } from '../ports/token-issuer.port';
+import {
+  type IssuedRefreshToken,
+  RefreshSessionsService,
+} from '../services/refresh-sessions.service';
 
 export interface LoginResult {
   user: { id: string; email: string; role: Role };
   accessToken: string;
+  // TD-5: the first token of a new refresh family.
+  refreshToken: IssuedRefreshToken;
 }
 
 // design.md Data Flow (POST /auth/login) + Decisions 7, 9, 10.
@@ -37,6 +43,7 @@ export class LoginUseCase {
     @Inject(TOKEN_DENYLIST) private readonly tokenDenylist: TokenDenylist,
     @Inject(LOGIN_FAILURE_LIMITER)
     private readonly loginFailureLimiter: LoginFailureLimiter,
+    private readonly refreshSessions: RefreshSessionsService,
   ) {}
 
   async execute(email: string, password: string): Promise<LoginResult> {
@@ -107,15 +114,24 @@ export class LoginUseCase {
     // Decision 9), not by this use case. `role` and `email` are signed into
     // the token as advisory claims only: AuthenticatedGuard overwrites them
     // with the stored values on every request.
+    // Opportunistic, like the denylist cleanup above: never gates login.
+    try {
+      await this.refreshSessions.deleteExpired();
+    } catch {
+      // swallow: best-effort cleanup, not a security-relevant operation.
+    }
+
     const accessToken = await this.tokenIssuer.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
     });
+    const refreshToken = await this.refreshSessions.start(user.id);
 
     return {
       user: { id: user.id, email: user.email, role: user.role },
       accessToken,
+      refreshToken,
     };
   }
 }
