@@ -697,7 +697,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   edits typed into the profile form and not saved are dropped without a
   word; before, the upload sat on the same page and kept them. The same
   holds for any nav link today. A leave-page guard (React Router's
-  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #TBD)
+  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #316)
   pre-push review, 2026-11-01.
 
 ## Done
@@ -714,7 +714,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   page shows the logo, or says there is none, with a "Change logo" button
   (a button-styled link, like the page's other actions) to that page, and
   keeps to its data and its save button. Done in `en-127-logo-page` (PR
-  #TBD), 2026-11-01.
+  #316), 2026-11-01.
 
 - **EN-118** (deploy): closed without a change, by decision.
   `offsite-copy.sh pull` keeps overwriting a local backup of the same name
