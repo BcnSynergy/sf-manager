@@ -37,6 +37,7 @@ export class ApiError extends Error {
 
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_SERVER_ERROR = 500;
 
 // auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
 // a mid-session 401 (the API now re-reads the user on every request) is
@@ -67,7 +68,8 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
 
   // TD-5 S8: the access token is short-lived. A 401 first tries one silent
   // refresh, then retries the request once; only a refused refresh ends the
-  // session. A session change during the refresh (logout, another login)
+  // session. An unavailable refresh rejects with its ApiError (0 or 5xx),
+  // which fails this call without ending the session. A session change during the refresh (logout, another login)
   // means this request belongs to the old session: neither retried nor
   // reported.
   if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
@@ -132,7 +134,10 @@ const REFRESH_LOCK = 'sf-manager.refresh';
 let refreshInFlight: Promise<unknown> | null = null;
 
 // Exchanges the refresh cookie for a new session. Resolves with the user
-// the API answers with, or null when the refresh is refused or unreachable.
+// the API answers with, or null when the API refuses the refresh (4xx: the
+// session is over). Rejects with ApiError when the refresh is unavailable
+// (network down, 5xx): the session may still be valid, so callers must not
+// end it.
 export function refreshSession<T = unknown>(): Promise<T | null> {
   refreshInFlight ??= withRefreshLock(postRefresh).finally(() => {
     refreshInFlight = null;
@@ -159,6 +164,9 @@ async function postRefresh(): Promise<unknown> {
     } catch {
       continue;
     }
+    if (response.status >= HTTP_SERVER_ERROR) {
+      throw new ApiError(response.status);
+    }
     if (!response.ok) {
       return null;
     }
@@ -168,5 +176,5 @@ async function postRefresh(): Promise<unknown> {
       return null;
     }
   }
-  return null;
+  throw new ApiError(0);
 }

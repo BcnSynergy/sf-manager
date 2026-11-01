@@ -600,6 +600,11 @@ Decision 4.)
   token at once.
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window.
+- Only a refusal (a 4xx answer from the refresh endpoint) MUST end the
+  session. When the refresh is unavailable (still unreachable after that
+  retry, or answering 5xx), the call MUST fail with that network or server
+  error and the session MUST stay, so an API restart or a short outage does
+  not log users out.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
@@ -617,6 +622,12 @@ Decision 4.)
 - GIVEN a signed-in user whose refresh token is no longer valid
 - WHEN an authenticated API call returns 401
 - THEN the session MUST end with the session-ended notice and a redirect to `/login`
+
+#### Scenario: Unavailable refresh keeps the session
+
+- GIVEN a signed-in user whose access token has expired
+- WHEN an authenticated API call returns 401 and the refresh endpoint is unreachable or answers 5xx
+- THEN the call MUST fail with a network or server error, and the session MUST NOT end (no notice, no redirect)
 
 #### Scenario: Concurrent 401s share one refresh
 

@@ -412,6 +412,45 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/auth/refresh', '/users']);
   });
 
+  // Only a refusal ends the session: an unreachable refresh (API restarting,
+  // network down, 5xx) must not log users out whose refresh token is valid.
+  it.each([502, 503, 500])(
+    'keeps the session when the refresh answers %i, failing the call with that status',
+    async (status) => {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const fetchMock = respond(unauthorized(), mockResponse({ ok: false, status }));
+
+      const error = await apiFetch('/users').catch((e: unknown) => e);
+
+      expect((error as ApiError).status).toBe(status);
+      expect(handler).not.toHaveBeenCalled();
+      expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+    },
+  );
+
+  it('keeps the session when the refresh is unreachable twice, failing the call with status 0', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    respond(unauthorized(), new TypeError('Failed to fetch'), new TypeError('Failed to fetch'));
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(0);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('treats a 403 from the refresh (foreign origin) as a refusal that ends the session', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    respond(unauthorized(), mockResponse({ ok: false, status: 403 }));
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('serializes the refresh across tabs with a Web Lock when the browser has them', async () => {
     const request = vi.fn((_name: string, callback: () => Promise<unknown>) => callback());
     vi.stubGlobal('navigator', { ...navigator, locks: { request } });
@@ -460,5 +499,14 @@ describe('refreshSession (TD-5)', () => {
 
     await expect(refreshSession()).resolves.toEqual({ id: '7' });
     await expect(refreshSession()).resolves.toBeNull();
+  });
+
+  it('rejects with ApiError when the refresh is unavailable (5xx), rather than reporting a refusal', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 503 })));
+
+    const error = await refreshSession().catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(503);
   });
 });
