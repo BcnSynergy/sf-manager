@@ -692,14 +692,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   rendered layout test would need Playwright (TD-32). Origin:
   `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
 
-- **EN-129** (web): warn before leaving the organization profile with
-  unsaved edits. Since EN-127, "Change logo" navigates to the logo page, so
-  edits typed into the profile form and not saved are dropped without a
-  word; before, the upload sat on the same page and kept them. The same
-  holds for any nav link today. A leave-page guard (React Router's
-  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #316)
-  pre-push review, 2026-11-01.
-
 - **EN-130** (web tests): walk the EN-127 round trip in one router session.
   The spec scenario "Coming back shows the current logo" is pinned per
   component: each preview gets a fresh URL on mount and after an upload,
@@ -708,7 +700,52 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   changed. It was checked in the browser for PR #316. Origin:
   `en-127-logo-page` (PR #316) native review, 2026-11-01.
 
+- **EN-131** (web): warn before reloading or closing the tab with unsaved
+  edits on the organization profile. EN-129's leave guard only catches
+  in-app navigation; a reload or a closed tab still drops the edits without
+  a word. A `beforeunload` handler (the browser's own prompt, its text not
+  ours) would cover it. Origin: `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
+
+- **EN-132** (web): `App` creates its data router in a `useState`
+  initializer, which `<StrictMode>` runs twice in development; the discarded
+  router stays subscribed to `popstate`. Harmless (no loaders, never
+  rendered, dev only). React Router's documented pattern is a module-level
+  `createBrowserRouter(...)`; that would create a browser router whenever a
+  test imports `App.tsx`, which is why it was not moved. Origin:
+  `en-129-unsaved-changes-guard` pre-push review, 2026-11-01.
+
+- **EN-133** (web): on the organization profile, a nav link clicked while
+  a save is in flight opens the leave dialog; if the save then succeeds,
+  the form is clean but the dialog stays open until the admin chooses
+  (either choice still works). Polish: call `proceed()` when the form turns
+  clean while blocked. Related: for one effect pass after a save resolves,
+  `useBlocker` still holds the dirty check (it installs the new one in an
+  effect), so a click in that window would still ask; the "after the edits
+  were saved" test flushes effects first and no test pins the window.
+  Origin: `en-129-unsaved-changes-guard` pre-push review, 2026-11-01; window
+  note from the PR #317 native review.
+
+- **EN-134** (web): since the data router (EN-129), a render error that
+  escapes the page-level boundaries (`AppLayout`, `ProtectedRoute`) shows
+  React Router's built-in "Unexpected Application Error!" screen instead of
+  unmounting the app to a blank page. Give the catch-all route in `App.tsx`
+  an `errorElement` with the app's own, translated message. Origin:
+  `en-129-unsaved-changes-guard` (PR #317) pre-merge review, 2026-11-01.
+
+- **EN-135** (web tests): the EN-129 leave guard is pinned for the back
+  button but not for forward. Both are POP navigations through the same
+  blocker, so the gap is small. Origin: `en-129-unsaved-changes-guard` (PR
+  #317) pre-merge review, 2026-11-01.
+
 ## Done
+
+- **EN-129** (web): the organization profile asks before any in-app
+  navigation ("Change logo", a nav link, back/forward) while the form holds
+  unsaved edits; cancelling keeps them, confirming leaves without saving.
+  The app now runs on a data router (`createBrowserRouter`, one catch-all
+  route rendering `AppRoutes`, no loaders or actions) so the page can use
+  `useBlocker`. Reload and tab close are EN-131. Done in
+  `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
   `deploy/test-postgres-backup.sh` no longer waits out its 30-second

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBlocker } from 'react-router';
 import { updateOrganizationProfileSchema } from '@sf-manager/validation';
 import {
   getOrganizationProfile,
@@ -7,6 +8,7 @@ import {
   type OrganizationProfile,
   type UpdateOrganizationProfilePayload,
 } from '../api/organization-profile';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageHeader } from '../components/PageHeader';
 import { Alert, StatusRegion } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
@@ -124,6 +126,16 @@ export function OrganizationProfilePage() {
   }, []);
 
   const incomplete = isProfileIncomplete(saved);
+  // EN-129: typed but not saved. Typing a field back to its saved value
+  // makes it clean again.
+  const hasUnsavedEdits = REQUIRED_FIELDS.some((field) => values[field] !== saved[field]);
+  // Any in-app navigation away from this page (Change logo, a nav link,
+  // back/forward) waits for the admin to confirm. Needs the data router set
+  // up in App.tsx. Reloading or closing the tab is not covered.
+  const leaveBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedEdits && currentLocation.pathname !== nextLocation.pathname,
+  );
 
   function handleChange(field: ProfileFieldKey, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -269,6 +281,15 @@ export function OrganizationProfilePage() {
           </button>
         </div>
       </form>
+      <ConfirmDialog
+        open={leaveBlocker.state === 'blocked'}
+        title={t('organizationProfile.leaveConfirmTitle')}
+        message={t('organizationProfile.leaveConfirmMessage')}
+        confirmLabel={t('organizationProfile.leaveConfirmLabel')}
+        tone="danger"
+        onConfirm={() => leaveBlocker.proceed?.()}
+        onCancel={() => leaveBlocker.reset?.()}
+      />
     </main>
   );
 }

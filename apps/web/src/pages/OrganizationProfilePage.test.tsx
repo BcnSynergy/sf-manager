@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -49,18 +49,21 @@ function statusRegions() {
   return { profile: all[0] };
 }
 
+// A data router, like the app's: the page's leave guard (EN-129) uses
+// useBlocker, which throws under a declarative <MemoryRouter>.
+function renderAt(routes: RouteObject[]) {
+  const router = createMemoryRouter(routes, { initialEntries: ['/organization-profile'] });
+  return { router, ...render(<RouterProvider router={router} />) };
+}
+
 function renderPage() {
-  return render(
-    <MemoryRouter initialEntries={['/organization-profile']}>
-      <Routes>
-        <Route path="/organization-profile" element={<OrganizationProfilePage />} />
-        <Route
-          path="/organization-profile/logo"
-          element={<div data-testid="logo-page-stub">logo page</div>}
-        />
-      </Routes>
-    </MemoryRouter>,
-  );
+  return renderAt([
+    { path: '/organization-profile', element: <OrganizationProfilePage /> },
+    {
+      path: '/organization-profile/logo',
+      element: <div data-testid="logo-page-stub">logo page</div>,
+    },
+  ]);
 }
 
 describe('OrganizationProfilePage', () => {
@@ -513,21 +516,17 @@ describe('OrganizationProfilePage route access', () => {
   });
 
   function renderRoute() {
-    return render(
-      <MemoryRouter initialEntries={['/organization-profile']}>
-        <Routes>
-          <Route
-            path="/organization-profile"
-            element={
-              <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
-                <OrganizationProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<div data-testid="login-page">login</div>} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    return renderAt([
+      {
+        path: '/organization-profile',
+        element: (
+          <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+            <OrganizationProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: '/login', element: <div data-testid="login-page">login</div> },
+    ]);
   }
 
   it('renders the explicit NotAuthorized surface, not a redirect, for a non-admin role', () => {
@@ -649,5 +648,129 @@ describe('OrganizationProfilePage route access', () => {
       expect(error).toHaveClass('sf-alert', 'sf-alert-danger');
       expect(error).toHaveAttribute('role', 'alert');
     });
+  });
+});
+
+// EN-129: leaving the page with unsaved edits asks first.
+describe('OrganizationProfilePage leave guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+  });
+
+  async function editName(value: string) {
+    fireEvent.change(await screen.findByTestId('organization-profile-name'), {
+      target: { value },
+    });
+  }
+
+  function leaveDialog() {
+    return screen.getByTestId('confirm-dialog');
+  }
+
+  it('asks before leaving with unsaved edits, and cancelling keeps them', async () => {
+    const { router } = renderPage();
+    await editName('Edited name');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
+
+    expect(leaveDialog()).toHaveAttribute('open');
+    expect(leaveDialog()).toHaveTextContent('Leave without saving?');
+    expect(leaveDialog()).toHaveTextContent(
+      'Your changes to the organization profile have not been saved and will be lost.',
+    );
+    expect(screen.queryByTestId('logo-page-stub')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
+
+    expect(leaveDialog()).not.toHaveAttribute('open');
+    expect(router.state.location.pathname).toBe('/organization-profile');
+    expect(screen.getByTestId('organization-profile-name')).toHaveValue('Edited name');
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
+  });
+
+  it('leaves and drops the edits when the admin confirms', async () => {
+    const { router } = renderPage();
+    await editName('Edited name');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/organization-profile/logo');
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
+  });
+
+  it('asks on any in-app navigation, not only Change logo', async () => {
+    const { router } = renderAt([
+      { path: '/organization-profile', element: <OrganizationProfilePage /> },
+      { path: '/users', element: <div data-testid="users-stub">users</div> },
+    ]);
+    await editName('Edited name');
+
+    // What a nav-menu link does: navigate the router to another page.
+    await act(() => router.navigate('/users'));
+
+    expect(leaveDialog()).toHaveAttribute('open');
+    expect(router.state.location.pathname).toBe('/organization-profile');
+    expect(screen.queryByTestId('users-stub')).not.toBeInTheDocument();
+  });
+
+  it('asks on the browser back button too, and leaving completes the back step', async () => {
+    const router = createMemoryRouter(
+      [
+        { path: '/users', element: <div data-testid="users-stub">users</div> },
+        { path: '/organization-profile', element: <OrganizationProfilePage /> },
+      ],
+      { initialEntries: ['/users', '/organization-profile'], initialIndex: 1 },
+    );
+    render(<RouterProvider router={router} />);
+    await editName('Edited name');
+
+    await act(() => router.navigate(-1));
+
+    expect(leaveDialog()).toHaveAttribute('open');
+    expect(router.state.location.pathname).toBe('/organization-profile');
+    expect(screen.queryByTestId('users-stub')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByTestId('users-stub')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
+  });
+
+  it('leaves without asking when nothing was edited', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Change logo' }));
+
+    expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
+  });
+
+  it('leaves without asking when the edits were typed back to the saved values', async () => {
+    renderPage();
+    await editName('Edited name');
+    await editName(filledProfile.name);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
+
+    expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
+  });
+
+  it('leaves without asking after the edits were saved', async () => {
+    mockedUpdateOrganizationProfile.mockResolvedValue({ ...filledProfile, name: 'Edited name' });
+    renderPage();
+    await editName('Edited name');
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+    await screen.findByTestId('organization-profile-success');
+    // The save resolves outside act, and useBlocker swaps in the now-clean
+    // check in an effect after the paint; flush it before clicking, as any
+    // real click lands frames later.
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
+
+    expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
   });
 });
