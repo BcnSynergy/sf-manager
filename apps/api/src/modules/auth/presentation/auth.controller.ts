@@ -19,7 +19,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle, ThrottlerException } from '@nestjs/throttler';
+import { ThrottlerException } from '@nestjs/throttler';
 import { loginRequestSchema } from '@sf-manager/validation';
 import type { Response } from 'express';
 import { Public } from '../../../shared/presentation/decorators/public.decorator';
@@ -43,7 +43,6 @@ import { RefreshThrottlerGuard } from './guards/refresh-throttler.guard';
 import { SameOriginGuard } from './guards/same-origin.guard';
 import { RefreshSessionUseCase } from '../application/use-cases/refresh-session.use-case';
 import { RefreshRejectedError } from '../domain/refresh-rejected.error';
-import { getRefreshRateLimitConfig } from '../infrastructure/config/login-rate-limit.config';
 import type { AuthenticatedRequest } from './types';
 
 // design.md Data Flow. Cookie name/httpOnly/path/secure/sameSite/maxAge all
@@ -112,12 +111,6 @@ export class AuthController {
   // expired; same-origin only (CSRF) and rate-limited per client key.
   @Public()
   @UseGuards(SameOriginGuard, RefreshThrottlerGuard)
-  @Throttle({
-    default: {
-      limit: () => getRefreshRateLimitConfig().maxAttempts,
-      ttl: () => getRefreshRateLimitConfig().windowMs,
-    },
-  })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthUserResponseDto })

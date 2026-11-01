@@ -11,11 +11,6 @@ import {
 } from '../ports/token-issuer.port';
 import { RefreshSessionsService } from '../services/refresh-sessions.service';
 
-// design.md Data Flow (POST /auth/logout) + Decision 9. Re-verifies the raw
-// cookie token itself rather than trusting the guard's already-parsed
-// payload — the guard's own verify already gated reaching this use case, so
-// this second verify only ever fails if the token expires in the narrow
-// window between the guard running and this call.
 export interface LogoutInput {
   accessToken?: string;
   refreshToken?: string;
@@ -25,7 +20,10 @@ export interface LogoutInput {
 // token has its jti revoked (as before); a refresh cookie has its whole
 // family revoked, so the session cannot be renewed. Only the refresh cookie
 // may be left once the short-lived access cookie has expired, so either one
-// is enough; with neither, there is no session to end (401).
+// is enough; with neither, there is no session to end (401). The endpoint
+// is public (no guard runs), so the access cookie is verified here and an
+// expired or forged one simply revokes nothing (design.md Decision 9 still
+// holds: the jti is revoked until the token's own expiry).
 @Injectable()
 export class LogoutUseCase {
   constructor(

@@ -753,8 +753,13 @@ Refresh"). Decision 4 itself stands; this records the shape it took.
    expired), reads the user live like the guard, refuses a foreign `Origin`
    with 403 (CSRF; SameSite covers production, the check also covers
    development's `lax`), and has its own per-client-key limit, apart from
-   login's (60 per minute by default). A Prisma transaction timeout on the
-   exchange answers 401, not 500.
+   login's (60 per minute by default), read at boot so an invalid value
+   stops startup. Reading the user and signing the access token run before
+   the rotation commits, so a failure there leaves the token unconsumed. A
+   database error during the exchange (including Prisma's transaction
+   timeout, P2028, which also signals an exhausted pool) answers 500 and
+   keeps the cookie: the transaction rolled back, so a retry is a normal
+   refresh, and a load spike does not log users out.
 6. **Cookie scope.** The refresh cookie's path is the auth routes as the
    browser sees them: `/auth` in development, `/api/auth` behind Caddy
    (`REFRESH_TOKEN_COOKIE_PATH`), so it reaches refresh and logout and no

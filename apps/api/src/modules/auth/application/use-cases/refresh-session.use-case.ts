@@ -19,7 +19,10 @@ export interface RefreshSessionResult {
 
 // TD-5 S3, S6: exchanges a refresh token for a new access token and the next
 // refresh token. The user is read live (as AuthenticatedGuard does), so a
-// deleted user cannot refresh and a changed role is in the new token.
+// deleted user cannot refresh and a changed role is in the new token. Every
+// step that can fail (reading the user, signing) runs before the rotation
+// commits, so a failure leaves the presented token unconsumed and a retry is
+// a normal refresh, not a reuse.
 @Injectable()
 export class RefreshSessionUseCase {
   constructor(
@@ -29,10 +32,13 @@ export class RefreshSessionUseCase {
   ) {}
 
   async execute(refreshToken: string): Promise<RefreshSessionResult> {
-    const rotated = await this.refreshSessions.rotate(refreshToken);
-    const user = await this.userRepository.findById(rotated.userId);
+    const ownerId = await this.refreshSessions.ownerOf(refreshToken);
+    if (ownerId === null) {
+      throw new RefreshRejectedError('unknown');
+    }
+    const user = await this.userRepository.findById(ownerId);
     if (!user) {
-      await this.refreshSessions.revoke(rotated.token);
+      await this.refreshSessions.revoke(refreshToken);
       throw new RefreshRejectedError('revoked');
     }
     const accessToken = await this.tokenIssuer.sign({
@@ -40,6 +46,7 @@ export class RefreshSessionUseCase {
       email: user.email,
       role: user.role,
     });
+    const rotated = await this.refreshSessions.rotate(refreshToken);
     return {
       user: { id: user.id, email: user.email, role: user.role },
       accessToken,

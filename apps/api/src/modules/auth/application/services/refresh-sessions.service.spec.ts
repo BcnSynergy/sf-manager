@@ -399,6 +399,17 @@ describe('RefreshSessionsService', () => {
     });
   });
 
+  describe('ownerOf', () => {
+    it("returns the token's user without consuming it, and null for an unknown token", async () => {
+      const { store, sessions } = setup();
+      const first = await sessions.start('user-1');
+
+      await expect(sessions.ownerOf(first.token)).resolves.toBe('user-1');
+      await expect(sessions.ownerOf('never-issued')).resolves.toBeNull();
+      expect((await store.findByHash('hash(token-1)'))?.rotatedAt).toBeNull();
+    });
+  });
+
   describe('revoke', () => {
     it('revokes every token of the family', async () => {
       const { clock, store, sessions } = setup();

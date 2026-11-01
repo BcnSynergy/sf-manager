@@ -22,8 +22,8 @@ import { User } from '../src/modules/users/domain/user.entity';
 
 // TD-5 (PR 2/3): POST /auth/refresh end to end, hermetic like auth.e2e-spec.
 // This suite runs with a zero grace window (strict rotation), so reusing a
-// rotated token is detected at once, and with a refresh limit low enough to
-// reach in one test.
+// rotated token is detected at once. The refresh rate limit has its own
+// suite (refresh-rate-limit.e2e-spec.ts).
 class InMemoryTokenDenylist implements TokenDenylist {
   private readonly revokedJtis = new Set<string>();
 
@@ -43,7 +43,6 @@ class InMemoryTokenDenylist implements TokenDenylist {
 
 const TEST_ORIGIN = 'http://localhost:5173';
 const PASSWORD = 'correct-horse-battery-staple';
-const REFRESH_LIMIT = 25;
 
 function cookiesOf(response: request.Response): string[] {
   const header = response.headers['set-cookie'] as unknown as
@@ -64,12 +63,21 @@ describe('POST /auth/refresh (e2e)', () => {
   let users: InMemoryUserRepository;
   let nextUser = 0;
 
+  const ENV_KEYS = [
+    'JWT_SECRET',
+    'CORS_ORIGIN',
+    'JWT_EXPIRES_IN',
+    'REFRESH_TOKEN_REUSE_GRACE',
+  ] as const;
+  const savedEnv = Object.fromEntries(
+    ENV_KEYS.map((key) => [key, process.env[key]]),
+  );
+
   beforeAll(async () => {
     process.env.JWT_SECRET = 'e2e-test-secret';
     process.env.CORS_ORIGIN = TEST_ORIGIN;
     process.env.JWT_EXPIRES_IN = '2h';
     process.env.REFRESH_TOKEN_REUSE_GRACE = '0s';
-    process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = String(REFRESH_LIMIT);
 
     users = new InMemoryUserRepository();
 
@@ -102,7 +110,13 @@ describe('POST /auth/refresh (e2e)', () => {
   });
 
   afterAll(async () => {
-    delete process.env.REFRESH_TOKEN_REUSE_GRACE;
+    for (const key of ENV_KEYS) {
+      if (savedEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = savedEnv[key];
+      }
+    }
     await app.close();
   });
 
@@ -231,19 +245,5 @@ describe('POST /auth/refresh (e2e)', () => {
     it('still answers 401 with neither a valid access token nor a refresh cookie', async () => {
       await request(app.getHttpServer()).post('/auth/logout').expect(401);
     });
-  });
-
-  // Last: it uses up this client's refresh budget for the window.
-  it('limits refreshes per client key, answering 429 with Retry-After', async () => {
-    let limited: request.Response | undefined;
-    for (let i = 0; i <= REFRESH_LIMIT && !limited; i += 1) {
-      const response = await refresh('B'.repeat(43));
-      if (response.status === 429) {
-        limited = response;
-      }
-    }
-
-    expect(limited).toBeDefined();
-    expect(limited?.headers['retry-after']).toBeDefined();
   });
 });

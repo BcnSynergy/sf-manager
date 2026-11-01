@@ -25,6 +25,10 @@ import {
   getAuthConfig,
 } from './infrastructure/config/auth.config';
 import {
+  getRefreshRateLimitConfig,
+  REFRESH_RATE_LIMIT_CONFIG,
+} from './infrastructure/config/refresh-rate-limit.config';
+import {
   getLoginEmailRateLimitConfig,
   getLoginRateLimitConfig,
 } from './infrastructure/config/login-rate-limit.config';
@@ -105,6 +109,11 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     RefreshSessionsService,
     { provide: REFRESH_TOKEN_STORE, useClass: PrismaRefreshTokenStore },
     { provide: OPAQUE_TOKEN_GENERATOR, useClass: CryptoOpaqueTokenGenerator },
+    // Read at boot: an invalid REFRESH_RATE_LIMIT_* stops startup.
+    {
+      provide: REFRESH_RATE_LIMIT_CONFIG,
+      useFactory: getRefreshRateLimitConfig,
+    },
     {
       provide: REFRESH_TOKEN_POLICY,
       inject: [AUTH_CONFIG],
