@@ -92,6 +92,7 @@ describe('RefreshSessionsService', () => {
         expiresAt: new Date(start.getTime() + 8 * HOUR),
         familyExpiresAt: new Date(start.getTime() + 7 * DAY),
         rotatedAt: null,
+        graceUsedAt: null,
         revokedAt: null,
       });
       expect(JSON.stringify(stored)).not.toContain('"token-1"');
@@ -217,17 +218,89 @@ describe('RefreshSessionsService', () => {
       });
     });
 
-    it('still issues a token when another request consumed it first (lost the atomic race)', async () => {
-      const { store, sessions } = setup();
+    it('allows only one grace exchange per consumed token: a third concurrent refresh is turned away without revoking', async () => {
+      const { clock, store, sessions } = setup();
+      const first = await sessions.start('user-1');
+      const fromTabA = await sessions.rotate(first.token);
+      clock.advance(2 * SECOND);
+      const fromTabB = await sessions.rotate(first.token);
+      clock.advance(2 * SECOND);
+
+      const fromTabC = await rejection(sessions.rotate(first.token));
+
+      expect(fromTabC.reason).toBe('superseded');
+      for (const token of store.tokens.values()) {
+        expect(token.revokedAt).toBeNull();
+      }
+      await expect(sessions.rotate(fromTabA.token)).resolves.toMatchObject({
+        userId: 'user-1',
+      });
+      await expect(sessions.rotate(fromTabB.token)).resolves.toMatchObject({
+        userId: 'user-1',
+      });
+    });
+
+    it('still revokes the family when a token whose grace was spent comes back after the window', async () => {
+      const { clock, store, sessions } = setup();
+      const first = await sessions.start('user-1');
+      await sessions.rotate(first.token);
+      await sessions.rotate(first.token);
+      clock.advance(10 * SECOND + 1);
+
+      const error = await rejection(sessions.rotate(first.token));
+
+      expect(error.reason).toBe('reused');
+      for (const token of store.tokens.values()) {
+        expect(token.revokedAt).toEqual(clock.now());
+      }
+    });
+
+    it('spends the grace exchange when another request consumed the token first (lost the atomic race)', async () => {
+      const { clock, store, sessions } = setup();
       const first = await sessions.start('user-1');
       jest.spyOn(store, 'markRotated').mockResolvedValueOnce(false);
 
       const next = await sessions.rotate(first.token);
 
       expect(next.userId).toBe('user-1');
+      const consumed = await store.findByHash('hash(token-1)');
+      expect(consumed?.graceUsedAt).toEqual(clock.now());
       expect(
         [...store.tokens.values()].every((token) => token.revokedAt === null),
       ).toBe(true);
+    });
+
+    it('turns away a lost race whose grace exchange is already spent, without revoking', async () => {
+      const { sessions, store } = setup();
+      const first = await sessions.start('user-1');
+      jest.spyOn(store, 'markRotated').mockResolvedValue(false);
+      jest.spyOn(store, 'claimGrace').mockResolvedValueOnce(false);
+
+      const error = await rejection(sessions.rotate(first.token));
+
+      expect(error.reason).toBe('superseded');
+      expect([...store.tokens.values()][0].revokedAt).toBeNull();
+    });
+
+    it('rejects a token that joined its family after the family was revoked (logout racing a refresh)', async () => {
+      const { clock, store, sessions } = setup();
+      const first = await sessions.start('user-1');
+      const familyId = [...store.tokens.values()][0].familyId;
+      await sessions.revoke(first.token);
+      // What a refresh that read the family before the revoke still writes.
+      await store.create({
+        id: 'late',
+        tokenHash: 'hash(late-token)',
+        familyId,
+        userId: 'user-1',
+        createdAt: clock.now(),
+        expiresAt: new Date(clock.now().getTime() + 8 * HOUR),
+        familyExpiresAt: new Date(clock.now().getTime() + 7 * DAY),
+      });
+
+      const error = await rejection(sessions.rotate('late-token'));
+
+      expect(error.reason).toBe('revoked');
     });
 
     it('rejects a token from a revoked family', async () => {
@@ -264,10 +337,23 @@ describe('RefreshSessionsService', () => {
   });
 
   describe('deleteExpired', () => {
-    it('removes the tokens whose expiry has passed', async () => {
+    it('keeps consumed tokens until their family expires, so a late reuse is still detected', async () => {
+      const { clock, sessions } = setup();
+      const first = await sessions.start('user-1');
+      clock.advance(7 * HOUR);
+      await sessions.rotate(first.token);
+      clock.advance(2 * HOUR); // first is past its own 8-hour expiry
+
+      await sessions.deleteExpired();
+      const error = await rejection(sessions.rotate(first.token));
+
+      expect(error.reason).toBe('reused');
+    });
+
+    it('removes the tokens of families past their 7-day maximum', async () => {
       const { clock, store, sessions } = setup();
       await sessions.start('user-1');
-      clock.advance(8 * HOUR + 1);
+      clock.advance(7 * DAY + 1);
       await sessions.start('user-2');
 
       await sessions.deleteExpired();

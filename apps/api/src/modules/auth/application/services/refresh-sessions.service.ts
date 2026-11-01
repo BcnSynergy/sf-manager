@@ -59,7 +59,7 @@ export class RefreshSessionsService {
     if (!stored) {
       throw new RefreshRejectedError('unknown');
     }
-    if (stored.revokedAt !== null) {
+    if (stored.familyRevoked) {
       throw new RefreshRejectedError('revoked');
     }
     // Reuse is checked before expiry: an old stolen token still kills the
@@ -71,10 +71,16 @@ export class RefreshSessionsService {
     if (stored.expiresAt.getTime() <= now.getTime()) {
       throw new RefreshRejectedError('expired');
     }
-    if (stored.rotatedAt === null) {
-      // Losing this race means another request consumed the token a moment
-      // ago: a concurrent refresh, so the token is still honoured.
-      await this.store.markRotated(stored.id, now);
+    // A token consumed a moment ago (or by a request that won the race right
+    // now) gets one grace exchange, for two tabs refreshing at once. Once it
+    // is spent, further attempts inside the window are turned away without
+    // revoking: a replayed token cannot mint more siblings, and a third tab
+    // does not log the user out everywhere. Outside the window it is reuse.
+    const consumedNow =
+      stored.rotatedAt === null &&
+      (await this.store.markRotated(stored.id, now));
+    if (!consumedNow && !(await this.store.claimGrace(stored.id, now))) {
+      throw new RefreshRejectedError('superseded');
     }
     const issued = await this.issue(stored, now);
     return { ...issued, userId: stored.userId };

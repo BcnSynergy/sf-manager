@@ -56,7 +56,9 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     await expect(store.findByHash(token.tokenHash)).resolves.toEqual({
       ...token,
       rotatedAt: null,
+      graceUsedAt: null,
       revokedAt: null,
+      familyRevoked: false,
     });
     await expect(store.findByHash(randomUUID())).resolves.toBeNull();
   });
@@ -95,6 +97,35 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     await expect(store.markRotated(token.id, second)).resolves.toBe(false);
   });
 
+  it('lets exactly one of two concurrent claimGrace calls win', async () => {
+    const token = newToken();
+    await store.create(token);
+    const at1 = at('2026-11-01T09:00:00.000Z');
+
+    const results = await Promise.all([
+      store.claimGrace(token.id, at1),
+      store.claimGrace(token.id, at1),
+    ]);
+
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect((await store.findByHash(token.tokenHash))?.graceUsedAt).toEqual(at1);
+    await expect(store.claimGrace(token.id, at1)).resolves.toBe(false);
+  });
+
+  it('reports the family as revoked for a token added after the revoke', async () => {
+    const familyId = randomUUID();
+    const first = newToken({ familyId });
+    await store.create(first);
+    await store.revokeFamily(familyId, at('2026-11-01T10:00:00.000Z'));
+    const late = newToken({ familyId });
+
+    await store.create(late);
+
+    const found = await store.findByHash(late.tokenHash);
+    expect(found?.revokedAt).toBeNull();
+    expect(found?.familyRevoked).toBe(true);
+  });
+
   it('revokes every not-yet-revoked token of a family, and only that family', async () => {
     const familyId = randomUUID();
     const earlier = at('2026-11-01T07:00:00.000Z');
@@ -115,20 +146,30 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     expect((await store.findByHash(other.tokenHash))?.revokedAt).toBeNull();
   });
 
-  it('deletes only the tokens whose expiry is before now', async () => {
-    const expired = newToken({ expiresAt: at('2026-11-01T09:59:59.999Z') });
-    const atNow = newToken({ expiresAt: at('2026-11-01T10:00:00.000Z') });
-    const live = newToken({ expiresAt: at('2026-11-01T18:00:00.000Z') });
+  it('deletes only the tokens whose family expired before now, keeping consumed ones of live families', async () => {
+    const now = at('2026-11-01T10:00:00.000Z');
+    const deadFamily = newToken({
+      expiresAt: at('2026-11-01T09:00:00.000Z'),
+      familyExpiresAt: at('2026-11-01T09:59:59.999Z'),
+    });
+    const familyEndsNow = newToken({ familyExpiresAt: now });
+    const pastOwnExpiry = newToken({
+      expiresAt: at('2026-11-01T02:00:00.000Z'),
+    });
     await Promise.all([
-      store.create(expired),
-      store.create(atNow),
-      store.create(live),
+      store.create(deadFamily),
+      store.create(familyEndsNow),
+      store.create(pastOwnExpiry),
     ]);
 
-    await store.deleteExpired(at('2026-11-01T10:00:00.000Z'));
+    await store.deleteExpired(now);
 
-    await expect(store.findByHash(expired.tokenHash)).resolves.toBeNull();
-    await expect(store.findByHash(atNow.tokenHash)).resolves.not.toBeNull();
-    await expect(store.findByHash(live.tokenHash)).resolves.not.toBeNull();
+    await expect(store.findByHash(deadFamily.tokenHash)).resolves.toBeNull();
+    await expect(
+      store.findByHash(familyEndsNow.tokenHash),
+    ).resolves.not.toBeNull();
+    await expect(
+      store.findByHash(pastOwnExpiry.tokenHash),
+    ).resolves.not.toBeNull();
   });
 });

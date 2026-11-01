@@ -93,11 +93,14 @@ model RefreshToken {
   // login + absolute TTL, copied to every token of the family.
   familyExpiresAt DateTime
   rotatedAt       DateTime?
+  // The one grace exchange a consumed token allows (two tabs at once).
+  graceUsedAt     DateTime?
   revokedAt       DateTime?
 
   @@index([familyId])
-  // Opportunistic cleanup (`WHERE expiresAt < now()`), as for RevokedToken.
-  @@index([expiresAt])
+  // Cleanup deletes whole families past their absolute expiry, keeping
+  // consumed tokens until then so a late reuse is still recognised.
+  @@index([familyExpiresAt])
 }
 
 // community/design.md Decision 5: closed enum, mirroring `Role`'s

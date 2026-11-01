@@ -10,6 +10,7 @@ CREATE TABLE "RefreshToken" (
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "familyExpiresAt" TIMESTAMP(3) NOT NULL,
     "rotatedAt" TIMESTAMP(3),
+    "graceUsedAt" TIMESTAMP(3),
     "revokedAt" TIMESTAMP(3),
 
     CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")
@@ -22,7 +23,7 @@ CREATE UNIQUE INDEX "RefreshToken_tokenHash_key" ON "RefreshToken"("tokenHash");
 CREATE INDEX "RefreshToken_familyId_idx" ON "RefreshToken"("familyId");
 
 -- CreateIndex
-CREATE INDEX "RefreshToken_expiresAt_idx" ON "RefreshToken"("expiresAt");
+CREATE INDEX "RefreshToken_familyExpiresAt_idx" ON "RefreshToken"("familyExpiresAt");
 
 -- AddForeignKey (hand-written, invisible to Prisma: ADR-013). Users are
 -- soft-deleted, so a hard delete of a user with tokens is refused.
