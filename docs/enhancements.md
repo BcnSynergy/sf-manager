@@ -692,12 +692,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   rendered layout test would need Playwright (TD-32). Origin:
   `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
 
-- **EN-131** (web): warn before reloading or closing the tab with unsaved
-  edits on the organization profile. EN-129's leave guard only catches
-  in-app navigation; a reload or a closed tab still drops the edits without
-  a word. A `beforeunload` handler (the browser's own prompt, its text not
-  ours) would cover it. Origin: `en-129-unsaved-changes-guard`, 2026-11-01.
-
 - **EN-130** (web tests): walk the EN-127 round trip in one router session.
   The spec scenario "Coming back shows the current logo" is pinned per
   component: each preview gets a fresh URL on mount and after an upload,
@@ -705,6 +699,27 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   one router, uploads, goes back and checks the profile's preview URL
   changed. It was checked in the browser for PR #316. Origin:
   `en-127-logo-page` (PR #316) native review, 2026-11-01.
+
+- **EN-131** (web): warn before reloading or closing the tab with unsaved
+  edits on the organization profile. EN-129's leave guard only catches
+  in-app navigation; a reload or a closed tab still drops the edits without
+  a word. A `beforeunload` handler (the browser's own prompt, its text not
+  ours) would cover it. Origin: `en-129-unsaved-changes-guard`, 2026-11-01.
+
+- **EN-132** (web): `App` creates its data router in a `useState`
+  initializer, which `<StrictMode>` runs twice in development; the discarded
+  router stays subscribed to `popstate`. Harmless (no loaders, never
+  rendered, dev only). React Router's documented pattern is a module-level
+  `createBrowserRouter(...)`; that would create a browser router whenever a
+  test imports `App.tsx`, which is why it was not moved. Origin:
+  `en-129-unsaved-changes-guard` pre-push review, 2026-11-01.
+
+- **EN-133** (web): on the organization profile, a nav link clicked while
+  a save is in flight opens the leave dialog; if the save then succeeds,
+  the form is clean but the dialog stays open until the admin chooses
+  (either choice still works). Polish: call `proceed()` when the form turns
+  clean while blocked. Origin: `en-129-unsaved-changes-guard` pre-push
+  review, 2026-11-01.
 
 ## Done
 

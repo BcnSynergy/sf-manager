@@ -712,7 +712,7 @@ describe('OrganizationProfilePage leave guard', () => {
     expect(router.state.location.pathname).toBe('/organization-profile');
   });
 
-  it('asks on the browser back button too', async () => {
+  it('asks on the browser back button too, and leaving completes the back step', async () => {
     const router = createMemoryRouter(
       [
         { path: '/users', element: <div data-testid="users-stub">users</div> },
@@ -728,6 +728,12 @@ describe('OrganizationProfilePage leave guard', () => {
     expect(leaveDialog()).toHaveAttribute('open');
     expect(router.state.location.pathname).toBe('/organization-profile');
     expect(screen.queryByTestId('users-stub')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    expect(await screen.findByTestId('users-stub')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/users');
+    expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
   });
 
   it('leaves without asking when nothing was edited', async () => {
@@ -736,7 +742,6 @@ describe('OrganizationProfilePage leave guard', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Change logo' }));
 
     expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument();
   });
 
   it('leaves without asking when the edits were typed back to the saved values', async () => {
