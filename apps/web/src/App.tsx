@@ -51,7 +51,9 @@ export function AppRoutes() {
 // EN-129: a data router, so pages can use useBlocker (it throws under
 // <BrowserRouter>). One catch-all route renders AppRoutes, which keeps the
 // declarative <Routes> tree above as the single route table and lets tests
-// keep mounting it in a MemoryRouter. Navigation only: no loaders or
+// keep mounting it in a MemoryRouter, as long as the pages they render do not
+// call useBlocker (App.test.tsx stubs every page; a test that renders the
+// organization profile page needs createMemoryRouter). Navigation only: no loaders or
 // actions, so data fetching stays in the pages and api/ modules, not in
 // route definitions.
 function App() {

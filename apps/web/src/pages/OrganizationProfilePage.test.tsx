@@ -712,6 +712,24 @@ describe('OrganizationProfilePage leave guard', () => {
     expect(router.state.location.pathname).toBe('/organization-profile');
   });
 
+  it('asks on the browser back button too', async () => {
+    const router = createMemoryRouter(
+      [
+        { path: '/users', element: <div data-testid="users-stub">users</div> },
+        { path: '/organization-profile', element: <OrganizationProfilePage /> },
+      ],
+      { initialEntries: ['/users', '/organization-profile'], initialIndex: 1 },
+    );
+    render(<RouterProvider router={router} />);
+    await editName('Edited name');
+
+    await act(() => router.navigate(-1));
+
+    expect(leaveDialog()).toHaveAttribute('open');
+    expect(router.state.location.pathname).toBe('/organization-profile');
+    expect(screen.queryByTestId('users-stub')).not.toBeInTheDocument();
+  });
+
   it('leaves without asking when nothing was edited', async () => {
     renderPage();
 
