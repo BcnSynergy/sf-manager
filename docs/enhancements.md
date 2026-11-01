@@ -778,7 +778,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   refresh route. Check `requestProps.throttler.name`, or say so in a
   comment. Its unit spec restores the `ThrottlerGuard.prototype` spy at the
   end of the test body, so a failing assertion would leave it mocked for
-  later tests in the worker; restore it in `afterEach`. Origin:
+  later tests in the worker; restore it in `afterEach`. In `auth.controller.spec.ts`, the type alias `RefreshRequest` also casts logout requests; a neutral name such as `ControllerRequest` reads better. Origin:
   `td-5-refresh-token-rotation` PR 2/3 native review, 2026-11-01.
 
 - **EN-140** (api, docs): leftovers from the TD-5 PR 2/3 pre-merge review.
