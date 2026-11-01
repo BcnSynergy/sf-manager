@@ -704,7 +704,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   edits on the organization profile. EN-129's leave guard only catches
   in-app navigation; a reload or a closed tab still drops the edits without
   a word. A `beforeunload` handler (the browser's own prompt, its text not
-  ours) would cover it. Origin: `en-129-unsaved-changes-guard`, 2026-11-01.
+  ours) would cover it. Origin: `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
 
 - **EN-132** (web): `App` creates its data router in a `useState`
   initializer, which `<StrictMode>` runs twice in development; the discarded
@@ -729,7 +729,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The app now runs on a data router (`createBrowserRouter`, one catch-all
   route rendering `AppRoutes`, no loaders or actions) so the page can use
   `useBlocker`. Reload and tab close are EN-131. Done in
-  `en-129-unsaved-changes-guard`, 2026-11-01.
+  `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
   `deploy/test-postgres-backup.sh` no longer waits out its 30-second
