@@ -759,6 +759,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   with the two TTLs. Origin: `td-5-refresh-token-rotation` (PR #318) native
   review, 2026-11-01.
 
+- **EN-138** (api): refresh follow-ups from the TD-5 PR 2/3 native review.
+  `RefreshSessionUseCase` looks the token up (`ownerOf`), reads the user and
+  signs an access token before `rotate()` decides validity, so a replayed,
+  expired or revoked token costs a user read and a JWT sign before its 401
+  (bounded by the refresh rate limit); `ownerOf` could return null for a
+  token that cannot be exchanged, at the cost of repeating `rotate()`'s
+  rules. The two refresh e2e suites (`refresh.e2e-spec.ts`,
+  `refresh-rate-limit.e2e-spec.ts`) each carry their own
+  `InMemoryTokenDenylist` and env save/restore loop; a shared test helper
+  would keep them from drifting. Origin: `td-5-refresh-token-rotation` PR
+  2/3 native review, 2026-11-01.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app

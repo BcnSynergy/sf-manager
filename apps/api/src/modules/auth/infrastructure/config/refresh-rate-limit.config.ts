@@ -1,4 +1,4 @@
-import { parsePositiveInteger } from './login-rate-limit.config';
+import { parsePositiveInteger } from '../../../../shared/infrastructure/env/positive-integer';
 
 // TD-5 S7: POST /auth/refresh has its own per-client-key limit. A refresh is
 // routine (one per access-token lifetime per browser), so the default is

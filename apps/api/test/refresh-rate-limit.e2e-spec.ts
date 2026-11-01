@@ -45,6 +45,7 @@ const LIMIT = 3;
 const ENV_KEYS = [
   'JWT_SECRET',
   'CORS_ORIGIN',
+  'LOGIN_RATE_LIMIT_MAX_ATTEMPTS',
   'REFRESH_RATE_LIMIT_MAX_ATTEMPTS',
   'REFRESH_RATE_LIMIT_WINDOW_SECONDS',
 ] as const;
@@ -80,6 +81,9 @@ describe('Refresh rate limit (e2e)', () => {
     process.env.JWT_SECRET = 'e2e-test-secret';
     process.env.CORS_ORIGIN = TEST_ORIGIN;
     process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = String(LIMIT);
+    // Below the refresh limit: if the module-wide throttler (login's limit)
+    // capped refreshes, the LIMIT-th refresh would already get 429.
+    process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = String(LIMIT - 1);
     process.env.REFRESH_RATE_LIMIT_WINDOW_SECONDS = '60';
     users = new InMemoryUserRepository();
     const now = new Date();

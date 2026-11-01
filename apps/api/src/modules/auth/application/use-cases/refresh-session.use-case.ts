@@ -22,7 +22,10 @@ export interface RefreshSessionResult {
 // deleted user cannot refresh and a changed role is in the new token. Every
 // step that can fail (reading the user, signing) runs before the rotation
 // commits, so a failure leaves the presented token unconsumed and a retry is
-// a normal refresh, not a reuse.
+// a normal refresh, not a reuse. ownerOf() only finds the token: rotate()
+// alone decides whether it may be exchanged (reuse, expiry, revocation), so
+// the access token signed before it MUST NOT be returned or used unless
+// rotate() succeeds.
 @Injectable()
 export class RefreshSessionUseCase {
   constructor(
