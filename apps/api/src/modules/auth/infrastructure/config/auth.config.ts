@@ -80,15 +80,22 @@ export function getAuthConfig(): AuthConfig {
     },
     // TD-5 S5 defaults: "8 h inactiv. / 7 d máx."; S4 grace window 10s.
     refreshToken: {
-      idleTtlMs: durationFromEnv('REFRESH_TOKEN_IDLE_TTL', '8h'),
-      absoluteTtlMs: durationFromEnv('REFRESH_TOKEN_ABSOLUTE_TTL', '7d'),
-      reuseGraceMs: durationFromEnv('REFRESH_TOKEN_REUSE_GRACE', '10s'),
+      idleTtlMs: positiveDurationFromEnv('REFRESH_TOKEN_IDLE_TTL', '8h'),
+      absoluteTtlMs: positiveDurationFromEnv(
+        'REFRESH_TOKEN_ABSOLUTE_TTL',
+        '7d',
+      ),
+      // Zero is allowed: strict rotation with no grace exchange.
+      reuseGraceMs: parseDurationMs(
+        process.env.REFRESH_TOKEN_REUSE_GRACE ?? '10s',
+        'REFRESH_TOKEN_REUSE_GRACE',
+      ),
     },
   };
 }
 
 // A zero lifetime would reject every refresh, so it fails fast at boot.
-function durationFromEnv(variable: string, fallback: string): number {
+function positiveDurationFromEnv(variable: string, fallback: string): number {
   const ms = parseDurationMs(process.env[variable] ?? fallback, variable);
   if (ms === 0) {
     throw new Error(`${variable} must be greater than zero`);

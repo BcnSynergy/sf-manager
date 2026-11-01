@@ -26,18 +26,24 @@ export interface FoundRefreshToken extends StoredRefreshToken {
   familyRevoked: boolean;
 }
 
+export type RefreshExchangeKind = 'rotation' | 'grace';
+
 export interface RefreshTokenStore {
   create(token: NewRefreshToken): Promise<void>;
 
   findByHash(tokenHash: string): Promise<FoundRefreshToken | null>;
 
-  // Atomic consume: sets rotatedAt only if it is still null. Returns false
-  // when another request rotated the token first.
-  markRotated(id: string, at: Date): Promise<boolean>;
-
-  // Atomic: sets graceUsedAt only if it is still null. Returns false when the
-  // grace exchange was already spent.
-  claimGrace(id: string, at: Date): Promise<boolean>;
+  // Atomic exchange, in one transaction: consumes the token (kind
+  // 'rotation' sets rotatedAt, 'grace' sets graceUsedAt, each only if still
+  // null) and, only when that wins, stores the successor. Returns false and
+  // stores nothing when another request got there first. If storing the
+  // successor fails, the consume is rolled back.
+  exchange(
+    id: string,
+    kind: RefreshExchangeKind,
+    at: Date,
+    successor: NewRefreshToken,
+  ): Promise<boolean>;
 
   // Revokes every token of the family that is not revoked yet.
   revokeFamily(familyId: string, at: Date): Promise<void>;

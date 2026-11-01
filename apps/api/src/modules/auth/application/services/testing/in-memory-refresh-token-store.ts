@@ -1,12 +1,14 @@
 import type {
   FoundRefreshToken,
   NewRefreshToken,
+  RefreshExchangeKind,
   RefreshTokenStore,
   StoredRefreshToken,
 } from '../../ports/refresh-token-store.port';
 
 // In-memory RefreshTokenStore for unit and e2e tests. Same contract as the
-// Prisma adapter, including the atomic markRotated and claimGrace.
+// Prisma adapter, including the atomic exchange (nothing is consumed when
+// storing the successor fails).
 export class InMemoryRefreshTokenStore implements RefreshTokenStore {
   readonly tokens = new Map<string, StoredRefreshToken>();
 
@@ -33,22 +35,20 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
     return Promise.resolve(null);
   }
 
-  markRotated(id: string, at: Date): Promise<boolean> {
+  async exchange(
+    id: string,
+    kind: RefreshExchangeKind,
+    at: Date,
+    successor: NewRefreshToken,
+  ): Promise<boolean> {
     const token = this.tokens.get(id);
-    if (!token || token.rotatedAt !== null) {
-      return Promise.resolve(false);
+    const field = kind === 'rotation' ? 'rotatedAt' : 'graceUsedAt';
+    if (!token || token[field] !== null) {
+      return false;
     }
-    token.rotatedAt = at;
-    return Promise.resolve(true);
-  }
-
-  claimGrace(id: string, at: Date): Promise<boolean> {
-    const token = this.tokens.get(id);
-    if (!token || token.graceUsedAt !== null) {
-      return Promise.resolve(false);
-    }
-    token.graceUsedAt = at;
-    return Promise.resolve(true);
+    await this.create(successor);
+    token[field] = at;
+    return true;
   }
 
   revokeFamily(familyId: string, at: Date): Promise<void> {

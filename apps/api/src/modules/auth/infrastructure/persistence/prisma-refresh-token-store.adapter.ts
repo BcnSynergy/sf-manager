@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import type {
   FoundRefreshToken,
   NewRefreshToken,
+  RefreshExchangeKind,
   RefreshTokenStore,
 } from '../../application/ports/refresh-token-store.port';
 
@@ -28,22 +30,27 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
     return { ...token, familyRevoked: revoked > 0 };
   }
 
-  // A conditional UPDATE, so two concurrent refreshes cannot both consume
-  // the token: Postgres row locking lets exactly one see rotatedAt null.
-  async markRotated(id: string, at: Date): Promise<boolean> {
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { id, rotatedAt: null },
-      data: { rotatedAt: at },
+  // A conditional UPDATE plus the INSERT, in one transaction: Postgres row
+  // locking lets exactly one of two concurrent exchanges see the field null,
+  // and a failed INSERT rolls the consume back.
+  async exchange(
+    id: string,
+    kind: RefreshExchangeKind,
+    at: Date,
+    successor: NewRefreshToken,
+  ): Promise<boolean> {
+    const consume: Prisma.RefreshTokenUpdateManyArgs =
+      kind === 'rotation'
+        ? { where: { id, rotatedAt: null }, data: { rotatedAt: at } }
+        : { where: { id, graceUsedAt: null }, data: { graceUsedAt: at } };
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.refreshToken.updateMany(consume);
+      if (count !== 1) {
+        return false;
+      }
+      await tx.refreshToken.create({ data: successor });
+      return true;
     });
-    return count === 1;
-  }
-
-  async claimGrace(id: string, at: Date): Promise<boolean> {
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { id, graceUsedAt: null },
-      data: { graceUsedAt: at },
-    });
-    return count === 1;
   }
 
   async revokeFamily(familyId: string, at: Date): Promise<void> {

@@ -120,19 +120,26 @@ describe('getAuthConfig', () => {
     expect(() => getAuthConfig()).toThrow(new RegExp(variable));
   });
 
-  it.each([
-    'REFRESH_TOKEN_IDLE_TTL',
-    'REFRESH_TOKEN_ABSOLUTE_TTL',
-    'REFRESH_TOKEN_REUSE_GRACE',
-  ])('throws naming %s when it is zero', (variable) => {
+  it('accepts a zero reuse grace: strict rotation, no grace exchange', () => {
     process.env.JWT_SECRET = 'test-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
-    process.env[variable] = '0h';
+    process.env.REFRESH_TOKEN_REUSE_GRACE = '0s';
 
-    expect(() => getAuthConfig()).toThrow(
-      new RegExp(`${variable}.*greater than zero`),
-    );
+    expect(getAuthConfig().refreshToken.reuseGraceMs).toBe(0);
   });
+
+  it.each(['REFRESH_TOKEN_IDLE_TTL', 'REFRESH_TOKEN_ABSOLUTE_TTL'])(
+    'throws naming %s when it is zero',
+    (variable) => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.CORS_ORIGIN = 'http://localhost:5173';
+      process.env[variable] = '0h';
+
+      expect(() => getAuthConfig()).toThrow(
+        new RegExp(`${variable}.*greater than zero`),
+      );
+    },
+  );
 
   it('exports a stable AUTH_CONFIG DI token', () => {
     expect(typeof AUTH_CONFIG).toBe('symbol');

@@ -6,7 +6,8 @@ import { PrismaRefreshTokenStore } from './prisma-refresh-token-store.adapter';
 
 // TD-5: against the real (per-run) Postgres, to prove what the in-memory fake
 // only mirrors: the unique hash, the FK to User, and above all that the
-// conditional markRotated lets exactly one of two concurrent calls win.
+// exchange is atomic: exactly one of two concurrent calls wins and stores its
+// successor, and a failed successor rolls the consume back.
 describe('PrismaRefreshTokenStore (integration)', () => {
   let prisma: PrismaService;
   let store: PrismaRefreshTokenStore;
@@ -78,38 +79,49 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     ).rejects.toThrow();
   });
 
-  it('lets exactly one of two concurrent markRotated calls win', async () => {
+  it.each(['rotation', 'grace'] as const)(
+    'lets exactly one of two concurrent %s exchanges win, storing only its successor',
+    async (kind) => {
+      const token = newToken();
+      await store.create(token);
+      const now = at('2026-11-01T09:00:00.000Z');
+      const a = newToken({ familyId: token.familyId });
+      const b = newToken({ familyId: token.familyId });
+
+      const results = await Promise.all([
+        store.exchange(token.id, kind, now, a),
+        store.exchange(token.id, kind, now, b),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      const stored = await store.findByHash(token.tokenHash);
+      const field = kind === 'rotation' ? 'rotatedAt' : 'graceUsedAt';
+      expect(stored?.[field]).toEqual(now);
+      const successors = await prisma.refreshToken.count({
+        where: { id: { in: [a.id, b.id] } },
+      });
+      expect(successors).toBe(1);
+      await expect(
+        store.exchange(token.id, kind, now, newToken()),
+      ).resolves.toBe(false);
+    },
+  );
+
+  it('rolls the consume back when the successor cannot be stored', async () => {
     const token = newToken();
-    await store.create(token);
-    const first = at('2026-11-01T09:00:00.000Z');
-    const second = at('2026-11-01T09:00:01.000Z');
+    const other = newToken();
+    await Promise.all([store.create(token), store.create(other)]);
 
-    const results = await Promise.all([
-      store.markRotated(token.id, first),
-      store.markRotated(token.id, second),
-    ]);
+    await expect(
+      store.exchange(
+        token.id,
+        'rotation',
+        at('2026-11-01T09:00:00.000Z'),
+        newToken({ tokenHash: other.tokenHash }),
+      ),
+    ).rejects.toThrow();
 
-    expect(results.filter(Boolean)).toHaveLength(1);
-    const stored = await store.findByHash(token.tokenHash);
-    expect([first.getTime(), second.getTime()]).toContain(
-      stored?.rotatedAt?.getTime(),
-    );
-    await expect(store.markRotated(token.id, second)).resolves.toBe(false);
-  });
-
-  it('lets exactly one of two concurrent claimGrace calls win', async () => {
-    const token = newToken();
-    await store.create(token);
-    const at1 = at('2026-11-01T09:00:00.000Z');
-
-    const results = await Promise.all([
-      store.claimGrace(token.id, at1),
-      store.claimGrace(token.id, at1),
-    ]);
-
-    expect(results.filter(Boolean)).toHaveLength(1);
-    expect((await store.findByHash(token.tokenHash))?.graceUsedAt).toEqual(at1);
-    await expect(store.claimGrace(token.id, at1)).resolves.toBe(false);
+    expect((await store.findByHash(token.tokenHash))?.rotatedAt).toBeNull();
   });
 
   it('reports the family as revoked for a token added after the revoke', async () => {

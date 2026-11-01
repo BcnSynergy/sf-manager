@@ -229,6 +229,9 @@ describe('RefreshSessionsService', () => {
       const fromTabC = await rejection(sessions.rotate(first.token));
 
       expect(fromTabC.reason).toBe('superseded');
+      // The login token plus one successor each for tabs A and B: the turned
+      // away request stored nothing.
+      expect(store.tokens.size).toBe(3);
       for (const token of store.tokens.values()) {
         expect(token.revokedAt).toBeNull();
       }
@@ -258,7 +261,8 @@ describe('RefreshSessionsService', () => {
     it('spends the grace exchange when another request consumed the token first (lost the atomic race)', async () => {
       const { clock, store, sessions } = setup();
       const first = await sessions.start('user-1');
-      jest.spyOn(store, 'markRotated').mockResolvedValueOnce(false);
+      // The rotation exchange loses; the grace exchange that follows is real.
+      jest.spyOn(store, 'exchange').mockResolvedValueOnce(false);
 
       const next = await sessions.rotate(first.token);
 
@@ -273,13 +277,16 @@ describe('RefreshSessionsService', () => {
     it('turns away a lost race whose grace exchange is already spent, without revoking', async () => {
       const { sessions, store } = setup();
       const first = await sessions.start('user-1');
-      jest.spyOn(store, 'markRotated').mockResolvedValue(false);
-      jest.spyOn(store, 'claimGrace').mockResolvedValueOnce(false);
+      jest
+        .spyOn(store, 'exchange')
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false);
 
       const error = await rejection(sessions.rotate(first.token));
 
       expect(error.reason).toBe('superseded');
       expect([...store.tokens.values()][0].revokedAt).toBeNull();
+      expect(store.tokens.size).toBe(1);
     });
 
     it('rejects a token that joined its family after the family was revoked (logout racing a refresh)', async () => {

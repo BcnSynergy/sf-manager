@@ -14,6 +14,7 @@ import {
 } from '../ports/opaque-token-generator.port';
 import {
   REFRESH_TOKEN_STORE,
+  type NewRefreshToken,
   type RefreshTokenStore,
   type StoredRefreshToken,
 } from '../ports/refresh-token-store.port';
@@ -71,23 +72,27 @@ export class RefreshSessionsService {
     if (stored.expiresAt.getTime() <= now.getTime()) {
       throw new RefreshRejectedError('expired');
     }
-    // The successor is stored before the presented token is consumed: if
-    // storing fails, the token stays unconsumed and a retry is a normal
-    // refresh instead of a reuse. A successor whose consume then loses is an
-    // orphan nobody holds the secret of; cleanup removes it with its family.
-    const issued = await this.issue(stored, now);
-    // A token consumed a moment ago (or by a request that won the race right
+    // A token consumed a moment ago (or by a request that wins the race right
     // now) gets one grace exchange, for two tabs refreshing at once. Once it
     // is spent, further attempts inside the window are turned away without
     // revoking: a replayed token cannot mint more siblings, and a third tab
     // does not log the user out everywhere. Outside the window it is reuse.
-    const consumedNow =
-      stored.rotatedAt === null &&
-      (await this.store.markRotated(stored.id, now));
-    if (!consumedNow && !(await this.store.claimGrace(stored.id, now))) {
+    // Each exchange consumes and stores the successor atomically, so a lost
+    // attempt stores nothing and a failed store consumes nothing.
+    const issued = this.successorOf(stored, now);
+    const won =
+      (stored.rotatedAt === null &&
+        (await this.store.exchange(
+          stored.id,
+          'rotation',
+          now,
+          issued.record,
+        ))) ||
+      (await this.store.exchange(stored.id, 'grace', now, issued.record));
+    if (!won) {
       throw new RefreshRejectedError('superseded');
     }
-    return { ...issued, userId: stored.userId };
+    return { ...issued.result, userId: stored.userId };
   }
 
   // Logout: kills the family of the presented token. Unknown tokens are
@@ -111,20 +116,31 @@ export class RefreshSessionsService {
     family: Pick<StoredRefreshToken, 'userId' | 'familyId' | 'familyExpiresAt'>,
     now: Date,
   ): Promise<IssuedRefreshToken> {
+    const { record, result } = this.successorOf(family, now);
+    await this.store.create(record);
+    return result;
+  }
+
+  private successorOf(
+    family: Pick<StoredRefreshToken, 'userId' | 'familyId' | 'familyExpiresAt'>,
+    now: Date,
+  ): { record: NewRefreshToken; result: IssuedRefreshToken } {
     const token = this.tokens.generate();
     const idleExpiry = now.getTime() + this.policy.idleTtlMs;
     const expiresAt = new Date(
       Math.min(idleExpiry, family.familyExpiresAt.getTime()),
     );
-    await this.store.create({
-      id: this.ids.generate(),
-      tokenHash: this.tokens.hash(token),
-      familyId: family.familyId,
-      userId: family.userId,
-      createdAt: now,
-      expiresAt,
-      familyExpiresAt: family.familyExpiresAt,
-    });
-    return { token, expiresAt };
+    return {
+      record: {
+        id: this.ids.generate(),
+        tokenHash: this.tokens.hash(token),
+        familyId: family.familyId,
+        userId: family.userId,
+        createdAt: now,
+        expiresAt,
+        familyExpiresAt: family.familyExpiresAt,
+      },
+      result: { token, expiresAt },
+    };
   }
 }
