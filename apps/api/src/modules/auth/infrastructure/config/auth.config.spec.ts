@@ -33,6 +33,9 @@ describe('getAuthConfig', () => {
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.NODE_ENV = 'development';
     delete process.env.JWT_EXPIRES_IN;
+    delete process.env.REFRESH_TOKEN_IDLE_TTL;
+    delete process.env.REFRESH_TOKEN_ABSOLUTE_TTL;
+    delete process.env.REFRESH_TOKEN_REUSE_GRACE;
 
     expect(getAuthConfig()).toEqual({
       jwtSecret: 'test-secret',
@@ -45,6 +48,12 @@ describe('getAuthConfig', () => {
         secure: false,
         sameSite: 'lax',
         maxAge: 2 * 60 * 60 * 1000,
+      },
+      // TD-5 S5 ("8 h inactiv. / 7 d máx.") and the S4 grace window.
+      refreshToken: {
+        idleTtlMs: 8 * 60 * 60 * 1000,
+        absoluteTtlMs: 7 * 24 * 60 * 60 * 1000,
+        reuseGraceMs: 10 * 1000,
       },
     });
   });
@@ -83,6 +92,32 @@ describe('getAuthConfig', () => {
     process.env.JWT_EXPIRES_IN = 'not-a-duration';
 
     expect(() => getAuthConfig()).toThrow(/JWT_EXPIRES_IN/);
+  });
+
+  it('reads the refresh-token lifetimes and grace window from the environment', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+    process.env.REFRESH_TOKEN_IDLE_TTL = '30m';
+    process.env.REFRESH_TOKEN_ABSOLUTE_TTL = '1d';
+    process.env.REFRESH_TOKEN_REUSE_GRACE = '5s';
+
+    expect(getAuthConfig().refreshToken).toEqual({
+      idleTtlMs: 30 * 60 * 1000,
+      absoluteTtlMs: 24 * 60 * 60 * 1000,
+      reuseGraceMs: 5 * 1000,
+    });
+  });
+
+  it.each([
+    'REFRESH_TOKEN_IDLE_TTL',
+    'REFRESH_TOKEN_ABSOLUTE_TTL',
+    'REFRESH_TOKEN_REUSE_GRACE',
+  ])('throws naming %s when its format is unparseable', (variable) => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+    process.env[variable] = '8 hours';
+
+    expect(() => getAuthConfig()).toThrow(new RegExp(variable));
   });
 
   it('exports a stable AUTH_CONFIG DI token', () => {

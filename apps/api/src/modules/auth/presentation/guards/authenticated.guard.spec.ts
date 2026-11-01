@@ -23,6 +23,11 @@ describe('AuthenticatedGuard', () => {
       sameSite: 'lax',
       maxAge: 2 * 60 * 60 * 1000,
     },
+    refreshToken: {
+      idleTtlMs: 28_800_000,
+      absoluteTtlMs: 604_800_000,
+      reuseGraceMs: 10_000,
+    },
   };
 
   let reflector: jest.Mocked<Pick<Reflector, 'getAllAndOverride'>>;

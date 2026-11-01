@@ -15,6 +15,12 @@ export interface AuthConfig {
     sameSite: 'lax' | 'strict';
     maxAge: number; // milliseconds, derived from jwtExpiresIn
   };
+  // TD-5: refresh-token lifetimes, in milliseconds (RefreshTokenPolicy).
+  refreshToken: {
+    idleTtlMs: number;
+    absoluteTtlMs: number;
+    reuseGraceMs: number;
+  };
 }
 
 const DURATION_UNIT_MS: Record<string, number> = {
@@ -24,11 +30,11 @@ const DURATION_UNIT_MS: Record<string, number> = {
   d: 86_400_000,
 };
 
-function parseDurationMs(value: string): number {
+function parseDurationMs(value: string, variable: string): number {
   const match = /^(\d+)(s|m|h|d)$/.exec(value);
   if (!match) {
     throw new Error(
-      `Invalid JWT_EXPIRES_IN format: "${value}" (expected e.g. "2h", "30m")`,
+      `Invalid ${variable} format: "${value}" (expected e.g. "2h", "30m")`,
     );
   }
   const [, amount, unit] = match;
@@ -60,7 +66,7 @@ export function getAuthConfig(): AuthConfig {
   }
 
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '2h';
-  const maxAge = parseDurationMs(jwtExpiresIn);
+  const maxAge = parseDurationMs(jwtExpiresIn, 'JWT_EXPIRES_IN');
   const production = isProduction(process.env.NODE_ENV);
 
   return {
@@ -75,5 +81,15 @@ export function getAuthConfig(): AuthConfig {
       sameSite: production ? 'strict' : 'lax',
       maxAge,
     },
+    // TD-5 S5 defaults: "8 h inactiv. / 7 d máx."; S4 grace window 10s.
+    refreshToken: {
+      idleTtlMs: durationFromEnv('REFRESH_TOKEN_IDLE_TTL', '8h'),
+      absoluteTtlMs: durationFromEnv('REFRESH_TOKEN_ABSOLUTE_TTL', '7d'),
+      reuseGraceMs: durationFromEnv('REFRESH_TOKEN_REUSE_GRACE', '10s'),
+    },
   };
+}
+
+function durationFromEnv(variable: string, fallback: string): number {
+  return parseDurationMs(process.env[variable] ?? fallback, variable);
 }

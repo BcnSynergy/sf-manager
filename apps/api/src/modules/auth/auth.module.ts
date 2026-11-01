@@ -7,15 +7,20 @@ import { HashingModule } from '../../shared/infrastructure/hashing/hashing.modul
 import { PrismaService } from '../../shared/infrastructure/persistence/prisma.service';
 import { UsersModule } from '../users/users.module';
 import { LOGIN_FAILURE_LIMITER } from './application/ports/login-failure-limiter.port';
+import { OPAQUE_TOKEN_GENERATOR } from './application/ports/opaque-token-generator.port';
 import { PERMISSION_CHECKER } from './application/ports/permission-checker.port';
+import { REFRESH_TOKEN_STORE } from './application/ports/refresh-token-store.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
 import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
+import { REFRESH_TOKEN_POLICY } from './application/services/refresh-token-policy';
+import { RefreshSessionsService } from './application/services/refresh-sessions.service';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { RolePermissionChecker } from './infrastructure/authorization/role-permission.checker';
 import {
   AUTH_CONFIG,
+  type AuthConfig,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
 import {
@@ -23,8 +28,10 @@ import {
   getLoginRateLimitConfig,
 } from './infrastructure/config/login-rate-limit.config';
 import { PrismaLoginFailureLimiter } from './infrastructure/persistence/prisma-login-failure-limiter.adapter';
+import { PrismaRefreshTokenStore } from './infrastructure/persistence/prisma-refresh-token-store.adapter';
 import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
+import { CryptoOpaqueTokenGenerator } from './infrastructure/token/crypto-opaque-token.generator';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
 import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
@@ -92,6 +99,15 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },
+    // TD-5: rotating refresh-token families (ADR-011 Decision 4).
+    RefreshSessionsService,
+    { provide: REFRESH_TOKEN_STORE, useClass: PrismaRefreshTokenStore },
+    { provide: OPAQUE_TOKEN_GENERATOR, useClass: CryptoOpaqueTokenGenerator },
+    {
+      provide: REFRESH_TOKEN_POLICY,
+      inject: [AUTH_CONFIG],
+      useFactory: (config: AuthConfig) => config.refreshToken,
+    },
     // Per-email failed-login limit (login-account-lockout, TD-31). Counters
     // live in Postgres next to the per-client-key ones. Fail closed: a
     // storage error on the block check or the failure record refuses the

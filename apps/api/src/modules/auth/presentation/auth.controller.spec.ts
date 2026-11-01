@@ -24,6 +24,11 @@ describe('AuthController', () => {
       sameSite: 'lax',
       maxAge: 7_200_000,
     },
+    refreshToken: {
+      idleTtlMs: 28_800_000,
+      absoluteTtlMs: 604_800_000,
+      reuseGraceMs: 10_000,
+    },
   };
 
   const loginUseCase = { execute: jest.fn() };
