@@ -771,6 +771,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   would keep them from drifting. Origin: `td-5-refresh-token-rotation` PR
   2/3 native review, 2026-11-01.
 
+- **EN-139** (api): two notes on `RefreshThrottlerGuard` (TD-5). Its
+  `handleRequest` replaces the limit, window and block duration of every
+  named throttler the module registers; today there is only one (login's),
+  but a second module-wide throttler would be silently overwritten for the
+  refresh route. Check `requestProps.throttler.name`, or say so in a
+  comment. Its unit spec restores the `ThrottlerGuard.prototype` spy at the
+  end of the test body, so a failing assertion would leave it mocked for
+  later tests in the worker; restore it in `afterEach`. Origin:
+  `td-5-refresh-token-rotation` PR 2/3 native review, 2026-11-01.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app
