@@ -29,9 +29,8 @@ type Props = {
 // sent the moment the admin clicks Upload, and the text fields are not
 // touched. The preview is an <img> on the logo endpoint; `version` gives it a
 // new URL on each mount and after each upload so the browser fetches the
-// current image. If the
-// image fails to load (for example its file was lost), the preview gives
-// way to a message instead of a broken image.
+// current image. If the image fails to load (for example its file was
+// lost), the preview gives way to a message instead of a broken image.
 //
 // EN-110: Remove, shown whenever the profile records a logo (also when its
 // image fails to load), asks for confirmation first. The section's one

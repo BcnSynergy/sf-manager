@@ -208,4 +208,21 @@ describe('OrganizationLogoPage route access', () => {
 
     expect(await screen.findByTestId('organization-logo-input')).toBeInTheDocument();
   });
+
+  it('redirects an unauthenticated visitor to /login', () => {
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
+    });
+
+    renderRoute();
+
+    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+    expect(mockedGetOrganizationProfile).not.toHaveBeenCalled();
+  });
 });

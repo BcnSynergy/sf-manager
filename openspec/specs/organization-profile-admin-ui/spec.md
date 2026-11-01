@@ -10,8 +10,8 @@ in the same change, not as a later retrofit).
 logo (EN-127): the profile page shows the logo and links to it, so the
 profile keeps to its data and its save button. There is no list page, no
 create page and no delete control for the profile, because there is
-nothing to list, create or delete — this is settings about ourselves, not a managed catalog
-parallel to `/maintenance-companies`.
+nothing to list, create or delete — this is settings about ourselves, not
+a managed catalog parallel to `/maintenance-companies`.
 
 Its one non-obvious job is the **not-completed-yet** state: the seeded
 profile is blank, and an admin must be able to tell "nobody has entered
