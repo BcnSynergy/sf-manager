@@ -210,6 +210,29 @@ describe('POST /auth/refresh (e2e)', () => {
     expect((response.body as { role: string }).role).toBe('MANAGER');
   });
 
+  // TD-5 S6: logout ends the refresh family too, even when only the refresh
+  // cookie is left.
+  describe('POST /auth/logout', () => {
+    it('works with only the refresh cookie, clears both cookies and kills the family', async () => {
+      const { refresh: token } = await loggedInUser();
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', `sf_refresh_token=${token}`)
+        .expect(200);
+
+      const cleared = cookiesOf(response).map((c) => c.split('=')[0]);
+      expect(cleared).toEqual(
+        expect.arrayContaining(['sf_access_token', 'sf_refresh_token']),
+      );
+      await refresh(token).expect(401);
+    });
+
+    it('still answers 401 with neither a valid access token nor a refresh cookie', async () => {
+      await request(app.getHttpServer()).post('/auth/logout').expect(401);
+    });
+  });
+
   // Last: it uses up this client's refresh budget for the window.
   it('limits refreshes per client key, answering 429 with Retry-After', async () => {
     let limited: request.Response | undefined;

@@ -166,15 +166,29 @@ describe('AuthController', () => {
     expect(response.setHeader).not.toHaveBeenCalled();
   });
 
-  it('logout revokes the cookie token and clears the cookie with matching attributes', async () => {
-    const request = { cookies: { sf_access_token: 'raw-token' } };
+  it('logout revokes both cookie tokens and clears both cookies with matching attributes', async () => {
+    const request = {
+      cookies: {
+        sf_access_token: 'raw-token',
+        sf_refresh_token: 'raw-refresh',
+      },
+    };
 
     await controller.logout(request, res);
 
-    expect(logoutUseCase.execute).toHaveBeenCalledWith('raw-token');
+    expect(logoutUseCase.execute).toHaveBeenCalledWith({
+      accessToken: 'raw-token',
+      refreshToken: 'raw-refresh',
+    });
     expect(response.clearCookie).toHaveBeenCalledWith('sf_access_token', {
       httpOnly: true,
       path: '/',
+      secure: false,
+      sameSite: 'lax',
+    });
+    expect(response.clearCookie).toHaveBeenCalledWith('sf_refresh_token', {
+      httpOnly: true,
+      path: '/auth',
       secure: false,
       sameSite: 'lax',
     });

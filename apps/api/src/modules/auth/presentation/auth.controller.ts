@@ -151,21 +151,21 @@ export class AuthController {
     }
   }
 
+  // TD-5 S6: public, because only the refresh cookie may be left once the
+  // access cookie has expired; LogoutUseCase still answers 401 when there
+  // is no session at all.
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
-    // Re-reads the raw cookie and re-verifies it inside LogoutUseCase
-    // instead of trusting @CurrentUser()/req.user like getMe() does — see
-    // LogoutUseCase's own comment for why (the guard's verify already
-    // gated this handler; this second verify only differs in the narrow
-    // window where the token expires in between).
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    const token = request.cookies?.[this.authConfig.cookie.name] ?? '';
-
     try {
-      await this.logoutUseCase.execute(token);
+      await this.logoutUseCase.execute({
+        accessToken: request.cookies?.[this.authConfig.cookie.name],
+        refreshToken: request.cookies?.[this.authConfig.refreshCookie.name],
+      });
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException(error.message);
@@ -173,15 +173,9 @@ export class AuthController {
       throw error;
     }
 
-    // MUST match the login Set-Cookie call's httpOnly/path/sameSite/secure
-    // attributes for the current environment, otherwise some browsers
-    // silently fail to clear the cookie (design.md Data Flow).
-    response.clearCookie(this.authConfig.cookie.name, {
-      httpOnly: this.authConfig.cookie.httpOnly,
-      path: this.authConfig.cookie.path,
-      secure: this.authConfig.cookie.secure,
-      sameSite: this.authConfig.cookie.sameSite,
-    });
+    const { name, httpOnly, path, secure, sameSite } = this.authConfig.cookie;
+    response.clearCookie(name, { httpOnly, path, secure, sameSite });
+    this.clearRefreshCookie(response);
   }
 
   @Get('me')
