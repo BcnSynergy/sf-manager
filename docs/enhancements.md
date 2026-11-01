@@ -700,6 +700,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #316)
   pre-push review, 2026-11-01.
 
+- **EN-130** (web tests): walk the EN-127 round trip in one router session.
+  The spec scenario "Coming back shows the current logo" is pinned per
+  component: each preview gets a fresh URL on mount and after an upload,
+  with a mocked clock. No test renders the profile and the logo page under
+  one router, uploads, goes back and checks the profile's preview URL
+  changed. It was checked in the browser for PR #316. Origin:
+  `en-127-logo-page` (PR #316) native review, 2026-11-01.
+
 ## Done
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in
