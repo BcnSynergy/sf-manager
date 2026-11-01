@@ -88,7 +88,8 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
     try {
       const profile = await uploadOrganizationLogo(file);
       setHasLogo(profile.hasLogo);
-      setVersion(Date.now());
+      // Never the same as before, even within one millisecond.
+      setVersion((current) => Math.max(Date.now(), current + 1));
       setImageFailed(false);
       setFile(null);
       if (inputRef.current) {

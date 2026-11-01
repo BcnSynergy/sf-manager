@@ -96,20 +96,29 @@ describe('OrganizationLogoPage', () => {
       ...profile,
       hasLogo: true,
     });
-    vi.mocked(organizationProfileApi.organizationLogoUrl).mockReturnValue('/logo?v=1');
-    renderPage();
+    vi.mocked(organizationProfileApi.organizationLogoUrl).mockImplementation(
+      (version) => `/logo?v=${version}`,
+    );
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+    try {
+      renderPage();
 
-    fireEvent.change(await screen.findByTestId('organization-logo-input'), {
-      target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] },
-    });
-    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+      fireEvent.change(await screen.findByTestId('organization-logo-input'), {
+        target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] },
+      });
+      now.mockReturnValue(2000);
+      fireEvent.click(screen.getByTestId('organization-logo-upload'));
+      await screen.findByTestId('organization-logo-success');
+    } finally {
+      now.mockRestore();
+    }
 
     const confirmation = await screen.findByTestId('organization-logo-success');
     expect(confirmation).toHaveTextContent('Logo uploaded.');
     expect(confirmation).not.toHaveAttribute('role');
     expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getByRole('status')).toContainElement(confirmation);
-    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=1');
+    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=2000');
     expect(screen.queryByTestId('profile-page-stub')).not.toBeInTheDocument();
     expect(mockedUpdateOrganizationProfile).not.toHaveBeenCalled();
   });

@@ -108,6 +108,20 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     expect(screen.getByTestId('organization-logo-upload')).toBeEnabled();
   });
 
+  // The clock alone could repeat a version when an upload lands in the same
+  // millisecond as the mount, or the clock moves back; the URL must still
+  // change.
+  it('still gives the preview a new URL when the clock has not moved since the mount', async () => {
+    mockedUpload.mockResolvedValue(profile);
+    render(<OrganizationLogoSection hasLogo />);
+
+    chooseFile(logoFile());
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await screen.findByTestId('organization-logo-success');
+    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=1001');
+  });
+
   it('uploads the chosen file, confirms it and reloads the preview', async () => {
     mockedUpload.mockResolvedValue(profile);
     render(<OrganizationLogoSection hasLogo={false} />);
