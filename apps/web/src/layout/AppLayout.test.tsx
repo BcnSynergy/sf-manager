@@ -45,6 +45,10 @@ function renderAppLayout(initialEntries: string[] = ['/']) {
               path="/review-schedule"
               element={<div data-testid="outlet-content">schedule</div>}
             />
+            <Route
+              path="/organization-profile/logo"
+              element={<div data-testid="outlet-content">logo</div>}
+            />
           </Route>
           <Route path="/login" element={<div data-testid="login-page">login</div>} />
         </Routes>
@@ -377,6 +381,20 @@ describe('AppLayout', () => {
         .filter((link) => link.getAttribute('aria-current') === 'page');
       expect(current).toHaveLength(1);
       expect(current[0]).toHaveAttribute('data-testid', 'nav-link-review-history');
+    });
+
+    // EN-127: the logo page is part of the organization profile, so its nav
+    // entry stays current there.
+    it('keeps the organization profile current on its logo page', async () => {
+      vi.stubGlobal('fetch', mockFetch({ role: 'SYSTEM_ADMIN' }));
+      renderAppLayout(['/organization-profile/logo']);
+
+      const nav = await screen.findByTestId('nav-root');
+      const current = within(nav)
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('aria-current') === 'page');
+      expect(current).toHaveLength(1);
+      expect(current[0]).toHaveAttribute('data-testid', 'nav-link-organization-profile');
     });
   });
 

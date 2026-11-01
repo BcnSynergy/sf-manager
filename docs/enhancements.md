@@ -692,6 +692,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   rendered layout test would need Playwright (TD-32). Origin:
   `td-43-status-region-grid-gap` (PR #315) pre-merge review, 2026-10-31.
 
+- **EN-129** (web): warn before leaving the organization profile with
+  unsaved edits. Since EN-127, "Change logo" navigates to the logo page, so
+  edits typed into the profile form and not saved are dropped without a
+  word; before, the upload sat on the same page and kept them. The same
+  holds for any nav link today. A leave-page guard (React Router's
+  `useBlocker`) would cover both. Origin: `en-127-logo-page` (PR #TBD)
+  pre-push review, 2026-11-01.
+
 ## Done
 
 - **EN-121** (deploy tests): the `BACKUP_RETENTION_DAYS=x` service case in

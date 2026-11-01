@@ -95,21 +95,24 @@ describe('OrganizationProfilePage', () => {
       (version) => `/logo?v=${version}`,
     );
     const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
-    const first = renderPage();
-    const firstSrc = (await screen.findByTestId('organization-profile-logo-preview')).getAttribute(
-      'src',
-    );
-    first.unmount();
+    try {
+      const first = renderPage();
+      expect(await screen.findByTestId('organization-profile-logo-preview')).toHaveAttribute(
+        'src',
+        '/logo?v=1000',
+      );
+      first.unmount();
 
-    now.mockReturnValue(2000);
-    renderPage();
-    const secondSrc = (await screen.findByTestId('organization-profile-logo-preview')).getAttribute(
-      'src',
-    );
-    now.mockRestore();
+      now.mockReturnValue(2000);
+      renderPage();
 
-    expect(firstSrc).toBe('/logo?v=1000');
-    expect(secondSrc).toBe('/logo?v=2000');
+      expect(await screen.findByTestId('organization-profile-logo-preview')).toHaveAttribute(
+        'src',
+        '/logo?v=2000',
+      );
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('says that no logo has been uploaded when the profile has none', async () => {

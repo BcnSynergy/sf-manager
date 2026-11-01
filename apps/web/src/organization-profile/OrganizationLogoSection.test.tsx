@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import '../i18n';
 import i18n from '../i18n';
 import { ApiError } from '../api/client';
@@ -34,10 +34,18 @@ function chooseFile(file: File) {
 }
 
 describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
+  // The preview URL's version comes from the clock (EN-127), so tests fix it.
+  let now: MockInstance<() => number>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockedLogoUrl.mockImplementation((version: number) => `/logo?v=${version}`);
+    now = vi.spyOn(Date, 'now').mockReturnValue(1000);
     void i18n.changeLanguage('en');
+  });
+
+  afterEach(() => {
+    now.mockRestore();
   });
 
   it('says there is no logo yet, and shows no image, when the profile has none', () => {
@@ -53,8 +61,23 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     render(<OrganizationLogoSection hasLogo />);
 
     const preview = screen.getByTestId('organization-logo-preview');
-    expect(preview).toHaveAttribute('src', '/logo?v=0');
+    expect(preview).toHaveAttribute('src', '/logo?v=1000');
     expect(preview).toHaveAttribute('alt', 'Organization logo');
+  });
+
+  // EN-127: the admin goes back and forth between the profile and the logo
+  // page without a reload, so a version that restarted at the same number on
+  // each visit would hand the browser a URL it already holds for an older
+  // image. Each mount, and each upload, asks for a URL of its own.
+  it('requests the logo with a fresh version each time it mounts', () => {
+    const first = render(<OrganizationLogoSection hasLogo />);
+    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=1000');
+    first.unmount();
+
+    now.mockReturnValue(2000);
+    render(<OrganizationLogoSection hasLogo />);
+
+    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=2000');
   });
 
   it('falls back to a message when the logo image fails to load', () => {
@@ -91,13 +114,14 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     const file = logoFile();
 
     chooseFile(file);
+    now.mockReturnValue(2000);
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
     expect(await screen.findByTestId('organization-logo-success')).toHaveTextContent(
       'Logo uploaded.',
     );
     expect(mockedUpload).toHaveBeenCalledWith(file);
-    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=1');
+    expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=2000');
     expect(screen.getByTestId('organization-logo-upload')).toBeDisabled();
   });
 
@@ -169,7 +193,10 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
       fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
       expect(await screen.findByTestId('organization-logo-error')).toHaveTextContent(message);
-      expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=0');
+      expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute(
+        'src',
+        '/logo?v=1000',
+      );
     },
   );
 

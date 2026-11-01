@@ -27,8 +27,9 @@ type Props = {
 
 // The logo has its own upload, separate from the profile's Save: a file is
 // sent the moment the admin clicks Upload, and the text fields are not
-// touched. The preview is an <img> on the logo endpoint; `version` changes
-// its URL after each upload so the browser fetches the new image. If the
+// touched. The preview is an <img> on the logo endpoint; `version` gives it a
+// new URL on each mount and after each upload so the browser fetches the
+// current image. If the
 // image fails to load (for example its file was lost), the preview gives
 // way to a message instead of a broken image.
 //
@@ -42,7 +43,11 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const removeRef = useRef<HTMLButtonElement>(null);
   const refocusRemoveRef = useRef(false);
   const [hasLogo, setHasLogo] = useState(initialHasLogo);
-  const [version, setVersion] = useState(0);
+  // EN-127: taken from the clock, on mount and after each upload. The admin
+  // moves between the profile and this page without a reload, so a counter
+  // restarting at 0 would repeat URLs the browser already holds for older
+  // images.
+  const [version, setVersion] = useState(() => Date.now());
   const [imageFailed, setImageFailed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -83,7 +88,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
     try {
       const profile = await uploadOrganizationLogo(file);
       setHasLogo(profile.hasLogo);
-      setVersion((current) => current + 1);
+      setVersion(Date.now());
       setImageFailed(false);
       setFile(null);
       if (inputRef.current) {

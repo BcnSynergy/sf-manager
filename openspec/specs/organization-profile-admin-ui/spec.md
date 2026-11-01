@@ -195,6 +195,24 @@ page MUST stay put after an upload or a removal.
 - WHEN they activate the control back to the profile
 - THEN the profile page MUST be shown
 
+#### Scenario: The logo page cannot read the profile
+
+- GIVEN a `SYSTEM_ADMIN` opens the logo page and the profile request is in flight or fails
+- WHEN the page renders
+- THEN a loading or an error state MUST be shown instead of the logo section, and the control back to the profile MUST be available
+
+#### Scenario: The logo page stays put after an upload
+
+- GIVEN the logo page rendered for a `SYSTEM_ADMIN`
+- WHEN they upload a logo
+- THEN the logo page MUST still be shown, with the upload confirmed
+
+#### Scenario: Coming back shows the current logo
+
+- GIVEN a `SYSTEM_ADMIN` replaced the logo on the logo page
+- WHEN they go back to the profile page, or open the logo page again, without reloading the application
+- THEN the new logo MUST be previewed, not the one shown before
+
 ### Requirement: Uploading the Logo
 
 The logo page's section MUST have its own upload, outside the profile

@@ -106,6 +106,8 @@ describe('OrganizationLogoPage', () => {
 
     const confirmation = await screen.findByTestId('organization-logo-success');
     expect(confirmation).toHaveTextContent('Logo uploaded.');
+    expect(confirmation).not.toHaveAttribute('role');
+    expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getByRole('status')).toContainElement(confirmation);
     expect(screen.getByTestId('organization-logo-preview')).toHaveAttribute('src', '/logo?v=1');
     expect(screen.queryByTestId('profile-page-stub')).not.toBeInTheDocument();
