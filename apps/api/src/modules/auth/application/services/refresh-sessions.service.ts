@@ -71,6 +71,11 @@ export class RefreshSessionsService {
     if (stored.expiresAt.getTime() <= now.getTime()) {
       throw new RefreshRejectedError('expired');
     }
+    // The successor is stored before the presented token is consumed: if
+    // storing fails, the token stays unconsumed and a retry is a normal
+    // refresh instead of a reuse. A successor whose consume then loses is an
+    // orphan nobody holds the secret of; cleanup removes it with its family.
+    const issued = await this.issue(stored, now);
     // A token consumed a moment ago (or by a request that won the race right
     // now) gets one grace exchange, for two tabs refreshing at once. Once it
     // is spent, further attempts inside the window are turned away without
@@ -82,7 +87,6 @@ export class RefreshSessionsService {
     if (!consumedNow && !(await this.store.claimGrace(stored.id, now))) {
       throw new RefreshRejectedError('superseded');
     }
-    const issued = await this.issue(stored, now);
     return { ...issued, userId: stored.userId };
   }
 

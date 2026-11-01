@@ -2,7 +2,7 @@ import type { Clock } from '../../../../shared/application/ports/clock.port';
 import type { IdGenerator } from '../../../../shared/application/ports/id-generator.port';
 import { RefreshRejectedError } from '../../domain/refresh-rejected.error';
 import type { OpaqueTokenGenerator } from '../ports/opaque-token-generator.port';
-import { InMemoryRefreshTokenStore } from '../use-cases/testing/in-memory-refresh-token-store';
+import { InMemoryRefreshTokenStore } from './testing/in-memory-refresh-token-store';
 import type { RefreshTokenPolicy } from './refresh-token-policy';
 import { RefreshSessionsService } from './refresh-sessions.service';
 
@@ -301,6 +301,27 @@ describe('RefreshSessionsService', () => {
       const error = await rejection(sessions.rotate('late-token'));
 
       expect(error.reason).toBe('revoked');
+    });
+
+    it('leaves the token unconsumed when its successor cannot be stored, so a later retry is a normal refresh', async () => {
+      const { clock, store, sessions } = setup();
+      const first = await sessions.start('user-1');
+      jest
+        .spyOn(store, 'create')
+        .mockRejectedValueOnce(new Error('connection lost'));
+
+      await expect(sessions.rotate(first.token)).rejects.toThrow(
+        'connection lost',
+      );
+
+      expect((await store.findByHash('hash(token-1)'))?.rotatedAt).toBeNull();
+      clock.advance(60 * SECOND);
+      await expect(sessions.rotate(first.token)).resolves.toMatchObject({
+        userId: 'user-1',
+      });
+      expect(
+        [...store.tokens.values()].every((token) => token.revokedAt === null),
+      ).toBe(true);
     });
 
     it('rejects a token from a revoked family', async () => {

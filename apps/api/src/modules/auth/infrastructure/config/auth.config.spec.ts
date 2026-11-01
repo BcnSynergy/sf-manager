@@ -120,6 +120,20 @@ describe('getAuthConfig', () => {
     expect(() => getAuthConfig()).toThrow(new RegExp(variable));
   });
 
+  it.each([
+    'REFRESH_TOKEN_IDLE_TTL',
+    'REFRESH_TOKEN_ABSOLUTE_TTL',
+    'REFRESH_TOKEN_REUSE_GRACE',
+  ])('throws naming %s when it is zero', (variable) => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+    process.env[variable] = '0h';
+
+    expect(() => getAuthConfig()).toThrow(
+      new RegExp(`${variable}.*greater than zero`),
+    );
+  });
+
   it('exports a stable AUTH_CONFIG DI token', () => {
     expect(typeof AUTH_CONFIG).toBe('symbol');
   });

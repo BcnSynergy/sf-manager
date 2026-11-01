@@ -1,3 +1,4 @@
+import type { RefreshTokenPolicy } from '../../application/services/refresh-token-policy';
 import { isProduction } from '../../../../shared/infrastructure/env/is-production';
 
 export const ACCESS_TOKEN_COOKIE_NAME = 'sf_access_token';
@@ -15,12 +16,8 @@ export interface AuthConfig {
     sameSite: 'lax' | 'strict';
     maxAge: number; // milliseconds, derived from jwtExpiresIn
   };
-  // TD-5: refresh-token lifetimes, in milliseconds (RefreshTokenPolicy).
-  refreshToken: {
-    idleTtlMs: number;
-    absoluteTtlMs: number;
-    reuseGraceMs: number;
-  };
+  // TD-5: refresh-token lifetimes, in milliseconds.
+  refreshToken: RefreshTokenPolicy;
 }
 
 const DURATION_UNIT_MS: Record<string, number> = {
@@ -90,6 +87,11 @@ export function getAuthConfig(): AuthConfig {
   };
 }
 
+// A zero lifetime would reject every refresh, so it fails fast at boot.
 function durationFromEnv(variable: string, fallback: string): number {
-  return parseDurationMs(process.env[variable] ?? fallback, variable);
+  const ms = parseDurationMs(process.env[variable] ?? fallback, variable);
+  if (ms === 0) {
+    throw new Error(`${variable} must be greater than zero`);
+  }
+  return ms;
 }
