@@ -817,7 +817,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   close it. On load, a 5xx or network error from the restore shows the
   login page even with a valid refresh cookie. The Web Lock test checks the
   lock name, not that a second caller waits. `HTTP_UNAUTHORIZED` is defined
-  both in `api/client.ts` and in `AuthProvider.tsx`. Origin:
+  both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
 ## Done
