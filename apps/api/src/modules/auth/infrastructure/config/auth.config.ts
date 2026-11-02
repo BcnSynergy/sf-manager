@@ -73,7 +73,7 @@ export function getAuthConfig(): AuthConfig {
     throw new Error('CORS_ORIGIN environment variable is required');
   }
 
-  const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '2h';
+  const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '15m';
   const maxAge = parseDurationMs(jwtExpiresIn, 'JWT_EXPIRES_IN');
   const production = isProduction(process.env.NODE_ENV);
 

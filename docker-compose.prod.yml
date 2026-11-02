@@ -35,7 +35,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in prod.env}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       CORS_ORIGIN: https://${SITE_ADDRESS:?set SITE_ADDRESS in prod.env}
       # TD-5: the refresh cookie is scoped to the auth routes as the browser
       # sees them, and Caddy serves the API under /api.

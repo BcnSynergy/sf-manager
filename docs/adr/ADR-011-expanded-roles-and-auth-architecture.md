@@ -771,9 +771,11 @@ Refresh"). Decision 4 itself stands; this records the shape it took.
    with neither it stays 401. This also changes item 4 of the 2026-10-06
    addendum: a deleted user's logout is no longer refused by the guard; it
    revokes what it is given.
-8. **Access-token lifetime.** `JWT_EXPIRES_IN` stays `2h` until the web
-   renews silently (PR 3/3), which then lowers the default to Decision 4's
-   15 minutes, so no release logs users out every 15 minutes.
+8. **Access-token lifetime.** `JWT_EXPIRES_IN` stayed `2h` until the web
+   renewed silently; PR 3/3 lowers the default to Decision 4's 15 minutes in
+   the same release as the web's silent refresh (`apiFetch` refreshes once on
+   a 401 and retries; one refresh at a time per tab, serialized across tabs
+   with Web Locks; the mount-time session check tries a refresh first).
 
 ## Alternatives Considered
 

@@ -37,6 +37,8 @@ export class ApiError extends Error {
 
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_SERVER_ERROR = 500;
+const HTTP_TOO_MANY_REQUESTS = 429;
 
 // auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
 // a mid-session 401 (the API now re-reads the user on every request) is
@@ -63,22 +65,19 @@ export function advanceSessionEpoch(): void {
 // response resolves to undefined regardless of T (design.md Interfaces).
 export async function apiFetch<T = undefined>(path: string, init: RequestInit = {}): Promise<T> {
   const epochAtStart = sessionEpoch;
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      credentials: 'include',
-      // A FormData body gets its multipart Content-Type, boundary included,
-      // from the browser; setting it here would drop the boundary.
-      headers:
-        init.body && !(init.body instanceof FormData)
-          ? { 'Content-Type': 'application/json', ...init.headers }
-          : init.headers,
-    });
-  } catch {
-    // Network failure (offline, DNS, CORS, aborted, ...) never reaches an
-    // HTTP status — status 0 is the client-only sentinel for that.
-    throw new ApiError(0);
+  let response = await send(path, init);
+
+  // TD-5 S8: the access token is short-lived. A 401 first tries one silent
+  // refresh, then retries the request once; only a refused refresh ends the
+  // session. An unavailable refresh rejects with its ApiError (0 or 5xx),
+  // which fails this call without ending the session. A session change during the refresh (logout, another login)
+  // means this request belongs to the old session: neither retried nor
+  // reported.
+  if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
+    const refreshed = await refreshSession();
+    if (refreshed !== null && epochAtStart === sessionEpoch) {
+      response = await send(path, init);
+    }
   }
 
   if (!response.ok) {
@@ -112,4 +111,115 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
   } catch {
     throw new ApiError(0);
   }
+}
+
+async function send(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+      // A FormData body gets its multipart Content-Type, boundary included,
+      // from the browser; setting it here would drop the boundary.
+      headers:
+        init.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json', ...init.headers }
+          : init.headers,
+    });
+  } catch {
+    // Network failure (offline, DNS, CORS, aborted, ...) never reaches an
+    // HTTP status — status 0 is the client-only sentinel for that.
+    throw new ApiError(0);
+  }
+}
+
+// TD-5 S8: one refresh at a time. Within a tab, concurrent callers share the
+// one in flight; across tabs, a Web Lock serializes them, so the second tab
+// sends the cookie the first one just received instead of the spent one.
+const REFRESH_LOCK = 'sf-manager.refresh';
+// One deadline for the whole refresh (both attempts, body included), so the
+// cross-tab lock is held at most this long. Keep it at or below the API's
+// REFRESH_TOKEN_REUSE_GRACE (10 s), so a retry stays inside the grace window.
+const REFRESH_TIMEOUT_MS = 10_000;
+let refreshInFlight: Promise<unknown> | null = null;
+
+// Exchanges the refresh cookie for a new session. Resolves with the user
+// the API answers with, or null when the API refuses the refresh (4xx: the
+// session is over). Rejects with ApiError when the refresh is unavailable
+// (network down, 5xx): the session may still be valid, so callers must not
+// end it.
+export function refreshSession<T = unknown>(): Promise<T | null> {
+  refreshInFlight ??= withRefreshLock(postRefresh).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight as Promise<T | null>;
+}
+
+function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
+  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  return locks ? locks.request(REFRESH_LOCK, work) : work();
+}
+
+async function postRefresh(): Promise<unknown> {
+  // A response lost to the network may have consumed the token server-side:
+  // retry once at once, inside the API's grace window
+  // (REFRESH_TOKEN_REUSE_GRACE, 10 s by default), where that consumed token
+  // is still honoured once.
+  // One deadline for both attempts, counted from the first send: the lock is
+  // held at most REFRESH_TIMEOUT_MS, and a retry still lands inside the API's
+  // grace window, which starts no earlier than that first send.
+  const deadline = Date.now() + REFRESH_TIMEOUT_MS;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new ApiError(0);
+    }
+    // Bounded, body included: a stalled request would otherwise hold the
+    // cross-tab lock and leave every tab's 401s waiting. A timeout counts as
+    // unavailable. An AbortController with a timer, not AbortSignal.timeout,
+    // which older browsers (Safari < 16) lack.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), remaining);
+    try {
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          signal: controller.signal,
+        });
+      } catch {
+        if (controller.signal.aborted) {
+          // Timed out: the request may still have consumed the token, and a
+          // retry this late would fall outside the grace window (reuse).
+          throw new ApiError(0);
+        }
+        continue;
+      }
+      // Rate-limited (429) or failing (5xx) is not a refusal: the refresh
+      // cookie may still be valid, so the session must stay.
+      if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR) {
+        throw new ApiError(response.status);
+      }
+      if (!response.ok) {
+        return null;
+      }
+      try {
+        return (await response.json()) as unknown;
+      } catch {
+        // The cookies were rotated, but the answer is unreadable or timed
+        // out: unavailable, not refused.
+        throw new ApiError(0);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new ApiError(0);
+}
+
+// Resolves once the refresh in flight (if any) has settled, whatever its
+// outcome. Logout waits on it, so a refresh committed just before the logout
+// cannot set a fresh access cookie after the logout cleared it.
+export async function settleRefresh(): Promise<void> {
+  await refreshInFlight?.catch(() => undefined);
 }

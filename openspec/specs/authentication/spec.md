@@ -547,7 +547,8 @@ error.)
 
 The web app MUST redirect unauthenticated visits to protected routes
 to `/login`, including when the session ends mid-session because an
-authenticated API call issued under the current session returned 401.
+authenticated API call issued under the current session returned 401 and
+the silent refresh ("Silent Session Refresh (Web)") was refused.
 A 401 returned for a call issued under an earlier session MUST NOT end
 the current session.
 (Previously: any authenticated API call returning 401 ended the session,
@@ -562,13 +563,13 @@ regardless of which session issued the call.)
 #### Scenario: Session ends mid-session
 
 - GIVEN a signed-in user on a protected route
-- WHEN an authenticated API call (not login) issued under the current session returns 401
+- WHEN an authenticated API call (not login) issued under the current session returns 401 and the silent refresh is refused
 - THEN the local session MUST be cleared and the app MUST redirect to `/login`
 
 #### Scenario: Current-session 401 ends the session and redirects
 
 - GIVEN a signed-in user on a protected route who sent an authenticated API call under the current session
-- WHEN that call returns 401
+- WHEN that call returns 401 and the silent refresh is refused
 - THEN the local session MUST be cleared
 - AND the app MUST redirect to `/login`
 - AND the session-ended notice MUST be shown
@@ -582,10 +583,75 @@ regardless of which session issued the call.)
 - AND the app MUST NOT redirect to `/login`
 - AND the caller of the earlier call MUST still receive the 401 error
 
+### Requirement: Silent Session Refresh (Web)
+
+The access token is short-lived (`JWT_EXPIRES_IN`, 15 minutes by default),
+so the web app MUST renew it without the user noticing. (TD-5, ADR-011
+Decision 4.)
+
+- When an authenticated API call issued under the current session
+  returns 401, the web app MUST call the refresh endpoint once and, if it
+  succeeds, MUST retry the call once, returning the retried result to the
+  caller. Only a refused refresh, or a 401 on the retry, MUST end the
+  session ("Session-Ended Notice (Web)").
+- Calls that get a 401 at the same time MUST share one refresh, and
+  refreshes MUST be serialized across the browser's tabs (Web Locks where
+  the browser supports them), so tabs do not present the same refresh
+  token at once.
+- A refresh whose response is lost to a network error MUST be retried
+  once, at once, within the API's grace window. The whole refresh, that
+  retry included, MUST be abandoned 10 seconds after its first request
+  (a later retry could fall outside the grace window and revoke the
+  session) and then counts as unavailable.
+- Only a refusal (a 4xx answer from the refresh endpoint other than 429)
+  MUST end the session. When the refresh is unavailable (still unreachable
+  after that retry, rate-limited with 429, answering 5xx, or with an
+  unreadable answer), the call MUST fail with that error and the session
+  MUST stay, so an API restart, a short outage or a shared office IP
+  hitting the refresh limit does not log users out.
+- Logout MUST wait for a refresh in flight before calling the logout
+  endpoint.
+- If the session changes while the refresh runs (logout or another
+  login), the call MUST be neither retried nor reported as a session end;
+  its caller MUST still receive the 401.
+- On load, when the session check answers 401, the web app MUST try one
+  refresh before treating the visitor as signed out.
+
+#### Scenario: Expired access token renewed silently
+
+- GIVEN a signed-in user whose access token has expired and whose refresh token is valid
+- WHEN an authenticated API call returns 401
+- THEN the web app MUST refresh the session and retry the call, and the user MUST see the call's result with no redirect and no notice
+
+#### Scenario: Refused refresh ends the session
+
+- GIVEN a signed-in user whose refresh token is no longer valid
+- WHEN an authenticated API call returns 401
+- THEN the session MUST end with the session-ended notice and a redirect to `/login`
+
+#### Scenario: Unavailable refresh keeps the session
+
+- GIVEN a signed-in user whose access token has expired
+- WHEN an authenticated API call returns 401 and the refresh endpoint is unreachable or answers 5xx
+- THEN the call MUST fail with a network or server error, and the session MUST NOT end (no notice, no redirect)
+
+#### Scenario: Concurrent 401s share one refresh
+
+- GIVEN two authenticated API calls that return 401 at the same time
+- WHEN the web app handles them
+- THEN exactly one refresh request MUST be sent, and both calls MUST be retried after it
+
+#### Scenario: Session restored on load through a refresh
+
+- GIVEN a visitor whose access cookie has expired but whose refresh cookie is valid
+- WHEN the app loads
+- THEN the session MUST be restored without showing the login page
+
 ### Requirement: Session-Ended Notice (Web)
 
 When an authenticated API call other than login, issued under the
-current session, returns 401 mid-session, the web app MUST end the local
+current session, returns 401 mid-session and the silent refresh ("Silent
+Session Refresh (Web)") is refused, the web app MUST end the local
 session, redirect to `/login`, and show the notice "Your session has
 ended. Please sign in again." (EN, ES and CA). The notice MUST NOT
 disclose the reason. A failed login attempt MUST NOT show this notice. A
@@ -600,7 +666,7 @@ the call.)
 #### Scenario: Mid-session 401
 
 - GIVEN a signed-in user whose session is no longer accepted by the API
-- WHEN any authenticated API call issued under the current session returns 401
+- WHEN any authenticated API call issued under the current session returns 401 and the silent refresh is refused
 - THEN the app MUST land on `/login` showing the session-ended notice
 - AND the notice MUST NOT state why the session ended
 

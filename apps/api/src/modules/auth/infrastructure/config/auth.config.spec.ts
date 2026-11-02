@@ -40,7 +40,8 @@ describe('getAuthConfig', () => {
 
     expect(getAuthConfig()).toEqual({
       jwtSecret: 'test-secret',
-      jwtExpiresIn: '2h',
+      // TD-5 S1: ADR-011 Decision 4's ~15 min, now that the web refreshes.
+      jwtExpiresIn: '15m',
       corsOrigin: 'http://localhost:5173',
       cookie: {
         name: 'sf_access_token',
@@ -48,7 +49,7 @@ describe('getAuthConfig', () => {
         path: '/',
         secure: false,
         sameSite: 'lax',
-        maxAge: 2 * 60 * 60 * 1000,
+        maxAge: 15 * 60 * 1000,
       },
       // TD-5 S5 ("8 h inactiv. / 7 d máx.") and the S4 grace window.
       refreshToken: {
@@ -81,7 +82,7 @@ describe('getAuthConfig', () => {
       path: '/',
       secure: true,
       sameSite: 'strict',
-      maxAge: 2 * 60 * 60 * 1000,
+      maxAge: 15 * 60 * 1000,
     });
   });
 

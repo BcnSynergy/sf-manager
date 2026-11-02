@@ -28,11 +28,6 @@ None.
 
 ### Low
 
-- **TD-5**: No refresh-token rotation. Access tokens live 2 hours and there is
-  no refresh token, although ADR-011 Decision 4 targets rotation. Evidence:
-  `docs/adr/ADR-011-expanded-roles-and-auth-architecture.md` (Decision 4 and
-  the 2026-08-21 addendum); `auth-live-user-check` explore.md option 3
-  (rejected by the user, deferred). Origin: `auth-minimal-skeleton`.
 - **TD-15**: The soft-deleted manager case is covered at e2e with fakes only,
   not through the real `PrismaUserRepository`. Evidence: `review-schedule`
   archive-report S-3 and follow-up 4; `prisma-user.repository.integration.spec.ts`
@@ -67,6 +62,11 @@ None.
 
 ## Resolved
 
+- **TD-5**: No refresh-token rotation (2-hour access tokens, no refresh
+  token). Resolved by `td-5-refresh-token-rotation` (#318, #319 and PR
+  3/3): 15-minute access tokens renewed silently by the web with a
+  rotating refresh token (reuse detection, 8 h idle, 7 days absolute);
+  ADR-011 2026-11-01 addendum.
 - **TD-1**: No CI. Resolved by `ci-pipeline` (#189, #191, #192; ADR-017).
 - **TD-2**: Lint `--fix`. Resolved in #188.
 - **TD-3**: Stale token after soft-delete or role change. Resolved by

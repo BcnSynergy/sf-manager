@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ApiError, apiFetch, setUnauthorizedHandler } from '../api/client';
+import { ApiError, apiFetch, refreshSession, setUnauthorizedHandler } from '../api/client';
 import { AuthProvider, useAuth } from './AuthProvider';
 
 // Wraps the real setUnauthorizedHandler so a test can assert what
@@ -15,10 +15,11 @@ vi.mock('../api/client', async (importOriginal) => {
 // Renders the raw fields useAuth() exposes so tests can assert on the
 // consumer-visible shape of `user`, including `role` — the field this PR adds.
 function UserProbe() {
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
   return (
     <div>
       <span data-testid="probe-role">{user?.role ?? 'none'}</span>
+      <span data-testid="probe-user-loading">{String(isLoading)}</span>
       <button
         data-testid="probe-login"
         onClick={() => {
@@ -35,14 +36,18 @@ function mockFetch(
   options: {
     meRole?: string;
     meFails?: boolean;
+    // Status of a failing /auth/me (default 401, an expired access cookie).
+    meStatus?: number;
     loginRole?: string;
+    // TD-5: answer to POST /auth/refresh (default: refused).
+    refreshRole?: string;
   } = {},
 ) {
   return vi.fn((url: RequestInfo | URL) => {
     const href = String(url);
     if (href.includes('/auth/me')) {
       if (options.meFails) {
-        return Promise.resolve({ ok: false } as Response);
+        return Promise.resolve({ ok: false, status: options.meStatus ?? 401 } as Response);
       }
       return Promise.resolve({
         ok: true,
@@ -50,6 +55,19 @@ function mockFetch(
           id: '1',
           email: 'admin@sf-manager.example',
           role: options.meRole ?? 'SYSTEM_ADMIN',
+        }),
+      } as Response);
+    }
+    if (href.includes('/auth/refresh')) {
+      if (options.refreshRole === undefined) {
+        return Promise.resolve({ ok: false, status: 401 } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: '1',
+          email: 'admin@sf-manager.example',
+          role: options.refreshRole,
         }),
       } as Response);
     }
@@ -92,6 +110,60 @@ describe('AuthProvider — role propagation', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+  });
+
+  // TD-5 S8: the access cookie may have expired while the refresh cookie is
+  // still good; the mount-time restore tries a refresh before giving up.
+  it('restores the session through a refresh when /auth/me is refused on mount', async () => {
+    const fetchMock = mockFetch({ meFails: true, refreshRole: 'MANAGER' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+    const refreshCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/auth/refresh'));
+    expect((refreshCall as unknown[] | undefined)?.[1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+    });
+  });
+
+  it('stays logged out when both /auth/me and the refresh are refused on mount', async () => {
+    const fetchMock = mockFetch({ meFails: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false'),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(true);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('does not try a refresh on mount when /auth/me fails for another reason than 401', async () => {
+    const fetchMock = mockFetch({ meFails: true, meStatus: 503, refreshRole: 'MANAGER' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false'),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(false);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
   });
 
   it('exposes role returned by POST /auth/login', async () => {
@@ -193,6 +265,50 @@ async function renderSession(options: SessionFetchOptions) {
   await waitFor(() => expect(screen.getByTestId('probe-loading')).toHaveTextContent('false'));
   return view;
 }
+
+// TD-5: logout must not race a refresh in flight.
+describe('AuthProvider — logout waits for a refresh in flight', () => {
+  it('sends POST /auth/logout only after the pending refresh has settled', async () => {
+    let answerRefresh: (response: Response) => void = () => undefined;
+    const user = { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' };
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.includes('/auth/me')) {
+        return Promise.resolve({ ok: true, json: async () => user } as Response);
+      }
+      if (href.includes('/auth/refresh')) {
+        return new Promise<Response>((resolve) => (answerRefresh = resolve));
+      }
+      if (href.includes('/auth/logout')) {
+        return Promise.resolve({ ok: true, status: 204 } as Response);
+      }
+      return Promise.reject(new Error(`unexpected fetch to ${href}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <AuthProvider>
+        <SessionProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-loading')).toHaveTextContent('false'));
+    const logoutCalls = () =>
+      fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/logout'));
+
+    const refreshing = refreshSession();
+    await act(async () => {
+      screen.getByTestId('probe-logout').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(logoutCalls()).toHaveLength(0);
+
+    await act(async () => {
+      answerRefresh({ ok: true, status: 200, json: async () => user } as Response);
+      await refreshing;
+    });
+    await waitFor(() => expect(logoutCalls()).toHaveLength(1));
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('none');
+  });
+});
 
 async function dataCall401() {
   await act(async () => {
