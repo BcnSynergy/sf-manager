@@ -805,6 +805,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
+- **EN-144** (api tests): the `countActiveByRole() excludes soft-deleted
+users` case in `prisma-user.repository.integration.spec.ts` counts
+  MANAGER rows globally, and since TD-15
+  `user-manager-capability.checker.integration.spec.ts` also creates one. It
+  stays deterministic only because `test:integration` runs spec files
+  serially (`--runInBand`); nothing in the test enforces that, so bringing
+  back parallel workers would reopen the race silently. Fix by scoping the
+  count to rows the test creates, or by asserting the runner mode. Origin:
+  `td-15-soft-deleted-manager-integration` native review (readability
+  lens), 2026-11-02.
+
 ## Done
 
 - **EN-143** (api tests): `auth.config.spec.ts` now pins the two remaining

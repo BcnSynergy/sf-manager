@@ -362,6 +362,12 @@ describe('PrismaUserRepository (integration)', () => {
   // still race this exact assertion. If that ever needs to be closed too,
   // don't just pick yet another role; this suite needs real per-test
   // isolation (transactional rollback or a scoped/dedicated schema).
+  //
+  // Update (TD-15): the "no other MANAGER fixtures" premise above no longer
+  // holds — `user-manager-capability.checker.integration.spec.ts` also
+  // creates a MANAGER. The count stays deterministic only because
+  // `test:integration` now runs spec files serially (`--runInBand`) against
+  // a per-run database; if parallel workers come back, this race returns.
   it('countActiveByRole() excludes soft-deleted users', async () => {
     const activeId = idGenerator.generate();
     const deletedId = idGenerator.generate();
