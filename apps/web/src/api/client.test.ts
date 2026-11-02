@@ -454,6 +454,42 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  // No retry after a timeout: the stalled request may have consumed the token
+  // server-side, and a retry 10 s later would land outside the grace window
+  // and revoke the whole family.
+  it('aborts a refresh that never answers after 10 seconds, without retrying, keeping the session (no AbortSignal.timeout needed)', async () => {
+    vi.useFakeTimers();
+    try {
+      // Older browsers (Safari < 16) lack AbortSignal.timeout.
+      vi.stubGlobal('AbortSignal', { ...AbortSignal, timeout: undefined });
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const stalled = (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          );
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(stalled)
+        .mockImplementationOnce(stalled);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await pending;
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('treats a 403 from the refresh (foreign origin) as a refusal that ends the session', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);

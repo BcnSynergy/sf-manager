@@ -599,7 +599,10 @@ Decision 4.)
   the browser supports them), so tabs do not present the same refresh
   token at once.
 - A refresh whose response is lost to a network error MUST be retried
-  once, at once, within the API's grace window.
+  once, at once, within the API's grace window. A refresh with no answer
+  within 10 seconds MUST be abandoned without a retry (a late retry could
+  fall outside the grace window and revoke the session) and counts as
+  unavailable.
 - Only a refusal (a 4xx answer from the refresh endpoint) MUST end the
   session. When the refresh is unavailable (still unreachable after that
   retry, or answering 5xx), the call MUST fail with that network or server

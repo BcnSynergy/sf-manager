@@ -135,6 +135,8 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 // one in flight; across tabs, a Web Lock serializes them, so the second tab
 // sends the cookie the first one just received instead of the spent one.
 const REFRESH_LOCK = 'sf-manager.refresh';
+// A stalled refresh holds the cross-tab lock for at most this long: there is
+// no retry after a timeout.
 const REFRESH_TIMEOUT_MS = 10_000;
 let refreshInFlight: Promise<unknown> | null = null;
 
@@ -161,16 +163,27 @@ async function postRefresh(): Promise<unknown> {
   // token is still honoured once.
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let response: Response;
+    // Bounded: a stalled request would otherwise hold the cross-tab lock and
+    // leave every tab's 401s waiting. A timeout counts as unavailable. An
+    // AbortController with a timer, not AbortSignal.timeout, which older
+    // browsers (Safari < 16) lack.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
     try {
       response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
-        // Bounded: a stalled request would otherwise hold the cross-tab lock
-        // and leave every tab's 401s waiting. A timeout counts as unavailable.
-        signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS),
+        signal: controller.signal,
       });
     } catch {
+      if (controller.signal.aborted) {
+        // Timed out: the request may still have consumed the token, and a
+        // retry this late would fall outside the grace window (reuse).
+        throw new ApiError(0);
+      }
       continue;
+    } finally {
+      clearTimeout(timer);
     }
     if (response.status >= HTTP_SERVER_ERROR) {
       throw new ApiError(response.status);
