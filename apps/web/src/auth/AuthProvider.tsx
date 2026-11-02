@@ -28,6 +28,7 @@ type AuthContextValue = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const HTTP_UNAUTHORIZED = 401;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -50,12 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // TD-5 S8: the access cookie may have expired while the refresh cookie
-    // is still good, so a refused /auth/me tries one refresh before the
+    // is still good, so a 401 from /auth/me tries one refresh before the
     // visitor counts as logged out.
     fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
-      .then((response) =>
-        response.ok ? (response.json() as Promise<AuthUser>) : refreshSession<AuthUser>(),
-      )
+      .then((response) => {
+        if (response.ok) {
+          return response.json() as Promise<AuthUser>;
+        }
+        // Only an expired or missing access token (401) is worth a refresh.
+        return response.status === HTTP_UNAUTHORIZED ? refreshSession<AuthUser>() : null;
+      })
       .then((data) => updateUser(data))
       .catch(() => updateUser(null))
       .finally(() => setIsLoading(false));

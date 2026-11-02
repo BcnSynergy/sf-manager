@@ -796,6 +796,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   reviewer's probes). Origin: `td-5-refresh-token-rotation` (PR #319)
   pre-merge review, 2026-11-01.
 
+- **EN-141** (web): two notes on the silent refresh (TD-5 PR 3/3 native
+  review). `apiFetch` refreshes and retries on any 401 under the current
+  session, auth routes included; today login and logout use raw `fetch`,
+  so nothing is affected, but a future call that answers 401 for wrong
+  credentials through `apiFetch` would rotate the refresh token and replay
+  the request; exclude such paths if one appears. `refreshSession<T>()`
+  casts the shared in-flight `Promise<unknown>` to `T` without checking it;
+  `AuthProvider` relies on that assertion for `AuthUser`. Origin:
+  `td-5-refresh-token-rotation` PR 3/3 native review, 2026-11-02.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app

@@ -117,12 +117,16 @@ async function send(path: string, init: RequestInit): Promise<Response> {
     return await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: 'include',
+      // A FormData body gets its multipart Content-Type, boundary included,
+      // from the browser; setting it here would drop the boundary.
       headers:
         init.body && !(init.body instanceof FormData)
           ? { 'Content-Type': 'application/json', ...init.headers }
           : init.headers,
     });
   } catch {
+    // Network failure (offline, DNS, CORS, aborted, ...) never reaches an
+    // HTTP status — status 0 is the client-only sentinel for that.
     throw new ApiError(0);
   }
 }
@@ -131,6 +135,7 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 // one in flight; across tabs, a Web Lock serializes them, so the second tab
 // sends the cookie the first one just received instead of the spent one.
 const REFRESH_LOCK = 'sf-manager.refresh';
+const REFRESH_TIMEOUT_MS = 10_000;
 let refreshInFlight: Promise<unknown> | null = null;
 
 // Exchanges the refresh cookie for a new session. Resolves with the user
@@ -160,6 +165,9 @@ async function postRefresh(): Promise<unknown> {
       response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        // Bounded: a stalled request would otherwise hold the cross-tab lock
+        // and leave every tab's 401s waiting. A timeout counts as unavailable.
+        signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS),
       });
     } catch {
       continue;

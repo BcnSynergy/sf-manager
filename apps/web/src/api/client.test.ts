@@ -326,10 +326,10 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     vi.unstubAllGlobals();
   });
 
-  function respond(...responses: Array<Response | Error>) {
+  function respond(...responses: Array<Response | Error | DOMException>) {
     const fetchMock = vi.fn();
     for (const response of responses) {
-      if (response instanceof Error) {
+      if (response instanceof Error || response instanceof DOMException) {
         fetchMock.mockRejectedValueOnce(response);
       } else {
         fetchMock.mockResolvedValueOnce(response);
@@ -356,6 +356,8 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
     const [, refreshInit] = fetchMock.mock.calls[1] as [string, RequestInit];
     expect(refreshInit).toMatchObject({ method: 'POST', credentials: 'include' });
+    // A stalled refresh must not hold the cross-tab lock forever.
+    expect(refreshInit.signal).toBeInstanceOf(AbortSignal);
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -433,6 +435,18 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
     respond(unauthorized(), new TypeError('Failed to fetch'), new TypeError('Failed to fetch'));
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(0);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session when the refresh times out twice (aborted fetch)', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const timeout = () => new DOMException('The operation timed out.', 'TimeoutError');
+    respond(unauthorized(), timeout(), timeout());
 
     const error = await apiFetch('/users').catch((e: unknown) => e);
 

@@ -15,10 +15,11 @@ vi.mock('../api/client', async (importOriginal) => {
 // Renders the raw fields useAuth() exposes so tests can assert on the
 // consumer-visible shape of `user`, including `role` — the field this PR adds.
 function UserProbe() {
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
   return (
     <div>
       <span data-testid="probe-role">{user?.role ?? 'none'}</span>
+      <span data-testid="probe-user-loading">{String(isLoading)}</span>
       <button
         data-testid="probe-login"
         onClick={() => {
@@ -35,6 +36,8 @@ function mockFetch(
   options: {
     meRole?: string;
     meFails?: boolean;
+    // Status of a failing /auth/me (default 401, an expired access cookie).
+    meStatus?: number;
     loginRole?: string;
     // TD-5: answer to POST /auth/refresh (default: refused).
     refreshRole?: string;
@@ -44,7 +47,7 @@ function mockFetch(
     const href = String(url);
     if (href.includes('/auth/me')) {
       if (options.meFails) {
-        return Promise.resolve({ ok: false } as Response);
+        return Promise.resolve({ ok: false, status: options.meStatus ?? 401 } as Response);
       }
       return Promise.resolve({
         ok: true,
@@ -140,10 +143,26 @@ describe('AuthProvider — role propagation', () => {
     );
 
     await waitFor(() =>
-      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(
-        true,
-      ),
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false'),
     );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(true);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('does not try a refresh on mount when /auth/me fails for another reason than 401', async () => {
+    const fetchMock = mockFetch({ meFails: true, meStatus: 503, refreshRole: 'MANAGER' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false'),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(false);
     expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
   });
 
