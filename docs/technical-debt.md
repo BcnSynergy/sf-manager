@@ -59,7 +59,7 @@ None.
 ## Resolved
 
 - **TD-15**: The soft-deleted manager case was covered at e2e with fakes
-  only. Resolved by `td-15-soft-deleted-manager-integration` (PR #TBD):
+  only. Resolved by `td-15-soft-deleted-manager-integration` (PR #323):
   `user-manager-capability.checker.integration.spec.ts` runs the real
   `UserManagerCapabilityChecker` over `PrismaUserRepository` and shows a
   MANAGER granted `VIEW_ALL_REVIEWS` losing it once soft-deleted, with the
