@@ -2826,6 +2826,8 @@ describe('Review History (e2e)', () => {
       'shared/seeding/seed-dev-dataset.integration.spec.ts',
       // TD-12: the type-level spec for the SoleManagerCapability guard.
       'modules/users/domain/manager-capability.spec.ts',
+      // TD-15: the checker over the real PrismaUserRepository.
+      'modules/users/infrastructure/authorization/user-manager-capability.checker.integration.spec.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 
     const ALLOWED_FILES = [
