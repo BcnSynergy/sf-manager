@@ -829,7 +829,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   refresh e2e suite now covers over HTTP the grace exchange and
   `superseded` (a second app booted with a 10 s grace), logout with both
   cookies, the revoked family of a deleted user and the refreshed JWT's
-  `role` claim. Done in `en-140-refresh-leftovers` (PR #TBD), 2026-11-02.
+  `role` claim. Done in `en-140-refresh-leftovers` (PR #321), 2026-11-02.
 
 - **EN-129** (web): the organization profile asks before any in-app
   navigation ("Change logo", a nav link, back/forward) while the form holds
