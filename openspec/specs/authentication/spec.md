@@ -299,6 +299,20 @@ configured web origin. This applies to any endpoint (public or
 protected) reachable from the web app, not just the public-opt-out
 endpoints above.
 
+`CORS_ORIGIN` MUST be a serialized origin (lower-case
+`scheme://host[:port]`, with no default port, no path and no trailing
+slash), because
+browsers send the `Origin` header in that form and it is compared exactly.
+Any other value MUST stop the API at startup with an error that names the
+value and, when one can be derived, the expected origin. (Added by EN-140.)
+
+#### Scenario: CORS origin with a trailing slash stops startup
+
+- GIVEN `CORS_ORIGIN` is `http://localhost:5173/`
+- WHEN the API starts
+- THEN startup MUST fail with an error naming `"http://localhost:5173/"`
+  and suggesting `"http://localhost:5173"`
+
 #### Scenario: Cross-origin request receives CORS headers
 
 - GIVEN a request from the configured web origin (`CORS_ORIGIN`)

@@ -28,6 +28,41 @@ describe('getAuthConfig', () => {
     expect(() => getAuthConfig()).toThrow(/CORS_ORIGIN/);
   });
 
+  // EN-140: browsers send `Origin` as scheme://host[:port] with no path, and
+  // SameOriginGuard and enableCors compare it exactly, so anything else
+  // would refuse every refresh and logout with 403.
+  it.each([
+    ['a trailing slash', 'http://localhost:5173/', 'http://localhost:5173'],
+    ['a path', 'https://app.example/web', 'https://app.example'],
+    ['upper-case letters', 'HTTP://Localhost:5173', 'http://localhost:5173'],
+  ])(
+    'throws when CORS_ORIGIN has %s, naming the expected value',
+    (_case, value, expected) => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.CORS_ORIGIN = value;
+
+      expect(() => getAuthConfig()).toThrow(
+        `CORS_ORIGIN must be an origin (scheme://host[:port]), got "${value}"; did you mean "${expected}"?`,
+      );
+    },
+  );
+
+  it('throws when CORS_ORIGIN is not a URL', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'not a url';
+
+    expect(() => getAuthConfig()).toThrow(
+      'CORS_ORIGIN must be an origin (scheme://host[:port]), got "not a url"',
+    );
+  });
+
+  it('accepts an origin with a port unchanged', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+
+    expect(getAuthConfig().corsOrigin).toBe('http://localhost:5173');
+  });
+
   it('returns dev cookie settings (secure:false, sameSite:lax) outside production', () => {
     process.env.JWT_SECRET = 'test-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
