@@ -816,7 +816,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   wildcard or comma-separated `CORS_ORIGIN` booted before EN-140 and is now
   rejected; that is not a regression, because `cors` sends a string origin
   verbatim and browsers compare it exactly, so it never worked. Done in
-  `en-143-assert-origin-tests` (PR #TBD), 2026-11-02.
+  `en-143-assert-origin-tests` (PR #322), 2026-11-02.
 
 - **EN-140** (api, docs): `apps/api/.env.example` lists the six refresh
   variables and `JWT_EXPIRES_IN` with their defaults (edited by the user;
