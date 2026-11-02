@@ -63,9 +63,12 @@ None.
   `user-manager-capability.checker.integration.spec.ts` runs the real
   `UserManagerCapabilityChecker` over `PrismaUserRepository` and shows a
   MANAGER granted `VIEW_ALL_REVIEWS` losing it once soft-deleted, with the
-  row and its grant still stored. `prisma-user.repository.integration.spec.ts`
-  already showed a soft-deleted MANAGER excluded from `findById()`, which
-  both `AuthenticatedGuard` and the checker use.
+  row and its grant still stored. The original evidence was partly wrong:
+  `prisma-user.repository.integration.spec.ts` already had "softDeleteById()
+  sets deletedAt so the user is excluded from findById()" with a MANAGER
+  (since 9cbe46f, 2026-08-22), and `findById()` is what both
+  `AuthenticatedGuard` and the checker use. The granted manager through the
+  real checker was the part never covered.
 
 - **TD-5**: No refresh-token rotation (2-hour access tokens, no refresh
   token). Resolved by `td-5-refresh-token-rotation` (#318, #319 and PR
