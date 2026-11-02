@@ -812,7 +812,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`https://app.example:443`, `http://app.example:80`) is rejected with a
   suggestion that omits the port, and a URL with an opaque origin
   (`file:///x`) is rejected without a suggestion. The no-suggestion cases
-  compare the whole message, so a stray "did you mean" fails them. Done in
+  compare the whole message, so a stray "did you mean" fails them. A
+  wildcard or comma-separated `CORS_ORIGIN` booted before EN-140 and is now
+  rejected; that is not a regression, because `cors` sends a string origin
+  verbatim and browsers compare it exactly, so it never worked. Done in
   `en-143-assert-origin-tests` (PR #TBD), 2026-11-02.
 
 - **EN-140** (api, docs): `apps/api/.env.example` lists the six refresh
