@@ -805,20 +805,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
-- **EN-143** (api tests): `assertIsOrigin` in
-  `apps/api/src/modules/auth/infrastructure/config/auth.config.ts` has two
-  correct but untested behaviors: a URL whose origin is the string `null`
-  (for example `file:///x`) gets an error without the "did you mean"
-  suggestion, and an explicit default port (`https://host:443`) is rejected
-  with a suggestion that omits the port, which is right because browsers
-  omit it from `Origin`. The reviewer also flagged that such values, a wildcard or a
-  comma-separated list booted before EN-140; this was checked and is not a
-  regression, because `cors` sends a string origin verbatim in
-  `Access-Control-Allow-Origin` and browsers compare it exactly, so none of
-  them ever worked for the web app. Origin: `en-140-refresh-leftovers`
-  native review (reliability lens), 2026-11-02.
-
 ## Done
+
+- **EN-143** (api tests): `auth.config.spec.ts` now pins the two remaining
+  branches of `assertIsOrigin`: an explicit default port
+  (`https://app.example:443`, `http://app.example:80`) is rejected with a
+  suggestion that omits the port, and a URL with an opaque origin
+  (`file:///x`) is rejected without a suggestion. The no-suggestion cases
+  compare the whole message, so a stray "did you mean" fails them. A
+  wildcard or comma-separated `CORS_ORIGIN` booted before EN-140 and is now
+  rejected; that is not a regression, because `cors` sends a string origin
+  verbatim and browsers compare it exactly, so it never worked. Done in
+  `en-143-assert-origin-tests` (PR #322), 2026-11-02.
 
 - **EN-140** (api, docs): `apps/api/.env.example` lists the six refresh
   variables and `JWT_EXPIRES_IN` with their defaults (edited by the user;
