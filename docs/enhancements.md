@@ -781,21 +781,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   later tests in the worker; restore it in `afterEach`. In `auth.controller.spec.ts`, the type alias `RefreshRequest` also casts logout requests; a neutral name such as `ControllerRequest` reads better. Origin:
   `td-5-refresh-token-rotation` PR 2/3 native review, 2026-11-01.
 
-- **EN-140** (api, docs): leftovers from the TD-5 PR 2/3 pre-merge review.
-  `apps/api/.env.example` still lacks the six refresh variables
-  (`REFRESH_TOKEN_IDLE_TTL`, `REFRESH_TOKEN_ABSOLUTE_TTL`,
-  `REFRESH_TOKEN_REUSE_GRACE`, `REFRESH_TOKEN_COOKIE_PATH`,
-  `REFRESH_RATE_LIMIT_MAX_ATTEMPTS`, `REFRESH_RATE_LIMIT_WINDOW_SECONDS`);
-  the agent cannot edit that file. `SameOriginGuard` compares `Origin`
-  with `CORS_ORIGIN` exactly, so a `CORS_ORIGIN` with a trailing slash
-  would answer every refresh and logout with 403; normalize it or reject it
-  at boot. The refresh e2e suites do not cover over HTTP: the grace
-  exchange and `superseded` (they run with a zero grace), that logout with
-  both cookies kills the refresh family, that a deleted user's family is
-  revoked, and the refreshed JWT's `role` claim (each was checked by the
-  reviewer's probes). Origin: `td-5-refresh-token-rotation` (PR #319)
-  pre-merge review, 2026-11-01.
-
 - **EN-141** (web): two notes on the silent refresh (TD-5 PR 3/3 native
   review). `apiFetch` refreshes and retries on any 401 under the current
   session, auth routes included; today login and logout use raw `fetch`,
@@ -820,7 +805,30 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
+- **EN-143** (api tests): `assertIsOrigin` in
+  `apps/api/src/modules/auth/infrastructure/config/auth.config.ts` has two
+  untested branches: a URL whose origin is the string `null` (for example
+  `file:///x`), whose error omits the "did you mean" suggestion, and an
+  explicit default port (`https://host:443`), whose suggestion drops the
+  port. The reviewer also flagged that such values, a wildcard or a
+  comma-separated list booted before EN-140; this was checked and is not a
+  regression, because `cors` sends a string origin verbatim in
+  `Access-Control-Allow-Origin` and browsers compare it exactly, so none of
+  them ever worked for the web app. Origin: `en-140-refresh-leftovers`
+  native review (reliability lens), 2026-11-02.
+
 ## Done
+
+- **EN-140** (api, docs): `apps/api/.env.example` lists the six refresh
+  variables and `JWT_EXPIRES_IN` with their defaults (edited by the user;
+  the agent cannot edit that file). `CORS_ORIGIN` must now be a serialized
+  origin: a trailing slash, a path, upper-case letters or a non-URL stop the
+  API at boot with an error naming the value and, when it can be derived,
+  the expected origin (`authentication` spec, CORS Configuration). The
+  refresh e2e suite now covers over HTTP the grace exchange and
+  `superseded` (a second app booted with a 10 s grace), logout with both
+  cookies, the revoked family of a deleted user and the refreshed JWT's
+  `role` claim. Done in `en-140-refresh-leftovers` (PR #TBD), 2026-11-02.
 
 - **EN-129** (web): the organization profile asks before any in-app
   navigation ("Change logo", a nav link, back/forward) while the form holds

@@ -72,6 +72,7 @@ export function getAuthConfig(): AuthConfig {
   if (!corsOrigin) {
     throw new Error('CORS_ORIGIN environment variable is required');
   }
+  assertIsOrigin(corsOrigin);
 
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '15m';
   const maxAge = parseDurationMs(jwtExpiresIn, 'JWT_EXPIRES_IN');
@@ -110,6 +111,28 @@ export function getAuthConfig(): AuthConfig {
       ),
     },
   };
+}
+
+// EN-140: browsers send `Origin` as a serialized origin (lower-case
+// scheme://host[:port], no path), and SameOriginGuard and enableCors compare
+// CORS_ORIGIN with it exactly. Any other shape, such as a trailing slash,
+// would refuse every refresh and logout with 403, so it fails fast at boot.
+function assertIsOrigin(value: string): void {
+  let origin: string | undefined;
+  try {
+    origin = new URL(value).origin;
+  } catch {
+    origin = undefined;
+  }
+  if (origin === value) {
+    return;
+  }
+  const message = `CORS_ORIGIN must be an origin (scheme://host[:port]), got "${value}"`;
+  throw new Error(
+    origin && origin !== 'null'
+      ? `${message}; did you mean "${origin}"?`
+      : message,
+  );
 }
 
 function refreshCookiePath(): string {
