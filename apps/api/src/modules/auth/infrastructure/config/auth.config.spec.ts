@@ -35,6 +35,13 @@ describe('getAuthConfig', () => {
     ['a trailing slash', 'http://localhost:5173/', 'http://localhost:5173'],
     ['a path', 'https://app.example/web', 'https://app.example'],
     ['upper-case letters', 'HTTP://Localhost:5173', 'http://localhost:5173'],
+    // EN-143: browsers omit a default port from `Origin`, so it is dropped.
+    [
+      'the default https port',
+      'https://app.example:443',
+      'https://app.example',
+    ],
+    ['the default http port', 'http://app.example:80', 'http://app.example'],
   ])(
     'throws when CORS_ORIGIN has %s, naming the expected value',
     (_case, value, expected) => {
@@ -47,12 +54,20 @@ describe('getAuthConfig', () => {
     },
   );
 
-  it('throws when CORS_ORIGIN is not a URL', () => {
+  // No origin can be derived, so the message has no "did you mean" part. An
+  // Error argument makes toThrow compare the whole message, not a substring.
+  it.each([
+    ['is not a URL', 'not a url'],
+    // EN-143: a URL with an opaque origin, which serializes as "null".
+    ['has an opaque origin', 'file:///x'],
+  ])('throws without a suggestion when CORS_ORIGIN %s', (_case, value) => {
     process.env.JWT_SECRET = 'test-secret';
-    process.env.CORS_ORIGIN = 'not a url';
+    process.env.CORS_ORIGIN = value;
 
     expect(() => getAuthConfig()).toThrow(
-      'CORS_ORIGIN must be an origin (scheme://host[:port]), got "not a url"',
+      new Error(
+        `CORS_ORIGIN must be an origin (scheme://host[:port]), got "${value}"`,
+      ),
     );
   });
 
