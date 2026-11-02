@@ -560,6 +560,45 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
+  // One 10 s deadline for both attempts, counted from the first send: the
+  // lock is held at most 10 s and a retry always lands inside the API's
+  // 10 s grace window.
+  it('gives a retry after a late network error only the time left of one 10-second deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const failsAt9s = () =>
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => reject(new TypeError('connection reset')), 9_000);
+        });
+      const stalled = (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          );
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(failsAt9s)
+        .mockImplementationOnce(stalled);
+      vi.stubGlobal('fetch', fetchMock);
+
+      let error: unknown;
+      void apiFetch('/users').catch((e: unknown) => {
+        error = e;
+      });
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect((error as ApiError | undefined)?.status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('treats a 403 from the refresh (foreign origin) as a refusal that ends the session', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
@@ -620,7 +659,8 @@ describe('settleRefresh (TD-5)', () => {
       settled = true;
     });
 
-    await Promise.resolve();
+    // A full macrotask, not a single microtask, before asserting it waits.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(settled).toBe(false);
     answer(mockResponse({ ok: false, status: 401 }));
     await waiting;

@@ -816,7 +816,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   family: no retry only delays it; an idempotent replay on the API would
   close it. On load, a 5xx or network error from the restore shows the
   login page even with a valid refresh cookie. The Web Lock test checks the
-  lock name, not that a second caller waits. Origin:
+  lock name, not that a second caller waits. `HTTP_UNAUTHORIZED` is defined
+  both in `api/client.ts` and in `AuthProvider.tsx`. Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
 ## Done

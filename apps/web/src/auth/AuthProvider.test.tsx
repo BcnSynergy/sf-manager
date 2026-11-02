@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ApiError, apiFetch, setUnauthorizedHandler } from '../api/client';
+import { ApiError, apiFetch, refreshSession, setUnauthorizedHandler } from '../api/client';
 import { AuthProvider, useAuth } from './AuthProvider';
 
 // Wraps the real setUnauthorizedHandler so a test can assert what
@@ -265,6 +265,50 @@ async function renderSession(options: SessionFetchOptions) {
   await waitFor(() => expect(screen.getByTestId('probe-loading')).toHaveTextContent('false'));
   return view;
 }
+
+// TD-5: logout must not race a refresh in flight.
+describe('AuthProvider — logout waits for a refresh in flight', () => {
+  it('sends POST /auth/logout only after the pending refresh has settled', async () => {
+    let answerRefresh: (response: Response) => void = () => undefined;
+    const user = { id: '1', email: 'admin@sf-manager.example', role: 'SYSTEM_ADMIN' };
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.includes('/auth/me')) {
+        return Promise.resolve({ ok: true, json: async () => user } as Response);
+      }
+      if (href.includes('/auth/refresh')) {
+        return new Promise<Response>((resolve) => (answerRefresh = resolve));
+      }
+      if (href.includes('/auth/logout')) {
+        return Promise.resolve({ ok: true, status: 204 } as Response);
+      }
+      return Promise.reject(new Error(`unexpected fetch to ${href}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <AuthProvider>
+        <SessionProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-loading')).toHaveTextContent('false'));
+    const logoutCalls = () =>
+      fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/logout'));
+
+    const refreshing = refreshSession();
+    await act(async () => {
+      screen.getByTestId('probe-logout').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(logoutCalls()).toHaveLength(0);
+
+    await act(async () => {
+      answerRefresh({ ok: true, status: 200, json: async () => user } as Response);
+      await refreshing;
+    });
+    await waitFor(() => expect(logoutCalls()).toHaveLength(1));
+    expect(screen.getByTestId('probe-user')).toHaveTextContent('none');
+  });
+});
 
 async function dataCall401() {
   await act(async () => {

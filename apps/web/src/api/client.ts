@@ -136,9 +136,9 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 // one in flight; across tabs, a Web Lock serializes them, so the second tab
 // sends the cookie the first one just received instead of the spent one.
 const REFRESH_LOCK = 'sf-manager.refresh';
-// Per attempt, body included. There is no retry after a timeout, only after
-// an immediate network error, so the lock is held for at most about this
-// long. Keep it at or below the API's REFRESH_TOKEN_REUSE_GRACE (10 s).
+// One deadline for the whole refresh (both attempts, body included), so the
+// cross-tab lock is held at most this long. Keep it at or below the API's
+// REFRESH_TOKEN_REUSE_GRACE (10 s), so a retry stays inside the grace window.
 const REFRESH_TIMEOUT_MS = 10_000;
 let refreshInFlight: Promise<unknown> | null = null;
 
@@ -164,13 +164,21 @@ async function postRefresh(): Promise<unknown> {
   // retry once at once, inside the API's grace window
   // (REFRESH_TOKEN_REUSE_GRACE, 10 s by default), where that consumed token
   // is still honoured once.
+  // One deadline for both attempts, counted from the first send: the lock is
+  // held at most REFRESH_TIMEOUT_MS, and a retry still lands inside the API's
+  // grace window, which starts no earlier than that first send.
+  const deadline = Date.now() + REFRESH_TIMEOUT_MS;
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new ApiError(0);
+    }
     // Bounded, body included: a stalled request would otherwise hold the
     // cross-tab lock and leave every tab's 401s waiting. A timeout counts as
     // unavailable. An AbortController with a timer, not AbortSignal.timeout,
     // which older browsers (Safari < 16) lack.
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), remaining);
     try {
       let response: Response;
       try {
