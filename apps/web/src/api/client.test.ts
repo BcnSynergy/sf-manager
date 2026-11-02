@@ -5,6 +5,7 @@ import {
   ApiError,
   refreshSession,
   setUnauthorizedHandler,
+  settleRefresh,
 } from './client';
 
 function mockResponse(init: {
@@ -442,16 +443,85 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('keeps the session when the refresh times out twice (aborted fetch)', async () => {
+  it('retries once after a network error that is not our timeout, then keeps the session', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
-    const timeout = () => new DOMException('The operation timed out.', 'TimeoutError');
-    respond(unauthorized(), timeout(), timeout());
+    const failure = () => new DOMException('connection reset', 'NetworkError');
+    const fetchMock = respond(unauthorized(), failure(), failure());
 
     const error = await apiFetch('/users').catch((e: unknown) => e);
 
     expect((error as ApiError).status).toBe(0);
     expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/auth/refresh']);
+  });
+
+  // Rate-limited is not refused: the refresh cookie is still valid.
+  it('keeps the session when the refresh is rate-limited (429), failing the call with 429', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    respond(unauthorized(), mockResponse({ ok: false, status: 429 }));
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(429);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session when a successful refresh has an unreadable body', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    respond(
+      unauthorized(),
+      mockResponse({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new SyntaxError('Unexpected token');
+        },
+      }),
+    );
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(0);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('also bounds reading the refresh body: a body that never arrives is abandoned after 10 seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const stalledBody = (_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          mockResponse({
+            ok: true,
+            status: 200,
+            json: () =>
+              new Promise((_resolve, reject) => {
+                init?.signal?.addEventListener('abort', () =>
+                  reject(new DOMException('aborted', 'AbortError')),
+                );
+              }),
+          }),
+        );
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(stalledBody);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await pending;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // No retry after a timeout: the stalled request may have consumed the token
@@ -528,6 +598,36 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect((error as ApiError).status).toBe(401);
     expect(handler).not.toHaveBeenCalled();
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
+});
+
+describe('settleRefresh (TD-5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Logout waits for a refresh in flight, so a refresh committed just before
+  // the logout cannot set a fresh access cookie after it.
+  it('resolves only once the refresh in flight has settled, whatever its outcome', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))),
+    );
+    const refreshing = refreshSession();
+    let settled = false;
+    const waiting = settleRefresh().then(() => {
+      settled = true;
+    });
+
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    answer(mockResponse({ ok: false, status: 401 }));
+    await waiting;
+
+    expect(settled).toBe(true);
+    await expect(refreshing).resolves.toBeNull();
+    await expect(settleRefresh()).resolves.toBeUndefined();
   });
 });
 

@@ -806,6 +806,19 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `AuthProvider` relies on that assertion for `AuthUser`. Origin:
   `td-5-refresh-token-rotation` PR 3/3 native review, 2026-11-02.
 
+- **EN-142** (web, api): silent-refresh follow-ups from the TD-5 PR 3/3
+  pre-push review. A tab that waited on the `sf-manager.refresh` Web Lock
+  still rotates once more (with the fresh cookie), costing one extra
+  rotation and refresh-limit hit per waiting tab; retrying the original
+  request first when the lock was contended would avoid it. If the server
+  consumes a token but its answer stalls past 10 s, the next 401 in any
+  tab presents the spent cookie outside the grace window and revokes the
+  family: no retry only delays it; an idempotent replay on the API would
+  close it. On load, a 5xx or network error from the restore shows the
+  login page even with a valid refresh cookie. The Web Lock test checks the
+  lock name, not that a second caller waits. Origin:
+  `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
+
 ## Done
 
 - **EN-129** (web): the organization profile asks before any in-app

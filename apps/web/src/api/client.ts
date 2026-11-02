@@ -38,6 +38,7 @@ export class ApiError extends Error {
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_SERVER_ERROR = 500;
+const HTTP_TOO_MANY_REQUESTS = 429;
 
 // auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
 // a mid-session 401 (the API now re-reads the user on every request) is
@@ -135,8 +136,9 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 // one in flight; across tabs, a Web Lock serializes them, so the second tab
 // sends the cookie the first one just received instead of the spent one.
 const REFRESH_LOCK = 'sf-manager.refresh';
-// A stalled refresh holds the cross-tab lock for at most this long: there is
-// no retry after a timeout.
+// Per attempt, body included. There is no retry after a timeout, only after
+// an immediate network error, so the lock is held for at most about this
+// long. Keep it at or below the API's REFRESH_TOKEN_REUSE_GRACE (10 s).
 const REFRESH_TIMEOUT_MS = 10_000;
 let refreshInFlight: Promise<unknown> | null = null;
 
@@ -159,43 +161,57 @@ function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
 
 async function postRefresh(): Promise<unknown> {
   // A response lost to the network may have consumed the token server-side:
-  // retry once at once, inside the API's grace window, where that consumed
-  // token is still honoured once.
+  // retry once at once, inside the API's grace window
+  // (REFRESH_TOKEN_REUSE_GRACE, 10 s by default), where that consumed token
+  // is still honoured once.
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    let response: Response;
-    // Bounded: a stalled request would otherwise hold the cross-tab lock and
-    // leave every tab's 401s waiting. A timeout counts as unavailable. An
-    // AbortController with a timer, not AbortSignal.timeout, which older
-    // browsers (Safari < 16) lack.
+    // Bounded, body included: a stalled request would otherwise hold the
+    // cross-tab lock and leave every tab's 401s waiting. A timeout counts as
+    // unavailable. An AbortController with a timer, not AbortSignal.timeout,
+    // which older browsers (Safari < 16) lack.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
     try {
-      response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        signal: controller.signal,
-      });
-    } catch {
-      if (controller.signal.aborted) {
-        // Timed out: the request may still have consumed the token, and a
-        // retry this late would fall outside the grace window (reuse).
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          signal: controller.signal,
+        });
+      } catch {
+        if (controller.signal.aborted) {
+          // Timed out: the request may still have consumed the token, and a
+          // retry this late would fall outside the grace window (reuse).
+          throw new ApiError(0);
+        }
+        continue;
+      }
+      // Rate-limited (429) or failing (5xx) is not a refusal: the refresh
+      // cookie may still be valid, so the session must stay.
+      if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR) {
+        throw new ApiError(response.status);
+      }
+      if (!response.ok) {
+        return null;
+      }
+      try {
+        return (await response.json()) as unknown;
+      } catch {
+        // The cookies were rotated, but the answer is unreadable or timed
+        // out: unavailable, not refused.
         throw new ApiError(0);
       }
-      continue;
     } finally {
       clearTimeout(timer);
     }
-    if (response.status >= HTTP_SERVER_ERROR) {
-      throw new ApiError(response.status);
-    }
-    if (!response.ok) {
-      return null;
-    }
-    try {
-      return (await response.json()) as unknown;
-    } catch {
-      return null;
-    }
   }
   throw new ApiError(0);
+}
+
+// Resolves once the refresh in flight (if any) has settled, whatever its
+// outcome. Logout waits on it, so a refresh committed just before the logout
+// cannot set a fresh access cookie after the logout cleared it.
+export async function settleRefresh(): Promise<void> {
+  await refreshInFlight?.catch(() => undefined);
 }

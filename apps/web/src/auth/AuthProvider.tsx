@@ -5,6 +5,7 @@ import {
   advanceSessionEpoch,
   refreshSession,
   setUnauthorizedHandler,
+  settleRefresh,
 } from '../api/client';
 
 // role is returned as-is by both POST /auth/login and GET /auth/me
@@ -125,6 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     advanceSessionEpoch();
     setSessionEnded(false);
     try {
+      // TD-5: a refresh in flight could otherwise set a fresh access cookie
+      // after the logout cleared it.
+      await settleRefresh();
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',

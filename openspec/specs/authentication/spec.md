@@ -569,7 +569,7 @@ regardless of which session issued the call.)
 #### Scenario: Current-session 401 ends the session and redirects
 
 - GIVEN a signed-in user on a protected route who sent an authenticated API call under the current session
-- WHEN that call returns 401
+- WHEN that call returns 401 and the silent refresh is refused
 - THEN the local session MUST be cleared
 - AND the app MUST redirect to `/login`
 - AND the session-ended notice MUST be shown
@@ -603,16 +603,19 @@ Decision 4.)
   within 10 seconds MUST be abandoned without a retry (a late retry could
   fall outside the grace window and revoke the session) and counts as
   unavailable.
-- Only a refusal (a 4xx answer from the refresh endpoint) MUST end the
-  session. When the refresh is unavailable (still unreachable after that
-  retry, or answering 5xx), the call MUST fail with that network or server
-  error and the session MUST stay, so an API restart or a short outage does
-  not log users out.
+- Only a refusal (a 4xx answer from the refresh endpoint other than 429)
+  MUST end the session. When the refresh is unavailable (still unreachable
+  after that retry, rate-limited with 429, answering 5xx, or with an
+  unreadable answer), the call MUST fail with that error and the session
+  MUST stay, so an API restart, a short outage or a shared office IP
+  hitting the refresh limit does not log users out.
+- Logout MUST wait for a refresh in flight before calling the logout
+  endpoint.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
-- On load, when the session check fails, the web app MUST try one refresh
-  before treating the visitor as signed out.
+- On load, when the session check answers 401, the web app MUST try one
+  refresh before treating the visitor as signed out.
 
 #### Scenario: Expired access token renewed silently
 
@@ -663,7 +666,7 @@ the call.)
 #### Scenario: Mid-session 401
 
 - GIVEN a signed-in user whose session is no longer accepted by the API
-- WHEN any authenticated API call issued under the current session returns 401
+- WHEN any authenticated API call issued under the current session returns 401 and the silent refresh is refused
 - THEN the app MUST land on `/login` showing the session-ended notice
 - AND the notice MUST NOT state why the session ended
 
