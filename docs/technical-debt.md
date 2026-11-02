@@ -28,10 +28,6 @@ None.
 
 ### Low
 
-- **TD-15**: The soft-deleted manager case is covered at e2e with fakes only,
-  not through the real `PrismaUserRepository`. Evidence: `review-schedule`
-  archive-report S-3 and follow-up 4; `prisma-user.repository.integration.spec.ts`
-  has no soft-deleted manager case. Origin: `review-schedule`.
 - **TD-18**: Review-export test-quality gaps. W-4: the permission-count lock
   checks a test-local list, not the production `Permission` union, and es/ca
   date formatting is only checked non-empty. S-5: the "rejected read issues no
@@ -61,6 +57,15 @@ None.
   deployment"); deploying from CI is EN-91.
 
 ## Resolved
+
+- **TD-15**: The soft-deleted manager case was covered at e2e with fakes
+  only. Resolved by `td-15-soft-deleted-manager-integration` (PR #TBD):
+  `user-manager-capability.checker.integration.spec.ts` runs the real
+  `UserManagerCapabilityChecker` over `PrismaUserRepository` and shows a
+  MANAGER granted `VIEW_ALL_REVIEWS` losing it once soft-deleted, with the
+  row and its grant still stored. `prisma-user.repository.integration.spec.ts`
+  already showed a soft-deleted MANAGER excluded from `findById()`, which
+  both `AuthenticatedGuard` and the checker use.
 
 - **TD-5**: No refresh-token rotation (2-hour access tokens, no refresh
   token). Resolved by `td-5-refresh-token-rotation` (#318, #319 and PR
