@@ -21,9 +21,10 @@ import { InMemoryUserRepository } from '../src/modules/users/application/use-cas
 import { User } from '../src/modules/users/domain/user.entity';
 
 // TD-5 (PR 2/3): POST /auth/refresh end to end, hermetic like auth.e2e-spec.
-// This suite runs with a zero grace window (strict rotation), so reusing a
-// rotated token is detected at once. The refresh rate limit has its own
-// suite (refresh-rate-limit.e2e-spec.ts).
+// The first suite runs with a zero grace window (strict rotation), so reusing
+// a rotated token is detected at once; the second boots its own app with a
+// 10 s grace window (EN-140). The refresh rate limit has its own suite
+// (refresh-rate-limit.e2e-spec.ts).
 class InMemoryTokenDenylist implements TokenDenylist {
   private readonly revokedJtis = new Set<string>();
 

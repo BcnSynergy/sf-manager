@@ -300,7 +300,8 @@ protected) reachable from the web app, not just the public-opt-out
 endpoints above.
 
 `CORS_ORIGIN` MUST be a serialized origin (lower-case
-`scheme://host[:port]`, with no path and no trailing slash), because
+`scheme://host[:port]`, with no default port, no path and no trailing
+slash), because
 browsers send the `Origin` header in that form and it is compared exactly.
 Any other value MUST stop the API at startup with an error that names the
 value and, when one can be derived, the expected origin. (Added by EN-140.)

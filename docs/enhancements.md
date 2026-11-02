@@ -807,10 +807,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 
 - **EN-143** (api tests): `assertIsOrigin` in
   `apps/api/src/modules/auth/infrastructure/config/auth.config.ts` has two
-  untested branches: a URL whose origin is the string `null` (for example
-  `file:///x`), whose error omits the "did you mean" suggestion, and an
-  explicit default port (`https://host:443`), whose suggestion drops the
-  port. The reviewer also flagged that such values, a wildcard or a
+  correct but untested behaviors: a URL whose origin is the string `null`
+  (for example `file:///x`) gets an error without the "did you mean"
+  suggestion, and an explicit default port (`https://host:443`) is rejected
+  with a suggestion that omits the port, which is right because browsers
+  omit it from `Origin`. The reviewer also flagged that such values, a wildcard or a
   comma-separated list booted before EN-140; this was checked and is not a
   regression, because `cors` sends a string origin verbatim in
   `Access-Control-Allow-Origin` and browsers compare it exactly, so none of
