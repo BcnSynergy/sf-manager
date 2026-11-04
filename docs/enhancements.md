@@ -822,6 +822,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   the call count and the final rethrow. Origin: `en-145-count-conflict-retry`
   native review (reliability lens), 2026-11-04.
 
+- **EN-148** (api tests): two follow-ups to `withConflictRetry` in
+  `prisma-user.repository.integration.spec.ts` (EN-145). It retries at once,
+  so a still-running concurrent transaction could hit the same cycle again
+  and use up all three attempts; a short delay that grows per attempt would
+  cut that. The test comment could also say what is not retried: a
+  transaction timeout (`P2028`) or a dropped connection is not mapped to
+  `TransactionConflictError`, so it is rethrown. Origin:
+  `en-145-count-conflict-retry` pre-push review, 2026-11-04.
+
 ## Done
 
 - **EN-145** (api tests): the `countActiveByRole()` soft-delete test now
@@ -831,7 +840,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   conflict; Postgres rolls the aborted transaction back, soft-delete
   included, so a retry starts clean. Checked by throwing a conflict after
   the soft-delete on the first attempt: the test passes with the retry and
-  fails with one attempt. Done in `en-145-count-conflict-retry`, 2026-11-04.
+  fails with one attempt. Done in `en-145-count-conflict-retry` (PR #328), 2026-11-04.
 
 - **EN-144** (api tests): the `countActiveByRole() excludes soft-deleted
 users` case now runs both counts and the soft-delete inside one
