@@ -49,6 +49,18 @@ jobs:
       - id: build
         name: Build
         run: npm run build
+      # Test helpers under src/**/testing are excluded from the API build
+      # (TD-46), but tsconfig `exclude` does not stop a file that production
+      # code imports, so check the emitted output (EN-149).
+      - name: No test helpers in API build
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          leaked=$(find apps/api/dist -path '*/testing/*' -type f)
+          if [ -n "$leaked" ]; then
+            echo "::error::Test helpers were emitted into apps/api/dist (a production file imports a testing/ module):"
+            echo "$leaked"
+            exit 1
+          fi
       # Test tiers keep running after an earlier tier fails so one run reports
       # every failure, but none of them run when the build fails.
       - name: Lint
