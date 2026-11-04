@@ -820,7 +820,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   transaction can finish instead of hitting the same cycle again, and its
   comment says that a transaction timeout (`P2028`), a dropped connection or
   any other error is not mapped to `TransactionConflictError` and is
-  rethrown at once. Done in `en-147-conflict-retry-unit`, 2026-11-04.
+  rethrown at once. Done in `en-147-conflict-retry-unit` (PR #329),
+  2026-11-04.
 
 - **EN-147** (api tests): `withConflictRetry` moved out of
   `prisma-user.repository.integration.spec.ts` into
@@ -831,7 +832,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `baseDelayMs` honoured, and a non-conflict error rethrown without a
   retry. `sleep` is injectable, so the spec is instant.
   Mutating the bound, the rethrow or the delay fails it. Done in
-  `en-147-conflict-retry-unit`, 2026-11-04.
+  `en-147-conflict-retry-unit` (PR #329), 2026-11-04.
 
 - **EN-145** (api tests): the `countActiveByRole()` soft-delete test now
   wraps its SERIALIZABLE `transactional()` call in a local
