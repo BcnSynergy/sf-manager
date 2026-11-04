@@ -826,7 +826,7 @@ users` case now runs both counts and the soft-delete inside one
   from `findById`. Checked with a probe that
   inserts a MANAGER from a second connection between the reads: the old
   test failed (`Expected: 0, Received: 1`), the new one passes. Done in
-  `en-144-scoped-manager-count` (PR #TBD), 2026-11-04.
+  `en-144-scoped-manager-count` (PR #326), 2026-11-04.
 
 - **EN-143** (api tests): `auth.config.spec.ts` now pins the two remaining
   branches of `assertIsOrigin`: an explicit default port
