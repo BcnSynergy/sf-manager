@@ -813,25 +813,24 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   duplication and the extra hashes.
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
-- **EN-147** (api tests): no committed test exercises the retry branch of
-  `withConflictRetry` in `prisma-user.repository.integration.spec.ts`
-  (EN-145). Under `--runInBand` no conflict happens, so CI never runs the
-  retry, the rethrow of a non-conflict error, or the rethrow of the last
-  conflict; the proof was a one-off injected conflict. A small unit check
-  that stubs `run()` to throw `TransactionConflictError` N times would pin
-  the call count and the final rethrow. Origin: `en-145-count-conflict-retry`
-  native review (reliability lens), 2026-11-04.
-
-- **EN-148** (api tests): two follow-ups to `withConflictRetry` in
-  `prisma-user.repository.integration.spec.ts` (EN-145). It retries at once,
-  so a still-running concurrent transaction could hit the same cycle again
-  and use up all three attempts; a short delay that grows per attempt would
-  cut that. The test comment could also say what is not retried: a
-  transaction timeout (`P2028`) or a dropped connection is not mapped to
-  `TransactionConflictError`, so it is rethrown. Origin:
-  `en-145-count-conflict-retry` pre-push review, 2026-11-04.
-
 ## Done
+
+- **EN-148** (api tests): `withConflictRetry` now waits `baseDelayMs * n`
+  (25 ms by default) before retry n, so a still-running concurrent
+  transaction can finish instead of hitting the same cycle again, and its
+  comment says that a transaction timeout (`P2028`), a dropped connection or
+  any other error is not mapped to `TransactionConflictError` and is
+  rethrown at once. Done in `en-147-conflict-retry-unit`, 2026-11-04.
+
+- **EN-147** (api tests): `withConflictRetry` moved out of
+  `prisma-user.repository.integration.spec.ts` into
+  `users/infrastructure/persistence/testing/with-conflict-retry.ts`, with a
+  unit spec that pins the retry branch CI never reaches: success on the
+  first call, two conflicts then success (three calls, delays 25 and 50),
+  the last conflict rethrown with no final wait, and a non-conflict error
+  rethrown without a retry. `sleep` is injectable, so the spec is instant.
+  Mutating the bound, the rethrow or the delay fails it. Done in
+  `en-147-conflict-retry-unit`, 2026-11-04.
 
 - **EN-145** (api tests): the `countActiveByRole()` soft-delete test now
   wraps its SERIALIZABLE `transactional()` call in a local
