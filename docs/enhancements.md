@@ -820,7 +820,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `seedUser(id, email)` and `seedAndLogin(id, email)` helpers, used by the
   admin seed, the TD-27 public no-lookup test and the live user check block.
   The file keeps its 12 tests, all passing. Done in
-  `en-146-auth-e2e-seed-helper`, 2026-11-04.
+  `en-146-auth-e2e-seed-helper` (PR #333), 2026-11-04.
 
 - **EN-150** (ci): The EN-149 build check, now "No test or seed helpers in
   API build", fails with an `::error::` annotation when `apps/api/dist` is
