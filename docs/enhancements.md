@@ -827,8 +827,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `users/infrastructure/persistence/testing/with-conflict-retry.ts`, with a
   unit spec that pins the retry branch CI never reaches: success on the
   first call, two conflicts then success (three calls, delays 25 and 50),
-  the last conflict rethrown with no final wait, and a non-conflict error
-  rethrown without a retry. `sleep` is injectable, so the spec is instant.
+  the last conflict rethrown with no final wait, custom `attempts` and
+  `baseDelayMs` honoured, and a non-conflict error rethrown without a
+  retry. `sleep` is injectable, so the spec is instant.
   Mutating the bound, the rethrow or the delay fails it. Done in
   `en-147-conflict-retry-unit`, 2026-11-04.
 

@@ -52,6 +52,22 @@ describe('withConflictRetry', () => {
     expect(delays).toEqual([25, 50]);
   });
 
+  it('honours custom attempts and baseDelayMs', async () => {
+    const { delays, sleep } = recordingSleep();
+    const lastConflict = new TransactionConflictError();
+    const run = jest
+      .fn()
+      .mockRejectedValueOnce(new TransactionConflictError())
+      .mockRejectedValueOnce(lastConflict);
+
+    await expect(
+      withConflictRetry(run, { attempts: 2, baseDelayMs: 10, sleep }),
+    ).rejects.toBe(lastConflict);
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(delays).toEqual([10]);
+  });
+
   it('rethrows a non-conflict error at once, without retrying', async () => {
     const { delays, sleep } = recordingSleep();
     const timeout = new Error('Transaction already closed (P2028)');
