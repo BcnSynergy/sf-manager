@@ -813,6 +813,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   duplication and the extra hashes.
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
+- **EN-151** (ci): The "No test or seed helpers in API build" step matches
+  `*/seeding/*` anywhere in `apps/api/dist`, not only the emitted
+  `shared/seeding`. No production module is named `seeding` today, so it
+  has no false positive, and `testing/` is matched the same broad way. If a
+  production `seeding` module is ever added, anchor the pattern to
+  `apps/api/dist/shared/seeding/*`. Origin: `en-150-build-guard-gaps`
+  (PR #332) native review, 2026-11-04.
+
 ## Done
 
 - **EN-150** (ci): The EN-149 build check, now "No test or seed helpers in
@@ -822,7 +830,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `src/**/testing`. Verified by running the step's script on a missing,
   clean and leaking `dist`, and by importing a seeding file from `main.ts`:
   the build still passed and the check failed. Done in
-  `en-150-build-guard-gaps`, 2026-11-04.
+  `en-150-build-guard-gaps` (PR #332), 2026-11-04.
 
 - **EN-149** (api build): CI step "No test helpers in API build" runs after
   the build and fails, listing the files, when `apps/api/dist` contains a
@@ -830,7 +838,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   production import that pulls an excluded `src/**/testing` file back in.
   Verified by importing a testing helper from `main.ts`: the build still
   passed and the check failed. Done in `en-149-build-testing-guard` (PR #331),
-  2026-11-04.
+  2026-11-04. EN-150 renamed the step to "No test or seed helpers in API
+  build".
 
 - **EN-148** (api tests): `withConflictRetry` now waits `baseDelayMs * n`
   (25 ms by default) before retry n, so a still-running concurrent
