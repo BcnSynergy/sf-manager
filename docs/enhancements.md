@@ -815,6 +815,13 @@ users` test (EN-144) runs its counts inside one SERIALIZABLE
   a wrong count; a bounded retry on conflict would remove it. Origin: `en-144-scoped-manager-count`
   native review (reliability lens), 2026-11-04.
 
+- **EN-146** (api tests): In `apps/api/test/auth.e2e-spec.ts`, the TD-27
+  public no-lookup test seeds a `User` inline and `seedAndLogin` in `live
+user check` does the same, each hashing `ADMIN_PASSWORD` with argon2 again
+  after `beforeAll` already did. A file-level `seedUser(id, email)` helper
+  with a hoisted hash would remove the duplication and the extra hashes.
+  Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
+
 ## Done
 
 - **EN-144** (api tests): the `countActiveByRole() excludes soft-deleted
