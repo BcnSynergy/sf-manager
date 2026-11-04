@@ -813,6 +813,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   duplication and the extra hashes.
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
+- **EN-150** (ci): Two gaps in the EN-149 build check. When
+  `apps/api/dist` is missing the step still fails, but only with the raw
+  `find` error and no `::error::` annotation; a `[ -d apps/api/dist ]` guard
+  would say why. And `src/shared/seeding`, also excluded in
+  `apps/api/tsconfig.build.json`, is not checked, so a production import of
+  a seeding file would reach `dist` unnoticed. Origin:
+  `en-149-build-testing-guard` (PR #331) pre-push review, 2026-11-04.
+
 ## Done
 
 - **EN-149** (api build): CI step "No test helpers in API build" runs after
@@ -820,7 +828,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `testing/` path. It checks the emitted output, so it also catches a
   production import that pulls an excluded `src/**/testing` file back in.
   Verified by importing a testing helper from `main.ts`: the build still
-  passed and the check failed. Done in `en-149-build-testing-guard`,
+  passed and the check failed. Done in `en-149-build-testing-guard` (PR #331),
   2026-11-04.
 
 - **EN-148** (api tests): `withConflictRetry` now waits `baseDelayMs * n`
