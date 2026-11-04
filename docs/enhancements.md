@@ -805,16 +805,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
-- **EN-145** (api tests): the `countActiveByRole() excludes soft-deleted
-users` test (EN-144) runs its counts inside one SERIALIZABLE
-  `transactional()` call and does not retry. Under `--runInBand` nothing
-  conflicts with it. If parallel workers come back, a plain concurrent
-  insert does not abort it, but a concurrent serializable transaction that
-  forms a read/write cycle with it can, with `TransactionConflictError`, and
-  the test would then fail intermittently. That failure is loud rather than
-  a wrong count; a bounded retry on conflict would remove it. Origin: `en-144-scoped-manager-count`
-  native review (reliability lens), 2026-11-04.
-
 - **EN-146** (api tests): In `apps/api/test/auth.e2e-spec.ts`, the TD-27
   public no-lookup test seeds a `User` inline, and the `seedAndLogin` helper
   in the live user check block does the same, each hashing `ADMIN_PASSWORD`
@@ -824,6 +814,15 @@ users` test (EN-144) runs its counts inside one SERIALIZABLE
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
 ## Done
+
+- **EN-145** (api tests): the `countActiveByRole()` soft-delete test now
+  wraps its SERIALIZABLE `transactional()` call in a local
+  `withConflictRetry` helper (three attempts). It retries only on
+  `TransactionConflictError` and rethrows anything else and the last
+  conflict; Postgres rolls the aborted transaction back, soft-delete
+  included, so a retry starts clean. Checked by throwing a conflict after
+  the soft-delete on the first attempt: the test passes with the retry and
+  fails with one attempt. Done in `en-145-count-conflict-retry`, 2026-11-04.
 
 - **EN-144** (api tests): the `countActiveByRole() excludes soft-deleted
 users` case now runs both counts and the soft-delete inside one
