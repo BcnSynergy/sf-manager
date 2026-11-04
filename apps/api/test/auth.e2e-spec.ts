@@ -54,6 +54,36 @@ describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
   let userRepository: InMemoryUserRepository;
   let tokenDenylist: InMemoryTokenDenylist;
+  // Hashed once in beforeAll: every seeded user shares ADMIN_PASSWORD.
+  let passwordHash: string;
+
+  function seedUser(id: string, email: string): void {
+    const now = new Date();
+    userRepository.seed(
+      new User({
+        id,
+        email,
+        passwordHash,
+        role: 'SYSTEM_ADMIN',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }),
+    );
+  }
+
+  async function seedAndLogin(
+    id: string,
+    email: string,
+  ): Promise<ReturnType<typeof request.agent>> {
+    seedUser(id, email);
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/auth/login')
+      .send({ email, password: ADMIN_PASSWORD })
+      .expect(200);
+    return agent;
+  }
 
   beforeAll(async () => {
     // getAuthConfig() (auth.config.ts) runs at module-compile time once
@@ -65,24 +95,13 @@ describe('Auth (e2e)', () => {
     userRepository = new InMemoryUserRepository();
     tokenDenylist = new InMemoryTokenDenylist();
 
-    const passwordHash = await argon2.hash(ADMIN_PASSWORD, {
+    passwordHash = await argon2.hash(ADMIN_PASSWORD, {
       type: argon2.argon2id,
       memoryCost: 19456,
       timeCost: 2,
       parallelism: 1,
     });
-    const now = new Date();
-    userRepository.seed(
-      new User({
-        id: 'seeded-admin-id',
-        email: ADMIN_EMAIL,
-        passwordHash,
-        role: 'SYSTEM_ADMIN',
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      }),
-    );
+    seedUser('seeded-admin-id', ADMIN_EMAIL);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -134,29 +153,10 @@ describe('Auth (e2e)', () => {
     // @Public() route, so a session cookie, even a deleted user's, costs no
     // user lookup there.
     it('does not look up the user for a session cookie (public)', async () => {
-      const passwordHash = await argon2.hash(ADMIN_PASSWORD, {
-        type: argon2.argon2id,
-        memoryCost: 19456,
-        timeCost: 2,
-        parallelism: 1,
-      });
-      const now = new Date();
-      userRepository.seed(
-        new User({
-          id: 'public-no-lookup-id',
-          email: 'public@example.com',
-          passwordHash,
-          role: 'SYSTEM_ADMIN',
-          createdAt: now,
-          updatedAt: now,
-          deletedAt: null,
-        }),
+      const agent = await seedAndLogin(
+        'public-no-lookup-id',
+        'public@example.com',
       );
-      const agent = request.agent(app.getHttpServer());
-      await agent
-        .post('/auth/login')
-        .send({ email: 'public@example.com', password: ADMIN_PASSWORD })
-        .expect(200);
       await userRepository.softDeleteById('public-no-lookup-id');
       const findById = jest.spyOn(userRepository, 'findById');
 
@@ -285,36 +285,6 @@ describe('Auth (e2e)', () => {
   });
 
   describe('live user check (GET /auth/me)', () => {
-    async function seedAndLogin(
-      id: string,
-      email: string,
-    ): Promise<ReturnType<typeof request.agent>> {
-      const passwordHash = await argon2.hash(ADMIN_PASSWORD, {
-        type: argon2.argon2id,
-        memoryCost: 19456,
-        timeCost: 2,
-        parallelism: 1,
-      });
-      const now = new Date();
-      userRepository.seed(
-        new User({
-          id,
-          email,
-          passwordHash,
-          role: 'SYSTEM_ADMIN',
-          createdAt: now,
-          updatedAt: now,
-          deletedAt: null,
-        }),
-      );
-      const agent = request.agent(app.getHttpServer());
-      await agent
-        .post('/auth/login')
-        .send({ email, password: ADMIN_PASSWORD })
-        .expect(200);
-      return agent;
-    }
-
     it('rejects a still-valid session once the user is soft-deleted', async () => {
       const agent = await seedAndLogin(
         'live-deleted-id',

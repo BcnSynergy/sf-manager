@@ -805,14 +805,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
-- **EN-146** (api tests): In `apps/api/test/auth.e2e-spec.ts`, the TD-27
-  public no-lookup test seeds a `User` inline, and the `seedAndLogin` helper
-  in the live user check block does the same, each hashing `ADMIN_PASSWORD`
-  with argon2 again after `beforeAll` already did. A file-level
-  `seedUser(id, email)` helper with a hoisted hash would remove the
-  duplication and the extra hashes.
-  Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
-
 - **EN-151** (ci): The "No test or seed helpers in API build" step matches
   `*/seeding/*` anywhere in `apps/api/dist`, not only the emitted
   `shared/seeding`. No production module is named `seeding` today, so it
@@ -822,6 +814,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (PR #332) native review, 2026-11-04.
 
 ## Done
+
+- **EN-146** (api tests): `apps/api/test/auth.e2e-spec.ts` now hashes
+  `ADMIN_PASSWORD` once in `beforeAll` and seeds users through file-level
+  `seedUser(id, email)` and `seedAndLogin(id, email)` helpers, used by the
+  admin seed, the TD-27 public no-lookup test and the live user check block.
+  The file keeps its 12 tests, all passing. Done in
+  `en-146-auth-e2e-seed-helper`, 2026-11-04.
 
 - **EN-150** (ci): The EN-149 build check, now "No test or seed helpers in
   API build", fails with an `::error::` annotation when `apps/api/dist` is
