@@ -813,6 +813,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   duplication and the extra hashes.
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
+- **EN-147** (api tests): no committed test exercises the retry branch of
+  `withConflictRetry` in `prisma-user.repository.integration.spec.ts`
+  (EN-145). Under `--runInBand` no conflict happens, so CI never runs the
+  retry, the rethrow of a non-conflict error, or the rethrow of the last
+  conflict; the proof was a one-off injected conflict. A small unit check
+  that stubs `run()` to throw `TransactionConflictError` N times would pin
+  the call count and the final rethrow. Origin: `en-145-count-conflict-retry`
+  native review (reliability lens), 2026-11-04.
+
 ## Done
 
 - **EN-145** (api tests): the `countActiveByRole()` soft-delete test now
