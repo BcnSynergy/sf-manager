@@ -346,8 +346,9 @@ describe('PrismaUserRepository (integration)', () => {
   // the soft-delete therefore run inside one transactional() call
   // (SERIALIZABLE): every read sees the same snapshot plus this
   // transaction's own write, so a MANAGER committed by a concurrent worker
-  // cannot shift the delta. A conflicting concurrent write aborts the
-  // transaction (TransactionConflictError) instead of yielding a wrong count.
+  // cannot shift the delta. A plain concurrent insert does not abort it; only
+  // a concurrent serializable transaction forming a read/write cycle with it
+  // can, raising TransactionConflictError instead of a wrong count (EN-145).
   it('countActiveByRole() excludes soft-deleted users', async () => {
     const activeId = idGenerator.generate();
     const deletedId = idGenerator.generate();
