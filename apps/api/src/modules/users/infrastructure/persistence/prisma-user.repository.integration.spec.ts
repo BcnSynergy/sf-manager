@@ -3,11 +3,31 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { EmailAlreadyInUseError } from '../../domain/errors/email-already-in-use.error';
+import { TransactionConflictError } from '../../domain/errors/transaction-conflict.error';
 import { assertSystemAdminRemains } from '../../domain/last-admin.policy';
 import { User } from '../../domain/user.entity';
 import { PrismaUserRepository } from './prisma-user.repository';
 
 const idGenerator = new UuidV7IdGenerator();
+
+// EN-145: Postgres rolls a SERIALIZABLE transaction back entirely when it
+// aborts it, so re-running the whole callback is safe. Only
+// TransactionConflictError is retried; any other error, and the last
+// conflict, are rethrown.
+async function withConflictRetry<T>(
+  run: () => Promise<T>,
+  attempts = 3,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      if (!(error instanceof TransactionConflictError) || attempt >= attempts) {
+        throw error;
+      }
+    }
+  }
+}
 
 // Integration test against a real Postgres 18 instance. Since
 // hermetic-integration-tests, `npm run test:integration` runs this against a
@@ -348,7 +368,8 @@ describe('PrismaUserRepository (integration)', () => {
   // transaction's own write, so a MANAGER committed by a concurrent worker
   // cannot shift the delta. A plain concurrent insert does not abort it; only
   // a concurrent serializable transaction forming a read/write cycle with it
-  // can, raising TransactionConflictError instead of a wrong count (EN-145).
+  // can, raising TransactionConflictError instead of a wrong count. The
+  // whole transaction is then retried (withConflictRetry, EN-145).
   it('countActiveByRole() excludes soft-deleted users', async () => {
     const activeId = idGenerator.generate();
     const deletedId = idGenerator.generate();
@@ -376,12 +397,14 @@ describe('PrismaUserRepository (integration)', () => {
       }),
     );
 
-    const { before, after } = await repository.transactional(async (repo) => {
-      const countBefore = await repo.countActiveByRole('MANAGER');
-      await repo.softDeleteById(activeId);
-      const countAfter = await repo.countActiveByRole('MANAGER');
-      return { before: countBefore, after: countAfter };
-    });
+    const { before, after } = await withConflictRetry(() =>
+      repository.transactional(async (repo) => {
+        const countBefore = await repo.countActiveByRole('MANAGER');
+        await repo.softDeleteById(activeId);
+        const countAfter = await repo.countActiveByRole('MANAGER');
+        return { before: countBefore, after: countAfter };
+      }),
+    );
 
     expect(after).toBe(before - 1);
     // The counts above are read inside the transaction; this checks the
