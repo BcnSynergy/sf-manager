@@ -3,31 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import { UuidV7IdGenerator } from '../../../../shared/infrastructure/id/uuid-v7.id-generator';
 import { EmailAlreadyInUseError } from '../../domain/errors/email-already-in-use.error';
-import { TransactionConflictError } from '../../domain/errors/transaction-conflict.error';
 import { assertSystemAdminRemains } from '../../domain/last-admin.policy';
 import { User } from '../../domain/user.entity';
 import { PrismaUserRepository } from './prisma-user.repository';
+import { withConflictRetry } from './testing/with-conflict-retry';
 
 const idGenerator = new UuidV7IdGenerator();
-
-// EN-145: Postgres rolls a SERIALIZABLE transaction back entirely when it
-// aborts it, so re-running the whole callback is safe. Only
-// TransactionConflictError is retried; any other error, and the last
-// conflict, are rethrown.
-async function withConflictRetry<T>(
-  run: () => Promise<T>,
-  attempts = 3,
-): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await run();
-    } catch (error) {
-      if (!(error instanceof TransactionConflictError) || attempt >= attempts) {
-        throw error;
-      }
-    }
-  }
-}
 
 // Integration test against a real Postgres 18 instance. Since
 // hermetic-integration-tests, `npm run test:integration` runs this against a

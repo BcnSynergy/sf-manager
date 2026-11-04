@@ -52,6 +52,14 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
+- **TD-46**: Per-module test helpers ship in the production build.
+  `apps/api/tsconfig.build.json` excludes only `**/*spec.ts`,
+  `src/shared/testing` and `src/shared/seeding`, so the 27 files under
+  `src/modules/**/testing/` (in-memory fakes, `withConflictRetry`) compile
+  into `dist`. None is imported by production code or registered in DI, so
+  it is dead weight, not a behavior risk. Excluding `src/**/testing` would
+  fix it. Evidence: `tsc -p tsconfig.build.json --listFilesOnly`. Origin:
+  `en-147-conflict-retry-unit` pre-push review, 2026-11-04.
 
 ## Resolved
 
