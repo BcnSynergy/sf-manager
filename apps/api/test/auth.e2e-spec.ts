@@ -129,6 +129,47 @@ describe('Auth (e2e)', () => {
         .expect(200)
         .expect({ status: 'ok', db: 'ok' });
     });
+
+    // TD-27: AuthenticatedGuard returns before reading the cookie on a
+    // @Public() route, so a session cookie, even a deleted user's, costs no
+    // user lookup there.
+    it('does not look up the user for a session cookie (public)', async () => {
+      const passwordHash = await argon2.hash(ADMIN_PASSWORD, {
+        type: argon2.argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        parallelism: 1,
+      });
+      const now = new Date();
+      userRepository.seed(
+        new User({
+          id: 'public-no-lookup-id',
+          email: 'public@example.com',
+          passwordHash,
+          role: 'SYSTEM_ADMIN',
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        }),
+      );
+      const agent = request.agent(app.getHttpServer());
+      await agent
+        .post('/auth/login')
+        .send({ email: 'public@example.com', password: ADMIN_PASSWORD })
+        .expect(200);
+      await userRepository.softDeleteById('public-no-lookup-id');
+      const findById = jest.spyOn(userRepository, 'findById');
+
+      try {
+        await agent
+          .get('/health')
+          .expect(200)
+          .expect({ status: 'ok', db: 'ok' });
+        expect(findById).not.toHaveBeenCalled();
+      } finally {
+        findById.mockRestore();
+      }
+    });
   });
 
   describe('POST /auth/login', () => {

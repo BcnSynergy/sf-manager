@@ -44,9 +44,6 @@ None.
   `review-history-company-scope` (W-2), `review-history-admin-scope` (W-5),
   `organization-profile`, `hermetic-integration-tests` (W1), and
   `review-schedule` (W-1). Origin: those reviews.
-- **TD-27**: The public-endpoint "no lookup" behavior is proven at unit level
-  only. Evidence: `auth-live-user-check` archive-report S-1. Origin:
-  `auth-live-user-check`.
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
   upload, matrix builds, Dependabot, Playwright, extra caching, parallel
   jobs, and SHA-pinned actions. The API typecheck step landed in
@@ -57,6 +54,13 @@ None.
   deployment"); deploying from CI is EN-91.
 
 ## Resolved
+
+- **TD-27**: The public-endpoint "no lookup" behavior was proven at unit
+  level only. Resolved by `td-27-public-no-lookup`: `auth.e2e-spec.ts` "does
+  not look up the user for a session cookie (public)" logs in, soft-deletes
+  the user, then calls `GET /health` with that cookie and gets 200 with no
+  `findById` call. `/health` is the probe because `POST /auth/refresh` reads
+  the user by design.
 
 - **TD-15**: The soft-deleted manager case was covered at e2e with fakes
   only. Resolved by `td-15-soft-deleted-manager-integration` (PR #323):
