@@ -10,7 +10,7 @@
     "**/*spec.ts",
     "prisma.config.ts",
     "prisma",
-    "src/shared/testing",
+    "src/**/testing",
     "src/shared/seeding"
   ]
 }

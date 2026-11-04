@@ -813,6 +813,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   duplication and the extra hashes.
   Origin: `td-27-public-no-lookup` pre-push review, 2026-11-04.
 
+- **EN-149** (api build): Nothing checks that `src/**/testing` helpers
+  stay out of the production build. `exclude` in
+  `apps/api/tsconfig.build.json` does not stop a file that production code
+  imports, so a later import from a `testing/` folder would put helpers
+  back into `dist` without failing the build. A CI step that fails when
+  `tsc -p tsconfig.build.json --listFilesOnly` lists a `/testing/` path, or
+  a lint rule against such imports outside specs, would catch it. Origin:
+  `td-46-exclude-testing-from-build` (PR #330) native review, 2026-11-04.
+
 ## Done
 
 - **EN-148** (api tests): `withConflictRetry` now waits `baseDelayMs * n`

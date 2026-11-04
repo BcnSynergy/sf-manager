@@ -52,16 +52,17 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-46**: Per-module test helpers ship in the production build.
-  `apps/api/tsconfig.build.json` excludes only `**/*spec.ts`,
-  `src/shared/testing` and `src/shared/seeding`, so the 27 files under
-  `src/modules/**/testing/` (in-memory fakes, `withConflictRetry`) compile
-  into `dist`. None is imported by production code or registered in DI, so
-  it is dead weight, not a behavior risk. Excluding `src/**/testing` would
-  fix it. Evidence: `tsc -p tsconfig.build.json --listFilesOnly`. Origin:
-  `en-147-conflict-retry-unit` pre-push review, 2026-11-04.
 
 ## Resolved
+
+- **TD-46**: Per-module test helpers shipped in the production build.
+  Resolved by `td-46-exclude-testing-from-build` (PR #330):
+  `apps/api/tsconfig.build.json` now excludes `src/**/testing` instead of
+  only `src/shared/testing`. `tsc -p tsconfig.build.json --listFilesOnly`
+  listed the 20 non-spec files under `src/modules/**/testing/` before and
+  lists none after, and `npm run build` emits none into `dist`. An empty
+  listing also proves no production code imports them: an imported file is
+  compiled even when excluded. Keeping it that way is EN-149.
 
 - **TD-27**: The public-endpoint "no lookup" behavior was proven at unit level
   only. Resolved by `td-27-public-no-lookup` (PR #327): `auth.e2e-spec.ts`
