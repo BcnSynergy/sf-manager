@@ -49,15 +49,20 @@ jobs:
       - id: build
         name: Build
         run: npm run build
-      # Test helpers under src/**/testing are excluded from the API build
-      # (TD-46), but tsconfig `exclude` does not stop a file that production
-      # code imports, so check the emitted output (EN-149).
-      - name: No test helpers in API build
+      # Test helpers under src/**/testing and the dev seed under
+      # src/shared/seeding are excluded from the API build (TD-46), but
+      # tsconfig `exclude` does not stop a file that production code imports,
+      # so check the emitted output (EN-149, EN-150).
+      - name: No test or seed helpers in API build
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
-          leaked=$(find apps/api/dist -path '*/testing/*' -type f)
+          if [ ! -d apps/api/dist ]; then
+            echo "::error::apps/api/dist is missing, so the build emitted no API output to check."
+            exit 1
+          fi
+          leaked=$(find apps/api/dist -type f \( -path '*/testing/*' -o -path '*/seeding/*' \))
           if [ -n "$leaked" ]; then
-            echo "::error::Test helpers were emitted into apps/api/dist (a production file imports a testing/ module):"
+            echo "::error::Test or seed helpers were emitted into apps/api/dist (a production file imports a testing/ or seeding/ module):"
             echo "$leaked"
             exit 1
           fi
