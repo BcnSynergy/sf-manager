@@ -259,7 +259,9 @@ expect_out "backup: deleted sfmanager-20200101T000000Z.files.tar.gz" "retention"
 expect_out "backup: deleted sfmanager-20210101T000000Z.dump" "retention"
 left=$(backups_list)
 # Match whole name prefixes: a bare 2020 also matches the new backup's own
-# stamp when it runs at a time such as 20:20 (T2020...).
+# stamp when it runs at a time such as 20:20 (T2020...). Keep it unanchored:
+# it is the only check that the dot-prefixed stale partial
+# (.sfmanager-2020...partial) was deleted, and ^sfmanager would skip it.
 printf '%s\n' "$left" | grep -q -e sfmanager-2020 -e sfmanager-2021 &&
   fail "retention left $left"
 printf '%s\n' "$left" | grep -qx other.txt || fail "retention deleted other.txt"

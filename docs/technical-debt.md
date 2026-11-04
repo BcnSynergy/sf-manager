@@ -61,7 +61,7 @@ None.
   backup's own stamp when CI ran at a time such as 20:20:33 UTC
   (`sfmanager-20261104T202033Z.dump`), so it reported "retention left" for
   a retention that had worked. Seen on PR #333's first CI run. Resolved by
-  `td-47-retention-test-clock`: the check matches `sfmanager-2020` and
+  `td-47-retention-test-clock` (PR #334): the check matches `sfmanager-2020` and
   `sfmanager-2021`, which still catches a leftover old dump or partial file.
 
 - **TD-46**: Per-module test helpers shipped in the production build.
