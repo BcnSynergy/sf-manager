@@ -258,7 +258,10 @@ expect_out "backup: deleted sfmanager-20200101T000000Z.dump" "retention"
 expect_out "backup: deleted sfmanager-20200101T000000Z.files.tar.gz" "retention"
 expect_out "backup: deleted sfmanager-20210101T000000Z.dump" "retention"
 left=$(backups_list)
-printf '%s\n' "$left" | grep -q -e 2020 -e 2021 && fail "retention left $left"
+# Match whole name prefixes: a bare 2020 also matches the new backup's own
+# stamp when it runs at a time such as 20:20 (T2020...).
+printf '%s\n' "$left" | grep -q -e sfmanager-2020 -e sfmanager-2021 &&
+  fail "retention left $left"
 printf '%s\n' "$left" | grep -qx other.txt || fail "retention deleted other.txt"
 printf '%s\n' "$left" | grep -qx sfmanager-20220101T000000Z.dump ||
   fail "retention deleted a backup younger than BACKUP_RETENTION_DAYS"
