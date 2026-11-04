@@ -820,7 +820,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   back into `dist` without failing the build. A CI step that fails when
   `tsc -p tsconfig.build.json --listFilesOnly` lists a `/testing/` path, or
   a lint rule against such imports outside specs, would catch it. Origin:
-  `td-46-exclude-testing-from-build` native review, 2026-11-04.
+  `td-46-exclude-testing-from-build` (PR #330) native review, 2026-11-04.
 
 ## Done
 
