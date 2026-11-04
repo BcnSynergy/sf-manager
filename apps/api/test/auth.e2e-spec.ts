@@ -166,6 +166,11 @@ describe('Auth (e2e)', () => {
           .expect(200)
           .expect({ status: 'ok', db: 'ok' });
         expect(findById).not.toHaveBeenCalled();
+
+        // Positive control: the same agent does send the cookie, and a
+        // guarded route does look the user up and rejects the deleted user.
+        await agent.get('/auth/me').expect(401);
+        expect(findById).toHaveBeenCalledWith('public-no-lookup-id');
       } finally {
         findById.mockRestore();
       }

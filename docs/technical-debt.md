@@ -59,7 +59,8 @@ None.
   level only. Resolved by `td-27-public-no-lookup`: `auth.e2e-spec.ts` "does
   not look up the user for a session cookie (public)" logs in, soft-deletes
   the user, then calls `GET /health` with that cookie and gets 200 with no
-  `findById` call. `/health` is the probe because `POST /auth/refresh` reads
+  `findById` call; the same agent on `GET /auth/me` then gets 401 after a
+  `findById` call, proving the cookie was sent. `/health` is the probe because `POST /auth/refresh` reads
   the user by design.
 
 - **TD-15**: The soft-deleted manager case was covered at e2e with fakes
