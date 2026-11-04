@@ -808,10 +808,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-145** (api tests): the `countActiveByRole() excludes soft-deleted
 users` test (EN-144) runs its counts inside one SERIALIZABLE
   `transactional()` call and does not retry. Under `--runInBand` nothing
-  conflicts with it, but if parallel workers come back, a conflicting write
-  aborts it with `TransactionConflictError` and the test fails
-  intermittently. That failure is loud rather than a wrong count; a bounded
-  retry on conflict would remove it. Origin: `en-144-scoped-manager-count`
+  conflicts with it. If parallel workers come back, a plain concurrent
+  insert does not abort it, but a concurrent serializable transaction that
+  forms a read/write cycle with it can, with `TransactionConflictError`, and
+  the test would then fail intermittently. That failure is loud rather than
+  a wrong count; a bounded retry on conflict would remove it. Origin: `en-144-scoped-manager-count`
   native review (reliability lens), 2026-11-04.
 
 ## Done
