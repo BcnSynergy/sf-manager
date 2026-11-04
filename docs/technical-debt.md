@@ -58,9 +58,13 @@ None.
 - **TD-46**: Per-module test helpers shipped in the production build.
   Resolved by `td-46-exclude-testing-from-build`:
   `apps/api/tsconfig.build.json` now excludes `src/**/testing` instead of
-  only `src/shared/testing`, so `tsc -p tsconfig.build.json --listFilesOnly`
-  lists no `testing/` file (20 before) and `npm run build` emits none into
-  `dist`. The build still type-checks, so no production code imports them.
+  only `src/shared/testing`. `tsc -p tsconfig.build.json --listFilesOnly`
+  listed the 20 non-spec files under `src/modules/**/testing/` before (the
+  27 first reported counted some specs, which `**/*spec.ts` already
+  excluded) and lists none after, and `npm run build` emits none into
+  `dist`. An empty listing also proves no production code imports them: an
+  imported file is compiled even when excluded. Keeping it that way is
+  EN-149.
 
 - **TD-27**: The public-endpoint "no lookup" behavior was proven at unit level
   only. Resolved by `td-27-public-no-lookup` (PR #327): `auth.e2e-spec.ts`
