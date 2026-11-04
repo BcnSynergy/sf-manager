@@ -383,6 +383,9 @@ describe('PrismaUserRepository (integration)', () => {
     });
 
     expect(after).toBe(before - 1);
+    // The counts above are read inside the transaction; this checks the
+    // committed soft-delete through the root client without a global count.
+    expect(await repository.findById(activeId)).toBeNull();
   });
 
   // maintenance-company design.md Decision 4: mirrors the countActiveByRole

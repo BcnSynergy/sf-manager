@@ -805,13 +805,24 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
+- **EN-145** (api tests): the `countActiveByRole() excludes soft-deleted
+users` test (EN-144) runs its counts inside one SERIALIZABLE
+  `transactional()` call and does not retry. Under `--runInBand` nothing
+  conflicts with it, but if parallel workers come back, a conflicting write
+  aborts it with `TransactionConflictError` and the test fails
+  intermittently. That failure is loud rather than a wrong count; a bounded
+  retry on conflict would remove it. Origin: `en-144-scoped-manager-count`
+  native review (reliability lens), 2026-11-04.
+
 ## Done
 
 - **EN-144** (api tests): the `countActiveByRole() excludes soft-deleted
 users` case now runs both counts and the soft-delete inside one
   `repository.transactional()` call (SERIALIZABLE), so both reads see the
   same snapshot and a MANAGER committed by another worker cannot shift the
-  delta; it no longer depends on `--runInBand`. Checked with a probe that
+  delta; it no longer depends on `--runInBand`. After the transaction it
+  also checks through the root client that the soft-deleted row is gone
+  from `findById`. Checked with a probe that
   inserts a MANAGER from a second connection between the reads: the old
   test failed (`Expected: 0, Received: 1`), the new one passes. Done in
   `en-144-scoped-manager-count` (PR #TBD), 2026-11-04.
