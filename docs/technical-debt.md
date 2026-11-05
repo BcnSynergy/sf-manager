@@ -54,7 +54,7 @@ None.
   enforces, and en/es/ca dates are pinned to exact strings. S-5 (PR #336):
   the "rejected read issues no lookup" unit test covered only the
   nonexistent case; it now also covers a draft session and an out-of-scope
-  one, for a technician and for an unassigned representative. S-6 (PR #TBD):
+  one, for a technician and for an unassigned representative. S-6 (PR #337):
   the parity e2e compared only statuses; a 404 from the document route must
   now carry the same body as the history detail's.
 

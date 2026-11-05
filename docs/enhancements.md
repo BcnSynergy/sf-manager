@@ -818,7 +818,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   chaining two other tests (the document route's out-of-scope/nonexistent/
   draft equality, and the parity row for an out-of-scope session). A direct
   row needs a draft created and discarded inside the case. Origin:
-  `td-18-test-gaps` (PR #TBD) fresh review, 2026-11-05.
+  `td-18-test-gaps` (PR #337) fresh review, 2026-11-05.
 
 ## Done
 
