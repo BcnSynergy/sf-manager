@@ -674,7 +674,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `build(deps)` prefix (GitHub's reference says a group's identifier sets
   their branch and title). How Dependabot PRs are reviewed (CLAUDE.md asked
   for a fresh review before every merge, and their titles do not follow
-  `PR N/M`) was decided by `dependabot-review-rule` (PR #TBD): see the
+  `PR N/M`) was decided by `dependabot-review-rule` (PR #341): see the
   "Dependabot exception" in CLAUDE.md. Origin: `en-95-pin-base-images`
   pre-push review (#290), 2026-10-26.
 - **EN-122** (API): `logoFileMissingError()` lives in
