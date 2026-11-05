@@ -672,10 +672,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   it lists both `docker-compose.yml` and `docker-compose.prod.yml`, opens
   one postgres PR for both, and whether grouped PRs keep the
   `build(deps)` prefix (GitHub's reference says a group's identifier sets
-  their branch and title), and
-  decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
-  before every merge, and their titles do not follow `PR N/M`). Origin:
-  `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
+  their branch and title). How Dependabot PRs are reviewed (CLAUDE.md asked
+  for a fresh review before every merge, and their titles do not follow
+  `PR N/M`) was decided by `dependabot-review-rule` (PR #TBD): see the
+  "Dependabot exception" in CLAUDE.md. Origin: `en-95-pin-base-images`
+  pre-push review (#290), 2026-10-26.
 - **EN-122** (API): `logoFileMissingError()` lives in
   `logo-file.interceptor.ts` and the controller imports it from there, so
   an error factory sits in the interceptor's file. Fine for two callers; a
