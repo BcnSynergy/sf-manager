@@ -50,7 +50,9 @@ describe('fixed time zone regardless of the runtime time zone', () => {
 
 describe('locale support', () => {
   // TD-18 W-4: pin the exact localized output, not just a non-empty string,
-  // so a wrong locale, month name or time zone in es/ca is caught.
+  // so a wrong locale, month name or time zone in es/ca is caught. The
+  // strings come from Node's bundled ICU/CLDR data; a Node major that ships
+  // new CLDR wording may need them updated.
   const date = new Date('2026-01-15T10:30:00Z');
 
   it.each([

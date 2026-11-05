@@ -348,8 +348,8 @@ describe('RolePermissionChecker', () => {
 
     // TD-18 W-4: a Record keyed by the production Permission union. The
     // typecheck (`npm run typecheck`, run in CI) fails when the union gains
-    // or loses a member until this object matches it, so the count below
-    // locks the real union, not just this file's own lists.
+    // or loses a member until this object matches it. The next test then
+    // ties this file's own lists, and so the count below, to the real union.
     const PERMISSION_UNION: Record<Permission, true> = {
       'user:create': true,
       'user:read': true,
