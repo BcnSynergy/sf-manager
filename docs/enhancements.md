@@ -668,7 +668,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`.github/workflows/ci.yml`, `image: postgres:18-alpine`) is still a
   floating tag, and no Dependabot ecosystem updates workflow service images,
   so integration tests can run on a different Postgres build than dev and
-  production. Two follow-ups as well: confirm on Dependabot's first run that
+  production. One follow-up as well: confirm on Dependabot's first run that
   it lists both `docker-compose.yml` and `docker-compose.prod.yml`, opens
   one postgres PR for both, and whether grouped PRs keep the
   `build(deps)` prefix (GitHub's reference says a group's identifier sets
