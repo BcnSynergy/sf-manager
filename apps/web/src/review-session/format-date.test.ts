@@ -49,11 +49,19 @@ describe('fixed time zone regardless of the runtime time zone', () => {
 });
 
 describe('locale support', () => {
-  it('formats in en, es and ca without throwing, each producing a non-empty string', () => {
-    const date = new Date('2026-01-15T10:30:00Z');
-    for (const locale of ['en', 'es', 'ca']) {
-      expect(formatDocumentDate(date, locale).length).toBeGreaterThan(0);
-      expect(formatDocumentDateTime(date, locale).length).toBeGreaterThan(0);
-    }
-  });
+  // TD-18 W-4: pin the exact localized output, not just a non-empty string,
+  // so a wrong locale, month name or time zone in es/ca is caught.
+  const date = new Date('2026-01-15T10:30:00Z');
+
+  it.each([
+    ['en', 'January 15, 2026', 'January 15, 2026 11:30'],
+    ['es', '15 de enero de 2026', '15 de enero de 2026 11:30'],
+    ['ca', '15 de gener del 2026', '15 de gener del 2026 11:30'],
+  ])(
+    'formats in %s as the localized long date in Europe/Madrid',
+    (locale, expectedDate, expectedDateTime) => {
+      expect(formatDocumentDate(date, locale)).toBe(expectedDate);
+      expect(formatDocumentDateTime(date, locale)).toBe(expectedDateTime);
+    },
+  );
 });

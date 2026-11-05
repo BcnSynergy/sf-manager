@@ -346,6 +346,53 @@ describe('RolePermissionChecker', () => {
     // reviewSchedule:read (authorization delta, "unchanged" clauses restated).
     const FULL_PERMISSION_SET: Permission[] = EVERY_PERMISSION;
 
+    // TD-18 W-4: a Record keyed by the production Permission union. The
+    // typecheck (`npm run typecheck`, run in CI) fails when the union gains
+    // or loses a member until this object matches it, so the count below
+    // locks the real union, not just this file's own lists.
+    const PERMISSION_UNION: Record<Permission, true> = {
+      'user:create': true,
+      'user:read': true,
+      'user:update': true,
+      'user:delete': true,
+      'community:create': true,
+      'community:read': true,
+      'community:update': true,
+      'community:delete': true,
+      'community:assign': true,
+      'maintenanceCompany:create': true,
+      'maintenanceCompany:read': true,
+      'maintenanceCompany:update': true,
+      'maintenanceCompany:delete': true,
+      'inspectableElement:create': true,
+      'inspectableElement:read': true,
+      'inspectableElement:update': true,
+      'inspectableElement:delete': true,
+      'checklistQuestion:create': true,
+      'checklistQuestion:read': true,
+      'checklistQuestion:update': true,
+      'checklistQuestion:delete': true,
+      'reviewTemplate:create': true,
+      'reviewTemplate:read': true,
+      'reviewTemplate:update': true,
+      'reviewTemplate:delete': true,
+      'reviewTemplate:activate': true,
+      'reviewSession:create': true,
+      'reviewSession:read': true,
+      'reviewSession:perform': true,
+      'reviewSession:complete': true,
+      'reviewSession:discard': true,
+      'reviewSchedule:read': true,
+      'organizationProfile:read': true,
+      'organizationProfile:update': true,
+    };
+
+    it('the test-local permission lists cover exactly the production Permission union', () => {
+      expect([...FULL_PERMISSION_SET].sort()).toEqual(
+        Object.keys(PERMISSION_UNION).sort(),
+      );
+    });
+
     it('the Permission union has exactly 34 members total (33 plus reviewSchedule:read), none of them organizationProfile:* beyond the two already shipped', () => {
       expect(FULL_PERMISSION_SET).toHaveLength(34);
       expect(
