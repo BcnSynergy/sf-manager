@@ -595,10 +595,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `ubuntu-24.04-arm` runner (free for public repositories) and merging the
   two into one manifest, rather than emulating arm64 with QEMU. The pinned
   base images (`node:24-bookworm-slim`, `caddy:2-alpine`, `postgres`,
-  `rclone`) are multi-platform indexes that include `linux/arm64/v8`
-  (checked 2026-11-05), so building on the server keeps working on arm64
-  until then. Unverified: that `argon2` installs on arm64 without a source
-  build; the first arm64 image build will show it.
+  `rclone`) are multi-platform indexes that include `linux/arm64`, and
+  `argon2` 0.45.1 ships a linux-arm64 glibc prebuild, so no source build is
+  expected (both checked 2026-11-05). Building on the server therefore keeps
+  working on arm64 until then; nothing has run on arm64 yet, so the first
+  arm64 image build is the real proof.
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
   `deployment` (S11), 2026-10-25; covers the deploy part of TD-32. Arm64
   requirement added 2026-11-05 (`en-91-arm64-note`).
