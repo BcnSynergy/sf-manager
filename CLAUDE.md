@@ -131,6 +131,28 @@ cascade + representative Prisma adapter`). No issue-linking (`Closes
   merge — confirmed explicitly with the user at each step, not assumed.
   This has repeatedly caught real bugs (DI-bootstrap crashes, error
   misclassification, vacuous concurrency tests) that inline review missed.
+- **Dependabot exception**: a Dependabot PR that only changes a base-image
+  digest within the same tag (for example a new `node:24-bookworm-slim`
+  digest) gets a light review, done inline by the main session, instead of
+  the fresh-context one. It passes when:
+  - every changed line is the `@sha256:` part of a `FROM` or `image:` line,
+    with the same image name and tag in every changed file;
+  - the version inside the image still matches the tag, checked with
+    `docker buildx imagetools inspect` (`NODE_VERSION` 24.x,
+    `CADDY_VERSION` v2.x, `PG_VERSION` 18.x);
+  - `linux/amd64` and `linux/arm64` are still present;
+  - CI is green on the current `main` (ask `@dependabot rebase` if it ran on
+    an older one). If Dependabot then closes it as no longer updatable, wait
+    for its next run or bump the digest by hand; a manual bump is a normal
+    PR (full review, `PR N/M` title).
+
+  Any tag change (patch, minor or major, for example
+  `rclone/rclone:1.75.2` to `1.75.3`), and npm or GitHub Actions updates,
+  keep the full fresh-context review. Merging still needs the user's
+  explicit OK. Dependabot PRs keep their own titles (the `PR N/M` format does
+  not apply), and nobody commits to their branches, so `npm run format` does
+  not apply either.
+
 - **Formatting**: run `npm run format` before every commit. CI runs
   `npm run format:check` and fails on unformatted files, Markdown included.
   `main` is fully formatted, so `--write` only touches what you changed.

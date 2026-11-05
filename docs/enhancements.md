@@ -668,14 +668,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`.github/workflows/ci.yml`, `image: postgres:18-alpine`) is still a
   floating tag, and no Dependabot ecosystem updates workflow service images,
   so integration tests can run on a different Postgres build than dev and
-  production. Two follow-ups as well: confirm on Dependabot's first run that
+  production. One follow-up as well: confirm on Dependabot's first run that
   it lists both `docker-compose.yml` and `docker-compose.prod.yml`, opens
   one postgres PR for both, and whether grouped PRs keep the
   `build(deps)` prefix (GitHub's reference says a group's identifier sets
-  their branch and title), and
-  decide how Dependabot PRs are reviewed (CLAUDE.md asks for a fresh review
-  before every merge, and their titles do not follow `PR N/M`). Origin:
-  `en-95-pin-base-images` pre-push review (#290), 2026-10-26.
+  their branch and title). How Dependabot PRs are reviewed (CLAUDE.md asked
+  for a fresh review before every merge, and their titles do not follow
+  `PR N/M`) was decided by `dependabot-review-rule` (PR #341): see the
+  "Dependabot exception" in CLAUDE.md. Origin: `en-95-pin-base-images`
+  pre-push review (#290), 2026-10-26.
 - **EN-122** (API): `logoFileMissingError()` lives in
   `logo-file.interceptor.ts` and the controller imports it from there, so
   an error factory sits in the interceptor's file. Fine for two callers; a
