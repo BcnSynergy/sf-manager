@@ -46,7 +46,7 @@ None.
   `review-history-company-scope` (W-2), `review-history-admin-scope` (W-5),
   `organization-profile`, `hermetic-integration-tests` (W1), and
   `review-schedule` (W-1). Closed without a fix by `td-23-close-unrecoverable`
-  (PR #TBD): the evidence cannot be recovered. The topic-key upsert keeps no
+  (PR #338): the evidence cannot be recovered. The topic-key upsert keeps no
   prior versions (Engram's version history for
   `sdd/review-schedule/apply-progress`, 16 revisions, is empty), and the
   commits hold each test with its code (for example `93f962d`, `935d4c9`,
