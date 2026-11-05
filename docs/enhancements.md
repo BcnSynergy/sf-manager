@@ -812,6 +812,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   production `seeding` module is ever added, anchor the pattern to
   `apps/api/dist/shared/seeding/*`. Origin: `en-150-build-guard-gaps`
   (PR #332) native review, 2026-11-04.
+- **EN-152** (api tests): The document/history-detail parity e2e in
+  `apps/api/test/review-history.e2e-spec.ts` ("document and history detail
+  agree for %s") has no draft-session row. Draft parity follows only by
+  chaining two other tests (the document route's out-of-scope/nonexistent/
+  draft equality, and the parity row for an out-of-scope session). A direct
+  row needs a draft created and discarded inside the case. Origin:
+  `td-18-test-gaps` (PR #337) fresh review, 2026-11-05.
 
 ## Done
 

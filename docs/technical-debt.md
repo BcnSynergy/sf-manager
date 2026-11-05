@@ -28,18 +28,6 @@ None.
 
 ### Low
 
-- **TD-18**: Review-export test-quality gaps. S-6: the parity e2e does not
-  compare 404 bodies between the history and document routes. Evidence:
-  `review-export` verify-report S-6 (not re-checked in code). Origin:
-  `review-export`. S-5 (the "rejected read issues no lookup" unit test
-  covered only the nonexistent case) was resolved by `td-18-test-gaps`
-  (PR #336): it now also covers a draft session and an out-of-scope one,
-  for a technician and for an unassigned representative. W-4 (the
-  permission-count lock checked only a test-local list, and es/ca dates were
-  only checked non-empty) was resolved by `td-18-test-gaps` (PR #335): the
-  lock is now tied to the production
-  `Permission` union through a `Record<Permission, true>` the typecheck
-  enforces, and en/es/ca dates are pinned to exact strings.
 - **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
   the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
   cannot be shown from the artifacts. Evidence: verify-reports of
@@ -57,6 +45,18 @@ None.
   deployment"); deploying from CI is EN-91.
 
 ## Resolved
+
+- **TD-18**: Review-export test-quality gaps from the `review-export`
+  verify-report. Resolved by `td-18-test-gaps` in three PRs. W-4 (PR #335):
+  the permission-count lock checked only a test-local list, and es/ca dates
+  were only checked non-empty; the lock is now tied to the production
+  `Permission` union through a `Record<Permission, true>` the typecheck
+  enforces, and en/es/ca dates are pinned to exact strings. S-5 (PR #336):
+  the "rejected read issues no lookup" unit test covered only the
+  nonexistent case; it now also covers a draft session and an out-of-scope
+  one, for a technician and for an unassigned representative. S-6 (PR #337):
+  the parity e2e compared only statuses; a 404 from the document route must
+  now carry the same body as the history detail's.
 
 - **TD-47**: The backup retention test failed depending on the time of
   day. `deploy/test-postgres-backup.sh` checked that the 2020 and 2021

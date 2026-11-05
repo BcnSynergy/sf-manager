@@ -3924,6 +3924,9 @@ describe('Review History (e2e)', () => {
     // spec.md review-document "Document and history detail agree for every
     // caller" — for every caller x session pair below, the two routes must
     // produce the identical reachability outcome (both 200 or both 404).
+    // TD-18 S-6: a 404 must also carry the identical body (status, code and
+    // message), per the requirement's "identical ... to the history detail
+    // read's rejection".
     it.each([
       [
         'technician, own session',
@@ -3967,6 +3970,12 @@ describe('Review History (e2e)', () => {
         () => sessionByUForC.id,
         404,
       ],
+      [
+        'technician, nonexistent session',
+        () => technicianUEmail,
+        () => '00000000-0000-7000-8000-000000000000',
+        404,
+      ],
     ] as const)(
       'document and history detail agree for %s',
       async (
@@ -3986,6 +3995,11 @@ describe('Review History (e2e)', () => {
 
         expect(detailResponse.status).toBe(expectedStatus);
         expect(documentResponse.status).toBe(expectedStatus);
+        if (expectedStatus === 404) {
+          const detailBody = detailResponse.body as ErrorBody;
+          expect(detailBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
+          expect(documentResponse.body as ErrorBody).toEqual(detailBody);
+        }
       },
     );
 
