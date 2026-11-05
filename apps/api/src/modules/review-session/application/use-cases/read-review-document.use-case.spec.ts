@@ -78,32 +78,64 @@ describe('ReadReviewDocumentUseCase', () => {
     );
   });
 
-  // spec.md "A rejected read issues no name lookup"
-  it('a rejected read issues no template, name, email or profile lookup', async () => {
-    const findFrozenSpy = jest.spyOn(
-      templateRepository,
-      'findFrozenWithSnapshot',
-    );
-    const communitySpy = jest.spyOn(nameDirectory, 'findCommunityName');
-    const companySpy = jest.spyOn(nameDirectory, 'findMaintenanceCompanyName');
-    const elementsSpy = jest.spyOn(nameDirectory, 'findElementsByIds');
-    const emailsSpy = jest.spyOn(userDirectory, 'findEmailsByIds');
-    const profileSpy = jest.spyOn(profileRepository, 'get');
-
-    await expect(
-      useCase.execute('nonexistent', {
-        userId: 'user-1',
-        role: 'MAINTENANCE_TECHNICIAN',
+  // spec.md "A rejected read issues no name lookup". TD-18 S-5: every
+  // rejection cause the spec names (nonexistent, out of scope, draft), not
+  // just the nonexistent one. The technician's scope is its own performed
+  // sessions, so "out of scope" is another performer's completed session.
+  function seedSession(id: string, performedById: string, isDraft: boolean) {
+    sessionRepository.seed(
+      new ReviewSession({
+        id,
+        communityId: 'community-1',
+        templateId: 'template-1',
+        performedById,
+        performedByCompanyId: 'company-1',
+        status: isDraft ? 'draft' : 'completed',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        completedAt: isDraft ? null : new Date('2026-01-02T00:00:00.000Z'),
+        entries: [],
       }),
-    ).rejects.toThrow(ReviewSessionNotFoundError);
+    );
+    scopeChecker.assign('user-1', 'community-1');
+  }
 
-    expect(findFrozenSpy).not.toHaveBeenCalled();
-    expect(communitySpy).not.toHaveBeenCalled();
-    expect(companySpy).not.toHaveBeenCalled();
-    expect(elementsSpy).not.toHaveBeenCalled();
-    expect(emailsSpy).not.toHaveBeenCalled();
-    expect(profileSpy).not.toHaveBeenCalled();
-  });
+  it.each([
+    ['nonexistent', () => undefined],
+    ['out of scope', () => seedSession('session-1', 'user-2', false)],
+    ['draft', () => seedSession('session-1', 'user-1', true)],
+  ])(
+    'a rejected read (%s) issues no template, name, email or profile lookup',
+    async (cause, arrange) => {
+      arrange();
+      const sessionId = cause === 'nonexistent' ? 'nonexistent' : 'session-1';
+      const findFrozenSpy = jest.spyOn(
+        templateRepository,
+        'findFrozenWithSnapshot',
+      );
+      const communitySpy = jest.spyOn(nameDirectory, 'findCommunityName');
+      const companySpy = jest.spyOn(
+        nameDirectory,
+        'findMaintenanceCompanyName',
+      );
+      const elementsSpy = jest.spyOn(nameDirectory, 'findElementsByIds');
+      const emailsSpy = jest.spyOn(userDirectory, 'findEmailsByIds');
+      const profileSpy = jest.spyOn(profileRepository, 'get');
+
+      await expect(
+        useCase.execute(sessionId, {
+          userId: 'user-1',
+          role: 'MAINTENANCE_TECHNICIAN',
+        }),
+      ).rejects.toThrow(ReviewSessionNotFoundError);
+
+      expect(findFrozenSpy).not.toHaveBeenCalled();
+      expect(communitySpy).not.toHaveBeenCalled();
+      expect(companySpy).not.toHaveBeenCalled();
+      expect(elementsSpy).not.toHaveBeenCalled();
+      expect(emailsSpy).not.toHaveBeenCalled();
+      expect(profileSpy).not.toHaveBeenCalled();
+    },
+  );
 
   // spec.md "Lookups use only identifiers from the loaded session"
   it('lookups use only identifiers carried by the loaded session', async () => {
