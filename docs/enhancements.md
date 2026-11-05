@@ -845,7 +845,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Check the next weekly run: if it again skips a digest that changed,
   investigate (for example the `base-images` group warning) or fall back to
   manual digest bumps. Until it is settled, the base images can fall behind
-  without notice. Origin: Dependabot PR review, 2026-11-05.
+  without notice. Origin: Dependabot PR review (PR #340), 2026-11-05.
 
 ## Done
 
