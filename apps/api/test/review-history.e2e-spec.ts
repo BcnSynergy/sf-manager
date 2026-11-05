@@ -3970,6 +3970,12 @@ describe('Review History (e2e)', () => {
         () => sessionByUForC.id,
         404,
       ],
+      [
+        'technician, nonexistent session',
+        () => technicianUEmail,
+        () => '00000000-0000-7000-8000-000000000000',
+        404,
+      ],
     ] as const)(
       'document and history detail agree for %s',
       async (
