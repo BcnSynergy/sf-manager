@@ -587,8 +587,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   settings before switching the compose file. Note that `publish` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
+  The planned host is an Oracle Cloud Always Free Ampere VM (arm64), but
+  `publish` builds with a plain `docker build` on `ubuntu-24.04`, so the
+  published images are amd64 only and an arm64 server cannot run them.
+  Before switching the compose file, publish multi-platform images
+  (`linux/amd64` and `linux/arm64`), for example by building on the native
+  `ubuntu-24.04-arm` runner (free for public repositories) and merging the
+  two into one manifest, rather than emulating arm64 with QEMU. The pinned
+  base images (`node:24-bookworm-slim`, `caddy:2-alpine`, `postgres`,
+  `rclone`) are multi-platform indexes that include `linux/arm64/v8`
+  (checked 2026-11-05), so building on the server keeps working on arm64
+  until then. Unverified: that `argon2` installs on arm64 without a source
+  build; the first arm64 image build will show it.
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
-  `deployment` (S11), 2026-10-25; covers the deploy part of TD-32.
+  `deployment` (S11), 2026-10-25; covers the deploy part of TD-32. Arm64
+  requirement added 2026-11-05 (`en-91-arm64-note`).
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 1.7 GB, EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
