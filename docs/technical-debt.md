@@ -34,7 +34,7 @@ None.
   Evidence: `review-export` verify-report S-5, S-6 (not re-checked in code).
   Origin: `review-export`. W-4 (the permission-count lock checked only a
   test-local list, and es/ca dates were only checked non-empty) was resolved
-  by `td-18-test-gaps` PR 1: the lock is now tied to the production
+  by `td-18-test-gaps` (PR #335): the lock is now tied to the production
   `Permission` union through a `Record<Permission, true>` the typecheck
   enforces, and en/es/ca dates are pinned to exact strings.
 - **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
