@@ -833,6 +833,19 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   draft equality, and the parity row for an out-of-scope session). A direct
   row needs a draft created and discarded inside the case. Origin:
   `td-18-test-gaps` (PR #337) fresh review, 2026-11-05.
+- **EN-153** (delivery): Dependabot reported "No update needed" for
+  `node 24-bookworm-slim` and `caddy 2-alpine` on a manual run (2026-11-05,
+  job "docker in /apps/api, /apps/web - Update #1683768849"), while the tags
+  pointed to newer digests (`node` `01d566e8…`, `caddy` `f6228111…`) than
+  the ones pinned on `main` (`55fb5f5a…`, `eb4d35b7…`), checked with
+  `docker buildx imagetools inspect`. The same job warned "Skipping update
+  group for 'base-images' as it does not match any allowed dependencies".
+  The 2026-11-02 run did open digest PRs (#324, #325), which Dependabot
+  closed as "no longer updatable" after a rebase request. Cause unknown.
+  Check the next weekly run: if it again skips a digest that changed,
+  investigate (for example the `base-images` group warning) or fall back to
+  manual digest bumps. Until it is settled, the base images can fall behind
+  without notice. Origin: Dependabot PR review, 2026-11-05.
 
 ## Done
 
