@@ -602,7 +602,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   arm64 image build is the real proof.
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
   `deployment` (S11), 2026-10-25; covers the deploy part of TD-32. Arm64
-  requirement added 2026-11-05 (`en-91-arm64-note`).
+  requirement added 2026-11-05 (`en-91-arm64-note`, PR #339).
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 1.7 GB, EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
