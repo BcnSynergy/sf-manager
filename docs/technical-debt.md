@@ -28,13 +28,6 @@ None.
 
 ### Low
 
-- **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
-  the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
-  cannot be shown from the artifacts. Evidence: verify-reports of
-  `label-printing` (W-1), `review-session`, `review-history` (W-2),
-  `review-history-company-scope` (W-2), `review-history-admin-scope` (W-5),
-  `organization-profile`, `hermetic-integration-tests` (W1), and
-  `review-schedule` (W-1). Origin: those reviews.
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
   upload, matrix builds, Dependabot, Playwright, extra caching, parallel
   jobs, and SHA-pinned actions. The API typecheck step landed in
@@ -45,6 +38,21 @@ None.
   deployment"); deploying from CI is EN-91.
 
 ## Resolved
+
+- **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
+  the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
+  cannot be shown from the artifacts. Evidence: verify-reports of
+  `label-printing` (W-1), `review-session`, `review-history` (W-2),
+  `review-history-company-scope` (W-2), `review-history-admin-scope` (W-5),
+  `organization-profile`, `hermetic-integration-tests` (W1), and
+  `review-schedule` (W-1). Closed without a fix by `td-23-close-unrecoverable`
+  (PR #TBD): the evidence cannot be recovered. Engram keeps no prior versions
+  of those observations (`sdd/review-schedule/apply-progress` has 16
+  revisions and an empty version history), and the commits hold each test
+  with its code (for example `93f962d`, `935d4c9`, `b3b6d76`), so git shows
+  no test-first order either. The cause is gone: SDD and its `apply-progress`
+  topic were retired on 2026-10-22. The affected changes passed their verify
+  and archive with tests in place; only the order proof is missing.
 
 - **TD-18**: Review-export test-quality gaps from the `review-export`
   verify-report. Resolved by `td-18-test-gaps` in three PRs. W-4 (PR #335):
