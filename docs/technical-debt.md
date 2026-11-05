@@ -33,7 +33,7 @@ None.
   `review-export` verify-report S-6 (not re-checked in code). Origin:
   `review-export`. S-5 (the "rejected read issues no lookup" unit test
   covered only the nonexistent case) was resolved by `td-18-test-gaps`
-  (PR #TBD): it now also covers a draft session and an out-of-scope one,
+  (PR #336): it now also covers a draft session and an out-of-scope one,
   for a technician and for an unassigned representative. W-4 (the
   permission-count lock checked only a test-local list, and es/ca dates were
   only checked non-empty) was resolved by `td-18-test-gaps` (PR #335): the
