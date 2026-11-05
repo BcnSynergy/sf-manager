@@ -6,6 +6,7 @@ import { OrganizationProfile } from '../../../organization-profile/domain/organi
 import { blankOrganizationProfileProps } from '../../../organization-profile/domain/organization-profile.fixture';
 import { ElementReviewEntry } from '../../domain/element-review-entry.entity';
 import { QuestionAnswer } from '../../domain/question-answer.entity';
+import type { Role } from '../../../users/domain/role';
 import { ReviewSession } from '../../domain/review-session.entity';
 import { ReviewSessionNotFoundError } from '../../domain/errors/review-session-not-found.error';
 import { InMemoryReviewSessionRepository } from './testing/in-memory-review-session.repository';
@@ -80,34 +81,66 @@ describe('ReadReviewDocumentUseCase', () => {
 
   // spec.md "A rejected read issues no name lookup". TD-18 S-5: every
   // rejection cause the spec names (nonexistent, out of scope, draft), not
-  // just the nonexistent one. The technician's scope is its own performed
-  // sessions, so "out of scope" is another performer's completed session.
-  function seedSession(id: string, performedById: string, isDraft: boolean) {
-    sessionRepository.seed(
-      new ReviewSession({
-        id,
-        communityId: 'community-1',
-        templateId: 'template-1',
-        performedById,
-        performedByCompanyId: 'company-1',
-        status: isDraft ? 'draft' : 'completed',
-        startedAt: new Date('2026-01-01T00:00:00.000Z'),
-        completedAt: isDraft ? null : new Date('2026-01-02T00:00:00.000Z'),
-        entries: [],
-      }),
-    );
-    scopeChecker.assign('user-1', 'community-1');
-  }
+  // just the nonexistent one. A technician's scope is its own performed
+  // sessions, so its "out of scope" is another performer's completed
+  // session; the representative case also goes through the community scope
+  // check (no assignment to the session's community) before rejecting.
+  type RejectedRead = {
+    role: Role;
+    sessionId: string;
+    seed?: { performedById: string; status: 'draft' | 'completed' };
+  };
 
-  it.each([
-    ['nonexistent', () => undefined],
-    ['out of scope', () => seedSession('session-1', 'user-2', false)],
-    ['draft', () => seedSession('session-1', 'user-1', true)],
+  it.each<[string, RejectedRead]>([
+    [
+      'nonexistent',
+      { role: 'MAINTENANCE_TECHNICIAN', sessionId: 'nonexistent' },
+    ],
+    [
+      'out of scope, technician',
+      {
+        role: 'MAINTENANCE_TECHNICIAN',
+        sessionId: 'session-1',
+        seed: { performedById: 'user-2', status: 'completed' },
+      },
+    ],
+    [
+      'out of scope, unassigned representative',
+      {
+        role: 'COMMUNITY_REPRESENTATIVE',
+        sessionId: 'session-1',
+        seed: { performedById: 'user-2', status: 'completed' },
+      },
+    ],
+    [
+      'draft',
+      {
+        role: 'MAINTENANCE_TECHNICIAN',
+        sessionId: 'session-1',
+        seed: { performedById: 'user-1', status: 'draft' },
+      },
+    ],
   ])(
     'a rejected read (%s) issues no template, name, email or profile lookup',
-    async (cause, arrange) => {
-      arrange();
-      const sessionId = cause === 'nonexistent' ? 'nonexistent' : 'session-1';
+    async (_cause, { role, sessionId, seed }) => {
+      if (seed) {
+        sessionRepository.seed(
+          new ReviewSession({
+            id: sessionId,
+            communityId: 'community-1',
+            templateId: 'template-1',
+            performedById: seed.performedById,
+            performedByCompanyId: 'company-1',
+            status: seed.status,
+            startedAt: new Date('2026-01-01T00:00:00.000Z'),
+            completedAt:
+              seed.status === 'completed'
+                ? new Date('2026-01-02T00:00:00.000Z')
+                : null,
+            entries: [],
+          }),
+        );
+      }
       const findFrozenSpy = jest.spyOn(
         templateRepository,
         'findFrozenWithSnapshot',
@@ -122,10 +155,7 @@ describe('ReadReviewDocumentUseCase', () => {
       const profileSpy = jest.spyOn(profileRepository, 'get');
 
       await expect(
-        useCase.execute(sessionId, {
-          userId: 'user-1',
-          role: 'MAINTENANCE_TECHNICIAN',
-        }),
+        useCase.execute(sessionId, { userId: 'user-1', role }),
       ).rejects.toThrow(ReviewSessionNotFoundError);
 
       expect(findFrozenSpy).not.toHaveBeenCalled();
