@@ -10,8 +10,9 @@
 # CI's Postgres service image (.github/workflows/ci.yml) is not covered
 # (EN-107).
 #
-# npm (TD-32): minor and patch updates arrive as one grouped PR each week;
-# majors arrive as separate PRs, since each may need code changes.
+# npm (TD-32): minor and patch updates arrive as one grouped PR each week,
+# except `@nestjs/throttler` (see the group below); majors arrive as
+# separate PRs, since each may need code changes.
 # GitHub Actions (TD-32): workflows pin major tags (`@v7`), so every update
 # is a major; all of them arrive as one grouped PR. Nothing merges on its
 # own.
@@ -55,6 +56,11 @@ updates:
       npm-minor-patch:
         applies-to: version-updates
         patterns: ['*']
+        # Pinned to an exact version on purpose (login-rate-limit design D1:
+        # header and storage behavior changed across 6.x minors and the e2e
+        # pins it). Excluded so each upgrade is reviewed alone; past 6.4.0
+        # the build breaks until TD-48 is done.
+        exclude-patterns: ['@nestjs/throttler']
         update-types: [minor, patch]
     commit-message:
       prefix: build

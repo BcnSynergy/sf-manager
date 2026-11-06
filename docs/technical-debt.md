@@ -37,6 +37,16 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
+- **TD-48**: `@nestjs/throttler` is stuck at 6.4.0. Dependabot's grouped
+  npm PR #345 bumped it to 6.7.1 and the API build failed with `TS2415: Class
+'LoginThrottlerGuard' incorrectly extends base class 'ThrottlerGuard'`, so
+  every throttler update PR fails CI the same way. To upgrade: adapt
+  `LoginThrottlerGuard` to the new `ThrottlerGuard` signature, then re-check
+  the header and storage behavior that `login-rate-limit` design D1 pins
+  (exact pin, plain `Retry-After` in seconds) with the login e2e. Evidence:
+  `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
+  `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
+  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
 
 ## Resolved
 

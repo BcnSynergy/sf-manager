@@ -227,6 +227,9 @@ none merges on its own.
   covered (EN-107).
 - npm (the whole workspace, from the root `package-lock.json`): minor and
   patch updates in one grouped PR, each major in its own PR.
+  `@nestjs/throttler` is pinned to an exact version on purpose and excluded
+  from the group, so every update to it arrives as its own PR (upgrading it
+  needs code changes first, TD-48).
 - GitHub Actions: workflows pin actions by major tag, so every update is a
   major; all of them arrive in one grouped PR.
 
