@@ -1,4 +1,4 @@
-# Keeps the digest-pinned base images current (EN-95). Dependabot keeps each
+# Docker: keeps the digest-pinned base images current (EN-95). Dependabot keeps each
 # tag's precision and suffix, so with single-number tags (`24-bookworm-slim`,
 # `2-alpine`, `18-alpine`) and majors ignored it only proposes a new digest
 # for the same tag; nothing merges on its own. Majors are ignored because a
@@ -9,6 +9,12 @@
 # version tag, so for it Dependabot also proposes minor and patch versions.
 # CI's Postgres service image (.github/workflows/ci.yml) is not covered
 # (EN-107).
+#
+# npm (TD-32): minor and patch updates arrive as one grouped PR each week;
+# majors arrive as separate PRs, since each may need code changes.
+# GitHub Actions (TD-32): workflows pin major tags (`@v7`), so every update
+# is a major; all of them arrive as one grouped PR. Nothing merges on its
+# own.
 version: 2
 updates:
   - package-ecosystem: docker
@@ -40,3 +46,26 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci

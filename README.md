@@ -278,7 +278,10 @@ rebuild weeks later uses the same layers. Dependabot (`.github/dependabot.yml`)
 checks weekly and opens a PR when a pinned tag gets a new digest, one PR per
 image. A new major version (or a new Debian release for `node`) is a manual
 upgrade. CI builds both images and starts the whole stack for every PR,
-these included.
+these included. Dependabot also checks npm packages and GitHub Actions
+weekly. npm minor and patch updates arrive as one grouped PR and each npm
+major as its own PR. Workflows pin actions by major tag, so their updates
+are majors, all in one grouped PR.
 
 ### Images in CI
 

@@ -840,6 +840,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   investigate (for example the `base-images` group warning) or fall back to
   manual digest bumps. Until it is settled, the base images can fall behind
   without notice. Origin: Dependabot PR review (PR #340), 2026-11-05.
+- **EN-154** (delivery): The npm entry in `.github/dependabot.yml` has no
+  `open-pull-requests-limit`, so the default of 5 open PRs applies. One
+  grouped minor/patch PR plus several individual majors can reach it, and
+  Dependabot then holds back later updates without notice. If that happens,
+  raise the limit or group majors too. Origin: `td-32-dependabot-npm-actions`
+  (PR #344) fresh review, 2026-11-06.
 
 ## Done
 
