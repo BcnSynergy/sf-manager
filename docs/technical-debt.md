@@ -69,6 +69,19 @@ None.
   vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
   helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
   2026-11-06.
+- **TD-50**: `multer` stays at 2.4.0, under Dependabot alert #59
+  (GHSA-q7qp-rjg7-q26m, high: denial of service via a pending asynchronous
+  `fileFilter` after request teardown; fixed in 2.5.0). `@nestjs/platform-express`
+  11.2.8, the latest 11.x, pins `multer` to exactly 2.4.0, and npm 11.17 did
+  not apply an `overrides` entry for `multer` (it dropped `multer` from the
+  tree instead of resolving 2.5.0). Exposure is low: the only multer use is
+  `LogoFileInterceptor`, which sets `limits` and no `fileFilter`, behind
+  `organizationProfile:update`. Resolve by taking a `@nestjs/platform-express`
+  release that ships `multer` 2.5.0 or later (Dependabot proposes it), or by
+  retrying the override with a clean lockfile resolution. Evidence:
+  `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`;
+  `npm view @nestjs/platform-express@11.2.8 dependencies.multer`. Origin:
+  `security-runtime-alerts` (PR #TBD), 2026-11-06.
 
 ## Resolved
 
