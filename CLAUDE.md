@@ -132,11 +132,14 @@ cascade + representative Prisma adapter`). No issue-linking (`Closes
   This has repeatedly caught real bugs (DI-bootstrap crashes, error
   misclassification, vacuous concurrency tests) that inline review missed.
   Launch it as the `fresh-reviewer` agent (`.claude/agents/fresh-reviewer.md`:
-  Opus, no edit tools, fixed verdict format) with the base ref, the head and
-  the intended outcome. When the review should run mutation probes, launch
-  it with `isolation: "worktree"` and say so in the brief, then remove the
-  worktree afterwards. Every review stays on Opus, docs-only changes
-  included.
+  Opus, no Edit/Write tools, read-only by instruction, fixed verdict format)
+  with the base ref, the head SHA and the intended outcome. When the review
+  should run mutation probes, launch it with `isolation: "worktree"` and say
+  so in the brief. The worktree starts from `main`, so the agent first checks
+  out the head SHA there, then makes and reverts its probes with Bash. A
+  fully reverted worktree is removed automatically; if one is left behind,
+  a probe was not reverted: the main session inspects and removes it. Every
+  review stays on Opus, docs-only changes included.
 - **Dependabot exception**: a Dependabot PR that only changes a base-image
   digest within the same tag (for example a new `node:24-bookworm-slim`
   digest) gets a light review, done inline by the main session, instead of

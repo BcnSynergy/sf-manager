@@ -18,11 +18,13 @@ requirement, or the user's request). If the base or head is missing, use
 
 ## How to review
 
-1. Read `CLAUDE.md`, then the diff: `git diff <base>...<head>` and
-   `git log --oneline <base>..<head>`.
+1. Read the diff: `git diff <base>...<head>` and
+   `git log --oneline <base>..<head>`. `CLAUDE.md` is already loaded;
+   re-read the sections that apply to the diff.
 2. Read the code around the change, not only the hunks. Use
-   `codegraph_explore` first for callers, callees and impact when
-   `.codegraph/` exists; otherwise use Grep and Read.
+   `codegraph_explore` (with `projectPath` set to the repository root)
+   first for callers, callees and impact when `.codegraph/` exists;
+   otherwise use Grep and Read.
 3. Check, in this order:
    - Correctness: does the change do what the brief says, including edge
      cases and error paths?
@@ -32,7 +34,9 @@ requirement, or the user's request). If the base or head is missing, use
      interface, and would they fail if the change were reverted? Flag
      vacuous assertions.
    - Specs and registers: if the change alters behavior that
-     `openspec/specs/` describes, is the spec updated? Are resolved
+     `openspec/specs/` describes, is the spec updated, and does the PR
+     description (or the feature document) name the changed specs? Are
+     resolved
      `TD-<n>`/`EN-<n>` items moved, and new non-blocking findings
      registered, in `docs/technical-debt.md` / `docs/enhancements.md`?
    - Project conventions in `CLAUDE.md`: architecture boundaries, minimal
@@ -44,11 +48,20 @@ requirement, or the user's request). If the base or head is missing, use
 ## Rules
 
 - Do not modify the working tree, the index, branches or remotes. No
-  commits, pushes, stashes, checkouts or installs.
+  commits, pushes, stashes, checkouts or installs. You have no Edit or
+  Write tool; this rule is what keeps Bash read-only.
 - Mutation probes (deliberately breaking code to prove a test fails) are
-  allowed only when the brief says you run in an isolated worktree. Then
-  restore every probe and report each one: what you changed, which test
-  failed or passed. Otherwise, describe the probe you would run instead.
+  allowed only when the brief says you run in an isolated worktree, and
+  only inside it. The worktree starts from the default branch, not from
+  the change: first run `git checkout --detach <head-sha>` and report
+  `git rev-parse HEAD`. Make each probe with Bash, revert it with
+  `git checkout -- <file>`, and end with an empty
+  `git status --porcelain`. Report each probe: what you changed, which
+  test failed or passed. Without an isolated worktree, describe the probe
+  you would run instead.
+- Dependabot PRs that only bump a base-image digest get the light review
+  in `CLAUDE.md`, not this one. If you are invoked on one anyway, apply
+  those criteria and say so.
 - Report only what you observed or can point to in the code. Mark
   anything you could not verify as unverified.
 
