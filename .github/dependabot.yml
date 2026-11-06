@@ -10,9 +10,11 @@
 # CI's Postgres service image (.github/workflows/ci.yml) is not covered
 # (EN-107).
 #
-# npm and GitHub Actions (TD-32): minor and patch updates arrive as one
-# grouped PR per ecosystem each week. npm majors arrive as separate PRs,
-# since each may need code changes; none merges on its own.
+# npm (TD-32): minor and patch updates arrive as one grouped PR each week;
+# majors arrive as separate PRs, since each may need code changes.
+# GitHub Actions (TD-32): workflows pin major tags (`@v7`), so every update
+# is a major; all of them arrive as one grouped PR. Nothing merges on its
+# own.
 version: 2
 updates:
   - package-ecosystem: docker
