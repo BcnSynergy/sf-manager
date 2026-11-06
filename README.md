@@ -197,12 +197,14 @@ manual and destructive to `sfmanager` — it is never run by
 ## Continuous integration
 
 Every pull request and every push to `main` runs the `ci` job
-(`.github/workflows/ci.yml`) on Node 24: install, build, lint, format
-check, ShellCheck, API typecheck, unit tests, API e2e tests, API
-integration tests, the deploy script tests and the image smoke test (see
-"Images in CI"), in that order. The integration
-tier runs against a throwaway Postgres service container, and the workflow
-uses no secrets and a read-only token.
+(`.github/workflows/ci.yml`) on Node 24: install, build, a check that no
+test or seed helper reached the API build output, lint, format check,
+ShellCheck, API typecheck, unit tests, API e2e tests, API integration tests,
+the deploy script tests and the image smoke test (see "Images in CI"), in
+that order. The integration tier runs against a throwaway Postgres service
+container, and the `ci` job uses no secrets and a read-only token. Only the
+`publish` job, which runs on `main` alone, gets write access to packages
+(see "Images in CI").
 
 Branch protection on `main` is applied once the `ci` check has run green
 there (see ADR-017). From then on, the `ci` check is required for everyone,
@@ -212,6 +214,26 @@ for a commit that already has a green `ci` run. Renaming the job breaks
 merges until branch protection is updated. To roll back, remove branch
 protection first, then revert the workflow; see
 [ADR-017](docs/adr/ADR-017-ci-merge-barrier.md).
+
+### Dependency updates
+
+Dependabot (`.github/dependabot.yml`) checks every week and opens PRs;
+none merges on its own.
+
+- Base images (`node`, `caddy`, `postgres`): a new digest for the same tag,
+  one PR per image (see "Production deployment"). The `rclone` image is
+  pinned by full version, so it also gets minor and patch versions. Majors
+  are ignored for all of them. CI's own Postgres service image is not
+  covered (EN-107).
+- npm (the whole workspace, from the root `package-lock.json`): minor and
+  patch updates in one grouped PR, each major in its own PR.
+- GitHub Actions: workflows pin actions by major tag, so every update is a
+  major; all of them arrive in one grouped PR.
+
+Dependabot alerts and security updates are enabled in the repository
+settings, not in `dependabot.yml`. When an advisory affects a dependency,
+GitHub raises an alert and Dependabot opens a security PR for it, outside
+the weekly schedule and the groups above.
 
 ## Production deployment
 
@@ -278,10 +300,8 @@ rebuild weeks later uses the same layers. Dependabot (`.github/dependabot.yml`)
 checks weekly and opens a PR when a pinned tag gets a new digest, one PR per
 image. A new major version (or a new Debian release for `node`) is a manual
 upgrade. CI builds both images and starts the whole stack for every PR,
-these included. Dependabot also checks npm packages and GitHub Actions
-weekly. npm minor and patch updates arrive as one grouped PR and each npm
-major as its own PR. Workflows pin actions by major tag, so their updates
-are majors, all in one grouped PR.
+these included. For npm and GitHub Actions updates, see "Dependency
+updates".
 
 ### Images in CI
 
