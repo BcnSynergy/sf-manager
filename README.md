@@ -231,9 +231,11 @@ none merges on its own.
   major; all of them arrive in one grouped PR.
 
 Dependabot alerts and security updates are enabled in the repository
-settings, not in `dependabot.yml`. When an advisory affects a dependency,
-GitHub raises an alert and Dependabot opens a security PR for it, outside
-the weekly schedule and the groups above.
+settings, not in `dependabot.yml`. When an advisory affects an npm package
+or a GitHub Action, GitHub raises an alert, and when a patched version
+exists Dependabot opens a security PR for it, outside the weekly schedule
+and the groups above. The advisory database has no entries for Docker base
+images, so those only get the weekly digest PRs.
 
 ## Production deployment
 
