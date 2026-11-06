@@ -69,6 +69,25 @@ None.
   vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
   helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
   2026-11-06.
+- **TD-50**: The root `package.json` carries a scoped npm override,
+  `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
+  alert #59 (GHSA-q7qp-rjg7-q26m, high: denial of service via a pending
+  asynchronous `fileFilter` after request teardown; fixed in multer 2.5.0).
+  `@nestjs/platform-express` 11.2.8, the latest 11.x, pins `multer` to exactly
+  2.4.0; the first release that ships 2.5.0 is 12.4.0. An override is a hidden
+  version pin: remove it when NestJS moves to 12.x (or a later 11.x ships
+  multer 2.5.0 or newer), and check that the installed `multer` is still at
+  least 2.5.0. A flat `"multer"` override does not work with npm 11.17 (it
+  keeps 2.4.0, or drops `multer` from the tree once its lock entry is
+  removed); the scoped form needs the `node_modules/multer` and
+  `node_modules/@nestjs/platform-express` lock entries removed before `npm
+install`. Exposure before the override was low: the only multer use,
+  `LogoFileInterceptor`, sets `limits` (`files: 1`) and no `fileFilter`,
+  behind `organizationProfile:update`, whose guard runs before the
+  interceptor. Evidence: `package.json` (`overrides`); `npm view
+@nestjs/platform-express@11.2.8 dependencies.multer`;
+  `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
+  Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
 
 ## Resolved
 
