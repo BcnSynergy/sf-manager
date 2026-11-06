@@ -55,6 +55,10 @@ updates:
       npm-minor-patch:
         applies-to: version-updates
         patterns: ['*']
+        # Pinned to an exact version on purpose (login-rate-limit design D1:
+        # header and storage behavior changed across 6.x minors and the e2e
+        # pins it), so each upgrade comes as its own PR.
+        exclude-patterns: ['@nestjs/throttler']
         update-types: [minor, patch]
     commit-message:
       prefix: build
