@@ -3828,22 +3828,26 @@ describe('Review History (e2e)', () => {
           .expect(201)
       ).body as { id: string };
 
-      const nonexistentResponse = await technicianUAgent
-        .get('/review-history/00000000-0000-7000-8000-000000000000/document')
-        .expect(404);
-      const outOfScopeResponse = await technicianUAgent
-        .get(`/review-history/${sessionByWForD.id}/document`)
-        .expect(404);
-      const draftResponse = await technicianUAgent
-        .get(`/review-history/${draft.id}/document`)
-        .expect(404);
+      try {
+        const nonexistentResponse = await technicianUAgent
+          .get('/review-history/00000000-0000-7000-8000-000000000000/document')
+          .expect(404);
+        const outOfScopeResponse = await technicianUAgent
+          .get(`/review-history/${sessionByWForD.id}/document`)
+          .expect(404);
+        const draftResponse = await technicianUAgent
+          .get(`/review-history/${draft.id}/document`)
+          .expect(404);
 
-      const nonexistentBody = nonexistentResponse.body as ErrorBody;
-      expect(nonexistentBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
-      expect(outOfScopeResponse.body as ErrorBody).toEqual(nonexistentBody);
-      expect(draftResponse.body as ErrorBody).toEqual(nonexistentBody);
-
-      await technicianUAgent.delete(`/review-sessions/${draft.id}`).expect(204);
+        const nonexistentBody = nonexistentResponse.body as ErrorBody;
+        expect(nonexistentBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
+        expect(outOfScopeResponse.body as ErrorBody).toEqual(nonexistentBody);
+        expect(draftResponse.body as ErrorBody).toEqual(nonexistentBody);
+      } finally {
+        await technicianUAgent
+          .delete(`/review-sessions/${draft.id}`)
+          .expect(204);
+      }
     });
 
     // Tech-debt cleanup: parity with the history detail route's malformed-id
@@ -4004,8 +4008,10 @@ describe('Review History (e2e)', () => {
     );
 
     // EN-152: the draft row of the parity matrix above. A draft cannot be a
-    // shared fixture (the other tests read only completed sessions), so it is
-    // created and discarded inside the case.
+    // shared fixture: an open draft would collide, through the open-draft
+    // unique index, with the other tests that open one for the same
+    // technician and community. So it is created and discarded inside the
+    // case.
     it('document and history detail agree for technician, own draft session', async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
       const draft = (
