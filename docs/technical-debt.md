@@ -47,6 +47,22 @@ None.
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
   `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
   Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
+- **TD-49**: Prisma is stuck at 7.9.x. Dependabot's grouped npm PR #355
+  bumped `prisma`, `@prisma/client` and `@prisma/adapter-pg` to 7.10.1, and
+  two integration tests failed: a real unique-constraint violation came back
+  as a raw `PrismaClientKnownRequestError` (P2002) instead of
+  `ElementCodeAlreadyExistsError` and `AssignmentAlreadyExistsError`. Prisma
+  7.10 changed the P2002 metadata the repositories read (they parse
+  `meta.driverAdapterError.cause.constraint`), so in production a duplicate
+  would answer 500 instead of 409. To upgrade: find the 7.10 shape, adapt
+  every repository that reads P2002 metadata
+  (`prisma-inspectable-element`, `prisma-community-representative`, and
+  check `prisma-community-technician`, `prisma-maintenance-company`,
+  `prisma-review-session`, `prisma-review-template`), and run the
+  integration suite on 7.10. Evidence: CI run of PR #355 (Integration step);
+  `apps/api/src/modules/community/infrastructure/persistence/prisma-community-representative.repository.ts`
+  (`extractViolatedConstraintFields`). Origin: `dependabot-prisma-group`
+  (PR #TBD), 2026-11-06.
 
 ## Resolved
 
