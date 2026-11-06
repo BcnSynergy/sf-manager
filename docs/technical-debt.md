@@ -32,7 +32,7 @@ None.
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
   SHA-pinned actions. The API typecheck step landed in
   `td-32-api-typecheck` (#219). Dependabot landed for Docker images (EN-95)
-  and for npm and GitHub Actions in `td-32-dependabot-npm-actions` (PR #TBD). Evidence:
+  and for npm and GitHub Actions in `td-32-dependabot-npm-actions` (PR #344). Evidence:
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
