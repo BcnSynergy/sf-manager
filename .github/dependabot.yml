@@ -11,8 +11,8 @@
 # (EN-107).
 #
 # npm (TD-32): minor and patch updates arrive as one grouped PR each week,
-# except `@nestjs/throttler` (see the group below); majors arrive as
-# separate PRs, since each may need code changes.
+# except Prisma (its own group) and `@nestjs/throttler` (see the groups
+# below); majors arrive as separate PRs, since each may need code changes.
 # GitHub Actions (TD-32): workflows pin major tags (`@v7`), so every update
 # is a major; all of them arrive as one grouped PR. Nothing merges on its
 # own.
@@ -53,6 +53,14 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # Prisma minors can change error shapes the repositories parse
+      # (`@prisma/adapter-pg` 7.10 changed the unique-violation metadata,
+      # TD-49), so Prisma updates arrive in their own PR and land with any
+      # repository changes they need.
+      prisma:
+        applies-to: version-updates
+        patterns: ['prisma', '@prisma/*']
+        update-types: [minor, patch]
       npm-minor-patch:
         applies-to: version-updates
         patterns: ['*']
@@ -60,7 +68,7 @@ updates:
         # header and storage behavior changed across 6.x minors and the e2e
         # pins it). Excluded so each upgrade is reviewed alone; past 6.4.0
         # the build breaks until TD-48 is done.
-        exclude-patterns: ['@nestjs/throttler']
+        exclude-patterns: ['@nestjs/throttler', 'prisma', '@prisma/*']
         update-types: [minor, patch]
     commit-message:
       prefix: build
