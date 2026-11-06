@@ -4003,6 +4003,38 @@ describe('Review History (e2e)', () => {
       },
     );
 
+    // EN-152: the draft row of the parity matrix above. A draft cannot be a
+    // shared fixture (the other tests read only completed sessions), so it is
+    // created and discarded inside the case.
+    it('document and history detail agree for technician, own draft session', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const draft = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityC.id, templateId })
+          .expect(201)
+      ).body as { id: string };
+
+      try {
+        const detailResponse = await technicianUAgent.get(
+          `/review-history/${draft.id}`,
+        );
+        const documentResponse = await technicianUAgent.get(
+          `/review-history/${draft.id}/document`,
+        );
+
+        expect(detailResponse.status).toBe(404);
+        expect(documentResponse.status).toBe(404);
+        const detailBody = detailResponse.body as ErrorBody;
+        expect(detailBody.code).toBe('REVIEW_SESSION_NOT_FOUND');
+        expect(documentResponse.body as ErrorBody).toEqual(detailBody);
+      } finally {
+        await technicianUAgent
+          .delete(`/review-sessions/${draft.id}`)
+          .expect(204);
+      }
+    });
+
     // spec.md review-document "The document exposes only the letterhead
     // fields" — the six text keys and `hasLogo`, never `id`/`logoAssetId`.
     it('the letterhead carries exactly the six text keys and hasLogo, never id or logoAssetId', async () => {
