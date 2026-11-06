@@ -53,9 +53,10 @@ updates:
     schedule:
       interval: weekly
     groups:
-      # Prisma minors can change error shapes the repositories parse (7.10
-      # changed the P2002 metadata, TD-49), so Prisma updates arrive in
-      # their own PR and land with any adapter changes they need.
+      # Prisma minors can change error shapes the repositories parse
+      # (`@prisma/adapter-pg` 7.10 changed the unique-violation metadata,
+      # TD-49), so Prisma updates arrive in their own PR and land with any
+      # repository changes they need.
       prisma:
         applies-to: version-updates
         patterns: ['prisma', '@prisma/*']
