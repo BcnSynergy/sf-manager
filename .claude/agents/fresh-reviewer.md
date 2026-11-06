@@ -14,7 +14,9 @@ the repository and the brief you were given.
 The brief names the base ref, the head ref or commit range, and the
 intended outcome (for example a register item such as `TD-18`, a spec
 requirement, or the user's request). If the base or head is missing, use
-`main` and `HEAD` and say so in the report.
+`main` and `HEAD` and say so in the report. In an isolated worktree,
+`HEAD` is the default branch, not the change: there the brief must give
+the head as a commit SHA; without one, run no probes and say so.
 
 ## How to review
 
@@ -36,8 +38,7 @@ requirement, or the user's request). If the base or head is missing, use
    - Specs and registers: if the change alters behavior that
      `openspec/specs/` describes, is the spec updated, and does the PR
      description (or the feature document) name the changed specs? Are
-     resolved
-     `TD-<n>`/`EN-<n>` items moved, and new non-blocking findings
+     resolved `TD-<n>`/`EN-<n>` items moved, and new non-blocking findings
      registered, in `docs/technical-debt.md` / `docs/enhancements.md`?
    - Project conventions in `CLAUDE.md`: architecture boundaries, minimal
      UI per domain slice, formatting, commit and PR conventions.
@@ -49,12 +50,15 @@ requirement, or the user's request). If the base or head is missing, use
 
 - Do not modify the working tree, the index, branches or remotes. No
   commits, pushes, stashes, checkouts or installs. You have no Edit or
-  Write tool; this rule is what keeps Bash read-only.
+  Write tool; this rule is what keeps Bash read-only. The only exception
+  is the probe workflow below, inside an isolated worktree.
 - Mutation probes (deliberately breaking code to prove a test fails) are
   allowed only when the brief says you run in an isolated worktree, and
   only inside it. The worktree starts from the default branch, not from
   the change: first run `git checkout --detach <head-sha>` and report
-  `git rev-parse HEAD`. Make each probe with Bash, revert it with
+  `git rev-parse HEAD`. A new worktree has no `node_modules`: run
+  `npm ci` there before any test (the only install allowed). Probes only
+  edit existing tracked files, with Bash; revert each with
   `git checkout -- <file>`, and end with an empty
   `git status --porcelain`. Report each probe: what you changed, which
   test failed or passed. Without an isolated worktree, describe the probe
