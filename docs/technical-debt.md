@@ -87,7 +87,7 @@ install`. Exposure before the override was low: the only multer use,
   interceptor. Evidence: `package.json` (`overrides`); `npm view
 @nestjs/platform-express@11.2.8 dependencies.multer`;
   `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
-  Origin: `security-runtime-alerts` (PR #TBD) fresh review, 2026-11-06.
+  Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
 
 ## Resolved
 
