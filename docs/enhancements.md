@@ -848,7 +848,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   "document and history detail agree for technician, own draft session". It
   creates a draft, checks that both routes return 404 with the identical
   `REVIEW_SESSION_NOT_FOUND` body, and discards the draft in a `finally`.
-  Done in `en-152-draft-parity-row` (PR #TBD), 2026-11-06.
+  Done in `en-152-draft-parity-row` (PR #343), 2026-11-06.
 
 - **EN-146** (api tests): `apps/api/test/auth.e2e-spec.ts` now hashes
   `ADMIN_PASSWORD` once in `beforeAll` and seeds users through file-level
