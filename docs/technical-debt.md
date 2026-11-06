@@ -67,7 +67,7 @@ None.
   files that describe the 7.9 shape, and run the integration suite on 7.10.
   Evidence: CI run of PR #355 (Integration step); `@prisma/adapter-pg` 7.9.1
   vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
-  helpers. Origin: `dependabot-prisma-group` (PR #TBD) fresh review,
+  helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
   2026-11-06.
 
 ## Resolved
