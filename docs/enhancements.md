@@ -827,13 +827,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   production `seeding` module is ever added, anchor the pattern to
   `apps/api/dist/shared/seeding/*`. Origin: `en-150-build-guard-gaps`
   (PR #332) native review, 2026-11-04.
-- **EN-152** (api tests): The document/history-detail parity e2e in
-  `apps/api/test/review-history.e2e-spec.ts` ("document and history detail
-  agree for %s") has no draft-session row. Draft parity follows only by
-  chaining two other tests (the document route's out-of-scope/nonexistent/
-  draft equality, and the parity row for an out-of-scope session). A direct
-  row needs a draft created and discarded inside the case. Origin:
-  `td-18-test-gaps` (PR #337) fresh review, 2026-11-05.
 - **EN-153** (delivery): Dependabot reported "No update needed" for
   `node 24-bookworm-slim` and `caddy 2-alpine` on a manual run (2026-11-05,
   job "docker in /apps/api, /apps/web - Update #1683768849"), while the tags
@@ -849,6 +842,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   without notice. Origin: Dependabot PR review (PR #340), 2026-11-05.
 
 ## Done
+
+- **EN-152** (api tests): The document/history-detail parity e2e in
+  `apps/api/test/review-history.e2e-spec.ts` has a direct draft row,
+  "document and history detail agree for technician, own draft session". It
+  creates a draft, checks that both routes return 404 with the identical
+  `REVIEW_SESSION_NOT_FOUND` body, and discards the draft in a `finally`.
+  Done in `en-152-draft-parity-row` (PR #343), 2026-11-06.
 
 - **EN-146** (api tests): `apps/api/test/auth.e2e-spec.ts` now hashes
   `ADMIN_PASSWORD` once in `beforeAll` and seeds users through file-level
