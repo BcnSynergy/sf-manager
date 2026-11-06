@@ -46,7 +46,7 @@ None.
   (exact pin, plain `Retry-After` in seconds) with the login e2e. Evidence:
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
   `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
-  Origin: `dependabot-throttler-exclude` (PR #TBD) fresh review, 2026-11-06.
+  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
 
 ## Resolved
 
