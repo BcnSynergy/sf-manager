@@ -847,6 +847,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   raise the limit or group majors too. Origin: `td-32-dependabot-npm-actions`
   (PR #344) fresh review, 2026-11-06.
 
+- **EN-155** (delivery): The npm version that writes `package-lock.json` is
+  not pinned in practice. Root `package.json` declares
+  `"packageManager": "npm@10.8.2"`, but nothing enforces it (no corepack in
+  CI or the Dockerfiles), Node 24 ships npm 11, and local development uses
+  npm 11.17. Each npm version rewrites some lock flags differently: the
+  `@types/react-dom` entry flips between `"dev": true` (Dependabot) and
+  `"devOptional": true` (local npm 11.17) in every lockfile change. It has no
+  effect today because CI and both Dockerfiles run `npm ci` without `--omit`.
+  Update `packageManager` to the npm actually used and decide whether to
+  enforce it (corepack, or `engines.npm` with `engine-strict`). Origin:
+  Dependabot PR #360 fresh review (W-1), 2026-11-07.
+
 ## Done
 
 - **EN-152** (api tests): The document/history-detail parity e2e in
