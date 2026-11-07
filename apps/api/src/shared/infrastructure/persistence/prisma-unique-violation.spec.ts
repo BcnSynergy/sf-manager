@@ -72,7 +72,10 @@ describe('isUniqueViolationOf', () => {
     const error = new Prisma.PrismaClientKnownRequestError('Not found', {
       code: 'P2025',
       clientVersion: 'test',
-      meta: { driverAdapterError: { cause: { constraint: PAIR } } },
+      // A constraint that would match on a P2002, so only the code decides.
+      meta: {
+        driverAdapterError: { cause: { constraint: { index: PAIR.name } } },
+      },
     });
     expect(isUniqueViolationOf(error, PAIR)).toBe(false);
   });
