@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import {
+  isUniqueViolationOf,
+  UniqueConstraint,
+} from '../../../../shared/infrastructure/persistence/prisma-unique-violation';
 import { SoftDeletableRepository } from '../../../../shared/infrastructure/persistence/soft-deletable.repository';
 import { InspectableElementRepository } from '../../application/ports/inspectable-element.repository.port';
 import { InspectableElement } from '../../domain/inspectable-element.entity';
@@ -21,8 +25,12 @@ const RECORD_NOT_FOUND = 'P2025';
 // design.md Decision 3: unique-constraint violation on
 // `InspectableElement_code_key`, mapped to ElementCodeAlreadyExistsError so
 // the create use case's bounded retry loop can regenerate and retry — never
-// surfaces as a raw Prisma error.
-const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+// surfaces as a raw Prisma error. See isUniqueViolationOf for how the
+// driver adapter reports it.
+const CODE_UNIQUE_CONSTRAINT: UniqueConstraint = {
+  name: 'InspectableElement_code_key',
+  columns: ['code'],
+};
 
 // Prisma adapter for the InspectableElementRepository port (ADR-013).
 // Extends SoftDeletableRepository so the ADR-010 `deletedAt: null` default
@@ -49,11 +57,10 @@ export class PrismaInspectableElementRepository
         data: InspectableElementMapper.toPersistence(element),
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === UNIQUE_CONSTRAINT_VIOLATION &&
-        this.isCodeUniqueViolation(error)
-      ) {
+      // Any other P2002, or one whose constraint can't be read, surfaces
+      // as the raw Prisma error instead of being mislabeled as a code
+      // collision.
+      if (isUniqueViolationOf(error, CODE_UNIQUE_CONSTRAINT)) {
         throw new ElementCodeAlreadyExistsError();
       }
       throw error;
@@ -188,67 +195,6 @@ export class PrismaInspectableElementRepository
     });
 
     return records.map((record) => InspectableElementMapper.toDomain(record));
-  }
-
-  // Fresh-context review CRITICAL finding (PR3), verified empirically
-  // against real Postgres: under Prisma 7 with the @prisma/adapter-pg driver
-  // adapter, `error.meta.target` is NEVER populated for P2002s — the
-  // violated constraint's columns instead come through under
-  // `error.meta.driverAdapterError.cause.constraint.fields` (quoted column
-  // names, e.g. `"code"`), because the driver adapter reports the raw
-  // Postgres error rather than Prisma's own precomputed `target`. Ported
-  // verbatim from PrismaCommunityRepresentativeRepository
-  // .extractViolatedConstraintFields, which fixed the same bug for that
-  // module — narrowed step-by-step (no `any`) to satisfy
-  // `no-unsafe-member-access`.
-  private extractViolatedConstraintFields(
-    error: unknown,
-  ): string[] | undefined {
-    if (
-      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-      error.code !== UNIQUE_CONSTRAINT_VIOLATION
-    ) {
-      return undefined;
-    }
-    const meta: unknown = error.meta;
-    if (typeof meta !== 'object' || meta === null) {
-      return undefined;
-    }
-    const driverAdapterError = (meta as Record<string, unknown>)
-      .driverAdapterError;
-    if (typeof driverAdapterError !== 'object' || driverAdapterError === null) {
-      return undefined;
-    }
-    const cause = (driverAdapterError as Record<string, unknown>).cause;
-    if (typeof cause !== 'object' || cause === null) {
-      return undefined;
-    }
-    const constraint = (cause as Record<string, unknown>).constraint;
-    if (typeof constraint !== 'object' || constraint === null) {
-      return undefined;
-    }
-    const fields = (constraint as Record<string, unknown>).fields;
-    if (!Array.isArray(fields)) {
-      return undefined;
-    }
-    return fields
-      .filter((field): field is string => typeof field === 'string')
-      .map((field) => field.replace(/"/g, ''));
-  }
-
-  // This table has exactly one unique constraint on `code` (design.md
-  // Decision 3), so any P2002 whose violated columns include `code` is the
-  // code collision — unlike CommunityRepresentativeRepository (2 unique
-  // constraints to distinguish), there is no second case to disambiguate
-  // here. Falls back to `false` (never throw ElementCodeAlreadyExistsError)
-  // when the driver-adapter shape can't be read, letting the raw Prisma
-  // error surface instead of mislabeling an unrelated P2002 as a code
-  // collision.
-  private isCodeUniqueViolation(
-    error: Prisma.PrismaClientKnownRequestError,
-  ): boolean {
-    const fields = this.extractViolatedConstraintFields(error);
-    return fields !== undefined && fields.includes('code');
   }
 
   private mapMutationError(error: unknown): unknown {

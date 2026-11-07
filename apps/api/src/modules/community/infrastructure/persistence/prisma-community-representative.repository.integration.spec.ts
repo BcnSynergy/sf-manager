@@ -412,10 +412,11 @@ describe('PrismaCommunityRepresentativeRepository (integration)', () => {
   // (`CommunityRepresentative_one_active_per_community`) is INVISIBLE to
   // schema.prisma, so Prisma's classic `error.meta.target` field is never
   // populated for it — but Prisma 7's pg driver adapter (@prisma/adapter-pg)
-  // surfaces the violated constraint's columns under
-  // `error.meta.driverAdapterError.cause.constraint.fields` for BOTH known
-  // and unknown-to-schema constraints (verified empirically against real
-  // Postgres). This forces a genuine P2002 on the partial index specifically
+  // surfaces the violated constraint under
+  // `error.meta.driverAdapterError.cause.constraint` for BOTH known and
+  // unknown-to-schema constraints: by name (`index`, adapter-pg 7.10+) or by
+  // columns (`fields`, adapter-pg 7.9), see isUniqueViolationOf (TD-49).
+  // This forces a genuine P2002 on the partial index specifically
   // (two active rows for the SAME community, DIFFERENT users — not a
   // duplicate pair) and asserts it maps to TransactionConflictError, not
   // AssignmentAlreadyExistsError.
