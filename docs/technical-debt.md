@@ -47,28 +47,6 @@ None.
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
   `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
   Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
-- **TD-49**: Prisma is stuck at 7.9.x. Dependabot's grouped npm PR #355 bumped
-  `prisma`, `@prisma/client` and `@prisma/adapter-pg` to 7.10.1, and two
-  integration tests failed: a real unique-constraint violation no longer
-  became `ElementCodeAlreadyExistsError` (a raw P2002
-  `PrismaClientKnownRequestError` came back) or `AssignmentAlreadyExistsError`
-  (a `TransactionConflictError` came back). Cause: for a Postgres unique
-  violation (23505), `@prisma/adapter-pg` 7.10 sets
-  `meta.driverAdapterError.cause.constraint` to `{ index: <constraint name> }`
-  whenever Postgres names the constraint (always, in practice), and sets
-  `fields` only as a fallback; 7.9 always set `fields`. Only two repositories
-  read `constraint.fields`: `prisma-inspectable-element` (a code collision
-  would no longer trigger the create use case's regenerate-and-retry, so the
-  request fails with 500) and `prisma-community-representative` (a duplicate
-  pair would answer 409 `TRANSACTION_CONFLICT`, telling the caller to retry,
-  instead of 409 `ASSIGNMENT_ALREADY_EXISTS`). To upgrade: match on
-  `constraint.index` (`InspectableElement_code_key`, the pair constraint and
-  the partial index) with `fields` as a fallback, update the comments in both
-  files that describe the 7.9 shape, and run the integration suite on 7.10.
-  Evidence: CI run of PR #355 (Integration step); `@prisma/adapter-pg` 7.9.1
-  vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
-  helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
-  2026-11-06.
 - **TD-50**: The root `package.json` carries a scoped npm override,
   `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
   alert #59 (GHSA-q7qp-rjg7-q26m, high: denial of service via a pending
@@ -90,6 +68,29 @@ install`. Exposure before the override was low: the only multer use,
   Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
 
 ## Resolved
+
+- **TD-49**: Prisma is stuck at 7.9.x. Dependabot's grouped npm PR #355 bumped
+  `prisma`, `@prisma/client` and `@prisma/adapter-pg` to 7.10.1, and two
+  integration tests failed: a real unique-constraint violation no longer
+  became `ElementCodeAlreadyExistsError` (a raw P2002
+  `PrismaClientKnownRequestError` came back) or `AssignmentAlreadyExistsError`
+  (a `TransactionConflictError` came back). Cause: for a Postgres unique
+  violation (23505), `@prisma/adapter-pg` 7.10 sets
+  `meta.driverAdapterError.cause.constraint` to `{ index: <constraint name> }`
+  whenever Postgres names the constraint (always, in practice), and sets
+  `fields` only as a fallback; 7.9 always set `fields`. Only two repositories
+  read `constraint.fields`: `prisma-inspectable-element` (a code collision
+  would no longer trigger the create use case's regenerate-and-retry, so the
+  request fails with 500) and `prisma-community-representative` (a duplicate
+  pair would answer 409 `TRANSACTION_CONFLICT`, telling the caller to retry,
+  instead of 409 `ASSIGNMENT_ALREADY_EXISTS`). To upgrade: match on
+  `constraint.index` (`InspectableElement_code_key`, the pair constraint and
+  the partial index) with `fields` as a fallback, update the comments in both
+  files that describe the 7.9 shape, and run the integration suite on 7.10.
+  Evidence: CI run of PR #355 (Integration step); `@prisma/adapter-pg` 7.9.1
+  vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
+  helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
+  2026-11-06. Resolved by `td-49-prisma-constraint-index` (PR #TBD): both repositories now match the constraint by name (`constraint.index`) with the exact columns (`fields`) as a fallback, through the shared `isUniqueViolationOf` helper; the integration suite passes on 7.9.1 and on 7.10.1. The version bump itself arrives with the Dependabot Prisma group PR.
 
 - **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
   the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
