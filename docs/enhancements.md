@@ -857,7 +857,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   by the other side. It has no effect today because CI and both Dockerfiles
   run `npm ci` without `--omit`. Update `packageManager` to the npm actually
   used and decide whether to enforce it (corepack, or an equivalent check).
-  Origin: Dependabot PR #360 fresh review (W-1), 2026-11-07.
+  Origin: Dependabot PR #360 fresh review (W-1), 2026-11-07. Registered in
+  PR #362.
 
 ## Done
 
