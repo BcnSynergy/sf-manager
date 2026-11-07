@@ -84,6 +84,21 @@ describe('PrismaCommunityRepresentativeRepository unique-violation mapping', () 
       );
     });
 
+    // The partial index covers a subset of the pair's columns, so the name
+    // must win over any column list reported alongside it.
+    it('trusts the reported constraint name over pair-matching columns', async () => {
+      const repository = repositoryRejectingWritesWith(
+        uniqueViolation({
+          index: 'CommunityRepresentative_one_active_per_community',
+          fields: ['"communityId"', '"userId"'],
+        }),
+      );
+
+      await expect(repository.create(assignment)).rejects.toBeInstanceOf(
+        TransactionConflictError,
+      );
+    });
+
     it('maps a P2002 whose constraint cannot be read to TransactionConflictError', async () => {
       const repository = repositoryRejectingWritesWith(
         new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
