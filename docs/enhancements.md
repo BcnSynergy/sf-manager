@@ -860,6 +860,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Origin: Dependabot PR #360 fresh review (W-1), 2026-11-07. Registered in
   PR #362.
 
+- **EN-156** (api tests): `prisma-unique-violation.spec.ts` pins the
+  `isUniqueViolationOf` contract with two gaps. Name precedence is proved in
+  one direction only (a non-matching name with matching columns returns
+  false); add the inverse, a matching name with non-matching columns returns
+  true, so an implementation that needs both to agree fails. The
+  unreadable-shape table also skips type-malformed payloads (`fields` as a
+  string, `index` as a non-string, a primitive `constraint`). Origin:
+  `td-49-prisma-constraint-index` (PR #363) Gentle AI reliability review,
+  2026-11-07.
+
 ## Done
 
 - **EN-152** (api tests): The document/history-detail parity e2e in
