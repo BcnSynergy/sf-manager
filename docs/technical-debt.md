@@ -87,7 +87,7 @@ install`. Exposure before the override was low: the only multer use,
   (Integration step); `@prisma/adapter-pg` 7.9.1 vs 7.10.1 `dist/index.js`
   (23505 mapping); the two repositories' P2002 helpers. Origin:
   `dependabot-prisma-group` (PR #356) fresh review, 2026-11-06. Resolved by
-  `td-49-prisma-constraint-index` (PR #TBD): both repositories now match the
+  `td-49-prisma-constraint-index` (PR #363): both repositories now match the
   constraint by name (`constraint.index`), with the exact columns (`fields`)
   as a fallback, through the shared `isUniqueViolationOf` helper. The
   integration suite passes on 7.9.1 and on 7.10.1. The version bump itself
