@@ -83,14 +83,15 @@ install`. Exposure before the override was low: the only multer use,
   would no longer trigger the create use case's regenerate-and-retry, so the
   request fails with 500) and `prisma-community-representative` (a duplicate
   pair would answer 409 `TRANSACTION_CONFLICT`, telling the caller to retry,
-  instead of 409 `ASSIGNMENT_ALREADY_EXISTS`). To upgrade: match on
-  `constraint.index` (`InspectableElement_code_key`, the pair constraint and
-  the partial index) with `fields` as a fallback, update the comments in both
-  files that describe the 7.9 shape, and run the integration suite on 7.10.
-  Evidence: CI run of PR #355 (Integration step); `@prisma/adapter-pg` 7.9.1
-  vs 7.10.1 `dist/index.js` (23505 mapping); the two repositories' P2002
-  helpers. Origin: `dependabot-prisma-group` (PR #356) fresh review,
-  2026-11-06. Resolved by `td-49-prisma-constraint-index` (PR #TBD): both repositories now match the constraint by name (`constraint.index`) with the exact columns (`fields`) as a fallback, through the shared `isUniqueViolationOf` helper; the integration suite passes on 7.9.1 and on 7.10.1. The version bump itself arrives with the Dependabot Prisma group PR.
+  instead of 409 `ASSIGNMENT_ALREADY_EXISTS`). Evidence: CI run of PR #355
+  (Integration step); `@prisma/adapter-pg` 7.9.1 vs 7.10.1 `dist/index.js`
+  (23505 mapping); the two repositories' P2002 helpers. Origin:
+  `dependabot-prisma-group` (PR #356) fresh review, 2026-11-06. Resolved by
+  `td-49-prisma-constraint-index` (PR #TBD): both repositories now match the
+  constraint by name (`constraint.index`), with the exact columns (`fields`)
+  as a fallback, through the shared `isUniqueViolationOf` helper. The
+  integration suite passes on 7.9.1 and on 7.10.1. The version bump itself
+  arrives with the Dependabot Prisma group PR.
 
 - **TD-23**: Several SDD changes lost their "TDD Cycle Evidence" table because
   the Engram `apply-progress` topic-key upsert overwrote it, so RED/GREEN order
