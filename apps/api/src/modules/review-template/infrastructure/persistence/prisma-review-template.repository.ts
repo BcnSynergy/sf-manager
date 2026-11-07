@@ -58,7 +58,7 @@ const DEADLOCK_DETECTED_SQLSTATE = '40P01';
 // bug this exact-match approach replaces).
 
 // Extracts the exact Postgres SQLSTATE from a Prisma P2010 ("Raw query
-// failed") error. Verified against Prisma 7.9.1 + @prisma/adapter-pg
+// failed") error. Verified against Prisma 7.9.1 and 7.10.1 + @prisma/adapter-pg
 // source (node_modules/@prisma/adapter-pg/dist/index.js's
 // convertDriverError, and node_modules/@prisma/client/runtime/client.js's
 // P2010-error factory): the message is constructed as EXACTLY
