@@ -885,6 +885,23 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   "`@nestjs/throttler` 6.x". Origin: `throttler-6-7` (PR #365) fresh review
   S-1, 2026-11-08.
 
+- **EN-159** (api): `toLogoUploadSetupError` in
+  `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`
+  turns every `UnsupportedMediaTypeException` from multer's interceptor into
+  400 `LOGO_UPLOAD_INVALID`, not only the one `@nestjs/platform-express` 12
+  raises for a multipart type other than form-data (message `Unsupported
+content type`). Today that is the only 415 it raises, but a future one
+  would be recoded silently. Match the message too, or say in the comment
+  that every 415 is translated on purpose. Origin: `nest-12` (PR #TBD)
+  Gentle AI readability and reliability reviews, 2026-11-08.
+
+- **EN-160** (api tooling): The six Jest scripts in `apps/api/package.json`
+  each repeat `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js`,
+  which depends on npm hoisting `jest` to the workspace root. Put the flag and
+  the path in one place (one shared script, or `NODE_OPTIONS` through
+  `cross-env`), so a hoisting change breaks one line, not six. Origin:
+  `nest-12` (PR #TBD) Gentle AI readability review, 2026-11-08.
+
 ## Done
 
 - **EN-152** (api tests): The document/history-detail parity e2e in
