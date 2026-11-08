@@ -35,7 +35,7 @@ None.
   then hit failures in `nest` CLI commands that are hard to trace. Raise the
   floor to `>=24.15` (and check that `.nvmrc`, Docker and CI agree), or
   document it. CI and the API image run a current Node 24, so neither is
-  affected. Origin: `nest-12` (PR #TBD) Gentle AI reliability review, on
+  affected. Origin: `nest-12` (PR #370) Gentle AI reliability review, on
   2026-11-08.
 
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
@@ -69,7 +69,7 @@ install`. Exposure before the override was low: the only multer use,
 @nestjs/platform-express@11.2.8 dependencies.multer`;
   `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
   Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
-  Resolved by `nest-12` (PR #TBD): all `@nestjs/*` packages moved to 12.x
+  Resolved by `nest-12` (PR #370): all `@nestjs/*` packages moved to 12.x
   (`@nestjs/platform-express` 12.4.0 depends on `multer` 2.5.0), and the
   override is gone. Removing the lock entries for `node_modules/multer` alone
   dropped `multer` from the tree, and a partial regeneration left its nested

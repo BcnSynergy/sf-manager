@@ -892,7 +892,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   raises for a multipart type other than form-data (message `Unsupported
 content type`). Today that is the only 415 it raises, but a future one
   would be recoded silently. Match the message too, or say in the comment
-  that every 415 is translated on purpose. Origin: `nest-12` (PR #TBD)
+  that every 415 is translated on purpose. Origin: `nest-12` (PR #370)
   Gentle AI readability and reliability reviews, 2026-11-08.
 
 - **EN-160** (api tooling): The six Jest scripts in `apps/api/package.json`
@@ -900,7 +900,7 @@ content type`). Today that is the only 415 it raises, but a future one
   which depends on npm hoisting `jest` to the workspace root. Put the flag and
   the path in one place (one shared script, or `NODE_OPTIONS` through
   `cross-env`), so a hoisting change breaks one line, not six. Origin:
-  `nest-12` (PR #TBD) Gentle AI readability review, 2026-11-08.
+  `nest-12` (PR #370) Gentle AI readability review, 2026-11-08.
 
 ## Done
 
