@@ -171,6 +171,11 @@ random>` (the timestamp is embedded so stale runs can be aged out), on the
 - `npm run test:e2e -w apps/api` — the remaining `*.e2e-spec.ts` suite
   (stubbed dependencies, no database).
 
+The API's test scripts run Jest under `node --experimental-vm-modules`:
+NestJS 12 ships only ES modules, and Jest loads them from the CommonJS test
+build through `require(esm)` only with that flag. To run `npx jest` directly
+in `apps/api`, set `NODE_OPTIONS=--experimental-vm-modules` first.
+
 ### One-time dev database reset
 
 If the dev database (`sfmanager`) ever needs resetting to a clean seeded

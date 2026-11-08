@@ -3,6 +3,7 @@ import {
   CallHandler,
   ExecutionContext,
   HttpException,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { of } from 'rxjs';
 import {
@@ -11,13 +12,17 @@ import {
 } from './logo-file.interceptor';
 
 describe('toLogoUploadSetupError (TD-44)', () => {
-  it('turns busboy\'s "Unsupported content type" error into a 400', () => {
-    const message = 'Unsupported content type: multipart/mixed; boundary=x';
-
-    const translated = toLogoUploadSetupError(new Error(message));
+  // @nestjs/platform-express 12 maps busboy's "Unsupported content type"
+  // error to a 415; the spec answers 400 LOGO_UPLOAD_INVALID.
+  it('turns the 415 for an unsupported multipart type into a 400', () => {
+    const translated = toLogoUploadSetupError(
+      new UnsupportedMediaTypeException('Unsupported content type'),
+    );
 
     expect(translated).toBeInstanceOf(BadRequestException);
-    expect((translated as BadRequestException).message).toBe(message);
+    expect((translated as BadRequestException).message).toBe(
+      'Unsupported content type',
+    );
   });
 
   // EN-115: the spec answers an unparseable content type with
@@ -72,14 +77,17 @@ describe('LogoFileInterceptor.intercept', () => {
     expect(intercept).toHaveBeenCalledWith(context, next);
   });
 
-  it("translates busboy's content-type error into a 400", async () => {
-    const message = 'Unsupported content type: multipart/mixed; boundary=x';
-    jest.spyOn(base, 'intercept').mockRejectedValue(new Error(message));
+  it('translates the 415 for an unsupported multipart type into a 400', async () => {
+    jest
+      .spyOn(base, 'intercept')
+      .mockRejectedValue(
+        new UnsupportedMediaTypeException('Unsupported content type'),
+      );
 
     const rejection = new LogoFileInterceptor().intercept(context, next);
 
     await expect(rejection).rejects.toBeInstanceOf(BadRequestException);
-    await expect(rejection).rejects.toThrow(message);
+    await expect(rejection).rejects.toThrow('Unsupported content type');
   });
 
   it('answers a malformed content type with LOGO_FILE_MISSING', async () => {
