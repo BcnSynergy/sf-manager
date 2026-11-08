@@ -59,20 +59,18 @@ install`. Exposure before the override was low: the only multer use,
 
 ## Resolved
 
-- **TD-48**: `@nestjs/throttler` is stuck at 6.4.0. Dependabot's grouped
+- **TD-48**: `@nestjs/throttler` was stuck at 6.4.0. Dependabot's grouped
   npm PR #345 bumped it to 6.7.1 and the API build failed with `TS2415: Class
 'LoginThrottlerGuard' incorrectly extends base class 'ThrottlerGuard'`, so
-  every throttler update PR fails CI the same way. To upgrade: adapt
-  `LoginThrottlerGuard` to the new `ThrottlerGuard` signature, then re-check
-  the header and storage behavior that `login-rate-limit` design D1 pins
-  (exact pin, plain `Retry-After` in seconds) with the login e2e. Evidence:
+  every throttler update PR failed CI the same way. Evidence:
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
   `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
-  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06. Resolved by `throttler-6-7` (PR #TBD): 6.7.1 added a
-  protected `logger` to `ThrottlerGuard`, which clashed with the guard's
-  private `logger` field; the field is now `loginLogger`. The exact pin and
-  the Dependabot group exclusion stay (design D1), and the login e2e passes
-  on 6.7.1 with the same `Retry-After` and storage behavior.
+  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
+  Resolved by `throttler-6-7` (PR #TBD): 6.7.1 added a protected `logger` to
+  `ThrottlerGuard`, which clashed with the guard's private `logger` field; the
+  field is now `loginLogger`. The exact pin and the Dependabot group exclusion
+  stay (design D1), and the login e2e and integration suites pass on 6.7.1
+  with the same `Retry-After` and storage behavior.
 
 - **TD-49**: Prisma is stuck at 7.9.x. Dependabot's grouped npm PR #355 bumped
   `prisma`, `@prisma/client` and `@prisma/adapter-pg` to 7.10.1, and two
