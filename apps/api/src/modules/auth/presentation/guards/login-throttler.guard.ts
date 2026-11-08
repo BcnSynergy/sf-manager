@@ -27,7 +27,9 @@ import { toClientKey } from './client-key';
 // plus the limiter.
 @Injectable()
 export class LoginThrottlerGuard extends ThrottlerGuard {
-  private readonly logger = new Logger(LoginThrottlerGuard.name);
+  // Not named `logger`: ThrottlerGuard declares a protected `logger` since
+  // 6.7.1, and a private field of the same name fails the build (TS2415).
+  private readonly loginLogger = new Logger(LoginThrottlerGuard.name);
 
   constructor(
     @InjectThrottlerOptions() options: ThrottlerModuleOptions,
@@ -74,7 +76,7 @@ export class LoginThrottlerGuard extends ThrottlerGuard {
           );
         }
       } catch (error) {
-        this.logger.warn(
+        this.loginLogger.warn(
           `Email block read failed on a rate-limited login: ${error instanceof Error ? error.message : 'unknown error'}`,
         );
       }
