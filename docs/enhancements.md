@@ -875,14 +875,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (`toBe('1')`, `/^\d+$/`), nothing pins it as a plain number of seconds or
   checks its value, so a throttler upgrade that changed that header would
   pass every refresh test. Add a numeric check and the expected value.
-  Pre-existing, not caused by the upgrade. Origin: `throttler-6-7` (PR #TBD)
+  Pre-existing, not caused by the upgrade. Origin: `throttler-6-7` (PR #365)
   fresh review W-1, 2026-11-08.
 
 - **EN-158** (api docs): A comment in
   `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`
   says "6.4.0 does not re-export `ThrottlerStorageRecord`". It is still true
   in 6.7.1, but the version is stale after the upgrade; reword it to
-  "`@nestjs/throttler` 6.x". Origin: `throttler-6-7` (PR #TBD) fresh review
+  "`@nestjs/throttler` 6.x". Origin: `throttler-6-7` (PR #365) fresh review
   S-1, 2026-11-08.
 
 ## Done

@@ -66,7 +66,7 @@ install`. Exposure before the override was low: the only multer use,
   `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
   `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
   Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
-  Resolved by `throttler-6-7` (PR #TBD): 6.7.1 added a protected `logger` to
+  Resolved by `throttler-6-7` (PR #365): 6.7.1 added a protected `logger` to
   `ThrottlerGuard`, which clashed with the guard's private `logger` field; the
   field is now `loginLogger`. The exact pin and the Dependabot group exclusion
   stay (design D1), and the login e2e and integration suites pass on 6.7.1
