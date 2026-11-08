@@ -870,6 +870,21 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `td-49-prisma-constraint-index` (PR #363) Gentle AI reliability review,
   2026-11-07.
 
+- **EN-157** (api tests): `refresh-rate-limit.e2e-spec.ts` checks the refresh
+  limit's `Retry-After` only with `toBeDefined()`. Unlike the login e2e
+  (`toBe('1')`, `/^\d+$/`), nothing pins it as a plain number of seconds or
+  checks its value, so a throttler upgrade that changed that header would
+  pass every refresh test. Add a numeric check and the expected value.
+  Pre-existing, not caused by the upgrade. Origin: `throttler-6-7` (PR #TBD)
+  fresh review W-1, 2026-11-08.
+
+- **EN-158** (api docs): A comment in
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`
+  says "6.4.0 does not re-export `ThrottlerStorageRecord`". It is still true
+  in 6.7.1, but the version is stale after the upgrade; reword it to
+  "`@nestjs/throttler` 6.x". Origin: `throttler-6-7` (PR #TBD) fresh review
+  S-1, 2026-11-08.
+
 ## Done
 
 - **EN-152** (api tests): The document/history-detail parity e2e in
