@@ -965,7 +965,7 @@ describe('Organization Profile (e2e)', () => {
         (req: request.Test) =>
           req.set('Content-Type', 'multipart/form-data').send('not a form'),
       ],
-      // TD-44: busboy rejects this content type with a plain Error.
+      // TD-44: platform-express 12 answers this content type with a 415.
       [
         'a multipart type other than form-data',
         (req: request.Test) =>
