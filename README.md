@@ -228,8 +228,8 @@ none merges on its own.
 - npm (the whole workspace, from the root `package-lock.json`): minor and
   patch updates in one grouped PR, each major in its own PR.
   `@nestjs/throttler` is pinned to an exact version on purpose and excluded
-  from the group, so every update to it arrives as its own PR (upgrading it
-  needs code changes first, TD-48). Prisma (`prisma`, `@prisma/*`) has its
+  from the group, so every update to it arrives as its own PR (each upgrade
+  must re-check the login e2e, TD-48). Prisma (`prisma`, `@prisma/*`) has its
   own grouped PR, because a Prisma minor can change the error metadata the
   repositories read (TD-49).
 - GitHub Actions: workflows pin actions by major tag, so every update is a

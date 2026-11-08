@@ -37,16 +37,6 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-48**: `@nestjs/throttler` is stuck at 6.4.0. Dependabot's grouped
-  npm PR #345 bumped it to 6.7.1 and the API build failed with `TS2415: Class
-'LoginThrottlerGuard' incorrectly extends base class 'ThrottlerGuard'`, so
-  every throttler update PR fails CI the same way. To upgrade: adapt
-  `LoginThrottlerGuard` to the new `ThrottlerGuard` signature, then re-check
-  the header and storage behavior that `login-rate-limit` design D1 pins
-  (exact pin, plain `Retry-After` in seconds) with the login e2e. Evidence:
-  `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
-  `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
-  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06.
 - **TD-50**: The root `package.json` carries a scoped npm override,
   `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
   alert #59 (GHSA-q7qp-rjg7-q26m, high: denial of service via a pending
@@ -68,6 +58,21 @@ install`. Exposure before the override was low: the only multer use,
   Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
 
 ## Resolved
+
+- **TD-48**: `@nestjs/throttler` is stuck at 6.4.0. Dependabot's grouped
+  npm PR #345 bumped it to 6.7.1 and the API build failed with `TS2415: Class
+'LoginThrottlerGuard' incorrectly extends base class 'ThrottlerGuard'`, so
+  every throttler update PR fails CI the same way. To upgrade: adapt
+  `LoginThrottlerGuard` to the new `ThrottlerGuard` signature, then re-check
+  the header and storage behavior that `login-rate-limit` design D1 pins
+  (exact pin, plain `Retry-After` in seconds) with the login e2e. Evidence:
+  `apps/api/src/modules/auth/presentation/guards/login-throttler.guard.ts`;
+  `openspec/changes/archive/2026-10-07-login-rate-limit/design.md` (D1).
+  Origin: `dependabot-throttler-exclude` (PR #354) fresh review, 2026-11-06. Resolved by `throttler-6-7` (PR #TBD): 6.7.1 added a
+  protected `logger` to `ThrottlerGuard`, which clashed with the guard's
+  private `logger` field; the field is now `loginLogger`. The exact pin and
+  the Dependabot group exclusion stay (design D1), and the login e2e passes
+  on 6.7.1 with the same `Retry-After` and storage behavior.
 
 - **TD-49**: Prisma is stuck at 7.9.x. Dependabot's grouped npm PR #355 bumped
   `prisma`, `@prisma/client` and `@prisma/adapter-pg` to 7.10.1, and two

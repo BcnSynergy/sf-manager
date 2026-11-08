@@ -66,8 +66,8 @@ updates:
         patterns: ['*']
         # Pinned to an exact version on purpose (login-rate-limit design D1:
         # header and storage behavior changed across 6.x minors and the e2e
-        # pins it). Excluded so each upgrade is reviewed alone; past 6.4.0
-        # the build breaks until TD-48 is done.
+        # pins it). Excluded so each upgrade is reviewed alone and re-checked
+        # with the login e2e (TD-48).
         exclude-patterns: ['@nestjs/throttler', 'prisma', '@prisma/*']
         update-types: [minor, patch]
     commit-message:
