@@ -28,6 +28,16 @@ None.
 
 ### Low
 
+- **TD-51**: The root `package.json` declares the Node engine as `>=24`, but
+  the NestJS 12 dev tooling (`@nestjs/schematics` 12 and its
+  `@angular-devkit/*` dependencies) requires `^22.22.3 || ^24.15.0 || >=26`.
+  A contributor on Node 24.0 to 24.14 passes the repo's engines check and can
+  then hit failures in `nest` CLI commands that are hard to trace. Raise the
+  floor to `>=24.15` (and check that `.nvmrc`, Docker and CI agree), or
+  document it. CI and the API image run a current Node 24, so neither is
+  affected. Origin: `nest-12` (PR #370) Gentle AI reliability review, on
+  2026-11-08.
+
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
   SHA-pinned actions. The API typecheck step landed in
@@ -37,7 +47,10 @@ None.
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
-- **TD-50**: The root `package.json` carries a scoped npm override,
+
+## Resolved
+
+- **TD-50**: The root `package.json` carried a scoped npm override,
   `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
   alert #59 (GHSA-q7qp-rjg7-q26m, high: denial of service via a pending
   asynchronous `fileFilter` after request teardown; fixed in multer 2.5.0).
@@ -56,8 +69,14 @@ install`. Exposure before the override was low: the only multer use,
 @nestjs/platform-express@11.2.8 dependencies.multer`;
   `apps/api/src/modules/organization-profile/presentation/logo-file.interceptor.ts`.
   Origin: `security-runtime-alerts` (PR #359) fresh review, 2026-11-06.
-
-## Resolved
+  Resolved by `nest-12` (PR #370): all `@nestjs/*` packages moved to 12.x
+  (`@nestjs/platform-express` 12.4.0 depends on `multer` 2.5.0), and the
+  override is gone. Removing the lock entries for `node_modules/multer` alone
+  dropped `multer` from the tree, and a partial regeneration left its nested
+  `type-is` 1.6.18 resolving the root `media-typer` 1.x and `mime-types` 3.x,
+  so no upload was seen as multipart. Regenerating the `multer` and
+  `@nestjs/platform-express` entries together fixed it; `npm ls --all`
+  reports no invalid or missing package.
 
 - **TD-48**: `@nestjs/throttler` was stuck at 6.4.0. Dependabot's grouped
   npm PR #345 bumped it to 6.7.1 and the API build failed with `TS2415: Class
