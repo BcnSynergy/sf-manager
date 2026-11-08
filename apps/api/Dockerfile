@@ -1,7 +1,7 @@
 # Production image for the API (odd/tasks/deployment.md, S2-S4). Build it
 # from the repository root, which holds the npm workspace:
 #   docker build -f apps/api/Dockerfile .
-FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
 
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-api, EN-91)
 # to this repository, so it inherits the repository's access permissions.
