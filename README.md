@@ -174,7 +174,9 @@ random>` (the timestamp is embedded so stale runs can be aged out), on the
 The API's test scripts run Jest under `node --experimental-vm-modules`:
 NestJS 12 ships only ES modules, and Jest loads them from the CommonJS test
 build through `require(esm)` only with that flag. To run `npx jest` directly
-in `apps/api`, set `NODE_OPTIONS=--experimental-vm-modules` first.
+in `apps/api`, set `NODE_OPTIONS=--experimental-vm-modules` first. Each run
+prints Node's "ExperimentalWarning: VM Modules is an experimental feature";
+it is expected and not a failure.
 
 ### One-time dev database reset
 

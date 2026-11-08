@@ -28,16 +28,15 @@ None.
 
 ### Low
 
-- **TD-51**: The root `package.json` declares `"engines": { "node": ">=24" }`,
-  but the NestJS 12 dev tooling (`@nestjs/schematics` 12 and its
-  `@angular-devkit/*` dependencies) declares `node: ^22.22.3 || ^24.15.0 ||
-
-  > =26`. A contributor on Node 24.0 to 24.14 passes the repo's engines check
-and can then hit failures in `nest`CLI commands that are hard to trace.
-Raise the floor to`>=24.15`(and check`.nvmrc`/Docker/CI agree), or
-document it. CI and the API image run a current Node 24, so neither is
-affected. Origin: `nest-12` (PR #TBD) Gentle AI reliability review,
-  > 2026-11-08.
+- **TD-51**: The root `package.json` declares the Node engine as `>=24`, but
+  the NestJS 12 dev tooling (`@nestjs/schematics` 12 and its
+  `@angular-devkit/*` dependencies) requires `^22.22.3 || ^24.15.0 || >=26`.
+  A contributor on Node 24.0 to 24.14 passes the repo's engines check and can
+  then hit failures in `nest` CLI commands that are hard to trace. Raise the
+  floor to `>=24.15` (and check that `.nvmrc`, Docker and CI agree), or
+  document it. CI and the API image run a current Node 24, so neither is
+  affected. Origin: `nest-12` (PR #TBD) Gentle AI reliability review, on
+  2026-11-08.
 
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
