@@ -813,7 +813,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-142** (web): silent-refresh follow-ups from the TD-5 PR 3/3
   pre-push review. (A tab that waited on the `sf-manager.refresh` Web Lock
   no longer rotates once more: it retries with the other tab's cookies
-  first, done in `en-142-wait-other-tab`, PR #381.) (The idempotent
+  first, done in `en-142-wait-other-tab`, PR #388.) (The idempotent
   replay on the API for a refresh whose answer stalls past 10 s after the
   token was consumed was dropped on 2026-11-09, `en-142-replay-decision`,
   PR #380: the API stores only token hashes, so a replay would have to
