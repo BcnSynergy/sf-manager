@@ -622,8 +622,9 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
       const pending = apiFetch('/users').catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(1_000);
-      const error = await pending;
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
+      expect(error).not.toBe('still pending');
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
@@ -656,6 +657,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       await vi.advanceTimersByTimeAsync(10_000);
       const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
+      expect(error).not.toBe('still pending');
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
