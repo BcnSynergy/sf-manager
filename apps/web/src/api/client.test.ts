@@ -540,10 +540,10 @@ describe('apiFetch — silent refresh (TD-5)', () => {
             reject(new DOMException('aborted', 'AbortError')),
           );
         });
+      // Only one refresh attempt is queued: a retry would make a third call.
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(unauthorized())
-        .mockImplementationOnce(stalled)
         .mockImplementationOnce(stalled);
       vi.stubGlobal('fetch', fetchMock);
 
@@ -585,14 +585,12 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         .mockImplementationOnce(stalled);
       vi.stubGlobal('fetch', fetchMock);
 
-      let error: unknown;
-      void apiFetch('/users').catch((e: unknown) => {
-        error = e;
-      });
+      const pending = apiFetch('/users').catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(10_000);
+      const error = await pending;
 
       expect(fetchMock).toHaveBeenCalledTimes(3);
-      expect((error as ApiError | undefined)?.status).toBe(0);
+      expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -611,13 +609,27 @@ describe('apiFetch — silent refresh (TD-5)', () => {
   });
 
   it('serializes the refresh across tabs with a Web Lock when the browser has them', async () => {
-    const request = vi.fn((_name: string, callback: () => Promise<unknown>) => callback());
+    // Another tab holds the lock until releaseOtherTab runs.
+    let releaseOtherTab: () => void = () => undefined;
+    const otherTabHolding = new Promise<void>((resolve) => (releaseOtherTab = resolve));
+    const request = vi.fn(async (_name: string, callback: () => Promise<unknown>) => {
+      await otherTabHolding;
+      return callback();
+    });
     vi.stubGlobal('navigator', { ...navigator, locks: { request } });
-    respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
 
-    await apiFetch('/users');
+    const pending = apiFetch('/users');
+    // A full macrotask, so a refresh that skipped the lock would have started.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
+    expect(urls(fetchMock)).toEqual(['/users']);
+
+    releaseOtherTab();
+    await pending;
+
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
   });
 
   it('neither retries nor ends the session when the session changed during the refresh (logout or new login)', async () => {
