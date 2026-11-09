@@ -587,9 +587,76 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
       const pending = apiFetch('/users').catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(10_000);
+      // Settled by now; a retry given a fresh 10 s would still be pending.
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
+
+      expect(error).not.toBe('still pending');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The deadline is checked before every attempt, not only through the abort
+  // timer: when the clock has passed it (here it jumps forward while the
+  // first attempt is in flight), no retry is sent even after a network error.
+  it('sends no retry once the deadline has passed, even after a network error', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const failsAfterClockJump = () =>
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => {
+            vi.setSystemTime(Date.now() + 20_000);
+            reject(new TypeError('connection reset'));
+          }, 1_000);
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(failsAfterClockJump);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(1_000);
       const error = await pending;
 
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A timed-out attempt is never retried, even when the clock stepped back
+  // (an NTP adjustment) and the deadline check alone would allow it.
+  it('does not retry a timed-out refresh when the clock stepped back during it', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const stalledThenClockStepsBack = (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            vi.setSystemTime(Date.now() - 5_000);
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(stalledThenClockStepsBack);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
     } finally {
