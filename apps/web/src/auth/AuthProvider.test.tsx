@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ApiError, apiFetch, refreshSession, setUnauthorizedHandler } from '../api/client';
@@ -355,6 +355,75 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN');
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
+
+  it('reports the session check as unavailable when /auth/me never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_url: RequestInfo | URL, init?: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init?.signal?.addEventListener('abort', () =>
+                reject(new DOMException('Aborted', 'AbortError')),
+              );
+            }),
+        ),
+      );
+
+      render(
+        <AuthProvider>
+          <UserProbe />
+        </AuthProvider>,
+      );
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('true');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // main.tsx renders under StrictMode, which runs the mount effect twice.
+  it('under StrictMode, keeps the second check when the first one settles later', async () => {
+    let releaseFirst: (response: Response) => void = () => undefined;
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        meCalls += 1;
+        if (meCalls === 1) {
+          return new Promise<Response>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+        } as Response);
+      }),
+    );
+
+    render(
+      <StrictMode>
+        <AuthProvider>
+          <UserProbe />
+        </AuthProvider>
+      </StrictMode>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+
+    await act(async () => releaseFirst({ ok: false, status: 503 } as Response));
+
+    expect(meCalls).toBe(2);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
   it('a successful login clears the unavailable session check', async () => {

@@ -665,8 +665,9 @@ Decision 4.)
 
 On load, the web app MUST treat the visitor as signed out when the session
 check answers 401 and the refresh that follows is refused, or answers any
-other 4xx except 429. When the check cannot tell (the API is unreachable, answers 429 or 5xx, the refresh is
-unavailable, or the answer is unreadable), a protected page MUST NOT redirect
+other 4xx except 429. When the check cannot tell (the API is unreachable, answers 429 or 5xx, does not
+answer within 10 seconds, the refresh is unavailable, or the answer is
+unreadable), a protected page MUST NOT redirect
 to `/login`. It MUST instead show "Cannot reach the server" with the message
 "We could not check your session. Try again in a moment." and a "Try again"
 button (EN, ES and CA). The button MUST run the session check again without
@@ -690,6 +691,18 @@ successful login MUST clear this state. (EN-142.)
 - GIVEN a visitor without a valid session
 - WHEN the app loads on a protected page, the session check answers 401 and the refresh is refused
 - THEN the visitor MUST be redirected to `/login`
+
+#### Scenario: Another 4xx on load signs the visitor out
+
+- GIVEN a visitor opening a protected page
+- WHEN the session check answers a 4xx other than 401 or 429
+- THEN the visitor MUST be redirected to `/login` without the "Cannot reach the server" message
+
+#### Scenario: A login clears the unavailable state
+
+- GIVEN the session check on load was unavailable
+- WHEN the user signs in successfully on `/login`
+- THEN the "Cannot reach the server" message MUST NOT show again, and a session check still running MUST NOT replace the signed-in user
 
 ### Requirement: Session-Ended Notice (Web)
 

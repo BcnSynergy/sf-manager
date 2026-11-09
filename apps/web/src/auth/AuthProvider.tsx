@@ -38,6 +38,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_SERVER_ERROR = 500;
+// Deadline for GET /auth/me on load, body included.
+const SESSION_CHECK_TIMEOUT_MS = 10_000;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -71,10 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // id, so a slow retry that answers afterwards cannot overwrite it.
     const checkId = ++sessionCheckIdRef.current;
     const isCurrent = () => checkId === sessionCheckIdRef.current;
+    // A server that accepts the connection but never answers would leave the
+    // page blank; past the deadline the check counts as unavailable. The
+    // refresh below has its own deadline (REFRESH_TIMEOUT_MS in api/client).
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
     // TD-5 S8: the access cookie may have expired while the refresh cookie
     // is still good, so a 401 from /auth/me tries one refresh before the
     // visitor counts as logged out.
-    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include', signal: controller.signal })
       .then((response) => {
         if (response.ok) {
           return response.json() as Promise<AuthUser>;
@@ -101,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUser(null);
       })
       .finally(() => {
+        clearTimeout(timer);
         if (isCurrent()) setIsLoading(false);
       });
   }
