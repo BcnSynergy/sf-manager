@@ -357,6 +357,192 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
   });
 
+  // EN-166: a refresh started by a superseded check would send the pre-login
+  // refresh cookie, and its answer could overwrite the login's cookies.
+  it('aborts a retried session check on login and never refreshes for it', async () => {
+    let releaseMe: (response: Response) => void = () => undefined;
+    let retrySignal: AbortSignal | undefined;
+    let meCalls = 0;
+    const fetchMock = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
+      const href = String(url);
+      if (href.includes('/auth/login')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'TECHNICIAN' }),
+        } as Response);
+      }
+      if (href.includes('/auth/refresh')) {
+        return Promise.resolve({ ok: false, status: 401 } as Response);
+      }
+      meCalls += 1;
+      if (meCalls === 1) {
+        return Promise.resolve({ ok: false, status: 503 } as Response);
+      }
+      retrySignal = init?.signal ?? undefined;
+      return new Promise<Response>((resolve) => {
+        releaseMe = resolve;
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-login').click());
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+    expect(retrySignal?.aborted).toBe(true);
+
+    // A fetch that ignores the abort still answers 401: no refresh follows.
+    await act(async () => releaseMe({ ok: false, status: 401 } as Response));
+
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/auth/refresh'),
+    );
+    expect(refreshCalls).toHaveLength(0);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+  });
+
+  it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
+    const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        meCalls += 1;
+        if (meCalls === 1) {
+          return Promise.resolve({ ok: false, status: 503 } as Response);
+        }
+        return new Promise<Response>((resolve) => {
+          pending.push({ signal: init?.signal ?? undefined, release: resolve });
+        });
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-retry').click());
+    await waitFor(() => expect(pending).toHaveLength(2));
+    expect(pending[0].signal?.aborted).toBe(true);
+    expect(pending[1].signal?.aborted).toBe(false);
+
+    await act(async () =>
+      pending[1].release({
+        ok: true,
+        json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+      } as Response),
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+
+    await act(async () => pending[0].release({ ok: false, status: 503 } as Response));
+
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
+
+  // A real fetch rejects as soon as it is aborted, so the superseded retry
+  // settles while the newer one is still in flight: it must not clear the
+  // newer check's controller, or the unmount below could not abort it.
+  it('a superseded retry that settles first leaves the newer check cancellable', async () => {
+    const signals: AbortSignal[] = [];
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        meCalls += 1;
+        if (meCalls === 1) {
+          return Promise.resolve({ ok: false, status: 503 } as Response);
+        }
+        const signal = init?.signal as AbortSignal;
+        signals.push(signal);
+        return new Promise<Response>((_resolve, reject) => {
+          signal.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError')),
+          );
+        });
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-retry').click());
+    await waitFor(() => expect(signals).toHaveLength(2));
+    // Let the first retry's AbortError rejection settle its promise chain.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(signals[1].aborted).toBe(false);
+
+    unmount();
+
+    expect(signals[1].aborted).toBe(true);
+  });
+
+  it('does not abort a session check that has already settled when the provider unmounts', async () => {
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+        } as Response);
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+
+    unmount();
+
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it('aborts the session check in flight when the provider unmounts', async () => {
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    expect(signal?.aborted).toBe(false);
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
   it('reports the session check as unavailable when /auth/me never answers', async () => {
     vi.useFakeTimers();
     try {

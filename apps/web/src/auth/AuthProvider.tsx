@@ -37,8 +37,11 @@ type AuthContextValue = {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TOO_MANY_REQUESTS = 429;
-const HTTP_SERVER_ERROR = 500;
-// Deadline for GET /auth/me on load, body included.
+// Lowest 5xx status: any answer at or above it is a server error.
+const HTTP_SERVER_ERROR_MIN = 500;
+// Deadline for GET /auth/me, body included, on load and on every "Try
+// again". The authentication spec "Session Check Unavailable on Load (Web)"
+// restates this value: change both together.
 const SESSION_CHECK_TIMEOUT_MS = 10_000;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -52,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
   const sessionCheckIdRef = useRef(0);
+  // Aborts the latest session check's request; see cancelSessionCheck.
+  const sessionCheckControllerRef = useRef<AbortController | null>(null);
   // Mirrors `user` for the 401 handler, which must read the current value
   // without re-registering. Assigned wherever setUser is called (never in an
   // effect, which would lag one render and reopen the logout race below).
@@ -68,15 +73,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the session unknown, so ProtectedRoute offers a retry instead of /login.
   // isLoading starts true, so the mount-time run needs no setState of its own;
   // a retry sets it first (retrySessionCheck below).
-  function checkSession() {
-    // Only the latest check may settle: a login (or a newer check) bumps the
-    // id, so a slow retry that answers afterwards cannot overwrite it.
-    const checkId = ++sessionCheckIdRef.current;
+  function checkSession(): () => void {
+    // Only the latest check may settle: a login, a newer check or an unmount
+    // supersedes it (cancelSessionCheck), so a slow retry that answers
+    // afterwards cannot overwrite it.
+    cancelSessionCheck();
+    const checkId = sessionCheckIdRef.current;
     const isCurrent = () => checkId === sessionCheckIdRef.current;
     // A server that accepts the connection but never answers would leave the
     // page blank; past the deadline the check counts as unavailable. The
     // refresh below has its own deadline (REFRESH_TIMEOUT_MS in api/client).
     const controller = new AbortController();
+    sessionCheckControllerRef.current = controller;
     const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
     // TD-5 S8: the access cookie may have expired while the refresh cookie
     // is still good, so a 401 from /auth/me tries one refresh before the
@@ -86,13 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           return response.json() as Promise<AuthUser>;
         }
-        // Only an expired or missing access token (401) is worth a refresh.
+        // Only an expired or missing access token (401) is worth a refresh,
+        // and only for the current check: a superseded one would send the
+        // pre-login refresh cookie, and its answer could overwrite the
+        // login's cookies (EN-166). Its result is ignored anyway.
         if (response.status === HTTP_UNAUTHORIZED) {
-          return refreshSession<AuthUser>();
+          return isCurrent() ? refreshSession<AuthUser>() : null;
         }
         // Rate-limited or failing: the session may still be valid. Any other
         // answer is final, and retrying would get the same one.
-        if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR) {
+        if (
+          response.status === HTTP_TOO_MANY_REQUESTS ||
+          response.status >= HTTP_SERVER_ERROR_MIN
+        ) {
           throw new ApiError(response.status);
         }
         return null;
@@ -109,10 +123,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         clearTimeout(timer);
+        // A settled check is no longer cancellable. Comparing the controller
+        // by reference keeps a superseded check that settles late from
+        // clearing the newer check's controller.
+        if (sessionCheckControllerRef.current === controller) {
+          sessionCheckControllerRef.current = null;
+        }
         if (isCurrent()) setIsLoading(false);
       });
+    return cancelSessionCheck;
   }
 
+  // Supersedes the session check in flight, if any: its result is ignored
+  // and its request aborted. A refresh it already started is shared with
+  // other callers (single-flight in api/client), so it is left to finish.
+  function cancelSessionCheck() {
+    sessionCheckIdRef.current += 1;
+    sessionCheckControllerRef.current?.abort();
+    sessionCheckControllerRef.current = null;
+  }
+
+  // The returned cleanup cancels the check on unmount, and StrictMode's
+  // discarded first run along with it.
   useEffect(checkSession, []);
 
   // design.md D4/D5: apiFetch reports every 401 here. Acts only when a user
@@ -157,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     advanceSessionEpoch();
     const data = (await response.json()) as AuthUser;
     // A session check still in flight (a retry) must not overwrite this login.
-    sessionCheckIdRef.current += 1;
+    cancelSessionCheck();
     setIsLoading(false);
     setSessionEnded(false);
     setSessionUnavailable(false);

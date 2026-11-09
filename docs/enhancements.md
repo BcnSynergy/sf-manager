@@ -820,7 +820,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   family: no retry only delays it; an idempotent replay on the API would
   close it. (The load-time case, where a 5xx or network error from the
   restore showed the login page even with a valid refresh cookie, was fixed
-  by `session-restore-unavailable`.) The Web Lock test checks the
+  by `session-restore-unavailable`.) A refresh that the load-time session
+  check started before a login is shared single-flight, so it still
+  finishes after the login and its `Set-Cookie` can overwrite the login's
+  cookies; `session-check-tidy` (EN-166) only stops a superseded check from
+  starting one. The Web Lock test checks the
   lock name, not that a second caller waits. `HTTP_UNAUTHORIZED` is defined
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
@@ -960,25 +964,20 @@ content type`). Today that is the only 415 it raises, but a future one
   replay fixes both. Origin: `session-restore-unavailable` Gentle AI
   review (resilience lens), 2026-11-09.
 
-- **EN-166** (web): tidy the load-time session check in `AuthProvider`
-  (`session-restore-unavailable`). A login invalidates a check in flight
-  through `sessionCheckIdRef`, but does not abort it: if a retried
-  `/auth/me` answers 401 during the login, that check still calls
-  `refreshSession` with the pre-login cookie, and a refresh answer landing
-  after the login's can overwrite its cookies (the guard protects React
-  state, not the cookie jar; before this change there was no guard at all).
-  Skip the refresh when the check is no longer current and abort a
-  superseded check's controller. `useEffect(checkSession, [])` returns no
-  cleanup, so an unmount (or StrictMode's discarded first run) keeps its
-  request and 10-second timer alive; harmless to state, but a leak. Rename
-  `HTTP_SERVER_ERROR` to a range bound such as `HTTP_SERVER_ERROR_MIN`, and
-  say in the `SESSION_CHECK_TIMEOUT_MS` comment that it also covers "Try
-  again" and is restated in the authentication spec. The "another 4xx signs
-  the visitor out" scenario is tested at provider level only, not through
-  `ProtectedRoute`. Origin: `session-restore-unavailable` Gentle AI review
-  (resilience, readability and reliability lenses), 2026-11-09.
-
 ## Done
+
+- **EN-166** (web): the load-time session check in `AuthProvider` is
+  cancelled when superseded: a login, a newer check ("Try again") or an
+  unmount aborts its `/auth/me` request, and a superseded check that still
+  gets a 401 no longer calls `refreshSession` with the pre-login cookie. The
+  mount effect returns that cancel as its cleanup (unmount, StrictMode's
+  discarded first run). `HTTP_SERVER_ERROR` is now `HTTP_SERVER_ERROR_MIN`
+  in `AuthProvider` and `api/client`; the `SESSION_CHECK_TIMEOUT_MS` comment
+  says it covers "Try again" and is restated in the authentication spec. An
+  `App` test pins "another 4xx signs the visitor out" through the real
+  `ProtectedRoute`. A refresh the check had already started before a login
+  is shared single-flight and still finishes; that case belongs to EN-142.
+  Done in `session-check-tidy` (PR #377), 2026-11-09.
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
   `App` (data router: `createBrowserRouter` and `RouterProvider` from
