@@ -452,6 +452,50 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
   });
 
+  // A real fetch rejects as soon as it is aborted, so the superseded retry
+  // settles while the newer one is still in flight: it must not clear the
+  // newer check's controller, or the unmount below could not abort it.
+  it('a superseded retry that settles first leaves the newer check cancellable', async () => {
+    const signals: AbortSignal[] = [];
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        meCalls += 1;
+        if (meCalls === 1) {
+          return Promise.resolve({ ok: false, status: 503 } as Response);
+        }
+        const signal = init?.signal as AbortSignal;
+        signals.push(signal);
+        return new Promise<Response>((_resolve, reject) => {
+          signal.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError')),
+          );
+        });
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-retry').click());
+    await waitFor(() => expect(signals).toHaveLength(2));
+    // Let the first retry's AbortError rejection settle its promise chain.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(signals[1].aborted).toBe(false);
+
+    unmount();
+
+    expect(signals[1].aborted).toBe(true);
+  });
+
   it('does not abort a session check that has already settled when the provider unmounts', async () => {
     let signal: AbortSignal | undefined;
     vi.stubGlobal(
