@@ -794,6 +794,18 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(urls(fetchMock)).toEqual(['/users', '/users']);
   });
 
+  it('does not wait for a lock with another name', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({
+      held: [{ name: 'some-other-lock', mode: 'exclusive' }],
+      pending: [{ name: 'some-other-lock', mode: 'exclusive' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+  });
+
   it('refreshes after waiting when the retry with the other tab cookies still gets 401', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
