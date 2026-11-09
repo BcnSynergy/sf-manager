@@ -385,17 +385,21 @@ windowEndsAt <= now()`) four times and the window-end expression five
   boundary in `App.tsx` has no test for its fallback or error path. Origin:
   `td-8-route-code-splitting` (#234) native review, findings `R3-001` and `R3-002`,
   2026-10-16.
-- **EN-52** (web): react-router 7 `BrowserRouter` wraps each navigation in
-  `startTransition` (unless `useTransitions={false}`), so on in-app navigation
+- **EN-52** (web): react-router `RouterProvider` (8.5.1; `BrowserRouter` in
+  7, before EN-129) wraps each navigation in `startTransition` (unless
+  `useTransitions={false}`), so on in-app navigation
   React keeps the current page on screen while a lazy page chunk downloads.
   The TD-8 "Loading page…" fallback only shows on a full load; on a slow
   network a nav click looks idle until the chunk arrives. Add a pending
   indicator (for example from `useNavigation`/transition state) or opt out of
   transitions. Also, a protected deep link downloads the page chunk only after
   `/auth/me` resolves (`ProtectedRoute` renders `null` while loading), two
-  requests in sequence. Evidence: `node_modules/react-router` 7.18.2
-  `BrowserRouter` `setState`. Origin: `td-8-route-code-splitting` (#234) fresh-context
-  review, 2026-10-16.
+  requests in sequence. Evidence: `node_modules/react-router` 8.5.1
+  `dist/development/lib/components.js` (`RouterProvider` `setState`, the
+  `React.startTransition` branch); first seen in 7.18.2 `BrowserRouter`.
+  Origin: `td-8-route-code-splitting` (#234) fresh-context review,
+  2026-10-16; rechecked against 8.5.1 in Dependabot PR #349 fresh review,
+  2026-11-09.
 - **EN-53** (api tests): The use-case test "leaves status, reason, deadline,
   last date and order unchanged" for the TD-22 `inProgress` flag compares a
   run where every pair is flagged with one where none is, so a comparator that
@@ -851,10 +855,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   not pinned in practice. Root `package.json` declares
   `"packageManager": "npm@10.8.2"`, but nothing enforces it (no corepack in
   CI or the Dockerfiles), Node 24 ships npm 11, and local development uses
-  npm 11.17. Each npm version rewrites some lock flags differently: the
-  `@types/react-dom` entry flips between `"dev": true` (Dependabot) and
-  `"devOptional": true` (local npm 11.17) whenever the lockfile is rewritten
-  by the other side. It has no effect today because CI and both Dockerfiles
+  npm 11.17. Each npm version can rewrite some lock flags differently. The
+  first example, the `@types/react-dom` entry flipping between `"dev": true`
+  (Dependabot) and `"devOptional": true` (local npm 11.17), stopped once
+  react-router 8.5 declared it an optional peer (Dependabot PR #349): both
+  sides now write `"devOptional"`. The unpinned npm version that caused it
+  remains. It has no effect today because CI and both Dockerfiles
   run `npm ci` without `--omit`. Update `packageManager` to the npm actually
   used and decide whether to enforce it (corepack, or an equivalent check).
   Origin: Dependabot PR #360 fresh review (W-1), 2026-11-07. Registered in
@@ -901,6 +907,13 @@ content type`). Today that is the only 415 it raises, but a future one
   the path in one place (one shared script, or `NODE_OPTIONS` through
   `cross-env`), so a hoisting change breaks one line, not six. Origin:
   `nest-12` (PR #370) Gentle AI readability review, 2026-11-08.
+
+- **EN-161** (web): An unknown URL (for example `/does-not-exist`) renders a
+  blank page with no nav and no message (seen signed in). The data router has one catch-all route (`path: '*'` in `App.tsx`)
+  whose `<AppRoutes>` `<Routes>` has no `*` route of its own, so nothing
+  matches and it renders `null`. Add a not-found route with a short message
+  and a link home. Origin: Dependabot PR #349 (react-router 8.5.1) browser
+  verification, 2026-11-09; the behavior predates that PR.
 
 ## Done
 
