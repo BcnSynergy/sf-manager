@@ -237,6 +237,126 @@ describe('AuthProvider — role propagation', () => {
     );
   });
 
+  it('reports the session check as unavailable when /auth/me answers 429 on mount', async () => {
+    vi.stubGlobal('fetch', mockFetch({ meFails: true, meStatus: 429 }));
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+  });
+
+  it('reports the session check as unavailable when the /auth/me answer is unreadable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new SyntaxError('Unexpected token');
+          },
+        } as unknown as Response),
+      ),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('treats another 4xx from /auth/me as signed out, not as unavailable', async () => {
+    vi.stubGlobal('fetch', mockFetch({ meFails: true, meStatus: 403 }));
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false'),
+    );
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('a retry that ends in a refused refresh clears the unavailable state (signed out)', async () => {
+    let meStatus = 503;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        Promise.resolve({
+          ok: false,
+          status: String(url).includes('/auth/refresh') ? 401 : meStatus,
+        } as Response),
+      ),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    meStatus = 401;
+    act(() => screen.getByTestId('probe-retry').click());
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false'));
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('ignores a retried session check that settles after a login', async () => {
+    let releaseMe: (response: Response) => void = () => undefined;
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) => {
+        const href = String(url);
+        if (href.includes('/auth/login')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'TECHNICIAN' }),
+          } as Response);
+        }
+        meCalls += 1;
+        if (meCalls === 1) {
+          return Promise.resolve({ ok: false, status: 503 } as Response);
+        }
+        return new Promise<Response>((resolve) => {
+          releaseMe = resolve;
+        });
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-login').click());
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+
+    await act(async () => releaseMe({ ok: false, status: 503 } as Response));
+
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
+
   it('a successful login clears the unavailable session check', async () => {
     vi.stubGlobal(
       'fetch',

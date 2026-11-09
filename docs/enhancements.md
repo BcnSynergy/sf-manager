@@ -946,6 +946,20 @@ content type`). Today that is the only 415 it raises, but a future one
   EN-163. Origin: product discussion, 2026-11-09; kept out of the MVP
   unless clients or regulations require photo evidence.
 
+- **EN-165** (web): two notes on the "Cannot reach the server" retry
+  (`session-restore-unavailable`). `AuthProvider`'s session check turns
+  every unavailable cause (network error, 429, 5xx, unavailable refresh,
+  unreadable 200) into the same flag and drops the error, so a malformed
+  `/auth/me` answer cannot be told apart from an outage; log the status or
+  error before setting it. And "Try again" reruns the whole check,
+  refresh included: when the mount-time refresh consumed the token but
+  timed out (the stalled-answer case in EN-142), the retry presents the
+  spent cookie outside the grace window, revokes the family and ends on
+  `/login`. A reload did the same before this change, so it is not a
+  regression, but the retry makes it likelier; fixing EN-142's idempotent
+  replay fixes both. Origin: `session-restore-unavailable` Gentle AI
+  review (resilience lens), 2026-11-09.
+
 ## Done
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default

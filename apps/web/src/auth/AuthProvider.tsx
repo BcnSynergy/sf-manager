@@ -36,6 +36,8 @@ type AuthContextValue = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_TOO_MANY_REQUESTS = 429;
+const HTTP_SERVER_ERROR = 500;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const sessionCheckIdRef = useRef(0);
   // Mirrors `user` for the 401 handler, which must read the current value
   // without re-registering. Assigned wherever setUser is called (never in an
   // effect, which would lag one render and reopen the logout race below).
@@ -64,6 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // isLoading starts true, so the mount-time run needs no setState of its own;
   // a retry sets it first (retrySessionCheck below).
   function checkSession() {
+    // Only the latest check may settle: a login (or a newer check) bumps the
+    // id, so a slow retry that answers afterwards cannot overwrite it.
+    const checkId = ++sessionCheckIdRef.current;
+    const isCurrent = () => checkId === sessionCheckIdRef.current;
     // TD-5 S8: the access cookie may have expired while the refresh cookie
     // is still good, so a 401 from /auth/me tries one refresh before the
     // visitor counts as logged out.
@@ -76,17 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.status === HTTP_UNAUTHORIZED) {
           return refreshSession<AuthUser>();
         }
-        throw new ApiError(response.status);
+        // Rate-limited or failing: the session may still be valid. Any other
+        // answer is final, and retrying would get the same one.
+        if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR) {
+          throw new ApiError(response.status);
+        }
+        return null;
       })
       .then((data) => {
+        if (!isCurrent()) return;
         setSessionUnavailable(false);
         updateUser(data);
       })
       .catch(() => {
+        if (!isCurrent()) return;
         setSessionUnavailable(true);
         updateUser(null);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (isCurrent()) setIsLoading(false);
+      });
   }
 
   useEffect(checkSession, []);
@@ -132,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // under the previous session could still end this one.
     advanceSessionEpoch();
     const data = (await response.json()) as AuthUser;
+    // A session check still in flight (a retry) must not overwrite this login.
+    sessionCheckIdRef.current += 1;
+    setIsLoading(false);
     setSessionEnded(false);
     setSessionUnavailable(false);
     updateUser(data);

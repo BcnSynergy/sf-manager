@@ -663,9 +663,9 @@ Decision 4.)
 
 ### Requirement: Session Check Unavailable on Load (Web)
 
-On load, the web app MUST treat the visitor as signed out only when the
-session check answers 401 and the refresh that follows is refused. When the
-check cannot tell (the API is unreachable, answers 429 or 5xx, the refresh is
+On load, the web app MUST treat the visitor as signed out when the session
+check answers 401 and the refresh that follows is refused, or answers any
+other 4xx except 429. When the check cannot tell (the API is unreachable, answers 429 or 5xx, the refresh is
 unavailable, or the answer is unreadable), a protected page MUST NOT redirect
 to `/login`. It MUST instead show "Cannot reach the server" with the message
 "We could not check your session. Try again in a moment." and a "Try again"
