@@ -431,4 +431,20 @@ describe('App (shipped data router)', () => {
     await screen.findByTestId('not-found');
     expect(screen.queryByTestId('session-unavailable')).not.toBeInTheDocument();
   });
+
+  // Same requirement: an answer other than 401, 429 or 5xx is final, so the
+  // visitor is signed out (EN-166: until now covered at provider level only).
+  it('redirects to /login when /auth/me answers another 4xx on load', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 403 } as Response)),
+    );
+
+    render(<App />);
+
+    await screen.findByTestId('login-email');
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.queryByTestId('session-unavailable')).not.toBeInTheDocument();
+  });
 });

@@ -357,6 +357,79 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
   });
 
+  // EN-166: a refresh started by a superseded check would send the pre-login
+  // refresh cookie, and its answer could overwrite the login's cookies.
+  it('aborts a retried session check on login and never refreshes for it', async () => {
+    let releaseMe: (response: Response) => void = () => undefined;
+    let retrySignal: AbortSignal | undefined;
+    let meCalls = 0;
+    const fetchMock = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
+      const href = String(url);
+      if (href.includes('/auth/login')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'TECHNICIAN' }),
+        } as Response);
+      }
+      if (href.includes('/auth/refresh')) {
+        return Promise.resolve({ ok: false, status: 401 } as Response);
+      }
+      meCalls += 1;
+      if (meCalls === 1) {
+        return Promise.resolve({ ok: false, status: 503 } as Response);
+      }
+      retrySignal = init?.signal ?? undefined;
+      return new Promise<Response>((resolve) => {
+        releaseMe = resolve;
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-login').click());
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+    expect(retrySignal?.aborted).toBe(true);
+
+    // A fetch that ignores the abort still answers 401: no refresh follows.
+    await act(async () => releaseMe({ ok: false, status: 401 } as Response));
+
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/auth/refresh'),
+    );
+    expect(refreshCalls).toHaveLength(0);
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+  });
+
+  it('aborts the session check in flight when the provider unmounts', async () => {
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    expect(signal?.aborted).toBe(false);
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
   it('reports the session check as unavailable when /auth/me never answers', async () => {
     vi.useFakeTimers();
     try {

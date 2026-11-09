@@ -37,7 +37,8 @@ export class ApiError extends Error {
 
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_SERVER_ERROR = 500;
+// Lowest 5xx status: any answer at or above it is a server error.
+const HTTP_SERVER_ERROR_MIN = 500;
 const HTTP_TOO_MANY_REQUESTS = 429;
 
 // auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
@@ -197,7 +198,7 @@ async function postRefresh(): Promise<unknown> {
       }
       // Rate-limited (429) or failing (5xx) is not a refusal: the refresh
       // cookie may still be valid, so the session must stay.
-      if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR) {
+      if (response.status === HTTP_TOO_MANY_REQUESTS || response.status >= HTTP_SERVER_ERROR_MIN) {
         throw new ApiError(response.status);
       }
       if (!response.ok) {
