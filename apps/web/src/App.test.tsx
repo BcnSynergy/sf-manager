@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '@sf-manager/validation';
 import '../src/i18n';
 import { AuthProvider } from './auth/AuthProvider';
@@ -327,18 +327,19 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
   // app-navigation "An Unknown Path Shows a Not-Found Page" (EN-161): the
   // catch-all route sits under AppLayout and ProtectedRoute like every
   // authenticated page, with no role restriction.
-  it.each(['/does-not-exist', '/communities/community-1/unknown'])(
-    '%s shows the not-found page with the nav and a link home when signed in',
-    async (path) => {
-      renderApp([path], 'MAINTENANCE_TECHNICIAN');
+  it.each(
+    ALL_ROLES.flatMap((role) =>
+      ['/does-not-exist', '/communities/community-1/unknown'].map((path) => [path, role] as const),
+    ),
+  )('%s shows the not-found page with the nav and a link home for %s', async (path, role) => {
+    renderApp([path], role);
 
-      await screen.findByTestId('not-found');
-      expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/');
-      expect(screen.getByTestId('nav-root')).toBeInTheDocument();
-      expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
-    },
-  );
+    await screen.findByTestId('not-found');
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+  });
 
   it('an unknown path redirects an unauthenticated visitor to /login', async () => {
     vi.stubGlobal(
@@ -363,6 +364,16 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
 // react-router/dom). These render the shipped default export against the
 // jsdom URL.
 describe('App (shipped data router)', () => {
+  // These tests point jsdom's URL elsewhere; put it back so no later test
+  // depends on their order.
+  let initialUrl: string;
+  beforeEach(() => {
+    initialUrl = window.location.href;
+  });
+  afterEach(() => {
+    window.history.replaceState(null, '', initialUrl);
+  });
+
   it('resolves the URL through the data router', async () => {
     window.history.replaceState(null, '', '/login');
     vi.stubGlobal('fetch', mockFetch());
