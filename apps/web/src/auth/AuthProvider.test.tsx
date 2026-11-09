@@ -408,7 +408,7 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
-  it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
+  it('a second "Try again" aborts the first retry, ignores its late answer, and is not aborted once settled', async () => {
     const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];
     let meCalls = 0;
     vi.stubGlobal(
