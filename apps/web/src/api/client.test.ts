@@ -347,6 +347,58 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     return fetchMock.mock.calls.map(([url]) => String(url).replace(/^https?:\/\/[^/]+/, ''));
   }
 
+  type LockCallback = (lock: { name: string } | null) => unknown;
+
+  // A Web Locks stand-in shared by "tabs": one lock per name, granted in
+  // request order (shared and exclusive alike); `query()` reports whether it
+  // is held. Installed on navigator.locks.
+  function installFakeLocks() {
+    let tail: Promise<void> = Promise.resolve();
+    let held = false;
+    const request = vi.fn(
+      async (
+        name: string,
+        optionsOrCallback: { mode?: 'shared' | 'exclusive' } | LockCallback,
+        maybeCallback?: LockCallback,
+      ) => {
+        const callback = (
+          typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback
+        ) as LockCallback;
+        const previous = tail;
+        let release: () => void = () => undefined;
+        tail = new Promise((resolve) => (release = resolve));
+        await previous;
+        held = true;
+        try {
+          return await callback({ name });
+        } finally {
+          held = false;
+          release();
+        }
+      },
+    );
+    type LockInfo = { name: string; mode: string };
+    const query = vi.fn(async (): Promise<{ held: LockInfo[]; pending: LockInfo[] }> => ({
+      held: held ? [{ name: 'sf-manager.refresh', mode: 'exclusive' }] : [],
+      pending: [],
+    }));
+    vi.stubGlobal('navigator', { ...navigator, locks: { request, query } });
+    return {
+      request,
+      query,
+      isHeld: () => held,
+      // Another tab takes the lock and keeps it until the returned function runs.
+      holdByOtherTab(): () => void {
+        let releaseOtherTab: () => void = () => undefined;
+        void request(
+          'sf-manager.refresh',
+          () => new Promise<void>((resolve) => (releaseOtherTab = resolve)),
+        );
+        return () => releaseOtherTab();
+      },
+    };
+  }
+
   it('refreshes once on a 401 and retries the request, without ending the session', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
@@ -677,27 +729,266 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it('serializes the refresh across tabs with a Web Lock when the browser has them', async () => {
-    // Another tab holds the lock until releaseOtherTab runs.
-    let releaseOtherTab: () => void = () => undefined;
-    const otherTabHolding = new Promise<void>((resolve) => (releaseOtherTab = resolve));
-    const request = vi.fn(async (_name: string, callback: () => Promise<unknown>) => {
-      await otherTabHolding;
-      return callback();
+  it('refreshes while holding the cross-tab Web Lock when the browser has them', async () => {
+    const locks = installFakeLocks();
+    let heldDuringRefresh: boolean | undefined;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/refresh')) {
+        heldDuringRefresh = locks.isHeld();
+        return Promise.resolve(ok({ id: '1' }));
+      }
+      return Promise.resolve(fetchMock.mock.calls.length === 1 ? unauthorized() : ok({}));
     });
-    vi.stubGlobal('navigator', { ...navigator, locks: { request } });
-    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
+    vi.stubGlobal('fetch', fetchMock);
 
-    const pending = apiFetch('/users');
-    // A full macrotask, so a refresh that skipped the lock would have started.
+    await apiFetch('/users');
+
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+    expect(heldDuringRefresh).toBe(true);
+    expect(locks.request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
+  });
+
+  // EN-142: the other tab's refresh already put fresh cookies in the shared
+  // jar, so a second refresh would only rotate the token again.
+  it('waits for another tab refreshing and retries with its cookies, without refreshing again', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    const fetchMock = respond(unauthorized(), ok({ data: 'fresh' }));
+
+    const pending = apiFetch<{ data: string }>('/users');
+    // A full macrotask, so a call that skipped the wait would have retried.
     await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
     expect(urls(fetchMock)).toEqual(['/users']);
 
     releaseOtherTab();
+
+    await expect(pending).resolves.toEqual({ data: 'fresh' });
+    expect(urls(fetchMock)).toEqual(['/users', '/users']);
+  });
+
+  // While one tab hands the lock to another tab's queued refresh, query()
+  // can show it only as pending; that still counts as a refresh to wait for.
+  it('also waits when another tab refresh is only queued for the lock', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    locks.query.mockResolvedValueOnce({
+      held: [],
+      pending: [{ name: 'sf-manager.refresh', mode: 'exclusive' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ data: 'fresh' }));
+
+    const pending = apiFetch<{ data: string }>('/users');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseOtherTab();
+
+    await expect(pending).resolves.toEqual({ data: 'fresh' });
+    expect(urls(fetchMock)).toEqual(['/users', '/users']);
+  });
+
+  // Logout waits for it too: the other tab's refresh may still set fresh
+  // cookies after the logout cleared them.
+  it('makes settleRefresh wait while a call waits for another tab refresh', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    respond(unauthorized(), ok({ data: 'fresh' }));
+
+    const pending = apiFetch('/users');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    let settled = false;
+    const waiting = settleRefresh().then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    releaseOtherTab();
+    await waiting;
     await pending;
 
+    expect(settled).toBe(true);
+  });
+
+  // A frozen tab could hold the lock indefinitely: logout stops waiting for
+  // other tabs after the refresh deadline (10 s).
+  it('bounds how long settleRefresh waits for another tab refresh', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      respond(unauthorized(), unauthorized(), unauthorized());
+
+      const call = apiFetch('/users').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+      let settled = false;
+      void settleRefresh().then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+
+      // Leave no wait behind for later tests (the module state persists).
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      await call;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Calls waiting for a refresh hold the lock in shared mode; only an
+  // exclusive entry is a refresh worth waiting for.
+  it('does not wait when the lock shows only other calls waiting', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({
+      held: [{ name: 'sf-manager.refresh', mode: 'shared' }],
+      pending: [{ name: 'sf-manager.refresh', mode: 'shared' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+  });
+
+  it('does not check the lock for a 401 from an earlier session', async () => {
+    const locks = installFakeLocks();
+    const fetchMock = vi.fn(() => {
+      advanceSessionEpoch();
+      return Promise.resolve(unauthorized());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(locks.query).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users']);
+  });
+
+  it('does not wait for a lock with another name', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({
+      held: [{ name: 'some-other-lock', mode: 'exclusive' }],
+      pending: [{ name: 'some-other-lock', mode: 'exclusive' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+  });
+
+  it('refreshes after waiting when the retry with the other tab cookies still gets 401', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    const fetchMock = respond(unauthorized(), unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    const pending = apiFetch<{ data: string }>('/users');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseOtherTab();
+
+    await expect(pending).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/users', '/auth/refresh', '/users']);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('ends the session when, after waiting, the retry and its own refresh are refused', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    const fetchMock = respond(unauthorized(), unauthorized(), unauthorized());
+
+    const pending = apiFetch('/users').catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseOtherTab();
+    const error = await pending;
+
+    expect((error as ApiError).status).toBe(401);
+    expect(urls(fetchMock)).toEqual(['/users', '/users', '/auth/refresh']);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('neither retries nor ends the session when the session changed while waiting for another tab', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    const fetchMock = respond(unauthorized());
+
+    const pending = apiFetch('/users').catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    advanceSessionEpoch();
+    releaseOtherTab();
+    const error = await pending;
+
+    expect((error as ApiError).status).toBe(401);
+    expect(urls(fetchMock)).toEqual(['/users']);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  // Calls in one tab share its own refresh instead of waiting on its lock:
+  // a refusal ends both, without a second refresh or a retry.
+  it('joins its own tab refresh in flight instead of waiting for the lock', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    installFakeLocks();
+    let answerRefresh: (response: Response) => void = () => undefined;
+    const fetchMock = vi.fn((url: string) =>
+      url.endsWith('/auth/refresh')
+        ? new Promise<Response>((resolve) => (answerRefresh = resolve))
+        : Promise.resolve(unauthorized()),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = apiFetch('/users').catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const second = apiFetch('/users').catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    answerRefresh(unauthorized());
+    const errors = await Promise.all([first, second]);
+
+    expect(errors.map((e) => (e as ApiError).status)).toEqual([401, 401]);
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+    // Each refused call reports once; AuthProvider collapses them.
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  // Checking whether another tab is refreshing must not take the lock itself:
+  // two calls of one tab that get a 401 together, with no refresh running,
+  // must not mistake each other's check for a refresh and retry for nothing.
+  it('does not mistake a sibling call checking the lock for another tab refreshing', async () => {
+    const locks = installFakeLocks();
+    let refreshed = false;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/refresh')) {
+        refreshed = true;
+        return Promise.resolve(ok({ id: '1' }));
+      }
+      return Promise.resolve(refreshed ? ok({}) : unauthorized());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await Promise.all([apiFetch('/users'), apiFetch('/users')]);
+
+    expect(urls(fetchMock).filter((u) => u === '/auth/refresh')).toHaveLength(1);
+    expect(urls(fetchMock).filter((u) => u === '/users')).toHaveLength(4);
+    // The check only reads the lock state; the refresh is the only holder.
+    expect(locks.request).toHaveBeenCalledTimes(1);
+  });
+
+  // An origin where Web Locks throw (an opaque origin, say) keeps the
+  // plain refresh-and-retry.
+  it('falls back to refreshing when the Web Locks check fails', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockRejectedValueOnce(new DOMException('denied', 'SecurityError'));
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(locks.query).toHaveBeenCalledTimes(1);
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
   });
 
