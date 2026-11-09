@@ -57,8 +57,9 @@ None.
 ## Resolved
 
 - **TD-51**: The root `package.json` (and the lockfile's root entry) now
-  declares the Node engine as `>=24.15`, the floor the NestJS 12 dev tooling
-  (`@nestjs/schematics` 12 and its `@angular-devkit/*` dependencies) needs.
+  declares the Node engine as `^24.15.0 || >=26`, the range the NestJS 12 dev
+  tooling (`@nestjs/schematics` 12 and its `@angular-devkit/*` dependencies)
+  supports on Node 24 and later (it excludes 25.x).
   `.nvmrc`, CI and the Dockerfiles track the latest Node 24 and needed no
   change. Resolved in `node-engine-floor` (PR #378), 2026-11-09.
 
