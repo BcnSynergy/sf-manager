@@ -810,15 +810,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `AuthProvider` relies on that assertion for `AuthUser`. Origin:
   `td-5-refresh-token-rotation` PR 3/3 native review, 2026-11-02.
 
-- **EN-142** (web, api): silent-refresh follow-ups from the TD-5 PR 3/3
+- **EN-142** (web): silent-refresh follow-ups from the TD-5 PR 3/3
   pre-push review. A tab that waited on the `sf-manager.refresh` Web Lock
   still rotates once more (with the fresh cookie), costing one extra
   rotation and refresh-limit hit per waiting tab; retrying the original
-  request first when the lock was contended would avoid it. If the server
-  consumes a token but its answer stalls past 10 s, the next 401 in any
-  tab presents the spent cookie outside the grace window and revokes the
-  family: no retry only delays it; an idempotent replay on the API would
-  close it. (The load-time case, where a 5xx or network error from the
+  request first when the lock was contended would avoid it. (The idempotent
+  replay on the API for a refresh whose answer stalls past 10 s after the
+  token was consumed was dropped on 2026-11-09, `en-142-replay-decision`,
+  PR #380: the API stores only token hashes, so a replay would have to
+  honour the spent token while its successor is unused, which lets a thief
+  holding it keep the session until the real client next refreshes and
+  delays ADR-011's reuse detection. The case is rare and costs one login;
+  reopen with production evidence.) (The load-time case, where a 5xx or network error from the
   restore showed the login page even with a valid refresh cookie, was fixed
   by `session-restore-unavailable`.) A refresh that the load-time session
   check started before a login is shared single-flight, so it still
@@ -959,8 +962,9 @@ content type`). Today that is the only 415 it raises, but a future one
   timed out (the stalled-answer case in EN-142), the retry presents the
   spent cookie outside the grace window, revokes the family and ends on
   `/login`. A reload did the same before this change, so it is not a
-  regression, but the retry makes it likelier; fixing EN-142's idempotent
-  replay fixes both. Origin: `session-restore-unavailable` Gentle AI
+  regression, but the retry makes it likelier. EN-142's idempotent replay
+  would have fixed this and EN-142's stalled-answer case, and was dropped, so this half is an accepted
+  limitation. Origin: `session-restore-unavailable` Gentle AI
   review (resilience lens), 2026-11-09.
 
 ## Done
