@@ -19,4 +19,26 @@ export default tseslint.config(
       globals: globals.browser,
     },
   },
+  {
+    // react-router 8: a DOM app takes RouterProvider from `react-router/dom`,
+    // which wires in ReactDOM.flushSync. Both entry points render the same in
+    // jsdom, so no test can tell them apart; this rule pins the import.
+    // Tests that build a memory router keep importing from `react-router`.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-router',
+              importNames: ['RouterProvider'],
+              message: "Import RouterProvider from 'react-router/dom' in app code.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

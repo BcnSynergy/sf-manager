@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router/dom';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { NotFound } from './components/NotFound';
 import { PageSuspense } from './components/PageSuspense';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
 
@@ -44,6 +45,17 @@ export function AppRoutes() {
             element={<ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>}
           />
         ))}
+        {/* EN-161: any other path. Under ProtectedRoute with no role
+            restriction, so a signed-out visitor goes to /login and the
+            not-found page never reveals which paths exist. */}
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <NotFound />
+            </ProtectedRoute>
+          }
+        />
       </Route>
     </Routes>
   );

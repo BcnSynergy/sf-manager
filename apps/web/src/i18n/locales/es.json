@@ -5,6 +5,9 @@
   "common": {
     "notAuthorizedTitle": "No autorizado",
     "notAuthorizedMessage": "No tienes permiso para ver esta página.",
+    "notFoundTitle": "Página no encontrada",
+    "notFoundMessage": "No hay ninguna página en esta dirección.",
+    "goHome": "Ir al inicio",
     "confirm": "Confirmar",
     "cancel": "Cancelar",
     "deactivate": "Desactivar",

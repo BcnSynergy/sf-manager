@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '@sf-manager/validation';
 import '../src/i18n';
 import { AuthProvider } from './auth/AuthProvider';
-import { AppRoutes } from './App';
+import App, { AppRoutes } from './App';
 import { AUTHENTICATED_ROUTES } from './routes/authenticated-routes';
 import type { AuthenticatedRoute } from './routes/authenticated-routes';
 
@@ -322,5 +322,88 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
 
     await screen.findByTestId('login-email');
     expect(screen.queryByTestId('nav-root')).not.toBeInTheDocument();
+  });
+
+  // app-navigation "An Unknown Path Shows a Not-Found Page" (EN-161): the
+  // catch-all route sits under AppLayout and ProtectedRoute like every
+  // authenticated page, with no role restriction.
+  it.each(
+    ALL_ROLES.flatMap((role) =>
+      ['/does-not-exist', '/communities/community-1/unknown'].map((path) => [path, role] as const),
+    ),
+  )('%s shows the not-found page with the nav and a link home for %s', async (path, role) => {
+    renderApp([path], role);
+
+    await screen.findByTestId('not-found');
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to home' })).toHaveAttribute('href', '/');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+    expect(screen.queryByTestId('not-authorized')).not.toBeInTheDocument();
+  });
+
+  it('an unknown path redirects an unauthenticated visitor to /login', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)),
+    );
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/does-not-exist']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    await screen.findByTestId('login-email');
+    expect(screen.queryByTestId('not-found')).not.toBeInTheDocument();
+  });
+});
+
+// EN-162: the tests above mount AppRoutes in their own MemoryRouter, so they
+// never exercise App's data router (createBrowserRouter + RouterProvider from
+// react-router/dom). These render the shipped default export against the
+// jsdom URL.
+describe('App (shipped data router)', () => {
+  // These tests point jsdom's URL elsewhere; put it back so no later test
+  // depends on their order.
+  let initialUrl: string;
+  beforeEach(() => {
+    initialUrl = window.location.href;
+  });
+  afterEach(() => {
+    window.history.replaceState(null, '', initialUrl);
+  });
+
+  it('resolves the URL through the data router', async () => {
+    window.history.replaceState(null, '', '/login');
+    vi.stubGlobal('fetch', mockFetch());
+
+    render(<App />);
+
+    await screen.findByTestId('login-email');
+  });
+
+  it('resolves an unknown URL to the not-found page', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    vi.stubGlobal('fetch', mockFetch());
+
+    render(<App />);
+
+    await screen.findByTestId('not-found');
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+  });
+
+  it('redirects an unknown URL to /login when there is no session', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)),
+    );
+
+    render(<App />);
+
+    await screen.findByTestId('login-email');
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.queryByTestId('not-found')).not.toBeInTheDocument();
   });
 });

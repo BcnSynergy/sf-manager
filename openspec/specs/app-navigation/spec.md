@@ -603,3 +603,25 @@ offered the item, and the existing reachability test MUST cover it unrelaxed.
 - WHEN they activate it
 - THEN the schedule page MUST render and the "not authorized" view MUST NOT appear
 - AND the shipped reachability test MUST pass with the item included and without any exception or relaxation
+
+### Requirement: An Unknown Path Shows a Not-Found Page
+
+A path that matches no route MUST NOT render a blank page. For a signed-in
+user, any such path MUST render a "page not found" view inside the
+authenticated layout, with the navigation, a short localized message and a
+link to the home page (`/`), whatever the user's role. For a visitor without
+a session, the same path MUST redirect to `/login`, exactly as a protected
+route does, so the response MUST NOT reveal whether a path exists.
+
+#### Scenario: A signed-in user opens an unknown path
+
+- GIVEN a signed-in user of any role
+- WHEN they open a path that matches no route, such as `/does-not-exist`
+- THEN the "page not found" view MUST render with its localized title, message and a link to `/`
+- AND the navigation MUST be present, and the "not authorized" view MUST NOT appear
+
+#### Scenario: A visitor without a session opens an unknown path
+
+- GIVEN a visitor with no session
+- WHEN they open a path that matches no route
+- THEN they MUST be redirected to `/login`, and the "page not found" view MUST NOT render

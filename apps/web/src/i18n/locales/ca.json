@@ -5,6 +5,9 @@
   "common": {
     "notAuthorizedTitle": "No autoritzat",
     "notAuthorizedMessage": "No tens permís per veure aquesta pàgina.",
+    "notFoundTitle": "Pàgina no trobada",
+    "notFoundMessage": "No hi ha cap pàgina en aquesta adreça.",
+    "goHome": "Anar a l'inici",
     "confirm": "Confirmar",
     "cancel": "Cancel·lar",
     "deactivate": "Desactivar",
