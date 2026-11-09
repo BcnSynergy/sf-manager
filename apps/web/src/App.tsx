@@ -1,5 +1,6 @@
 import { lazy, useState } from 'react';
-import { createBrowserRouter, Route, RouterProvider, Routes } from 'react-router';
+import { createBrowserRouter, Route, Routes } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
