@@ -424,7 +424,7 @@ describe('AuthProvider — role propagation', () => {
       }),
     );
 
-    render(
+    const { unmount } = render(
       <AuthProvider>
         <UserProbe />
       </AuthProvider>,
@@ -433,7 +433,7 @@ describe('AuthProvider — role propagation', () => {
 
     act(() => screen.getByTestId('probe-retry').click());
     act(() => screen.getByTestId('probe-retry').click());
-    expect(pending).toHaveLength(2);
+    await waitFor(() => expect(pending).toHaveLength(2));
     expect(pending[0].signal?.aborted).toBe(true);
     expect(pending[1].signal?.aborted).toBe(false);
 
@@ -450,6 +450,10 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER');
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+
+    // A settled check is no longer cancellable: unmounting leaves it alone.
+    unmount();
+    expect(pending[1].signal?.aborted).toBe(false);
   });
 
   it('aborts the session check in flight when the provider unmounts', async () => {
