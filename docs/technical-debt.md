@@ -38,16 +38,6 @@ None.
   `deployment` added a manual production stack (README "Production
   deployment"); deploying from CI is EN-91.
 
-- **TD-51**: The root `package.json` declares the Node engine as `>=24`, but
-  the NestJS 12 dev tooling (`@nestjs/schematics` 12 and its
-  `@angular-devkit/*` dependencies) requires `^22.22.3 || ^24.15.0 || >=26`.
-  A contributor on Node 24.0 to 24.14 passes the repo's engines check and can
-  then hit failures in `nest` CLI commands that are hard to trace. Raise the
-  floor to `>=24.15` (and check that `.nvmrc`, Docker and CI agree), or
-  document it. CI and the API image run a current Node 24, so neither is
-  affected. Origin: `nest-12` (PR #370) Gentle AI reliability review, on
-  2026-11-08.
-
 - **TD-52**: Two open Dependabot alerts in dev-only packages have no fix
   inside the ranges their parents allow. Alert #71 (GHSA-g3hv-75wg-m249,
   medium: denial of service via glob pattern expansion) hits `minimatch`
@@ -65,6 +55,15 @@ None.
   `security-dev-alerts` triage, 2026-11-09.
 
 ## Resolved
+
+- **TD-51**: The root `package.json` (and the lockfile's root entry) now
+  declares the Node engine as `^24.15.0 || >=26`, the range the NestJS 12 dev
+  tooling (`@nestjs/schematics` 12 and its `@angular-devkit/*` dependencies)
+  supports on Node 24 and later (it excludes 25.x).
+  `.nvmrc`, CI and the Dockerfiles track the latest Node 24 and needed no
+  change (the pinned `node:24-bookworm-slim` digest carries 24.22.2).
+  Origin: `nest-12` (PR #370) Gentle AI reliability review, 2026-11-08.
+  Resolved by `node-engine-floor` (PR #378), 2026-11-09.
 
 - **TD-50**: The root `package.json` carried a scoped npm override,
   `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
