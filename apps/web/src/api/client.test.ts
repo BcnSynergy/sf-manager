@@ -386,7 +386,8 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         }
       },
     );
-    const query = vi.fn(async () => ({
+    type LockInfo = { name: string; mode: string };
+    const query = vi.fn(async (): Promise<{ held: LockInfo[]; pending: LockInfo[] }> => ({
       held: held ? [{ name: 'sf-manager.refresh', mode: 'exclusive' }] : [],
       pending: [],
     }));
@@ -768,6 +769,25 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(urls(fetchMock)).toEqual(['/users']);
 
+    releaseOtherTab();
+
+    await expect(pending).resolves.toEqual({ data: 'fresh' });
+    expect(urls(fetchMock)).toEqual(['/users', '/users']);
+  });
+
+  // While one tab hands the lock to another tab's queued refresh, query()
+  // can show it only as pending; that still counts as a refresh to wait for.
+  it('also waits when another tab refresh is only queued for the lock', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    locks.query.mockResolvedValueOnce({
+      held: [],
+      pending: [{ name: 'sf-manager.refresh', mode: 'exclusive' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ data: 'fresh' }));
+
+    const pending = apiFetch<{ data: string }>('/users');
+    await new Promise((resolve) => setTimeout(resolve, 0));
     releaseOtherTab();
 
     await expect(pending).resolves.toEqual({ data: 'fresh' });

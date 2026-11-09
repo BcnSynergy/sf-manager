@@ -187,8 +187,10 @@ async function waitForOtherTabRefresh(): Promise<boolean> {
     return false;
   }
   try {
-    const { held = [] } = await locks.query();
-    if (!held.some((lock) => lock.name === REFRESH_LOCK)) {
+    // A refresh queued for the lock counts too: while the lock passes from
+    // one tab to the next, the snapshot may show it only as pending.
+    const { held = [], pending = [] } = await locks.query();
+    if (![...held, ...pending].some((lock) => lock.name === REFRESH_LOCK)) {
       return false;
     }
     await locks.request(REFRESH_LOCK, () => undefined);
