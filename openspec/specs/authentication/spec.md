@@ -633,7 +633,8 @@ Decision 4.)
   hitting the refresh limit does not log users out.
 - Logout MUST wait for a refresh in flight before calling the logout
   endpoint, including another tab's refresh that a call in this tab is
-  waiting for.
+  waiting for; it MUST stop waiting for other tabs after 10 seconds, so a
+  frozen tab cannot block the logout.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.

@@ -188,9 +188,14 @@ async function waitForOtherTabRefresh(): Promise<boolean> {
   }
   try {
     // A refresh queued for the lock counts too: while the lock passes from
-    // one tab to the next, the snapshot may show it only as pending.
+    // one tab to the next, the snapshot may show it only as pending. Only
+    // exclusive entries are refreshes; shared ones are calls like this one,
+    // waiting.
     const { held = [], pending = [] } = await locks.query();
-    if (![...held, ...pending].some((lock) => lock.name === REFRESH_LOCK)) {
+    const refreshing = [...held, ...pending].some(
+      (lock) => lock.name === REFRESH_LOCK && lock.mode === 'exclusive',
+    );
+    if (!refreshing) {
       return false;
     }
     // Shared: every call waiting here is released together once the
@@ -272,7 +277,20 @@ async function postRefresh(): Promise<unknown> {
 // Resolves once this tab's refresh in flight, and any other tab's refresh a
 // call here is waiting for, have settled, whatever their outcome. Logout
 // waits on it, so such a refresh committed just before the logout cannot set
-// a fresh access cookie after the logout cleared it.
+// a fresh access cookie after the logout cleared it. This tab's refresh is
+// bounded by REFRESH_TIMEOUT_MS; the wait for other tabs is cut at the same
+// limit, so a frozen tab holding the lock cannot block the logout.
 export async function settleRefresh(): Promise<void> {
-  await Promise.allSettled([refreshInFlight, ...otherTabWaits]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const otherTabsDeadline = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, REFRESH_TIMEOUT_MS);
+  });
+  try {
+    await Promise.all([
+      refreshInFlight?.catch(() => undefined),
+      Promise.race([Promise.allSettled([...otherTabWaits]), otherTabsDeadline]),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }

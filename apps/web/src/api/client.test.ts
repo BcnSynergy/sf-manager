@@ -808,6 +808,50 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(settled).toBe(true);
   });
 
+  // A frozen tab could hold the lock indefinitely: logout stops waiting for
+  // other tabs after the refresh deadline (10 s).
+  it('bounds how long settleRefresh waits for another tab refresh', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      respond(unauthorized(), unauthorized(), unauthorized());
+
+      const call = apiFetch('/users').catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(0);
+      let settled = false;
+      void settleRefresh().then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+
+      // Leave no wait behind for later tests (the module state persists).
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      await call;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Calls waiting for a refresh hold the lock in shared mode; only an
+  // exclusive entry is a refresh worth waiting for.
+  it('does not wait when the lock shows only other calls waiting', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({
+      held: [{ name: 'sf-manager.refresh', mode: 'shared' }],
+      pending: [{ name: 'sf-manager.refresh', mode: 'shared' }],
+    });
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
+  });
+
   it('does not check the lock for a 401 from an earlier session', async () => {
     const locks = installFakeLocks();
     const fetchMock = vi.fn(() => {
