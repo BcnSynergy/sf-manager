@@ -969,9 +969,12 @@ content type`). Today that is the only 415 it raises, but a future one
 - **EN-167** (web tests): the Web Locks fake in `apps/web/src/api/client.test.ts`
   (`installFakeLocks`) reports only the refresh lock as held and an empty
   `pending` list, so it never models a lock handoff between tabs on its own;
-  the pending-only path is covered by one `mockResolvedValueOnce`. Make
-  `query()` report queued `request` callers as pending, so the sibling-call
-  and handoff tests run against realistic snapshots. Origin:
+  the pending-only path is covered by one `mockResolvedValueOnce`. It also
+  grants shared and exclusive requests one at a time and reports every hold
+  as exclusive, so the release of all shared waiters together is never
+  exercised. Make `query()` report queued `request` callers as pending with
+  their mode, and grant shared requests together, so the sibling-call,
+  handoff and shared-wait tests run against realistic snapshots. Origin:
   `en-142-wait-other-tab` Gentle AI review (reliability lens), 2026-11-09.
 
 ## Done
