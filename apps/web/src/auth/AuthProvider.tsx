@@ -236,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionUnavailable,
         retrySessionCheck: () => {
           setIsLoading(true);
-          void checkSession();
+          checkSession();
         },
       }}
     >
