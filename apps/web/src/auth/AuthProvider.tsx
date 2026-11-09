@@ -123,8 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         clearTimeout(timer);
-        // A settled check is no longer cancellable. The identity check keeps
-        // a superseded check that settles late from clearing the newer one.
+        // A settled check is no longer cancellable. Comparing the controller
+        // by reference keeps a superseded check that settles late from
+        // clearing the newer check's controller.
         if (sessionCheckControllerRef.current === controller) {
           sessionCheckControllerRef.current = null;
         }
