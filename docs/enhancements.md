@@ -811,10 +811,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `td-5-refresh-token-rotation` PR 3/3 native review, 2026-11-02.
 
 - **EN-142** (web): silent-refresh follow-ups from the TD-5 PR 3/3
-  pre-push review. A tab that waited on the `sf-manager.refresh` Web Lock
-  still rotates once more (with the fresh cookie), costing one extra
-  rotation and refresh-limit hit per waiting tab; retrying the original
-  request first when the lock was contended would avoid it. (The idempotent
+  pre-push review. (A tab that waited on the `sf-manager.refresh` Web Lock
+  no longer rotates once more: it retries with the other tab's cookies
+  first, done in `en-142-wait-other-tab`, PR #388.) (The idempotent
   replay on the API for a refresh whose answer stalls past 10 s after the
   token was consumed was dropped on 2026-11-09, `en-142-replay-decision`,
   PR #380: the API stores only token hashes, so a replay would have to
@@ -966,6 +965,17 @@ content type`). Today that is the only 415 it raises, but a future one
   would have fixed this and EN-142's stalled-answer case, and was dropped, so this half is an accepted
   limitation. Origin: `session-restore-unavailable` Gentle AI
   review (resilience lens), 2026-11-09.
+
+- **EN-167** (web tests): the Web Locks fake in `apps/web/src/api/client.test.ts`
+  (`installFakeLocks`) reports only the refresh lock as held and an empty
+  `pending` list, so it never models a lock handoff between tabs on its own;
+  the pending-only path is covered by one `mockResolvedValueOnce`. It also
+  grants shared and exclusive requests one at a time and reports every hold
+  as exclusive, so the release of all shared waiters together is never
+  exercised. Make `query()` report queued `request` callers as pending with
+  their mode, and grant shared requests together, so the sibling-call,
+  handoff and shared-wait tests run against realistic snapshots. Origin:
+  `en-142-wait-other-tab` Gentle AI review (reliability lens), 2026-11-09.
 
 ## Done
 
