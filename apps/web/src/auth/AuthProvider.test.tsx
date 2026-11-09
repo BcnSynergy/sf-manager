@@ -15,11 +15,15 @@ vi.mock('../api/client', async (importOriginal) => {
 // Renders the raw fields useAuth() exposes so tests can assert on the
 // consumer-visible shape of `user`, including `role` — the field this PR adds.
 function UserProbe() {
-  const { user, login, isLoading } = useAuth();
+  const { user, login, isLoading, sessionUnavailable, retrySessionCheck } = useAuth();
   return (
     <div>
       <span data-testid="probe-role">{user?.role ?? 'none'}</span>
       <span data-testid="probe-user-loading">{String(isLoading)}</span>
+      <span data-testid="probe-unavailable">{String(sessionUnavailable)}</span>
+      <button data-testid="probe-retry" onClick={retrySessionCheck}>
+        retry
+      </button>
       <button
         data-testid="probe-login"
         onClick={() => {
@@ -147,6 +151,116 @@ describe('AuthProvider — role propagation', () => {
     );
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(true);
     expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+  });
+
+  // Session check unavailable on load: a server or network failure is not a
+  // signed-out visitor, so the session may still be valid.
+  it('reports the session check as unavailable when /auth/me answers 5xx on mount', async () => {
+    vi.stubGlobal('fetch', mockFetch({ meFails: true, meStatus: 503 }));
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('reports the session check as unavailable when /auth/me cannot be reached on mount', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('reports the session check as unavailable when the mount-time refresh answers 5xx', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        Promise.resolve({
+          ok: false,
+          status: String(url).includes('/auth/refresh') ? 503 : 401,
+        } as Response),
+      ),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+  });
+
+  it('retrySessionCheck asks /auth/me again and restores the session once the API answers', async () => {
+    let meAvailable = false;
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      if (String(url).includes('/auth/me') && meAvailable) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 503 } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    meAvailable = true;
+    act(() => screen.getByTestId('probe-retry').click());
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/me'))).toHaveLength(
+      2,
+    );
+  });
+
+  it('a successful login clears the unavailable session check', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        String(url).includes('/auth/login')
+          ? Promise.resolve({
+              ok: true,
+              json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'TECHNICIAN' }),
+            } as Response)
+          : Promise.resolve({ ok: false, status: 503 } as Response),
+      ),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-login').click());
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
   it('does not try a refresh on mount when /auth/me fails for another reason than 401', async () => {

@@ -537,6 +537,8 @@ describe('OrganizationProfilePage route access', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderRoute();
@@ -555,6 +557,8 @@ describe('OrganizationProfilePage route access', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
 

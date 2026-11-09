@@ -3,6 +3,7 @@ import { Navigate } from 'react-router';
 import type { Role } from '@sf-manager/validation';
 import { useAuth } from './AuthProvider';
 import { NotAuthorized } from './NotAuthorized';
+import { SessionUnavailable } from './SessionUnavailable';
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -16,14 +17,20 @@ type ProtectedRouteProps = {
 //
 // design.md Decision 1: allowedRoles is optional so this component owns the
 // 401-before-403 precedence in one place. Order matters: isLoading -> null,
-// no user -> /login, role not in allowedRoles -> NotAuthorized, otherwise
+// session check unavailable -> SessionUnavailable, no user -> /login, role not in allowedRoles -> NotAuthorized, otherwise
 // (allowed role, or no allowedRoles prop at all) -> children. The last case
 // keeps every existing caller that doesn't pass allowedRoles unchanged.
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, sessionUnavailable, retrySessionCheck } = useAuth();
 
   if (isLoading) {
     return null;
+  }
+
+  // authentication spec "Session Check Unavailable on Load (Web)": a failed
+  // check is not a signed-out visitor, so offer a retry instead of /login.
+  if (!user && sessionUnavailable) {
+    return <SessionUnavailable onRetry={retrySessionCheck} />;
   }
 
   if (!user) {

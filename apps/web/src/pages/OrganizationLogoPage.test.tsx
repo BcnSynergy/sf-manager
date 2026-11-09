@@ -52,6 +52,8 @@ function signInAs(role: 'SYSTEM_ADMIN' | 'MANAGER') {
     logout: vi.fn(),
     sessionEnded: false,
     clearSessionEnded: vi.fn(),
+    sessionUnavailable: false,
+    retrySessionCheck: vi.fn(),
   });
 }
 
@@ -217,6 +219,8 @@ describe('OrganizationLogoPage route access', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderRoute();

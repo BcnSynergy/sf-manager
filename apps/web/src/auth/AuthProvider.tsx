@@ -26,6 +26,12 @@ type AuthContextValue = {
   // reload clears it.
   sessionEnded: boolean;
   clearSessionEnded: () => void;
+  // True when the session check on load could not tell whether the visitor
+  // is signed in (API unreachable or failing). Cleared by a successful
+  // check or login.
+  sessionUnavailable: boolean;
+  // Runs the session check again, without reloading the page.
+  retrySessionCheck: () => void;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
@@ -40,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
   // Mirrors `user` for the 401 handler, which must read the current value
   // without re-registering. Assigned wherever setUser is called (never in an
   // effect, which would lag one render and reopen the logout race below).
@@ -50,7 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(next);
   }
 
-  useEffect(() => {
+  // authentication spec "Session Check Unavailable on Load (Web)": only a 401
+  // whose refresh is refused means signed out. Anything else that fails (no
+  // network, 5xx, 429, an unavailable refresh, an unreadable answer) leaves
+  // the session unknown, so ProtectedRoute offers a retry instead of /login.
+  // isLoading starts true, so the mount-time run needs no setState of its own;
+  // a retry sets it first (retrySessionCheck below).
+  function checkSession() {
     // TD-5 S8: the access cookie may have expired while the refresh cookie
     // is still good, so a 401 from /auth/me tries one refresh before the
     // visitor counts as logged out.
@@ -60,12 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return response.json() as Promise<AuthUser>;
         }
         // Only an expired or missing access token (401) is worth a refresh.
-        return response.status === HTTP_UNAUTHORIZED ? refreshSession<AuthUser>() : null;
+        if (response.status === HTTP_UNAUTHORIZED) {
+          return refreshSession<AuthUser>();
+        }
+        throw new ApiError(response.status);
       })
-      .then((data) => updateUser(data))
-      .catch(() => updateUser(null))
+      .then((data) => {
+        setSessionUnavailable(false);
+        updateUser(data);
+      })
+      .catch(() => {
+        setSessionUnavailable(true);
+        updateUser(null);
+      })
       .finally(() => setIsLoading(false));
-  }, []);
+  }
+
+  useEffect(checkSession, []);
 
   // design.md D4/D5: apiFetch reports every 401 here. Acts only when a user
   // is logged in, so a logged-out 401 raises no notice and several
@@ -109,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     advanceSessionEpoch();
     const data = (await response.json()) as AuthUser;
     setSessionEnded(false);
+    setSessionUnavailable(false);
     updateUser(data);
   }
 
@@ -150,6 +175,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         sessionEnded,
         clearSessionEnded: () => setSessionEnded(false),
+        sessionUnavailable,
+        retrySessionCheck: () => {
+          setIsLoading(true);
+          checkSession();
+        },
       }}
     >
       {children}
