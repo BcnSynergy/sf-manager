@@ -408,6 +408,50 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
+  it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
+    const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];
+    let meCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        meCalls += 1;
+        if (meCalls === 1) {
+          return Promise.resolve({ ok: false, status: 503 } as Response);
+        }
+        return new Promise<Response>((resolve) => {
+          pending.push({ signal: init?.signal ?? undefined, release: resolve });
+        });
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true'));
+
+    act(() => screen.getByTestId('probe-retry').click());
+    act(() => screen.getByTestId('probe-retry').click());
+    expect(pending).toHaveLength(2);
+    expect(pending[0].signal?.aborted).toBe(true);
+    expect(pending[1].signal?.aborted).toBe(false);
+
+    await act(async () =>
+      pending[1].release({
+        ok: true,
+        json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+      } as Response),
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+
+    await act(async () => pending[0].release({ ok: false, status: 503 } as Response));
+
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER');
+    expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
+
   it('aborts the session check in flight when the provider unmounts', async () => {
     let signal: AbortSignal | undefined;
     vi.stubGlobal(

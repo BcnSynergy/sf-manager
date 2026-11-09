@@ -123,6 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         clearTimeout(timer);
+        if (sessionCheckControllerRef.current === controller) {
+          sessionCheckControllerRef.current = null;
+        }
         if (isCurrent()) setIsLoading(false);
       });
     return cancelSessionCheck;
