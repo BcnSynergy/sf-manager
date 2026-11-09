@@ -818,8 +818,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   consumes a token but its answer stalls past 10 s, the next 401 in any
   tab presents the spent cookie outside the grace window and revokes the
   family: no retry only delays it; an idempotent replay on the API would
-  close it. On load, a 5xx or network error from the restore shows the
-  login page even with a valid refresh cookie. The Web Lock test checks the
+  close it. (The load-time case, where a 5xx or network error from the
+  restore showed the login page even with a valid refresh cookie, was fixed
+  by `session-restore-unavailable`.) The Web Lock test checks the
   lock name, not that a second caller waits. `HTTP_UNAUTHORIZED` is defined
   both in `api/client.ts` and in `AuthProvider.tsx`. Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. In `client.test.ts`, the no-retry-after-timeout test queues a second stalled fetch it never uses, and the shared-deadline test asserts an error captured from a promise it does not await. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
@@ -944,6 +945,38 @@ content type`). Today that is the only 415 it raises, but a future one
   whether photos appear in the review document (FR-010). Independent of
   EN-163. Origin: product discussion, 2026-11-09; kept out of the MVP
   unless clients or regulations require photo evidence.
+
+- **EN-165** (web): two notes on the "Cannot reach the server" retry
+  (`session-restore-unavailable`). `AuthProvider`'s session check turns
+  every unavailable cause (network error, 429, 5xx, unavailable refresh,
+  unreadable 200) into the same flag and drops the error, so a malformed
+  `/auth/me` answer cannot be told apart from an outage; log the status or
+  error before setting it. And "Try again" reruns the whole check,
+  refresh included: when the mount-time refresh consumed the token but
+  timed out (the stalled-answer case in EN-142), the retry presents the
+  spent cookie outside the grace window, revokes the family and ends on
+  `/login`. A reload did the same before this change, so it is not a
+  regression, but the retry makes it likelier; fixing EN-142's idempotent
+  replay fixes both. Origin: `session-restore-unavailable` Gentle AI
+  review (resilience lens), 2026-11-09.
+
+- **EN-166** (web): tidy the load-time session check in `AuthProvider`
+  (`session-restore-unavailable`). A login invalidates a check in flight
+  through `sessionCheckIdRef`, but does not abort it: if a retried
+  `/auth/me` answers 401 during the login, that check still calls
+  `refreshSession` with the pre-login cookie, and a refresh answer landing
+  after the login's can overwrite its cookies (the guard protects React
+  state, not the cookie jar; before this change there was no guard at all).
+  Skip the refresh when the check is no longer current and abort a
+  superseded check's controller. `useEffect(checkSession, [])` returns no
+  cleanup, so an unmount (or StrictMode's discarded first run) keeps its
+  request and 10-second timer alive; harmless to state, but a leak. Rename
+  `HTTP_SERVER_ERROR` to a range bound such as `HTTP_SERVER_ERROR_MIN`, and
+  say in the `SESSION_CHECK_TIMEOUT_MS` comment that it also covers "Try
+  again" and is restated in the authentication spec. The "another 4xx signs
+  the visitor out" scenario is tested at provider level only, not through
+  `ProtectedRoute`. Origin: `session-restore-unavailable` Gentle AI review
+  (resilience, readability and reliability lenses), 2026-11-09.
 
 ## Done
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { Role } from '@sf-manager/validation';
@@ -40,6 +40,8 @@ describe('ProtectedRoute', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderProtectedRoute();
@@ -56,11 +58,35 @@ describe('ProtectedRoute', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderProtectedRoute();
 
     expect(screen.getByTestId('login-page')).toBeInTheDocument();
+  });
+
+  it('shows the session-unavailable page instead of redirecting when the session check failed', () => {
+    const retrySessionCheck = vi.fn();
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      sessionEnded: false,
+      clearSessionEnded: vi.fn(),
+      sessionUnavailable: true,
+      retrySessionCheck,
+    });
+
+    renderProtectedRoute();
+
+    expect(screen.getByTestId('session-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button'));
+    expect(retrySessionCheck).toHaveBeenCalledTimes(1);
   });
 
   it('renders the protected content when authenticated', () => {
@@ -71,6 +97,8 @@ describe('ProtectedRoute', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderProtectedRoute();
@@ -106,6 +134,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -123,6 +153,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -139,6 +171,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -156,6 +190,8 @@ describe('ProtectedRoute with allowedRoles', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderWithAllowedRoles(['SYSTEM_ADMIN']);
@@ -209,6 +245,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -224,6 +262,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -239,6 +279,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -254,6 +296,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -273,6 +317,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -300,6 +346,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     render(
@@ -339,6 +387,8 @@ describe('ProtectedRoute with the review-history route family (5 allowed roles)'
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderReviewHistoryRoute();
@@ -400,6 +450,8 @@ describe('ProtectedRoute for the element review-history route (5 allowed roles, 
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     renderElementHistoryRoute();
@@ -419,6 +471,8 @@ describe('ProtectedRoute for the element review-history route (5 allowed roles, 
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
 
     render(

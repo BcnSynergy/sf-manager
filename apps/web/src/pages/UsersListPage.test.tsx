@@ -75,6 +75,8 @@ describe('UsersListPage', () => {
       logout: vi.fn(),
       sessionEnded: false,
       clearSessionEnded: vi.fn(),
+      sessionUnavailable: false,
+      retrySessionCheck: vi.fn(),
     });
     mockedListMaintenanceCompanies.mockResolvedValue([]);
   });

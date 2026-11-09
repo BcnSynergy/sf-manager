@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '@sf-manager/validation';
@@ -405,5 +405,30 @@ describe('App (shipped data router)', () => {
     await screen.findByTestId('login-email');
     expect(window.location.pathname).toBe('/login');
     expect(screen.queryByTestId('not-found')).not.toBeInTheDocument();
+  });
+
+  // authentication spec "Session Check Unavailable on Load (Web)", end to end
+  // through the real AuthProvider and ProtectedRoute.
+  it('offers a retry when the API is unavailable on load, and Try again restores the session', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    const available = mockFetch();
+    let apiUp = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        apiUp ? available(url) : Promise.reject(new TypeError('Failed to fetch')),
+      ),
+    );
+
+    render(<App />);
+
+    await screen.findByTestId('session-unavailable');
+    expect(window.location.pathname).toBe('/does-not-exist');
+
+    apiUp = true;
+    fireEvent.click(within(screen.getByTestId('session-unavailable')).getByRole('button'));
+
+    await screen.findByTestId('not-found');
+    expect(screen.queryByTestId('session-unavailable')).not.toBeInTheDocument();
   });
 });
