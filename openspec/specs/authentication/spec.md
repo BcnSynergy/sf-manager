@@ -612,6 +612,10 @@ Decision 4.)
   refreshes MUST be serialized across the browser's tabs (Web Locks where
   the browser supports them), so tabs do not present the same refresh
   token at once.
+- A call whose 401 finds another tab's refresh in progress MUST wait for it
+  and retry with the cookies it set, without refreshing again. Only if that
+  retry also returns 401 MUST the web app refresh and retry as above, so a
+  waiting tab does not rotate the refresh token a second time.
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 10 seconds after its first request
@@ -654,6 +658,13 @@ Decision 4.)
 - GIVEN two authenticated API calls that return 401 at the same time
 - WHEN the web app handles them
 - THEN exactly one refresh request MUST be sent, and both calls MUST be retried after it
+
+#### Scenario: A tab waiting for another tab's refresh reuses it
+
+- GIVEN two tabs of a signed-in user whose access token has expired, and one tab's refresh in progress
+- WHEN an authenticated API call in the other tab returns 401
+- THEN that tab MUST wait for the refresh to finish and retry the call without sending a refresh request of its own
+- AND only if the retried call returns 401 again MUST it refresh and retry once more
 
 #### Scenario: Session restored on load through a refresh
 

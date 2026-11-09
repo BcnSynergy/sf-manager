@@ -72,6 +72,18 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
   // which fails this call without ending the session. A session change during the refresh (logout, another login)
   // means this request belongs to the old session: neither retried nor
   // reported.
+  // EN-142: when another tab is refreshing, its new cookies are shared with
+  // this tab, so wait for it and retry first; refreshing again would only
+  // rotate the token a second time. Refresh here only if that retry is
+  // still refused.
+  if (
+    response.status === HTTP_UNAUTHORIZED &&
+    epochAtStart === sessionEpoch &&
+    (await waitForOtherTabRefresh()) &&
+    epochAtStart === sessionEpoch
+  ) {
+    response = await send(path, init);
+  }
   if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
     const refreshed = await refreshSession();
     if (refreshed !== null && epochAtStart === sessionEpoch) {
@@ -154,8 +166,34 @@ export function refreshSession<T = unknown>(): Promise<T | null> {
 }
 
 function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
-  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  const locks = refreshLocks();
   return locks ? locks.request(REFRESH_LOCK, work) : work();
+}
+
+function refreshLocks(): LockManager | undefined {
+  return (globalThis.navigator as Navigator | undefined)?.locks;
+}
+
+// Resolves true once another tab's refresh, in progress when this was
+// called, has finished; false when no other tab held the refresh lock, when
+// this tab is refreshing itself (callers join that refresh instead) or when
+// the browser has no Web Locks. A tab that finishes in between is missed and
+// this tab refreshes as before: one extra rotation, never a wrong session.
+async function waitForOtherTabRefresh(): Promise<boolean> {
+  const locks = refreshLocks();
+  if (!locks || refreshInFlight) {
+    return false;
+  }
+  try {
+    const busy = await locks.request(REFRESH_LOCK, { ifAvailable: true }, (lock) => lock === null);
+    if (!busy) {
+      return false;
+    }
+    await locks.request(REFRESH_LOCK, () => undefined);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function postRefresh(): Promise<unknown> {
