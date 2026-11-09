@@ -177,16 +177,18 @@ function refreshLocks(): LockManager | undefined {
 // Resolves true once another tab's refresh, in progress when this was
 // called, has finished; false when no other tab held the refresh lock, when
 // this tab is refreshing itself (callers join that refresh instead) or when
-// the browser has no Web Locks. A tab that finishes in between is missed and
-// this tab refreshes as before: one extra rotation, never a wrong session.
+// the browser has no Web Locks. The check reads the lock state with query()
+// instead of trying the lock, so two calls checking at once never see each
+// other as a refresh. A tab that finishes in between is missed and this tab
+// refreshes as before: one extra rotation, never a wrong session.
 async function waitForOtherTabRefresh(): Promise<boolean> {
   const locks = refreshLocks();
   if (!locks || refreshInFlight) {
     return false;
   }
   try {
-    const busy = await locks.request(REFRESH_LOCK, { ifAvailable: true }, (lock) => lock === null);
-    if (!busy) {
+    const { held = [] } = await locks.query();
+    if (!held.some((lock) => lock.name === REFRESH_LOCK)) {
       return false;
     }
     await locks.request(REFRESH_LOCK, () => undefined);

@@ -350,8 +350,10 @@ describe('apiFetch — silent refresh (TD-5)', () => {
   type LockCallback = (lock: { name: string } | null) => unknown;
 
   // A Web Locks stand-in shared by "tabs": one exclusive lock per name,
-  // granted in request order, with `ifAvailable` answering null while it is
-  // held or awaited. Installed on navigator.locks.
+  // granted in request order. Like the real API, `ifAvailable` answers null
+  // while the lock is held or awaited, and otherwise takes it until its
+  // callback settles; `query()` reports whether it is held. Installed on
+  // navigator.locks.
   function installFakeLocks() {
     let tail: Promise<void> = Promise.resolve();
     let holdersAndWaiters = 0;
@@ -384,9 +386,14 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         }
       },
     );
-    vi.stubGlobal('navigator', { ...navigator, locks: { request } });
+    const query = vi.fn(async () => ({
+      held: held ? [{ name: 'sf-manager.refresh', mode: 'exclusive' }] : [],
+      pending: [],
+    }));
+    vi.stubGlobal('navigator', { ...navigator, locks: { request, query } });
     return {
       request,
+      query,
       isHeld: () => held,
       // Another tab takes the lock and keeps it until the returned function runs.
       holdByOtherTab(): () => void {
@@ -841,7 +848,42 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
     expect(errors.map((e) => (e as ApiError).status)).toEqual([401, 401]);
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
-    expect(handler).toHaveBeenCalled();
+    // Each refused call reports once; AuthProvider collapses them.
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  // Checking whether another tab is refreshing must not take the lock itself:
+  // two calls of one tab that get a 401 together, with no refresh running,
+  // must not mistake each other's check for a refresh and retry for nothing.
+  it('does not mistake a sibling call checking the lock for another tab refreshing', async () => {
+    const locks = installFakeLocks();
+    let refreshed = false;
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/refresh')) {
+        refreshed = true;
+        return Promise.resolve(ok({ id: '1' }));
+      }
+      return Promise.resolve(refreshed ? ok({}) : unauthorized());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await Promise.all([apiFetch('/users'), apiFetch('/users')]);
+
+    expect(urls(fetchMock).filter((u) => u === '/auth/refresh')).toHaveLength(1);
+    expect(urls(fetchMock).filter((u) => u === '/users')).toHaveLength(4);
+    // The check only reads the lock state; the refresh is the only holder.
+    expect(locks.request).toHaveBeenCalledTimes(1);
+  });
+
+  // An origin where Web Locks throw (an opaque origin, say) keeps the
+  // plain refresh-and-retry.
+  it('falls back to refreshing when the Web Locks check fails', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockRejectedValueOnce(new DOMException('denied', 'SecurityError'));
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+    await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
   });
 
   it('neither retries nor ends the session when the session changed during the refresh (logout or new login)', async () => {
