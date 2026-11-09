@@ -1,3 +1,5 @@
+import { HTTP_SERVER_ERROR_MIN, HTTP_TOO_MANY_REQUESTS, HTTP_UNAUTHORIZED } from './http-status';
+
 // The only place in the web app that parses an error response body
 // (design.md "Technical Approach") — every typed call in api/users.ts goes
 // through this seam so the "no English-message string comparison" success
@@ -36,10 +38,6 @@ export class ApiError extends Error {
 }
 
 const STANDARD_ERROR_BODY_KEYS = new Set(['statusCode', 'error', 'message', 'code']);
-const HTTP_UNAUTHORIZED = 401;
-// Lowest 5xx status: any answer at or above it is a server error.
-const HTTP_SERVER_ERROR_MIN = 500;
-const HTTP_TOO_MANY_REQUESTS = 429;
 
 // auth-live-user-check design.md D4: apiFetch is the only data-call seam, so
 // a mid-session 401 (the API now re-reads the user on every request) is

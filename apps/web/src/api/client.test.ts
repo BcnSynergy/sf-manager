@@ -540,10 +540,10 @@ describe('apiFetch — silent refresh (TD-5)', () => {
             reject(new DOMException('aborted', 'AbortError')),
           );
         });
+      // Only one refresh attempt is queued: a retry would make a third call.
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(unauthorized())
-        .mockImplementationOnce(stalled)
         .mockImplementationOnce(stalled);
       vi.stubGlobal('fetch', fetchMock);
 
@@ -585,14 +585,81 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         .mockImplementationOnce(stalled);
       vi.stubGlobal('fetch', fetchMock);
 
-      let error: unknown;
-      void apiFetch('/users').catch((e: unknown) => {
-        error = e;
-      });
+      const pending = apiFetch('/users').catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(10_000);
+      // Settled by now; a retry given a fresh 10 s would still be pending.
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
+      expect(error).not.toBe('still pending');
       expect(fetchMock).toHaveBeenCalledTimes(3);
-      expect((error as ApiError | undefined)?.status).toBe(0);
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The deadline is checked before every attempt, not only through the abort
+  // timer: when the clock has passed it (here it jumps forward while the
+  // first attempt is in flight), no retry is sent even after a network error.
+  it('sends no retry once the deadline has passed, even after a network error', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const failsAfterClockJump = () =>
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => {
+            vi.setSystemTime(Date.now() + 20_000);
+            reject(new TypeError('connection reset'));
+          }, 1_000);
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(failsAfterClockJump);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(1_000);
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
+
+      expect(error).not.toBe('still pending');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect((error as ApiError).status).toBe(0);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A timed-out attempt is never retried, even when the clock stepped back
+  // (an NTP adjustment) and the deadline check alone would allow it.
+  it('does not retry a timed-out refresh when the clock stepped back during it', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const stalledThenClockStepsBack = (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            vi.setSystemTime(Date.now() - 5_000);
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(unauthorized())
+        .mockImplementationOnce(stalledThenClockStepsBack);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = apiFetch('/users').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
+
+      expect(error).not.toBe('still pending');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -611,13 +678,27 @@ describe('apiFetch — silent refresh (TD-5)', () => {
   });
 
   it('serializes the refresh across tabs with a Web Lock when the browser has them', async () => {
-    const request = vi.fn((_name: string, callback: () => Promise<unknown>) => callback());
+    // Another tab holds the lock until releaseOtherTab runs.
+    let releaseOtherTab: () => void = () => undefined;
+    const otherTabHolding = new Promise<void>((resolve) => (releaseOtherTab = resolve));
+    const request = vi.fn(async (_name: string, callback: () => Promise<unknown>) => {
+      await otherTabHolding;
+      return callback();
+    });
     vi.stubGlobal('navigator', { ...navigator, locks: { request } });
-    respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
+    const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'fresh' }));
 
-    await apiFetch('/users');
+    const pending = apiFetch('/users');
+    // A full macrotask, so a refresh that skipped the lock would have started.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
+    expect(urls(fetchMock)).toEqual(['/users']);
+
+    releaseOtherTab();
+    await pending;
+
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
   });
 
   it('neither retries nor ends the session when the session changed during the refresh (logout or new login)', async () => {

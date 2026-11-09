@@ -7,6 +7,11 @@ import {
   setUnauthorizedHandler,
   settleRefresh,
 } from '../api/client';
+import {
+  HTTP_SERVER_ERROR_MIN,
+  HTTP_TOO_MANY_REQUESTS,
+  HTTP_UNAUTHORIZED,
+} from '../api/http-status';
 
 // role is returned as-is by both POST /auth/login and GET /auth/me
 // (design.md "Data Flow") — the frontend does not decide or cache it
@@ -35,10 +40,6 @@ type AuthContextValue = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_TOO_MANY_REQUESTS = 429;
-// Lowest 5xx status: any answer at or above it is a server error.
-const HTTP_SERVER_ERROR_MIN = 500;
 // Deadline for GET /auth/me, body included, on load and on every "Try
 // again". The authentication spec "Session Check Unavailable on Load (Web)"
 // restates this value: change both together.
