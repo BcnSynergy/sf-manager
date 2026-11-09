@@ -908,6 +908,43 @@ content type`). Today that is the only 415 it raises, but a future one
   `cross-env`), so a hoisting change breaks one line, not six. Origin:
   `nest-12` (PR #370) Gentle AI readability review, 2026-11-08.
 
+- **EN-163** (web, FR-007): Scan an element's QR label with the device
+  camera during a review session, as an alternative to typing the code.
+  A "Scan" control fills the same code field, so manual entry stays the
+  fallback and the API and data model do not change. Needs a spec change
+  in `review-session-ui`: the overview ("Codes are typed, not scanned"),
+  the out-of-scope list ("camera / QR scanning") and the requirement
+  "Manual Code Entry Only", which forbids opening a camera, asking for
+  camera permission, or any scanning library. Update the FR-007 status
+  ("no camera scanning") when it ships. Camera access (`getUserMedia`)
+  needs a secure context (production is HTTPS through Caddy; a phone on
+  the LAN dev server over HTTP is not). The native `BarcodeDetector` API is
+  not enough on its own: it is unsupported in Firefox and disabled by
+  default in Safari, so in practice no browser on iPhone has it (iOS
+  browsers use WebKit), and Chromium wires it up only where the OS has a
+  decoder (Android, macOS, ChromeOS). Plan a polyfill (for example a
+  ZXing-based one) behind feature detection. Also correct the "on web (no
+  native camera)" premise in `docs/architecture/domain-model-inspections.md`.
+  Independent of EN-164. Origin: product discussion, 2026-11-09.
+
+- **EN-164** (feature): Attach photos to a review, captured with the device
+  camera or chosen from files. On mobile,
+  `<input type="file" accept="image/*" capture="environment">` opens the
+  camera without a permission prompt; desktop browsers ignore `capture`
+  and show a file picker. Not in any FR today, so it starts as a new FR
+  with its own slice (ADR-006). Needs a spec change in `review-session-ui`:
+  photos and attachments are out of scope, "Manual Code Entry Only"
+  forbids camera capture and device-capture libraries, and the field flow
+  forbids "an attachment/photo control". Open decisions: what a photo
+  belongs to (session, element or answer); storage, size limits and
+  client-side compression, starting from the existing `LocalFileStorage`
+  port (ADR-012, used for the organization logo); who may view a photo
+  (ADR-011 scopes); backup size and retention (each dump already archives
+  the `api-files` volume since TD-42, so photos grow that archive); and
+  whether photos appear in the review document (FR-010). Independent of
+  EN-163. Origin: product discussion, 2026-11-09; kept out of the MVP
+  unless clients or regulations require photo evidence.
+
 ## Done
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
