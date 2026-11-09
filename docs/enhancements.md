@@ -960,6 +960,24 @@ content type`). Today that is the only 415 it raises, but a future one
   replay fixes both. Origin: `session-restore-unavailable` Gentle AI
   review (resilience lens), 2026-11-09.
 
+- **EN-166** (web): tidy the load-time session check in `AuthProvider`
+  (`session-restore-unavailable`). A login invalidates a check in flight
+  through `sessionCheckIdRef`, but does not abort it: if a retried
+  `/auth/me` answers 401 during the login, that check still calls
+  `refreshSession` with the pre-login cookie, and a refresh answer landing
+  after the login's can overwrite its cookies (the guard protects React
+  state, not the cookie jar; before this change there was no guard at all).
+  Skip the refresh when the check is no longer current and abort a
+  superseded check's controller. `useEffect(checkSession, [])` returns no
+  cleanup, so an unmount (or StrictMode's discarded first run) keeps its
+  request and 10-second timer alive; harmless to state, but a leak. Rename
+  `HTTP_SERVER_ERROR` to a range bound such as `HTTP_SERVER_ERROR_MIN`, and
+  say in the `SESSION_CHECK_TIMEOUT_MS` comment that it also covers "Try
+  again" and is restated in the authentication spec. The "another 4xx signs
+  the visitor out" scenario is tested at provider level only, not through
+  `ProtectedRoute`. Origin: `session-restore-unavailable` Gentle AI review
+  (resilience, readability and reliability lenses), 2026-11-09.
+
 ## Done
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
