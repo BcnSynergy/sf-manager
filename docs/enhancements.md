@@ -913,7 +913,10 @@ content type`). Today that is the only 415 it raises, but a future one
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
   `App` (data router: `createBrowserRouter` and `RouterProvider` from
   `react-router/dom`) against the jsdom URL, for `/login` and for an unknown
-  path. Done in `not-found-route` (PR #374), 2026-11-09.
+  path with and without a session, which pins the router wiring. Both entry
+  points render the same in jsdom, so the `react-router/dom` import is pinned
+  by a `no-restricted-imports` rule in `apps/web/eslint.config.mjs` instead.
+  Done in `not-found-route` (PR #374), 2026-11-09.
 
 - **EN-161** (web): an unknown path renders a "page not found" view inside
   the authenticated layout (nav, localized message, link home) for any

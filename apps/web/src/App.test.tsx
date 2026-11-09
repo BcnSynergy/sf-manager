@@ -392,4 +392,18 @@ describe('App (shipped data router)', () => {
     await screen.findByTestId('not-found');
     expect(screen.getByTestId('nav-root')).toBeInTheDocument();
   });
+
+  it('redirects an unknown URL to /login when there is no session', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 401 } as Response)),
+    );
+
+    render(<App />);
+
+    await screen.findByTestId('login-email');
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.queryByTestId('not-found')).not.toBeInTheDocument();
+  });
 });
