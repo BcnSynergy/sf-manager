@@ -909,11 +909,20 @@ content type`). Today that is the only 415 it raises, but a future one
   `nest-12` (PR #370) Gentle AI readability review, 2026-11-08.
 
 - **EN-161** (web): An unknown URL (for example `/does-not-exist`) renders a
-  blank page with no nav and no message (seen signed in). The data router has one catch-all route (`path: '*'` in `App.tsx`)
-  whose `<AppRoutes>` `<Routes>` has no `*` route of its own, so nothing
-  matches and it renders `null`. Add a not-found route with a short message
-  and a link home. Origin: Dependabot PR #349 (react-router 8.5.1) browser
-  verification, 2026-11-09; the behavior predates that PR.
+  blank page with no nav and no message (seen signed in). The data router
+  has one catch-all route (`path: '*'` in `App.tsx`) whose `<AppRoutes>`
+  `<Routes>` has no `*` route of its own, so nothing matches and it renders
+  `null`. Add a not-found route with a short message and a link home.
+  Origin: Dependabot PR #349 (react-router 8.5.1) browser verification,
+  2026-11-09; the behavior predates that PR.
+
+- **EN-162** (web tests): No test renders the default `App`. `App.test.tsx`
+  renders only `AppRoutes` inside a `MemoryRouter`, so the data router setup
+  in `App.tsx` (`createBrowserRouter`, and `RouterProvider` imported from
+  `react-router/dom`) is not pinned: reverting the import to `react-router`,
+  or breaking the router wiring, would pass every test. Add a smoke test that
+  renders `App` and checks that a route resolves. Origin:
+  `react-router-8-followup` fresh-context review (S-2), 2026-11-09.
 
 ## Done
 
