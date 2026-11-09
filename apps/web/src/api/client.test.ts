@@ -883,6 +883,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
 
     await expect(apiFetch('/users')).resolves.toEqual({ data: 'ok' });
+    expect(locks.query).toHaveBeenCalledTimes(1);
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
   });
 
