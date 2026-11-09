@@ -977,6 +977,16 @@ content type`). Today that is the only 415 it raises, but a future one
   handoff and shared-wait tests run against realistic snapshots. Origin:
   `en-142-wait-other-tab` Gentle AI review (reliability lens), 2026-11-09.
 
+- **EN-168** (deploy tests): `deploy/test-offsite-copy.sh` creates its
+  backup fixtures inside the rclone image it tests (`in_volume`), so they
+  belong to whatever user that image runs as. If a future rclone image ran
+  as a non-root user, the test would still pass while production, whose
+  `./backups` files are root-owned with mode 600, could no longer read them.
+  Create the fixtures as root (`--user 0`) and run the script as the
+  image's default user, or assert that the image runs as uid 0. Today's
+  1.76.0 image runs as root, like 1.75.2. Origin: Dependabot PR #381
+  (rclone 1.76.0) fresh review, 2026-11-09.
+
 ## Done
 
 - **EN-166** (web): the load-time session check in `AuthProvider` is
