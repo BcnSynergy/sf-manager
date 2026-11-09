@@ -408,7 +408,7 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
-  it('a second "Try again" aborts the first retry, ignores its late answer, and is not aborted once settled', async () => {
+  it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
     const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];
     let meCalls = 0;
     vi.stubGlobal(
@@ -424,7 +424,7 @@ describe('AuthProvider — role propagation', () => {
       }),
     );
 
-    const { unmount } = render(
+    render(
       <AuthProvider>
         <UserProbe />
       </AuthProvider>,
@@ -450,10 +450,31 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER');
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
     expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
 
-    // A settled check is no longer cancellable: unmounting leaves it alone.
+  it('does not abort a session check that has already settled when the provider unmounts', async () => {
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'admin@sf-manager.example', role: 'MANAGER' }),
+        } as Response);
+      }),
+    );
+
+    const { unmount } = render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('MANAGER'));
+
     unmount();
-    expect(pending[1].signal?.aborted).toBe(false);
+
+    expect(signal?.aborted).toBe(false);
   });
 
   it('aborts the session check in flight when the provider unmounts', async () => {
