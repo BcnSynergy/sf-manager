@@ -61,7 +61,9 @@ None.
   tooling (`@nestjs/schematics` 12 and its `@angular-devkit/*` dependencies)
   supports on Node 24 and later (it excludes 25.x).
   `.nvmrc`, CI and the Dockerfiles track the latest Node 24 and needed no
-  change. Resolved in `node-engine-floor` (PR #378), 2026-11-09.
+  change (the pinned `node:24-bookworm-slim` digest carries 24.22.2).
+  Origin: `nest-12` (PR #370) Gentle AI reliability review, 2026-11-08.
+  Resolved by `node-engine-floor` (PR #378), 2026-11-09.
 
 - **TD-50**: The root `package.json` carried a scoped npm override,
   `"@nestjs/platform-express": { "multer": "2.5.0" }`, to close Dependabot
