@@ -379,6 +379,50 @@ describe('AuthProvider — role propagation', () => {
       );
       expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('true');
 
+      // Still waiting just before the deadline: a slow but healthy API is
+      // not reported as unavailable.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(9_999);
+      });
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('true');
+      expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+
+      expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the deadline also covers an /auth/me body that never finishes', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url: RequestInfo | URL, init?: RequestInit) =>
+          Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              new Promise((_resolve, reject) => {
+                init?.signal?.addEventListener('abort', () =>
+                  reject(new DOMException('Aborted', 'AbortError')),
+                );
+              }),
+          } as unknown as Response),
+        ),
+      );
+
+      render(
+        <AuthProvider>
+          <UserProbe />
+        </AuthProvider>,
+      );
+
       await act(async () => {
         await vi.advanceTimersByTimeAsync(10_000);
       });
