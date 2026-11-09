@@ -28,6 +28,16 @@ None.
 
 ### Low
 
+- **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
+  upload, matrix builds, Playwright, extra caching, parallel jobs, and
+  SHA-pinned actions. The API typecheck step landed in
+  `td-32-api-typecheck` (#219). Dependabot landed for Docker images (EN-95)
+  and for npm and GitHub Actions in `td-32-dependabot-npm-actions` (PR #344). Evidence:
+  `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
+  ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
+  `deployment` added a manual production stack (README "Production
+  deployment"); deploying from CI is EN-91.
+
 - **TD-51**: The root `package.json` declares the Node engine as `>=24`, but
   the NestJS 12 dev tooling (`@nestjs/schematics` 12 and its
   `@angular-devkit/*` dependencies) requires `^22.22.3 || ^24.15.0 || >=26`.
@@ -38,15 +48,21 @@ None.
   affected. Origin: `nest-12` (PR #370) Gentle AI reliability review, on
   2026-11-08.
 
-- **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
-  upload, matrix builds, Playwright, extra caching, parallel jobs, and
-  SHA-pinned actions. The API typecheck step landed in
-  `td-32-api-typecheck` (#219). Dependabot landed for Docker images (EN-95)
-  and for npm and GitHub Actions in `td-32-dependabot-npm-actions` (PR #344). Evidence:
-  `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
-  ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
-  `deployment` added a manual production stack (README "Production
-  deployment"); deploying from CI is EN-91.
+- **TD-52**: Two open Dependabot alerts in dev-only packages have no fix
+  inside the ranges their parents allow. Alert #71 (GHSA-g3hv-75wg-m249,
+  medium: denial of service via glob pattern expansion) hits `minimatch`
+  10.2.6, pulled by `eslint`, `@eslint/config-array`,
+  `@typescript-eslint/typescript-estree`, `test-exclude` and `glob` 13 (via
+  `@jest/reporters`), and 9.0.9 under `test-exclude`'s nested `glob` 10.5.0;
+  the fix is in 11.0.1, but the latest versions of those parents still ask
+  for `^10.2.x`. Alert #69 (GHSA-gcqx-w48m-w2h4, low: prototype poisoning in
+  `mergeObject()`) hits `deepmerge` 4.3.1 via `jest-config`; no patched
+  version exists. Both only process our own lint, test and coverage config,
+  never user input. The web image ships only the built `dist`; the API image
+  keeps dev dependencies on purpose (Prisma CLI and the ts-node seed, see
+  `apps/api/Dockerfile`), so both packages are present there but never run. Recheck when the parents move to `minimatch` 11 or `deepmerge` is
+  patched, and do not force either with `overrides`. Origin:
+  `security-dev-alerts` triage, 2026-11-09.
 
 ## Resolved
 
