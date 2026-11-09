@@ -978,7 +978,8 @@ content type`). Today that is the only 415 it raises, but a future one
   `en-142-wait-other-tab` Gentle AI review (reliability lens), 2026-11-09.
 
 - **EN-168** (deploy tests): `deploy/test-offsite-copy.sh` creates its
-  backup fixtures inside the rclone image it tests (`in_volume`), so they
+  backup fixtures inside the rclone image it tests (`in_volume`, line 82,
+  used at lines 96-99), so they
   belong to whatever user that image runs as. If a future rclone image ran
   as a non-root user, the test would still pass while production, whose
   `./backups` files are root-owned with mode 600, could no longer read them.
