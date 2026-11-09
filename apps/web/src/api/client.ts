@@ -193,12 +193,23 @@ async function waitForOtherTabRefresh(): Promise<boolean> {
     if (![...held, ...pending].some((lock) => lock.name === REFRESH_LOCK)) {
       return false;
     }
-    await locks.request(REFRESH_LOCK, () => undefined);
+    // Shared: every call waiting here is released together once the
+    // refresh ahead of them ends. Tracked so logout (settleRefresh) also
+    // waits for that refresh, whose cookies could land after the logout.
+    const wait = locks.request(REFRESH_LOCK, { mode: 'shared' }, () => undefined);
+    otherTabWaits.add(wait);
+    try {
+      await wait;
+    } finally {
+      otherTabWaits.delete(wait);
+    }
     return true;
   } catch {
     return false;
   }
 }
+
+const otherTabWaits = new Set<Promise<unknown>>();
 
 async function postRefresh(): Promise<unknown> {
   // A response lost to the network may have consumed the token server-side:
@@ -258,9 +269,10 @@ async function postRefresh(): Promise<unknown> {
   throw new ApiError(0);
 }
 
-// Resolves once the refresh in flight (if any) has settled, whatever its
-// outcome. Logout waits on it, so a refresh committed just before the logout
-// cannot set a fresh access cookie after the logout cleared it.
+// Resolves once this tab's refresh in flight, and any other tab's refresh a
+// call here is waiting for, have settled, whatever their outcome. Logout
+// waits on it, so such a refresh committed just before the logout cannot set
+// a fresh access cookie after the logout cleared it.
 export async function settleRefresh(): Promise<void> {
-  await refreshInFlight?.catch(() => undefined);
+  await Promise.allSettled([refreshInFlight, ...otherTabWaits]);
 }

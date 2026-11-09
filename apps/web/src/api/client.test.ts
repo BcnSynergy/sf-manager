@@ -349,29 +349,21 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
   type LockCallback = (lock: { name: string } | null) => unknown;
 
-  // A Web Locks stand-in shared by "tabs": one exclusive lock per name,
-  // granted in request order. Like the real API, `ifAvailable` answers null
-  // while the lock is held or awaited, and otherwise takes it until its
-  // callback settles; `query()` reports whether it is held. Installed on
-  // navigator.locks.
+  // A Web Locks stand-in shared by "tabs": one lock per name, granted in
+  // request order (shared and exclusive alike); `query()` reports whether it
+  // is held. Installed on navigator.locks.
   function installFakeLocks() {
     let tail: Promise<void> = Promise.resolve();
-    let holdersAndWaiters = 0;
     let held = false;
     const request = vi.fn(
       async (
         name: string,
-        optionsOrCallback: { ifAvailable?: boolean } | LockCallback,
+        optionsOrCallback: { mode?: 'shared' | 'exclusive' } | LockCallback,
         maybeCallback?: LockCallback,
       ) => {
-        const options = typeof optionsOrCallback === 'function' ? {} : optionsOrCallback;
         const callback = (
           typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback
         ) as LockCallback;
-        if (options.ifAvailable && holdersAndWaiters > 0) {
-          return callback(null);
-        }
-        holdersAndWaiters += 1;
         const previous = tail;
         let release: () => void = () => undefined;
         tail = new Promise((resolve) => (release = resolve));
@@ -381,7 +373,6 @@ describe('apiFetch — silent refresh (TD-5)', () => {
           return await callback({ name });
         } finally {
           held = false;
-          holdersAndWaiters -= 1;
           release();
         }
       },
@@ -792,6 +783,44 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
     await expect(pending).resolves.toEqual({ data: 'fresh' });
     expect(urls(fetchMock)).toEqual(['/users', '/users']);
+  });
+
+  // Logout waits for it too: the other tab's refresh may still set fresh
+  // cookies after the logout cleared them.
+  it('makes settleRefresh wait while a call waits for another tab refresh', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    respond(unauthorized(), ok({ data: 'fresh' }));
+
+    const pending = apiFetch('/users');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    let settled = false;
+    const waiting = settleRefresh().then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    releaseOtherTab();
+    await waiting;
+    await pending;
+
+    expect(settled).toBe(true);
+  });
+
+  it('does not check the lock for a 401 from an earlier session', async () => {
+    const locks = installFakeLocks();
+    const fetchMock = vi.fn(() => {
+      advanceSessionEpoch();
+      return Promise.resolve(unauthorized());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect((error as ApiError).status).toBe(401);
+    expect(locks.query).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users']);
   });
 
   it('does not wait for a lock with another name', async () => {

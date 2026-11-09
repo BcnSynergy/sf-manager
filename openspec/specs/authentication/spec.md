@@ -606,16 +606,20 @@ Decision 4.)
 - When an authenticated API call issued under the current session
   returns 401, the web app MUST call the refresh endpoint once and, if it
   succeeds, MUST retry the call once, returning the retried result to the
-  caller. Only a refused refresh, or a 401 on the retry, MUST end the
-  session ("Session-Ended Notice (Web)").
+  caller (a call that waited for another tab's refresh first retries
+  without refreshing, as below). Only a refused refresh, or a 401 on the
+  retry after a refresh, MUST end the session ("Session-Ended Notice
+  (Web)").
 - Calls that get a 401 at the same time MUST share one refresh, and
   refreshes MUST be serialized across the browser's tabs (Web Locks where
   the browser supports them), so tabs do not present the same refresh
   token at once.
-- A call whose 401 finds another tab's refresh in progress MUST wait for it
-  and retry with the cookies it set, without refreshing again. Only if that
-  retry also returns 401 MUST the web app refresh and retry as above, so a
-  waiting tab does not rotate the refresh token a second time.
+- Where the browser supports Web Locks, a call whose 401 finds another
+  tab's refresh in progress MUST wait for it and retry with the cookies it
+  set, without refreshing again. Only if that retry also returns 401 MUST
+  the web app refresh and retry as above, so a waiting tab does not rotate
+  the refresh token a second time. A refresh that ends before the call
+  checks for it is not seen, and the call refreshes itself.
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 10 seconds after its first request
@@ -628,7 +632,8 @@ Decision 4.)
   MUST stay, so an API restart, a short outage or a shared office IP
   hitting the refresh limit does not log users out.
 - Logout MUST wait for a refresh in flight before calling the logout
-  endpoint.
+  endpoint, including another tab's refresh that a call in this tab is
+  waiting for.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
