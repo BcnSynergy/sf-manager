@@ -623,8 +623,9 @@ Decision 4.)
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 9 seconds after its first request
-  (a later retry could fall outside the 10-second grace window, which
-  starts when the API consumes the token, and revoke the session; the
+  (a later retry could fall outside the API's grace window, 10 seconds by
+  default, which starts when the API consumes the token, and revoke the
+  session; the
   second of margin absorbs request latency) and then counts as
   unavailable.
 - Only a refusal (a 4xx answer from the refresh endpoint other than 429)

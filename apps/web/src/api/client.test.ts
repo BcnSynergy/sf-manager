@@ -540,7 +540,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('also bounds reading the refresh body: a body that never arrives is abandoned after 10 seconds', async () => {
+  it('also bounds reading the refresh body: a body that never arrives is abandoned after 9 seconds', async () => {
     vi.useFakeTimers();
     try {
       const handler = vi.fn();
@@ -565,9 +565,12 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       vi.stubGlobal('fetch', fetchMock);
 
       const pending = apiFetch('/users').catch((e: unknown) => e);
-      await vi.advanceTimersByTimeAsync(10_000);
-      const error = await pending;
+      await vi.advanceTimersByTimeAsync(8_999);
+      expect(await Promise.race([pending, Promise.resolve('still pending')])).toBe('still pending');
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
+      expect(error).not.toBe('still pending');
       expect((error as ApiError).status).toBe(0);
       expect(handler).not.toHaveBeenCalled();
       expect(fetchMock).toHaveBeenCalledTimes(2);
