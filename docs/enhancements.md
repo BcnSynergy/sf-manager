@@ -987,6 +987,15 @@ content type`). Today that is the only 415 it raises, but a future one
   image's default user, or assert that the image runs as uid 0. Today's
   1.76.0 image runs as root, like 1.75.2. Origin: Dependabot PR #381
   (rclone 1.76.0) fresh review, 2026-11-09.
+- **EN-169** (api tests): since uuid 14 (ESM-only, no `require` export),
+  the api Jest runs load it only because every Jest script in
+  `apps/api/package.json` (lines 20-27) passes `--experimental-vm-modules`.
+  Without the flag, Jest 30 fails with "Must use import to load ES Module"
+  on `uuid/dist-node/index.js`. Nothing records that dependency, so the flag
+  could be removed as unused. Add a note next to the scripts or a test that
+  fails with a clear message when the flag is missing. The built API is not
+  affected: Node 24 loads uuid through `require(esm)`. Origin: Dependabot PR
+  #385 (uuid 14.0.3) fresh review, 2026-11-10.
 
 ## Done
 
