@@ -1008,12 +1008,6 @@ content type`). Today that is the only 415 it raises, but a future one
   testing-library/jest-dom#742, "feat: support vitest 5"), then bump it and
   recheck. Origin: Dependabot PR #386 (vitest 5.1.0) fresh review,
   2026-11-10.
-- **EN-171** (validation tooling): vitest 5 lists `vite` only as a peer
-  dependency, and `packages/validation/package.json` does not declare it.
-  Its tests run today only because the `vite` of `apps/web` (8.3.6) is
-  hoisted to the root `node_modules`. Add `vite` as a devDependency there
-  so the package is self-contained. Origin: Dependabot PR #386 (vitest
-  5.1.0) fresh review, 2026-11-10.
 - **EN-172** (tooling): migrate to TypeScript 7 (the native compiler). Not
   possible as a plain bump today. TypeScript 7.0 "does not ship with an
   API" (TypeScript 7.0 release post), so the tools that import the compiler
@@ -1048,6 +1042,13 @@ content type`). Today that is the only 415 it raises, but a future one
   `ProtectedRoute`. A refresh the check had already started before a login
   is shared single-flight and still finishes; that case belongs to EN-142.
   Done in `session-check-tidy` (PR #377), 2026-11-09.
+- **EN-171** (validation tooling): `packages/validation` now declares
+  `vite` (`^8.3.6`, the version `apps/web` uses) as a devDependency, since
+  vitest 5 lists it only as a peer; before, its tests ran only because the
+  `vite` of `apps/web` was hoisted to the root `node_modules`. The lockfile
+  keeps vite 8.3.6 and only drops the `"peer": true` marks on the optional
+  rolldown and lightningcss platform packages. Done in `validation-vite`
+  (PR #393), 2026-11-10.
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
   `App` (data router: `createBrowserRouter` and `RouterProvider` from
