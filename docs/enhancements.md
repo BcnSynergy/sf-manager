@@ -1014,6 +1014,23 @@ content type`). Today that is the only 415 it raises, but a future one
   hoisted to the root `node_modules`. Add `vite` as a devDependency there
   so the package is self-contained. Origin: Dependabot PR #386 (vitest
   5.1.0) fresh review, 2026-11-10.
+- **EN-172** (tooling): migrate to TypeScript 7 (the native compiler). Not
+  possible as a plain bump today. TypeScript 7.0 "does not ship with an
+  API" (TypeScript 7.0 release post), so the tools that import the compiler
+  API cannot use it: `ts-jest`, `ts-node`, `@nestjs/cli` and
+  `typescript-eslint` (whose peer range is `typescript >=4.8.4 <6.1.0`). It
+  also turns options deprecated in 6.0 into errors: CI failed on
+  `packages/validation/tsconfig.json` (`moduleResolution: "node"`, TS5108),
+  and the api Jest configs (`apps/api/package.json`,
+  `apps/api/test/jest-e2e.json`, `apps/api/test/jest-integration.json`) set
+  `moduleResolution: "node"` and `ignoreDeprecations: "6.0"`, as
+  `packages/validation/tsconfig.json` does. TypeScript 7 also stops
+  `skipLibCheck` from hiding conflicting declarations, so EN-170 must be
+  fixed first. The official interim path is npm aliases (`typescript` →
+  `@typescript/typescript6`, TypeScript 7 as `@typescript/native`). Revisit
+  when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
+  told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
+  Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 
 ## Done
 
