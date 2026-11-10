@@ -577,9 +577,9 @@ describe('apiFetch — silent refresh (TD-5)', () => {
   });
 
   // No retry after a timeout: the stalled request may have consumed the token
-  // server-side, and a retry 10 s later would land outside the grace window
+  // server-side, and a retry 9 s later could land outside the grace window
   // and revoke the whole family.
-  it('aborts a refresh that never answers after 10 seconds, without retrying, keeping the session (no AbortSignal.timeout needed)', async () => {
+  it('aborts a refresh that never answers after 9 seconds, without retrying, keeping the session (no AbortSignal.timeout needed)', async () => {
     vi.useFakeTimers();
     try {
       // Older browsers (Safari < 16) lack AbortSignal.timeout.
@@ -600,9 +600,13 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       vi.stubGlobal('fetch', fetchMock);
 
       const pending = apiFetch('/users').catch((e: unknown) => e);
-      await vi.advanceTimersByTimeAsync(10_000);
-      const error = await pending;
+      // Still waiting just before the deadline.
+      await vi.advanceTimersByTimeAsync(8_999);
+      expect(await Promise.race([pending, Promise.resolve('still pending')])).toBe('still pending');
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
+      expect(error).not.toBe('still pending');
       expect(fetchMock).toHaveBeenCalledTimes(2);
 
       expect((error as ApiError).status).toBe(0);
@@ -612,17 +616,17 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
-  // One 10 s deadline for both attempts, counted from the first send: the
-  // lock is held at most 10 s and a retry always lands inside the API's
-  // 10 s grace window.
-  it('gives a retry after a late network error only the time left of one 10-second deadline', async () => {
+  // One 9 s deadline for both attempts, counted from the first send: the
+  // lock is held at most 9 s and a retry lands inside the API's 10 s grace
+  // window with a second to spare for latency.
+  it('gives a retry after a late network error only the time left of one 9-second deadline', async () => {
     vi.useFakeTimers();
     try {
       const handler = vi.fn();
       setUnauthorizedHandler(handler);
-      const failsAt9s = () =>
+      const failsAt8s = () =>
         new Promise<Response>((_resolve, reject) => {
-          setTimeout(() => reject(new TypeError('connection reset')), 9_000);
+          setTimeout(() => reject(new TypeError('connection reset')), 8_000);
         });
       const stalled = (_url: string, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
@@ -633,13 +637,13 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(unauthorized())
-        .mockImplementationOnce(failsAt9s)
+        .mockImplementationOnce(failsAt8s)
         .mockImplementationOnce(stalled);
       vi.stubGlobal('fetch', fetchMock);
 
       const pending = apiFetch('/users').catch((e: unknown) => e);
-      await vi.advanceTimersByTimeAsync(10_000);
-      // Settled by now; a retry given a fresh 10 s would still be pending.
+      await vi.advanceTimersByTimeAsync(9_000);
+      // Settled by now; a retry given a fresh 9 s would still be pending.
       const error = await Promise.race([pending, Promise.resolve('still pending')]);
 
       expect(error).not.toBe('still pending');
@@ -809,7 +813,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
   });
 
   // A frozen tab could hold the lock indefinitely: logout stops waiting for
-  // other tabs after the refresh deadline (10 s).
+  // other tabs after the refresh deadline (9 s).
   it('bounds how long settleRefresh waits for another tab refresh', async () => {
     vi.useFakeTimers();
     try {
@@ -824,7 +828,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         settled = true;
       });
 
-      await vi.advanceTimersByTimeAsync(9_999);
+      await vi.advanceTimersByTimeAsync(8_999);
       expect(settled).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
       expect(settled).toBe(true);

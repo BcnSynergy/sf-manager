@@ -622,9 +622,11 @@ Decision 4.)
   checks for it is not seen, and the call refreshes itself.
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
-  retry included, MUST be abandoned 10 seconds after its first request
-  (a later retry could fall outside the grace window and revoke the
-  session) and then counts as unavailable.
+  retry included, MUST be abandoned 9 seconds after its first request
+  (a later retry could fall outside the 10-second grace window, which
+  starts when the API consumes the token, and revoke the session; the
+  second of margin absorbs request latency) and then counts as
+  unavailable.
 - Only a refusal (a 4xx answer from the refresh endpoint other than 429)
   MUST end the session. When the refresh is unavailable (still unreachable
   after that retry, rate-limited with 429, answering 5xx, or with an
@@ -633,8 +635,8 @@ Decision 4.)
   hitting the refresh limit does not log users out.
 - Logout MUST wait for a refresh in flight before calling the logout
   endpoint, including another tab's refresh that a call in this tab is
-  waiting for; it MUST stop waiting for other tabs after 10 seconds, so a
-  frozen tab cannot block the logout.
+  waiting for; it MUST stop waiting for other tabs after 9 seconds (the
+  refresh deadline), so a frozen tab cannot block the logout.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
