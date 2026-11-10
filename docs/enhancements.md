@@ -996,6 +996,23 @@ content type`). Today that is the only 415 it raises, but a future one
   fails with a clear message when the flag is missing. The built API is not
   affected: Node 24 loads uuid through `require(esm)`. Origin: Dependabot PR
   #385 (uuid 14.0.3) fresh review, 2026-11-10.
+- **EN-170** (web tests): `@testing-library/jest-dom` 7.0.1
+  (`types/vitest.d.ts`) augments vitest's `Assertion<T>` with one type
+  parameter, while vitest 5 declares `Assertion` with two. With
+  `--skipLibCheck false`, `tsc -p apps/web/tsconfig.app.json` reports TS2428
+  three times (none on vitest 4). It is masked by `skipLibCheck: true` in
+  `apps/web/tsconfig.app.json` (line 9), and matcher typing is unaffected:
+  misspelled matchers and wrong arguments still fail the typecheck exactly
+  as on vitest 4. Keep `skipLibCheck` on until a jest-dom release supports
+  vitest 5 (upstream PR "feat: support vitest 5 #742"), then bump it and
+  recheck. Origin: Dependabot PR #386 (vitest 5.1.0) fresh review,
+  2026-11-10.
+- **EN-171** (validation tooling): vitest 5 lists `vite` only as a peer
+  dependency, and `packages/validation/package.json` does not declare it.
+  Its tests run today only because the `vite` of `apps/web` (8.3.6) is
+  hoisted to the root `node_modules`. Add `vite` as a devDependency there
+  so the package is self-contained. Origin: Dependabot PR #386 (vitest
+  5.1.0) fresh review, 2026-11-10.
 
 ## Done
 
