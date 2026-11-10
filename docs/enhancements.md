@@ -1000,11 +1000,12 @@ content type`). Today that is the only 415 it raises, but a future one
   (`types/vitest.d.ts`) augments vitest's `Assertion<T>` with one type
   parameter, while vitest 5 declares `Assertion` with two. With
   `--skipLibCheck false`, `tsc -p apps/web/tsconfig.app.json` reports TS2428
-  three times (none on vitest 4). It is masked by `skipLibCheck: true` in
-  `apps/web/tsconfig.app.json` (line 9), and matcher typing is unaffected:
-  misspelled matchers and wrong arguments still fail the typecheck exactly
-  as on vitest 4. Keep `skipLibCheck` on until a jest-dom release supports
-  vitest 5 (upstream PR "feat: support vitest 5 #742"), then bump it and
+  three times (none on vitest 4, per the #386 review). It is masked by
+  `skipLibCheck: true` in `apps/web/tsconfig.app.json` (line 9), and matcher
+  typing is unaffected: per the #386 review, misspelled matchers and wrong
+  arguments still fail the typecheck exactly as on vitest 4. Keep
+  `skipLibCheck` on until a jest-dom release supports vitest 5 (upstream PR
+  testing-library/jest-dom#742, "feat: support vitest 5"), then bump it and
   recheck. Origin: Dependabot PR #386 (vitest 5.1.0) fresh review,
   2026-11-10.
 - **EN-171** (validation tooling): vitest 5 lists `vite` only as a peer
