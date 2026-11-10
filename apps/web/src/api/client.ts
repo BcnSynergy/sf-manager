@@ -72,6 +72,18 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
   // which fails this call without ending the session. A session change during the refresh (logout, another login)
   // means this request belongs to the old session: neither retried nor
   // reported.
+  // EN-142: when another tab is refreshing, its new cookies are shared with
+  // this tab, so wait for it and retry first; refreshing again would only
+  // rotate the token a second time. Refresh here only if that retry is
+  // still refused.
+  if (
+    response.status === HTTP_UNAUTHORIZED &&
+    epochAtStart === sessionEpoch &&
+    (await waitForOtherTabRefresh()) &&
+    epochAtStart === sessionEpoch
+  ) {
+    response = await send(path, init);
+  }
   if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
     const refreshed = await refreshSession();
     if (refreshed !== null && epochAtStart === sessionEpoch) {
@@ -154,9 +166,55 @@ export function refreshSession<T = unknown>(): Promise<T | null> {
 }
 
 function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
-  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  const locks = refreshLocks();
   return locks ? locks.request(REFRESH_LOCK, work) : work();
 }
+
+function refreshLocks(): LockManager | undefined {
+  return (globalThis.navigator as Navigator | undefined)?.locks;
+}
+
+// Resolves true once another tab's refresh, in progress when this was
+// called, has finished; false when no other tab held the refresh lock, when
+// this tab is refreshing itself (callers join that refresh instead) or when
+// the browser has no Web Locks. The check reads the lock state with query()
+// instead of trying the lock, so two calls checking at once never see each
+// other as a refresh. A tab that finishes in between is missed and this tab
+// refreshes as before: one extra rotation, never a wrong session.
+async function waitForOtherTabRefresh(): Promise<boolean> {
+  const locks = refreshLocks();
+  if (!locks || refreshInFlight) {
+    return false;
+  }
+  try {
+    // A refresh queued for the lock counts too: while the lock passes from
+    // one tab to the next, the snapshot may show it only as pending. Only
+    // exclusive entries are refreshes; shared ones are calls like this one,
+    // waiting.
+    const { held = [], pending = [] } = await locks.query();
+    const refreshing = [...held, ...pending].some(
+      (lock) => lock.name === REFRESH_LOCK && lock.mode === 'exclusive',
+    );
+    if (!refreshing) {
+      return false;
+    }
+    // Shared: every call waiting here is released together once the
+    // refresh ahead of them ends. Tracked so logout (settleRefresh) also
+    // waits for that refresh, whose cookies could land after the logout.
+    const wait = locks.request(REFRESH_LOCK, { mode: 'shared' }, () => undefined);
+    otherTabWaits.add(wait);
+    try {
+      await wait;
+    } finally {
+      otherTabWaits.delete(wait);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const otherTabWaits = new Set<Promise<unknown>>();
 
 async function postRefresh(): Promise<unknown> {
   // A response lost to the network may have consumed the token server-side:
@@ -216,9 +274,23 @@ async function postRefresh(): Promise<unknown> {
   throw new ApiError(0);
 }
 
-// Resolves once the refresh in flight (if any) has settled, whatever its
-// outcome. Logout waits on it, so a refresh committed just before the logout
-// cannot set a fresh access cookie after the logout cleared it.
+// Resolves once this tab's refresh in flight, and any other tab's refresh a
+// call here is waiting for, have settled, whatever their outcome. Logout
+// waits on it, so such a refresh committed just before the logout cannot set
+// a fresh access cookie after the logout cleared it. This tab's refresh is
+// bounded by REFRESH_TIMEOUT_MS; the wait for other tabs is cut at the same
+// limit, so a frozen tab holding the lock cannot block the logout.
 export async function settleRefresh(): Promise<void> {
-  await refreshInFlight?.catch(() => undefined);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const otherTabsDeadline = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, REFRESH_TIMEOUT_MS);
+  });
+  try {
+    await Promise.all([
+      refreshInFlight?.catch(() => undefined),
+      Promise.race([Promise.allSettled([...otherTabWaits]), otherTabsDeadline]),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
