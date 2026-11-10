@@ -1017,8 +1017,10 @@ content type`). Today that is the only 415 it raises, but a future one
 - **EN-172** (tooling): migrate to TypeScript 7 (the native compiler). Not
   possible as a plain bump today. TypeScript 7.0 "does not ship with an
   API" (TypeScript 7.0 release post), so the tools that import the compiler
-  API cannot use it: `ts-jest`, `ts-node`, `@nestjs/cli` and
-  `typescript-eslint` (whose peer range is `typescript >=4.8.4 <6.1.0`). It
+  API cannot use it: `ts-jest` (peer `typescript >=4.3 <7` in 29.4.15),
+  `ts-node`, `typescript-eslint` (peer `typescript >=4.8.4 <6.1.0` in
+  8.72.1) and `@nestjs/cli` (12.0.12 depends on `typescript ~6.0.2`, so it
+  would keep a nested TypeScript 6 and not compile with 7). It
   also turns options deprecated in 6.0 into errors: CI failed on
   `packages/validation/tsconfig.json` (`moduleResolution: "node"`, TS5108),
   and the api Jest configs (`apps/api/package.json`,
