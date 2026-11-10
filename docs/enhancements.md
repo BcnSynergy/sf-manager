@@ -1030,6 +1030,14 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-171** (validation tooling): `packages/validation` now declares
+  `vite` (`^8.3.6`, the version `apps/web` uses) as a devDependency, since
+  vitest 5 lists it only as a peer; before, its tests ran only because the
+  `vite` of `apps/web` was hoisted to the root `node_modules`. The lockfile
+  keeps vite 8.3.6 and only drops the `"peer": true` marks on the optional
+  rolldown and lightningcss platform packages. Done in `validation-vite`
+  (PR #393), 2026-11-10.
+
 - **EN-166** (web): the load-time session check in `AuthProvider` is
   cancelled when superseded: a login, a newer check ("Try again") or an
   unmount aborts its `/auth/me` request, and a superseded check that still
@@ -1042,13 +1050,6 @@ content type`). Today that is the only 415 it raises, but a future one
   `ProtectedRoute`. A refresh the check had already started before a login
   is shared single-flight and still finishes; that case belongs to EN-142.
   Done in `session-check-tidy` (PR #377), 2026-11-09.
-- **EN-171** (validation tooling): `packages/validation` now declares
-  `vite` (`^8.3.6`, the version `apps/web` uses) as a devDependency, since
-  vitest 5 lists it only as a peer; before, its tests ran only because the
-  `vite` of `apps/web` was hoisted to the root `node_modules`. The lockfile
-  keeps vite 8.3.6 and only drops the `"peer": true` marks on the optional
-  rolldown and lightningcss platform packages. Done in `validation-vite`
-  (PR #393), 2026-11-10.
 
 - **EN-162** (web tests): `App.test.tsx` now renders the shipped default
   `App` (data router: `createBrowserRouter` and `RouterProvider` from
