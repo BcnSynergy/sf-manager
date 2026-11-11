@@ -1072,10 +1072,38 @@ describe('apiFetch — silent refresh (TD-5)', () => {
         const refreshing = refreshSession();
         await vi.advanceTimersByTimeAsync(18_000);
         expect(fetchMock).not.toHaveBeenCalled();
+        // Start sample, then the checks at 9 s and 18 s.
+        expect(locks.query).toHaveBeenCalledTimes(3);
         releaseOther();
         await vi.advanceTimersByTimeAsync(0);
 
         await expect(refreshing).resolves.toEqual({ id: '1' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // The lowest id decides: {a, b} then {a, c} is the same holder (a).
+    it('compares shared holders by their lowest client id', async () => {
+      vi.useFakeTimers();
+      try {
+        const locks = installFakeLocks();
+        const releaseOther = locks.holdByOtherTab();
+        await vi.advanceTimersByTimeAsync(0);
+        locks.query
+          .mockResolvedValueOnce(shared('tab-a', 'tab-b'))
+          .mockResolvedValueOnce(shared('tab-a', 'tab-c'));
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const refreshing = refreshSession().catch((e: unknown) => e);
+        await vi.advanceTimersByTimeAsync(9_000);
+        const error = await refreshing;
+
+        expect((error as ApiError).status).toBe(0);
+        expect(fetchMock).not.toHaveBeenCalled();
+        releaseOther();
+        await vi.advanceTimersByTimeAsync(0);
       } finally {
         vi.useRealTimers();
       }

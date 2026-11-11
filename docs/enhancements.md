@@ -1014,11 +1014,12 @@ content type`). Today that is the only 415 it raises, but a future one
   (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). (A
   lock held only in shared mode is followed by the lowest shared holder's
   `clientId`, like a moving queue; tests now pin that changing shared
-  holders keep the refresh waiting and that the same shared holder at two
-  checks, listed in any order, gives up.) (A `query()` that hangs adds up
-  to `LOCK_QUERY_TIMEOUT_MS`, 1 s, to each check; the spec now says each
-  limit can run up to 1 second late in that case, rather than starting
-  each query early, which would make a normal check decide before 9 s.)
+  holders keep the refresh waiting, that the same shared holder at two
+  checks, listed in any order, gives up, and that the lowest id decides.) (A `query()` that hangs adds up
+  to `LOCK_QUERY_TIMEOUT_MS`, 1 s, to each check, and the next check is
+  due 9 s after it decides; the spec now says each check can decide up to
+  1 second late and that the delay carries over, rather than starting each
+  query early, which would make a normal check decide before 9 s.)
   Done in `en-179-lock-edges`, PR #407. Origin: `en-177-lock-progress`
   (PR #405) Gentle AI review, 2026-11-11.
 

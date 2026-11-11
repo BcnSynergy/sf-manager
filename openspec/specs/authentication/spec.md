@@ -690,9 +690,10 @@ Decision 4.)
   but not two such checks in a row. A lock held only in shared mode is
   followed the same way, by its lowest client id. Where the browser does
   not report which tab holds the lock, the refresh MUST be abandoned 9
-  seconds after it asked for the lock. Each check MAY take up to 1 more
-  second when the browser does not answer the lock query, so these limits
-  can each run up to 1 second late. (EN-174, EN-177, EN-179.)
+  seconds after it asked for the lock. A check MAY decide up to 1 second
+  after it is due while it waits for the browser's answer to the lock
+  query, and that delay carries over to the next check, so these limits
+  can run late by up to 1 second per check. (EN-174, EN-177, EN-179.)
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 9 seconds after its first request
