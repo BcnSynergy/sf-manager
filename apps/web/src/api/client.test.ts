@@ -970,10 +970,8 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       const releaseOtherTab = locks.holdByOtherTab();
       await vi.advanceTimersByTimeAsync(0);
       let answerRefresh: (response: Response) => void = () => undefined;
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(() => new Promise<Response>((resolve) => (answerRefresh = resolve))),
-      );
+      const fetchMock = vi.fn(() => new Promise<Response>((resolve) => (answerRefresh = resolve)));
+      vi.stubGlobal('fetch', fetchMock);
 
       const refreshing = refreshSession();
       await vi.advanceTimersByTimeAsync(8_999);
@@ -982,6 +980,7 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       answerRefresh(ok({ id: '1' }));
 
       await expect(refreshing).resolves.toEqual({ id: '1' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       const [, options] = locks.request.mock.calls.at(-1) as [string, { signal: AbortSignal }];
       expect(options.signal.aborted).toBe(false);
     } finally {

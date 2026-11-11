@@ -1047,6 +1047,15 @@ content type`). Today that is the only 415 it raises, but a future one
   `/auth/me` (as `apiFetch` does), or restart the lock timer whenever the
   holder changes. Origin: `en-174-lock-deadline` (PR #402) fresh review,
   2026-11-11.
+- **EN-178** (web): `withRefreshLock` (`apps/web/src/api/client.ts`) maps
+  an `AbortError` to `ApiError(0)` only while the lock is still queued (a
+  `granted` flag), so a granted refresh's own errors would pass through
+  unchanged. No test covers that branch: `postRefresh` turns every error
+  it meets into `ApiError`, so a granted refresh cannot reject with an
+  `AbortError` today, and a mutation dropping the flag passes the suite.
+  Add a test if `postRefresh` ever lets such an error out, or drop the
+  flag. Origin: `en-174-lock-deadline` (PR #402) Gentle AI review,
+  2026-11-11.
 
 ## Done
 
