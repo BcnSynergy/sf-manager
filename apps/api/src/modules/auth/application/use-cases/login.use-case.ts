@@ -120,18 +120,21 @@ export class LoginUseCase {
     // deliberately NOT the IdGenerator/UUIDv7 port used for entity ids —
     // Decision 9), not by this use case. `role` and `email` are signed into
     // the token as advisory claims only: AuthenticatedGuard overwrites them
-    // with the stored values on every request.
+    // with the stored values on every request. The session starts first so
+    // the access token can name it (`sid`, EN-174); a signing failure after
+    // it leaves an unused family that simply expires.
+    const session = await this.refreshSessions.start(user.id);
     const accessToken = await this.tokenIssuer.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
+      sid: session.sessionId,
     });
-    const refreshToken = await this.refreshSessions.start(user.id);
 
     return {
       user: { id: user.id, email: user.email, role: user.role },
       accessToken,
-      refreshToken,
+      refreshToken: { token: session.token, expiresAt: session.expiresAt },
     };
   }
 }

@@ -24,10 +24,25 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
     if (!token) {
       return null;
     }
-    const revoked = await this.prisma.refreshToken.count({
+    const revoked = await this.prisma.refreshToken.findFirst({
       where: { familyId: token.familyId, revokedAt: { not: null } },
+      select: { id: true },
     });
-    return { ...token, familyRevoked: revoked > 0 };
+    return { ...token, familyRevoked: revoked !== null };
+  }
+
+  // One query: the familyId index finds the family's rows, which are sorted
+  // so a revoked one comes first (a family keeps its consumed tokens until
+  // its absolute expiry: one row per refresh, so up to about 700 rows in 7
+  // days at the 15-minute default; EN-176).
+  // No row at all means the family was deleted after its absolute expiry.
+  async isFamilyEnded(familyId: string): Promise<boolean> {
+    const first = await this.prisma.refreshToken.findFirst({
+      where: { familyId },
+      orderBy: { revokedAt: { sort: 'desc', nulls: 'last' } },
+      select: { revokedAt: true },
+    });
+    return first === null || first.revokedAt !== null;
   }
 
   // A conditional UPDATE plus the INSERT, in one transaction: Postgres row

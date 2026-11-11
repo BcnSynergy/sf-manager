@@ -35,19 +35,22 @@ export class RefreshSessionUseCase {
   ) {}
 
   async execute(refreshToken: string): Promise<RefreshSessionResult> {
-    const ownerId = await this.refreshSessions.ownerOf(refreshToken);
-    if (ownerId === null) {
+    const owner = await this.refreshSessions.ownerOf(refreshToken);
+    if (owner === null) {
       throw new RefreshRejectedError('unknown');
     }
-    const user = await this.userRepository.findById(ownerId);
+    const user = await this.userRepository.findById(owner.userId);
     if (!user) {
       await this.refreshSessions.revoke(refreshToken);
       throw new RefreshRejectedError('revoked');
     }
+    // Rotation keeps the family, so the new access token names the same
+    // session (EN-174).
     const accessToken = await this.tokenIssuer.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
+      sid: owner.sessionId,
     });
     const rotated = await this.refreshSessions.rotate(refreshToken);
     return {

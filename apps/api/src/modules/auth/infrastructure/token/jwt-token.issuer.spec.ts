@@ -13,6 +13,7 @@ describe('JwtTokenIssuer', () => {
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
 
     const verified = await issuer.verify(token);
@@ -21,6 +22,7 @@ describe('JwtTokenIssuer', () => {
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
     expect(typeof verified.jti).toBe('string');
     expect(verified.jti.length).toBeGreaterThan(0);
@@ -32,11 +34,13 @@ describe('JwtTokenIssuer', () => {
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
     const tokenB = await issuer.sign({
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
 
     const verifiedA = await issuer.verify(tokenA);
@@ -50,6 +54,7 @@ describe('JwtTokenIssuer', () => {
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
     const tampered = token.slice(0, -1) + (token.endsWith('a') ? 'b' : 'a');
 
@@ -66,6 +71,7 @@ describe('JwtTokenIssuer', () => {
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
 
     await new Promise((resolve) => setTimeout(resolve, 20));

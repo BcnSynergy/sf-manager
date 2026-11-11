@@ -30,7 +30,9 @@ describe('RefreshSessionUseCase', () => {
 
   beforeEach(() => {
     sessions = {
-      ownerOf: jest.fn().mockResolvedValue('user-1'),
+      ownerOf: jest
+        .fn()
+        .mockResolvedValue({ userId: 'user-1', sessionId: 'session-1' }),
       rotate: jest.fn().mockResolvedValue({
         userId: 'user-1',
         token: 'next-refresh',
@@ -55,10 +57,12 @@ describe('RefreshSessionUseCase', () => {
 
     expect(sessions.ownerOf).toHaveBeenCalledWith('presented-refresh');
     expect(userRepository.findById).toHaveBeenCalledWith('user-1');
+    // EN-174: rotation keeps the family, so the token names the same session.
     expect(tokenIssuer.sign).toHaveBeenCalledWith({
       sub: 'user-1',
       email: 'live@example.com',
       role: 'MANAGER',
+      sid: 'session-1',
     });
     expect(sessions.rotate).toHaveBeenCalledWith('presented-refresh');
     expect(tokenIssuer.sign.mock.invocationCallOrder[0]).toBeLessThan(

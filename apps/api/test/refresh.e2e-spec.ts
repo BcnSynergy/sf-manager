@@ -254,14 +254,18 @@ describe('POST /auth/refresh (e2e)', () => {
 
   it('revokes the whole family when a rotated token is reused (strict rotation)', async () => {
     const { refresh: first } = await login();
-    const rotated = valueOf(
-      await refresh(first).expect(200),
-      'sf_refresh_token',
-    );
+    const rotation = await refresh(first).expect(200);
+    const rotated = valueOf(rotation, 'sf_refresh_token');
+    const access = valueOf(rotation, 'sf_access_token') as string;
 
     await refresh(first).expect(401);
 
     await refresh(rotated).expect(401);
+    // EN-174: the session's access tokens die with it.
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', `sf_access_token=${access}`)
+      .expect(401);
   });
 
   it('refuses a request from another origin with 403, leaving the token usable', async () => {
@@ -332,6 +336,60 @@ describe('POST /auth/refresh (e2e)', () => {
         .set('Cookie', `sf_access_token=${access}`)
         .expect(401);
       await refresh(token).expect(401);
+    });
+
+    // EN-174: another tab may have refreshed just before the logout; the
+    // access token that refresh issued (a jti the logout never sees) must
+    // die with the session too.
+    it('invalidates an access token issued by a refresh just before the logout', async () => {
+      const { access, refresh: token } = await login();
+      const refreshed = await refresh(token).expect(200);
+      const lateAccess = valueOf(refreshed, 'sf_access_token') as string;
+
+      // Only the access cookie: the refresh cookie alone would revoke the
+      // family too, and would not pin the session claim.
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', `sf_access_token=${access}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Cookie', `sf_access_token=${lateAccess}`)
+        .expect(401);
+    });
+
+    it('with only the access cookie, also kills the refresh family', async () => {
+      const { access, refresh: token } = await login();
+
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', `sf_access_token=${access}`)
+        .expect(200);
+
+      await refresh(token).expect(401);
+    });
+
+    it('leaves another session of the same user alive', async () => {
+      const first = await login();
+      const second = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: first.email, password: PASSWORD })
+        .expect(200);
+      const secondAccess = valueOf(second, 'sf_access_token') as string;
+
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', [
+          `sf_access_token=${first.access}`,
+          `sf_refresh_token=${first.refresh}`,
+        ])
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Cookie', `sf_access_token=${secondAccess}`)
+        .expect(200);
     });
 
     it('refuses a logout from another origin with 403, leaving the session alive', async () => {

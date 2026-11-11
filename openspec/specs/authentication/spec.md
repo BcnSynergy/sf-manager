@@ -155,6 +155,17 @@ only the refresh cookie is left after the access token expired; with
 neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.) A request whose `Origin` header is present and is not
 `CORS_ORIGIN` MUST be refused with 403.
 
+Every access token MUST name the refresh session it was issued for. A
+valid access token presented to logout MUST also revoke that refresh
+session, and once a refresh session is revoked (by logout, reuse
+detection or a deleted user), or once it no longer exists because it was
+deleted after its absolute expiry, every access token issued for it MUST be
+rejected with 401, including one issued by a refresh that ran just
+before the logout and whose own token the logout never saw. Other
+sessions of the same user MUST NOT be affected. An access token issued
+before this rule, which names no session, MUST keep being checked only by
+its own revocation until it expires. (EN-174.)
+
 #### Scenario: Logout clears cookie
 
 - GIVEN an authenticated session
@@ -168,6 +179,24 @@ neither a valid access token nor a refresh cookie the response MUST be 401. (Ref
 - GIVEN a session whose access-token cookie has expired and whose refresh cookie remains
 - WHEN the client calls the logout endpoint
 - THEN the response MUST be 2xx, both cookies MUST be cleared, and the refresh session MUST be revoked
+
+#### Scenario: Logout invalidates an access token from a concurrent refresh
+
+- GIVEN a session whose refresh token was just exchanged, issuing a second access token
+- WHEN the client logs out with the first access token only
+- THEN a protected endpoint called with the second access token MUST return 401
+
+#### Scenario: Logout with only the access cookie ends the refresh session
+
+- GIVEN a session whose refresh cookie is not sent with the logout
+- WHEN the client logs out with a valid access token only
+- THEN presenting that session's refresh token to the refresh endpoint MUST return 401
+
+#### Scenario: Logout leaves the user's other sessions alive
+
+- GIVEN the same user is signed in twice, in two separate sessions
+- WHEN one session logs out
+- THEN the other session's access token MUST still be accepted
 
 #### Scenario: Logout without a session
 
@@ -189,7 +218,8 @@ same public identity fields as login. (ADR-011 Decision 4, TD-5.)
   new session.
 - **Reuse detection.** A consumed token presented again after the grace
   window MUST be rejected with 401 and MUST revoke the whole refresh
-  session, so neither the client nor a thief can refresh it again. Inside
+  session, so neither the client nor a thief can refresh it again, and
+  its access tokens stop being accepted (see "Logout"). Inside
   the grace window a consumed token MUST be honoured once (two tabs
   refreshing at the same time); further attempts inside the window MUST be
   rejected with 401 without revoking and without clearing the cookie (the

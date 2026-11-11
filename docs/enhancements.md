@@ -1012,15 +1012,16 @@ content type`). Today that is the only 415 it raises, but a future one
   its time queued for the cross-tab Web Lock before the 9 s refresh
   deadline starts, so a refresh stuck behind another tab's lock delays
   login and logout, with no pending indicator on the login button; cap
-  that wait too if it shows up. And a refresh that another tab starts
-  after `settleRefresh` checked the lock (so also while the logout request
-  is in flight) is not waited for, nor one still running when the 9 s cap
-  ends the wait: if the
-  API rotates the token before it revokes the family, that refresh's new
-  access token (a jti the logout never saw) can still land after the
-  logout and keep the session usable for up to `JWT_EXPIRES_IN`. Closing
-  that would need the API to revoke every access token of the family on
-  logout (a jti-to-family link). Origin: `en-142-login-waits-refresh`
+  that wait too if it shows up. (A refresh that another tab started after
+  `settleRefresh` checked the lock, or one still running when the 9 s cap
+  ended the wait, could land after the logout with a new access token, a
+  jti the logout never saw, and keep the session usable for up to
+  `JWT_EXPIRES_IN`. Done in `en-174-session-revocation`, PR #401: every
+  access token now names its refresh session (`sid` claim), logout ends
+  that session, and `AuthenticatedGuard` rejects any access token of a
+  revoked session, so the late token is dead on arrival. Once that is
+  deployed, the cap above is safe to add: a refresh landing late can no
+  longer outlive the logout.) Origin: `en-142-login-waits-refresh`
   (PR #398) fresh review and `en-142-logout-other-tabs` (PR #399),
   2026-11-11.
 - **EN-175** (web): the login page shows "Invalid email or password." when
@@ -1034,6 +1035,21 @@ content type`). Today that is the only 415 it raises, but a future one
   unreachable or failing API (for example reusing the "Cannot reach the
   server" wording) and update both the requirement and the scenarios. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
   2026-11-11, with the dev API down.
+- **EN-176** (api): costs and partial failures of the session check added
+  by EN-174. `AuthenticatedGuard` now makes three database round trips in
+  a row on every authenticated request (jti deny-list, session, user);
+  the first two do not depend on each other and could run together.
+  `PrismaRefreshTokenStore.isFamilyEnded` finds the family through the
+  `familyId` index but sorts its rows by `revokedAt`, and a family keeps
+  its consumed tokens until its absolute expiry (one row per refresh, up
+  to about 700 in 7 days at the 15-minute default); a composite index on
+  `(familyId, revokedAt)` or two `EXISTS` checks would avoid the sort.
+  And logout deny-lists the access jti before it ends the session: if
+  ending the session then fails, logout answers 500 with the jti revoked
+  but the session alive and the cookies not cleared (a failing deny-list
+  or refresh revoke already answered 500 the same way). Measure before
+  changing the first two. Origin: `en-174-session-revocation` (PR #401)
+  Gentle AI review, 2026-11-11.
 
 ## Done
 

@@ -11,7 +11,7 @@ describe('LogoutUseCase', () => {
   let tokenIssuer: jest.Mocked<TokenIssuer>;
   let tokenDenylist: jest.Mocked<TokenDenylist>;
   let refreshSessions: jest.Mocked<
-    Pick<RefreshSessionsService, 'revoke' | 'deleteExpired'>
+    Pick<RefreshSessionsService, 'revoke' | 'revokeSession' | 'deleteExpired'>
   >;
   let useCase: LogoutUseCase;
 
@@ -24,6 +24,7 @@ describe('LogoutUseCase', () => {
     };
     refreshSessions = {
       revoke: jest.fn().mockResolvedValue(true),
+      revokeSession: jest.fn().mockResolvedValue(undefined),
       deleteExpired: jest.fn().mockResolvedValue(undefined),
     };
     useCase = new LogoutUseCase(
@@ -31,6 +32,43 @@ describe('LogoutUseCase', () => {
       tokenDenylist,
       refreshSessions as unknown as RefreshSessionsService,
     );
+  });
+
+  // EN-174: the access token names its session; logout ends it, so other
+  // access tokens of that session die too, even with no refresh cookie.
+  it('ends the session the access token names', async () => {
+    tokenIssuer.verify.mockResolvedValue({
+      sub: 'user-1',
+      email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
+      jti: 'jti-1',
+      exp: 1_700_000_000,
+    });
+    tokenDenylist.isRevoked.mockResolvedValue(false);
+
+    await useCase.execute({ accessToken: 'valid-token' });
+
+    expect(refreshSessions.revokeSession).toHaveBeenCalledWith('session-1');
+  });
+
+  it('ends no session for a token signed before the session claim existed', async () => {
+    tokenIssuer.verify.mockResolvedValue({
+      sub: 'user-1',
+      email: 'admin@example.com',
+      role: 'SYSTEM_ADMIN',
+      jti: 'jti-1',
+      exp: 1_700_000_000,
+    });
+    tokenDenylist.isRevoked.mockResolvedValue(false);
+
+    await useCase.execute({ accessToken: 'old-token' });
+
+    expect(tokenDenylist.revoke).toHaveBeenCalledWith(
+      'jti-1',
+      new Date(1_700_000_000 * 1000),
+    );
+    expect(refreshSessions.revokeSession).not.toHaveBeenCalled();
   });
 
   it("revokes the token's jti with its own exp, then cleans up expired rows", async () => {

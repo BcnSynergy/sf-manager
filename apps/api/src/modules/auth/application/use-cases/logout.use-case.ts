@@ -17,8 +17,9 @@ export interface LogoutInput {
 }
 
 // TD-5 S6: logout ends whatever the browser still holds. A valid access
-// token has its jti revoked (as before); a refresh cookie has its whole
-// family revoked, so the session cannot be renewed. Only the refresh cookie
+// token has its jti revoked and the session it names (`sid`) ended, which
+// invalidates every access token of that session (EN-174); a refresh cookie
+// has its whole family revoked, so the session cannot be renewed. Only the refresh cookie
 // may be left once the short-lived access cookie has expired, so either one
 // is enough; with neither, there is no session to end (401). The endpoint
 // is public (no guard runs), so the access cookie is verified here and an
@@ -43,6 +44,12 @@ export class LogoutUseCase {
         payload.jti,
         new Date(payload.exp * 1000),
       );
+      // EN-174: ends the session the token names, which also invalidates
+      // every other access token issued for it (another tab's refresh) and
+      // its refresh family, even with no refresh cookie.
+      if (payload.sid) {
+        await this.refreshSessions.revokeSession(payload.sid);
+      }
       try {
         await this.tokenDenylist.deleteExpired();
       } catch {

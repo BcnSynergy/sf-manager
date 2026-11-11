@@ -70,6 +70,7 @@ describe('LoginUseCase', () => {
       start: jest.fn().mockResolvedValue({
         token: 'refresh-token',
         expiresAt: refreshExpiresAt,
+        sessionId: 'session-1',
       }),
       deleteExpired: jest.fn().mockResolvedValue(undefined),
     };
@@ -105,12 +106,17 @@ describe('LoginUseCase', () => {
     expect(tokenDenylist.deleteExpired).toHaveBeenCalledTimes(1);
     // jti is generated internally by the TokenIssuer adapter (Decision 9) —
     // this use case only supplies {sub, email, role}, never a jti.
+    // EN-174: the session starts first so the access token can name it.
     expect(tokenIssuer.sign).toHaveBeenCalledWith({
       sub: 'user-1',
       email: 'admin@example.com',
       role: 'SYSTEM_ADMIN',
+      sid: 'session-1',
     });
     expect(refreshSessions.start).toHaveBeenCalledWith('user-1');
+    expect(refreshSessions.start.mock.invocationCallOrder[0]).toBeLessThan(
+      tokenIssuer.sign.mock.invocationCallOrder[0],
+    );
     expect(refreshSessions.deleteExpired).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       user: { id: 'user-1', email: 'admin@example.com', role: 'SYSTEM_ADMIN' },

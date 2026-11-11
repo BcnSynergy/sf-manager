@@ -161,6 +161,28 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     const found = await store.findByHash(late.tokenHash);
     expect(found?.revokedAt).toBeNull();
     expect(found?.familyRevoked).toBe(true);
+    // EN-174: the session check must see the revoked row first too (Postgres
+    // sorts nulls first in DESC order unless told otherwise).
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(true);
+  });
+
+  // EN-174: AuthenticatedGuard asks this on every request for the session
+  // (family) an access token names.
+  it('reports whether a family is revoked, for that family only', async () => {
+    const familyId = randomUUID();
+    const other = newToken();
+    await Promise.all([
+      store.create(newToken({ familyId })),
+      store.create(other),
+    ]);
+
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(false);
+    await store.revokeFamily(familyId, at('2026-11-01T10:00:00.000Z'));
+
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(true);
+    await expect(store.isFamilyEnded(other.familyId)).resolves.toBe(false);
+    // A family with no row left (deleted after expiry) is over too.
+    await expect(store.isFamilyEnded(randomUUID())).resolves.toBe(true);
   });
 
   it('revokes every not-yet-revoked token of a family, and only that family', async () => {
