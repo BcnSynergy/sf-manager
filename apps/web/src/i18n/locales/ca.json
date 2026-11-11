@@ -644,6 +644,7 @@
     "validationInvalidEmail": "Introdueix un correu electrònic vàlid.",
     "loginFailed": "Correu electrònic o contrasenya incorrectes.",
     "loginRateLimited": "Massa intents d'inici de sessió. Torna-ho a provar més tard.",
+    "loginUnavailable": "No es pot connectar amb el servidor. Torna-ho a provar d'aquí a un moment.",
     "sessionEnded": "La teva sessió ha acabat. Torna a iniciar la sessió.",
     "logoAlt": "SF-Manager",
     "logoutLabel": "Tanca sessió"

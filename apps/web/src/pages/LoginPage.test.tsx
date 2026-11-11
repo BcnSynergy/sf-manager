@@ -136,6 +136,93 @@ describe('LoginPage', () => {
     expect(error.textContent).not.toMatch(/\d/);
   });
 
+  // EN-175: a network failure or a 5xx is not a wrong password.
+  function submitValidCredentials() {
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'right-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+  }
+
+  it('shows the server-unavailable message, not the invalid-credentials one, on a 5xx', async () => {
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 503 } as Response));
+    renderLoginPage();
+
+    submitValidCredentials();
+
+    const error = await screen.findByTestId('login-error');
+    expect(error).toHaveTextContent('Cannot reach the server. Please try again in a moment.');
+    expect(error).not.toHaveTextContent('Invalid email or password.');
+  });
+
+  it('shows the server-unavailable message when the API cannot be reached', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: RequestInfo | URL) =>
+        String(url).includes('/auth/me')
+          ? Promise.resolve({ ok: false } as Response)
+          : Promise.reject(new TypeError('Failed to fetch')),
+      ),
+    );
+    renderLoginPage();
+
+    submitValidCredentials();
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'Cannot reach the server. Please try again in a moment.',
+    );
+  });
+
+  it('shows the server-unavailable message when a successful answer cannot be read', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        ok: true,
+        json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+      }),
+    );
+    renderLoginPage();
+
+    submitValidCredentials();
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'Cannot reach the server. Please try again in a moment.',
+    );
+  });
+
+  // Unchanged: another 4xx is still a generic rejection; 500 is the first
+  // status that counts as unavailable.
+  it.each([400, 499])(
+    'still shows the invalid-credentials message on another 4xx (%i)',
+    async (status) => {
+      vi.stubGlobal('fetch', mockFetch({ ok: false, status } as Response));
+      renderLoginPage();
+
+      submitValidCredentials();
+
+      expect(await screen.findByTestId('login-error')).toHaveTextContent(
+        'Invalid email or password.',
+      );
+    },
+  );
+
+  it('stays usable after the server-unavailable message: a later submit shows its own result', async () => {
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 500 } as Response));
+    renderLoginPage();
+    submitValidCredentials();
+    await screen.findByText('Cannot reach the server. Please try again in a moment.');
+
+    const unauthorized = mockFetch({ ok: false, status: 401 } as Response);
+    vi.stubGlobal('fetch', unauthorized);
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'Invalid email or password.',
+    );
+    expect(unauthorized.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
+  });
+
   it('stays usable after a 429: a later submit is sent and shows its own result', async () => {
     const rateLimited = mockFetch({ ok: false, status: 429 } as Response);
     vi.stubGlobal('fetch', rateLimited);
@@ -323,6 +410,24 @@ describe('LoginPage language selector', () => {
     expect(screen.getByTestId('login-error')).not.toHaveTextContent(
       'Email and password are required.',
     );
+  });
+
+  it.each([
+    ['es', 'No se puede conectar con el servidor. Vuelve a intentarlo en un momento.'],
+    ['ca', "No es pot connectar amb el servidor. Torna-ho a provar d'aquí a un moment."],
+  ])('shows the server-unavailable message in %s', async (lng, message) => {
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 503 } as Response));
+    renderLoginPage();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: lng } });
+    await waitFor(() => expect(document.documentElement.lang).toBe(lng));
+
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'right-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(message);
   });
 
   it('shows the maker credit in the active locale', async () => {
