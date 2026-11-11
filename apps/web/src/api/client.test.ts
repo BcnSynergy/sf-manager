@@ -990,6 +990,87 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
+  it('still abandons a refresh when a check finds no holder and then a tab freezes with the lock', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseFirst = locks.holdByOtherTab();
+      const releaseFrozen = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession().catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(0);
+      locks.query.mockResolvedValueOnce({ held: [], pending: [] });
+      await vi.advanceTimersByTimeAsync(9_000);
+      // The first tab lets go; the second takes the lock and freezes.
+      releaseFirst();
+      await vi.advanceTimersByTimeAsync(18_000);
+      const error = await refreshing;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      releaseFrozen();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('abandons a refresh when two checks in a row find no holder', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOther = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession().catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(0);
+      locks.query.mockResolvedValue({ held: [], pending: [] });
+      let settled = false;
+      void refreshing.then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(17_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await refreshing;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      releaseOther();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('abandons a refresh after 9 seconds when the lock query fails', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOther = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      locks.query.mockRejectedValue(new DOMException('denied', 'SecurityError'));
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession().catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(9_000);
+      const error = await refreshing;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      releaseOther();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // A query() that never answers must not keep a refresh queued behind a
   // frozen tab forever: it counts as "cannot tell" after a second.
   it('abandons a refresh behind a frozen tab even when the lock query hangs', async () => {

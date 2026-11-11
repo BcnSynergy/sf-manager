@@ -212,7 +212,7 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
 // that long: every REFRESH_TIMEOUT_MS the holder is checked, and a different
 // tab than at the last check means the queue moves, so it keeps waiting.
 // No holder at a check (the lock passing between tabs) counts as moving
-// too. The same tab at two checks (frozen while holding it, so detected
+// too, but not at two checks in a row. The same tab at two checks (frozen while holding it, so detected
 // after 9 to 18 s), or no way to tell (no clientId, or a query that fails
 // or hangs), gives up. That costs one
 // query() per lock request even when no other tab holds the lock.
@@ -232,8 +232,10 @@ function requestLockWithin<T>(
     if (settled) {
       return;
     }
-    // No holder (between two grants) or a different tab: the queue moves.
-    const moving = now === NO_HOLDER || (now !== UNKNOWN_HOLDER && now !== before);
+    // No holder (between two grants, but not twice in a row) or a different
+    // tab: the queue moves.
+    const moving =
+      (now === NO_HOLDER && before !== NO_HOLDER) || (typeof now === 'string' && now !== before);
     if (moving) {
       lastHolder = Promise.resolve(now);
       timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
@@ -272,11 +274,22 @@ async function lockHolder(locks: LockManager): Promise<string | symbol> {
         timer = setTimeout(() => reject(new Error('query timed out')), LOCK_QUERY_TIMEOUT_MS);
       }),
     ]);
-    const holder = held.find((lock) => lock.name === REFRESH_LOCK);
-    if (!holder) {
+    const holders = held.filter((lock) => lock.name === REFRESH_LOCK);
+    if (holders.length === 0) {
       return NO_HOLDER;
     }
-    return holder.clientId ?? UNKNOWN_HOLDER;
+    // The exclusive holder (a refresh) when there is one; otherwise the
+    // lowest clientId among shared ones, so the answer is stable across
+    // checks whatever order the browser lists them in.
+    const exclusive = holders.find((lock) => lock.mode === 'exclusive');
+    if (exclusive) {
+      return exclusive.clientId ?? UNKNOWN_HOLDER;
+    }
+    const ids = holders.map((lock) => lock.clientId);
+    if (ids.some((id) => id === undefined)) {
+      return UNKNOWN_HOLDER;
+    }
+    return (ids as string[]).sort()[0];
   } catch {
     return UNKNOWN_HOLDER;
   } finally {

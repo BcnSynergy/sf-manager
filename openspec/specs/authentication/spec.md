@@ -686,7 +686,8 @@ Decision 4.)
   18 seconds after it took the lock), so a refresh, and login and logout
   waiting for it, never wait without limit. While the lock passes from tab
   to tab it MUST keep waiting, however long the queue takes in total; a
-  check that finds no tab holding the lock counts as the queue moving. Where the browser does not report which tab holds the
+  check that finds no tab holding the lock counts as the queue moving,
+  but not two such checks in a row. Where the browser does not report which tab holds the
   lock, the refresh MUST be abandoned 9 seconds after it asked for the
   lock. (EN-174, EN-177.)
 - A refresh whose response is lost to a network error MUST be retried
