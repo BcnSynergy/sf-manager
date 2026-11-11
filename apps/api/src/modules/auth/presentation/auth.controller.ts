@@ -169,9 +169,16 @@ export class AuthController {
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException(error.message);
       }
+      // EN-176: logout failed on the server (a 5xx follows), but the browser
+      // must not keep the session the user asked to end.
+      this.clearSessionCookies(response);
       throw error;
     }
 
+    this.clearSessionCookies(response);
+  }
+
+  private clearSessionCookies(response: Response): void {
     const { name, httpOnly, path, secure, sameSite } = this.authConfig.cookie;
     response.clearCookie(name, { httpOnly, path, secure, sameSite });
     this.clearRefreshCookie(response);

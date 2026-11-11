@@ -71,16 +71,18 @@ export class AuthenticatedGuard implements CanActivate {
     let user: VerifiedAccessToken;
     try {
       const payload: VerifiedAccessToken = await this.tokenIssuer.verify(token);
-      if (await this.tokenDenylist.isRevoked(payload.jti)) {
-        throw new UnauthorizedException();
-      }
       // EN-174: a token whose session was ended (logout, reuse detection, a
       // deleted user) is dead even if its own jti was never revoked. Tokens
       // signed before the claim existed have no sid and keep the jti check.
-      if (
-        payload.sid &&
-        (await this.refreshSessions.isSessionEnded(payload.sid))
-      ) {
+      // The two checks are independent, so they run together (EN-176); a
+      // rejection of either still fails closed below.
+      const [jtiRevoked, sessionEnded] = await Promise.all([
+        this.tokenDenylist.isRevoked(payload.jti),
+        payload.sid
+          ? this.refreshSessions.isSessionEnded(payload.sid)
+          : Promise.resolve(false),
+      ]);
+      if (jtiRevoked || sessionEnded) {
         throw new UnauthorizedException();
       }
       const storedUser = await this.userRepository.findById(payload.sub);

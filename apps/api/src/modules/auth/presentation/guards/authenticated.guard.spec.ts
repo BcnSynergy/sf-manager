@@ -182,6 +182,57 @@ describe('AuthenticatedGuard', () => {
     expect(userRepository.findById).not.toHaveBeenCalled();
   });
 
+  // EN-176: the jti and session checks do not depend on each other, so the
+  // request waits for one round trip, not two.
+  it('runs the jti and session checks together', async () => {
+    reflector.getAllAndOverride.mockReturnValue(false);
+    tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
+    let answerDenylist: (revoked: boolean) => void = () => undefined;
+    tokenDenylist.isRevoked.mockReturnValue(
+      new Promise<boolean>((resolve) => (answerDenylist = resolve)),
+    );
+    userRepository.findById.mockResolvedValue(buildUser());
+    const { context } = buildContext({ sf_access_token: 'good-token' });
+
+    const activation = guard.canActivate(context);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(refreshSessions.isSessionEnded).toHaveBeenCalledWith('session-1');
+    answerDenylist(false);
+    await expect(activation).resolves.toBe(true);
+  });
+
+  // The user is read only once both checks have passed, whichever answers
+  // last.
+  it.each([
+    ['the deny-list', 'denylist'],
+    ['the session check', 'session'],
+  ] as const)(
+    'reads the user only after both checks pass, when %s answers last',
+    async (_label, last) => {
+      reflector.getAllAndOverride.mockReturnValue(false);
+      tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
+      let answerLast: (value: boolean) => void = () => undefined;
+      const pending = new Promise<boolean>((resolve) => (answerLast = resolve));
+      tokenDenylist.isRevoked.mockReturnValue(
+        last === 'denylist' ? pending : Promise.resolve(false),
+      );
+      refreshSessions.isSessionEnded.mockReturnValue(
+        last === 'session' ? pending : Promise.resolve(false),
+      );
+      userRepository.findById.mockResolvedValue(buildUser());
+      const { context } = buildContext({ sf_access_token: 'good-token' });
+
+      const activation = guard.canActivate(context);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(userRepository.findById).not.toHaveBeenCalled();
+      answerLast(false);
+
+      await expect(activation).resolves.toBe(true);
+      expect(userRepository.findById).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('passes a token whose session is still open', async () => {
     reflector.getAllAndOverride.mockReturnValue(false);
     tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });

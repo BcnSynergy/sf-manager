@@ -305,6 +305,35 @@ describe('POST /auth/refresh (e2e)', () => {
   // TD-5 S6: logout ends the refresh family too, even when only the refresh
   // cookie is left.
   describe('POST /auth/logout', () => {
+    // EN-176: a logout whose server-side revocation fails still answers 500,
+    // but clears both cookies, so the browser does not keep the session.
+    it('clears both cookies even when revoking the session fails', async () => {
+      const { access, refresh: token } = await login();
+      const store = app.get<InMemoryRefreshTokenStore>(REFRESH_TOKEN_STORE);
+      const failing = jest
+        .spyOn(store, 'revokeFamily')
+        .mockRejectedValueOnce(new Error('db unreachable'));
+
+      try {
+        const response = await request(app.getHttpServer())
+          .post('/auth/logout')
+          .set('Cookie', [
+            `sf_access_token=${access}`,
+            `sf_refresh_token=${token}`,
+          ])
+          .expect(500);
+
+        const cleared = cookiesOf(response)
+          .filter((c) => /Expires=Thu, 01 Jan 1970/.test(c))
+          .map((c) => c.split('=')[0]);
+        expect(cleared).toEqual(
+          expect.arrayContaining(['sf_access_token', 'sf_refresh_token']),
+        );
+      } finally {
+        failing.mockRestore();
+      }
+    });
+
     it('works with only the refresh cookie, clears both cookies and kills the family', async () => {
       const { refresh: token } = await login();
 
