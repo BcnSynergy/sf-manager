@@ -174,17 +174,38 @@ describe('LoginPage', () => {
     );
   });
 
-  // Unchanged: another 4xx is still a generic rejection.
-  it('still shows the invalid-credentials message on another 4xx', async () => {
-    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 400 } as Response));
+  it('shows the server-unavailable message when a successful answer cannot be read', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        ok: true,
+        json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+      }),
+    );
     renderLoginPage();
 
     submitValidCredentials();
 
     expect(await screen.findByTestId('login-error')).toHaveTextContent(
-      'Invalid email or password.',
+      'Cannot reach the server. Please try again in a moment.',
     );
   });
+
+  // Unchanged: another 4xx is still a generic rejection; 500 is the first
+  // status that counts as unavailable.
+  it.each([400, 499])(
+    'still shows the invalid-credentials message on another 4xx (%i)',
+    async (status) => {
+      vi.stubGlobal('fetch', mockFetch({ ok: false, status } as Response));
+      renderLoginPage();
+
+      submitValidCredentials();
+
+      expect(await screen.findByTestId('login-error')).toHaveTextContent(
+        'Invalid email or password.',
+      );
+    },
+  );
 
   it('stays usable after the server-unavailable message: a later submit shows its own result', async () => {
     vi.stubGlobal('fetch', mockFetch({ ok: false, status: 500 } as Response));

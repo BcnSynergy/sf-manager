@@ -26,7 +26,9 @@ import { useAlertMessage } from '../components/use-alert-message';
 // EN-82: the error is an `Alert` keyed per message, so a repeated error is
 // announced again. It holds the i18n key, so it follows a language switch.
 function loginErrorKey(err: unknown): string {
-  if (!(err instanceof ApiError) || err.status === 0 || err.status >= HTTP_SERVER_ERROR_MIN) {
+  // AuthProvider.login rejects with ApiError(status) for an error answer;
+  // anything else is a network failure or an unreadable answer.
+  if (!(err instanceof ApiError) || err.status >= HTTP_SERVER_ERROR_MIN) {
     return 'auth.loginUnavailable';
   }
   return err.status === HTTP_TOO_MANY_REQUESTS ? 'auth.loginRateLimited' : 'auth.loginFailed';

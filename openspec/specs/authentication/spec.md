@@ -559,7 +559,8 @@ try again in a moment." (EN, ES and CA) instead of the
 invalid-credentials message, and MUST remain usable for a later retry.
 (EN-175.)
 (Previously: covered only client-side validation and the 401 generic
-error.)
+error; before EN-175 a network failure or a 5xx also showed the
+invalid-credentials message.)
 
 #### Scenario: Empty fields blocked client-side
 
@@ -589,7 +590,7 @@ error.)
 
 #### Scenario: Server unavailable is not shown as wrong credentials
 
-- GIVEN the API cannot be reached, or answers a login attempt with a 5xx
+- GIVEN the API cannot be reached, answers a login attempt with a 5xx, or gives an unreadable answer
 - WHEN the form receives that outcome
 - THEN the UI MUST show the server-unavailable message
 - AND the invalid-credentials message MUST NOT be shown
