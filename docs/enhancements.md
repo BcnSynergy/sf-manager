@@ -827,7 +827,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   finishes after the login and its `Set-Cookie` can overwrite the login's
   cookies; `session-check-tidy` (EN-166) only stops a superseded check from
   starting one. (The test-quality and duplicated-constant follow-ups were done in
-  `en-142-web-hygiene`, PR #379.) Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; the 10-second client deadline counts from the first send while the API grace starts at `rotatedAt`, so a very late retry with asymmetric latency could land just past it (a 9-second deadline would leave margin); and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). Origin:
+  `en-142-web-hygiene`, PR #379.) Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. From the pre-merge review: when the session changes during a refresh that turns out unavailable, the caller gets the `ApiError` (0 or 5xx) rather than the 401 the spec names; and in a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid (a reload restores the session). (The client-deadline finding was done in `en-142-refresh-deadline`, PR #394: the refresh deadline, which counts from the first send while the API grace starts at `rotatedAt`, is now 9 seconds instead of 10, leaving a second of margin.) Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
 - **EN-151** (ci): The "No test or seed helpers in API build" step matches
@@ -1027,6 +1027,15 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
+- **EN-173** (web/api config): the web refresh deadline
+  (`REFRESH_TIMEOUT_MS`, 9 s, `apps/web/src/api/client.ts`) is a fixed
+  number, while the API's `REFRESH_TOKEN_REUSE_GRACE` is configurable (10 s
+  by default; values such as `5s` are accepted, and `0s` turns the grace
+  off). An operator who sets the grace below about 10 s brings back the
+  late-retry revoke that `en-142-refresh-deadline` (PR #394) fixed. Say in
+  the README row for `REFRESH_TOKEN_REUSE_GRACE` that the web assumes a
+  grace of at least 10 s, or derive the web deadline from the configured
+  grace. Origin: `en-142-refresh-deadline` fresh review, 2026-11-10.
 
 ## Done
 

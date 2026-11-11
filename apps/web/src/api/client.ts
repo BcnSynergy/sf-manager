@@ -148,9 +148,11 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 // sends the cookie the first one just received instead of the spent one.
 const REFRESH_LOCK = 'sf-manager.refresh';
 // One deadline for the whole refresh (both attempts, body included), so the
-// cross-tab lock is held at most this long. Keep it at or below the API's
-// REFRESH_TOKEN_REUSE_GRACE (10 s), so a retry stays inside the grace window.
-const REFRESH_TIMEOUT_MS = 10_000;
+// cross-tab lock is held at most this long. Keep it below the API's
+// REFRESH_TOKEN_REUSE_GRACE (10 s): the grace window starts when the API
+// consumes the token (rotatedAt), after the first send, so the second of
+// margin covers a late retry with asymmetric latency (EN-142).
+const REFRESH_TIMEOUT_MS = 9_000;
 let refreshInFlight: Promise<unknown> | null = null;
 
 // Exchanges the refresh cookie for a new session. Resolves with the user
@@ -223,7 +225,8 @@ async function postRefresh(): Promise<unknown> {
   // is still honoured once.
   // One deadline for both attempts, counted from the first send: the lock is
   // held at most REFRESH_TIMEOUT_MS, and a retry still lands inside the API's
-  // grace window, which starts no earlier than that first send.
+  // grace window, which starts no earlier than that first send; the deadline
+  // is a second shorter than the window to absorb the request's latency.
   const deadline = Date.now() + REFRESH_TIMEOUT_MS;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const remaining = deadline - Date.now();
