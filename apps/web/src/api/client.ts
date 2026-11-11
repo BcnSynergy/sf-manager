@@ -188,8 +188,10 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   if (!locks) {
     return work();
   }
-  // An AbortError can only come from giving up while queued: postRefresh
-  // turns every error of a granted refresh into ApiError (EN-178).
+  // An AbortError comes from giving up while queued: postRefresh turns every
+  // error of a granted refresh into ApiError. One that ever leaked from it
+  // would also mean the refresh did not complete, so it maps to unavailable
+  // as well; no need to tell the two apart (EN-178).
   try {
     return await requestLockWithin(locks, { followQueue: true }, work);
   } catch (error) {
