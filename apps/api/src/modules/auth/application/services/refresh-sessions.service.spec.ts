@@ -409,15 +409,15 @@ describe('RefreshSessionsService', () => {
       const first = await sessions.start('user-1');
       const second = await sessions.start('user-1');
 
-      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+      await expect(sessions.isSessionEnded(first.sessionId)).resolves.toBe(
         false,
       );
       await sessions.revokeSession(first.sessionId);
 
-      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+      await expect(sessions.isSessionEnded(first.sessionId)).resolves.toBe(
         true,
       );
-      await expect(sessions.isSessionRevoked(second.sessionId)).resolves.toBe(
+      await expect(sessions.isSessionEnded(second.sessionId)).resolves.toBe(
         false,
       );
       const error = await rejection(sessions.rotate(first.token));
@@ -431,19 +431,32 @@ describe('RefreshSessionsService', () => {
 
       await rejection(sessions.rotate(first.token));
 
-      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+      await expect(sessions.isSessionEnded(first.sessionId)).resolves.toBe(
         true,
       );
     });
 
-    it('treats an unknown session as not revoked, and revoking it changes nothing', async () => {
-      const { sessions } = setup();
+    // A deleted family's late access token must not come back to life.
+    it('treats a session deleted after its absolute expiry as ended', async () => {
+      const { clock, sessions } = setup();
+      const first = await sessions.start('user-1');
+      await sessions.revokeSession(first.sessionId);
+
+      clock.advance(7 * DAY + 1);
+      await sessions.deleteExpired();
+
+      await expect(sessions.isSessionEnded(first.sessionId)).resolves.toBe(
+        true,
+      );
+    });
+
+    it('treats an unknown session as ended, and revoking it changes nothing', async () => {
+      const { sessions, store } = setup();
 
       await sessions.revokeSession('never-issued');
 
-      await expect(sessions.isSessionRevoked('never-issued')).resolves.toBe(
-        false,
-      );
+      await expect(sessions.isSessionEnded('never-issued')).resolves.toBe(true);
+      expect(store.tokens.size).toBe(0);
     });
   });
 

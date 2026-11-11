@@ -173,12 +173,13 @@ describe('PrismaRefreshTokenStore (integration)', () => {
       store.create(other),
     ]);
 
-    await expect(store.isFamilyRevoked(familyId)).resolves.toBe(false);
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(false);
     await store.revokeFamily(familyId, at('2026-11-01T10:00:00.000Z'));
 
-    await expect(store.isFamilyRevoked(familyId)).resolves.toBe(true);
-    await expect(store.isFamilyRevoked(other.familyId)).resolves.toBe(false);
-    await expect(store.isFamilyRevoked(randomUUID())).resolves.toBe(false);
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(true);
+    await expect(store.isFamilyEnded(other.familyId)).resolves.toBe(false);
+    // A family with no row left (deleted after expiry) is over too.
+    await expect(store.isFamilyEnded(randomUUID())).resolves.toBe(true);
   });
 
   it('revokes every not-yet-revoked token of a family, and only that family', async () => {

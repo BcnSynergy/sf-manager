@@ -24,19 +24,22 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
     if (!token) {
       return null;
     }
-    return {
-      ...token,
-      familyRevoked: await this.isFamilyRevoked(token.familyId),
-    };
-  }
-
-  // Uses the familyId index; findFirst stops at the first revoked row.
-  async isFamilyRevoked(familyId: string): Promise<boolean> {
     const revoked = await this.prisma.refreshToken.findFirst({
-      where: { familyId, revokedAt: { not: null } },
+      where: { familyId: token.familyId, revokedAt: { not: null } },
       select: { id: true },
     });
-    return revoked !== null;
+    return { ...token, familyRevoked: revoked !== null };
+  }
+
+  // One query on the familyId index: a revoked row sorts first, and no row
+  // at all means the family was deleted after its absolute expiry.
+  async isFamilyEnded(familyId: string): Promise<boolean> {
+    const first = await this.prisma.refreshToken.findFirst({
+      where: { familyId },
+      orderBy: { revokedAt: { sort: 'desc', nulls: 'last' } },
+      select: { revokedAt: true },
+    });
+    return first === null || first.revokedAt !== null;
   }
 
   // A conditional UPDATE plus the INSERT, in one transaction: Postgres row

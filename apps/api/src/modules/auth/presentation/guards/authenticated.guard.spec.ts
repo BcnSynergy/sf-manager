@@ -42,7 +42,7 @@ describe('AuthenticatedGuard', () => {
   let tokenIssuer: jest.Mocked<TokenIssuer>;
   let tokenDenylist: jest.Mocked<TokenDenylist>;
   let userRepository: { findById: jest.Mock };
-  let refreshSessions: { isSessionRevoked: jest.Mock };
+  let refreshSessions: { isSessionEnded: jest.Mock };
   let guard: AuthenticatedGuard;
 
   const PAYLOAD: VerifiedAccessToken = {
@@ -94,7 +94,7 @@ describe('AuthenticatedGuard', () => {
       deleteExpired: jest.fn(),
     };
     userRepository = { findById: jest.fn() };
-    refreshSessions = { isSessionRevoked: jest.fn().mockResolvedValue(false) };
+    refreshSessions = { isSessionEnded: jest.fn().mockResolvedValue(false) };
     guard = new AuthenticatedGuard(
       reflector as unknown as Reflector,
       tokenIssuer,
@@ -172,13 +172,13 @@ describe('AuthenticatedGuard', () => {
     reflector.getAllAndOverride.mockReturnValue(false);
     tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
     tokenDenylist.isRevoked.mockResolvedValue(false);
-    refreshSessions.isSessionRevoked.mockResolvedValue(true);
+    refreshSessions.isSessionEnded.mockResolvedValue(true);
     const { context } = buildContext({ sf_access_token: 'good-token' });
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,
     );
-    expect(refreshSessions.isSessionRevoked).toHaveBeenCalledWith('session-1');
+    expect(refreshSessions.isSessionEnded).toHaveBeenCalledWith('session-1');
     expect(userRepository.findById).not.toHaveBeenCalled();
   });
 
@@ -190,14 +190,14 @@ describe('AuthenticatedGuard', () => {
     const { context } = buildContext({ sf_access_token: 'good-token' });
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(refreshSessions.isSessionRevoked).toHaveBeenCalledWith('session-1');
+    expect(refreshSessions.isSessionEnded).toHaveBeenCalledWith('session-1');
   });
 
   it('rejects (fail-closed) when the session check itself rejects', async () => {
     reflector.getAllAndOverride.mockReturnValue(false);
     tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
     tokenDenylist.isRevoked.mockResolvedValue(false);
-    refreshSessions.isSessionRevoked.mockRejectedValue(
+    refreshSessions.isSessionEnded.mockRejectedValue(
       new Error('db unreachable'),
     );
     const { context } = buildContext({ sf_access_token: 'good-token' });
@@ -215,7 +215,7 @@ describe('AuthenticatedGuard', () => {
     const { context } = buildContext({ sf_access_token: 'good-token' });
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(refreshSessions.isSessionRevoked).not.toHaveBeenCalled();
+    expect(refreshSessions.isSessionEnded).not.toHaveBeenCalled();
   });
 
   it('passes through for a valid, non-revoked session whose user still exists', async () => {

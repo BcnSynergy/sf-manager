@@ -34,8 +34,11 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
     return Promise.resolve(null);
   }
 
-  isFamilyRevoked(familyId: string): Promise<boolean> {
-    return Promise.resolve(this.familyRevoked(familyId));
+  isFamilyEnded(familyId: string): Promise<boolean> {
+    const exists = [...this.tokens.values()].some(
+      (token) => token.familyId === familyId,
+    );
+    return Promise.resolve(!exists || this.familyRevoked(familyId));
   }
 
   private familyRevoked(familyId: string): boolean {

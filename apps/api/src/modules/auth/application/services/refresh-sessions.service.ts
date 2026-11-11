@@ -140,10 +140,11 @@ export class RefreshSessionsService {
     await this.store.revokeFamily(sessionId, this.clock.now());
   }
 
-  // Whether the session an access token names was ended (logout, reuse
-  // detection or a deleted user). AuthenticatedGuard asks on every request.
-  isSessionRevoked(sessionId: string): Promise<boolean> {
-    return this.store.isFamilyRevoked(sessionId);
+  // Whether the session an access token names is over: ended (logout, reuse
+  // detection or a deleted user) or already deleted after its absolute
+  // expiry. AuthenticatedGuard asks on every request.
+  isSessionEnded(sessionId: string): Promise<boolean> {
+    return this.store.isFamilyEnded(sessionId);
   }
 
   async deleteExpired(): Promise<void> {

@@ -79,7 +79,7 @@ export class AuthenticatedGuard implements CanActivate {
       // signed before the claim existed have no sid and keep the jti check.
       if (
         payload.sid &&
-        (await this.refreshSessions.isSessionRevoked(payload.sid))
+        (await this.refreshSessions.isSessionEnded(payload.sid))
       ) {
         throw new UnauthorizedException();
       }

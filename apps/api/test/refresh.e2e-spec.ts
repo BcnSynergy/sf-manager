@@ -346,12 +346,11 @@ describe('POST /auth/refresh (e2e)', () => {
       const refreshed = await refresh(token).expect(200);
       const lateAccess = valueOf(refreshed, 'sf_access_token') as string;
 
+      // Only the access cookie: the refresh cookie alone would revoke the
+      // family too, and would not pin the session claim.
       await request(app.getHttpServer())
         .post('/auth/logout')
-        .set('Cookie', [
-          `sf_access_token=${access}`,
-          `sf_refresh_token=${token}`,
-        ])
+        .set('Cookie', `sf_access_token=${access}`)
         .expect(200);
 
       await request(app.getHttpServer())

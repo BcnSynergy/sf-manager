@@ -158,7 +158,8 @@ neither a valid access token nor a refresh cookie the response MUST be 401. (Ref
 Every access token MUST name the refresh session it was issued for. A
 valid access token presented to logout MUST also revoke that refresh
 session, and once a refresh session is revoked (by logout, reuse
-detection or a deleted user) every access token issued for it MUST be
+detection or a deleted user), or once it no longer exists because it was
+deleted after its absolute expiry, every access token issued for it MUST be
 rejected with 401, including one issued by a refresh that ran just
 before the logout and whose own token the logout never saw. Other
 sessions of the same user MUST NOT be affected. An access token issued
@@ -182,7 +183,7 @@ its own revocation until it expires. (EN-174.)
 #### Scenario: Logout invalidates an access token from a concurrent refresh
 
 - GIVEN a session whose refresh token was just exchanged, issuing a second access token
-- WHEN the client logs out with the first access token and the presented refresh token
+- WHEN the client logs out with the first access token only
 - THEN a protected endpoint called with the second access token MUST return 401
 
 #### Scenario: Logout with only the access cookie ends the refresh session
