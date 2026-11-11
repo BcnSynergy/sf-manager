@@ -31,8 +31,10 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
     return { ...token, familyRevoked: revoked !== null };
   }
 
-  // One query on the familyId index: a revoked row sorts first, and no row
-  // at all means the family was deleted after its absolute expiry.
+  // One query: the familyId index finds the family's rows, which are sorted
+  // so a revoked one comes first (a family keeps its consumed tokens until
+  // its absolute expiry, so this sorts up to a few hundred rows; EN-176).
+  // No row at all means the family was deleted after its absolute expiry.
   async isFamilyEnded(familyId: string): Promise<boolean> {
     const first = await this.prisma.refreshToken.findFirst({
       where: { familyId },

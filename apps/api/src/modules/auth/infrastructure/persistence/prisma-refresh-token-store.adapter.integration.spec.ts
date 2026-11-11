@@ -161,6 +161,9 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     const found = await store.findByHash(late.tokenHash);
     expect(found?.revokedAt).toBeNull();
     expect(found?.familyRevoked).toBe(true);
+    // EN-174: the session check must see the revoked row first too (Postgres
+    // sorts nulls first in DESC order unless told otherwise).
+    await expect(store.isFamilyEnded(familyId)).resolves.toBe(true);
   });
 
   // EN-174: AuthenticatedGuard asks this on every request for the session

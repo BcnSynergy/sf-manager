@@ -1035,6 +1035,21 @@ content type`). Today that is the only 415 it raises, but a future one
   unreachable or failing API (for example reusing the "Cannot reach the
   server" wording) and update both the requirement and the scenarios. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
   2026-11-11, with the dev API down.
+- **EN-176** (api): costs and partial failures of the session check added
+  by EN-174. `AuthenticatedGuard` now makes three database round trips in
+  a row on every authenticated request (jti deny-list, session, user);
+  the first two do not depend on each other and could run together.
+  `PrismaRefreshTokenStore.isFamilyEnded` finds the family through the
+  `familyId` index but sorts its rows by `revokedAt`, and a family keeps
+  its consumed tokens until its absolute expiry (one row per refresh, up
+  to about 700 in 7 days at the 15-minute default); a composite index on
+  `(familyId, revokedAt)` or two `EXISTS` checks would avoid the sort.
+  And logout deny-lists the access jti before it ends the session: if
+  ending the session then fails, logout answers 500 with the jti revoked
+  but the session alive and the cookies not cleared (a failing deny-list
+  or refresh revoke already answered 500 the same way). Measure before
+  changing the first two. Origin: `en-174-session-revocation` (PR #401)
+  Gentle AI review, 2026-11-11.
 
 ## Done
 
