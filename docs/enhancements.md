@@ -1007,20 +1007,6 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-178** (web): `withRefreshLock` (`apps/web/src/api/client.ts`) maps
-  an `AbortError` to `ApiError(0)` only while the lock is still queued (a
-  `granted` flag), so a granted refresh's own errors would pass through
-  unchanged. No test covers that branch: `postRefresh` turns every error
-  it meets into `ApiError`, so a granted refresh cannot reject with an
-  `AbortError` today, and a mutation dropping the flag passes the suite.
-  Add a test if `postRefresh` ever lets such an error out, or drop the
-  flag. The same kind of gap exists in `LoginPage`'s `loginErrorKey`: it
-  no longer treats an `ApiError` with status 0 as unavailable, because
-  `AuthProvider.login` only throws `ApiError(response.status)` for an
-  error answer and a `cors` fetch never answers status 0; if that ever
-  changes, such an error would show "Invalid email or password." again.
-  Origin: `en-174-lock-deadline` (PR #402) and `login-unavailable`
-  (PR #403) Gentle AI reviews, 2026-11-11.
 - **EN-179** (web): edge cases of the lock-holder check added by EN-177
   (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). A
   lock held only in shared mode is now followed by the lowest shared
@@ -1034,6 +1020,19 @@ content type`). Today that is the only 415 it raises, but a future one
   Origin: `en-177-lock-progress` (PR #405) Gentle AI review, 2026-11-11.
 
 ## Done
+
+- **EN-178** (web): two defensive branches no test could reach.
+  (`withRefreshLock` mapped an `AbortError` to `ApiError(0)` only while the
+  lock was still queued, through a `granted` flag; `postRefresh` turns every
+  error of a granted refresh into `ApiError`, so the flag guarded an
+  impossible case and is gone.) (`LoginPage` had stopped treating an
+  `ApiError` with status 0 as unavailable, because `AuthProvider.login`
+  never throws one; it does again, so such an error can never read as wrong
+  credentials, and the mapping now lives in `pages/login-error-key.ts` with
+  a unit test covering status 0, 4xx, 429, 5xx, a network failure and an
+  unreadable answer.) Done in `en-178-defensive-branches`, PR #406. Origin:
+  `en-174-lock-deadline` (PR #402) and `login-unavailable` (PR #403)
+  Gentle AI reviews, 2026-11-11.
 
 - **EN-177** (web): several tabs loading at once could show "Cannot
   reach the server" instead of signing in. The load-time session check

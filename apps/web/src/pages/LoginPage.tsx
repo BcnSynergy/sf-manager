@@ -2,12 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
-import { ApiError } from '../api/client';
-import { HTTP_SERVER_ERROR_MIN, HTTP_TOO_MANY_REQUESTS } from '../api/http-status';
 import { useAuth } from '../auth/AuthProvider';
 import { Alert } from '../components/Alert';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useAlertMessage } from '../components/use-alert-message';
+import { loginErrorKey } from './login-error-key';
 
 // spec.md "Login Form Validation": empty/invalid fields are blocked
 // client-side, before any network call, using the SAME schema the API
@@ -25,15 +24,6 @@ import { useAlertMessage } from '../components/use-alert-message';
 //
 // EN-82: the error is an `Alert` keyed per message, so a repeated error is
 // announced again. It holds the i18n key, so it follows a language switch.
-function loginErrorKey(err: unknown): string {
-  // AuthProvider.login rejects with ApiError(status) for an error answer;
-  // anything else is a network failure or an unreadable answer.
-  if (!(err instanceof ApiError) || err.status >= HTTP_SERVER_ERROR_MIN) {
-    return 'auth.loginUnavailable';
-  }
-  return err.status === HTTP_TOO_MANY_REQUESTS ? 'auth.loginRateLimited' : 'auth.loginFailed';
-}
-
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();

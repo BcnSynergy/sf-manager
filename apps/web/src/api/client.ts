@@ -188,16 +188,14 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   if (!locks) {
     return work();
   }
-  // Only an abort while still queued is a lock timeout; once granted, the
-  // refresh's own errors pass through unchanged.
-  let granted = false;
+  // An AbortError comes from giving up while queued: postRefresh turns every
+  // error of a granted refresh into ApiError. One that ever leaked from it
+  // would also mean the refresh did not complete, so it maps to unavailable
+  // as well; no need to tell the two apart (EN-178).
   try {
-    return await requestLockWithin(locks, { followQueue: true }, () => {
-      granted = true;
-      return work();
-    });
+    return await requestLockWithin(locks, { followQueue: true }, work);
   } catch (error) {
-    if (!granted && isLockTimeout(error)) {
+    if (isLockTimeout(error)) {
       throw new ApiError(0);
     }
     throw error;
