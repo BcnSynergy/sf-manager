@@ -1007,19 +1007,20 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-179** (web): edge cases of the lock-holder check added by EN-177
-  (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). A
-  lock held only in shared mode is now followed by the lowest shared
-  holder's `clientId`, like a moving queue, where before EN-177 it was
-  abandoned at 9 s; shared holders are other tabs' short waits, so this
-  is not expected to wait long, but no test covers it. A `query()` that
-  hangs adds up to `LOCK_QUERY_TIMEOUT_MS` (1 s) to each check, so a
-  refresh that cannot learn the holder is abandoned at about 10 s rather
-  than the 9 s the spec states, and frozen-tab detection can run that much
-  past 18 s. Align the spec wording or start each check's query earlier.
-  Origin: `en-177-lock-progress` (PR #405) Gentle AI review, 2026-11-11.
 
 ## Done
+
+- **EN-179** (web): edge cases of the lock-holder check added by EN-177
+  (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). (A
+  lock held only in shared mode is followed by the lowest shared holder's
+  `clientId`, like a moving queue; tests now pin that changing shared
+  holders keep the refresh waiting and that the same shared holder at two
+  checks, listed in any order, gives up.) (A `query()` that hangs adds up
+  to `LOCK_QUERY_TIMEOUT_MS`, 1 s, to each check; the spec now says each
+  limit can run up to 1 second late in that case, rather than starting
+  each query early, which would make a normal check decide before 9 s.)
+  Done in `en-179-lock-edges`, PR #407. Origin: `en-177-lock-progress`
+  (PR #405) Gentle AI review, 2026-11-11.
 
 - **EN-178** (web): two defensive branches no test could reach.
   (`withRefreshLock` mapped an `AbortError` to `ApiError(0)` only while the

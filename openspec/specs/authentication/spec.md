@@ -687,9 +687,12 @@ Decision 4.)
   waiting for it, never wait without limit. While the lock passes from tab
   to tab it MUST keep waiting, however long the queue takes in total; a
   check that finds no tab holding the lock counts as the queue moving,
-  but not two such checks in a row. Where the browser does not report which tab holds the
-  lock, the refresh MUST be abandoned 9 seconds after it asked for the
-  lock. (EN-174, EN-177.)
+  but not two such checks in a row. A lock held only in shared mode is
+  followed the same way, by its lowest client id. Where the browser does
+  not report which tab holds the lock, the refresh MUST be abandoned 9
+  seconds after it asked for the lock. Each check MAY take up to 1 more
+  second when the browser does not answer the lock query, so these limits
+  can each run up to 1 second late. (EN-174, EN-177, EN-179.)
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 9 seconds after its first request

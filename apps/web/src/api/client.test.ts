@@ -1048,6 +1048,65 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
+  // EN-179: a lock held only in shared mode (other tabs' short waits) is
+  // followed by the lowest shared clientId, like a moving queue.
+  describe('a lock held in shared mode', () => {
+    const shared = (...clientIds: string[]) => ({
+      held: clientIds.map((clientId) => ({ name: 'sf-manager.refresh', mode: 'shared', clientId })),
+      pending: [],
+    });
+
+    it('keeps waiting while the shared holders change', async () => {
+      vi.useFakeTimers();
+      try {
+        const locks = installFakeLocks();
+        const releaseOther = locks.holdByOtherTab();
+        await vi.advanceTimersByTimeAsync(0);
+        locks.query
+          .mockResolvedValueOnce(shared('tab-a'))
+          .mockResolvedValueOnce(shared('tab-b'))
+          .mockResolvedValueOnce(shared('tab-c'));
+        const fetchMock = vi.fn(() => Promise.resolve(ok({ id: '1' })));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const refreshing = refreshSession();
+        await vi.advanceTimersByTimeAsync(18_000);
+        expect(fetchMock).not.toHaveBeenCalled();
+        releaseOther();
+        await vi.advanceTimersByTimeAsync(0);
+
+        await expect(refreshing).resolves.toEqual({ id: '1' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('gives up when the same shared holder is seen at two checks, whatever order they are listed in', async () => {
+      vi.useFakeTimers();
+      try {
+        const locks = installFakeLocks();
+        const releaseOther = locks.holdByOtherTab();
+        await vi.advanceTimersByTimeAsync(0);
+        locks.query
+          .mockResolvedValueOnce(shared('tab-b', 'tab-a'))
+          .mockResolvedValueOnce(shared('tab-a', 'tab-b'));
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const refreshing = refreshSession().catch((e: unknown) => e);
+        await vi.advanceTimersByTimeAsync(9_000);
+        const error = await refreshing;
+
+        expect((error as ApiError).status).toBe(0);
+        expect(fetchMock).not.toHaveBeenCalled();
+        releaseOther();
+        await vi.advanceTimersByTimeAsync(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   it('abandons a refresh after 9 seconds when the lock query fails', async () => {
     vi.useFakeTimers();
     try {
