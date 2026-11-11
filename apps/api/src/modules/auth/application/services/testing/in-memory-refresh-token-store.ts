@@ -25,14 +25,23 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
   findByHash(tokenHash: string): Promise<FoundRefreshToken | null> {
     for (const token of this.tokens.values()) {
       if (token.tokenHash === tokenHash) {
-        const familyRevoked = [...this.tokens.values()].some(
-          (other) =>
-            other.familyId === token.familyId && other.revokedAt !== null,
-        );
-        return Promise.resolve({ ...token, familyRevoked });
+        return Promise.resolve({
+          ...token,
+          familyRevoked: this.familyRevoked(token.familyId),
+        });
       }
     }
     return Promise.resolve(null);
+  }
+
+  isFamilyRevoked(familyId: string): Promise<boolean> {
+    return Promise.resolve(this.familyRevoked(familyId));
+  }
+
+  private familyRevoked(familyId: string): boolean {
+    return [...this.tokens.values()].some(
+      (token) => token.familyId === familyId && token.revokedAt !== null,
+    );
   }
 
   async exchange(

@@ -48,6 +48,11 @@ export interface RefreshTokenStore {
   // Revokes every token of the family that is not revoked yet.
   revokeFamily(familyId: string, at: Date): Promise<void>;
 
+  // True when any token of the family is revoked (EN-174: an access token
+  // carries its family as the session id). A family already deleted by
+  // deleteExpired counts as not revoked.
+  isFamilyRevoked(familyId: string): Promise<boolean>;
+
   // Deletes the tokens of families past their absolute expiry. Consumed
   // tokens are kept until then, so a late reuse is still recognised.
   deleteExpired(now: Date): Promise<void>;

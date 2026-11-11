@@ -32,6 +32,18 @@ export interface RotatedRefreshToken extends IssuedRefreshToken {
   userId: string;
 }
 
+// A refresh family is the session: its id goes into every access token
+// issued for it (the `sid` claim), so revoking the family also invalidates
+// those access tokens (EN-174).
+export interface StartedRefreshSession extends IssuedRefreshToken {
+  sessionId: string;
+}
+
+export interface RefreshSessionOwner {
+  userId: string;
+  sessionId: string;
+}
+
 // TD-5 (ADR-011 Decision 4): refresh-token families. A login starts a family;
 // each refresh consumes the presented token and issues the next one in the
 // same family. A consumed token presented again after the grace window is
@@ -47,11 +59,12 @@ export class RefreshSessionsService {
     @Inject(REFRESH_TOKEN_POLICY) private readonly policy: RefreshTokenPolicy,
   ) {}
 
-  async start(userId: string): Promise<IssuedRefreshToken> {
+  async start(userId: string): Promise<StartedRefreshSession> {
     const now = this.clock.now();
     const familyId = this.ids.generate();
     const familyExpiresAt = new Date(now.getTime() + this.policy.absoluteTtlMs);
-    return this.issue({ userId, familyId, familyExpiresAt }, now);
+    const issued = await this.issue({ userId, familyId, familyExpiresAt }, now);
+    return { ...issued, sessionId: familyId };
   }
 
   async rotate(token: string): Promise<RotatedRefreshToken> {
@@ -100,11 +113,13 @@ export class RefreshSessionsService {
     return { ...issued.result, userId: stored.userId };
   }
 
-  // The token's user, without consuming it (null when unknown), so a caller
-  // can do everything that may fail before rotate() commits.
-  async ownerOf(token: string): Promise<string | null> {
+  // The token's user and session, without consuming it (null when unknown),
+  // so a caller can do everything that may fail before rotate() commits.
+  async ownerOf(token: string): Promise<RefreshSessionOwner | null> {
     const stored = await this.store.findByHash(this.tokens.hash(token));
-    return stored?.userId ?? null;
+    return stored
+      ? { userId: stored.userId, sessionId: stored.familyId }
+      : null;
   }
 
   // Logout: kills the family of the presented token. Unknown tokens are
@@ -117,6 +132,18 @@ export class RefreshSessionsService {
     }
     await this.store.revokeFamily(stored.familyId, this.clock.now());
     return true;
+  }
+
+  // Logout with only an access token: kills the session it names (EN-174).
+  // An unknown or already revoked session changes nothing.
+  async revokeSession(sessionId: string): Promise<void> {
+    await this.store.revokeFamily(sessionId, this.clock.now());
+  }
+
+  // Whether the session an access token names was ended (logout, reuse
+  // detection or a deleted user). AuthenticatedGuard asks on every request.
+  isSessionRevoked(sessionId: string): Promise<boolean> {
+    return this.store.isFamilyRevoked(sessionId);
   }
 
   async deleteExpired(): Promise<void> {

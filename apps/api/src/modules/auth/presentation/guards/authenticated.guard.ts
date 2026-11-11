@@ -20,6 +20,7 @@ import {
   type TokenIssuer,
   type VerifiedAccessToken,
 } from '../../application/ports/token-issuer.port';
+import { RefreshSessionsService } from '../../application/services/refresh-sessions.service';
 import {
   AUTH_CONFIG,
   type AuthConfig,
@@ -37,6 +38,7 @@ export class AuthenticatedGuard implements CanActivate {
     @Inject(TOKEN_DENYLIST) private readonly tokenDenylist: TokenDenylist,
     @Inject(AUTH_CONFIG) private readonly authConfig: AuthConfig,
     @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    private readonly refreshSessions: RefreshSessionsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -70,6 +72,15 @@ export class AuthenticatedGuard implements CanActivate {
     try {
       const payload: VerifiedAccessToken = await this.tokenIssuer.verify(token);
       if (await this.tokenDenylist.isRevoked(payload.jti)) {
+        throw new UnauthorizedException();
+      }
+      // EN-174: a token whose session was ended (logout, reuse detection, a
+      // deleted user) is dead even if its own jti was never revoked. Tokens
+      // signed before the claim existed have no sid and keep the jti check.
+      if (
+        payload.sid &&
+        (await this.refreshSessions.isSessionRevoked(payload.sid))
+      ) {
         throw new UnauthorizedException();
       }
       const storedUser = await this.userRepository.findById(payload.sub);

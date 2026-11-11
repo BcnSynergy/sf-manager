@@ -163,6 +163,24 @@ describe('PrismaRefreshTokenStore (integration)', () => {
     expect(found?.familyRevoked).toBe(true);
   });
 
+  // EN-174: AuthenticatedGuard asks this on every request for the session
+  // (family) an access token names.
+  it('reports whether a family is revoked, for that family only', async () => {
+    const familyId = randomUUID();
+    const other = newToken();
+    await Promise.all([
+      store.create(newToken({ familyId })),
+      store.create(other),
+    ]);
+
+    await expect(store.isFamilyRevoked(familyId)).resolves.toBe(false);
+    await store.revokeFamily(familyId, at('2026-11-01T10:00:00.000Z'));
+
+    await expect(store.isFamilyRevoked(familyId)).resolves.toBe(true);
+    await expect(store.isFamilyRevoked(other.familyId)).resolves.toBe(false);
+    await expect(store.isFamilyRevoked(randomUUID())).resolves.toBe(false);
+  });
+
   it('revokes every not-yet-revoked token of a family, and only that family', async () => {
     const familyId = randomUUID();
     const earlier = at('2026-11-01T07:00:00.000Z');

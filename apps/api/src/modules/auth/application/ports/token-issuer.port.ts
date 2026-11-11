@@ -17,17 +17,24 @@ import type { Role } from '../../../users/domain/role';
 // AuthenticatedGuard re-reads the user on every request and overwrites both
 // on `request.user` with the stored values, so a role or email change (or a
 // deletion) takes effect immediately (ADR-011, 2026-10-06 addendum).
+//
+// `sid` is the refresh session (family) the token was issued for, so ending
+// that session also invalidates the token (EN-174).
 export interface AccessTokenPayload {
   sub: string;
   email: string;
   role: Role;
+  sid: string;
 }
 
 // What verify() resolves to once the JWT library has decoded and validated
 // the signature/expiry: the original payload plus the adapter-generated
 // `jti` and the standard `exp` claim (unix seconds), which LogoutUseCase
 // needs to record the denylist row's own expiry (design.md Data Flow).
-export interface VerifiedAccessToken extends AccessTokenPayload {
+// `sid` is optional: tokens signed before EN-174 lack it and stay valid,
+// checked by jti only, until they expire.
+export interface VerifiedAccessToken extends Omit<AccessTokenPayload, 'sid'> {
+  sid?: string;
   jti: string;
   exp: number;
 }

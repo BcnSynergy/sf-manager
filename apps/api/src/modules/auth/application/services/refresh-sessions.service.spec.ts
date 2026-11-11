@@ -81,6 +81,8 @@ describe('RefreshSessionsService', () => {
       const issued = await sessions.start('user-1');
 
       expect(issued.token).toBe('token-1');
+      // EN-174: the family id is the session id access tokens carry.
+      expect(issued.sessionId).toBe('id-1');
       expect(issued.expiresAt).toEqual(new Date(start.getTime() + 8 * HOUR));
       const [stored] = [...store.tokens.values()];
       expect(stored).toEqual({
@@ -174,7 +176,8 @@ describe('RefreshSessionsService', () => {
     it('caps the family at 7 days after login, however often it is refreshed (absolute maximum)', async () => {
       const { clock, sessions } = setup();
       const login = clock.now();
-      let current = await sessions.start('user-1');
+      let current: { token: string; expiresAt: Date } =
+        await sessions.start('user-1');
 
       // Refresh every 7 hours: always inside the idle timeout.
       while (clock.now().getTime() + 7 * HOUR < login.getTime() + 7 * DAY) {
@@ -399,12 +402,60 @@ describe('RefreshSessionsService', () => {
     });
   });
 
+  // EN-174: access tokens name their session; ending it invalidates them.
+  describe('sessions', () => {
+    it('reports a session as revoked once logout ends it, and leaves other sessions alone', async () => {
+      const { sessions } = setup();
+      const first = await sessions.start('user-1');
+      const second = await sessions.start('user-1');
+
+      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+        false,
+      );
+      await sessions.revokeSession(first.sessionId);
+
+      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+        true,
+      );
+      await expect(sessions.isSessionRevoked(second.sessionId)).resolves.toBe(
+        false,
+      );
+      const error = await rejection(sessions.rotate(first.token));
+      expect(error.reason).toBe('revoked');
+    });
+
+    it('reports a session as revoked when reuse detection kills its family', async () => {
+      const { sessions } = setup({ reuseGraceMs: 0 });
+      const first = await sessions.start('user-1');
+      await sessions.rotate(first.token);
+
+      await rejection(sessions.rotate(first.token));
+
+      await expect(sessions.isSessionRevoked(first.sessionId)).resolves.toBe(
+        true,
+      );
+    });
+
+    it('treats an unknown session as not revoked, and revoking it changes nothing', async () => {
+      const { sessions } = setup();
+
+      await sessions.revokeSession('never-issued');
+
+      await expect(sessions.isSessionRevoked('never-issued')).resolves.toBe(
+        false,
+      );
+    });
+  });
+
   describe('ownerOf', () => {
-    it("returns the token's user without consuming it, and null for an unknown token", async () => {
+    it("returns the token's user and session without consuming it, and null for an unknown token", async () => {
       const { store, sessions } = setup();
       const first = await sessions.start('user-1');
 
-      await expect(sessions.ownerOf(first.token)).resolves.toBe('user-1');
+      await expect(sessions.ownerOf(first.token)).resolves.toEqual({
+        userId: 'user-1',
+        sessionId: first.sessionId,
+      });
       await expect(sessions.ownerOf('never-issued')).resolves.toBeNull();
       expect((await store.findByHash('hash(token-1)'))?.rotatedAt).toBeNull();
     });
