@@ -638,6 +638,12 @@ Decision 4.)
   endpoint, including another tab's refresh that a call in this tab is
   waiting for; it MUST stop waiting for other tabs after 9 seconds (the
   refresh deadline), so a frozen tab cannot block the logout.
+- Login MUST stop the session check in flight from starting a refresh and
+  MUST wait for a refresh already in flight before calling the login
+  endpoint, with the same 9-second limit for other tabs as logout, so the
+  previous session's cookies cannot be set over the new session's. If
+  the login fails (rejected, unreachable or with an unreadable answer),
+  the app MUST NOT stay in the loading state.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
@@ -674,6 +680,26 @@ Decision 4.)
 - WHEN an authenticated API call in the other tab returns 401
 - THEN that tab MUST wait for the refresh to finish and retry the call without sending a refresh request of its own
 - AND only if the retried call returns 401 again MUST it refresh and retry once more
+
+#### Scenario: Login waits for a refresh in flight
+
+- GIVEN the session check on load answered 401 and its refresh is still in progress
+- WHEN the user submits the login form
+- THEN the app MUST call the login endpoint only after that refresh has finished
+- AND the signed-in session MUST be the one the login created
+
+#### Scenario: A session check pending at login never refreshes
+
+- GIVEN the session check on load has not answered yet
+- WHEN the user submits the login form and the check then answers 401
+- THEN the app MUST NOT call the refresh endpoint for that check
+
+#### Scenario: A failed login during the session check stops loading
+
+- GIVEN the session check on load has not answered yet
+- WHEN the user submits the login form and the login is rejected, the API is unreachable, or its answer is unreadable
+- THEN the app MUST NOT stay in the loading state
+- AND the visitor MUST be treated as signed out
 
 #### Scenario: Session restored on load through a refresh
 

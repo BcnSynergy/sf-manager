@@ -822,11 +822,22 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   delays ADR-011's reuse detection. The case is rare and costs one login;
   reopen with production evidence.) (The load-time case, where a 5xx or network error from the
   restore showed the login page even with a valid refresh cookie, was fixed
-  by `session-restore-unavailable`.) A refresh that the load-time session
-  check started before a login is shared single-flight, so it still
-  finishes after the login and its `Set-Cookie` can overwrite the login's
-  cookies; `session-check-tidy` (EN-166) only stops a superseded check from
-  starting one. (The test-quality and duplicated-constant follow-ups were done in
+  by `session-restore-unavailable`.) (A refresh that the load-time session
+  check started before a login is shared single-flight, so it could finish
+  after the login and its `Set-Cookie` overwrite the login's cookies;
+  `session-check-tidy` (EN-166) only stopped a superseded check from
+  starting one. Login now cancels the check and waits for a refresh in
+  flight (`settleRefresh`) before calling the login endpoint, done in
+  `en-142-login-waits-refresh`, PR #398. Its fresh review left two notes.
+  The trade-off is visible beyond `/login`: a signed-in user who opens
+  `/login` while the check is pending and then fails a login is treated as
+  signed out (protected pages redirect to `/login`, or show it instead of
+  "Cannot reach the server") until a reload. And `settleRefresh` waits for
+  this tab's own refresh without a cap, including its time queued for the
+  cross-tab Web Lock before the 9 s deadline starts, so a refresh stuck
+  behind another tab's lock delays the login (as it already delayed
+  logout), with no pending indicator on the login button; cap that wait
+  too if it shows up.) (The test-quality and duplicated-constant follow-ups were done in
   `en-142-web-hygiene`, PR #379.) Logout waits only for this tab's refresh in flight (`settleRefresh`); a refresh committed in another tab just before the logout can still set the shared cookies after it. (When the session changes during a refresh that turns out unavailable, the caller now gets the 401 the spec names instead of the refresh's `ApiError` (0 or 5xx), done in `en-142-stale-unavailable`, PR #396.) (In a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid; a reload restores the session. Closed as outside the supported browsers on 2026-11-11, `en-142-safari-no-locks`, PR #397: the web declares no browser support policy apart from its build target, and `apps/web/vite.config.ts` sets no `build.target`, so Vite compiles for its default `baseline-widely-available` (Chrome 111+, Edge 111+, Firefox 114+, Safari 16.4+), all of which have Web Locks. That target sets the syntax the code is compiled for, not a gate: an older browser may still load the app, but it is unsupported; and Web Locks exist only in a secure context, which production always is (Caddy serves HTTPS) and localhost is too. Fixing it would mean exposing the `superseded` reason in the refresh 401, which is the same bare 401 for every reason on purpose, or retrying after every refusal. Reopen if `build.target` is lowered below Safari 15.4 or the web is served over plain HTTP on another host.) (The client-deadline finding was done in `en-142-refresh-deadline`, PR #394: the refresh deadline, which counts from the first send while the API grace starts at `rotatedAt`, is now 9 seconds instead of 10, leaving a second of margin.) Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02.
 
