@@ -71,7 +71,7 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
   // session. An unavailable refresh rejects with its ApiError (0 or 5xx),
   // which fails this call without ending the session. A session change during the refresh (logout, another login)
   // means this request belongs to the old session: neither retried nor
-  // reported.
+  // reported, and its caller gets the 401 whatever the refresh's outcome.
   // EN-142: when another tab is refreshing, its new cookies are shared with
   // this tab, so wait for it and retry first; refreshing again would only
   // rotate the token a second time. Refresh here only if that retry is
@@ -85,7 +85,17 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
     response = await send(path, init);
   }
   if (response.status === HTTP_UNAUTHORIZED && epochAtStart === sessionEpoch) {
-    const refreshed = await refreshSession();
+    let refreshed: unknown;
+    try {
+      refreshed = await refreshSession();
+    } catch (error) {
+      // EN-142: once the session changed, this call belongs to the old one;
+      // its caller gets the 401 below, not the refresh's own failure.
+      if (epochAtStart === sessionEpoch) {
+        throw error;
+      }
+      refreshed = null;
+    }
     if (refreshed !== null && epochAtStart === sessionEpoch) {
       response = await send(path, init);
     }

@@ -1017,6 +1017,105 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(handler).not.toHaveBeenCalled();
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
   });
+
+  // EN-142: the call belongs to the old session, so its caller gets the 401
+  // the spec names, not the refresh's own failure.
+  it('rejects with the 401 when the session changed during a refresh that answered 5xx', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(unauthorized())
+      .mockImplementationOnce(() => {
+        advanceSessionEpoch();
+        return Promise.resolve(mockResponse({ ok: false, status: 503 }));
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
+
+  it('rejects with the 401 when the session changed during a refresh the network failed', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(unauthorized())
+      .mockImplementationOnce(() => {
+        advanceSessionEpoch();
+        return Promise.reject(new TypeError('Failed to fetch'));
+      })
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/auth/refresh']);
+  });
+
+  it('rejects with the 401 when the session changed during a rate-limited refresh (429)', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(unauthorized())
+      .mockImplementationOnce(() => {
+        advanceSessionEpoch();
+        return Promise.resolve(mockResponse({ ok: false, status: 429 }));
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
+
+  // Any failure of the refresh counts, not only an ApiError: here the Web
+  // Lock itself rejects, so the refresh never reaches the network.
+  it('rejects with the 401 when the session changed and the refresh lock failed', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({ held: [], pending: [] });
+    locks.request.mockImplementationOnce(async () => {
+      advanceSessionEpoch();
+      throw new DOMException('aborted', 'AbortError');
+    });
+    const fetchMock = respond(unauthorized());
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users']);
+  });
+
+  // Unchanged: with the same session, an unavailable refresh still fails the
+  // call with its own error and does not end the session.
+  it('still rejects with the refresh error when the session did not change', async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    const fetchMock = respond(unauthorized(), mockResponse({ ok: false, status: 503 }));
+
+    const error = await apiFetch('/users').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(503);
+    expect(handler).not.toHaveBeenCalled();
+    expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh']);
+  });
 });
 
 describe('settleRefresh (TD-5)', () => {
