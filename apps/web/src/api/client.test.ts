@@ -845,6 +845,71 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
+  // EN-142: another tab's refresh may have rotated the token just before the
+  // logout; its fresh access cookie (a jti the logout does not know) must land
+  // first, even when no call in this tab is waiting for it.
+  it('makes settleRefresh wait for another tab refresh that no call here waits for', async () => {
+    const locks = installFakeLocks();
+    const releaseOtherTab = locks.holdByOtherTab();
+    // The fake grants the other tab's lock a tick later.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    let settled = false;
+    const waiting = settleRefresh().then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    releaseOtherTab();
+    await waiting;
+    expect(settled).toBe(true);
+  });
+
+  it('bounds the wait for another tab refresh no call here waits for at 9 seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      let settled = false;
+      void settleRefresh().then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(8_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not make settleRefresh wait when no tab is refreshing', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockResolvedValueOnce({
+      held: [{ name: 'sf-manager.refresh', mode: 'shared' }],
+      pending: [{ name: 'some-other-lock', mode: 'exclusive' }],
+    });
+
+    await expect(settleRefresh()).resolves.toBeUndefined();
+    expect(locks.request).not.toHaveBeenCalled();
+  });
+
+  // Pins that settleRefresh absorbs a failed check (allSettled); the check's
+  // own catch is pinned by "falls back to refreshing when the Web Locks check
+  // fails".
+  it('does not make settleRefresh fail when the Web Locks check fails', async () => {
+    const locks = installFakeLocks();
+    locks.query.mockRejectedValueOnce(new DOMException('denied', 'SecurityError'));
+
+    await expect(settleRefresh()).resolves.toBeUndefined();
+  });
+
   // Calls waiting for a refresh hold the lock in shared mode; only an
   // exclusive entry is a refresh worth waiting for.
   it('does not wait when the lock shows only other calls waiting', async () => {
