@@ -649,7 +649,13 @@ Decision 4.)
   set, without refreshing again. Only if that retry also returns 401 MUST
   the web app refresh and retry as above, so a waiting tab does not rotate
   the refresh token a second time. A refresh that ends before the call
-  checks for it is not seen, and the call refreshes itself.
+  checks for it is not seen, and the call refreshes itself. The call MUST
+  stop waiting for that other tab after 9 seconds and then refresh as
+  above.
+- A refresh that cannot get the cross-tab lock within 9 seconds (another
+  tab frozen while holding it) MUST be abandoned without being sent and
+  then counts as unavailable, so a refresh, and login and logout waiting
+  for it, never wait without limit. (EN-174.)
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 9 seconds after its first request
@@ -713,6 +719,13 @@ Decision 4.)
 - WHEN an authenticated API call in the other tab returns 401
 - THEN that tab MUST wait for the refresh to finish and retry the call without sending a refresh request of its own
 - AND only if the retried call returns 401 again MUST it refresh and retry once more
+
+#### Scenario: A refresh behind a frozen tab is abandoned
+
+- GIVEN another tab holds the refresh lock and never releases it
+- WHEN an authenticated API call in this tab returns 401
+- THEN the call MUST fail as unavailable within 18 seconds (9 waiting for that tab's refresh, 9 waiting for the lock) without sending a refresh request
+- AND the session MUST NOT end
 
 #### Scenario: Logout waits for another tab's refresh
 
