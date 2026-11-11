@@ -965,6 +965,56 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     }
   });
 
+  // A check that finds nobody holding the lock (it is passing between tabs)
+  // counts as the queue moving, not as a frozen tab.
+  it('keeps waiting when a check finds the lock between two holders', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOther = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = vi.fn(() => Promise.resolve(ok({ id: '1' })));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession();
+      await vi.advanceTimersByTimeAsync(0);
+      locks.query.mockResolvedValueOnce({ held: [], pending: [] });
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(fetchMock).not.toHaveBeenCalled();
+      releaseOther();
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(refreshing).resolves.toEqual({ id: '1' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A query() that never answers must not keep a refresh queued behind a
+  // frozen tab forever: it counts as "cannot tell" after a second.
+  it('abandons a refresh behind a frozen tab even when the lock query hangs', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseFrozen = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      locks.query.mockImplementation(() => new Promise(() => undefined));
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession().catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await refreshing;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      releaseFrozen();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('gives up after 9 seconds when the browser does not say which tab holds the lock', async () => {
     vi.useFakeTimers();
     try {

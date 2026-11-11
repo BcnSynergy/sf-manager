@@ -211,8 +211,10 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
 // refreshes may outlast REFRESH_TIMEOUT_MS, since each holds the lock up to
 // that long: every REFRESH_TIMEOUT_MS the holder is checked, and a different
 // tab than at the last check means the queue moves, so it keeps waiting.
-// The same tab at two checks (frozen while holding it, so detected after 9
-// to 18 s), or no way to tell (no clientId), gives up. That costs one
+// No holder at a check (the lock passing between tabs) counts as moving
+// too. The same tab at two checks (frozen while holding it, so detected
+// after 9 to 18 s), or no way to tell (no clientId, or a query that fails
+// or hangs), gives up. That costs one
 // query() per lock request even when no other tab holds the lock.
 function requestLockWithin<T>(
   locks: LockManager,
@@ -221,16 +223,18 @@ function requestLockWithin<T>(
 ): Promise<T> {
   const { followQueue = false, ...lockOptions } = options;
   const controller = new AbortController();
-  let granted = false;
+  let settled = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let lastHolder = followQueue ? exclusiveHolder(locks) : Promise.resolve(undefined);
+  let lastHolder = followQueue ? lockHolder(locks) : Promise.resolve(UNKNOWN_HOLDER);
   const check = async () => {
     const before = await lastHolder;
-    const now = followQueue ? await exclusiveHolder(locks) : undefined;
-    if (granted) {
+    const now = followQueue ? await lockHolder(locks) : UNKNOWN_HOLDER;
+    if (settled) {
       return;
     }
-    if (now !== undefined && now !== before) {
+    // No holder (between two grants) or a different tab: the queue moves.
+    const moving = now === NO_HOLDER || (now !== UNKNOWN_HOLDER && now !== before);
+    if (moving) {
       lastHolder = Promise.resolve(now);
       timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
       return;
@@ -240,21 +244,43 @@ function requestLockWithin<T>(
   timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
   return locks
     .request(REFRESH_LOCK, { ...lockOptions, signal: controller.signal }, () => {
-      granted = true;
+      settled = true;
       clearTimeout(timer);
       return callback();
     })
-    .finally(() => clearTimeout(timer)) as Promise<T>;
+    .finally(() => {
+      settled = true;
+      clearTimeout(timer);
+    }) as Promise<T>;
 }
 
-// The tab (Web Locks clientId) holding the refresh lock exclusively, or
-// undefined when none does or the browser does not say.
-async function exclusiveHolder(locks: LockManager): Promise<string | undefined> {
+const NO_HOLDER = Symbol('no holder');
+const UNKNOWN_HOLDER = Symbol('unknown holder');
+// A stuck query() must not stop a frozen tab from being detected.
+const LOCK_QUERY_TIMEOUT_MS = 1_000;
+
+// The tab (Web Locks clientId) holding the refresh lock in any mode;
+// NO_HOLDER when nobody holds it (the lock is passing between tabs), and
+// UNKNOWN_HOLDER when the browser does not say, the query fails, or it does
+// not answer within LOCK_QUERY_TIMEOUT_MS.
+async function lockHolder(locks: LockManager): Promise<string | symbol> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const { held = [] } = await locks.query();
-    return held.find((lock) => lock.name === REFRESH_LOCK && lock.mode === 'exclusive')?.clientId;
+    const { held = [] } = await Promise.race([
+      locks.query(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('query timed out')), LOCK_QUERY_TIMEOUT_MS);
+      }),
+    ]);
+    const holder = held.find((lock) => lock.name === REFRESH_LOCK);
+    if (!holder) {
+      return NO_HOLDER;
+    }
+    return holder.clientId ?? UNKNOWN_HOLDER;
   } catch {
-    return undefined;
+    return UNKNOWN_HOLDER;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
