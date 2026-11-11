@@ -1043,8 +1043,13 @@ content type`). Today that is the only 415 it raises, but a future one
   it meets into `ApiError`, so a granted refresh cannot reject with an
   `AbortError` today, and a mutation dropping the flag passes the suite.
   Add a test if `postRefresh` ever lets such an error out, or drop the
-  flag. Origin: `en-174-lock-deadline` (PR #402) Gentle AI review,
-  2026-11-11.
+  flag. The same kind of gap exists in `LoginPage`'s `loginErrorKey`: it
+  no longer treats an `ApiError` with status 0 as unavailable, because
+  `AuthProvider.login` only throws `ApiError(response.status)` for an
+  error answer and a `cors` fetch never answers status 0; if that ever
+  changes, such an error would show "Invalid email or password." again.
+  Origin: `en-174-lock-deadline` (PR #402) and `login-unavailable`
+  (PR #403) Gentle AI reviews, 2026-11-11.
 
 ## Done
 
