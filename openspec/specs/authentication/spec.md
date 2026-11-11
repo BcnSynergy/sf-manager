@@ -680,10 +680,16 @@ Decision 4.)
   checks for it is not seen, and the call refreshes itself. The call MUST
   stop waiting for that other tab after 9 seconds and then refresh as
   above.
-- A refresh that cannot get the cross-tab lock within 9 seconds (another
-  tab frozen while holding it) MUST be abandoned without being sent and
-  then counts as unavailable, so a refresh, and login and logout waiting
-  for it, never wait without limit. (EN-174.)
+- A refresh waiting for the cross-tab lock MUST be abandoned without being
+  sent, and then counts as unavailable, once the same tab is seen holding
+  the lock at two checks 9 seconds apart (a frozen tab, so between 9 and
+  18 seconds after it took the lock), so a refresh, and login and logout
+  waiting for it, never wait without limit. While the lock passes from tab
+  to tab it MUST keep waiting, however long the queue takes in total; a
+  check that finds no tab holding the lock counts as the queue moving,
+  but not two such checks in a row. Where the browser does not report which tab holds the
+  lock, the refresh MUST be abandoned 9 seconds after it asked for the
+  lock. (EN-174, EN-177.)
 - A refresh whose response is lost to a network error MUST be retried
   once, at once, within the API's grace window. The whole refresh, that
   retry included, MUST be abandoned 9 seconds after its first request
@@ -754,6 +760,12 @@ Decision 4.)
 - WHEN an authenticated API call in this tab returns 401
 - THEN the call MUST fail as unavailable within 18 seconds (9 waiting for that tab's refresh, 9 waiting for the lock) without sending a refresh request
 - AND the session MUST NOT end
+
+#### Scenario: A refresh queued behind several tabs keeps waiting
+
+- GIVEN two other tabs are refreshing one after the other, each holding the lock for 6 seconds
+- WHEN a refresh in this tab waits behind them
+- THEN it MUST NOT be abandoned, and MUST be sent once it gets the lock, 12 seconds after asking
 
 #### Scenario: Logout waits for another tab's refresh
 

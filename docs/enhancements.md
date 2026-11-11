@@ -1007,20 +1007,6 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-177** (web): several tabs loading at once can now show "Cannot
-  reach the server" instead of signing in. The load-time session check
-  (`AuthProvider`) calls `refreshSession()` directly after a 401 from
-  `/auth/me`, without first waiting for another tab's refresh, so each tab
-  queues its own exclusive refresh. Since `en-174-lock-deadline` (PR #402)
-  a refresh not granted the lock within 9 s is abandoned as unavailable,
-  and that 9 s covers every refresh queued ahead of it: with five tabs
-  restored together and an API taking about 2.5 s per refresh, the fourth
-  and fifth show the unavailable page and need "Try again". The wait
-  cannot tell a frozen tab from a long legitimate queue. Possible fixes:
-  let the load-time check wait for another tab's refresh first and retry
-  `/auth/me` (as `apiFetch` does), or restart the lock timer whenever the
-  holder changes. Origin: `en-174-lock-deadline` (PR #402) fresh review,
-  2026-11-11.
 - **EN-178** (web): `withRefreshLock` (`apps/web/src/api/client.ts`) maps
   an `AbortError` to `ApiError(0)` only while the lock is still queued (a
   `granted` flag), so a granted refresh's own errors would pass through
@@ -1035,8 +1021,39 @@ content type`). Today that is the only 415 it raises, but a future one
   changes, such an error would show "Invalid email or password." again.
   Origin: `en-174-lock-deadline` (PR #402) and `login-unavailable`
   (PR #403) Gentle AI reviews, 2026-11-11.
+- **EN-179** (web): edge cases of the lock-holder check added by EN-177
+  (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). A
+  lock held only in shared mode is now followed by the lowest shared
+  holder's `clientId`, like a moving queue, where before EN-177 it was
+  abandoned at 9 s; shared holders are other tabs' short waits, so this
+  is not expected to wait long, but no test covers it. A `query()` that
+  hangs adds up to `LOCK_QUERY_TIMEOUT_MS` (1 s) to each check, so a
+  refresh that cannot learn the holder is abandoned at about 10 s rather
+  than the 9 s the spec states, and frozen-tab detection can run that much
+  past 18 s. Align the spec wording or start each check's query earlier.
+  Origin: `en-177-lock-progress` (PR #405) Gentle AI review, 2026-11-11.
 
 ## Done
+
+- **EN-177** (web): several tabs loading at once could show "Cannot
+  reach the server" instead of signing in. The load-time session check
+  (`AuthProvider`) calls `refreshSession()` directly after a 401 from
+  `/auth/me`, without first waiting for another tab's refresh, so each tab
+  queues its own exclusive refresh. Since `en-174-lock-deadline` (PR #402)
+  a refresh not granted the lock within 9 s is abandoned as unavailable,
+  and that 9 s covers every refresh queued ahead of it: with five tabs
+  restored together and an API taking about 2.5 s per refresh, the fourth
+  and fifth show the unavailable page and need "Try again". The wait
+  cannot tell a frozen tab from a long legitimate queue. Fixed in
+  `en-177-lock-progress`, PR #405: every 9 s the waiting refresh checks
+  which tab (Web Locks `clientId`) holds the lock and keeps waiting while
+  it changes, giving up only when the same tab has held it for 9 s, or
+  when the browser does not report the holder. A call waiting for another
+  tab's refresh keeps its fixed 9 s cap and then refreshes itself. Two
+  refreshes in a row from the same other tab would look like one holder,
+  but a tab has at most one refresh in flight and the queue is first in,
+  first out, so its next refresh queues behind this one. Origin: `en-174-lock-deadline` (PR #402) fresh review,
+  2026-11-11.
 
 - **EN-176** (api): costs and partial failures of the session check added
   by EN-174. (`AuthenticatedGuard` made three database round trips in a
