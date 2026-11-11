@@ -152,7 +152,7 @@ both the access-token and the refresh-token cookie. A valid access token (correc
 MUST be revoked; a presented refresh token MUST have its whole refresh
 session revoked. Either one MUST be enough, so that logout works when
 only the refresh cookie is left after the access token expired; with
-neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.) A request whose `Origin` header is present and is not
+neither a valid access token nor a refresh cookie the response MUST be 401. (Refresh session added by TD-5.) If revoking the session fails on the server, the response MUST still clear both cookies, and MUST report the failure (5xx) rather than success. (EN-176.) A request whose `Origin` header is present and is not
 `CORS_ORIGIN` MUST be refused with 403.
 
 Every access token MUST name the refresh session it was issued for. A
@@ -197,6 +197,13 @@ its own revocation until it expires. (EN-174.)
 - GIVEN the same user is signed in twice, in two separate sessions
 - WHEN one session logs out
 - THEN the other session's access token MUST still be accepted
+
+#### Scenario: Logout clears the cookies even when revocation fails
+
+- GIVEN an authenticated session and a storage error while revoking it
+- WHEN the client calls the logout endpoint
+- THEN the response MUST be a 5xx
+- AND both cookies MUST be cleared
 
 #### Scenario: Logout without a session
 

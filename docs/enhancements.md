@@ -1008,20 +1008,18 @@ content type`). Today that is the only 415 it raises, but a future one
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 - **EN-176** (api): costs and partial failures of the session check added
-  by EN-174. `AuthenticatedGuard` now makes three database round trips in
-  a row on every authenticated request (jti deny-list, session, user);
-  the first two do not depend on each other and could run together.
-  `PrismaRefreshTokenStore.isFamilyEnded` finds the family through the
-  `familyId` index but sorts its rows by `revokedAt`, and a family keeps
-  its consumed tokens until its absolute expiry (one row per refresh, up
-  to about 700 in 7 days at the 15-minute default); a composite index on
-  `(familyId, revokedAt)` or two `EXISTS` checks would avoid the sort.
-  And logout deny-lists the access jti before it ends the session: if
-  ending the session then fails, logout answers 500 with the jti revoked
-  but the session alive and the cookies not cleared (a failing deny-list
-  or refresh revoke already answered 500 the same way). Measure before
-  changing the first two. Origin: `en-174-session-revocation` (PR #401)
-  Gentle AI review, 2026-11-11.
+  by EN-174. `PrismaRefreshTokenStore.isFamilyEnded` finds the family
+  through the `familyId` index but sorts its rows by `revokedAt`, and a
+  family keeps its consumed tokens until its absolute expiry (one row per
+  refresh, up to about 700 in 7 days at the 15-minute default); a
+  composite index on `(familyId, revokedAt)` or two `EXISTS` checks would
+  avoid the sort. Measure before changing it. (`AuthenticatedGuard` made
+  three database round trips in a row on every authenticated request; the
+  jti and session checks now run together. And a logout whose server-side
+  revocation failed answered 500 without clearing the cookies, so the
+  browser kept the session; it now clears them and still answers 500.
+  Both done in `en-176-guard-logout`, PR #404.) Origin:
+  `en-174-session-revocation` (PR #401) Gentle AI review, 2026-11-11.
 - **EN-177** (web): several tabs loading at once can now show "Cannot
   reach the server" instead of signing in. The load-time session check
   (`AuthProvider`) calls `refreshSession()` directly after a 401 from

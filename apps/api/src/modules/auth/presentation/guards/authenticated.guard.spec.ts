@@ -182,6 +182,39 @@ describe('AuthenticatedGuard', () => {
     expect(userRepository.findById).not.toHaveBeenCalled();
   });
 
+  // EN-176: the jti and session checks do not depend on each other, so the
+  // request waits for one round trip, not two.
+  it('runs the jti and session checks together', async () => {
+    reflector.getAllAndOverride.mockReturnValue(false);
+    tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
+    let answerDenylist: (revoked: boolean) => void = () => undefined;
+    tokenDenylist.isRevoked.mockReturnValue(
+      new Promise<boolean>((resolve) => (answerDenylist = resolve)),
+    );
+    userRepository.findById.mockResolvedValue(buildUser());
+    const { context } = buildContext({ sf_access_token: 'good-token' });
+
+    const activation = guard.canActivate(context);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(refreshSessions.isSessionEnded).toHaveBeenCalledWith('session-1');
+    answerDenylist(false);
+    await expect(activation).resolves.toBe(true);
+  });
+
+  it('does not look the user up when only the session check rejects the token', async () => {
+    reflector.getAllAndOverride.mockReturnValue(false);
+    tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
+    tokenDenylist.isRevoked.mockResolvedValue(false);
+    refreshSessions.isSessionEnded.mockResolvedValue(true);
+    const { context } = buildContext({ sf_access_token: 'good-token' });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(userRepository.findById).not.toHaveBeenCalled();
+  });
+
   it('passes a token whose session is still open', async () => {
     reflector.getAllAndOverride.mockReturnValue(false);
     tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
