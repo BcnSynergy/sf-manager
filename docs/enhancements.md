@@ -1007,22 +1007,6 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-176** (api): costs and partial failures of the session check added
-  by EN-174. `PrismaRefreshTokenStore.isFamilyEnded` finds the family
-  through the `familyId` index but sorts its rows by `revokedAt`, and a
-  family keeps its consumed tokens until its absolute expiry (one row per
-  refresh, up to about 700 in 7 days at the 15-minute default); a
-  composite index on `(familyId, revokedAt)` or two `EXISTS` checks would
-  avoid the sort. Measure before changing it, together with the effect of
-  the guard's two checks now running at once: each authenticated request
-  takes two pooled connections at a time instead of one, and a deny-listed
-  jti no longer skips the session query. (`AuthenticatedGuard` made
-  three database round trips in a row on every authenticated request; the
-  jti and session checks now run together. And a logout whose server-side
-  revocation failed answered 500 without clearing the cookies, so the
-  browser kept the session; it now clears them and still answers 500.
-  Both done in `en-176-guard-logout`, PR #404.) Origin:
-  `en-174-session-revocation` (PR #401) Gentle AI review, 2026-11-11.
 - **EN-177** (web): several tabs loading at once can now show "Cannot
   reach the server" instead of signing in. The load-time session check
   (`AuthProvider`) calls `refreshSession()` directly after a 401 from
@@ -1053,6 +1037,22 @@ content type`). Today that is the only 415 it raises, but a future one
   (PR #403) Gentle AI reviews, 2026-11-11.
 
 ## Done
+
+- **EN-176** (api): costs and partial failures of the session check added
+  by EN-174. (`AuthenticatedGuard` made three database round trips in a
+  row on every authenticated request; the jti and session checks now run
+  together. And a logout whose server-side revocation failed answered 500
+  without clearing the cookies, so the browser kept the session; it now
+  clears them and still answers 500.) (`PrismaRefreshTokenStore.isFamilyEnded`
+  sorts the family's rows by `revokedAt`, up to about 700 consumed tokens
+  per family. Measured on the dev database with `EXPLAIN ANALYZE` in a
+  rolled-back transaction, a 701-row family among about 100 000 rows: the
+  current query uses the `familyId` index and a top-N heapsort (25 kB) in
+  0.40 ms; two `EXISTS` checks instead took 0.89 ms. No change. The guard's
+  two checks at once take two pooled connections for under a millisecond
+  each; reopen if pool saturation shows up.) All done or closed in
+  `en-176-guard-logout`, PR #404. Origin: `en-174-session-revocation`
+  (PR #401) Gentle AI review, 2026-11-11.
 
 - **EN-175** (web): the login page showed "Invalid email or password." when
   the API could not be reached: `LoginPage.tsx` mapped every login error
