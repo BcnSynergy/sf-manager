@@ -351,23 +351,44 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
   // A Web Locks stand-in shared by "tabs": one lock per name, granted in
   // request order (shared and exclusive alike); `query()` reports whether it
-  // is held. Installed on navigator.locks.
+  // is held. A request whose `signal` aborts before it is granted rejects
+  // with an AbortError and leaves the queue, as in browsers. Installed on
+  // navigator.locks.
   function installFakeLocks() {
     let tail: Promise<void> = Promise.resolve();
     let held = false;
     const request = vi.fn(
       async (
         name: string,
-        optionsOrCallback: { mode?: 'shared' | 'exclusive' } | LockCallback,
+        optionsOrCallback: { mode?: 'shared' | 'exclusive'; signal?: AbortSignal } | LockCallback,
         maybeCallback?: LockCallback,
       ) => {
         const callback = (
           typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback
         ) as LockCallback;
+        const signal =
+          typeof optionsOrCallback === 'function' ? undefined : optionsOrCallback.signal;
         const previous = tail;
         let release: () => void = () => undefined;
         tail = new Promise((resolve) => (release = resolve));
-        await previous;
+        if (signal) {
+          try {
+            await Promise.race([
+              previous,
+              new Promise<never>((_, reject) => {
+                const abort = () => reject(new DOMException('aborted', 'AbortError'));
+                if (signal.aborted) abort();
+                signal.addEventListener('abort', abort);
+              }),
+            ]);
+          } catch (error) {
+            // Leave the queue: the next request waits only for the one before.
+            void previous.then(release);
+            throw error;
+          }
+        } else {
+          await previous;
+        }
         held = true;
         try {
           return await callback({ name });
@@ -752,7 +773,12 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
     expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
     expect(heldDuringRefresh).toBe(true);
-    expect(locks.request).toHaveBeenCalledWith('sf-manager.refresh', expect.any(Function));
+    // Exclusive (no mode), with a signal that gives up a lock not granted in time.
+    expect(locks.request).toHaveBeenCalledWith(
+      'sf-manager.refresh',
+      { signal: expect.any(AbortSignal) as AbortSignal },
+      expect.any(Function),
+    );
   });
 
   // EN-142: the other tab's refresh already put fresh cookies in the shared
@@ -864,6 +890,92 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     releaseOtherTab();
     await waiting;
     expect(settled).toBe(true);
+  });
+
+  // EN-174: a tab frozen while holding the lock must not leave this tab's
+  // refresh queued forever: login and logout wait for it (settleRefresh).
+  it('abandons a refresh that cannot get the lock within 9 seconds, as unavailable, without sending it', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const refreshing = refreshSession().catch((e: unknown) => e);
+      let settled = false;
+      void refreshing.then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(8_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await refreshing;
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).status).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      // The abandoned request left the queue: once the other tab lets go,
+      // nothing of this refresh runs.
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(locks.isHeld()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fails a call behind a frozen tab as unavailable, without ending the session', async () => {
+    vi.useFakeTimers();
+    try {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = respond(unauthorized());
+
+      const call = apiFetch('/users').catch((e: unknown) => e);
+      // 9 s waiting for the other tab's refresh, then 9 s for the lock.
+      await vi.advanceTimersByTimeAsync(18_000);
+      const error = await call;
+
+      expect((error as ApiError).status).toBe(0);
+      expect(urls(fetchMock)).toEqual(['/users']);
+      expect(handler).not.toHaveBeenCalled();
+
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('makes settleRefresh resolve once a refresh stuck behind a frozen tab is abandoned', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      vi.stubGlobal('fetch', vi.fn());
+      const refreshing = refreshSession().catch(() => undefined);
+
+      let settled = false;
+      void settleRefresh().then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(9_000);
+
+      expect(settled).toBe(true);
+      await refreshing;
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('bounds the wait for another tab refresh no call here waits for at 9 seconds', async () => {

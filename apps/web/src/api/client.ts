@@ -177,9 +177,46 @@ export function refreshSession<T = unknown>(): Promise<T | null> {
   return refreshInFlight as Promise<T | null>;
 }
 
-function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
+// A refresh that cannot get the cross-tab lock within REFRESH_TIMEOUT_MS
+// (another tab frozen while holding it, say) is abandoned before it sends
+// anything, and counts as unavailable like a timed-out one. Together with
+// postRefresh's own deadline this bounds the whole refresh, so login and
+// logout, which wait for it (settleRefresh), never wait forever (EN-174).
+async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   const locks = refreshLocks();
-  return locks ? locks.request(REFRESH_LOCK, work) : work();
+  if (!locks) {
+    return work();
+  }
+  try {
+    return await requestLockWithin(locks, {}, work);
+  } catch (error) {
+    if (isLockTimeout(error)) {
+      throw new ApiError(0);
+    }
+    throw error;
+  }
+}
+
+// Requests the refresh lock, giving up if it is not granted within
+// REFRESH_TIMEOUT_MS: the request then rejects with an AbortError and is
+// dropped from the queue. Once granted, the callback runs to completion.
+function requestLockWithin<T>(
+  locks: LockManager,
+  options: { mode?: LockMode },
+  callback: () => T | Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+  return locks
+    .request(REFRESH_LOCK, { ...options, signal: controller.signal }, () => {
+      clearTimeout(timer);
+      return callback();
+    })
+    .finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
+function isLockTimeout(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }
 
 function refreshLocks(): LockManager | undefined {
@@ -219,8 +256,9 @@ async function waitForRefreshLock(locks: LockManager): Promise<boolean> {
     }
     // Shared: every waiter is released together once the refresh ahead of
     // them ends. Tracked so logout (settleRefresh) also waits for that
-    // refresh, whose cookies could land after the logout.
-    const wait = locks.request(REFRESH_LOCK, { mode: 'shared' }, () => undefined);
+    // refresh, whose cookies could land after the logout. Given up after
+    // REFRESH_TIMEOUT_MS (a frozen tab), which counts as no refresh seen.
+    const wait = requestLockWithin(locks, { mode: 'shared' }, () => undefined);
     otherTabWaits.add(wait);
     try {
       await wait;
