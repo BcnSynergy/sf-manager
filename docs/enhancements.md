@@ -1021,6 +1021,17 @@ content type`). Today that is the only 415 it raises, but a future one
   changes, such an error would show "Invalid email or password." again.
   Origin: `en-174-lock-deadline` (PR #402) and `login-unavailable`
   (PR #403) Gentle AI reviews, 2026-11-11.
+- **EN-179** (web): edge cases of the lock-holder check added by EN-177
+  (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). A
+  lock held only in shared mode is now followed by the lowest shared
+  holder's `clientId`, like a moving queue, where before EN-177 it was
+  abandoned at 9 s; shared holders are other tabs' short waits, so this
+  is not expected to wait long, but no test covers it. A `query()` that
+  hangs adds up to `LOCK_QUERY_TIMEOUT_MS` (1 s) to each check, so a
+  refresh that cannot learn the holder is abandoned at about 10 s rather
+  than the 9 s the spec states, and frozen-tab detection can run that much
+  past 18 s. Align the spec wording or start each check's query earlier.
+  Origin: `en-177-lock-progress` (PR #405) Gentle AI review, 2026-11-11.
 
 ## Done
 
