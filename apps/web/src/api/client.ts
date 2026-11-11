@@ -245,8 +245,9 @@ async function postRefresh(): Promise<unknown> {
     }
     // Bounded, body included: a stalled request would otherwise hold the
     // cross-tab lock and leave every tab's 401s waiting. A timeout counts as
-    // unavailable. An AbortController with a timer, not AbortSignal.timeout,
-    // which older browsers (Safari < 16) lack.
+    // unavailable. An AbortController with a timer, not AbortSignal.timeout
+    // (missing before Safari 16): the build targets Safari 16.4+, so either
+    // would do, and the timer is cleared once the attempt ends.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), remaining);
     try {
