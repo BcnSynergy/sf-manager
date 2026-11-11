@@ -1007,17 +1007,6 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-175** (web): the login page shows "Invalid email or password." when
-  the API cannot be reached. `LoginPage.tsx` maps every login error other
-  than 429 to `auth.loginFailed`, including a network failure (the login
-  `fetch` rejects) and a 5xx, so a user with the right password is told it
-  is wrong while the API is down or restarting. The authentication spec's
-  scenarios only name the 401 case ("Server error shown generically") and
-  the 429 one, and its requirement text ("one generic error on server
-  rejection") can be read to cover a 5xx. Show a distinct message for an
-  unreachable or failing API (for example reusing the "Cannot reach the
-  server" wording) and update both the requirement and the scenarios. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
-  2026-11-11, with the dev API down.
 - **EN-176** (api): costs and partial failures of the session check added
   by EN-174. `AuthenticatedGuard` now makes three database round trips in
   a row on every authenticated request (jti deny-list, session, user);
@@ -1058,6 +1047,19 @@ content type`). Today that is the only 415 it raises, but a future one
   2026-11-11.
 
 ## Done
+
+- **EN-175** (web): the login page showed "Invalid email or password." when
+  the API cannot be reached. `LoginPage.tsx` mapped every login error other
+  than 429 to `auth.loginFailed`, including a network failure (the login
+  `fetch` rejects) and a 5xx, so a user with the right password is told it
+  was wrong while the API is down or restarting. The authentication spec's
+  scenarios only named the 401 case ("Server error shown generically") and
+  the 429 one, and its requirement text ("one generic error on server
+  rejection") could be read to cover a 5xx. The login page now shows "Cannot reach the
+  server. Please try again in a moment." (EN, ES and CA) for a network
+  failure, a 5xx or an unreadable answer, and the spec names that case;
+  done in `login-unavailable`, PR #403. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
+  2026-11-11, with the dev API down.
 
 - **EN-174** (web/api): leftovers of EN-142's logout and login waits.
   (A refresh that another tab started after `settleRefresh` checked the

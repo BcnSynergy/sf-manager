@@ -547,11 +547,17 @@ fail with an error. No production default other than off applies.
 ### Requirement: Login Form Validation (Web)
 
 The login form MUST require both fields client-side before submission
-and MUST show one generic error on server rejection, never per-field.
+and MUST show one generic error on server rejection (a 4xx answer),
+never per-field.
 When the server rejects an attempt with 429 (rate limited), the form
 MUST show a generic message "Too many login attempts. Please try
 again later." (EN, ES and CA), distinct from the invalid-credentials
 message, without a countdown, and MUST remain usable for a later retry.
+When the attempt gets no answer (the API is unreachable), a 5xx, or an
+unreadable answer, the form MUST show "Cannot reach the server. Please
+try again in a moment." (EN, ES and CA) instead of the
+invalid-credentials message, and MUST remain usable for a later retry.
+(EN-175.)
 (Previously: covered only client-side validation and the 401 generic
 error.)
 
@@ -580,6 +586,20 @@ error.)
 - GIVEN the rate-limited message is shown
 - WHEN the user edits the fields and submits again
 - THEN the form MUST send the attempt and MUST show the result of that attempt
+
+#### Scenario: Server unavailable is not shown as wrong credentials
+
+- GIVEN the API cannot be reached, or answers a login attempt with a 5xx
+- WHEN the form receives that outcome
+- THEN the UI MUST show the server-unavailable message
+- AND the invalid-credentials message MUST NOT be shown
+- AND a later submit MUST be sent and MUST show the result of that attempt
+
+#### Scenario: Localized server-unavailable message
+
+- GIVEN the UI locale is ES or CA
+- WHEN the server-unavailable message is shown
+- THEN it MUST render "No se puede conectar con el servidor. Vuelve a intentarlo en un momento." (ES) or "No es pot connectar amb el servidor. Torna-ho a provar d'aquí a un moment." (CA)
 
 #### Scenario: Localized rate-limited message
 

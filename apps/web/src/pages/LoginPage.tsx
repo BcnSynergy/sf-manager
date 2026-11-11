@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
+import { HTTP_SERVER_ERROR_MIN, HTTP_TOO_MANY_REQUESTS } from '../api/http-status';
 import { useAuth } from '../auth/AuthProvider';
 import { Alert } from '../components/Alert';
 import { LanguageSelector } from '../components/LanguageSelector';
@@ -14,7 +15,9 @@ import { useAlertMessage } from '../components/use-alert-message';
 // of email-format validation here. Server rejection (401) always shows one
 // generic message, never a field-specific hint (anti-enumeration). The one
 // exception is a 429 (login rate limit), which shows its own message with
-// no countdown; the form stays usable for a later retry.
+// no countdown; the form stays usable for a later retry. A login that never
+// got an answer (network failure) or got a 5xx is not a rejection: it says
+// the server cannot be reached instead (EN-175).
 //
 // The session-ended notice (auth-live-user-check spec "Session-Ended
 // Notice") shows only while no login error does, and the flag is cleared on
@@ -22,6 +25,13 @@ import { useAlertMessage } from '../components/use-alert-message';
 //
 // EN-82: the error is an `Alert` keyed per message, so a repeated error is
 // announced again. It holds the i18n key, so it follows a language switch.
+function loginErrorKey(err: unknown): string {
+  if (!(err instanceof ApiError) || err.status === 0 || err.status >= HTTP_SERVER_ERROR_MIN) {
+    return 'auth.loginUnavailable';
+  }
+  return err.status === HTTP_TOO_MANY_REQUESTS ? 'auth.loginRateLimited' : 'auth.loginFailed';
+}
+
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -55,11 +65,7 @@ export function LoginPage() {
       await login(result.data.email, result.data.password);
       navigate('/');
     } catch (err) {
-      error.show(
-        err instanceof ApiError && err.status === 429
-          ? 'auth.loginRateLimited'
-          : 'auth.loginFailed',
-      );
+      error.show(loginErrorKey(err));
     }
   }
 
