@@ -1013,7 +1013,9 @@ content type`). Today that is the only 415 it raises, but a future one
   deadline starts, so a refresh stuck behind another tab's lock delays
   login and logout, with no pending indicator on the login button; cap
   that wait too if it shows up. And a refresh that another tab starts
-  while the logout request is already in flight is not waited for: if the
+  after `settleRefresh` checked the lock (so also while the logout request
+  is in flight) is not waited for, nor one still running when the 9 s cap
+  ends the wait: if the
   API rotates the token before it revokes the family, that refresh's new
   access token (a jti the logout never saw) can still land after the
   logout and keep the session usable for up to `JWT_EXPIRES_IN`. Closing

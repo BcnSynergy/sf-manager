@@ -900,6 +900,9 @@ describe('apiFetch — silent refresh (TD-5)', () => {
     expect(locks.request).not.toHaveBeenCalled();
   });
 
+  // Pins that settleRefresh absorbs a failed check (allSettled); the check's
+  // own catch is pinned by "falls back to refreshing when the Web Locks check
+  // fails".
   it('does not make settleRefresh fail when the Web Locks check fails', async () => {
     const locks = installFakeLocks();
     locks.query.mockRejectedValueOnce(new DOMException('denied', 'SecurityError'));

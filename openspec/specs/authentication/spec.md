@@ -642,7 +642,8 @@ Decision 4.)
   logout.
 - Login MUST stop the session check in flight from starting a refresh and
   MUST wait for a refresh already in flight before calling the login
-  endpoint, with the same 9-second limit for other tabs as logout, so the
+  endpoint, including any other tab's refresh in progress as for logout,
+  with the same 9-second limit for other tabs, so the
   previous session's cookies cannot be set over the new session's. If
   the login fails (rejected, unreachable or with an unreadable answer),
   the app MUST NOT stay in the loading state.
@@ -688,7 +689,7 @@ Decision 4.)
 - GIVEN two tabs of a signed-in user, and one tab's refresh in progress
 - WHEN the user logs out in the other tab, where no call is waiting for that refresh
 - THEN the app MUST call the logout endpoint only after that refresh has finished, or after 9 seconds if it has not
-- AND the session MUST NOT stay usable after the logout
+- AND when that refresh finished first, the session MUST NOT stay usable after the logout
 
 #### Scenario: Login waits for a refresh in flight
 
