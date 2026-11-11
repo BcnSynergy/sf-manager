@@ -1027,11 +1027,12 @@ content type`). Today that is the only 415 it raises, but a future one
   the API cannot be reached. `LoginPage.tsx` maps every login error other
   than 429 to `auth.loginFailed`, including a network failure (the login
   `fetch` rejects) and a 5xx, so a user with the right password is told it
-  is wrong while the API is down or restarting. The authentication spec
-  only names the 401 case ("Server error shown generically") and the 429
-  one. Show a distinct message for an unreachable or failing API (for
-  example reusing the "Cannot reach the server" wording) and add it to the
-  spec. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
+  is wrong while the API is down or restarting. The authentication spec's
+  scenarios only name the 401 case ("Server error shown generically") and
+  the 429 one, and its requirement text ("one generic error on server
+  rejection") can be read to cover a 5xx. Show a distinct message for an
+  unreachable or failing API (for example reusing the "Cannot reach the
+  server" wording) and update both the requirement and the scenarios. Origin: `en-142-login-waits-refresh` (PR #398) browser check,
   2026-11-11, with the dev API down.
 
 ## Done
