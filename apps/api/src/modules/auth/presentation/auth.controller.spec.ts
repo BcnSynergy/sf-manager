@@ -233,12 +233,20 @@ describe('AuthController', () => {
 
     await expect(controller.logout(request, res)).rejects.toBe(failure);
 
-    const cleared = response.clearCookie.mock.calls.map(
-      ([name]) => name as string,
-    );
-    expect(cleared).toEqual(
-      expect.arrayContaining(['sf_access_token', 'sf_refresh_token']),
-    );
+    // Same options as a successful logout: a browser drops a cookie only
+    // when its path matches.
+    expect(response.clearCookie).toHaveBeenCalledWith('sf_access_token', {
+      httpOnly: true,
+      path: '/',
+      secure: false,
+      sameSite: 'lax',
+    });
+    expect(response.clearCookie).toHaveBeenCalledWith('sf_refresh_token', {
+      httpOnly: true,
+      path: '/auth',
+      secure: false,
+      sameSite: 'lax',
+    });
   });
 
   describe('refresh (TD-5)', () => {
