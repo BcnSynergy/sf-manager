@@ -187,10 +187,16 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   if (!locks) {
     return work();
   }
+  // Only an abort while still queued is a lock timeout; once granted, the
+  // refresh's own errors pass through unchanged.
+  let granted = false;
   try {
-    return await requestLockWithin(locks, {}, work);
+    return await requestLockWithin(locks, {}, () => {
+      granted = true;
+      return work();
+    });
   } catch (error) {
-    if (isLockTimeout(error)) {
+    if (!granted && isLockTimeout(error)) {
       throw new ApiError(0);
     }
     throw error;

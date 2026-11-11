@@ -1033,6 +1033,20 @@ content type`). Today that is the only 415 it raises, but a future one
   or refresh revoke already answered 500 the same way). Measure before
   changing the first two. Origin: `en-174-session-revocation` (PR #401)
   Gentle AI review, 2026-11-11.
+- **EN-177** (web): several tabs loading at once can now show "Cannot
+  reach the server" instead of signing in. The load-time session check
+  (`AuthProvider`) calls `refreshSession()` directly after a 401 from
+  `/auth/me`, without first waiting for another tab's refresh, so each tab
+  queues its own exclusive refresh. Since `en-174-lock-deadline` (PR #402)
+  a refresh not granted the lock within 9 s is abandoned as unavailable,
+  and that 9 s covers every refresh queued ahead of it: with five tabs
+  restored together and an API taking about 2.5 s per refresh, the fourth
+  and fifth show the unavailable page and need "Try again". The wait
+  cannot tell a frozen tab from a long legitimate queue. Possible fixes:
+  let the load-time check wait for another tab's refresh first and retry
+  `/auth/me` (as `apiFetch` does), or restart the lock timer whenever the
+  holder changes. Origin: `en-174-lock-deadline` (PR #402) fresh review,
+  2026-11-11.
 
 ## Done
 
@@ -1081,7 +1095,8 @@ content type`). Today that is the only 415 it raises, but a future one
   reload.) (The test-quality and duplicated-constant follow-ups were done in
   `en-142-web-hygiene`, PR #379.) (Logout waited only for this tab's refresh in flight and for other tabs' refreshes a call here was waiting for; a refresh committed in another tab just before the logout could still set its cookies after it, and its new access token, whose jti the logout never saw, kept the session usable for up to `JWT_EXPIRES_IN`. `settleRefresh` now also waits, up to 9 s, for any tab's refresh it sees on the `sf-manager.refresh` Web Lock, done in `en-142-logout-other-tabs`, PR #399.) (When the session changes during a refresh that turns out unavailable, the caller now gets the 401 the spec names instead of the refresh's `ApiError` (0 or 5xx), done in `en-142-stale-unavailable`, PR #396.) (In a browser without Web Locks (Safari < 15.4) a third tab refreshing at once gets 401 `superseded`, which the web treats as a refusal although the cookie is still valid; a reload restores the session. Closed as outside the supported browsers on 2026-11-11, `en-142-safari-no-locks`, PR #397: the web declares no browser support policy apart from its build target, and `apps/web/vite.config.ts` sets no `build.target`, so Vite compiles for its default `baseline-widely-available` (Chrome 111+, Edge 111+, Firefox 114+, Safari 16.4+), all of which have Web Locks. That target sets the syntax the code is compiled for, not a gate: an older browser may still load the app, but it is unsupported; and Web Locks exist only in a secure context, which production always is (Caddy serves HTTPS) and localhost is too. Fixing it would mean exposing the `superseded` reason in the refresh 401, which is the same bare 401 for every reason on purpose, or retrying after every refusal. Reopen if `build.target` is lowered below Safari 15.4 or the web is served over plain HTTP on another host.) (The client-deadline finding was done in `en-142-refresh-deadline`, PR #394: the refresh deadline, which counts from the first send while the API grace starts at `rotatedAt`, is now 9 seconds instead of 10, leaving a second of margin.) Origin:
   `td-5-refresh-token-rotation` PR 3/3 pre-push review, 2026-11-02. All items done or closed
-  by 2026-11-11; what is left is EN-174.
+  by 2026-11-11; what was left became EN-174, done in
+  `en-174-lock-deadline` (PR #402).
 
 - **EN-173** (web/api config): the web refresh deadline
   (`REFRESH_TIMEOUT_MS`, 9 s, `apps/web/src/api/client.ts`) is a fixed

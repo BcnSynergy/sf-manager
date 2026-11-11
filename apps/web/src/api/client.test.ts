@@ -378,7 +378,8 @@ describe('apiFetch — silent refresh (TD-5)', () => {
               new Promise<never>((_, reject) => {
                 const abort = () => reject(new DOMException('aborted', 'AbortError'));
                 if (signal.aborted) abort();
-                signal.addEventListener('abort', abort);
+                signal.addEventListener('abort', abort, { once: true });
+                void previous.then(() => signal.removeEventListener('abort', abort));
               }),
             ]);
           } catch (error) {
@@ -939,8 +940,14 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       const fetchMock = respond(unauthorized());
 
       const call = apiFetch('/users').catch((e: unknown) => e);
+      let settled = false;
+      void call.then(() => {
+        settled = true;
+      });
       // 9 s waiting for the other tab's refresh, then 9 s for the lock.
-      await vi.advanceTimersByTimeAsync(18_000);
+      await vi.advanceTimersByTimeAsync(17_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
       const error = await call;
 
       expect((error as ApiError).status).toBe(0);
@@ -949,6 +956,34 @@ describe('apiFetch — silent refresh (TD-5)', () => {
 
       releaseOtherTab();
       await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A lock granted just before the deadline is not given up: the refresh
+  // runs to completion, past 9 s from its request, under its own deadline.
+  it('lets a refresh granted the lock just before 9 seconds run to completion', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseOtherTab = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      let answerRefresh: (response: Response) => void = () => undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>((resolve) => (answerRefresh = resolve))),
+      );
+
+      const refreshing = refreshSession();
+      await vi.advanceTimersByTimeAsync(8_999);
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(4_000);
+      answerRefresh(ok({ id: '1' }));
+
+      await expect(refreshing).resolves.toEqual({ id: '1' });
+      const [, options] = locks.request.mock.calls.at(-1) as [string, { signal: AbortSignal }];
+      expect(options.signal.aborted).toBe(false);
     } finally {
       vi.useRealTimers();
     }
