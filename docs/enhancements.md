@@ -1007,20 +1007,6 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
-- **EN-177** (web): several tabs loading at once can now show "Cannot
-  reach the server" instead of signing in. The load-time session check
-  (`AuthProvider`) calls `refreshSession()` directly after a 401 from
-  `/auth/me`, without first waiting for another tab's refresh, so each tab
-  queues its own exclusive refresh. Since `en-174-lock-deadline` (PR #402)
-  a refresh not granted the lock within 9 s is abandoned as unavailable,
-  and that 9 s covers every refresh queued ahead of it: with five tabs
-  restored together and an API taking about 2.5 s per refresh, the fourth
-  and fifth show the unavailable page and need "Try again". The wait
-  cannot tell a frozen tab from a long legitimate queue. Possible fixes:
-  let the load-time check wait for another tab's refresh first and retry
-  `/auth/me` (as `apiFetch` does), or restart the lock timer whenever the
-  holder changes. Origin: `en-174-lock-deadline` (PR #402) fresh review,
-  2026-11-11.
 - **EN-178** (web): `withRefreshLock` (`apps/web/src/api/client.ts`) maps
   an `AbortError` to `ApiError(0)` only while the lock is still queued (a
   `granted` flag), so a granted refresh's own errors would pass through
@@ -1037,6 +1023,24 @@ content type`). Today that is the only 415 it raises, but a future one
   (PR #403) Gentle AI reviews, 2026-11-11.
 
 ## Done
+
+- **EN-177** (web): several tabs loading at once could show "Cannot
+  reach the server" instead of signing in. The load-time session check
+  (`AuthProvider`) calls `refreshSession()` directly after a 401 from
+  `/auth/me`, without first waiting for another tab's refresh, so each tab
+  queues its own exclusive refresh. Since `en-174-lock-deadline` (PR #402)
+  a refresh not granted the lock within 9 s is abandoned as unavailable,
+  and that 9 s covers every refresh queued ahead of it: with five tabs
+  restored together and an API taking about 2.5 s per refresh, the fourth
+  and fifth show the unavailable page and need "Try again". The wait
+  cannot tell a frozen tab from a long legitimate queue. Fixed in
+  `en-177-lock-progress`, PR #405: every 9 s the waiting refresh checks
+  which tab (Web Locks `clientId`) holds the lock and keeps waiting while
+  it changes, giving up only when the same tab has held it for 9 s, or
+  when the browser does not report the holder. One gap remains: two
+  refreshes in a row from the same other tab look like one holder, so a
+  refresh queued behind both can still be abandoned. Origin: `en-174-lock-deadline` (PR #402) fresh review,
+  2026-11-11.
 
 - **EN-176** (api): costs and partial failures of the session check added
   by EN-174. (`AuthenticatedGuard` made three database round trips in a

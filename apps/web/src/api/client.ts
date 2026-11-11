@@ -212,13 +212,46 @@ function requestLockWithin<T>(
   callback: () => T | Promise<T>,
 ): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+  let granted = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // EN-177: a queue of healthy refreshes can outlast REFRESH_TIMEOUT_MS,
+  // since each one holds the lock up to that long. Every REFRESH_TIMEOUT_MS
+  // the holder is checked: a different tab than last time means the queue
+  // moves, so keep waiting; the same tab (frozen while holding it), or no
+  // way to tell (no clientId), gives up.
+  let lastHolder = exclusiveHolder(locks);
+  const check = async () => {
+    const before = await lastHolder;
+    const now = await exclusiveHolder(locks);
+    if (granted) {
+      return;
+    }
+    if (now !== undefined && now !== before) {
+      lastHolder = Promise.resolve(now);
+      timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
+      return;
+    }
+    controller.abort();
+  };
+  timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
   return locks
     .request(REFRESH_LOCK, { ...options, signal: controller.signal }, () => {
+      granted = true;
       clearTimeout(timer);
       return callback();
     })
     .finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
+// The tab (Web Locks clientId) holding the refresh lock exclusively, or
+// undefined when none does or the browser does not say.
+async function exclusiveHolder(locks: LockManager): Promise<string | undefined> {
+  try {
+    const { held = [] } = await locks.query();
+    return held.find((lock) => lock.name === REFRESH_LOCK && lock.mode === 'exclusive')?.clientId;
+  } catch {
+    return undefined;
+  }
 }
 
 function isLockTimeout(error: unknown): boolean {
