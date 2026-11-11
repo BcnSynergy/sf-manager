@@ -413,6 +413,7 @@ describe('AuthProvider — role propagation', () => {
   // session's) lands before the login's instead of overwriting it.
   it('login waits for the session check refresh in flight before signing in', async () => {
     let releaseRefresh: (response: Response) => void = () => undefined;
+    let releaseLogin: (response: Response) => void = () => undefined;
     const fetchMock = vi.fn((url: RequestInfo | URL) => {
       const href = String(url);
       if (href.includes('/auth/me')) {
@@ -423,10 +424,9 @@ describe('AuthProvider — role propagation', () => {
           releaseRefresh = resolve;
         });
       }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ id: '2', email: 'b@sf-manager.example', role: 'TECHNICIAN' }),
-      } as Response);
+      return new Promise<Response>((resolve) => {
+        releaseLogin = resolve;
+      });
     });
     vi.stubGlobal('fetch', fetchMock);
     const calledUrls = () =>
@@ -449,6 +449,16 @@ describe('AuthProvider — role propagation', () => {
       releaseRefresh({
         ok: true,
         json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'SYSTEM_ADMIN' }),
+      } as Response),
+    );
+    await waitFor(() => expect(calledUrls()).toContain('/auth/login'));
+    // The cancelled check never applies the previous session's user.
+    expect(screen.getByTestId('probe-role')).toHaveTextContent('none');
+
+    await act(async () =>
+      releaseLogin({
+        ok: true,
+        json: async () => ({ id: '2', email: 'b@sf-manager.example', role: 'TECHNICIAN' }),
       } as Response),
     );
 
@@ -501,50 +511,64 @@ describe('AuthProvider — role propagation', () => {
   });
 
   // The check was cancelled for the login, so a failed login must still
-  // leave the loading state.
-  it('a failed login after cancelling the session check stops loading', async () => {
-    const fetchMock = vi.fn((url: RequestInfo | URL) => {
-      if (String(url).includes('/auth/me')) {
-        return new Promise<Response>(() => undefined);
+  // leave the loading state, whether rejected or never answered.
+  it.each([
+    ['rejected with 401', () => Promise.resolve({ ok: false, status: 401 } as Response)],
+    ['unreachable', () => Promise.reject(new TypeError('Failed to fetch'))],
+    [
+      'answered with an unreadable body',
+      () =>
+        Promise.resolve({
+          ok: true,
+          json: async () => {
+            throw new SyntaxError('Unexpected end of JSON input');
+          },
+        } as unknown as Response),
+    ],
+  ])(
+    'a failed login (%s) after cancelling the session check stops loading',
+    async (_case, loginAnswer) => {
+      const fetchMock = vi.fn((url: RequestInfo | URL) => {
+        if (String(url).includes('/auth/me')) {
+          return new Promise<Response>(() => undefined);
+        }
+        return loginAnswer();
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      function FailingLoginProbe() {
+        const { user, login, isLoading } = useAuth();
+        const [failed, setFailed] = useState(false);
+        return (
+          <div>
+            <span data-testid="role">{user?.role ?? 'none'}</span>
+            <span data-testid="loading">{String(isLoading)}</span>
+            <span data-testid="failed">{String(failed)}</span>
+            <button
+              data-testid="login"
+              onClick={() => {
+                login('a@sf-manager.example', 'wrong').catch(() => setFailed(true));
+              }}
+            >
+              login
+            </button>
+          </div>
+        );
       }
-      return Promise.resolve({ ok: false, status: 401 } as Response);
-    });
-    vi.stubGlobal('fetch', fetchMock);
 
-    function FailingLoginProbe() {
-      const { user, login, isLoading } = useAuth();
-      const [error, setError] = useState<number | null>(null);
-      return (
-        <div>
-          <span data-testid="role">{user?.role ?? 'none'}</span>
-          <span data-testid="loading">{String(isLoading)}</span>
-          <span data-testid="error">{String(error)}</span>
-          <button
-            data-testid="login"
-            onClick={() => {
-              login('a@sf-manager.example', 'wrong').catch((e: unknown) =>
-                setError((e as ApiError).status),
-              );
-            }}
-          >
-            login
-          </button>
-        </div>
+      render(
+        <AuthProvider>
+          <FailingLoginProbe />
+        </AuthProvider>,
       );
-    }
+      expect(screen.getByTestId('loading')).toHaveTextContent('true');
+      act(() => screen.getByTestId('login').click());
 
-    render(
-      <AuthProvider>
-        <FailingLoginProbe />
-      </AuthProvider>,
-    );
-    expect(screen.getByTestId('loading')).toHaveTextContent('true');
-    act(() => screen.getByTestId('login').click());
-
-    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('401'));
-    expect(screen.getByTestId('loading')).toHaveTextContent('false');
-    expect(screen.getByTestId('role')).toHaveTextContent('none');
-  });
+      await waitFor(() => expect(screen.getByTestId('failed')).toHaveTextContent('true'));
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('role')).toHaveTextContent('none');
+    },
+  );
 
   it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
     const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];

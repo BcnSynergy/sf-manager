@@ -642,7 +642,8 @@ Decision 4.)
   MUST wait for a refresh already in flight before calling the login
   endpoint, with the same 9-second limit for other tabs as logout, so the
   previous session's cookies cannot be set over the new session's. If
-  the login is rejected, the app MUST NOT stay in the loading state.
+  the login fails (rejected, unreachable or with an unreadable answer),
+  the app MUST NOT stay in the loading state.
 - If the session changes while the refresh runs (logout or another
   login), the call MUST be neither retried nor reported as a session end;
   its caller MUST still receive the 401.
@@ -692,6 +693,13 @@ Decision 4.)
 - GIVEN the session check on load has not answered yet
 - WHEN the user submits the login form and the check then answers 401
 - THEN the app MUST NOT call the refresh endpoint for that check
+
+#### Scenario: A failed login during the session check stops loading
+
+- GIVEN the session check on load has not answered yet
+- WHEN the user submits the login form and the login is rejected, the API is unreachable, or its answer is unreadable
+- THEN the app MUST NOT stay in the loading state
+- AND the visitor MUST be treated as signed out
 
 #### Scenario: Session restored on load through a refresh
 

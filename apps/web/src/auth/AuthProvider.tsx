@@ -172,39 +172,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // starting one, then let a refresh already in flight (shared, so it
     // finishes anyway) land first. Bounded by the refresh deadline.
     cancelSessionCheck();
-    await settleRefresh();
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      await settleRefresh();
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        // Per spec.md's anti-enumeration requirement: never surface whether
+        // the email or the password was wrong. Only the HTTP status is
+        // exposed, so the caller (LoginPage) can tell a rate-limited 429 from
+        // every other rejection and show one generic message for the rest.
+        throw new ApiError(response.status);
+      }
+
+      // stale-401-session-guard design.md Decision 3: the new Set-Cookie is
+      // applied when the headers arrive, so this is the session boundary.
+      // Advance before any further await and before updateUser makes the new
+      // session visible to the handler; otherwise a 401 from a request issued
+      // under the previous session could still end this one.
+      advanceSessionEpoch();
+      const data = (await response.json()) as AuthUser;
+      // A session check started while the login was in flight (a retry) must
+      // not overwrite this login.
+      cancelSessionCheck();
+      setSessionEnded(false);
+      setSessionUnavailable(false);
+      updateUser(data);
+    } finally {
       // The session check was cancelled above, so it will not end the
-      // loading state itself.
+      // loading state itself, whether the login succeeds, is rejected or
+      // never gets an answer.
       setIsLoading(false);
-      // Per spec.md's anti-enumeration requirement: never surface whether
-      // the email or the password was wrong. Only the HTTP status is
-      // exposed, so the caller (LoginPage) can tell a rate-limited 429 from
-      // every other rejection and show one generic message for the rest.
-      throw new ApiError(response.status);
     }
-
-    // stale-401-session-guard design.md Decision 3: the new Set-Cookie is
-    // applied when the headers arrive, so this is the session boundary.
-    // Advance before any further await and before updateUser makes the new
-    // session visible to the handler; otherwise a 401 from a request issued
-    // under the previous session could still end this one.
-    advanceSessionEpoch();
-    const data = (await response.json()) as AuthUser;
-    // A session check started while the login was in flight (a retry) must
-    // not overwrite this login.
-    cancelSessionCheck();
-    setIsLoading(false);
-    setSessionEnded(false);
-    setSessionUnavailable(false);
-    updateUser(data);
   }
 
   async function logout(): Promise<void> {
