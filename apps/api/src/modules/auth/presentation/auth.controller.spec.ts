@@ -222,6 +222,25 @@ describe('AuthController', () => {
     expect(response.clearCookie).not.toHaveBeenCalled();
   });
 
+  // EN-176: a server-side failure still answers 5xx, but the browser drops
+  // the session the user asked to end.
+  it('clears both cookies and rethrows when logout fails on the server', async () => {
+    const failure = new Error('db unreachable');
+    logoutUseCase.execute.mockRejectedValue(failure);
+    const request = {
+      cookies: { sf_access_token: 'valid-token', sf_refresh_token: 'refresh' },
+    };
+
+    await expect(controller.logout(request, res)).rejects.toBe(failure);
+
+    const cleared = response.clearCookie.mock.calls.map(
+      ([name]) => name as string,
+    );
+    expect(cleared).toEqual(
+      expect.arrayContaining(['sf_access_token', 'sf_refresh_token']),
+    );
+  });
+
   describe('refresh (TD-5)', () => {
     const refreshExpiresAt = new Date('2026-11-01T16:00:00.000Z');
 

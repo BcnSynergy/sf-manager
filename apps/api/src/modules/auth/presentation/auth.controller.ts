@@ -169,8 +169,8 @@ export class AuthController {
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException(error.message);
       }
-      // EN-176: the server-side revocation failed (a 500 follows), but the
-      // browser must not keep the session the user asked to end.
+      // EN-176: logout failed on the server (a 5xx follows), but the browser
+      // must not keep the session the user asked to end.
       this.clearSessionCookies(response);
       throw error;
     }

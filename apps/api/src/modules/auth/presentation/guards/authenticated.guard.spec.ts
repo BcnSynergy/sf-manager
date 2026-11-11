@@ -202,16 +202,23 @@ describe('AuthenticatedGuard', () => {
     await expect(activation).resolves.toBe(true);
   });
 
-  it('does not look the user up when only the session check rejects the token', async () => {
+  // The user is read only once both checks pass, whichever answers first.
+  it('waits for both checks before looking the user up, even when the session has ended first', async () => {
     reflector.getAllAndOverride.mockReturnValue(false);
     tokenIssuer.verify.mockResolvedValue({ ...PAYLOAD, sid: 'session-1' });
-    tokenDenylist.isRevoked.mockResolvedValue(false);
+    let answerDenylist: (revoked: boolean) => void = () => undefined;
+    tokenDenylist.isRevoked.mockReturnValue(
+      new Promise<boolean>((resolve) => (answerDenylist = resolve)),
+    );
     refreshSessions.isSessionEnded.mockResolvedValue(true);
     const { context } = buildContext({ sf_access_token: 'good-token' });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    const activation = guard.canActivate(context);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(userRepository.findById).not.toHaveBeenCalled();
+    answerDenylist(false);
+
+    await expect(activation).rejects.toThrow(UnauthorizedException);
     expect(userRepository.findById).not.toHaveBeenCalled();
   });
 

@@ -1013,7 +1013,10 @@ content type`). Today that is the only 415 it raises, but a future one
   family keeps its consumed tokens until its absolute expiry (one row per
   refresh, up to about 700 in 7 days at the 15-minute default); a
   composite index on `(familyId, revokedAt)` or two `EXISTS` checks would
-  avoid the sort. Measure before changing it. (`AuthenticatedGuard` made
+  avoid the sort. Measure before changing it, together with the effect of
+  the guard's two checks now running at once: each authenticated request
+  takes two pooled connections at a time instead of one, and a deny-listed
+  jti no longer skips the session query. (`AuthenticatedGuard` made
   three database round trips in a row on every authenticated request; the
   jti and session checks now run together. And a logout whose server-side
   revocation failed answered 500 without clearing the cookies, so the
