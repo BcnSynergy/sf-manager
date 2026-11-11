@@ -681,11 +681,11 @@ Decision 4.)
   stop waiting for that other tab after 9 seconds and then refresh as
   above.
 - A refresh waiting for the cross-tab lock MUST be abandoned without being
-  sent, and then counts as unavailable, once one tab has held the lock for
-  9 seconds without releasing it (a frozen tab), so a refresh, and login
-  and logout waiting for it, never wait without limit. While the lock
-  passes from tab to tab it MUST keep waiting, however long the queue
-  takes in total. Where the browser does not report which tab holds the
+  sent, and then counts as unavailable, once the same tab is seen holding
+  the lock at two checks 9 seconds apart (a frozen tab, so between 9 and
+  18 seconds after it took the lock), so a refresh, and login and logout
+  waiting for it, never wait without limit. While the lock passes from tab
+  to tab it MUST keep waiting, however long the queue takes in total. Where the browser does not report which tab holds the
   lock, the refresh MUST be abandoned 9 seconds after it asked for the
   lock. (EN-174, EN-177.)
 - A refresh whose response is lost to a network error MUST be retried

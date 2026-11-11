@@ -923,12 +923,43 @@ describe('apiFetch — silent refresh (TD-5)', () => {
       const refreshing = refreshSession();
       await vi.advanceTimersByTimeAsync(6_000);
       releaseFirst();
-      await vi.advanceTimersByTimeAsync(6_000);
+      await vi.advanceTimersByTimeAsync(5_999);
+      expect(fetchMock).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
       releaseSecond();
       await vi.advanceTimersByTimeAsync(0);
 
       await expect(refreshing).resolves.toEqual({ id: '1' });
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The wait for another tab's refresh (retrying with its cookies) keeps its
+  // fixed 9 s cap even while the lock passes on: after it the call refreshes
+  // itself, and that refresh follows the queue.
+  it('stops waiting for another tab after 9 seconds even while the lock passes on, then refreshes', async () => {
+    vi.useFakeTimers();
+    try {
+      const locks = installFakeLocks();
+      const releaseFirst = locks.holdByOtherTab();
+      const releaseSecond = locks.holdByOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      const fetchMock = respond(unauthorized(), ok({ id: '1' }), ok({ data: 'ok' }));
+
+      const call = apiFetch<{ data: string }>('/users');
+      await vi.advanceTimersByTimeAsync(6_000);
+      releaseFirst();
+      await vi.advanceTimersByTimeAsync(3_000);
+      // 9 s: the shared wait gave up; the call's own refresh is now queued.
+      expect(urls(fetchMock)).toEqual(['/users']);
+      await vi.advanceTimersByTimeAsync(3_000);
+      releaseSecond();
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(call).resolves.toEqual({ data: 'ok' });
+      expect(urls(fetchMock)).toEqual(['/users', '/auth/refresh', '/users']);
     } finally {
       vi.useRealTimers();
     }

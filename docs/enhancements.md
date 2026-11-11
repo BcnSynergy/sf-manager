@@ -1037,9 +1037,11 @@ content type`). Today that is the only 415 it raises, but a future one
   `en-177-lock-progress`, PR #405: every 9 s the waiting refresh checks
   which tab (Web Locks `clientId`) holds the lock and keeps waiting while
   it changes, giving up only when the same tab has held it for 9 s, or
-  when the browser does not report the holder. One gap remains: two
-  refreshes in a row from the same other tab look like one holder, so a
-  refresh queued behind both can still be abandoned. Origin: `en-174-lock-deadline` (PR #402) fresh review,
+  when the browser does not report the holder. A call waiting for another
+  tab's refresh keeps its fixed 9 s cap and then refreshes itself. Two
+  refreshes in a row from the same other tab would look like one holder,
+  but a tab has at most one refresh in flight and the queue is first in,
+  first out, so its next refresh queues behind this one. Origin: `en-174-lock-deadline` (PR #402) fresh review,
   2026-11-11.
 
 - **EN-176** (api): costs and partial failures of the session check added

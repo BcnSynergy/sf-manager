@@ -177,11 +177,12 @@ export function refreshSession<T = unknown>(): Promise<T | null> {
   return refreshInFlight as Promise<T | null>;
 }
 
-// A refresh that cannot get the cross-tab lock within REFRESH_TIMEOUT_MS
-// (another tab frozen while holding it, say) is abandoned before it sends
-// anything, and counts as unavailable like a timed-out one. Together with
-// postRefresh's own deadline this bounds the whole refresh, so login and
-// logout, which wait for it (settleRefresh), never wait forever (EN-174).
+// A refresh queued behind a tab frozen while holding the cross-tab lock is
+// abandoned before it sends anything, and counts as unavailable like a
+// timed-out one (EN-174). While the lock passes from tab to tab it keeps
+// waiting (EN-177), so the wait is bounded by the queue ahead of it, each
+// holder cut by its own REFRESH_TIMEOUT_MS deadline: login and logout, which
+// wait for it (settleRefresh), never wait forever.
 async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   const locks = refreshLocks();
   if (!locks) {
@@ -191,7 +192,7 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
   // refresh's own errors pass through unchanged.
   let granted = false;
   try {
-    return await requestLockWithin(locks, {}, () => {
+    return await requestLockWithin(locks, { followQueue: true }, () => {
       granted = true;
       return work();
     });
@@ -206,23 +207,26 @@ async function withRefreshLock<T>(work: () => Promise<T>): Promise<T> {
 // Requests the refresh lock, giving up if it is not granted within
 // REFRESH_TIMEOUT_MS: the request then rejects with an AbortError and is
 // dropped from the queue. Once granted, the callback runs to completion.
+// With `followQueue` (this tab's own refresh, EN-177) a queue of healthy
+// refreshes may outlast REFRESH_TIMEOUT_MS, since each holds the lock up to
+// that long: every REFRESH_TIMEOUT_MS the holder is checked, and a different
+// tab than at the last check means the queue moves, so it keeps waiting.
+// The same tab at two checks (frozen while holding it, so detected after 9
+// to 18 s), or no way to tell (no clientId), gives up. That costs one
+// query() per lock request even when no other tab holds the lock.
 function requestLockWithin<T>(
   locks: LockManager,
-  options: { mode?: LockMode },
+  options: { mode?: LockMode; followQueue?: boolean },
   callback: () => T | Promise<T>,
 ): Promise<T> {
+  const { followQueue = false, ...lockOptions } = options;
   const controller = new AbortController();
   let granted = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  // EN-177: a queue of healthy refreshes can outlast REFRESH_TIMEOUT_MS,
-  // since each one holds the lock up to that long. Every REFRESH_TIMEOUT_MS
-  // the holder is checked: a different tab than last time means the queue
-  // moves, so keep waiting; the same tab (frozen while holding it), or no
-  // way to tell (no clientId), gives up.
-  let lastHolder = exclusiveHolder(locks);
+  let lastHolder = followQueue ? exclusiveHolder(locks) : Promise.resolve(undefined);
   const check = async () => {
     const before = await lastHolder;
-    const now = await exclusiveHolder(locks);
+    const now = followQueue ? await exclusiveHolder(locks) : undefined;
     if (granted) {
       return;
     }
@@ -235,7 +239,7 @@ function requestLockWithin<T>(
   };
   timer = setTimeout(() => void check(), REFRESH_TIMEOUT_MS);
   return locks
-    .request(REFRESH_LOCK, { ...options, signal: controller.signal }, () => {
+    .request(REFRESH_LOCK, { ...lockOptions, signal: controller.signal }, () => {
       granted = true;
       clearTimeout(timer);
       return callback();
@@ -377,9 +381,10 @@ async function postRefresh(): Promise<unknown> {
 // outcome. Logout and login wait on it, so such a refresh committed just
 // before them cannot set its cookies after theirs: after a logout, a fresh
 // access token whose jti the logout never saw would keep the session alive
-// until it expires (EN-142). This tab's refresh is bounded by
-// REFRESH_TIMEOUT_MS; the wait for other tabs is cut at the same limit, so a
-// frozen tab holding the lock cannot block the logout.
+// until it expires (EN-142). This tab's refresh is bounded by the queue
+// ahead of it, each holder cut by REFRESH_TIMEOUT_MS, and abandoned behind a
+// frozen tab (withRefreshLock); the wait for other tabs is cut at
+// REFRESH_TIMEOUT_MS, so a frozen tab holding the lock cannot block logout.
 export async function settleRefresh(): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const otherTabsDeadline = new Promise<void>((resolve) => {
