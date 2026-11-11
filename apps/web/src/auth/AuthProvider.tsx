@@ -167,6 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string): Promise<void> {
+    // EN-142: a refresh answering after the login would set the previous
+    // session's cookies over the new ones. Stop the session check from
+    // starting one, then let a refresh already in flight (shared, so it
+    // finishes anyway) land first. Bounded by the refresh deadline.
+    cancelSessionCheck();
+    await settleRefresh();
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       credentials: 'include',
@@ -175,6 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!response.ok) {
+      // The session check was cancelled above, so it will not end the
+      // loading state itself.
+      setIsLoading(false);
       // Per spec.md's anti-enumeration requirement: never surface whether
       // the email or the password was wrong. Only the HTTP status is
       // exposed, so the caller (LoginPage) can tell a rate-limited 429 from
@@ -189,7 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // under the previous session could still end this one.
     advanceSessionEpoch();
     const data = (await response.json()) as AuthUser;
-    // A session check still in flight (a retry) must not overwrite this login.
+    // A session check started while the login was in flight (a retry) must
+    // not overwrite this login.
     cancelSessionCheck();
     setIsLoading(false);
     setSessionEnded(false);

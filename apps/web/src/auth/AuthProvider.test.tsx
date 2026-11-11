@@ -408,6 +408,144 @@ describe('AuthProvider — role propagation', () => {
     expect(screen.getByTestId('probe-unavailable')).toHaveTextContent('false');
   });
 
+  // EN-142: a refresh the load-time check already started is shared and
+  // finishes anyway; login waits for it, so its Set-Cookie (the previous
+  // session's) lands before the login's instead of overwriting it.
+  it('login waits for the session check refresh in flight before signing in', async () => {
+    let releaseRefresh: (response: Response) => void = () => undefined;
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.includes('/auth/me')) {
+        return Promise.resolve({ ok: false, status: 401 } as Response);
+      }
+      if (href.includes('/auth/refresh')) {
+        return new Promise<Response>((resolve) => {
+          releaseRefresh = resolve;
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ id: '2', email: 'b@sf-manager.example', role: 'TECHNICIAN' }),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const calledUrls = () =>
+      fetchMock.mock.calls.map(([url]) => String(url).replace(/^https?:\/\/[^/]+/, ''));
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calledUrls()).toContain('/auth/refresh'));
+
+    act(() => screen.getByTestId('probe-login').click());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(calledUrls()).not.toContain('/auth/login');
+
+    await act(async () =>
+      releaseRefresh({
+        ok: true,
+        json: async () => ({ id: '1', email: 'a@sf-manager.example', role: 'SYSTEM_ADMIN' }),
+      } as Response),
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+    expect(calledUrls()).toEqual(['/auth/me', '/auth/refresh', '/auth/login']);
+    expect(screen.getByTestId('probe-user-loading')).toHaveTextContent('false');
+  });
+
+  // EN-142: a check whose /auth/me is still pending at login must not start a
+  // refresh once it answers 401, even if the login has not answered yet.
+  it('login cancels a pending session check before signing in, so it never refreshes', async () => {
+    let releaseMe: (response: Response) => void = () => undefined;
+    let releaseLogin: (response: Response) => void = () => undefined;
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.includes('/auth/me')) {
+        return new Promise<Response>((resolve) => {
+          releaseMe = resolve;
+        });
+      }
+      if (href.includes('/auth/login')) {
+        return new Promise<Response>((resolve) => {
+          releaseLogin = resolve;
+        });
+      }
+      return Promise.resolve({ ok: false, status: 401 } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    act(() => screen.getByTestId('probe-login').click());
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true),
+    );
+
+    await act(async () => releaseMe({ ok: false, status: 401 } as Response));
+    await act(async () =>
+      releaseLogin({
+        ok: true,
+        json: async () => ({ id: '2', email: 'b@sf-manager.example', role: 'TECHNICIAN' }),
+      } as Response),
+    );
+
+    await waitFor(() => expect(screen.getByTestId('probe-role')).toHaveTextContent('TECHNICIAN'));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/refresh'))).toBe(false);
+  });
+
+  // The check was cancelled for the login, so a failed login must still
+  // leave the loading state.
+  it('a failed login after cancelling the session check stops loading', async () => {
+    const fetchMock = vi.fn((url: RequestInfo | URL) => {
+      if (String(url).includes('/auth/me')) {
+        return new Promise<Response>(() => undefined);
+      }
+      return Promise.resolve({ ok: false, status: 401 } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    function FailingLoginProbe() {
+      const { user, login, isLoading } = useAuth();
+      const [error, setError] = useState<number | null>(null);
+      return (
+        <div>
+          <span data-testid="role">{user?.role ?? 'none'}</span>
+          <span data-testid="loading">{String(isLoading)}</span>
+          <span data-testid="error">{String(error)}</span>
+          <button
+            data-testid="login"
+            onClick={() => {
+              login('a@sf-manager.example', 'wrong').catch((e: unknown) =>
+                setError((e as ApiError).status),
+              );
+            }}
+          >
+            login
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <AuthProvider>
+        <FailingLoginProbe />
+      </AuthProvider>,
+    );
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+    act(() => screen.getByTestId('login').click());
+
+    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('401'));
+    expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    expect(screen.getByTestId('role')).toHaveTextContent('none');
+  });
+
   it('a second "Try again" aborts the first retry and ignores its late answer', async () => {
     const pending: { signal?: AbortSignal; release: (response: Response) => void }[] = [];
     let meCalls = 0;
