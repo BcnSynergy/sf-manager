@@ -635,9 +635,11 @@ Decision 4.)
   MUST stay, so an API restart, a short outage or a shared office IP
   hitting the refresh limit does not log users out.
 - Logout MUST wait for a refresh in flight before calling the logout
-  endpoint, including another tab's refresh that a call in this tab is
-  waiting for; it MUST stop waiting for other tabs after 9 seconds (the
-  refresh deadline), so a frozen tab cannot block the logout.
+  endpoint, including any other tab's refresh in progress where the
+  browser supports Web Locks (that refresh's new access token is one the
+  logout would otherwise not revoke); it MUST stop waiting for other tabs
+  after 9 seconds (the refresh deadline), so a frozen tab cannot block the
+  logout.
 - Login MUST stop the session check in flight from starting a refresh and
   MUST wait for a refresh already in flight before calling the login
   endpoint, with the same 9-second limit for other tabs as logout, so the
@@ -680,6 +682,13 @@ Decision 4.)
 - WHEN an authenticated API call in the other tab returns 401
 - THEN that tab MUST wait for the refresh to finish and retry the call without sending a refresh request of its own
 - AND only if the retried call returns 401 again MUST it refresh and retry once more
+
+#### Scenario: Logout waits for another tab's refresh
+
+- GIVEN two tabs of a signed-in user, and one tab's refresh in progress
+- WHEN the user logs out in the other tab, where no call is waiting for that refresh
+- THEN the app MUST call the logout endpoint only after that refresh has finished, or after 9 seconds if it has not
+- AND the session MUST NOT stay usable after the logout
 
 #### Scenario: Login waits for a refresh in flight
 
