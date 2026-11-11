@@ -1027,17 +1027,21 @@ content type`). Today that is the only 415 it raises, but a future one
   when those tools support TypeScript 7 or its new 7.1 API. Dependabot was
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
+
+## Done
+
 - **EN-173** (web/api config): the web refresh deadline
   (`REFRESH_TIMEOUT_MS`, 9 s, `apps/web/src/api/client.ts`) is a fixed
   number, while the API's `REFRESH_TOKEN_REUSE_GRACE` is configurable (10 s
   by default; values such as `5s` are accepted, and `0s` turns the grace
   off). An operator who sets the grace below about 10 s brings back the
-  late-retry revoke that `en-142-refresh-deadline` (PR #394) fixed. Say in
-  the README row for `REFRESH_TOKEN_REUSE_GRACE` that the web assumes a
-  grace of at least 10 s, or derive the web deadline from the configured
-  grace. Origin: `en-142-refresh-deadline` fresh review, 2026-11-10.
-
-## Done
+  late-retry revoke that `en-142-refresh-deadline` (PR #394) fixed. The
+  README row for `REFRESH_TOKEN_REUSE_GRACE` now says that the web gives up
+  on a refresh after a fixed 9 s and assumes a grace of at least 10 s.
+  Deriving the web deadline from the configured grace was not done: the API
+  would have to expose its configuration to the web for one rarely changed
+  value. Done in `en-173-grace-note`
+  (PR #395), 2026-11-11.
 
 - **EN-171** (validation tooling): `packages/validation` now declares
   `vite` (`^8.3.6`, the version `apps/web` uses) as a devDependency, since
