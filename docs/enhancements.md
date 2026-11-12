@@ -994,6 +994,17 @@ content type`). Today that is the only 415 it raises, but a future one
   `apps/api/src/modules/auth/infrastructure/config/secret.config.ts`.
   Origin: `en-180-secret-strength` native review `R1-001` and fresh review
   `S-3`, 2026-11-12.
+- **EN-183** (delivery): since EN-93 the Prisma CLI is a production
+  dependency of the API (migrations run at container start), so its
+  transitive packages (Prisma Studio core, the Prisma dev server with
+  pglite, `mysql2`, `find-my-way` and others) now count as production in
+  `package-lock.json` and show up in `npm audit --omit=dev`. They were
+  already in the image before EN-93, so exposure is unchanged, but triage
+  should know they never run in the API. They are also most of the
+  remaining 947 MB. A migrate-only runtime (for example running
+  `migrate deploy` from a separate one-off image) would drop them. Evidence:
+  `apps/api/package.json`, `apps/api/Dockerfile`. Origin:
+  `en-93-api-image-size` native review `R1-002`, 2026-11-12.
 
 ## Done
 
@@ -1002,7 +1013,9 @@ content type`). Today that is the only 415 it raises, but a future one
   (`apps/api/tsconfig.seed.json`, run through `PRISMA_SEED_COMMAND`);
   `runtime` installs production dependencies only, with the Prisma CLI moved
   to them. 1.63 GB to 947 MB; the Prisma CLI and its engines are most of
-  what is left. Done in `en-93-api-image-size` (PR #TBD).
+  what is left (EN-183). `deploy/smoke-test.sh` now runs the documented
+  admin seed command, since no build step executes the compiled seed
+  (spec `deployment`). Done in `en-93-api-image-size` (PR #TBD).
   Original entry: The API image is about 1.7 GB because it ships dev
   dependencies, sources and tests: the Prisma CLI (`migrate deploy`) and
   ts-node (admin seed) are dev dependencies. A multi-stage build with a

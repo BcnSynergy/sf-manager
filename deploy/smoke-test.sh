@@ -4,7 +4,8 @@
 # starts the whole stack on https://localhost with throwaway secrets, checks
 # that the API and the web app answer, that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
-# uploaded files (TD-42), that the off-site copy service, unconfigured,
+# uploaded files (TD-42), that the documented admin seed command creates the
+# system admin (EN-93), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), and that a dump taken before the
 # newest migration restores, with its uploaded files, and the API then
 # applies that migration (EN-105, EN-120), then removes the stack and its
@@ -118,6 +119,20 @@ if [ -z "$offsite" ] || [ "$(docker inspect -f '{{.State.Running}}' "$offsite")"
   fail "the offsite service is not running"
 fi
 echo "smoke: offsite service disabled and idle"
+
+# The documented admin seed command (README, spec `deployment`, "First
+# admin") runs the seed compiled into the image, which no build step
+# executes (EN-93), so run it here and check it left exactly that admin.
+SEED_ADMIN_EMAIL=smoke-admin@example.com
+SEED_ADMIN_PASSWORD=$(openssl rand -hex 16)
+export SEED_ADMIN_EMAIL SEED_ADMIN_PASSWORD
+compose run --rm -T -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD api npx prisma db seed >/dev/null ||
+  fail "the admin seed command failed"
+users=$(compose exec -T postgres psql -U smoke -d sfmanager -tA -F ' ' \
+  -c 'select email, role from "User"')
+[ "$users" = "$SEED_ADMIN_EMAIL SYSTEM_ADMIN" ] ||
+  fail "the admin seed left users '$users', expected '$SEED_ADMIN_EMAIL SYSTEM_ADMIN'"
+echo "smoke: admin seed created the system admin"
 
 # A dump taken on an older version restores, with its uploaded files, and
 # the API then applies the newer migrations (spec `deployment`, "Restore").
