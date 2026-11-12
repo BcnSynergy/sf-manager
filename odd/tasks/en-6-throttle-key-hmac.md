@@ -1,7 +1,7 @@
 # EN-6 — HMAC for throttle counter keys
 
 Objective: key the stored and logged throttle counter keys with a server secret (HMAC-SHA-256) instead of an unsalted SHA-256.
-Branch: `en-6-throttle-key-hmac/01-hmac` (single PR, stacked-to-main). Runner: Jest (`npm test`, `npm run test:e2e`, `npm run test:integration` in `apps/api`).
+Branch: `en-6-throttle-key-hmac/01-hmac` (PR #408, stacked-to-main). Runner: Jest (`npm test`, `npm run test:e2e`, `npm run test:integration` in `apps/api`).
 
 ## Specs
 
@@ -22,5 +22,5 @@ Branch: `en-6-throttle-key-hmac/01-hmac` (single PR, stacked-to-main). Runner: J
 - L2 (2026-11-12, user): HMAC key source = "Nueva variable (Recomendado)"; spec question answered "si".
 - L3: Risk items 1 (persisted key format), 2 (secret) and 3 (new required env var for the deployment config).
 - L4 (2026-11-12): `apps/api/.env.example` is permission-denied for the agent; the user added `THROTTLE_KEY_SECRET` there and in their local `.env`.
-- L5 (2026-11-12): native review (risk, readability, reliability) granted, approved and acknowledged on d0fa5aa (lineage review-6bdd0b2c1c8270c5). Fixed in a follow-up commit: R2-004/R3-001 (try/finally in the new integration test), R2-002 (comment reflow). Registered: EN-180 (R1-001, R3-002 secret minimum), EN-181 (R2-001 single hasher provider). R2-003 (PR #TBD, task status) resolved when the PR number is known.
+- L5 (2026-11-12): native review (risk, readability, reliability) granted, approved and acknowledged on d0fa5aa (lineage review-6bdd0b2c1c8270c5). Fixed in a follow-up commit: R2-004/R3-001 (try/finally in the new integration test), R2-002 (comment reflow). Registered: EN-180 (R1-001, R3-002 secret minimum), EN-181 (R2-001 single hasher provider). R2-003 resolved: PR #408 filled in.
 - L6 (2026-11-12): native review of d5d6bba approved and acknowledged (lineage review-1eda6cdcbb929596); advisories R3-001, R2-001/R3-002 on the test's env restore not chased (noted in the PR). Fresh review (Opus, worktree, probes P1-P6 all caught): APPROVE, no blockers or warnings. Applied S-1 (spec "MUST NOT" wording); S-2 folded into EN-181.

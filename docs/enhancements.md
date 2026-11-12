@@ -1026,7 +1026,7 @@ content type`). Today that is the only 415 it raises, but a future one
 - **EN-6** (api): throttle counter keys are now HMAC-SHA-256 under the new
   required `THROTTLE_KEY_SECRET` (per client key and per email, stored and
   logged), and the API refuses to boot without it. Old unkeyed rows expire
-  on their own. Done in `en-6-throttle-key-hmac` (PR #TBD). Original entry:
+  on their own. Done in `en-6-throttle-key-hmac` (PR #408). Original entry:
   Hash the throttle key with an HMAC (secret-keyed) instead of
   the library's unsalted SHA-256. An IPv4 key has only 2^32 values, so the
   stored hash can be enumerated: today the key is pseudonymized, not
