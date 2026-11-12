@@ -1006,7 +1006,7 @@ content type`). Today that is the only 415 it raises, but a future one
 - **EN-73** (web UI): Activate on a draft template is now disabled while
   the question selection has unsaved changes, with a localized "save the
   question selection before activating" message (spec
-  `review-template-admin-ui`). Done in `en-73-activate-unsaved` (PR #TBD).
+  `review-template-admin-ui`). Done in `en-73-activate-unsaved` (PR #411).
   Original entry: On a draft template, Activate activates the last
   saved question selection. Picker changes not yet saved are silently
   dropped, with no warning or prompt to save first. Options: disable
