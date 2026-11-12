@@ -389,6 +389,7 @@
       "addQuestion": "Afegeix",
       "saveLabel": "Desa la selecció",
       "activateLabel": "Activa",
+      "activateUnsavedHint": "Desa la selecció de preguntes abans d'activar.",
       "activateConfirmTitle": "Activa la plantilla",
       "activateConfirmMessageWithRetirement": "Activar aquest esborrany el congela permanentment i no es pot desfer. La versió {{version}} d'aquesta plantilla quedarà retirada.",
       "activateConfirmMessageFirst": "Activar aquest esborrany el congela permanentment i no es pot desfer. Serà la primera versió activa d'aquesta plantilla.",

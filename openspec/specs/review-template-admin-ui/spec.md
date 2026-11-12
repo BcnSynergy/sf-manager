@@ -167,6 +167,14 @@ surfaced by code: `REVIEW_TEMPLATE_EMPTY` as a specific "add at least
 one question" message, `REVIEW_TEMPLATE_NOT_EDITABLE` as a specific
 "this version is already frozen" message.
 
+Activation freezes the last saved question selection. While the
+builder's selection differs from the saved one (a question added or
+removed, or the order changed, and not saved yet), Activate MUST be
+disabled and a localized message MUST ask the `SYSTEM_ADMIN` to save
+the question selection first, so that unsaved changes are never
+silently dropped by activating. Activate MUST be enabled again as soon
+as the selection is saved or the change is undone.
+
 #### Scenario: Confirmation names the version being retired
 
 - GIVEN `(EXTINGUISHER, QUARTERLY)` has an `active` version 1 and a `draft` with questions
@@ -190,6 +198,19 @@ one question" message, `REVIEW_TEMPLATE_NOT_EDITABLE` as a specific
 - GIVEN a confirmed activation succeeds over an existing `active` version
 - WHEN the list is shown
 - THEN the new version MUST read `active` and its predecessor `retired`, without a manual reload
+
+#### Scenario: Activate disabled while the selection is unsaved
+
+- GIVEN a `draft` whose saved selection is questions A then B
+- WHEN the `SYSTEM_ADMIN` adds, removes or reorders a question in the builder without saving
+- THEN Activate MUST be disabled and a message MUST ask to save the question selection before activating
+- AND no activation confirmation MUST open and no activation request MUST be sent
+
+#### Scenario: Activate enabled once the selection is saved
+
+- GIVEN a `draft` whose builder holds an unsaved change
+- WHEN the `SYSTEM_ADMIN` saves the selection, or undoes the change
+- THEN Activate MUST be enabled again and the message MUST disappear
 
 #### Scenario: Empty-template rejection is explained specifically
 
