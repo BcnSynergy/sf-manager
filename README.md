@@ -345,7 +345,10 @@ that version: `docker run --rm -i koalaman/shellcheck:v0.9.0 - < deploy/<script>
 
 When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
 and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and
-moves their `main` tag while `main` still points at that commit. The packages are linked to this repository and inherit its access
+moves their `main` tag while `main` still points at that commit. Each tag is
+one image for `linux/amd64` and `linux/arm64`: `publish-platform` builds
+both on a native runner per platform and pushes them by digest, and
+`publish` joins them (check with `docker buildx imagetools inspect`). The packages are linked to this repository and inherit its access
 permissions. After the first publish (#291) both were public (an anonymous
 manifest fetch answered 200), although GitHub documents new packages as
 private by default; why they came out public is unconfirmed. Pulls need no

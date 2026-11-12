@@ -109,15 +109,28 @@ jobs:
         run: sh deploy/smoke-test.sh
 
   # Publishes the images to GitHub Container Registry once main is green
-  # (EN-91). It is the only job allowed to write packages; `ci` stays
-  # read-only. Every green push gets its `sha-<short SHA>` tag; `main` moves
-  # only while main still points at this commit, because the ci jobs of two
-  # quick merges run in parallel and can finish out of order.
-  publish:
-    name: publish
+  # (EN-91). These are the only jobs allowed to write packages; `ci` stays
+  # read-only. Each image is published for linux/amd64 and linux/arm64 (the
+  # host is an arm64 VM): `publish-platform` builds both images
+  # natively on one runner per platform and pushes them by digest, untagged,
+  # and `publish` joins the two digests into one multi-platform image. Every
+  # green push gets its `sha-<short SHA>` tag; `main` moves only while main
+  # still points at this commit, because the ci jobs of two quick merges run
+  # in parallel and can finish out of order. If either platform fails, the
+  # matrix cancels the other and nothing is tagged: every published tag must
+  # hold both platforms (spec `deployment`).
+  publish-platform:
+    name: publish (${{ matrix.arch }})
     needs: ci
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -130,17 +143,81 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-      - name: Build and push
+      # The default `docker` driver cannot push an untagged image by digest.
+      - name: Set up Buildx
+        run: docker buildx create --use --driver docker-container
+      - name: Build and push by digest
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p digests
+          for app in api web; do
+            docker buildx build -f "apps/$app/Dockerfile" \
+              --platform "linux/$ARCH" --provenance=false \
+              --output "type=image,name=ghcr.io/bcnsynergy/sf-manager-$app,push-by-digest=true,name-canonical=true,push=true" \
+              --metadata-file "meta-$app.json" .
+            jq -er '."containerimage.digest"' "meta-$app.json" >"digests/$app-$ARCH"
+          done
+          cat digests/*
+      # The smoke test in `ci` runs amd64 only, so start each image once on
+      # its own platform: the API must load its native modules (argon2, the
+      # Prisma engines) and the web image must run Caddy.
+      - name: Start the images on this platform
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          api="ghcr.io/bcnsynergy/sf-manager-api@$(cat "digests/api-$ARCH")"
+          web="ghcr.io/bcnsynergy/sf-manager-web@$(cat "digests/web-$ARCH")"
+          # prisma.config.ts requires DATABASE_URL; nothing connects to it.
+          docker run --rm -e DATABASE_URL=postgresql://check@localhost/check "$api" \
+            sh -c "node -e \"require('argon2'); require('@prisma/client')\" && npx prisma --version"
+          docker run --rm "$web" caddy version
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/
+          # Long enough to rerun only the failed `publish` job later.
+          retention-days: 7
+
+  publish:
+    name: publish
+    needs: publish-platform
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Create multi-platform images
         run: |
           short=$(git rev-parse --short=7 HEAD)
+          source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
           for app in api web; do
             image="ghcr.io/bcnsynergy/sf-manager-$app"
-            docker build -f "apps/$app/Dockerfile" -t "$image:sha-$short" .
-            docker push "$image:sha-$short"
+            # One digest file per matrix platform: digests/<app>-<arch>.
+            refs=''
+            for file in digests/"$app"-*; do
+              refs="$refs $image@$(cat "$file")"
+            done
+            # shellcheck disable=SC2086 # one word per platform image
+            docker buildx imagetools create -t "$image:sha-$short" \
+              --annotation "index:org.opencontainers.image.source=$source" $refs
+            docker buildx imagetools inspect "$image:sha-$short"
             head=$(git ls-remote origin refs/heads/main | cut -f1)
             if [ "$head" = "$GITHUB_SHA" ]; then
-              docker tag "$image:sha-$short" "$image:main"
-              docker push "$image:main"
+              docker buildx imagetools create -t "$image:main" "$image:sha-$short"
             else
               echo "main moved on to $head; its own publish run moves $image:main"
             fi
