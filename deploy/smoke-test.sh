@@ -132,7 +132,12 @@ users=$(compose exec -T postgres psql -U smoke -d sfmanager -tA -F ' ' \
   -c 'select email, role from "User"')
 [ "$users" = "$SEED_ADMIN_EMAIL SYSTEM_ADMIN" ] ||
   fail "the admin seed left users '$users', expected '$SEED_ADMIN_EMAIL SYSTEM_ADMIN'"
-echo "smoke: admin seed created the system admin"
+status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$SEED_ADMIN_EMAIL\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \
+  https://localhost/api/auth/login) || status=000
+[ "$status" = 200 ] || fail "the seeded admin's login answered $status, expected 200"
+echo "smoke: admin seed created the system admin, who can log in"
 
 # A dump taken on an older version restores, with its uploaded files, and
 # the API then applies the newer migrations (spec `deployment`, "Restore").
