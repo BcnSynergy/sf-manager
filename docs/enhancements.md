@@ -1017,7 +1017,7 @@ content type`). Today that is the only 415 it raises, but a future one
   to them. 1.63 GB to 947 MB; the Prisma CLI and its engines are most of
   what is left (EN-183). `deploy/smoke-test.sh` now runs the documented
   admin seed command, since no build step executes the compiled seed
-  (spec `deployment`). Done in `en-93-api-image-size` (PR #TBD).
+  (spec `deployment`). Done in `en-93-api-image-size` (PR #412).
   Original entry: The API image is about 1.7 GB because it ships dev
   dependencies, sources and tests: the Prisma CLI (`migrate deploy`) and
   ts-node (admin seed) are dev dependencies. A multi-stage build with a
