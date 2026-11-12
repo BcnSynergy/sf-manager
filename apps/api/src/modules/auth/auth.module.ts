@@ -32,6 +32,10 @@ import {
   getLoginEmailRateLimitConfig,
   getLoginRateLimitConfig,
 } from './infrastructure/config/login-rate-limit.config';
+import {
+  createThrottleKeyHasher,
+  getThrottleKeySecret,
+} from './infrastructure/config/throttle-key.config';
 import { PrismaLoginFailureLimiter } from './infrastructure/persistence/prisma-login-failure-limiter.adapter';
 import { PrismaRefreshTokenStore } from './infrastructure/persistence/prisma-refresh-token-store.adapter';
 import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
@@ -77,7 +81,10 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
         const { maxAttempts, windowMs } = getLoginRateLimitConfig();
         return {
           throttlers: [{ name: 'default', ttl: windowMs, limit: maxAttempts }],
-          storage: new PrismaThrottlerStorage(prisma),
+          storage: new PrismaThrottlerStorage(
+            prisma,
+            createThrottleKeyHasher(getThrottleKeySecret()),
+          ),
         };
       },
     }),
@@ -129,7 +136,11 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
       provide: LOGIN_FAILURE_LIMITER,
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) =>
-        new PrismaLoginFailureLimiter(prisma, getLoginEmailRateLimitConfig()),
+        new PrismaLoginFailureLimiter(
+          prisma,
+          getLoginEmailRateLimitConfig(),
+          createThrottleKeyHasher(getThrottleKeySecret()),
+        ),
     },
     { provide: PERMISSION_CHECKER, useClass: RolePermissionChecker },
     { provide: APP_GUARD, useClass: AuthenticatedGuard },

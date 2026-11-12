@@ -46,19 +46,6 @@ behavior belongs in `docs/requirements/functional-requirements.md`.
   could throttle all translated clients. No documented topology does this.
   Evidence: `apps/api/src/modules/auth/presentation/guards/client-key.ts`.
   Origin: `login-rate-limit-hardening` PR 1 RDD review (R1-001), 2026-10-12.
-- **EN-6** (api): Hash the throttle key with an HMAC (secret-keyed) instead of
-  the library's unsalted SHA-256. An IPv4 key has only 2^32 values, so the
-  stored hash can be enumerated: today the key is pseudonymized, not
-  anonymized, at rest. Evidence:
-  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`
-  (key stored as received from the library). Origin:
-  `login-rate-limit-hardening` reviews and `sdd-verify`, 2026-10-12.
-  Extended by `login-account-lockout` (#214, 2026-10-14): the per-email
-  limiter stores `sha256("login-email:" + email)` and logs the same hash on
-  the block transition, so anyone who can read the table or the application
-  logs can hash candidate emails and learn which accounts were targeted. An
-  HMAC should cover both the stored key and the logged value. Evidence:
-  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
 - **EN-7** (api tests): Close the client-key and guard test gaps. Add rows for
   `1::`, `1:2:3:4:5:6:7::`, `::2:3:4:5:6:7:8`, uppercase hex, and an IPv4 with
   a zone id (`1.2.3.4%x` is accepted as IPv4). Pin the IPv4-compatible
@@ -1009,6 +996,24 @@ content type`). Today that is the only 415 it raises, but a future one
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 
 ## Done
+
+- **EN-6** (api): throttle counter keys are now HMAC-SHA-256 under the new
+  required `THROTTLE_KEY_SECRET` (per client key and per email, stored and
+  logged), and the API refuses to boot without it. Old unkeyed rows expire
+  on their own. Done in `en-6-throttle-key-hmac` (PR #TBD). Original entry:
+  Hash the throttle key with an HMAC (secret-keyed) instead of
+  the library's unsalted SHA-256. An IPv4 key has only 2^32 values, so the
+  stored hash can be enumerated: today the key is pseudonymized, not
+  anonymized, at rest. Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-throttler-storage.adapter.ts`
+  (key stored as received from the library). Origin:
+  `login-rate-limit-hardening` reviews and `sdd-verify`, 2026-10-12.
+  Extended by `login-account-lockout` (#214, 2026-10-14): the per-email
+  limiter stores `sha256("login-email:" + email)` and logs the same hash on
+  the block transition, so anyone who can read the table or the application
+  logs can hash candidate emails and learn which accounts were targeted. An
+  HMAC should cover both the stored key and the logged value. Evidence:
+  `apps/api/src/modules/auth/infrastructure/persistence/prisma-login-failure-limiter.adapter.ts`.
 
 - **EN-179** (web): edge cases of the lock-holder check added by EN-177
   (`requestLockWithin`, `lockHolder` in `apps/web/src/api/client.ts`). (A

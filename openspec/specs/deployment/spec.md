@@ -19,7 +19,7 @@ The repository MUST provide `docker-compose.prod.yml`, which builds the API and 
 
 #### Scenario: Missing configuration
 
-- GIVEN `prod.env` lacks a required value (`SITE_ADDRESS`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` or `JWT_SECRET`)
+- GIVEN `prod.env` lacks a required value (`SITE_ADDRESS`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `JWT_SECRET` or `THROTTLE_KEY_SECRET`)
 - WHEN the operator starts the stack
 - THEN Compose refuses to start it and names the missing variable
 

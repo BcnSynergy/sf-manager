@@ -253,7 +253,9 @@ same public identity fields as login. (ADR-011 Decision 4, TD-5.)
   from login attempts, with 429 and `Retry-After` past the limit. The
   defaults MUST be 60 refreshes per 60 seconds
   (`REFRESH_RATE_LIMIT_MAX_ATTEMPTS`, `REFRESH_RATE_LIMIT_WINDOW_SECONDS`,
-  positive integers; an invalid value MUST make startup fail).
+  positive integers; an invalid value MUST make startup fail). Its counters
+  MUST be stored only under a keyed hash, as the login counters are (see
+  "Login Attempt Rate Limiting").
 - **Cookie scope.** The refresh cookie MUST be httpOnly, Secure and
   SameSite like the access-token cookie, and scoped to the auth routes by
   its path (`REFRESH_TOKEN_COOKIE_PATH`, default `/auth`), so it is not
@@ -391,7 +393,11 @@ key MAY still be rejected with 429 by the per-email limit (see "Login
 Failure Limiting per Email"), which is independent of this limit. The
 counters MUST persist across an API restart and
 MUST be shared by all API instances that use the same database, and
-concurrent attempts MUST NOT cause attempts to go uncounted. If the client
+concurrent attempts MUST NOT cause attempts to go uncounted. Neither the
+client IP nor the client key MUST be stored at rest; a counter MUST be
+stored only under a keyed hash (an HMAC under the server secret
+`THROTTLE_KEY_SECRET`), so that whoever reads the stored data without that
+secret cannot test candidate addresses against it. If the client
 IP of a request cannot be determined, the request MUST still be
 rate-limited and MUST NOT cause an error. The limit MUST apply only to the
 login endpoint; no other endpoint MUST be throttled by this requirement.
@@ -421,6 +427,13 @@ by prefix.)
 - GIVEN one client key has exhausted its login attempts in the window
 - WHEN a different client key submits a login attempt for an email that is not blocked by the per-email limit
 - THEN the attempt MUST be processed normally and MUST NOT be rejected with 429 by the per-client-key limit
+
+#### Scenario: Client key stored only as a keyed hash
+
+- GIVEN a client key has made a login attempt
+- WHEN the stored throttling data is inspected
+- THEN it MUST NOT contain the client IP, and the counter MUST be stored under a keyed hash under `THROTTLE_KEY_SECRET`
+- AND the same client key under a different `THROTTLE_KEY_SECRET` MUST be stored under a different key
 
 #### Scenario: Other endpoints unaffected
 
@@ -971,7 +984,10 @@ email counter.
 The counters MUST persist across an API restart and MUST be shared by all
 API instances that use the same database, and concurrent failed attempts
 MUST NOT cause failures to go uncounted. The raw email MUST NOT be stored
-at rest or written to logs; only a one-way hash of it MAY be. If the
+at rest or written to logs; only a keyed hash of it (an HMAC under the
+server secret `THROTTLE_KEY_SECRET`) MAY be, so that whoever reads the
+stored data or the logs without that secret cannot test candidate emails
+against it. If the
 block state cannot be read, or a failed attempt cannot be recorded, the
 login MUST be refused with a 500 response (fail closed). If the counter
 reset after a valid login fails, the login MUST still succeed and a
@@ -1117,7 +1133,8 @@ The web login page MUST show the existing rate-limited message for this
 
 - GIVEN failed login attempts were submitted for an email
 - WHEN the stored throttling data and the application logs are inspected
-- THEN neither MUST contain the raw email, and the email MUST appear only as a one-way hash
+- THEN neither MUST contain the raw email, and the email MUST appear only as a keyed hash under `THROTTLE_KEY_SECRET`
+- AND the same email under a different `THROTTLE_KEY_SECRET` MUST be stored under a different key
 
 #### Scenario: Block is logged once with the hash only
 

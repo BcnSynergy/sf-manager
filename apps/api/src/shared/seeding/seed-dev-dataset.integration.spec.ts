@@ -158,6 +158,7 @@ describe('seedDevDataset (integration)', () => {
   beforeAll(async () => {
     // AppModule's AuthModule throws at boot without these.
     process.env.JWT_SECRET = 'seed-integration-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
     moduleRef = await Test.createTestingModule({

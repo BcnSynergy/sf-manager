@@ -61,6 +61,7 @@ function valueOf(response: request.Response, name: string): string | undefined {
 
 const ENV_KEYS = [
   'JWT_SECRET',
+  'THROTTLE_KEY_SECRET',
   'CORS_ORIGIN',
   'JWT_EXPIRES_IN',
   'REFRESH_TOKEN_REUSE_GRACE',
@@ -85,6 +86,7 @@ async function bootApp(
   reuseGrace: string,
 ): Promise<INestApplication<App>> {
   process.env.JWT_SECRET = 'e2e-test-secret';
+  process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
   process.env.CORS_ORIGIN = TEST_ORIGIN;
   process.env.JWT_EXPIRES_IN = '2h';
   process.env.REFRESH_TOKEN_REUSE_GRACE = reuseGrace;

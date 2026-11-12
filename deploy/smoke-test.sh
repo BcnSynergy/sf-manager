@@ -39,6 +39,7 @@ POSTGRES_USER=smoke
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 POSTGRES_DB=sfmanager
 JWT_SECRET=$(openssl rand -hex 32)
+THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
 EOF
 
 compose() {

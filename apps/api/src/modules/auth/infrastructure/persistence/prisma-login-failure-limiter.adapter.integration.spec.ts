@@ -1,8 +1,9 @@
 import 'dotenv/config';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import type { LoginEmailRateLimitConfig } from '../config/login-rate-limit.config';
+import { createThrottleKeyHasher } from '../config/throttle-key.config';
 import { PrismaLoginFailureLimiter } from './prisma-login-failure-limiter.adapter';
 import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 
@@ -31,8 +32,11 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     windowMs: WINDOW_MS,
   };
 
+  // EN-6: rows are keyed by HMAC under THROTTLE_KEY_SECRET.
+  const SECRET = 'test-throttle-key-secret';
+  const hashKey = createThrottleKeyHasher(SECRET);
   const keyFor = (email: string) =>
-    createHash('sha256').update(`login-email:${email}`).digest('hex');
+    createHmac('sha256', SECRET).update(`login-email:${email}`).digest('hex');
   // Every email this suite creates, so cleanup touches only its own rows.
   const createdKeys = new Set<string>();
   const newEmail = () => {
@@ -44,7 +48,7 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     new Promise<void>((resolve) => setTimeout(resolve, ms));
 
   const limiterWith = (overrides: Partial<LoginEmailRateLimitConfig> = {}) =>
-    new PrismaLoginFailureLimiter(prisma, { ...config, ...overrides });
+    new PrismaLoginFailureLimiter(prisma, { ...config, ...overrides }, hashKey);
   const failTimes = async (
     limiter: PrismaLoginFailureLimiter,
     email: string,
@@ -275,20 +279,26 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     const limiter = limiterWith();
     const email = newEmail();
     // Worst case: a client key whose preimage embeds the very same text.
+    // The storage HMACs whatever key it is given, so these are the library
+    // keys it receives and storedX are the rows it writes.
     const unprefixed = createHash('sha256').update(email).digest('hex');
     const clientStyle = createHash('sha256')
       .update(`AuthController-login-default-${email}`)
       .digest('hex');
-    createdKeys.add(unprefixed);
-    createdKeys.add(clientStyle);
-    const storage = new PrismaThrottlerStorage(prisma);
+    const storedUnprefixed = hashKey(unprefixed);
+    const storedClientStyle = hashKey(clientStyle);
+    createdKeys.add(storedUnprefixed);
+    createdKeys.add(storedClientStyle);
+    const storage = new PrismaThrottlerStorage(prisma, hashKey);
     await storage.increment(unprefixed, WINDOW_MS, 10, WINDOW_MS);
     await storage.increment(clientStyle, WINDOW_MS, 10, WINDOW_MS);
 
     await limiter.recordFailure(email);
 
     const rows = await prisma.throttleCounter.findMany({
-      where: { key: { in: [keyFor(email), unprefixed, clientStyle] } },
+      where: {
+        key: { in: [keyFor(email), storedUnprefixed, storedClientStyle] },
+      },
     });
     expect(rows).toHaveLength(3);
     // The email failure landed on its own prefixed key and did not touch the
@@ -296,8 +306,8 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
     expect(rows.map((row) => [row.key, row.hits]).sort()).toEqual(
       [
         [keyFor(email), 1],
-        [unprefixed, 1],
-        [clientStyle, 1],
+        [storedUnprefixed, 1],
+        [storedClientStyle, 1],
       ].sort(),
     );
   });
@@ -344,7 +354,7 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
       // other runs may come first: keep opening windows until this row is
       // gone, within a cap.
       for (let i = 0; i < 100 && (await rowFor(expiredEmail)) !== null; i++) {
-        await new PrismaThrottlerStorage(prisma).increment(
+        await new PrismaThrottlerStorage(prisma, hashKey).increment(
           randomUUID(),
           WINDOW_MS,
           10,
@@ -364,6 +374,7 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
         $executeRaw: () => Promise.reject(new Error('db down')),
       } as unknown as PrismaService,
       config,
+      hashKey,
     );
 
     await expect(failing.getBlock('a@example.com')).rejects.toThrow('db down');

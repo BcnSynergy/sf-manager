@@ -1,6 +1,8 @@
+import { createHmac } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import { createThrottleKeyHasher } from '../config/throttle-key.config';
 import { PrismaThrottlerStorage } from './prisma-throttler-storage.adapter';
 
 // Failure-path unit tests (login-rate-limit-hardening/design.md Decisions 4-6).
@@ -28,10 +30,13 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
     transaction = jest.fn((callback: (tx: unknown) => Promise<unknown>) =>
       callback({ $executeRaw: executeRaw }),
     );
-    storage = new PrismaThrottlerStorage({
-      $queryRaw: queryRaw,
-      $transaction: transaction,
-    } as unknown as PrismaService);
+    storage = new PrismaThrottlerStorage(
+      {
+        $queryRaw: queryRaw,
+        $transaction: transaction,
+      } as unknown as PrismaService,
+      createThrottleKeyHasher('test-throttle-key-secret'),
+    );
     warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
   });
 
@@ -56,6 +61,25 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
       storage.increment('k', 60_000, 10, 60_000, 'default'),
     ).resolves.toEqual(blockedRow);
     expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  // EN-6: the library's unkeyed sha256 key never reaches SQL; only its HMAC
+  // under THROTTLE_KEY_SECRET does, in both places the statement uses it.
+  it('writes and reads the row under the HMAC of the key, never the key itself', async () => {
+    queryRaw.mockResolvedValueOnce([row]);
+    const libraryKey = 'a'.repeat(64);
+
+    await storage.increment(libraryKey, 60_000, 10, 60_000, 'default');
+
+    const [, ...values] = queryRaw.mock.calls[0] as unknown as [
+      string[],
+      ...unknown[],
+    ];
+    const expected = createHmac('sha256', 'test-throttle-key-secret')
+      .update(libraryKey)
+      .digest('hex');
+    expect(values.filter((value) => value === expected)).toHaveLength(2);
+    expect(values).not.toContain(libraryKey);
   });
 
   it('retries once when the statement snapshot cannot see the row', async () => {

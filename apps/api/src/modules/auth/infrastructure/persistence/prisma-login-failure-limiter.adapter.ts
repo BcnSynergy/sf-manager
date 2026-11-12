@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
 import type {
@@ -6,6 +5,7 @@ import type {
   LoginFailureLimiter,
 } from '../../application/ports/login-failure-limiter.port';
 import type { LoginEmailRateLimitConfig } from '../config/login-rate-limit.config';
+import type { ThrottleKeyHasher } from '../config/throttle-key.config';
 
 // Postgres-backed per-email failed-login limiter (login-account-lockout/
 // design.md Decisions 3, 4 and 7, TD-31). One "ThrottleCounter" row per
@@ -13,23 +13,19 @@ import type { LoginEmailRateLimitConfig } from '../config/login-rate-limit.confi
 // same table, same expiresAt trigger, same cleanup (that adapter's bounded
 // deleteExpired removes any expired row, whatever its key), so no migration.
 //
-// The key is sha256("login-email:" + normalizedEmail): the raw email never
-// reaches SQL, a row or a log. The library's per-client-key keys hash a
-// different preimage ("AuthController-login-default-<clientKey>"), so the two
-// namespaces can only collide through a SHA-256 collision. The hash is
-// unsalted, so an attacker who can read the table can still test known
-// emails against it (tracked as EN-6).
+// The key is HMAC-SHA-256("login-email:" + normalizedEmail) under
+// THROTTLE_KEY_SECRET (EN-6, see throttle-key.config.ts): the raw email never
+// reaches SQL, a row or a log, and without the secret a reader of the table
+// or the logs cannot test candidate emails against it. The per-client-key
+// rows (PrismaThrottlerStorage) are HMACs of the library's own sha256 hex
+// key, a different preimage, so the two namespaces cannot collide in
+// practice.
 //
 // Every timestamp comparison uses the database clock (now()), so all API
 // instances agree on window boundaries regardless of clock drift. Errors are
 // NOT caught: a storage failure surfaces to the caller, which fails closed
 // (see LoginFailureLimiter).
 const EMAIL_KEY_PREFIX = 'login-email:';
-
-const keyFor = (email: string): string =>
-  createHash('sha256')
-    .update(EMAIL_KEY_PREFIX + email)
-    .digest('hex');
 
 @Injectable()
 export class PrismaLoginFailureLimiter implements LoginFailureLimiter {
@@ -38,10 +34,15 @@ export class PrismaLoginFailureLimiter implements LoginFailureLimiter {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: LoginEmailRateLimitConfig,
+    private readonly hashKey: ThrottleKeyHasher,
   ) {}
 
+  private keyFor(email: string): string {
+    return this.hashKey(EMAIL_KEY_PREFIX + email);
+  }
+
   async getBlock(email: string): Promise<LoginBlock> {
-    const key = keyFor(email);
+    const key = this.keyFor(email);
     // Single primary-key read; writes nothing. A row whose block has ended
     // does not match, so an expired block reads as "not blocked" without
     // waiting for the next failure to clear it.
@@ -57,7 +58,7 @@ export class PrismaLoginFailureLimiter implements LoginFailureLimiter {
   }
 
   async recordFailure(email: string): Promise<void> {
-    const key = keyFor(email);
+    const key = this.keyFor(email);
     const { maxFailures, windowMs } = this.config;
 
     // windowMs is milliseconds, cast to bigint so values above 2^31-1 cannot
@@ -130,7 +131,7 @@ export class PrismaLoginFailureLimiter implements LoginFailureLimiter {
   }
 
   async reset(email: string): Promise<void> {
-    const key = keyFor(email);
+    const key = this.keyFor(email);
     await this.prisma.$executeRaw`
       DELETE FROM "ThrottleCounter" WHERE "key" = ${key}
     `;

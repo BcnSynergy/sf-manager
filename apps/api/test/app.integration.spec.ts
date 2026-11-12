@@ -25,6 +25,7 @@ describe('Health (integration)', () => {
     // boot if these are missing — required here even though this suite only
     // exercises /health, since compiling AppModule instantiates every module.
     process.env.JWT_SECRET = 'e2e-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
     moduleFixture = await Test.createTestingModule({

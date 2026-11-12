@@ -1,14 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ThrottlerStorage } from '@nestjs/throttler';
 import { PrismaService } from '../../../../shared/infrastructure/persistence/prisma.service';
+import type { ThrottleKeyHasher } from '../config/throttle-key.config';
 
 // Postgres-backed ThrottlerStorage (login-rate-limit-hardening/design.md
 // Decisions 4-6, TD-30). Wired into AuthModule through
 // ThrottlerModule.forRootAsync.
 //
-// The key is already ThrottlerGuard.generateKey's sha256 hex, so no raw IP is
-// ever stored, and `throttlerName` is ignored because it is already part of
-// that hash. Every timestamp comparison uses the database clock (now()), so
+// The key the library passes in is ThrottlerGuard.generateKey's unkeyed
+// sha256 hex, and `throttlerName` is ignored because it is already part of
+// that hash. It is stored as an HMAC of that hex under THROTTLE_KEY_SECRET
+// (EN-6, see throttle-key.config.ts), so no raw IP is ever stored and a
+// reader of the table cannot recompute the key from candidate addresses. Every timestamp comparison uses the database clock (now()), so
 // all API instances agree on window boundaries regardless of clock drift.
 //
 // Errors are NOT caught: a storage failure surfaces as a 500 and the login
@@ -38,7 +41,10 @@ const CLEANUP_STATEMENT_TIMEOUT_MS = 500;
 export class PrismaThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger(PrismaThrottlerStorage.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hashKey: ThrottleKeyHasher,
+  ) {}
 
   async increment(
     key: string,
@@ -46,6 +52,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
     limit: number,
     blockDuration: number,
   ): Promise<ThrottlerStorageRecord> {
+    const storedKey = this.hashKey(key);
     // ttl and blockDuration are milliseconds, cast to bigint so values above
     // 2^31-1 cannot overflow and fail every login closed (interval * bigint
     // is evaluated as double precision).
@@ -76,7 +83,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       WITH upsert AS (
       INSERT INTO "ThrottleCounter" AS t ("key", "hits", "windowEndsAt", "blockedUntil")
       VALUES (
-        ${key}, 1,
+        ${storedKey}, 1,
         date_trunc('milliseconds', now()) + ${ttl}::bigint * interval '1 millisecond',
         NULL
       )
@@ -105,7 +112,7 @@ export class PrismaThrottlerStorage implements ThrottlerStorage {
       skipped AS (
         SELECT t."hits", t."windowEndsAt", t."blockedUntil"
         FROM "ThrottleCounter" t
-        WHERE t."key" = ${key} AND NOT EXISTS (SELECT 1 FROM upsert)
+        WHERE t."key" = ${storedKey} AND NOT EXISTS (SELECT 1 FROM upsert)
         FOR UPDATE
       ),
       result AS (

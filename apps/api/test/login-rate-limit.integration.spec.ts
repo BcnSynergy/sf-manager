@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
@@ -20,6 +20,7 @@ import { PrismaService } from '../src/shared/infrastructure/persistence/prisma.s
 const LIMIT = 3;
 const MANAGED_ENV = [
   'JWT_SECRET',
+  'THROTTLE_KEY_SECRET',
   'CORS_ORIGIN',
   'JWT_EXPIRES_IN',
   'LOGIN_RATE_LIMIT_MAX_ATTEMPTS',
@@ -68,6 +69,7 @@ describe('Login rate limit persistence (integration)', () => {
       savedEnv[name] = process.env[name];
     }
     process.env.JWT_SECRET = 'integration-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'integration-throttle-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '2h';
     delete process.env.TRUST_PROXY;
@@ -179,5 +181,40 @@ describe('Login rate limit persistence (integration)', () => {
     const stored = JSON.stringify(rows);
     expect(stored).not.toContain(email);
     expect(stored).not.toContain(client);
+  });
+
+  // EN-6: both keys are HMACs under THROTTLE_KEY_SECRET, so the same client
+  // and email land on different rows under another secret, and the email key
+  // is exactly HMAC(secret, "login-email:" + email). Without the secret the
+  // stored keys cannot be recomputed from candidate emails or addresses.
+  it('keys both counters with THROTTLE_KEY_SECRET', async () => {
+    const client = uniqueClient();
+    const email = `nobody-${randomUUID()}@example.com`;
+    const keysUnder = async (secret: string): Promise<string[]> => {
+      process.env.THROTTLE_KEY_SECRET = secret;
+      const app = await createApp();
+      const prisma = app.get(PrismaService);
+      await prisma.throttleCounter.deleteMany();
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .set('X-Forwarded-For', client)
+        .send({ email, password: 'wrong-password-1' })
+        .expect(401);
+      const rows = await prisma.throttleCounter.findMany();
+      await closeApp(app);
+      return rows.map((row) => row.key);
+    };
+    const emailKey = (secret: string) =>
+      createHmac('sha256', secret).update(`login-email:${email}`).digest('hex');
+
+    const first = await keysUnder('first-throttle-secret');
+    const second = await keysUnder('second-throttle-secret');
+    process.env.THROTTLE_KEY_SECRET = 'integration-throttle-secret';
+
+    expect(first).toHaveLength(2);
+    expect(second).toHaveLength(2);
+    expect(first).toContain(emailKey('first-throttle-secret'));
+    expect(second).toContain(emailKey('second-throttle-secret'));
+    expect(first.filter((key) => second.includes(key))).toEqual([]);
   });
 });
