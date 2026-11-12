@@ -210,8 +210,14 @@ jobs:
           for app in api web; do
             image="ghcr.io/bcnsynergy/sf-manager-$app"
             # One digest file per platform: digests/<app>-<arch>. Keep this
-            # list in step with the publish-platform matrix; a missing
-            # platform fails here, before any tag moves.
+            # list in step with the publish-platform matrix; a missing or
+            # unexpected platform fails here, before any tag moves.
+            for file in digests/"$app"-*; do
+              case "$file" in
+                "digests/$app-amd64" | "digests/$app-arm64") ;;
+                *) echo "unexpected digest file $file" >&2; exit 1 ;;
+              esac
+            done
             refs=''
             for arch in amd64 arm64; do
               file="digests/$app-$arch"

@@ -571,7 +571,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   settings before switching the compose file. Note that `publish-platform` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
-  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing is done (`en-91-multi-arch`, PR #TBD):
+  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing was added in `en-91-multi-arch` (PR #TBD) and is
+  proved by its first green `main` run:
   `publish-platform` builds both images on `ubuntu-24.04` and the native
   `ubuntu-24.04-arm` runner, checks each on its own platform (native
   modules, Prisma CLI, Caddyfile), and `publish` joins them into one
@@ -1001,6 +1002,14 @@ content type`). Today that is the only 415 it raises, but a future one
   MB of `dist`'s 6.7 MB). Evidence:
   `apps/api/package.json`, `apps/api/Dockerfile`. Origin:
   `en-93-api-image-size` native review `R1-002`, 2026-11-12.
+- **EN-184** (delivery): since `en-91-multi-arch`, `publish-platform` pushes
+  each platform image to GitHub Container Registry untagged, by digest,
+  before `publish` joins them under a tag. A run that fails between the
+  two (a platform check, the join) leaves those untagged versions behind,
+  and nothing removes them. Fold into EN-108's retention rule, for example
+  also deleting untagged versions older than a few days. Evidence:
+  `.github/workflows/ci.yml`. Origin: `en-91-multi-arch` fresh review
+  `S-1`, 2026-11-12.
 
 ## Done
 
