@@ -33,9 +33,10 @@ import {
   getLoginRateLimitConfig,
 } from './infrastructure/config/login-rate-limit.config';
 import {
-  createThrottleKeyHasher,
-  getThrottleKeySecret,
+  THROTTLE_KEY_HASHER,
+  type ThrottleKeyHasher,
 } from './infrastructure/config/throttle-key.config';
+import { ThrottleKeyModule } from './infrastructure/config/throttle-key.module';
 import { PrismaLoginFailureLimiter } from './infrastructure/persistence/prisma-login-failure-limiter.adapter';
 import { PrismaRefreshTokenStore } from './infrastructure/persistence/prisma-refresh-token-store.adapter';
 import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
@@ -64,6 +65,9 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // as AuthModule is instantiated — mirrors the IdGeneratorModule
     // precedent (app.module.ts), just registered from this module instead.
     HashingModule,
+    // EN-181: provides THROTTLE_KEY_HASHER, the one hasher both counter
+    // families use (the throttler storage below and LOGIN_FAILURE_LIMITER).
+    ThrottleKeyModule,
     // Only the login handler opts in (@UseGuards(LoginThrottlerGuard) in
     // AuthController); this module registers no APP_GUARD for it. The
     // throttler MUST stay named 'default': v6 suffixes headers of named
@@ -75,16 +79,15 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // @Global(), so PrismaService is injectable here. Fail closed: a storage
     // error refuses the login attempt (500). e2e suites that mock
     // PrismaService override ThrottlerStorage with the in-memory store.
+    // EN-181: the storage gets the one shared hasher from ThrottleKeyModule.
     ThrottlerModule.forRootAsync({
-      inject: [PrismaService],
-      useFactory: (prisma: PrismaService) => {
+      imports: [ThrottleKeyModule],
+      inject: [PrismaService, THROTTLE_KEY_HASHER],
+      useFactory: (prisma: PrismaService, hashKey: ThrottleKeyHasher) => {
         const { maxAttempts, windowMs } = getLoginRateLimitConfig();
         return {
           throttlers: [{ name: 'default', ttl: windowMs, limit: maxAttempts }],
-          storage: new PrismaThrottlerStorage(
-            prisma,
-            createThrottleKeyHasher(getThrottleKeySecret()),
-          ),
+          storage: new PrismaThrottlerStorage(prisma, hashKey),
         };
       },
     }),
@@ -134,12 +137,12 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // so tests that set the env before compile() see their values.
     {
       provide: LOGIN_FAILURE_LIMITER,
-      inject: [PrismaService],
-      useFactory: (prisma: PrismaService) =>
+      inject: [PrismaService, THROTTLE_KEY_HASHER],
+      useFactory: (prisma: PrismaService, hashKey: ThrottleKeyHasher) =>
         new PrismaLoginFailureLimiter(
           prisma,
           getLoginEmailRateLimitConfig(),
-          createThrottleKeyHasher(getThrottleKeySecret()),
+          hashKey,
         ),
     },
     { provide: PERMISSION_CHECKER, useClass: RolePermissionChecker },

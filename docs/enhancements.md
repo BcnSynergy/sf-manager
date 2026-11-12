@@ -995,20 +995,6 @@ content type`). Today that is the only 415 it raises, but a future one
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 
-- **EN-181** (api): `auth.module.ts` builds the throttle key hasher twice,
-  `createThrottleKeyHasher(getThrottleKeySecret())` in the
-  `ThrottlerModule.forRootAsync` factory and in the `LOGIN_FAILURE_LIMITER`
-  factory. Both counters must use the same secret, but nothing ties the two
-  calls together; a later change to one (for example key rotation) could
-  drift silently. Build it once, for example as a `THROTTLE_KEY_HASHER`
-  provider that the limiter factory injects and that the throttler factory
-  reaches through `forRootAsync` `imports`/`inject`. This also closes a
-  test gap: `app.module.spec.ts` "refuses to boot without
-  THROTTLE_KEY_SECRET" still passes if only one factory stops reading the
-  secret (the integration test "keys both counters" catches it). Origin:
-  `en-6-throttle-key-hmac` native review, finding `R2-001`, and fresh
-  review `S-2`, 2026-11-12.
-
 - **EN-182** (api): `readSecret()` (EN-180) checks length, not entropy: a
   32-character predictable value (one repeated character, a phrase) still
   passes, so an operator who ignores `openssl rand -hex 32` can still pick
@@ -1023,6 +1009,25 @@ content type`). Today that is the only 415 it raises, but a future one
   `S-3`, 2026-11-12.
 
 ## Done
+
+- **EN-181** (api): the throttle key hasher is now built once, by
+  `ThrottleKeyModule` as the `THROTTLE_KEY_HASHER` provider, and injected
+  into both the `ThrottlerModule` storage and `LOGIN_FAILURE_LIMITER`;
+  `app.module.spec.ts` checks both share that instance. Done in
+  `en-181-throttle-key-hasher` (PR #410).
+  Original entry: `auth.module.ts` builds the throttle key hasher twice,
+  `createThrottleKeyHasher(getThrottleKeySecret())` in the
+  `ThrottlerModule.forRootAsync` factory and in the `LOGIN_FAILURE_LIMITER`
+  factory. Both counters must use the same secret, but nothing ties the two
+  calls together; a later change to one (for example key rotation) could
+  drift silently. Build it once, for example as a `THROTTLE_KEY_HASHER`
+  provider that the limiter factory injects and that the throttler factory
+  reaches through `forRootAsync` `imports`/`inject`. This also closes a
+  test gap: `app.module.spec.ts` "refuses to boot without
+  THROTTLE_KEY_SECRET" still passes if only one factory stops reading the
+  secret (the integration test "keys both counters" catches it). Origin:
+  `en-6-throttle-key-hmac` native review, finding `R2-001`, and fresh
+  review `S-2`, 2026-11-12.
 
 - **EN-180** (api): `JWT_SECRET` and `THROTTLE_KEY_SECRET` now need at
   least 32 characters and no surrounding whitespace, and

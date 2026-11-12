@@ -1,5 +1,8 @@
 import { Test } from '@nestjs/testing';
+import { getStorageToken } from '@nestjs/throttler';
 import { AppModule } from './app.module';
+import { LOGIN_FAILURE_LIMITER } from './modules/auth/application/ports/login-failure-limiter.port';
+import { THROTTLE_KEY_HASHER } from './modules/auth/infrastructure/config/throttle-key.config';
 import { COMMUNITY_SCOPE_CHECKER } from './shared/application/authorization/community-scope.checker.port';
 import { MANAGER_CAPABILITY_CHECKER } from './shared/application/authorization/manager-capability.checker.port';
 import { CLOCK } from './shared/application/ports/clock.port';
@@ -49,6 +52,32 @@ describe('AppModule (DI bootstrap)', () => {
     await expect(
       Test.createTestingModule({ imports: [AppModule] }).compile(),
     ).resolves.toBeDefined();
+  });
+
+  // EN-181: one hasher instance keys both counter families, so both always
+  // use the same secret and cannot drift apart.
+  it('gives the throttler storage and the email limiter the same THROTTLE_KEY_HASHER', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    // hashKey is a private field; reading it is the only way to prove the
+    // two adapters hold the very same instance. If an adapter renames the
+    // field, this fails with "undefined !== function": update the name here.
+    type WithHasher = { hashKey: unknown };
+    const hasher = moduleRef.get<unknown>(THROTTLE_KEY_HASHER, {
+      strict: false,
+    });
+    const storage = moduleRef.get<WithHasher>(getStorageToken(), {
+      strict: false,
+    });
+    const limiter = moduleRef.get<WithHasher>(LOGIN_FAILURE_LIMITER, {
+      strict: false,
+    });
+
+    expect(typeof hasher).toBe('function');
+    expect(storage.hashKey).toBe(hasher);
+    expect(limiter.hashKey).toBe(hasher);
   });
 
   // EN-6: the throttle counter keys need their HMAC secret, so the API must
