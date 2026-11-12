@@ -568,22 +568,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   deploy from CI, which needs server access as repository secrets. Both
   packages were public after the first publish (cause unconfirmed), so the
   server needs no token to pull them while they stay public; check Package
-  settings before switching the compose file. Note that `publish` rebuilds the images instead of pushing the ones `ci`
+  settings before switching the compose file. Note that `publish-platform` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
-  The planned host is an Oracle Cloud Always Free Ampere VM (arm64), but
-  `publish` builds with a plain `docker build` on `ubuntu-24.04`, so the
-  published images are amd64 only and an arm64 server cannot run them.
-  Before switching the compose file, publish multi-platform images
-  (`linux/amd64` and `linux/arm64`), for example by building on the native
-  `ubuntu-24.04-arm` runner (free for public repositories) and merging the
-  two into one manifest, rather than emulating arm64 with QEMU. The pinned
-  base images (`node:24-bookworm-slim`, `caddy:2-alpine`, `postgres`,
-  `rclone`) are multi-platform indexes that include `linux/arm64`, and
-  `argon2` 0.45.1 ships a linux-arm64 glibc prebuild, so no source build is
-  expected (both checked 2026-11-05). Building on the server therefore keeps
-  working on arm64 until then; nothing has run on arm64 yet, so the first
-  arm64 image build is the real proof.
+  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing was added in `en-91-multi-arch` (PR #413), to be
+  confirmed by its first green `main` run:
+  `publish-platform` builds both images on `ubuntu-24.04` and the native
+  `ubuntu-24.04-arm` runner, checks each on its own platform (native
+  modules, Prisma CLI, Caddyfile), and `publish` joins them into one
+  `linux/amd64` + `linux/arm64` image per tag. The server (checked
+  2026-11-12) is that VM: aarch64, Ubuntu 26.04, no Docker installed yet,
+  iptables open only on port 22.
   Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
   `deployment` (S11), 2026-10-25; covers the deploy part of TD-32. Arm64
   requirement added 2026-11-05 (`en-91-arm64-note`, PR #339).
@@ -1007,6 +1002,14 @@ content type`). Today that is the only 415 it raises, but a future one
   MB of `dist`'s 6.7 MB). Evidence:
   `apps/api/package.json`, `apps/api/Dockerfile`. Origin:
   `en-93-api-image-size` native review `R1-002`, 2026-11-12.
+- **EN-184** (delivery): since `en-91-multi-arch`, `publish-platform` pushes
+  each platform image to GitHub Container Registry untagged, by digest,
+  before `publish` joins them under a tag. A run that fails between the
+  two (a platform check, the join) leaves those untagged versions behind,
+  and nothing removes them. Fold into EN-108's retention rule, for example
+  also deleting untagged versions older than a few days. Evidence:
+  `.github/workflows/ci.yml`. Origin: `en-91-multi-arch` fresh review
+  `S-1`, 2026-11-12.
 
 ## Done
 

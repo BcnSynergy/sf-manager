@@ -343,9 +343,13 @@ catches a change. CI uses the runner's ShellCheck (0.9.0 on ubuntu-24.04),
 which reports some findings newer versions do not, so check locally with
 that version: `docker run --rm -i koalaman/shellcheck:v0.9.0 - < deploy/<script>.sh`.
 
-When `main` is green, the `publish` job pushes `ghcr.io/bcnsynergy/sf-manager-api`
-and `ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and
-moves their `main` tag while `main` still points at that commit. The packages are linked to this repository and inherit its access
+When `main` is green, CI publishes `ghcr.io/bcnsynergy/sf-manager-api` and
+`ghcr.io/bcnsynergy/sf-manager-web`, tagged `sha-<short commit SHA>`, and
+moves their `main` tag while `main` still points at that commit. Each tag is
+one image for `linux/amd64` and `linux/arm64`: the `publish-platform` jobs
+build both on a native runner per platform, check them there and push them
+by digest, and the `publish` job joins them under the tags (check with
+`docker buildx imagetools inspect`). The packages are linked to this repository and inherit its access
 permissions. After the first publish (#291) both were public (an anonymous
 manifest fetch answered 200), although GitHub documents new packages as
 private by default; why they came out public is unconfirmed. Pulls need no
