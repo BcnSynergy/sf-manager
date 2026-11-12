@@ -12,6 +12,10 @@ import { readSecret } from './secret.config';
 // any active blocks, since every key changes.
 export type ThrottleKeyHasher = (value: string) => string;
 
+// EN-181: DI token for the single hasher shared by both counter families
+// (ThrottleKeyModule provides it).
+export const THROTTLE_KEY_HASHER = Symbol('THROTTLE_KEY_HASHER');
+
 // Read at boot by AuthModule's factories: a missing or weak secret, or one
 // equal to JWT_SECRET, stops startup (EN-180, see secret.config.ts).
 export function getThrottleKeySecret(): string {
