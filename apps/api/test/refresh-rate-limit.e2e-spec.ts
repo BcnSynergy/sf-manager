@@ -79,8 +79,8 @@ describe('Refresh rate limit (e2e)', () => {
   let users: InMemoryUserRepository;
 
   beforeEach(async () => {
-    process.env.JWT_SECRET = 'e2e-test-secret';
-    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
+    process.env.JWT_SECRET = 'e2e-test-jwt-secret-0123456789abcdef';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
     process.env.CORS_ORIGIN = TEST_ORIGIN;
     process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = String(LIMIT);
     // Below the refresh limit: if the module-wide throttler (login's limit)

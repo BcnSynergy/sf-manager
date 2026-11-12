@@ -164,8 +164,8 @@ describe('GET /review-schedule through the real Prisma reader (integration)', ()
   });
 
   beforeAll(async () => {
-    process.env.JWT_SECRET = 'integration-test-secret';
-    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
+    process.env.JWT_SECRET = 'integration-test-jwt-secret-0123456789';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
     moduleRef = await Test.createTestingModule({ imports: [AppModule] })

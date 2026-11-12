@@ -24,8 +24,8 @@ describe('Health (integration)', () => {
     // AppModule now wires AuthModule (PR 4), whose getAuthConfig() throws at
     // boot if these are missing — required here even though this suite only
     // exercises /health, since compiling AppModule instantiates every module.
-    process.env.JWT_SECRET = 'e2e-test-secret';
-    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
+    process.env.JWT_SECRET = 'e2e-test-jwt-secret-0123456789abcdef';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
     moduleFixture = await Test.createTestingModule({

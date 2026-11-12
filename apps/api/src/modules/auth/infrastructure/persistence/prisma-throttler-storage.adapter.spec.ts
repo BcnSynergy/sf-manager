@@ -35,7 +35,7 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
         $queryRaw: queryRaw,
         $transaction: transaction,
       } as unknown as PrismaService,
-      createThrottleKeyHasher('test-throttle-key-secret'),
+      createThrottleKeyHasher('test-throttle-key-secret-0123456789ab'),
     );
     warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
   });
@@ -75,7 +75,10 @@ describe('PrismaThrottlerStorage (failure paths)', () => {
       string[],
       ...unknown[],
     ];
-    const expected = createHmac('sha256', 'test-throttle-key-secret')
+    const expected = createHmac(
+      'sha256',
+      'test-throttle-key-secret-0123456789ab',
+    )
       .update(libraryKey)
       .digest('hex');
     expect(values.filter((value) => value === expected)).toHaveLength(2);

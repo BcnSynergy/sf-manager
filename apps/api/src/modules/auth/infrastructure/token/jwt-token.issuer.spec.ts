@@ -3,7 +3,7 @@ import { JwtTokenIssuer } from './jwt-token.issuer';
 
 describe('JwtTokenIssuer', () => {
   const jwtService = new JwtService({
-    secret: 'test-secret',
+    secret: 'test-jwt-secret-0123456789abcdefghij',
     signOptions: { expiresIn: '2h' },
   });
   const issuer = new JwtTokenIssuer(jwtService);
@@ -63,7 +63,7 @@ describe('JwtTokenIssuer', () => {
 
   it('rejects an expired token', async () => {
     const shortLivedService = new JwtService({
-      secret: 'test-secret',
+      secret: 'test-jwt-secret-0123456789abcdefghij',
       signOptions: { expiresIn: '1ms' },
     });
     const shortLivedIssuer = new JwtTokenIssuer(shortLivedService);

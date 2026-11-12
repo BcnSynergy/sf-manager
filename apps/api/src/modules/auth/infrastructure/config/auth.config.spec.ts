@@ -21,8 +21,28 @@ describe('getAuthConfig', () => {
     expect(() => getAuthConfig()).toThrow(/JWT_SECRET/);
   });
 
+  // EN-180: JWT_SECRET follows the shared strength rules (readSecret).
+  // The whole message is matched, so it provably never carries the value.
+  it.each([
+    [
+      'shorter than 32 characters',
+      'a'.repeat(31),
+      'JWT_SECRET must be at least 32 characters long, got 31',
+    ],
+    [
+      'padded with whitespace',
+      ` ${'a'.repeat(32)}`,
+      'JWT_SECRET must not start or end with whitespace',
+    ],
+  ])('throws when JWT_SECRET is %s', (_case, value, message) => {
+    process.env.JWT_SECRET = value;
+    process.env.CORS_ORIGIN = 'http://localhost:5173';
+
+    expect(() => getAuthConfig()).toThrow(new Error(message));
+  });
+
   it('throws when CORS_ORIGIN is missing', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     delete process.env.CORS_ORIGIN;
 
     expect(() => getAuthConfig()).toThrow(/CORS_ORIGIN/);
@@ -45,7 +65,7 @@ describe('getAuthConfig', () => {
   ])(
     'throws when CORS_ORIGIN has %s, naming the expected value',
     (_case, value, expected) => {
-      process.env.JWT_SECRET = 'test-secret';
+      process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
       process.env.CORS_ORIGIN = value;
 
       expect(() => getAuthConfig()).toThrow(
@@ -61,7 +81,7 @@ describe('getAuthConfig', () => {
     // EN-143: a URL with an opaque origin, which serializes as "null".
     ['has an opaque origin', 'file:///x'],
   ])('throws without a suggestion when CORS_ORIGIN %s', (_case, value) => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = value;
 
     expect(() => getAuthConfig()).toThrow(
@@ -72,14 +92,14 @@ describe('getAuthConfig', () => {
   });
 
   it('accepts an origin with a port unchanged', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
     expect(getAuthConfig().corsOrigin).toBe('http://localhost:5173');
   });
 
   it('returns dev cookie settings (secure:false, sameSite:lax) outside production', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.NODE_ENV = 'development';
     delete process.env.JWT_EXPIRES_IN;
@@ -89,7 +109,7 @@ describe('getAuthConfig', () => {
     delete process.env.REFRESH_TOKEN_COOKIE_PATH;
 
     expect(getAuthConfig()).toEqual({
-      jwtSecret: 'test-secret',
+      jwtSecret: 'test-jwt-secret-0123456789abcdefghij',
       // TD-5 S1: ADR-011 Decision 4's ~15 min, now that the web refreshes.
       jwtExpiresIn: '15m',
       corsOrigin: 'http://localhost:5173',
@@ -120,7 +140,7 @@ describe('getAuthConfig', () => {
   });
 
   it('returns production cookie settings (secure:true, sameSite:strict) when NODE_ENV is production', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'https://app.sf-manager.example';
     process.env.NODE_ENV = 'production';
 
@@ -137,7 +157,7 @@ describe('getAuthConfig', () => {
   });
 
   it('respects a custom JWT_EXPIRES_IN for both jwtExpiresIn and the cookie maxAge', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '30m';
 
@@ -148,7 +168,7 @@ describe('getAuthConfig', () => {
   });
 
   it('throws for an unparseable JWT_EXPIRES_IN format', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = 'not-a-duration';
 
@@ -156,7 +176,7 @@ describe('getAuthConfig', () => {
   });
 
   it('reads the refresh-token lifetimes and grace window from the environment', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.REFRESH_TOKEN_IDLE_TTL = '30m';
     process.env.REFRESH_TOKEN_ABSOLUTE_TTL = '1d';
@@ -174,7 +194,7 @@ describe('getAuthConfig', () => {
     'REFRESH_TOKEN_ABSOLUTE_TTL',
     'REFRESH_TOKEN_REUSE_GRACE',
   ])('throws naming %s when its format is unparseable', (variable) => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env[variable] = '8 hours';
 
@@ -182,7 +202,7 @@ describe('getAuthConfig', () => {
   });
 
   it('accepts a zero reuse grace: strict rotation, no grace exchange', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.REFRESH_TOKEN_REUSE_GRACE = '0s';
 
@@ -192,7 +212,7 @@ describe('getAuthConfig', () => {
   it.each(['REFRESH_TOKEN_IDLE_TTL', 'REFRESH_TOKEN_ABSOLUTE_TTL'])(
     'throws naming %s when it is zero',
     (variable) => {
-      process.env.JWT_SECRET = 'test-secret';
+      process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
       process.env.CORS_ORIGIN = 'http://localhost:5173';
       process.env[variable] = '0h';
 
@@ -203,7 +223,7 @@ describe('getAuthConfig', () => {
   );
 
   it('gives the refresh cookie the production flags of the access cookie', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'https://app.sf-manager.example';
     process.env.NODE_ENV = 'production';
 
@@ -214,7 +234,7 @@ describe('getAuthConfig', () => {
   });
 
   it('reads the refresh cookie path from REFRESH_TOKEN_COOKIE_PATH (the browser sees /api/auth behind Caddy)', () => {
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.REFRESH_TOKEN_COOKIE_PATH = '/api/auth';
 
@@ -224,7 +244,7 @@ describe('getAuthConfig', () => {
   it.each(['auth', 'api/auth', ''])(
     'throws naming REFRESH_TOKEN_COOKIE_PATH when it does not start with a slash ("%s")',
     (value) => {
-      process.env.JWT_SECRET = 'test-secret';
+      process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdefghij';
       process.env.CORS_ORIGIN = 'http://localhost:5173';
       process.env.REFRESH_TOKEN_COOKIE_PATH = value;
 

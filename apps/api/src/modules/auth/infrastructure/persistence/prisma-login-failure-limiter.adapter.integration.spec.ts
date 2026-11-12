@@ -33,7 +33,7 @@ describe('PrismaLoginFailureLimiter (integration)', () => {
   };
 
   // EN-6: rows are keyed by HMAC under THROTTLE_KEY_SECRET.
-  const SECRET = 'test-throttle-key-secret';
+  const SECRET = 'test-throttle-key-secret-0123456789ab';
   const hashKey = createThrottleKeyHasher(SECRET);
   const keyFor = (email: string) =>
     createHmac('sha256', SECRET).update(`login-email:${email}`).digest('hex');

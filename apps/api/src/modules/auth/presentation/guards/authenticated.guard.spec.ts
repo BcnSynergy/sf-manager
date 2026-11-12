@@ -13,7 +13,7 @@ import { AuthenticatedGuard } from './authenticated.guard';
 
 describe('AuthenticatedGuard', () => {
   const authConfig: AuthConfig = {
-    jwtSecret: 'test-secret',
+    jwtSecret: 'test-jwt-secret-0123456789abcdefghij',
     jwtExpiresIn: '2h',
     corsOrigin: 'http://localhost:5173',
     cookie: {

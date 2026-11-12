@@ -85,8 +85,8 @@ async function bootApp(
   users: InMemoryUserRepository,
   reuseGrace: string,
 ): Promise<INestApplication<App>> {
-  process.env.JWT_SECRET = 'e2e-test-secret';
-  process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
+  process.env.JWT_SECRET = 'e2e-test-jwt-secret-0123456789abcdef';
+  process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
   process.env.CORS_ORIGIN = TEST_ORIGIN;
   process.env.JWT_EXPIRES_IN = '2h';
   process.env.REFRESH_TOKEN_REUSE_GRACE = reuseGrace;

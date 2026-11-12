@@ -23,6 +23,34 @@ The repository MUST provide `docker-compose.prod.yml`, which builds the API and 
 - WHEN the operator starts the stack
 - THEN Compose refuses to start it and names the missing variable
 
+### Requirement: Secret strength
+
+The API MUST refuse to start when `JWT_SECRET` or `THROTTLE_KEY_SECRET` is shorter than 32 characters or starts or ends with whitespace, and when `THROTTLE_KEY_SECRET` equals `JWT_SECRET`. The error MUST name the variable and the rule it breaks, and MUST NOT contain the secret's value.
+
+#### Scenario: Short secret
+
+- GIVEN `JWT_SECRET` or `THROTTLE_KEY_SECRET` has fewer than 32 characters
+- WHEN the API starts
+- THEN it exits without serving requests, with an error that names the variable and the minimum length
+
+#### Scenario: Whitespace around a secret
+
+- GIVEN `JWT_SECRET` or `THROTTLE_KEY_SECRET` starts or ends with a space, tab or newline
+- WHEN the API starts
+- THEN it exits without serving requests, with an error that names the variable
+
+#### Scenario: Same secret twice
+
+- GIVEN `THROTTLE_KEY_SECRET` has the same value as `JWT_SECRET`
+- WHEN the API starts
+- THEN it exits without serving requests, with an error saying `THROTTLE_KEY_SECRET` must differ from `JWT_SECRET`
+
+#### Scenario: Generated secrets accepted
+
+- GIVEN each secret was generated with `openssl rand -hex 32` (64 characters), and the two differ
+- WHEN the API starts
+- THEN it starts normally
+
 ### Requirement: Migrations before serving
 
 The API container MUST apply pending Prisma migrations (`prisma migrate deploy`) before the API accepts requests. If migrating fails, the API MUST NOT start serving.

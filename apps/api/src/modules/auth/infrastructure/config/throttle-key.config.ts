@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { readSecret } from './secret.config';
 
 // EN-6: throttle counter keys (per client key and per email) are stored and
 // logged as HMAC-SHA-256 digests under THROTTLE_KEY_SECRET. An unkeyed hash
@@ -11,11 +12,12 @@ import { createHmac } from 'node:crypto';
 // any active blocks, since every key changes.
 export type ThrottleKeyHasher = (value: string) => string;
 
-// Read at boot by AuthModule's factories: a missing secret stops startup.
+// Read at boot by AuthModule's factories: a missing or weak secret, or one
+// equal to JWT_SECRET, stops startup (EN-180, see secret.config.ts).
 export function getThrottleKeySecret(): string {
-  const secret = process.env.THROTTLE_KEY_SECRET;
-  if (!secret) {
-    throw new Error('THROTTLE_KEY_SECRET environment variable is required');
+  const secret = readSecret('THROTTLE_KEY_SECRET');
+  if (secret === process.env.JWT_SECRET) {
+    throw new Error('THROTTLE_KEY_SECRET must differ from JWT_SECRET');
   }
   return secret;
 }
