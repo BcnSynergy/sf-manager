@@ -571,8 +571,8 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   settings before switching the compose file. Note that `publish-platform` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
-  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing was added in `en-91-multi-arch` (PR #TBD) and is
-  proved by its first green `main` run:
+  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing was added in `en-91-multi-arch` (PR #413), to be
+  confirmed by its first green `main` run:
   `publish-platform` builds both images on `ubuntu-24.04` and the native
   `ubuntu-24.04-arm` runner, checks each on its own platform (native
   modules, Prisma CLI, Caddyfile), and `publish` joins them into one
