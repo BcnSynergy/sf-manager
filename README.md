@@ -326,7 +326,8 @@ and push to `main`: it starts the whole stack on `https://localhost` with
 throwaway secrets and fails unless `/api/health` reports the database ok,
 the web app answers 200, the API can write uploaded files, the backup
 service writes a dump and a files archive, the off-site copy service,
-unconfigured, says it is disabled, and a dump taken before the newest
+unconfigured, says it is disabled, the documented admin seed command
+creates a system admin who can log in, and a dump taken before the newest
 migration restores, with its uploaded files, and the API then applies that
 migration. Run it locally from the repository root with
 `sh deploy/smoke-test.sh` (ports 80 and 443 must be free; it uses its own

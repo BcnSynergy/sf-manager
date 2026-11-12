@@ -5,7 +5,8 @@
 # that the API and the web app answer, that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
-# reports that it is disabled (EN-104), and that a dump taken before the
+# reports that it is disabled (EN-104), that the documented admin seed
+# command creates a system admin who can log in (EN-93), and that a dump taken before the
 # newest migration restores, with its uploaded files, and the API then
 # applies that migration (EN-105, EN-120), then removes the stack and its
 # volumes. CI runs it on every PR and push to main; run it from the
@@ -118,6 +119,28 @@ if [ -z "$offsite" ] || [ "$(docker inspect -f '{{.State.Running}}' "$offsite")"
   fail "the offsite service is not running"
 fi
 echo "smoke: offsite service disabled and idle"
+
+# The documented admin seed command (README, spec `deployment`, "First
+# admin") runs the seed compiled into the image, which no build step
+# executes (EN-93), so run it here and check it left exactly that admin. No
+# earlier step creates users, so the user table holds only that admin.
+SEED_ADMIN_EMAIL=smoke-admin@example.com
+SEED_ADMIN_PASSWORD=$(openssl rand -hex 16)
+export SEED_ADMIN_EMAIL SEED_ADMIN_PASSWORD
+if ! seed_output=$(compose run --rm -T -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD   api npx prisma db seed 2>&1); then
+  echo "$seed_output" >&2
+  fail "the admin seed command failed"
+fi
+users=$(compose exec -T postgres psql -U smoke -d sfmanager -tA -F ' ' \
+  -c 'select email, role from "User"')
+[ "$users" = "$SEED_ADMIN_EMAIL SYSTEM_ADMIN" ] ||
+  fail "the admin seed left users '$users', expected '$SEED_ADMIN_EMAIL SYSTEM_ADMIN'"
+status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$SEED_ADMIN_EMAIL\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \
+  https://localhost/api/auth/login) || status=000
+[ "$status" = 200 ] || fail "the seeded admin's login answered $status, expected 200"
+echo "smoke: admin seed created the system admin, who can log in"
 
 # A dump taken on an older version restores, with its uploaded files, and
 # the API then applies the newer migrations (spec `deployment`, "Restore").

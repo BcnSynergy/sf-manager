@@ -48,9 +48,9 @@ None.
   for `^10.2.x`. Alert #69 (GHSA-gcqx-w48m-w2h4, low: prototype poisoning in
   `mergeObject()`) hits `deepmerge` 4.3.1 via `jest-config`; no patched
   version exists. Both only process our own lint, test and coverage config,
-  never user input. The web image ships only the built `dist`; the API image
-  keeps dev dependencies on purpose (Prisma CLI and the ts-node seed, see
-  `apps/api/Dockerfile`), so both packages are present there but never run. Recheck when the parents move to `minimatch` 11 or `deepmerge` is
+  never user input. Neither image ships them: the web image holds only the
+  built `dist`, and since EN-93 the API image installs production
+  dependencies only (`apps/api/Dockerfile`). Recheck when the parents move to `minimatch` 11 or `deepmerge` is
   patched, and do not force either with `overrides`. Origin:
   `security-dev-alerts` triage, 2026-11-09.
 
