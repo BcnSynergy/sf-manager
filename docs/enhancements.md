@@ -1014,7 +1014,8 @@ content type`). Today that is the only 415 it raises, but a future one
   `ThrottleKeyModule` as the `THROTTLE_KEY_HASHER` provider, and injected
   into both the `ThrottlerModule` storage and `LOGIN_FAILURE_LIMITER`;
   `app.module.spec.ts` checks both share that instance. Done in
-  `en-181-throttle-key-hasher` (PR #TBD). Original entry: `auth.module.ts` builds the throttle key hasher twice,
+  `en-181-throttle-key-hasher` (PR #TBD).
+  Original entry: `auth.module.ts` builds the throttle key hasher twice,
   `createThrottleKeyHasher(getThrottleKeySecret())` in the
   `ThrottlerModule.forRootAsync` factory and in the `LOGIN_FAILURE_LIMITER`
   factory. Both counters must use the same secret, but nothing ties the two

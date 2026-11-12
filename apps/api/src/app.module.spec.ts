@@ -62,7 +62,8 @@ describe('AppModule (DI bootstrap)', () => {
     }).compile();
 
     // hashKey is a private field; reading it is the only way to prove the
-    // two adapters hold the very same instance.
+    // two adapters hold the very same instance. If an adapter renames the
+    // field, this fails with "undefined !== function": update the name here.
     type WithHasher = { hashKey: unknown };
     const hasher = moduleRef.get<unknown>(THROTTLE_KEY_HASHER, {
       strict: false,

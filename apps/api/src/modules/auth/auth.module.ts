@@ -65,6 +65,9 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // as AuthModule is instantiated — mirrors the IdGeneratorModule
     // precedent (app.module.ts), just registered from this module instead.
     HashingModule,
+    // EN-181: provides THROTTLE_KEY_HASHER, the one hasher both counter
+    // families use (the throttler storage below and LOGIN_FAILURE_LIMITER).
+    ThrottleKeyModule,
     // Only the login handler opts in (@UseGuards(LoginThrottlerGuard) in
     // AuthController); this module registers no APP_GUARD for it. The
     // throttler MUST stay named 'default': v6 suffixes headers of named
@@ -77,7 +80,6 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
     // error refuses the login attempt (500). e2e suites that mock
     // PrismaService override ThrottlerStorage with the in-memory store.
     // EN-181: the storage gets the one shared hasher from ThrottleKeyModule.
-    ThrottleKeyModule,
     ThrottlerModule.forRootAsync({
       imports: [ThrottleKeyModule],
       inject: [PrismaService, THROTTLE_KEY_HASHER],

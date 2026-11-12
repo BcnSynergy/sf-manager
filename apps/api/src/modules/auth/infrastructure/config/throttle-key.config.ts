@@ -16,8 +16,9 @@ export type ThrottleKeyHasher = (value: string) => string;
 // (ThrottleKeyModule provides it).
 export const THROTTLE_KEY_HASHER = Symbol('THROTTLE_KEY_HASHER');
 
-// Read at boot by AuthModule's factories: a missing or weak secret, or one
-// equal to JWT_SECRET, stops startup (EN-180, see secret.config.ts).
+// Read once at boot by ThrottleKeyModule's THROTTLE_KEY_HASHER factory
+// (EN-181): a missing or weak secret, or one equal to JWT_SECRET, stops
+// startup (EN-180, see secret.config.ts).
 export function getThrottleKeySecret(): string {
   const secret = readSecret('THROTTLE_KEY_SECRET');
   if (secret === process.env.JWT_SECRET) {
