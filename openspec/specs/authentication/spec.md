@@ -393,8 +393,8 @@ key MAY still be rejected with 429 by the per-email limit (see "Login
 Failure Limiting per Email"), which is independent of this limit. The
 counters MUST persist across an API restart and
 MUST be shared by all API instances that use the same database, and
-concurrent attempts MUST NOT cause attempts to go uncounted. Neither the
-client IP nor the client key MUST be stored at rest; a counter MUST be
+concurrent attempts MUST NOT cause attempts to go uncounted. The client IP
+and the client key MUST NOT be stored at rest; a counter MUST be
 stored only under a keyed hash (an HMAC under the server secret
 `THROTTLE_KEY_SECRET`), so that whoever reads the stored data without that
 secret cannot test candidate addresses against it. If the client

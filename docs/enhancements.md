@@ -1014,8 +1014,12 @@ content type`). Today that is the only 415 it raises, but a future one
   calls together; a later change to one (for example key rotation) could
   drift silently. Build it once, for example as a `THROTTLE_KEY_HASHER`
   provider that the limiter factory injects and that the throttler factory
-  reaches through `forRootAsync` `imports`/`inject`. Origin:
-  `en-6-throttle-key-hmac` native review, finding `R2-001`, 2026-11-12.
+  reaches through `forRootAsync` `imports`/`inject`. This also closes a
+  test gap: `app.module.spec.ts` "refuses to boot without
+  THROTTLE_KEY_SECRET" still passes if only one factory stops reading the
+  secret (the integration test "keys both counters" catches it). Origin:
+  `en-6-throttle-key-hmac` native review, finding `R2-001`, and fresh
+  review `S-2`, 2026-11-12.
 
 ## Done
 
