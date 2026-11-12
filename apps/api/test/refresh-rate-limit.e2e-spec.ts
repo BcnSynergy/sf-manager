@@ -44,6 +44,7 @@ const PASSWORD = 'correct-horse-battery-staple';
 const LIMIT = 3;
 const ENV_KEYS = [
   'JWT_SECRET',
+  'THROTTLE_KEY_SECRET',
   'CORS_ORIGIN',
   'LOGIN_RATE_LIMIT_MAX_ATTEMPTS',
   'REFRESH_RATE_LIMIT_MAX_ATTEMPTS',
@@ -79,6 +80,7 @@ describe('Refresh rate limit (e2e)', () => {
 
   beforeEach(async () => {
     process.env.JWT_SECRET = 'e2e-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = TEST_ORIGIN;
     process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = String(LIMIT);
     // Below the refresh limit: if the module-wide throttler (login's limit)

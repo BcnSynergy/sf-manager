@@ -35,6 +35,7 @@ describe('AppModule (DI bootstrap)', () => {
     process.env = {
       ...originalEnv,
       JWT_SECRET: 'test-secret',
+      THROTTLE_KEY_SECRET: 'test-throttle-key-secret',
       CORS_ORIGIN: 'http://localhost:5173',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
     };
@@ -49,6 +50,16 @@ describe('AppModule (DI bootstrap)', () => {
       Test.createTestingModule({ imports: [AppModule] }).compile(),
     ).resolves.toBeDefined();
   });
+
+  // EN-6: the throttle counter keys need their HMAC secret, so the API must
+  // not boot without it.
+  it('refuses to boot without THROTTLE_KEY_SECRET', async () => {
+    delete process.env.THROTTLE_KEY_SECRET;
+
+    await expect(
+      Test.createTestingModule({ imports: [AppModule] }).compile(),
+    ).rejects.toThrow('THROTTLE_KEY_SECRET environment variable is required');
+  });
 });
 
 // review-schedule design.md Bootstrap row, E10: the real Prisma reader, the
@@ -62,6 +73,7 @@ describe('AppModule (review-schedule DI bootstrap)', () => {
     process.env = {
       ...originalEnv,
       JWT_SECRET: 'test-secret',
+      THROTTLE_KEY_SECRET: 'test-throttle-key-secret',
       CORS_ORIGIN: 'http://localhost:5173',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
     };

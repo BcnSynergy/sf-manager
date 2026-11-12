@@ -29,6 +29,7 @@ const PASSWORD = 'integration-password-1';
 const WRONG_PASSWORD = 'definitely-not-the-password';
 const MANAGED_ENV = [
   'JWT_SECRET',
+  'THROTTLE_KEY_SECRET',
   'CORS_ORIGIN',
   'JWT_EXPIRES_IN',
   'LOGIN_RATE_LIMIT_MAX_ATTEMPTS',
@@ -102,6 +103,7 @@ describe('Login email limit (integration)', () => {
       savedEnv[name] = process.env[name];
     }
     process.env.JWT_SECRET = 'integration-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '2h';
     delete process.env.TRUST_PROXY;

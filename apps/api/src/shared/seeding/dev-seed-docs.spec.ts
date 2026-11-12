@@ -23,6 +23,7 @@ describe('dev seed documentation', () => {
     for (const key of [
       'DATABASE_URL',
       'JWT_SECRET',
+      'THROTTLE_KEY_SECRET',
       'CORS_ORIGIN',
       'SEED_ADMIN_EMAIL',
       'SEED_ADMIN_PASSWORD',

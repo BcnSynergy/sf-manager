@@ -89,6 +89,7 @@ describe('Auth (e2e)', () => {
     // getAuthConfig() (auth.config.ts) runs at module-compile time once
     // AuthModule is part of the graph — must be set before .compile().
     process.env.JWT_SECRET = 'e2e-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = TEST_ORIGIN;
     process.env.JWT_EXPIRES_IN = '2h';
 

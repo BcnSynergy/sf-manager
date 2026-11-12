@@ -23,7 +23,10 @@ describe('PrismaThrottlerStorage (integration)', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.$connect();
-    storage = new PrismaThrottlerStorage(prisma);
+    // Identity hasher: this suite proves the SQL, so rows stay addressable by
+    // the key passed in. The HMAC itself is pinned by the unit spec and by
+    // test/login-rate-limit.integration.spec.ts (EN-6).
+    storage = new PrismaThrottlerStorage(prisma, (key) => key);
   });
 
   afterAll(async () => {

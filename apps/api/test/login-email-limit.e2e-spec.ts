@@ -149,6 +149,7 @@ describe('Login email limit (e2e)', () => {
       savedEnv[name] = process.env[name];
     }
     process.env.JWT_SECRET = 'e2e-test-secret';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '2h';
     passwordHash = await argon2.hash(ADMIN_PASSWORD, {
