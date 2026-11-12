@@ -169,6 +169,130 @@ describe('ReviewTemplateDetailPage', () => {
       ).toBeInTheDocument();
     });
 
+    describe('Activate with an unsaved selection (EN-73)', () => {
+      const savedTwo = {
+        ...draftTemplate,
+        questions: [
+          { questionId: 'question-1', order: 1, text: 'Check the pressure gauge' },
+          { questionId: 'question-3', order: 2, text: 'Check the hose' },
+        ],
+      };
+      const activate = () => screen.getByTestId('review-template-detail-activate');
+      const hint = () => screen.queryByTestId('review-template-detail-activate-unsaved');
+
+      it('keeps Activate enabled with no hint while the selection matches the saved one (spec: Activate enabled once the selection is saved)', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        await screen.findByTestId('review-template-detail-question-question-1');
+        expect(activate()).toBeEnabled();
+        expect(hint()).not.toBeInTheDocument();
+      });
+
+      it('disables Activate and asks to save first after adding a question (spec: Activate disabled while the selection is unsaved)', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        fireEvent.click(await screen.findByTestId('review-template-detail-picker-add-question-2'));
+
+        expect(activate()).toBeDisabled();
+        expect(hint()).toHaveTextContent('Save the question selection before activating.');
+        expect(activate()).toHaveAttribute('aria-describedby', hint()?.id);
+        fireEvent.click(activate());
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(mockedActivateReviewTemplate).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['removing a question', 'review-template-detail-question-remove-question-1'],
+        ['reordering', 'review-template-detail-question-down-question-1'],
+      ])(
+        'disables Activate after %s (spec: Activate disabled while the selection is unsaved)',
+        async (_case, control) => {
+          mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+          mockedListChecklistQuestions.mockResolvedValue([]);
+          mockedListReviewTemplates.mockResolvedValue([]);
+
+          renderPage();
+
+          await screen.findByTestId('review-template-detail-question-question-1');
+          fireEvent.click(screen.getByTestId(control));
+
+          expect(activate()).toBeDisabled();
+          expect(hint()).toBeInTheDocument();
+        },
+      );
+
+      it('enables Activate again once the selection is saved (spec: Activate enabled once the selection is saved)', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+        mockedSetReviewTemplateQuestions.mockResolvedValue({
+          ...savedTwo,
+          questions: [
+            ...savedTwo.questions,
+            { questionId: annualQuestion.id, order: 3, text: annualQuestion.text },
+          ],
+        });
+
+        renderPage();
+
+        fireEvent.click(await screen.findByTestId('review-template-detail-picker-add-question-2'));
+        expect(activate()).toBeDisabled();
+        fireEvent.click(screen.getByTestId('review-template-detail-save'));
+
+        await waitFor(() => expect(activate()).toBeEnabled());
+        expect(hint()).not.toBeInTheDocument();
+      });
+
+      it('compares by saved order, not by the order the API lists the questions in', async () => {
+        mockedReadReviewTemplate.mockResolvedValue({
+          ...savedTwo,
+          questions: [savedTwo.questions[1], savedTwo.questions[0]],
+        } as typeof savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        await screen.findByTestId('review-template-detail-question-question-1');
+        expect(activate()).toBeEnabled();
+        expect(hint()).not.toBeInTheDocument();
+      });
+
+      it('announces the hint politely when it appears', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        fireEvent.click(await screen.findByTestId('review-template-detail-picker-add-question-2'));
+
+        expect(hint()).toHaveAttribute('role', 'status');
+      });
+
+      it('enables Activate again when the change is undone without saving', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        fireEvent.click(await screen.findByTestId('review-template-detail-picker-add-question-2'));
+        fireEvent.click(screen.getByTestId('review-template-detail-question-remove-question-2'));
+
+        expect(activate()).toBeEnabled();
+        expect(hint()).not.toBeInTheDocument();
+      });
+    });
+
     it('reorders selected questions with the up/down controls before saving (spec: Admin builds and reorders a draft)', async () => {
       mockedReadReviewTemplate.mockResolvedValue({
         ...draftTemplate,

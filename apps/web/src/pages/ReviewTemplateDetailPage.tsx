@@ -49,6 +49,8 @@ type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
 // No standalone "retire" control exists anywhere on this page — retirement
 // is only ever a side effect of activating a successor (spec "No
 // Standalone Retire Control").
+const ACTIVATE_UNSAVED_HINT_ID = 'review-template-detail-activate-unsaved';
+
 export function ReviewTemplateDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -284,6 +286,16 @@ export function ReviewTemplateDetailPage() {
       (showAllFrequencies || question.frequencies.includes(template.frequency)),
   );
 
+  // EN-73: Activate freezes the last *saved* selection, so while the picker
+  // holds changes that are not saved yet it is disabled and says why;
+  // otherwise activation would silently drop them.
+  const savedQuestionIds = [...template.questions]
+    .sort((a, b) => a.order - b.order)
+    .map((question) => question.questionId);
+  const hasUnsavedSelection =
+    savedQuestionIds.length !== selectedQuestionIds.length ||
+    savedQuestionIds.some((id, index) => id !== selectedQuestionIds[index]);
+
   const activateMessage =
     currentActiveVersion === null
       ? t('reviewTemplate.detail.activateConfirmMessageFirst')
@@ -301,7 +313,8 @@ export function ReviewTemplateDetailPage() {
               className="sf-btn sf-btn-primary"
               data-testid="review-template-detail-activate"
               onClick={requestActivate}
-              disabled={activating}
+              disabled={activating || hasUnsavedSelection}
+              aria-describedby={hasUnsavedSelection ? ACTIVATE_UNSAVED_HINT_ID : undefined}
             >
               {t('reviewTemplate.detail.activateLabel')}
             </button>
@@ -318,6 +331,19 @@ export function ReviewTemplateDetailPage() {
         )}
       </PageHeader>
 
+      {isDraft && hasUnsavedSelection && (
+        <p
+          id={ACTIVATE_UNSAVED_HINT_ID}
+          // A disabled button cannot take focus, so its aria-describedby is
+          // only heard while reading the page; role="status" also announces
+          // the hint politely as soon as it appears.
+          role="status"
+          className="sf-badge sf-badge-notice"
+          data-testid="review-template-detail-activate-unsaved"
+        >
+          {t('reviewTemplate.detail.activateUnsavedHint')}
+        </p>
+      )}
       {isDraft && activateError && (
         <Alert
           key={activateErrorAlertKey}

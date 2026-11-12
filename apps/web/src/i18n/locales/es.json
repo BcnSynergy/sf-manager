@@ -389,6 +389,7 @@
       "addQuestion": "Añadir",
       "saveLabel": "Guardar selección",
       "activateLabel": "Activar",
+      "activateUnsavedHint": "Guarda la selección de preguntas antes de activar.",
       "activateConfirmTitle": "Activar plantilla",
       "activateConfirmMessageWithRetirement": "Activar este borrador lo congela permanentemente y no se puede deshacer. La versión {{version}} de esta plantilla quedará retirada.",
       "activateConfirmMessageFirst": "Activar este borrador lo congela permanentemente y no se puede deshacer. Será la primera versión activa de esta plantilla.",

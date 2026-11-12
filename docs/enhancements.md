@@ -559,13 +559,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
-- **EN-73** (web UI): On a draft template, Activate activates the last
-  saved question selection. Picker changes not yet saved are silently
-  dropped, with no warning or prompt to save first. Options: disable
-  Activate while the selection is unsaved, or warn in the confirmation.
-  Either changes observable behavior, so it edits the spec. Evidence:
-  `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
-  Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 - **EN-91** (delivery): CI builds both images, smoke-tests the stack and
   publishes the images to GitHub Container Registry (`en-91-ci-images`,
   #291), but nothing deploys them: the operator still builds on the server
@@ -1009,6 +1002,18 @@ content type`). Today that is the only 415 it raises, but a future one
   `S-3`, 2026-11-12.
 
 ## Done
+
+- **EN-73** (web UI): Activate on a draft template is now disabled while
+  the question selection has unsaved changes, with a localized "save the
+  question selection before activating" message (spec
+  `review-template-admin-ui`). Done in `en-73-activate-unsaved` (PR #411).
+  Original entry: On a draft template, Activate activates the last
+  saved question selection. Picker changes not yet saved are silently
+  dropped, with no warning or prompt to save first. Options: disable
+  Activate while the selection is unsaved, or warn in the confirmation.
+  Either changes observable behavior, so it edits the spec. Evidence:
+  `apps/web/src/pages/ReviewTemplateDetailPage.tsx` (`confirmActivate`).
+  Origin: `ui-restyle-review-template-detail` PR 1 analysis, 2026-10-20.
 
 - **EN-181** (api): the throttle key hasher is now built once, by
   `ThrottleKeyModule` as the `THROTTLE_KEY_HASHER` provider, and injected

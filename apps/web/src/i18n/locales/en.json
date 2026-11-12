@@ -389,6 +389,7 @@
       "addQuestion": "Add",
       "saveLabel": "Save selection",
       "activateLabel": "Activate",
+      "activateUnsavedHint": "Save the question selection before activating.",
       "activateConfirmTitle": "Activate template",
       "activateConfirmMessageWithRetirement": "Activating this draft permanently freezes it and cannot be undone. Version {{version}} of this template will be retired.",
       "activateConfirmMessageFirst": "Activating this draft permanently freezes it and cannot be undone. This will be the first active version of this template.",
