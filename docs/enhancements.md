@@ -1009,6 +1009,19 @@ content type`). Today that is the only 415 it raises, but a future one
   `en-6-throttle-key-hmac` native review, finding `R2-001`, and fresh
   review `S-2`, 2026-11-12.
 
+- **EN-182** (api): `readSecret()` (EN-180) checks length, not entropy: a
+  32-character predictable value (one repeated character, a phrase) still
+  passes, so an operator who ignores `openssl rand -hex 32` can still pick
+  a brute-forceable `JWT_SECRET` or `THROTTLE_KEY_SECRET`. The short-length
+  error also prints the actual length (never the value), and `length`
+  counts UTF-16 code units, not characters, which only matters for
+  non-ASCII secrets. Reliable entropy checks are hard, so the realistic
+  option is rejecting obvious cases (a single repeated character, a
+  value shorter than 32 bytes once decoded). Evidence:
+  `apps/api/src/modules/auth/infrastructure/config/secret.config.ts`.
+  Origin: `en-180-secret-strength` native review `R1-001` and fresh review
+  `S-3`, 2026-11-12.
+
 ## Done
 
 - **EN-180** (api): `JWT_SECRET` and `THROTTLE_KEY_SECRET` now need at

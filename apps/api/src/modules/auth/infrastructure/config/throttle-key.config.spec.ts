@@ -30,6 +30,7 @@ describe('getThrottleKeySecret', () => {
   });
 
   it('returns the configured secret', () => {
+    delete process.env.JWT_SECRET;
     process.env.THROTTLE_KEY_SECRET = 'a'.repeat(32);
 
     expect(getThrottleKeySecret()).toBe('a'.repeat(32));

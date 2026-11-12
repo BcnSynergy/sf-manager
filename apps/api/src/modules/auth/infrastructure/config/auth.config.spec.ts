@@ -22,14 +22,23 @@ describe('getAuthConfig', () => {
   });
 
   // EN-180: JWT_SECRET follows the shared strength rules (readSecret).
+  // The whole message is matched, so it provably never carries the value.
   it.each([
-    ['shorter than 32 characters', 'a'.repeat(31), 'at least 32 characters'],
-    ['padded with whitespace', ` ${'a'.repeat(32)}`, 'whitespace'],
+    [
+      'shorter than 32 characters',
+      'a'.repeat(31),
+      'JWT_SECRET must be at least 32 characters long, got 31',
+    ],
+    [
+      'padded with whitespace',
+      ` ${'a'.repeat(32)}`,
+      'JWT_SECRET must not start or end with whitespace',
+    ],
   ])('throws when JWT_SECRET is %s', (_case, value, message) => {
     process.env.JWT_SECRET = value;
     process.env.CORS_ORIGIN = 'http://localhost:5173';
 
-    expect(() => getAuthConfig()).toThrow(message);
+    expect(() => getAuthConfig()).toThrow(new Error(message));
   });
 
   it('throws when CORS_ORIGIN is missing', () => {
