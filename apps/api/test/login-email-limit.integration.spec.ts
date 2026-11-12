@@ -102,8 +102,8 @@ describe('Login email limit (integration)', () => {
     for (const name of MANAGED_ENV) {
       savedEnv[name] = process.env[name];
     }
-    process.env.JWT_SECRET = 'integration-test-secret';
-    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret';
+    process.env.JWT_SECRET = 'integration-test-jwt-secret-0123456789';
+    process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '2h';
     delete process.env.TRUST_PROXY;

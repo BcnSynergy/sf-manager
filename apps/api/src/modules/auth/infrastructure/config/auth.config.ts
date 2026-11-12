@@ -1,5 +1,6 @@
 import type { RefreshTokenPolicy } from '../../application/services/refresh-token-policy';
 import { isProduction } from '../../../../shared/infrastructure/env/is-production';
+import { readSecret } from './secret.config';
 
 export const ACCESS_TOKEN_COOKIE_NAME = 'sf_access_token';
 export const REFRESH_TOKEN_COOKIE_NAME = 'sf_refresh_token';
@@ -63,10 +64,8 @@ function parseDurationMs(value: string, variable: string): number {
 // itself is not imported into AppModule until PR 4 (app.module.ts/main.ts
 // wiring), and no PR 3 test builds AuthModule through Nest's container.
 export function getAuthConfig(): AuthConfig {
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    throw new Error('JWT_SECRET environment variable is required');
-  }
+  // EN-180: missing, short or whitespace-padded secrets stop startup.
+  const jwtSecret = readSecret('JWT_SECRET');
 
   const corsOrigin = process.env.CORS_ORIGIN;
   if (!corsOrigin) {

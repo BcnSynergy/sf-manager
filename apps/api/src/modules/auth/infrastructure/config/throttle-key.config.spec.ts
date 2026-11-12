@@ -30,9 +30,42 @@ describe('getThrottleKeySecret', () => {
   });
 
   it('returns the configured secret', () => {
-    process.env.THROTTLE_KEY_SECRET = 'a-secret';
+    process.env.THROTTLE_KEY_SECRET = 'a'.repeat(32);
 
-    expect(getThrottleKeySecret()).toBe('a-secret');
+    expect(getThrottleKeySecret()).toBe('a'.repeat(32));
+  });
+
+  // EN-180: the strength rules shared with JWT_SECRET (readSecret).
+  it('throws when THROTTLE_KEY_SECRET is shorter than 32 characters', () => {
+    process.env.THROTTLE_KEY_SECRET = 'a'.repeat(31);
+
+    expect(() => getThrottleKeySecret()).toThrow(
+      'THROTTLE_KEY_SECRET must be at least 32 characters long, got 31',
+    );
+  });
+
+  it('throws when THROTTLE_KEY_SECRET has surrounding whitespace', () => {
+    process.env.THROTTLE_KEY_SECRET = `${'a'.repeat(32)} `;
+
+    expect(() => getThrottleKeySecret()).toThrow(
+      'THROTTLE_KEY_SECRET must not start or end with whitespace',
+    );
+  });
+
+  it('throws when THROTTLE_KEY_SECRET equals JWT_SECRET', () => {
+    process.env.JWT_SECRET = 'a'.repeat(32);
+    process.env.THROTTLE_KEY_SECRET = 'a'.repeat(32);
+
+    expect(() => getThrottleKeySecret()).toThrow(
+      new Error('THROTTLE_KEY_SECRET must differ from JWT_SECRET'),
+    );
+  });
+
+  it('accepts a THROTTLE_KEY_SECRET that differs from JWT_SECRET', () => {
+    process.env.JWT_SECRET = 'a'.repeat(32);
+    process.env.THROTTLE_KEY_SECRET = 'b'.repeat(32);
+
+    expect(getThrottleKeySecret()).toBe('b'.repeat(32));
   });
 });
 

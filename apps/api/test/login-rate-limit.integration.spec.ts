@@ -68,8 +68,8 @@ describe('Login rate limit persistence (integration)', () => {
     for (const name of MANAGED_ENV) {
       savedEnv[name] = process.env[name];
     }
-    process.env.JWT_SECRET = 'integration-test-secret';
-    process.env.THROTTLE_KEY_SECRET = 'integration-throttle-secret';
+    process.env.JWT_SECRET = 'integration-test-jwt-secret-0123456789';
+    process.env.THROTTLE_KEY_SECRET = 'integration-throttle-secret-0123456789';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
     process.env.JWT_EXPIRES_IN = '2h';
     delete process.env.TRUST_PROXY;
@@ -214,13 +214,15 @@ describe('Login rate limit persistence (integration)', () => {
     const emailKey = (secret: string) =>
       createHmac('sha256', secret).update(`login-email:${email}`).digest('hex');
 
-    const first = await keysUnder('first-throttle-secret');
-    const second = await keysUnder('second-throttle-secret');
+    const first = await keysUnder('first-throttle-secret-0123456789abcdef');
+    const second = await keysUnder('second-throttle-secret-0123456789abcde');
 
     expect(first).toHaveLength(2);
     expect(second).toHaveLength(2);
-    expect(first).toContain(emailKey('first-throttle-secret'));
-    expect(second).toContain(emailKey('second-throttle-secret'));
+    expect(first).toContain(emailKey('first-throttle-secret-0123456789abcdef'));
+    expect(second).toContain(
+      emailKey('second-throttle-secret-0123456789abcde'),
+    );
     expect(first.filter((key) => second.includes(key))).toEqual([]);
   });
 });

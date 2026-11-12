@@ -995,18 +995,6 @@ content type`). Today that is the only 415 it raises, but a future one
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 
-- **EN-180** (api): `getThrottleKeySecret()` refuses only a missing or empty
-  `THROTTLE_KEY_SECRET`. A short or whitespace-only secret, or one equal to
-  `JWT_SECRET`, is accepted, although the docs ask for 32 random bytes kept
-  apart from `JWT_SECRET`. With table or log access and one known email or
-  IP, a weak secret can be brute-forced offline, which undoes EN-6. Enforce
-  a minimum length (and reject a value equal to `JWT_SECRET`) at boot; this
-  changes the deployment spec. `JWT_SECRET` has no minimum either, so
-  consider both together. Evidence:
-  `apps/api/src/modules/auth/infrastructure/config/throttle-key.config.ts`.
-  Origin: `en-6-throttle-key-hmac` native review, findings `R1-001` and
-  `R3-002`, 2026-11-12.
-
 - **EN-181** (api): `auth.module.ts` builds the throttle key hasher twice,
   `createThrottleKeyHasher(getThrottleKeySecret())` in the
   `ThrottlerModule.forRootAsync` factory and in the `LOGIN_FAILURE_LIMITER`
@@ -1022,6 +1010,23 @@ content type`). Today that is the only 415 it raises, but a future one
   review `S-2`, 2026-11-12.
 
 ## Done
+
+- **EN-180** (api): `JWT_SECRET` and `THROTTLE_KEY_SECRET` now need at
+  least 32 characters and no surrounding whitespace, and
+  `THROTTLE_KEY_SECRET` must differ from `JWT_SECRET`; otherwise the API
+  refuses to start (shared `readSecret`, deployment spec "Secret
+  strength"). Done in `en-180-secret-strength` (PR #TBD). Original entry:
+  `getThrottleKeySecret()` refuses only a missing or empty
+  `THROTTLE_KEY_SECRET`. A short or whitespace-only secret, or one equal to
+  `JWT_SECRET`, is accepted, although the docs ask for 32 random bytes kept
+  apart from `JWT_SECRET`. With table or log access and one known email or
+  IP, a weak secret can be brute-forced offline, which undoes EN-6. Enforce
+  a minimum length (and reject a value equal to `JWT_SECRET`) at boot; this
+  changes the deployment spec. `JWT_SECRET` has no minimum either, so
+  consider both together. Evidence:
+  `apps/api/src/modules/auth/infrastructure/config/throttle-key.config.ts`.
+  Origin: `en-6-throttle-key-hmac` native review, findings `R1-001` and
+  `R3-002`, 2026-11-12.
 
 - **EN-6** (api): throttle counter keys are now HMAC-SHA-256 under the new
   required `THROTTLE_KEY_SECRET` (per client key and per email, stored and

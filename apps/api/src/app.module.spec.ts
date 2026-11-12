@@ -34,8 +34,8 @@ describe('AppModule (DI bootstrap)', () => {
   beforeEach(() => {
     process.env = {
       ...originalEnv,
-      JWT_SECRET: 'test-secret',
-      THROTTLE_KEY_SECRET: 'test-throttle-key-secret',
+      JWT_SECRET: 'test-jwt-secret-0123456789abcdefghij',
+      THROTTLE_KEY_SECRET: 'test-throttle-key-secret-0123456789ab',
       CORS_ORIGIN: 'http://localhost:5173',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
     };
@@ -72,8 +72,8 @@ describe('AppModule (review-schedule DI bootstrap)', () => {
   beforeEach(() => {
     process.env = {
       ...originalEnv,
-      JWT_SECRET: 'test-secret',
-      THROTTLE_KEY_SECRET: 'test-throttle-key-secret',
+      JWT_SECRET: 'test-jwt-secret-0123456789abcdefghij',
+      THROTTLE_KEY_SECRET: 'test-throttle-key-secret-0123456789ab',
       CORS_ORIGIN: 'http://localhost:5173',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
     };
