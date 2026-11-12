@@ -190,26 +190,32 @@ describe('Login rate limit persistence (integration)', () => {
   it('keys both counters with THROTTLE_KEY_SECRET', async () => {
     const client = uniqueClient();
     const email = `nobody-${randomUUID()}@example.com`;
+    const suiteSecret = process.env.THROTTLE_KEY_SECRET;
     const keysUnder = async (secret: string): Promise<string[]> => {
       process.env.THROTTLE_KEY_SECRET = secret;
       const app = await createApp();
-      const prisma = app.get(PrismaService);
-      await prisma.throttleCounter.deleteMany();
-      await request(app.getHttpServer())
-        .post('/auth/login')
-        .set('X-Forwarded-For', client)
-        .send({ email, password: 'wrong-password-1' })
-        .expect(401);
-      const rows = await prisma.throttleCounter.findMany();
-      await closeApp(app);
-      return rows.map((row) => row.key);
+      try {
+        const prisma = app.get(PrismaService);
+        // As in the test above: suites run in band, so emptying the table
+        // makes the two rows below provably this attempt's own.
+        await prisma.throttleCounter.deleteMany();
+        await request(app.getHttpServer())
+          .post('/auth/login')
+          .set('X-Forwarded-For', client)
+          .send({ email, password: 'wrong-password-1' })
+          .expect(401);
+        const rows = await prisma.throttleCounter.findMany();
+        return rows.map((row) => row.key);
+      } finally {
+        await closeApp(app);
+        process.env.THROTTLE_KEY_SECRET = suiteSecret;
+      }
     };
     const emailKey = (secret: string) =>
       createHmac('sha256', secret).update(`login-email:${email}`).digest('hex');
 
     const first = await keysUnder('first-throttle-secret');
     const second = await keysUnder('second-throttle-secret');
-    process.env.THROTTLE_KEY_SECRET = 'integration-throttle-secret';
 
     expect(first).toHaveLength(2);
     expect(second).toHaveLength(2);

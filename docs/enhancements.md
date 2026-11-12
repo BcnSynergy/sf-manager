@@ -995,6 +995,28 @@ content type`). Today that is the only 415 it raises, but a future one
   told to ignore TypeScript 7.x on PR #387, so it will next propose 8.x.
   Origin: Dependabot PR #387 (typescript 7.0.2), 2026-11-10.
 
+- **EN-180** (api): `getThrottleKeySecret()` refuses only a missing or empty
+  `THROTTLE_KEY_SECRET`. A short or whitespace-only secret, or one equal to
+  `JWT_SECRET`, is accepted, although the docs ask for 32 random bytes kept
+  apart from `JWT_SECRET`. With table or log access and one known email or
+  IP, a weak secret can be brute-forced offline, which undoes EN-6. Enforce
+  a minimum length (and reject a value equal to `JWT_SECRET`) at boot; this
+  changes the deployment spec. `JWT_SECRET` has no minimum either, so
+  consider both together. Evidence:
+  `apps/api/src/modules/auth/infrastructure/config/throttle-key.config.ts`.
+  Origin: `en-6-throttle-key-hmac` native review, findings `R1-001` and
+  `R3-002`, 2026-11-12.
+
+- **EN-181** (api): `auth.module.ts` builds the throttle key hasher twice,
+  `createThrottleKeyHasher(getThrottleKeySecret())` in the
+  `ThrottlerModule.forRootAsync` factory and in the `LOGIN_FAILURE_LIMITER`
+  factory. Both counters must use the same secret, but nothing ties the two
+  calls together; a later change to one (for example key rotation) could
+  drift silently. Build it once, for example as a `THROTTLE_KEY_HASHER`
+  provider that the limiter factory injects and that the throttler factory
+  reaches through `forRootAsync` `imports`/`inject`. Origin:
+  `en-6-throttle-key-hmac` native review, finding `R2-001`, 2026-11-12.
+
 ## Done
 
 - **EN-6** (api): throttle counter keys are now HMAC-SHA-256 under the new

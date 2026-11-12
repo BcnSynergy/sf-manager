@@ -11,8 +11,10 @@ import type { ThrottleKeyHasher } from '../config/throttle-key.config';
 // sha256 hex, and `throttlerName` is ignored because it is already part of
 // that hash. It is stored as an HMAC of that hex under THROTTLE_KEY_SECRET
 // (EN-6, see throttle-key.config.ts), so no raw IP is ever stored and a
-// reader of the table cannot recompute the key from candidate addresses. Every timestamp comparison uses the database clock (now()), so
-// all API instances agree on window boundaries regardless of clock drift.
+// reader of the table cannot recompute the key from candidate addresses.
+//
+// Every timestamp comparison uses the database clock (now()), so all API
+// instances agree on window boundaries regardless of clock drift.
 //
 // Errors are NOT caught: a storage failure surfaces as a 500 and the login
 // attempt is refused (fail closed). Under Prisma 7 + @prisma/adapter-pg a
