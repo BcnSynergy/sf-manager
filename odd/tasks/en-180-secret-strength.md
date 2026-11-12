@@ -1,7 +1,7 @@
 # EN-180 — Secret strength at boot
 
 Objective: refuse to start on weak `JWT_SECRET` / `THROTTLE_KEY_SECRET` values.
-Branch: `en-180-secret-strength/01-validate` (single PR, stacked-to-main). Runner: Jest (`npm test`, `npm run test:e2e`, `npm run test:integration` in `apps/api`).
+Branch: `en-180-secret-strength/01-validate` (PR #409, stacked-to-main). Runner: Jest (`npm test`, `npm run test:e2e`, `npm run test:integration` in `apps/api`).
 
 ## Specs
 
@@ -20,4 +20,4 @@ Branch: `en-180-secret-strength/01-validate` (single PR, stacked-to-main). Runne
 - L1 (2026-11-12, user): "vamos con EN-180".
 - L2 (2026-11-12, user): scope "Ambos secretos (Recomendado)"; spec question answered "si".
 - L3: Risk items 2 (secrets) and 3 (stricter config contract: an existing short `JWT_SECRET` stops the API from starting).
-- L4 (2026-11-12): native review (risk, reliability) on a794ac9 approved and acknowledged (lineage review-573fa55a71f7235f); R1-001 registered as EN-182. Fresh review (Opus, worktree, probes P1-P9 all caught): APPROVE. Applied S-1 (exact JWT_SECRET messages), S-2 (test independent of JWT_SECRET), W-1 (EN-182, with S-3). W-2: `apps/api/.env.example` placeholders are shorter than 32 characters; the user updates them (file denied to the agent). W-3: PR number filled when the PR opens.
+- L4 (2026-11-12): native review (risk, reliability) on a794ac9 approved and acknowledged (lineage review-573fa55a71f7235f); R1-001 registered as EN-182. Fresh review (Opus, worktree, probes P1-P9 all caught): APPROVE. Applied S-1 (exact JWT_SECRET messages), S-2 (test independent of JWT_SECRET), W-1 (EN-182, with S-3). W-2: `apps/api/.env.example` placeholders are shorter than 32 characters; the user updates them (file denied to the agent). W-3: PR #409 filled in.

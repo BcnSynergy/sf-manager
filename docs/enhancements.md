@@ -1028,7 +1028,7 @@ content type`). Today that is the only 415 it raises, but a future one
   least 32 characters and no surrounding whitespace, and
   `THROTTLE_KEY_SECRET` must differ from `JWT_SECRET`; otherwise the API
   refuses to start (shared `readSecret`, deployment spec "Secret
-  strength"). Done in `en-180-secret-strength` (PR #TBD). Original entry:
+  strength"). Done in `en-180-secret-strength` (PR #409). Original entry:
   `getThrottleKeySecret()` refuses only a missing or empty
   `THROTTLE_KEY_SECRET`. A short or whitespace-only secret, or one equal to
   `JWT_SECRET`, is accepted, although the docs ask for 32 random bytes kept
