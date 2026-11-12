@@ -1,0 +1,14 @@
+// Compiles the admin seed (prisma/seed.ts) and the API code it imports to
+// JavaScript for the production image, which has no ts-node (EN-93,
+// apps/api/Dockerfile). Runs after `nest build`, which empties dist/.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/seed",
+    "rootDir": "./",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": ["prisma/seed.ts"]
+}

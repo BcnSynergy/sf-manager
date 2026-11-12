@@ -9,10 +9,10 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
-    // prisma/seed.ts is created in PR 3 (auth-minimal-skeleton), once the
-    // `PASSWORD_HASHER`/`USER_REPOSITORY` DI tokens it resolves exist —
-    // wiring the command here now so PR 3 only has to add the file.
-    seed: 'ts-node prisma/seed.ts',
+    // Development runs prisma/seed.ts through ts-node. The production image
+    // ships no ts-node (EN-93): it compiles the seed to JavaScript
+    // (tsconfig.seed.json) and points PRISMA_SEED_COMMAND at that file.
+    seed: process.env.PRISMA_SEED_COMMAND || 'ts-node prisma/seed.ts',
   },
   datasource: {
     url: env('DATABASE_URL'),
