@@ -1002,7 +1002,9 @@ content type`). Today that is the only 415 it raises, but a future one
   already in the image before EN-93, so exposure is unchanged, but triage
   should know they never run in the API. They are also most of the
   remaining 947 MB. A migrate-only runtime (for example running
-  `migrate deploy` from a separate one-off image) would drop them. Evidence:
+  `migrate deploy` from a separate one-off image) would drop them. Smaller
+  item: `dist/seed/src` repeats the compiled app the seed imports (a few
+  MB of `dist`'s 6.7 MB). Evidence:
   `apps/api/package.json`, `apps/api/Dockerfile`. Origin:
   `en-93-api-image-size` native review `R1-002`, 2026-11-12.
 

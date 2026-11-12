@@ -5,7 +5,8 @@
 # Two stages (EN-93): `build` installs every dependency and compiles the API,
 # the validation package and the admin seed; `runtime` installs only
 # production dependencies and copies the compiled output, so the image ships
-# no dev dependencies, TypeScript sources or tests.
+# no dev dependencies or tests, and no TypeScript source but prisma.config.ts,
+# which the Prisma CLI reads.
 FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS base
 
 # Prisma's schema engine (`prisma migrate deploy`) links against OpenSSL.
@@ -50,7 +51,8 @@ RUN npm ci --omit=dev --workspace=@sf-manager/api --workspace=@sf-manager/valida
 
 COPY --from=build /app/packages/validation/dist packages/validation/dist
 COPY --from=build /app/apps/api/dist apps/api/dist
-COPY apps/api/prisma apps/api/prisma
+COPY apps/api/prisma/schema.prisma apps/api/prisma/
+COPY apps/api/prisma/migrations apps/api/prisma/migrations
 COPY apps/api/prisma.config.ts apps/api/
 # The generated Prisma client lives in node_modules, which this stage
 # installed afresh, so it is generated again here.
