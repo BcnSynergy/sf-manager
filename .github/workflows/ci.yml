@@ -159,19 +159,22 @@ jobs:
             jq -er '."containerimage.digest"' "meta-$app.json" >"digests/$app-$ARCH"
           done
           cat digests/*
-      # The smoke test in `ci` runs amd64 only, so start each image once on
+      # The smoke test in `ci` runs amd64 only, so check each image once on
       # its own platform: the API must load its native modules (argon2, the
-      # Prisma engines) and the web image must run Caddy.
-      - name: Start the images on this platform
+      # Prisma client) and run the Prisma CLI it ships, and Caddy must accept
+      # the web image's Caddyfile. Neither starts its server: the API needs a
+      # database, which the server deploy proves.
+      - name: Check the images on this platform
         env:
           ARCH: ${{ matrix.arch }}
         run: |
           api="ghcr.io/bcnsynergy/sf-manager-api@$(cat "digests/api-$ARCH")"
           web="ghcr.io/bcnsynergy/sf-manager-web@$(cat "digests/web-$ARCH")"
           # prisma.config.ts requires DATABASE_URL; nothing connects to it.
+          # --no-install: fail instead of fetching a CLI the image lacks.
           docker run --rm -e DATABASE_URL=postgresql://check@localhost/check "$api" \
-            sh -c "node -e \"require('argon2'); require('@prisma/client')\" && npx prisma --version"
-          docker run --rm "$web" caddy version
+            sh -c "node -e \"require('argon2'); require('@prisma/client')\" && npx --no-install prisma --version"
+          docker run --rm "$web" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - uses: actions/upload-artifact@v7
         with:
           name: digests-${{ matrix.arch }}
@@ -206,9 +209,13 @@ jobs:
           source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
           for app in api web; do
             image="ghcr.io/bcnsynergy/sf-manager-$app"
-            # One digest file per matrix platform: digests/<app>-<arch>.
+            # One digest file per platform: digests/<app>-<arch>. Keep this
+            # list in step with the publish-platform matrix; a missing
+            # platform fails here, before any tag moves.
             refs=''
-            for file in digests/"$app"-*; do
+            for arch in amd64 arm64; do
+              file="digests/$app-$arch"
+              [ -s "$file" ] || { echo "no $arch digest for $app" >&2; exit 1; }
               refs="$refs $image@$(cat "$file")"
             done
             # shellcheck disable=SC2086 # one word per platform image

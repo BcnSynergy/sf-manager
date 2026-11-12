@@ -568,12 +568,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   deploy from CI, which needs server access as repository secrets. Both
   packages were public after the first publish (cause unconfirmed), so the
   server needs no token to pull them while they stay public; check Package
-  settings before switching the compose file. Note that `publish` rebuilds the images instead of pushing the ones `ci`
+  settings before switching the compose file. Note that `publish-platform` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state).
   The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing is done (`en-91-multi-arch`, PR #TBD):
   `publish-platform` builds both images on `ubuntu-24.04` and the native
-  `ubuntu-24.04-arm` runner and `publish` joins them into one
+  `ubuntu-24.04-arm` runner, checks each on its own platform (native
+  modules, Prisma CLI, Caddyfile), and `publish` joins them into one
   `linux/amd64` + `linux/arm64` image per tag. The server (checked
   2026-11-12) is that VM: aarch64, Ubuntu 26.04, no Docker installed yet,
   iptables open only on port 22.
