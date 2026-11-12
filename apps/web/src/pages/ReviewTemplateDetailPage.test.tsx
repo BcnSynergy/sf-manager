@@ -251,6 +251,33 @@ describe('ReviewTemplateDetailPage', () => {
         expect(hint()).not.toBeInTheDocument();
       });
 
+      it('compares by saved order, not by the order the API lists the questions in', async () => {
+        mockedReadReviewTemplate.mockResolvedValue({
+          ...savedTwo,
+          questions: [savedTwo.questions[1], savedTwo.questions[0]],
+        } as typeof savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        await screen.findByTestId('review-template-detail-question-question-1');
+        expect(activate()).toBeEnabled();
+        expect(hint()).not.toBeInTheDocument();
+      });
+
+      it('announces the hint politely when it appears', async () => {
+        mockedReadReviewTemplate.mockResolvedValue(savedTwo);
+        mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);
+        mockedListReviewTemplates.mockResolvedValue([]);
+
+        renderPage();
+
+        fireEvent.click(await screen.findByTestId('review-template-detail-picker-add-question-2'));
+
+        expect(hint()).toHaveAttribute('role', 'status');
+      });
+
       it('enables Activate again when the change is undone without saving', async () => {
         mockedReadReviewTemplate.mockResolvedValue(savedTwo);
         mockedListChecklistQuestions.mockResolvedValue([annualQuestion]);

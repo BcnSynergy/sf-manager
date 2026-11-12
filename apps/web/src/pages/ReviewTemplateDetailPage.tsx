@@ -334,6 +334,10 @@ export function ReviewTemplateDetailPage() {
       {isDraft && hasUnsavedSelection && (
         <p
           id={ACTIVATE_UNSAVED_HINT_ID}
+          // A disabled button cannot take focus, so its aria-describedby is
+          // only heard while reading the page; role="status" also announces
+          // the hint politely as soon as it appears.
+          role="status"
           className="sf-badge sf-badge-notice"
           data-testid="review-template-detail-activate-unsaved"
         >
