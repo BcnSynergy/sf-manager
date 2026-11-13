@@ -577,6 +577,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The README's later `run` commands (seed, restore, off-site copy) do not
   pass `--no-build`, so a pruned image would be built on the server; adding
   it there belongs to the same item. Origin: native review advisory R3 in `en-91-registry-deploy`, 2026-11-13.
+- **EN-187** (delivery tests): the smoke test's "API that cannot start"
+  case matches Compose's wording exactly
+  (`container sf-manager-smoke-api-1 is unhealthy` or `... exited`), and it
+  fails when `compose ps -a web` errors. Both hold with the Compose on the
+  CI runner and on Docker Desktop (v5.7.0), but another Compose release
+  could word the error differently (for example
+  `container for service "api" ...`) or error on `ps` for a service with no
+  containers, which would fail the smoke test falsely. Revisit if CI
+  changes its Compose. Origin: native review advisories in
+  `en-92-healthchecks`, 2026-11-13.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
