@@ -289,7 +289,12 @@ spec is `openspec/specs/deployment/spec.md`.
    (the error then names the `local` tag, which only images built from the
    checkout carry and CI never publishes). `--no-build` makes a missing image
    an error instead of a build on the server. The `grep` line adds
-   `IMAGE_TAG` to a `prod.env` copied before it existed. The server needs no
+   `IMAGE_TAG` to a `prod.env` copied before it existed. Set `IMAGE_TAG` only
+   in `prod.env`, never with `export`: a shell variable overrides the file,
+   so this and every later command would use the shell's tag. CI names the
+   tag with `git rev-parse --short=7`, which gives more than 7 characters
+   only if the prefix is ambiguous in its checkout; if the pull then says
+   `not found`, look up the tag in the package's version list. The server needs no
    registry login while the packages stay public. To
    build the images from the checkout instead, for example on a developer
    machine, leave `IMAGE_TAG` empty and run

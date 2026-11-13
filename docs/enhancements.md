@@ -574,7 +574,9 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   (pull fails, `up -d --no-build` exits non-zero) nor the rule that CI never
   publishes the `local` tag has a check. A CI step could pull an unknown
   `sha-` tag and run `up -d --no-build` against it, expecting both to fail.
-  Origin: native review advisory R3 in `en-91-registry-deploy`, 2026-11-13.
+  The README's later `run` commands (seed, restore, off-site copy) do not
+  pass `--no-build`, so a pruned image would be built on the server; adding
+  it there belongs to the same item. Origin: native review advisory R3 in `en-91-registry-deploy`, 2026-11-13.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
