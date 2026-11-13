@@ -8,14 +8,32 @@ Defines how SF-Manager runs in production: one Docker Compose stack on a single 
 
 ### Requirement: One-command production stack
 
-The repository MUST provide `docker-compose.prod.yml`, which builds the API and web images from the repository and starts Postgres, the API, the backup service, the off-site copy service and Caddy with one `docker compose ... up -d --build` command. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
+The repository MUST provide `docker-compose.prod.yml`, which starts Postgres, the API, the backup service, the off-site copy service and Caddy with one `docker compose ... up -d` command. The API and web services MUST run the images CI published (see "Images built and published by CI") under the tag `IMAGE_TAG` names in `prod.env`, which the operator sets to `sha-<short commit SHA>` of the commit the checkout is on, so the compose file and the images come from the same commit. The documented start command MUST NOT build an image on the server: a missing image MUST stop it with an error. With `IMAGE_TAG` empty or unset, pulling those images MUST fail instead of running other images, and `up -d --build` MUST build both images from the checkout under the tag `local`, which CI MUST NOT publish. Its Compose project name MUST differ from the dev stack's, so both can run on one machine.
 
 #### Scenario: First start
 
-- GIVEN a server with Docker and a filled-in `prod.env`
-- WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`
-- THEN Postgres, the API, the backup service, the off-site copy service and Caddy are running
+- GIVEN a server with Docker, a checkout of a commit that was green on `main`, and a filled-in `prod.env` whose `IMAGE_TAG` is `sha-<short SHA of that commit>`
+- WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env pull api web` and then `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build`
+- THEN Postgres, the API, the backup service, the off-site copy service and Caddy are running, the API and web from the images published for that commit, with no image built on the server
 - AND `https://<SITE_ADDRESS>/api/health` returns 200 with `{"status":"ok","db":"ok"}`
+
+#### Scenario: No image tag set
+
+- GIVEN `prod.env` leaves `IMAGE_TAG` empty
+- WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env pull api web`
+- THEN the pull fails, saying the API and web images were not found, and no published image is run
+
+#### Scenario: Image not published
+
+- GIVEN `IMAGE_TAG` names a tag CI did not publish
+- WHEN the operator runs the pull and start commands of "First start"
+- THEN the pull fails, saying the images were not found, and the start command builds no image on the server
+
+#### Scenario: Build from the checkout
+
+- GIVEN `prod.env` leaves `IMAGE_TAG` empty
+- WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`
+- THEN both images are built from the checkout and the stack starts as in "First start"
 
 #### Scenario: Missing configuration
 
@@ -322,7 +340,7 @@ Postgres data MUST persist in a named volume across container restarts and upgra
 #### Scenario: Upgrade keeps data
 
 - GIVEN a running production stack with data
-- WHEN the operator checks out a newer version and runs the start command again
+- WHEN the operator checks out a newer version, sets `IMAGE_TAG` to it, and pulls and starts the stack again as in "First start"
 - THEN the data and the uploaded logo are still there and any new migrations are applied
 
 #### Scenario: Secrets not committed

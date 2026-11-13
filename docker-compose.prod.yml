@@ -1,5 +1,9 @@
 # Production stack (README "Production deployment"; spec `deployment`).
-#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build
+# The server runs the images CI published for IMAGE_TAG (set in prod.env):
+#   docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
+#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
+# Without IMAGE_TAG, `up -d --build` builds both images from this checkout
+# and tags them `local`, a tag CI never publishes, so pulling it fails.
 # The dev stack (docker-compose.yml) is a separate project, so both can run
 # on one machine without sharing containers or volumes.
 name: sf-manager-prod
@@ -22,6 +26,7 @@ services:
       retries: 12
 
   api:
+    image: ghcr.io/bcnsynergy/sf-manager-api:${IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -104,6 +109,7 @@ services:
       - ./deploy/offsite-copy.sh:/usr/local/bin/offsite-copy.sh:ro
 
   web:
+    image: ghcr.io/bcnsynergy/sf-manager-web:${IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: apps/web/Dockerfile
