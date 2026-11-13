@@ -228,10 +228,16 @@ compose rm -sf web >/dev/null 2>&1 || fail "could not remove the web container"
 if out=$(compose -f "$failing_api" up -d 2>&1); then
   fail "up -d succeeded although the API cannot start"
 fi
+# Compose names the API as unhealthy (it restarts, unless-stopped) or, in
+# other versions, as exited; either way it must name the API.
 case $out in
-  *api-1\ is\ unhealthy*) ;;
-  *) fail "up -d failed without naming the unhealthy API: $out" ;;
+  *api*unhealthy* | *api*exited*) ;;
+  *) fail "up -d failed without naming the API: $out" ;;
 esac
-[ -z "$(compose ps -q --status running web)" ] ||
-  fail "Caddy started although the API is unhealthy"
+# Created but never started: not running, and not restarting either.
+web_state=$(compose ps -a --format '{{.State}}' web 2>/dev/null || true)
+case $web_state in
+  '' | created) ;;
+  *) fail "Caddy is '$web_state' although the API is unhealthy" ;;
+esac
 echo "smoke: an API that cannot start fails up -d and keeps Caddy down"
