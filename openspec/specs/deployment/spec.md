@@ -86,6 +86,29 @@ The API container MUST apply pending Prisma migrations (`prisma migrate deploy`)
 - WHEN it starts
 - THEN the container exits with a non-zero status without serving requests
 
+### Requirement: API health in the stack
+
+The API service MUST declare a Compose healthcheck that passes only while the API's `/health` route answers 200, that is, while the API serves requests and reaches the database. Its start period MUST allow pending migrations to run before a failed check counts. Caddy (the `web` service) MUST start only once the API is healthy, so the start command fails, naming the unhealthy API, instead of serving 502 for `/api/*` while the API cannot start.
+
+#### Scenario: Healthy start
+
+- GIVEN a stack whose API applies its migrations and starts
+- WHEN the operator starts the stack
+- THEN the API container reports `healthy` and Caddy starts after it
+
+#### Scenario: API never becomes healthy
+
+- GIVEN an API container that exits before it serves, for example after a failed migration
+- WHEN the operator starts the stack
+- THEN the start command fails, saying the API container is unhealthy
+- AND Caddy is not started
+
+#### Scenario: Database unreachable
+
+- GIVEN a running stack whose database stops answering
+- WHEN the API's healthcheck runs
+- THEN the check fails, and after its retries the API container reports `unhealthy`
+
 ### Requirement: First admin
 
 The operator MUST be able to create or reset the system admin inside the production stack with one documented command that reads `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` from the operator's shell. The production image runs with `NODE_ENV=production`, so this command MUST NOT create the dev seed accounts or dataset. The long-running API container SHALL NOT receive the seed credentials.
@@ -300,7 +323,7 @@ When configured, the stack MUST copy every complete dump and files archive that 
 
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, the off-site copy service, left unconfigured, reports that it is disabled and keeps running, the documented admin seed command leaves exactly one user, the seeded admin with role `SYSTEM_ADMIN`, who can log in, and a dump taken before the newest migration restores, together with its uploaded files, owned by the API's user, and the API then applies that migration and serves `/api/health` ok. `deploy/smoke-test.sh` MUST run the same check locally. CI MUST also fail unless ShellCheck passes on every script in `deploy/`, and unless the backup and off-site copy scripts pass their tests, which run them against throwaway containers and cover the scenarios of "Database backups" and "Off-site backup copies"; `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` MUST run those tests locally. After CI passes on a push to `main`, separate jobs, the only ones allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Each published tag MUST be one multi-platform image for `linux/amd64` and `linux/arm64`, each platform built natively on a runner of that architecture, and on that runner, before any tag points at them, the platform's API image MUST load its native modules and run its Prisma CLI, and its web image's Caddy MUST accept its configuration. A tag MUST NOT be created or moved unless both platforms' images were built. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the API container reports `healthy`, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, the off-site copy service, left unconfigured, reports that it is disabled and keeps running, the documented admin seed command leaves exactly one user, the seeded admin with role `SYSTEM_ADMIN`, who can log in, and a dump taken before the newest migration restores, together with its uploaded files, owned by the API's user, and the API then applies that migration and serves `/api/health` ok. `deploy/smoke-test.sh` MUST run the same check locally. CI MUST also fail unless ShellCheck passes on every script in `deploy/`, and unless the backup and off-site copy scripts pass their tests, which run them against throwaway containers and cover the scenarios of "Database backups" and "Off-site backup copies"; `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` MUST run those tests locally. After CI passes on a push to `main`, separate jobs, the only ones allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Each published tag MUST be one multi-platform image for `linux/amd64` and `linux/arm64`, each platform built natively on a runner of that architecture, and on that runner, before any tag points at them, the platform's API image MUST load its native modules and run its Prisma CLI, and its web image's Caddy MUST accept its configuration. A tag MUST NOT be created or moved unless both platforms' images were built. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 

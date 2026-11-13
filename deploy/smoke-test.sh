@@ -2,7 +2,8 @@
 # Smoke test for the production stack (EN-91; spec `deployment`, "Images
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
 # starts the whole stack on https://localhost with throwaway secrets, checks
-# that the API and the web app answer, that the API can write uploaded
+# that the API and the web app answer, that Docker reports the API healthy
+# (EN-92), that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), that the documented admin seed
@@ -81,6 +82,21 @@ wait_healthy() {
 }
 wait_healthy "first start"
 echo "smoke: /api/health ok"
+
+# EN-92: Docker's own healthcheck on the API must agree. It can lag the
+# request above by one probe, so allow a few.
+api_health=''
+attempt=0
+while [ "$attempt" -lt 15 ]; do
+  api_health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+    "$(compose ps -q api)" 2>/dev/null || echo unknown)
+  [ "$api_health" = healthy ] && break
+  attempt=$((attempt + 1))
+  sleep 2
+done
+[ "$api_health" = healthy ] ||
+  fail "the api container's healthcheck reports '$api_health', expected healthy"
+echo "smoke: api container healthy"
 
 status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
