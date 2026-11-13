@@ -277,15 +277,20 @@ spec is `openspec/specs/deployment/spec.md`.
 
    ```sh
    tag=sha-$(git rev-parse HEAD | cut -c1-7)
+   grep -q '^IMAGE_TAG=' prod.env || echo 'IMAGE_TAG=' >>prod.env
    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
-   docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
-   docker compose -f docker-compose.prod.yml --env-file prod.env up -d
+   docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
+     docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
    ```
 
    CI publishes these images only for commits that were green on `main` (see
    "Images in CI"), so check out such a commit. A commit without published
-   images fails the pull with `not found`, and so does an empty `IMAGE_TAG`.
-   The server needs no registry login while the packages stay public. To
+   images fails the pull with `not found`, and so does an empty `IMAGE_TAG`
+   (the error then names the `local` tag, which only images built from the
+   checkout carry and CI never publishes). `--no-build` makes a missing image
+   an error instead of a build on the server. The `grep` line adds
+   `IMAGE_TAG` to a `prod.env` copied before it existed. The server needs no
+   registry login while the packages stay public. To
    build the images from the checkout instead, for example on a developer
    machine, leave `IMAGE_TAG` empty and run
    `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`.

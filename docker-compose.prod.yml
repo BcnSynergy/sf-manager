@@ -1,8 +1,9 @@
 # Production stack (README "Production deployment"; spec `deployment`).
 # The server runs the images CI published for IMAGE_TAG (set in prod.env):
 #   docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
-#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d
-# Without IMAGE_TAG, `up -d --build` builds both images from this checkout.
+#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
+# Without IMAGE_TAG, `up -d --build` builds both images from this checkout
+# and tags them `local`, a tag CI never publishes, so pulling it fails.
 # The dev stack (docker-compose.yml) is a separate project, so both can run
 # on one machine without sharing containers or volumes.
 name: sf-manager-prod
