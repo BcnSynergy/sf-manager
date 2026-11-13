@@ -231,11 +231,12 @@ fi
 # Compose names the API as unhealthy (it restarts, unless-stopped) or, in
 # other versions, as exited; either way it must name the API.
 case $out in
-  *api*unhealthy* | *api*exited*) ;;
+  *"container $project-api-1 is unhealthy"* | *"container $project-api-1 exited"*) ;;
   *) fail "up -d failed without naming the API: $out" ;;
 esac
 # Created but never started: not running, and not restarting either.
-web_state=$(compose ps -a --format '{{.State}}' web 2>/dev/null || true)
+web_state=$(compose ps -a --format '{{.State}}' web) ||
+  fail "could not read the web container's state"
 case $web_state in
   '' | created) ;;
   *) fail "Caddy is '$web_state' although the API is unhealthy" ;;
