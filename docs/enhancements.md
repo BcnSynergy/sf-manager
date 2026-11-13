@@ -606,7 +606,7 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   migration, or an expiring certificate. An external uptime check on
   `/api/health` would cover the first two; it needs the domain. The API now
   has a Compose healthcheck and Caddy waits for it, so a failed start shows
-  as `unhealthy` instead of 502s (`en-92-healthchecks`, PR #TBD), but
+  as `unhealthy` instead of 502s (`en-92-healthchecks`, PR #415), but
   nothing alerts on it. Evidence: `docker-compose.prod.yml`.
   Origin: `deployment` (S11) and its pre-push review, 2026-10-25.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
