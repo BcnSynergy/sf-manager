@@ -1018,7 +1018,7 @@ content type`). Today that is the only 415 it raises, but a future one
   image since `en-91-multi-arch` (PR #413), confirmed by its first green
   `main` run (`imagetools inspect` lists both platforms) for the Oracle Cloud
   Ampere (arm64) host. Deploying from CI moved to EN-185. Done in
-  `en-91-registry-deploy` (PR #TBD).
+  `en-91-registry-deploy` (PR #414).
   Original entry: CI builds both images, smoke-tests the stack and publishes
   the images to GitHub Container Registry (`en-91-ci-images`, #291), but
   nothing deploys them: the operator still builds on the server with
