@@ -559,29 +559,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
-- **EN-91** (delivery): CI builds both images, smoke-tests the stack and
-  publishes the images to GitHub Container Registry (`en-91-ci-images`,
-  #291), but nothing deploys them: the operator still builds on the server
-  with `docker compose ... up -d --build`. Remaining: switch
-  `docker-compose.prod.yml` to the published images (`image:` by tag or
-  digest instead of `build:`), update the upgrade steps, and optionally
-  deploy from CI, which needs server access as repository secrets. Both
-  packages were public after the first publish (cause unconfirmed), so the
-  server needs no token to pull them while they stay public; check Package
-  settings before switching the compose file. Note that `publish-platform` rebuilds the images instead of pushing the ones `ci`
+- **EN-185** (delivery): deploying is manual: the operator checks out a
+  commit on the server, sets `IMAGE_TAG` and pulls (README "Production
+  deployment"). Deploying from CI after a green `main` run would need server
+  access (SSH host, user and key) as repository secrets and a decision on
+  when to deploy (every green `main`, or a manual trigger). Note that
+  `publish-platform` rebuilds the images instead of pushing the ones `ci`
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
-  registry state).
-  The host is an Oracle Cloud Always Free Ampere VM (arm64). Multi-platform publishing was added in `en-91-multi-arch` (PR #413), to be
-  confirmed by its first green `main` run:
-  `publish-platform` builds both images on `ubuntu-24.04` and the native
-  `ubuntu-24.04-arm` runner, checks each on its own platform (native
-  modules, Prisma CLI, Caddyfile), and `publish` joins them into one
-  `linux/amd64` + `linux/arm64` image per tag. The server (checked
-  2026-11-12) is that VM: aarch64, Ubuntu 26.04, no Docker installed yet,
-  iptables open only on port 22.
-  Evidence: `.github/workflows/ci.yml`, README "Images in CI". Origin:
-  `deployment` (S11), 2026-10-25; covers the deploy part of TD-32. Arm64
-  requirement added 2026-11-05 (`en-91-arm64-note`, PR #339).
+  registry state). Origin: split from EN-91 in `en-91-registry-deploy`,
+  2026-11-13; covers the deploy part of TD-32.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
@@ -1012,6 +998,24 @@ content type`). Today that is the only 415 it raises, but a future one
   `S-1`, 2026-11-12.
 
 ## Done
+
+- **EN-91** (delivery): the server runs the images CI publishes instead of
+  building them. `docker-compose.prod.yml` names
+  `ghcr.io/bcnsynergy/sf-manager-<app>:${IMAGE_TAG:-local}` for the API and
+  web services and keeps their `build:`, so `up -d --build` (smoke test,
+  developer machine) still works; `prod.env` sets `IMAGE_TAG` to
+  `sha-<commit>` of the checkout, and the README deploy and upgrade steps pull
+  that tag (spec `deployment`). Each tag is one `linux/amd64` + `linux/arm64`
+  image since `en-91-multi-arch` (PR #413), confirmed by its first green
+  `main` run (`imagetools inspect` lists both platforms) for the Oracle Cloud
+  Ampere (arm64) host. Deploying from CI moved to EN-185. Done in
+  `en-91-registry-deploy` (PR #TBD).
+  Original entry: CI builds both images, smoke-tests the stack and publishes
+  the images to GitHub Container Registry (`en-91-ci-images`, #291), but
+  nothing deploys them: the operator still builds on the server with
+  `docker compose ... up -d --build`. Origin: `deployment` (S11),
+  2026-10-25. Arm64 requirement added 2026-11-05 (`en-91-arm64-note`, PR
+  #339).
 
 - **EN-93** (delivery): the API image is now a two-stage build. `build`
   compiles the API, the validation package and the admin seed

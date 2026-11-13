@@ -36,7 +36,8 @@ None.
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
-  deployment"); deploying from CI is EN-91.
+  deployment"), which runs the images CI publishes (EN-91); deploying
+  from CI is EN-185.
 
 - **TD-52**: Two open Dependabot alerts in dev-only packages have no fix
   inside the ranges their parents allow. Alert #71 (GHSA-g3hv-75wg-m249,

@@ -272,11 +272,23 @@ spec is `openspec/specs/deployment/spec.md`.
    with a certificate from Caddy's local authority, which the browser does
    not trust until you accept it.
 
-2. Build and start the stack:
+2. Pin the images to the commit this checkout is on, pull them and start the
+   stack:
 
    ```sh
-   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build
+   tag=sha-$(git rev-parse HEAD | cut -c1-7)
+   sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
+   docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
+   docker compose -f docker-compose.prod.yml --env-file prod.env up -d
    ```
+
+   CI publishes these images only for commits that were green on `main` (see
+   "Images in CI"), so check out such a commit. A commit without published
+   images fails the pull with `not found`, and so does an empty `IMAGE_TAG`.
+   The server needs no registry login while the packages stay public. To
+   build the images from the checkout instead, for example on a developer
+   machine, leave `IMAGE_TAG` empty and run
+   `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --build`.
 
    The API applies pending migrations before it starts serving. If a
    migration fails the API container exits and restarts, and the old schema
@@ -298,7 +310,10 @@ spec is `openspec/specs/deployment/spec.md`.
    admin, never the dev accounts. Running it again resets that admin's
    password.
 
-4. To upgrade, check out the new version and run step 2 again.
+4. To upgrade, check out the new version (`git fetch` and
+   `git checkout <commit>`) and run step 2 again. To roll back, do the same
+   with the previous commit; a rollback does not undo migrations the newer
+   version applied.
 
 `TRUST_PROXY` is set to `1` in the compose file, because Caddy is the only
 proxy in front of the API and it replaces any `X-Forwarded-For` a client
@@ -354,11 +369,11 @@ permissions. After the first publish (#291) both were public (an anonymous
 manifest fetch answered 200), although GitHub documents new packages as
 private by default; why they came out public is unconfirmed. Pulls need no
 token while they stay public; check or change that in each package's
-Package settings. The server does not use them yet: it
-still builds with `up -d --build`, and deploying from the registry is EN-91.
+Package settings. The server runs them through `IMAGE_TAG` (see
+"Production deployment"); deploying from CI is not set up.
 
-Monitoring and automated deploys are not part of this setup yet (EN-91,
-EN-92). Swagger is off at `/api/docs` unless `prod.env` sets
+Monitoring and automated deploys are not part of this setup yet (EN-92,
+EN-185). Swagger is off at `/api/docs` unless `prod.env` sets
 `API_DOCS_ENABLED=true`.
 
 ### Database backups
