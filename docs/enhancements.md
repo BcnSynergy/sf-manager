@@ -568,6 +568,13 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
   registry state). Origin: split from EN-91 in `en-91-registry-deploy`,
   2026-11-13; covers the deploy part of TD-32.
+- **EN-186** (delivery): nothing tests that the documented start command
+  refuses to run an unpublished image. `deploy/smoke-test.sh` builds the
+  images with `up -d --build`, so neither the "Image not published" scenario
+  (pull fails, `up -d --no-build` exits non-zero) nor the rule that CI never
+  publishes the `local` tag has a check. A CI step could pull an unknown
+  `sha-` tag and run `up -d --no-build` against it, expecting both to fail.
+  Origin: native review advisory R3 in `en-91-registry-deploy`, 2026-11-13.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old

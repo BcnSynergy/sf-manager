@@ -277,7 +277,7 @@ spec is `openspec/specs/deployment/spec.md`.
 
    ```sh
    tag=sha-$(git rev-parse HEAD | cut -c1-7)
-   grep -q '^IMAGE_TAG=' prod.env || echo 'IMAGE_TAG=' >>prod.env
+   grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
    docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
      docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
