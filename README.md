@@ -308,8 +308,12 @@ healthcheck uses `start_interval`. The spec is
    `docker compose -f docker-compose.prod.yml --env-file prod.env logs api`.
    Caddy starts only once the API's healthcheck (`/health` answers 200)
    passes, so in that case `up -d` fails with
-   `dependency failed to start: container ... api-1 is unhealthy` and the
-   site stays down until the API starts. `docker compose ... ps` shows the
+   `dependency failed to start: container ... api-1 is unhealthy`. When the
+   upgrade replaced Caddy (a new `IMAGE_TAG` always does), the new Caddy is
+   left created but not started, so the whole site is down; Docker does not
+   start it later on its own, even once the API recovers, so after fixing
+   the cause run `up -d` again. When Caddy was not replaced, the old one keeps
+   running and answers 502 for `/api/*` until then. `docker compose ... ps` shows the
    API as `healthy` or `unhealthy`; an API that loses its database turns
    `unhealthy` within about a minute and a half, but nothing alerts on it
    yet (EN-92).

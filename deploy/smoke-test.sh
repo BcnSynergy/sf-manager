@@ -230,7 +230,8 @@ compose rm -sf web >/dev/null 2>&1 || fail "could not remove the web container"
 # Bounded, so a Compose that never gives up on the restarting API fails the
 # check instead of hanging the job.
 up_status=0
-out=$(timeout 300 docker compose -p "$project" -f docker-compose.prod.yml   -f "$override" -f "$failing_api" --env-file "$env_file" up -d 2>&1) || up_status=$?
+out=$(timeout 300 docker compose -p "$project" -f docker-compose.prod.yml \
+  -f "$override" -f "$failing_api" --env-file "$env_file" up -d 2>&1) || up_status=$?
 [ "$up_status" != 0 ] || fail "up -d succeeded although the API cannot start"
 [ "$up_status" != 124 ] || fail "up -d was still waiting for the API after 300 s"
 # Compose names the API as unhealthy (it restarts, unless-stopped) or, in

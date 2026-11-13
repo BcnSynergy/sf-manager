@@ -585,8 +585,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   could word the error differently (for example
   `container for service "api" ...`) or error on `ps` for a service with no
   containers, which would fail the smoke test falsely. Revisit if CI
-  changes its Compose. Origin: native review advisories in
-  `en-92-healthchecks`, 2026-11-13.
+  changes its Compose. Smaller points in the same case: it bounds `up -d`
+  with the external `timeout`, missing on stock macOS (exit 127 then reads
+  as "failed without naming the API"); that call repeats the `compose()`
+  helper's arguments, since `timeout` cannot run a shell function; 300 is
+  written in both the bound and the message; and its temp file, like the
+  others, is created before the cleanup trap. The "Database unreachable"
+  scenario of "API health in the stack" has no automated check (verified by
+  hand: the probe exits 1 with Postgres stopped); the smoke test could stop
+  Postgres and wait for `unhealthy`. Origin: native review advisories and
+  the fresh review in `en-92-healthchecks`, 2026-11-13.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
