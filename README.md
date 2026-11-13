@@ -257,8 +257,10 @@ images, so those only get the weekly digest PRs.
 Postgres, the API, a backup service and an off-site copy service (below), and Caddy, which serves the web app and forwards `/api/*`
 to the API on the same origin. Only Caddy publishes ports (80 and 443); it
 obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
-the domain's DNS must point at the server and both ports must be open. The
-spec is `openspec/specs/deployment/spec.md`.
+the domain's DNS must point at the server and both ports must be open. It
+needs Docker Engine 25 or later with the Compose plugin: the API's
+healthcheck uses `start_interval`. The spec is
+`openspec/specs/deployment/spec.md`.
 
 1. Create the env file from the example and fill in every value
    (`openssl rand -hex 32` gives a URL-safe password or secret):

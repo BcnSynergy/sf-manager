@@ -41,6 +41,8 @@ services:
     # and reaches the database. The start period covers pending migrations,
     # which run before the API listens; a failed migration never turns it
     # healthy, so `web` does not start and `docker compose ps` says why.
+    # PORT is unset, so the API listens on 3000. start_interval needs Docker
+    # Engine 25 or later (README).
     healthcheck:
       test:
         - CMD

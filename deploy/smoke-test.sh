@@ -43,6 +43,14 @@ POSTGRES_DB=sfmanager
 JWT_SECRET=$(openssl rand -hex 32)
 THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
 EOF
+# Last check (EN-92): an API that exits before it serves, as after a failed
+# migration.
+failing_api=$(mktemp)
+cat >"$failing_api" <<'EOF'
+services:
+  api:
+    command: ['sh', '-c', 'echo smoke: simulated start failure; exit 1']
+EOF
 
 compose() {
   docker compose -p "$project" -f docker-compose.prod.yml -f "$override" \
@@ -51,7 +59,7 @@ compose() {
 
 cleanup() {
   compose down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$env_file" "$override"
+  rm -f "$env_file" "$override" "$failing_api"
 }
 trap cleanup EXIT
 # dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
@@ -213,3 +221,17 @@ marker=$(compose exec -T api sh -c 'm="$FILE_STORAGE_DIR/smoke-marker" && [ -O "
 [ "$marker" = from-dump ] ||
   fail "the restored uploaded files lack the dump's marker owned by the API's user (got '$marker')"
 echo "smoke: a dump from before the newest migration restores with its uploaded files and the API migrates it"
+
+# EN-92: when the API never becomes healthy, the start command must fail
+# naming it, and Caddy must stay down instead of answering 502.
+compose rm -sf web >/dev/null 2>&1 || fail "could not remove the web container"
+if out=$(compose -f "$failing_api" up -d 2>&1); then
+  fail "up -d succeeded although the API cannot start"
+fi
+case $out in
+  *api-1\ is\ unhealthy*) ;;
+  *) fail "up -d failed without naming the unhealthy API: $out" ;;
+esac
+[ -z "$(compose ps -q --status running web)" ] ||
+  fail "Caddy started although the API is unhealthy"
+echo "smoke: an API that cannot start fails up -d and keeps Caddy down"
