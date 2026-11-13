@@ -258,7 +258,9 @@ Postgres, the API, a backup service and an off-site copy service (below), and Ca
 to the API on the same origin. Only Caddy publishes ports (80 and 443); it
 obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
 the domain's DNS must point at the server and both ports must be open. The
-spec is `openspec/specs/deployment/spec.md`.
+server needs Docker Engine 25 or later with the Compose plugin: the API's
+healthcheck uses `start_interval`. The spec is
+`openspec/specs/deployment/spec.md`.
 
 1. Create the env file from the example and fill in every value
    (`openssl rand -hex 32` gives a URL-safe password or secret):
@@ -304,6 +306,17 @@ spec is `openspec/specs/deployment/spec.md`.
    migration fails the API container exits and restarts, and the old schema
    is never served; read why with
    `docker compose -f docker-compose.prod.yml --env-file prod.env logs api`.
+   Caddy starts only once the API's healthcheck (`/health` answers 200)
+   passes, so in that case `up -d` fails with
+   `dependency failed to start: container ... api-1 is unhealthy`. When the
+   upgrade replaced Caddy (a new `IMAGE_TAG` always does), the new Caddy is
+   left created but not started, so the whole site is down; Docker does not
+   start it later on its own, even once the API recovers, so after fixing
+   the cause run `up -d` again. When Caddy was not replaced, the old one keeps
+   running and answers 502 for `/api/*` until then. `docker compose ... ps` shows the
+   API as `healthy` or `unhealthy`; an API that loses its database turns
+   `unhealthy` within about a minute and a half, but nothing alerts on it
+   yet (EN-92).
 
 3. Create the first admin once. The credentials come from your shell, so they
    are not stored in `prod.env` or in the running API:
@@ -349,6 +362,7 @@ updates".
 CI builds the production images and runs `deploy/smoke-test.sh` on every PR
 and push to `main`: it starts the whole stack on `https://localhost` with
 throwaway secrets and fails unless `/api/health` reports the database ok,
+Docker reports the API container healthy,
 the web app answers 200, the API can write uploaded files, the backup
 service writes a dump and a files archive, the off-site copy service,
 unconfigured, says it is disabled, the documented admin seed command

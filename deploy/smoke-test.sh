@@ -2,7 +2,8 @@
 # Smoke test for the production stack (EN-91; spec `deployment`, "Images
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
 # starts the whole stack on https://localhost with throwaway secrets, checks
-# that the API and the web app answer, that the API can write uploaded
+# that the API and the web app answer, that Docker reports the API healthy
+# (EN-92), that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), that the documented admin seed
@@ -42,6 +43,14 @@ POSTGRES_DB=sfmanager
 JWT_SECRET=$(openssl rand -hex 32)
 THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
 EOF
+# Last check (EN-92): an API that exits before it serves, as after a failed
+# migration.
+failing_api=$(mktemp)
+cat >"$failing_api" <<'EOF'
+services:
+  api:
+    command: ['sh', '-c', 'echo smoke: simulated start failure; exit 1']
+EOF
 
 compose() {
   docker compose -p "$project" -f docker-compose.prod.yml -f "$override" \
@@ -50,7 +59,7 @@ compose() {
 
 cleanup() {
   compose down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$env_file" "$override"
+  rm -f "$env_file" "$override" "$failing_api"
 }
 trap cleanup EXIT
 # dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
@@ -81,6 +90,21 @@ wait_healthy() {
 }
 wait_healthy "first start"
 echo "smoke: /api/health ok"
+
+# EN-92: Docker's own healthcheck on the API must agree. It can lag the
+# request above by one probe, so allow a few.
+api_health=''
+attempt=0
+while [ "$attempt" -lt 15 ]; do
+  api_health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+    "$(compose ps -q api)" 2>/dev/null || echo unknown)
+  [ "$api_health" = healthy ] && break
+  attempt=$((attempt + 1))
+  sleep 2
+done
+[ "$api_health" = healthy ] ||
+  fail "the api container's healthcheck reports '$api_health', expected healthy"
+echo "smoke: api container healthy"
 
 status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
@@ -197,3 +221,31 @@ marker=$(compose exec -T api sh -c 'm="$FILE_STORAGE_DIR/smoke-marker" && [ -O "
 [ "$marker" = from-dump ] ||
   fail "the restored uploaded files lack the dump's marker owned by the API's user (got '$marker')"
 echo "smoke: a dump from before the newest migration restores with its uploaded files and the API migrates it"
+
+# EN-92: when the API never becomes healthy, the start command must fail
+# naming it, and Caddy must stay down instead of answering 502.
+# The earlier checks left Caddy running: remove it, so up -d has to create
+# it again and we can see whether it starts.
+compose rm -sf web >/dev/null 2>&1 || fail "could not remove the web container"
+# Bounded, so a Compose that never gives up on the restarting API fails the
+# check instead of hanging the job.
+up_status=0
+out=$(timeout 300 docker compose -p "$project" -f docker-compose.prod.yml \
+  -f "$override" -f "$failing_api" --env-file "$env_file" up -d 2>&1) || up_status=$?
+[ "$up_status" != 0 ] || fail "up -d succeeded although the API cannot start"
+[ "$up_status" != 124 ] || fail "up -d was still waiting for the API after 300 s"
+# Compose names the API as unhealthy (it restarts, unless-stopped) or, in
+# other versions, as exited; either way it must name the API.
+case $out in
+  *"container $project-api-1 is unhealthy"* | *"container $project-api-1 exited"*) ;;
+  *) fail "up -d failed without naming the API: $out" ;;
+esac
+# Created but never started (or not created at all): not running, and not
+# restarting either.
+web_state=$(compose ps -a --format '{{.State}}' web) ||
+  fail "could not read the web container's state"
+case $web_state in
+  '' | created) ;;
+  *) fail "Caddy is '$web_state' although the API is unhealthy" ;;
+esac
+echo "smoke: an API that cannot start fails up -d and keeps Caddy down"

@@ -577,6 +577,24 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The README's later `run` commands (seed, restore, off-site copy) do not
   pass `--no-build`, so a pruned image would be built on the server; adding
   it there belongs to the same item. Origin: native review advisory R3 in `en-91-registry-deploy`, 2026-11-13.
+- **EN-187** (delivery tests): the smoke test's "API that cannot start"
+  case matches Compose's wording exactly
+  (`container sf-manager-smoke-api-1 is unhealthy` or `... exited`), and it
+  fails when `compose ps -a web` errors. Both hold with the Compose on the
+  CI runner and on Docker Desktop (v5.7.0), but another Compose release
+  could word the error differently (for example
+  `container for service "api" ...`) or error on `ps` for a service with no
+  containers, which would fail the smoke test falsely. Revisit if CI
+  changes its Compose. Smaller points in the same case: it bounds `up -d`
+  with the external `timeout`, missing on stock macOS (exit 127 then reads
+  as "failed without naming the API"); that call repeats the `compose()`
+  helper's arguments, since `timeout` cannot run a shell function; 300 is
+  written in both the bound and the message; and its temp file, like the
+  others, is created before the cleanup trap. The "Database unreachable"
+  scenario of "API health in the stack" has no automated check (verified by
+  hand: the probe exits 1 with Postgres stopped); the smoke test could stop
+  Postgres and wait for `unhealthy`. Origin: native review advisories and
+  the fresh review in `en-92-healthchecks`, 2026-11-13.
 - **EN-108** (delivery): every green push to `main` adds a new version of
   `ghcr.io/bcnsynergy/sf-manager-api` (about 950 MB since EN-93) and
   `sf-manager-web` to GitHub Container Registry, and nothing removes old
@@ -586,9 +604,10 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
 - **EN-92** (operations): The production stack has no monitoring or
   alerting: nothing reports a down API, a restart loop after a failed
   migration, or an expiring certificate. An external uptime check on
-  `/api/health` would cover the first two. The API service also has no
-  Compose healthcheck and `web` waits only for it to start, so Caddy answers
-  502 for `/api/*` during such a loop. Evidence: `docker-compose.prod.yml`.
+  `/api/health` would cover the first two; it needs the domain. The API now
+  has a Compose healthcheck and Caddy waits for it, so a failed start shows
+  as `unhealthy` instead of 502s (`en-92-healthchecks`, PR #415), but
+  nothing alerts on it. Evidence: `docker-compose.prod.yml`.
   Origin: `deployment` (S11) and its pre-push review, 2026-10-25.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
