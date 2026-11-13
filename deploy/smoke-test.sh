@@ -224,17 +224,23 @@ echo "smoke: a dump from before the newest migration restores with its uploaded 
 
 # EN-92: when the API never becomes healthy, the start command must fail
 # naming it, and Caddy must stay down instead of answering 502.
+# The earlier checks left Caddy running: remove it, so up -d has to create
+# it again and we can see whether it starts.
 compose rm -sf web >/dev/null 2>&1 || fail "could not remove the web container"
-if out=$(compose -f "$failing_api" up -d 2>&1); then
-  fail "up -d succeeded although the API cannot start"
-fi
+# Bounded, so a Compose that never gives up on the restarting API fails the
+# check instead of hanging the job.
+up_status=0
+out=$(timeout 300 docker compose -p "$project" -f docker-compose.prod.yml   -f "$override" -f "$failing_api" --env-file "$env_file" up -d 2>&1) || up_status=$?
+[ "$up_status" != 0 ] || fail "up -d succeeded although the API cannot start"
+[ "$up_status" != 124 ] || fail "up -d was still waiting for the API after 300 s"
 # Compose names the API as unhealthy (it restarts, unless-stopped) or, in
 # other versions, as exited; either way it must name the API.
 case $out in
   *"container $project-api-1 is unhealthy"* | *"container $project-api-1 exited"*) ;;
   *) fail "up -d failed without naming the API: $out" ;;
 esac
-# Created but never started: not running, and not restarting either.
+# Created but never started (or not created at all): not running, and not
+# restarting either.
 web_state=$(compose ps -a --format '{{.State}}' web) ||
   fail "could not read the web container's state"
 case $web_state in
