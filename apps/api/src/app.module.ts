@@ -3,6 +3,7 @@ import { PrismaModule } from './shared/infrastructure/persistence/prisma.module'
 import { IdGeneratorModule } from './shared/infrastructure/id/id-generator.module';
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { FileStorageModule } from './shared/infrastructure/file-storage/file-storage.module';
+import { EmailModule } from './shared/infrastructure/email/email.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -50,12 +51,15 @@ import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.
 // CommunityModule and UsersModule for the two scope checkers.
 // FileStorageModule (organization-logo) is @Global() too: FILE_STORAGE for
 // the organization logo, reading FILE_STORAGE_DIR at boot.
+// EmailModule (password-reset, ADR-018) is @Global() as well: EMAIL_SENDER,
+// reading the SMTP settings at boot.
 @Module({
   imports: [
     PrismaModule,
     IdGeneratorModule,
     ClockModule,
     FileStorageModule,
+    EmailModule,
     UsersModule,
     AuthModule,
     CommunityModule,

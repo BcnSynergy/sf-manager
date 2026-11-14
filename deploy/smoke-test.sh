@@ -42,6 +42,10 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 POSTGRES_DB=sfmanager
 JWT_SECRET=$(openssl rand -hex 32)
 THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
+SMTP_HOST=smtp.invalid
+SMTP_USER=smoke
+SMTP_PASSWORD=$(openssl rand -hex 16)
+SMTP_FROM=SF-Manager <no-reply@smoke.invalid>
 EOF
 # Last check (EN-92): an API that exits before it serves, as after a failed
 # migration.
@@ -221,6 +225,21 @@ marker=$(compose exec -T api sh -c 'm="$FILE_STORAGE_DIR/smoke-marker" && [ -O "
 [ "$marker" = from-dump ] ||
   fail "the restored uploaded files lack the dump's marker owned by the API's user (got '$marker')"
 echo "smoke: a dump from before the newest migration restores with its uploaded files and the API migrates it"
+
+# password-reset (spec `deployment`, "Outgoing email settings"): without an
+# SMTP setting the production API refuses to start and names it. Bounded:
+# an API that ignored the setting would start and never return.
+smtp_status=0
+out=$(timeout 120 docker compose -p "$project" -f docker-compose.prod.yml \
+  -f "$override" --env-file "$env_file" \
+  run --rm -e SMTP_HOST= api node dist/main 2>&1) || smtp_status=$?
+[ "$smtp_status" != 0 ] || fail "the API exited cleanly without SMTP_HOST"
+[ "$smtp_status" != 124 ] || fail "the API kept running without SMTP_HOST"
+case $out in
+  *"SMTP_HOST must be set in production"*) ;;
+  *) fail "the API refused to start without naming SMTP_HOST: $out" ;;
+esac
+echo "smoke: an API without SMTP_HOST refuses to start and names it"
 
 # EN-92: when the API never becomes healthy, the start command must fail
 # naming it, and Caddy must stay down instead of answering 502.

@@ -1071,6 +1071,20 @@ content type`). Today that is the only 415 it raises, but a future one
   rather than showing the message as is. The edit form's email-only message
   may deserve the same. Origin: production use, 2026-11-14: a 9-character
   password (`Admin123!`) read as the email being rejected.
+- **EN-194** (dev setup): `docker compose up -d` now also starts Mailpit,
+  which publishes host ports 1025 and 8025 (loopback only). On a machine
+  where either port is taken, the README's setup step fails where it used
+  to start only Postgres. Postgres's 5432 has the same exposure already. An
+  env-overridable host port (for example `${MAILPIT_SMTP_PORT:-1025}`) and a
+  README note would cover it. Origin: `password-reset` T1 native review
+  (R3-mailpit-host-ports), 2026-11-14.
+- **EN-195** (api tests): `SmtpEmailSender.send` logs a failed send as
+  `Email send failed (code <code>, SMTP <responseCode>)`, falling back to
+  `unknown` and `none`, but only an error carrying both fields is tested. A
+  plain `Error`, an error with only a `code` (nodemailer timeouts) and a
+  rejection with `undefined` would pin the fallbacks. Origin:
+  `password-reset` T1 second native review
+  (R3-send-failure-fallback-untested), 2026-11-14.
 
 ## Done
 

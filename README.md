@@ -61,6 +61,11 @@ business features yet, just the toolchain wired end-to-end.
    | `TRUST_PROXY`                           | No                 | off                                                                                      | How many trusted proxy hops sit between the client and the API, for the login rate limit's client IP. Accepted: unset, empty or `false` (off, use the socket address); `true` (one hop); a positive integer N (N hops). Any other value makes the app throw at boot. See the topology table below.                                                            |
    | `API_DOCS_ENABLED`                      | No                 | on outside production, off in production                                                 | Serves Swagger UI and the OpenAPI document at `/docs`. Accepted: unset or empty (the default), `true`, `false` (exact, lowercase). Any other value makes the app throw at boot.                                                                                                                                                                               |
    | `FILE_STORAGE_DIR`                      | Only in production | `storage` under the working directory outside production (`apps/api` with `npm run dev`) | Directory for uploaded files such as the organization logo. The app throws at boot in production without it; the API image sets it to `/var/lib/sf-manager/files`.                                                                                                                                                                                            |
+   | `SMTP_HOST`                             | Only in production | `localhost` (port `1025`, the Mailpit catcher) outside production                        | SMTP relay for outgoing email (README "Email"). The app throws at boot in production without it.                                                                                                                                                                                                                                                              |
+   | `SMTP_PORT`                             | No                 | `587` in production, `1025` outside it                                                   | Port `465` uses implicit TLS; any other port upgrades with STARTTLS, which production always requires, and any environment requires when credentials are set. Must be a positive integer up to 65535.                                                                                                                                                         |
+   | `SMTP_USER`                             | Only in production | —                                                                                        | SMTP login. Set together with `SMTP_PASSWORD`, or neither outside production.                                                                                                                                                                                                                                                                                 |
+   | `SMTP_PASSWORD`                         | Only in production | —                                                                                        | SMTP password or key, no surrounding whitespace.                                                                                                                                                                                                                                                                                                              |
+   | `SMTP_FROM`                             | Only in production | `SF-Manager <no-reply@sf-manager.local>` outside production                              | Sender, e.g. `SF-Manager <no-reply@example.com>`; must contain an email address on a domain the relay has authenticated.                                                                                                                                                                                                                                      |
    | `SEED_ADMIN_EMAIL`                      | Only for seeding   | —                                                                                        | Used by `prisma db seed` to create/update the admin user.                                                                                                                                                                                                                                                                                                     |
    | `SEED_ADMIN_PASSWORD`                   | Only for seeding   | —                                                                                        | Used by `prisma db seed` to create/update the admin user.                                                                                                                                                                                                                                                                                                     |
    | `NODE_ENV`                              | For dev seed data  | —                                                                                        | Must be exactly `development` for `prisma db seed` to create the dev accounts.                                                                                                                                                                                                                                                                                |
@@ -88,7 +93,8 @@ business features yet, just the toolchain wired end-to-end.
    login attempt is refused. The window is fixed, so up to about twice the
    limit can pass around a window boundary.
 
-3. Start Postgres:
+3. Start Postgres and Mailpit, which catches the email the API sends in
+   development (open http://localhost:8025 to read it):
    ```
    docker compose up -d
    ```
@@ -338,6 +344,11 @@ healthcheck uses `start_interval`. The spec is
    with the previous commit; a rollback does not undo migrations the newer
    version applied.
 
+   **Upgrading past the email change (ADR-018):** from that version on, the
+   API refuses to start until `prod.env` has `SMTP_HOST`, `SMTP_USER`,
+   `SMTP_PASSWORD` and `SMTP_FROM` (see "Email"). Add them before running
+   step 2, or the API stays down and Caddy with it.
+
 `TRUST_PROXY` is set to `1` in the compose file, because Caddy is the only
 proxy in front of the API and it replaces any `X-Forwarded-For` a client
 sends. Put another proxy or a CDN in front and the value must change (see
@@ -552,6 +563,29 @@ because a dump records which logo is current, not the image itself. The
 archive is taken a moment after the dump, so a logo changed in between can
 be missing after a restore; the profile and the documents then show no logo
 until it is uploaded again.
+
+### Email
+
+The API sends email (password reset links) through any SMTP relay,
+configured with the `SMTP_*` values in `prod.env` (ADR-018). Production uses
+Brevo's free plan (300 emails a day): host `smtp-relay.brevo.com`, port
+`587`, and the SMTP login and key from Brevo's "SMTP & API" page. The API
+refuses to start until `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and
+`SMTP_FROM` are set; it opens no connection until it sends something, so a
+wrong key or an unreachable relay shows up as a failed send in
+`docker compose ... logs api`, not at start.
+
+The sender's domain must be authenticated at the relay, or recipients
+reject the mail: `bcnsynergy.com` publishes Brevo's verification TXT and its
+two DKIM CNAMEs (`brevo1._domainkey`, `brevo2._domainkey`). With the
+domain's strict DMARC (`p=reject; adkim=s; aspf=s`) only DKIM aligns, so
+those two records are required; the SPF record does not list Brevo. Keep
+click and open tracking off at the relay: reset links carry a single-use
+token and must reach the user unchanged.
+
+To switch relays, change the `SMTP_*` values, authenticate the domain at
+the new relay, and restart the API; no code changes. Brevo's SMTP key
+expires (one year when it was created); renew it before then.
 
 ## Structure
 
