@@ -12,8 +12,8 @@ export interface SmtpConfig {
   port: number;
   // Implicit TLS (port 465); otherwise the connection upgrades with STARTTLS.
   secure: boolean;
-  // Production never sends credentials over a connection that did not
-  // upgrade to TLS.
+  // Credentials are never sent over a connection that did not upgrade to
+  // TLS; production requires it even without credentials.
   requireTLS: boolean;
   auth: { user: string; pass: string } | null;
   from: string;
@@ -34,8 +34,10 @@ const SUBMISSION_PORT = 587;
 // The one port that speaks TLS from the first byte.
 const IMPLICIT_TLS_PORT = 465;
 
+// Unset, empty and whitespace-only all count as missing, so `SMTP_HOST=" "`
+// stops production at start instead of failing every send.
 function present(value: string | undefined): string | undefined {
-  return value === undefined || value === '' ? undefined : value;
+  return value === undefined || value.trim() === '' ? undefined : value;
 }
 
 export function getSmtpConfig(env: NodeJS.ProcessEnv): SmtpConfig {
@@ -77,12 +79,15 @@ export function getSmtpConfig(env: NodeJS.ProcessEnv): SmtpConfig {
   }
 
   const secure = port === IMPLICIT_TLS_PORT;
+  const auth = user !== undefined && pass !== undefined ? { user, pass } : null;
   return {
     host,
     port,
     secure,
-    requireTLS: production && !secure,
-    auth: user !== undefined && pass !== undefined ? { user, pass } : null,
+    // Credentials never cross a connection that did not upgrade to TLS, in
+    // production or not; only the credential-less local catcher skips it.
+    requireTLS: !secure && (production || auth !== null),
+    auth,
     from,
   };
 }

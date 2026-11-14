@@ -72,6 +72,26 @@ describe('getSmtpConfig', () => {
     });
   });
 
+  it('requires STARTTLS outside production too whenever credentials are set', () => {
+    const config = getSmtpConfig({
+      NODE_ENV: 'development',
+      SMTP_HOST: 'smtp-relay.example.com',
+      SMTP_PORT: '587',
+      SMTP_USER: 'relay-user',
+      SMTP_PASSWORD: 'relay-password-value',
+    });
+    expect(config.requireTLS).toBe(true);
+  });
+
+  it.each(['SMTP_HOST', 'SMTP_USER', 'SMTP_FROM'])(
+    'treats a whitespace-only %s as missing in production',
+    (name) => {
+      expect(() => getSmtpConfig({ ...production, [name]: '   ' })).toThrow(
+        `${name} must be set in production`,
+      );
+    },
+  );
+
   it('ignores the other SMTP values outside production when SMTP_HOST is unset', () => {
     expect(
       getSmtpConfig({

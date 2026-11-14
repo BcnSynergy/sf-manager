@@ -30,7 +30,7 @@ Options compared on 2026-11-14:
   one adapter, `SmtpEmailSender`, built on `nodemailer` and speaking plain
   SMTP. It is configured by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
   `SMTP_PASSWORD` and `SMTP_FROM`; production refuses to start without them
-  and requires TLS before sending credentials.
+  and requires TLS; credentials never cross an unencrypted connection.
 - Production uses Brevo's SMTP relay (`smtp-relay.brevo.com:587`) with the
   sender `no-reply@bcnsynergy.com`. The domain is authenticated with Brevo's
   verification TXT and two DKIM CNAMEs; SPF is unchanged. Under the strict
@@ -41,8 +41,8 @@ Options compared on 2026-11-14:
   feature is used, and click and open tracking stay off: reset links carry
   single-use tokens.
 - Development sends to a local Mailpit container (`docker-compose.yml`,
-  `localhost:1025`, web UI on port 8025); tests replace the port with an
-  in-memory fake. Nothing leaves a developer's machine.
+  `localhost:1025`, web UI on port 8025); tests that exercise sending will
+  replace the port with an in-memory fake (added with the reset flow). Nothing leaves a developer's machine.
 
 ## Consequences
 
