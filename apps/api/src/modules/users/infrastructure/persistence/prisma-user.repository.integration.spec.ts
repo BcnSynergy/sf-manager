@@ -518,4 +518,26 @@ describe('PrismaUserRepository (integration)', () => {
     const remainingAdmins = await repository.countActiveByRole('SYSTEM_ADMIN');
     expect(remainingAdmins).toBe(1);
   });
+
+  // password-reset S5: only the hash changes; the row stays the same user.
+  it('replaces the password hash of an active user and leaves its other fields', async () => {
+    const email = uniqueEmail('set-hash');
+    const user = new User({
+      id: idGenerator.generate(),
+      email,
+      passwordHash: 'argon2id$old',
+      role: 'MANAGER',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    });
+    await repository.create(user);
+
+    await repository.updatePasswordHashById(user.id, 'argon2id$new');
+
+    const found = await repository.findByEmail(email);
+    expect(found?.passwordHash).toBe('argon2id$new');
+    expect(found?.id).toBe(user.id);
+    expect(found?.role).toBe('MANAGER');
+  });
 });

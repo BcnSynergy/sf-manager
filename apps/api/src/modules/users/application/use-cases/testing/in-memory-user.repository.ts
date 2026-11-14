@@ -148,6 +148,23 @@ export class InMemoryUserRepository implements UserRepository {
     return Promise.resolve();
   }
 
+  updatePasswordHashById(id: string, passwordHash: string): Promise<void> {
+    const existing = this.usersById.get(id);
+    if (!existing || existing.isDeleted) {
+      return Promise.resolve();
+    }
+    this.usersById.set(
+      id,
+      new User({
+        ...existing,
+        managerCapabilities: [...existing.managerCapabilities],
+        passwordHash,
+        updatedAt: new Date(),
+      }),
+    );
+    return Promise.resolve();
+  }
+
   softDeleteById(id: string): Promise<void> {
     const existing = this.usersById.get(id);
     if (!existing) {

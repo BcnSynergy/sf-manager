@@ -94,4 +94,29 @@ describe('InMemoryUserRepository (test double parity)', () => {
     const updated = await repository.findById('manager-2');
     expect(updated?.managerCapabilities).toEqual([]);
   });
+
+  it('updatePasswordHashById() replaces the hash of an active user only, mirroring PrismaUserRepository', async () => {
+    repository.seed(buildUser({ id: 'active-1', email: 'active@example.com' }));
+    repository.seed(
+      buildUser({
+        id: 'deleted-1',
+        email: 'gone@example.com',
+        deletedAt: new Date(),
+      }),
+    );
+
+    await repository.updatePasswordHashById('active-1', 'new-hash');
+    await repository.updatePasswordHashById('deleted-1', 'new-hash');
+    await repository.updatePasswordHashById('unknown', 'new-hash');
+
+    expect((await repository.findById('active-1'))?.passwordHash).toBe(
+      'new-hash',
+    );
+    expect((await repository.findByEmail('active@example.com'))?.role).toBe(
+      'MANAGER',
+    );
+    // The soft-deleted row is invisible to reads, so check through save-free access.
+    const all = await repository.findAll();
+    expect(all.map((user) => user.id)).toEqual(['active-1']);
+  });
 });

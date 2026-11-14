@@ -137,6 +137,18 @@ export class PrismaUserRepository
     });
   }
 
+  // updateMany with the default filter, so a soft-deleted or unknown id
+  // matches no row instead of throwing.
+  async updatePasswordHashById(
+    id: string,
+    passwordHash: string,
+  ): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: this.withDefaultFilter({ id }),
+      data: { passwordHash },
+    });
+  }
+
   // Sets deletedAt (ADR-010) — no row deletion.
   async softDeleteById(id: string): Promise<void> {
     await this.prisma.user.update({

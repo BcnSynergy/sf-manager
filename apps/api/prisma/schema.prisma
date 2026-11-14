@@ -541,3 +541,20 @@ model ThrottleCounter {
   // Opportunistic cleanup filters on expiresAt (Decision 6, TD-35).
   @@index([expiresAt])
 }
+
+// password-reset S4 (ADR-013): one row per emailed reset link. Only the
+// SHA-256 of the opaque token is stored. Single use: usedAt is set by the
+// conditional UPDATE that consumes it; requesting a new link stamps the
+// user's earlier unused rows as used. The FK to User(id) is hand-written in
+// migration.sql, invisible to Prisma (ADR-013).
+model PasswordResetToken {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @db.Timestamptz(3)
+
+  // Opportunistic cleanup deletes the rows past their expiry.
+  @@index([expiresAt])
+}
