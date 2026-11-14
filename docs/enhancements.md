@@ -1078,6 +1078,13 @@ content type`). Today that is the only 415 it raises, but a future one
   env-overridable host port (for example `${MAILPIT_SMTP_PORT:-1025}`) and a
   README note would cover it. Origin: `password-reset` T1 native review
   (R3-mailpit-host-ports), 2026-11-14.
+- **EN-195** (api tests): `SmtpEmailSender.send` logs a failed send as
+  `Email send failed (code <code>, SMTP <responseCode>)`, falling back to
+  `unknown` and `none`, but only an error carrying both fields is tested. A
+  plain `Error`, an error with only a `code` (nodemailer timeouts) and a
+  rejection with `undefined` would pin the fallbacks. Origin:
+  `password-reset` T1 second native review
+  (R3-send-failure-fallback-untested), 2026-11-14.
 
 ## Done
 
