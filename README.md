@@ -315,8 +315,8 @@ healthcheck uses `start_interval`. The spec is
    the cause run `up -d` again. When Caddy was not replaced, the old one keeps
    running and answers 502 for `/api/*` until then. `docker compose ... ps` shows the
    API as `healthy` or `unhealthy`; an API that loses its database turns
-   `unhealthy` within about a minute and a half, but nothing alerts on it
-   yet (EN-92).
+   `unhealthy` within about a minute and a half; the production check
+   (see "Monitoring") alerts once `/api/health` fails from outside.
 
 3. Create the first admin once. The credentials come from your shell, so they
    are not stored in `prod.env` or in the running API:
@@ -396,9 +396,42 @@ token while they stay public; check or change that in each package's
 Package settings. The server runs them through `IMAGE_TAG` (see
 "Production deployment"); deploying from CI is not set up.
 
-Monitoring and automated deploys are not part of this setup yet (EN-92,
-EN-185). Swagger is off at `/api/docs` unless `prod.env` sets
+Automated deploys are not part of this setup yet (EN-185); for monitoring
+see "Monitoring". Swagger is off at `/api/docs` unless `prod.env` sets
 `API_DOCS_ENABLED=true`.
+
+### Monitoring
+
+The production site is `https://sfmanager.bcnsynergy.com`. The `Production
+check` workflow (`.github/workflows/production-check.yml`) runs
+`deploy/check-production.sh` against it every 15 minutes, and on demand from
+the Actions tab (Run workflow). The check fails when `/api/health` does not
+answer 200 with `"status":"ok"` and `"db":"ok"` over trusted HTTPS, on each
+of three tries 20 seconds apart, or when the certificate expires within 14
+days. Caddy renews a 90-day certificate about 30 days before it expires, so
+the second only fires when renewal has been failing for over two weeks.
+Run it by hand from any machine with `curl` and `openssl`:
+
+```sh
+sh deploy/check-production.sh https://sfmanager.bcnsynergy.com
+```
+
+A failed run is the alert: GitHub emails it to whoever created the workflow,
+or later changed its `cron` line or re-enabled it (your GitHub Settings >
+Notifications > Actions controls that email). Know its limits:
+
+- GitHub may start a scheduled run late, so an outage can take longer than
+  15 minutes to show up.
+- In a public repository GitHub disables the schedule after 60 days without
+  activity in it; re-enable it from the Actions tab, and check now and then
+  that recent runs exist.
+- Each failed run sends its own email, so an outage repeats every quarter
+  of an hour until the site recovers.
+- To move the site to another domain, change the URL in the workflow.
+
+CI tests the script against a fake site on every PR:
+`sh deploy/test-check-production.sh`, from the repository root (needs
+Docker only).
 
 ### Database backups
 

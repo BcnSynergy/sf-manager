@@ -601,14 +601,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   ones. Free for public packages, but the list grows without bound. Add a
   retention rule, for example keep the last N `sha-*` versions. Origin:
   `en-91-ci-images`, 2026-10-26.
-- **EN-92** (operations): The production stack has no monitoring or
-  alerting: nothing reports a down API, a restart loop after a failed
-  migration, or an expiring certificate. An external uptime check on
-  `/api/health` would cover the first two; it needs the domain. The API now
-  has a Compose healthcheck and Caddy waits for it, so a failed start shows
-  as `unhealthy` instead of 502s (`en-92-healthchecks`, PR #415), but
-  nothing alerts on it. Evidence: `docker-compose.prod.yml`.
-  Origin: `deployment` (S11) and its pre-push review, 2026-10-25.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails
@@ -1026,6 +1018,21 @@ content type`). Today that is the only 415 it raises, but a future one
   `S-1`, 2026-11-12.
 
 ## Done
+
+- **EN-92** (operations): the production site is monitored from outside.
+  `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
+  every 15 minutes (and by hand): it fails when `/api/health` does not answer
+  200 with `"status":"ok"` and `"db":"ok"` over trusted HTTPS after three
+  tries, or when the certificate expires within 14 days, and GitHub's
+  failed-run email is the alert (spec `deployment`, "Production
+  monitoring"). CI tests the script against a fake site
+  (`deploy/test-check-production.sh`). The API's Compose healthcheck, with
+  Caddy waiting for it, came first (`en-92-healthchecks`, PR #415). Done in
+  `en-92-monitoring` (PR #TBD).
+  Original entry: the production stack has no monitoring or alerting:
+  nothing reports a down API, a restart loop after a failed migration, or an
+  expiring certificate. Origin: `deployment` (S11) and its pre-push review,
+  2026-10-25.
 
 - **EN-91** (delivery): the server runs the images CI publishes instead of
   building them. `docker-compose.prod.yml` names

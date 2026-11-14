@@ -1,0 +1,33 @@
+name: Production check
+
+# Checks the production site from outside the server (EN-92; spec
+# `deployment`, "Production monitoring"; README "Monitoring"). A failed run
+# is the alert: GitHub emails a failed scheduled run to whoever last changed
+# the `cron` line below. Not a merge barrier, so it never runs on PRs.
+on:
+  schedule:
+    # GitHub may start a scheduled run late, and disables the schedule after
+    # 60 days without activity in the repository.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A late run must not overlap the next one.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Forks would check a site they do not run.
+    if: github.repository == 'BcnSynergy/sf-manager'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check https://sfmanager.bcnsynergy.com
+        run: sh deploy/check-production.sh https://sfmanager.bcnsynergy.com
