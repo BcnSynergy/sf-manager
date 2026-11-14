@@ -1056,6 +1056,22 @@ content type`). Today that is the only 415 it raises, but a future one
   `.github/workflows/ci.yml`. Origin: `en-91-multi-arch` fresh review
   `S-1`, 2026-11-12.
 
+- **EN-193** (web UX): the new-user form validates in the browser with
+  `createUserSchema` and, on any failure, shows one generic message
+  (`users.create.validationError`, `en.json:48`: "Enter a valid email and a
+  password that meets the strength requirements.") without saying which
+  field failed or why (`apps/web/src/pages/UserCreatePage.tsx:86-93`). The
+  request never reaches the API, so nothing is logged either. The form does
+  not state the password rules beforehand (at least 10 characters, one
+  letter, one digit; `packages/validation/src/users/password.schema.ts`).
+  Show which field failed, next to it, and the password rules under the
+  field. The schema's issues carry the path and a reason, but their
+  messages are hard-coded English (the password schema's strings, Zod's
+  default for the email), so map each issue's path or rule to i18n keys
+  rather than showing the message as is. The edit form's email-only message
+  may deserve the same. Origin: production use, 2026-11-14: a 9-character
+  password (`Admin123!`) read as the email being rejected.
+
 ## Done
 
 - **EN-92** (operations): the production site is monitored from outside.
