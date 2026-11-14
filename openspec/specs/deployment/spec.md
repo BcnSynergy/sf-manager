@@ -111,7 +111,7 @@ The API service MUST declare a Compose healthcheck that passes only while the AP
 
 ### Requirement: Production monitoring
 
-A scheduled GitHub Actions workflow MUST check the production site from outside the server at least every 15 minutes, and MUST also be runnable by hand. A check MUST fail when `/api/health` does not answer 200 with `"status":"ok"` and `"db":"ok"` over a trusted HTTPS connection, after retrying a few times so that one dropped request does not alert, or when the site's certificate expires within 14 days. A failed check fails the workflow run, and GitHub's failed-run notification is the alert. The workflow MUST run only in this repository, never in forks.
+A GitHub Actions workflow MUST check the production site from outside the server, MUST be scheduled every 15 minutes, and MUST also be runnable by hand. GitHub runs schedules on a best-effort basis (a run may start late or be skipped), so the schedule is not a guarantee of detection time. A check MUST fail when `/api/health` does not answer 200 with `"status":"ok"` and `"db":"ok"` over a trusted HTTPS connection, after retrying a few times so that one dropped request does not alert, or when the site's certificate expires within 14 days. A failed check fails the workflow run, and GitHub's failed-run notification is the alert. The workflow MUST run only in this repository, never in forks.
 
 #### Scenario: Healthy site
 

@@ -54,8 +54,9 @@ docker run -d --name "$p-client" --network "$p" "$client_image" sleep 3600 >/dev
 docker exec "$p-client" apk add --no-cache -q curl openssl >/dev/null ||
   fail "could not install curl and openssl in the client container"
 docker exec -i "$p-client" sh -c 'cat >/check.sh' <"$script"
-# Self-signed certificates for the site's name, valid for 90 and 5 days.
-for days in 90 5; do
+# Self-signed certificates for the site's name: 90 days, and one day on
+# each side of the check's 14-day threshold.
+for days in 90 15 13; do
   docker exec "$p-client" sh -c "mkdir -p /certs/${days}d && openssl req -x509 \
     -newkey rsa:2048 -nodes -days $days -subj /CN=site \
     -addext subjectAltName=DNS:site -keyout /certs/${days}d/key.pem \
@@ -64,16 +65,10 @@ for days in 90 5; do
 done
 ok_body='{"status":"ok","db":"ok"}'
 
-# Serves the fake site at $url: serve CERT_DAYS (ok|503) [BODY].
+# Serves the fake site at $url: serve CERT_DAYS STATUS BODY, where
+# /api/health answers STATUS with BODY.
 serve() {
   docker rm -f "$p-site" >/dev/null 2>&1 || true
-  if [ "$2" = ok ]; then
-    handler='root * /etc/check
-		rewrite * /health.json
-		file_server'
-  else
-    handler='respond 503'
-  fi
   # The site's files are assembled in the client container and streamed
   # into the site container as a tar, so no host path is involved.
   docker exec -i "$p-client" sh -c "rm -rf /check && mkdir /check &&
@@ -85,11 +80,15 @@ serve() {
 https://:8443 {
 	tls /etc/check/cert.pem /etc/check/key.pem
 	handle /api/health {
-		$handler
+		root * /etc/check
+		rewrite * /health.json
+		file_server {
+			status $2
+		}
 	}
 }
 EOF
-  printf '%s' "${3:-}" | docker exec -i "$p-client" sh -c 'cat >/check/health.json'
+  printf '%s' "$3" | docker exec -i "$p-client" sh -c 'cat >/check/health.json'
   docker create --name "$p-site" --network "$p" --network-alias site "$caddy_image" \
     caddy run --config /etc/check/Caddyfile >/dev/null
   docker exec "$p-client" tar -C / -cf - check | docker cp - "$p-site:/etc"
@@ -112,43 +111,55 @@ check() {
   set -e
 }
 
-serve 90 ok "$ok_body"
+serve 90 200 "$ok_body"
 check
 [ "$rc" -eq 0 ] || fail "a healthy site with a 90-day certificate should pass (exit $rc)"
 pass "healthy site passes"
 
-serve 90 503
+# An ok body with a 503, so only the status code can fail the check.
+serve 90 503 "$ok_body"
 check
 [ "$rc" -ne 0 ] || fail "a 503 from /api/health should fail the check"
-printf '%s' "$out" | grep -qi 'health' || fail "a failed health check should name the health check"
+printf '%s' "$out" | grep -q 'health check attempt 2/2 failed: HTTP 503' ||
+  fail "a 503 should fail the health check, naming the status"
 pass "503 from /api/health fails"
 
 # The API answers 503 when its database is down; these pin each key the
 # check reads, one at a time.
-serve 90 ok '{"status":"ok","db":"unreachable"}'
+serve 90 200 '{"status":"ok","db":"unreachable"}'
 check
 [ "$rc" -ne 0 ] || fail "a 200 whose body does not say the database is ok should fail the check"
+printf '%s' "$out" | grep -q 'health check attempt 2/2 failed: HTTP 200' ||
+  fail "a database not ok should fail the health check"
 pass "200 with the database not ok fails"
 
-serve 90 ok '{"status":"error","db":"ok"}'
+serve 90 200 '{"status":"error","db":"ok"}'
 check
 [ "$rc" -ne 0 ] || fail "a 200 whose body does not say the status is ok should fail the check"
+printf '%s' "$out" | grep -q 'health check attempt 2/2 failed: HTTP 200' ||
+  fail "a status not ok should fail the health check"
 pass "200 with the status not ok fails"
 
-serve 90 ok '{ "status": "ok", "db": "ok" }'
+serve 90 200 '{ "status": "ok", "db": "ok" }'
 check
 [ "$rc" -eq 0 ] || fail "spaces in the health JSON should not fail the check (exit $rc)"
 pass "health JSON with spaces passes"
 
-serve 5 ok "$ok_body"
-check 5d
-[ "$rc" -ne 0 ] || fail "a certificate expiring in 5 days should fail the check"
-printf '%s' "$out" | grep -qi 'certificate' || fail "an expiring certificate should name the certificate"
+serve 15 200 "$ok_body"
+check 15d
+[ "$rc" -eq 0 ] || fail "a certificate expiring in 15 days should pass the check (exit $rc)"
+pass "certificate expiring in 15 days passes"
+
+serve 13 200 "$ok_body"
+check 13d
+[ "$rc" -ne 0 ] || fail "a certificate expiring in 13 days should fail the check"
+printf '%s' "$out" | grep -q 'certificate expires within 14 days' ||
+  fail "an expiring certificate should name the certificate"
 printf '%s' "$out" | grep -q 'notAfter=' || fail "an expiring certificate should show its expiry date"
 pass "certificate expiring within 14 days fails"
 
-serve 90 ok "$ok_body"
-check 5d
+serve 90 200 "$ok_body"
+check 13d
 [ "$rc" -ne 0 ] || fail "a certificate the client does not trust should fail the check"
 printf '%s' "$out" | grep -q 'health check attempt 2/2 failed: HTTP 000' ||
   fail "an untrusted certificate should fail the health check's HTTPS request"
@@ -159,18 +170,20 @@ pass "untrusted certificate fails"
 docker rm -f "$p-site" >/dev/null
 check
 [ "$rc" -ne 0 ] || fail "a site that does not answer should fail the check"
-printf '%s' "$out" | grep -qi 'health' || fail "an unanswered health check should name the health check"
+printf '%s' "$out" | grep -qi 'health check attempt' || fail "an unanswered health check should name the health check"
+printf '%s' "$out" | grep -q 'could not read the certificate' ||
+  fail "a site that does not answer should also fail the certificate check"
 pass "site down fails"
 
 # The site answers 503 to the first attempt and recovers during the pause
 # after it, so only a retry sees it healthy. (A site that is down instead
 # would make the first attempt wait on DNS, which may outlast the recovery.)
-serve 90 503
+serve 90 503 "$ok_body"
 docker exec -e CURL_CA_BUNDLE=/certs/90d/cert.pem -e CHECK_ATTEMPTS=3 -e CHECK_PAUSE=8 \
   "$p-client" sh /check.sh "$url" >"$retry_out" 2>&1 &
 pid=$!
 sleep 3
-serve 90 ok "$ok_body"
+serve 90 200 "$ok_body"
 set +e
 wait "$pid"
 rc=$?

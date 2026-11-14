@@ -619,8 +619,14 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   The untrusted-certificate case also matches the script's exact messages
   (`attempt 2/2 failed: HTTP 000`, `certificate ok`), so rewording them
   breaks the test. The scheduled workflow is unaffected (the runner has
-  `timeout`). Origin: `en-92-monitoring` second native review (R4-001,
-  R3-001, R3-002), 2026-11-14.
+  `timeout`). No case pins `failed=1` in the "could not read the
+  certificate" branch on its own: a site whose certificate cannot be read
+  also fails the health check (same host), so the site-down case only
+  asserts the message. The test's Alpine client image is pinned by digest inside the
+  script, where no Dependabot ecosystem updates it (like EN-107's CI
+  service image), so it drifts until someone bumps it by hand. Origin:
+  `en-92-monitoring` second native review (R4-001, R3-001, R3-002) and
+  fresh review (S-1), 2026-11-14.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails
