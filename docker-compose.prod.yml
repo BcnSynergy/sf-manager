@@ -69,6 +69,13 @@ services:
       TRUST_PROXY: '1'
       # Swagger UI at /api/docs lists every route and schema (TD-40).
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
+      # Outgoing email (password reset, ADR-018): any SMTP relay. The API
+      # refuses to start without them.
+      SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST in prod.env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?set SMTP_USER in prod.env}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?set SMTP_PASSWORD in prod.env}
+      SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM in prod.env}
       # SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD are deliberately absent: the
       # one-off admin seed run passes them with `-e` (README), so the
       # long-running API never holds the admin password.

@@ -42,6 +42,10 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 POSTGRES_DB=sfmanager
 JWT_SECRET=$(openssl rand -hex 32)
 THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
+SMTP_HOST=smtp.invalid
+SMTP_USER=smoke
+SMTP_PASSWORD=$(openssl rand -hex 16)
+SMTP_FROM=SF-Manager <no-reply@smoke.invalid>
 EOF
 # Last check (EN-92): an API that exits before it serves, as after a failed
 # migration.
