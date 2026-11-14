@@ -429,19 +429,6 @@ windowEndsAt <= now()`) four times and the window-end expression five
   and pick the user from a list of eligible users instead. This changes a flow,
   so it needs its own slice. Origin: `ui-redesign-foundation` screens canvas,
   2026-10-16.
-- **EN-193** (web UX): the new-user form validates in the browser with
-  `createUserSchema` and, on any failure, shows one generic message
-  (`users.create.validationError`: "Enter a valid email and a password that
-  meets the security requirements") without saying which field failed or
-  why (`apps/web/src/pages/UserCreatePage.tsx:86-93`). The request never
-  reaches the API, so nothing is logged either. The form does not state the
-  password rules beforehand (at least 10 characters, one letter, one digit;
-  `packages/validation/src/users/password.schema.ts`). Show the failing
-  field's own message next to it (the schema's issues already carry the
-  path and the reason) and the password rules under the field. The edit
-  form's email-only message may deserve the same. Origin: production use,
-  2026-11-14: a 9-character password (`Admin123!`) read as the email being
-  rejected.
 - **EN-58** (web print): The `.label-print` print scope forces black only on
   `dt`/`dd`, while the review document scope also covers `th`, `td`, `code`
   and headings. The redesign's base styles give `th`, `td` and `code` token
@@ -1068,6 +1055,22 @@ content type`). Today that is the only 415 it raises, but a future one
   also deleting untagged versions older than a few days. Evidence:
   `.github/workflows/ci.yml`. Origin: `en-91-multi-arch` fresh review
   `S-1`, 2026-11-12.
+
+- **EN-193** (web UX): the new-user form validates in the browser with
+  `createUserSchema` and, on any failure, shows one generic message
+  (`users.create.validationError`, `en.json:48`: "Enter a valid email and a
+  password that meets the strength requirements.") without saying which
+  field failed or why (`apps/web/src/pages/UserCreatePage.tsx:86-93`). The
+  request never reaches the API, so nothing is logged either. The form does
+  not state the password rules beforehand (at least 10 characters, one
+  letter, one digit; `packages/validation/src/users/password.schema.ts`).
+  Show which field failed, next to it, and the password rules under the
+  field. The schema's issues carry the path and a reason, but their
+  messages are hard-coded English (the password schema's strings, Zod's
+  default for the email), so map each issue's path or rule to i18n keys
+  rather than showing the message as is. The edit form's email-only message
+  may deserve the same. Origin: production use, 2026-11-14: a 9-character
+  password (`Admin123!`) read as the email being rejected.
 
 ## Done
 
