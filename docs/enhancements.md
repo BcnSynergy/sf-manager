@@ -610,23 +610,36 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   or a second alert recipient would close it. Evidence:
   `.github/workflows/production-check.yml`. Origin: `en-92-monitoring`
   native review (R4-silent-monitor-stop), 2026-11-14.
-- **EN-189** (operations tests): `deploy/check-production.sh` runs
+- **EN-189** (operations): `deploy/check-production.sh` runs
   `openssl s_client` without a bound where `timeout` is missing (stock
   macOS), so a manual run against a port that drops packets hangs until
   Ctrl-C instead of failing; a background `kill` watchdog would bound it
   everywhere. No test covers that branch (the Docker client always has
   `timeout`); running the check with a `PATH` that hides `timeout` would.
-  The untrusted-certificate case also matches the script's exact messages
-  (`attempt 2/2 failed: HTTP 000`, `certificate ok`), so rewording them
-  breaks the test. The scheduled workflow is unaffected (the runner has
-  `timeout`). No case pins `failed=1` in the "could not read the
-  certificate" branch on its own: a site whose certificate cannot be read
-  also fails the health check (same host), so the site-down case only
-  asserts the message. The test's Alpine client image is pinned by digest inside the
-  script, where no Dependabot ecosystem updates it (like EN-107's CI
-  service image), so it drifts until someone bumps it by hand. Origin:
-  `en-92-monitoring` second native review (R4-001, R3-001, R3-002) and
-  fresh review (S-1), 2026-11-14.
+  The scheduled workflow is unaffected (the runner has `timeout`). The
+  probe also reads awkwardly: `! command -v timeout ... || limit=...` is a
+  double negative (a plain `if` says it directly), and the unquoted
+  `$limit` relies on a shellcheck suppression. Origin: `en-92-monitoring`
+  native reviews (R4-001, R3-001, R4-unbounded-s-client,
+  R3-untested-no-timeout-branch, R2-negated-or-idiom), 2026-11-14.
+- **EN-190** (operations tests): `deploy/test-check-production.sh` matches
+  the check's exact messages (`attempt 2/2 failed: HTTP 000`,
+  `certificate ok`, ...), so rewording them breaks the test. Its
+  untrusted-certificate case trusts the 13-day certificate as a foreign CA
+  with no comment saying so; changing the threshold fixtures could change
+  what it tests (a dedicated "other CA" fixture would not). Origin:
+  `en-92-monitoring` native reviews (R3-002, R2-untrusted-ca-reuse),
+  2026-11-14.
+- **EN-191** (operations tests): no case pins `failed=1` in the check's
+  "could not read the certificate" branch on its own: a site whose
+  certificate cannot be read also fails the health check (same host), so
+  the site-down case only asserts the message. Origin: `en-92-monitoring`
+  fresh review (W-2), 2026-11-14.
+- **EN-192** (operations tests): the test's Alpine client image is pinned by
+  digest inside `deploy/test-check-production.sh`, where no Dependabot
+  ecosystem updates it (like EN-107's CI service image), so it drifts until
+  someone bumps it by hand. Origin: `en-92-monitoring` fresh review (S-1),
+  2026-11-14.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails
