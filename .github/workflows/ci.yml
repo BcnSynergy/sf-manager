@@ -101,6 +101,10 @@ jobs:
       - name: Off-site copy script
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: sh deploy/test-offsite-copy.sh
+      # The scheduled production check (EN-92), against a fake site.
+      - name: Production check script
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: sh deploy/test-check-production.sh
       # Builds the production images and starts the whole stack on
       # https://localhost, so a broken Dockerfile or base-image update
       # (Dependabot) fails the PR (EN-91).

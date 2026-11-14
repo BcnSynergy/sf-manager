@@ -601,14 +601,45 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   ones. Free for public packages, but the list grows without bound. Add a
   retention rule, for example keep the last N `sha-*` versions. Origin:
   `en-91-ci-images`, 2026-10-26.
-- **EN-92** (operations): The production stack has no monitoring or
-  alerting: nothing reports a down API, a restart loop after a failed
-  migration, or an expiring certificate. An external uptime check on
-  `/api/health` would cover the first two; it needs the domain. The API now
-  has a Compose healthcheck and Caddy waits for it, so a failed start shows
-  as `unhealthy` instead of 502s (`en-92-healthchecks`, PR #415), but
-  nothing alerts on it. Evidence: `docker-compose.prod.yml`.
-  Origin: `deployment` (S11) and its pre-push review, 2026-10-25.
+- **EN-188** (operations): the production check (EN-92) alerts only when a
+  scheduled run fails, so monitoring that stops running alerts nobody:
+  GitHub disables the schedule after 60 days without repository activity,
+  and a disabled or skipped schedule sends no email. The README asks for an
+  occasional look at recent runs. A dead-man's switch (the check pings an
+  external heartbeat service on success, which alerts when the pings stop)
+  or a second alert recipient would close it. Evidence:
+  `.github/workflows/production-check.yml`. Origin: `en-92-monitoring`
+  native review (R4-silent-monitor-stop), 2026-11-14.
+- **EN-189** (operations): `deploy/check-production.sh` runs
+  `openssl s_client` without a bound where `timeout` is missing (stock
+  macOS), so a manual run against a port that drops packets hangs until
+  Ctrl-C instead of failing; a background `kill` watchdog would bound it
+  everywhere. No test covers that branch (the Docker client always has
+  `timeout`); running the check with a `PATH` that hides `timeout` would.
+  The scheduled workflow is unaffected (the runner has `timeout`). The
+  probe also reads awkwardly: `! command -v timeout ... || limit=...` is a
+  double negative (a plain `if` says it directly), and the unquoted
+  `$limit` relies on a shellcheck suppression. Origin: `en-92-monitoring`
+  native reviews (R4-001, R3-001, R4-unbounded-s-client,
+  R3-untested-no-timeout-branch, R2-negated-or-idiom), 2026-11-14.
+- **EN-190** (operations tests): `deploy/test-check-production.sh` matches
+  the check's exact messages (`attempt 2/2 failed: HTTP 000`,
+  `certificate ok`, ...), so rewording them breaks the test. Its
+  untrusted-certificate case trusts the 13-day certificate as a foreign CA
+  with no comment saying so; changing the threshold fixtures could change
+  what it tests (a dedicated "other CA" fixture would not). Origin:
+  `en-92-monitoring` native reviews (R3-002, R2-untrusted-ca-reuse),
+  2026-11-14.
+- **EN-191** (operations tests): no case pins `failed=1` in the check's
+  "could not read the certificate" branch on its own: a site whose
+  certificate cannot be read also fails the health check (same host), so
+  the site-down case only asserts the message. Origin: `en-92-monitoring`
+  fresh review (W-2), 2026-11-14.
+- **EN-192** (operations tests): the test's Alpine client image is pinned by
+  digest inside `deploy/test-check-production.sh`, where no Dependabot
+  ecosystem updates it (like EN-107's CI service image), so it drifts until
+  someone bumps it by hand. Origin: `en-92-monitoring` fresh review (S-1),
+  2026-11-14.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails
@@ -1026,6 +1057,21 @@ content type`). Today that is the only 415 it raises, but a future one
   `S-1`, 2026-11-12.
 
 ## Done
+
+- **EN-92** (operations): the production site is monitored from outside.
+  `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
+  every 15 minutes (and by hand): it fails when `/api/health` does not answer
+  200 with `"status":"ok"` and `"db":"ok"` over trusted HTTPS after three
+  tries, or when the certificate expires within 14 days, and GitHub's
+  failed-run email is the alert (spec `deployment`, "Production
+  monitoring"). CI tests the script against a fake site
+  (`deploy/test-check-production.sh`). The API's Compose healthcheck, with
+  Caddy waiting for it, came first (`en-92-healthchecks`, PR #415). Done in
+  `en-92-monitoring` (PR #416).
+  Original entry: the production stack has no monitoring or alerting:
+  nothing reports a down API, a restart loop after a failed migration, or an
+  expiring certificate. Origin: `deployment` (S11) and its pre-push review,
+  2026-10-25.
 
 - **EN-91** (delivery): the server runs the images CI publishes instead of
   building them. `docker-compose.prod.yml` names

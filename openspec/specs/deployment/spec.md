@@ -109,6 +109,34 @@ The API service MUST declare a Compose healthcheck that passes only while the AP
 - WHEN the API's healthcheck runs
 - THEN the check fails, and after its retries the API container reports `unhealthy`
 
+### Requirement: Production monitoring
+
+A GitHub Actions workflow MUST check the production site from outside the server, MUST be scheduled every 15 minutes, and MUST also be runnable by hand. GitHub runs schedules on a best-effort basis (a run may start late or be skipped), so the schedule is not a guarantee of detection time. A check MUST fail when `/api/health` does not answer 200 with `"status":"ok"` and `"db":"ok"` over a trusted HTTPS connection, after retrying a few times so that one dropped request does not alert, or when the site's certificate expires within 14 days. A failed check fails the workflow run, and GitHub's failed-run notification is the alert. The workflow MUST run only in this repository, never in forks.
+
+#### Scenario: Healthy site
+
+- GIVEN a production site whose API reaches its database and whose certificate expires in more than 14 days
+- WHEN the scheduled check runs
+- THEN the check succeeds
+
+#### Scenario: API down or database unreachable
+
+- GIVEN a production site whose `/api/health` does not answer 200 with the database ok, or does not answer at all
+- WHEN the scheduled check runs
+- THEN the check fails after its retries, naming the health check
+
+#### Scenario: Untrusted certificate
+
+- GIVEN a production site whose certificate the runner does not trust
+- WHEN the scheduled check runs
+- THEN the check fails
+
+#### Scenario: Certificate about to expire
+
+- GIVEN a production site whose certificate expires within 14 days, for example because Caddy could not renew it
+- WHEN the scheduled check runs
+- THEN the check fails, naming the certificate and its expiry date
+
 ### Requirement: First admin
 
 The operator MUST be able to create or reset the system admin inside the production stack with one documented command that reads `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` from the operator's shell. The production image runs with `NODE_ENV=production`, so this command MUST NOT create the dev seed accounts or dataset. The long-running API container SHALL NOT receive the seed credentials.
