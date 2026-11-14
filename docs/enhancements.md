@@ -601,6 +601,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   ones. Free for public packages, but the list grows without bound. Add a
   retention rule, for example keep the last N `sha-*` versions. Origin:
   `en-91-ci-images`, 2026-10-26.
+- **EN-188** (operations): the production check (EN-92) alerts only when a
+  scheduled run fails, so monitoring that stops running alerts nobody:
+  GitHub disables the schedule after 60 days without repository activity,
+  and a disabled or skipped schedule sends no email. The README asks for an
+  occasional look at recent runs. A dead-man's switch (the check pings an
+  external heartbeat service on success, which alerts when the pings stop)
+  or a second alert recipient would close it. Evidence:
+  `.github/workflows/production-check.yml`. Origin: `en-92-monitoring`
+  native review (R4-silent-monitor-stop), 2026-11-14.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails

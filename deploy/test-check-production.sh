@@ -102,11 +102,11 @@ EOF
   done
 }
 
-# Runs the check against the fake site, trusting the 90-day certificate
-# unless CA names another; sets $out and $rc.
+# Runs the check against the fake site, trusting the certificate named by
+# $1 (default 90d); sets $out and $rc.
 check() {
   set +e
-  out=$(docker exec -e CURL_CA_BUNDLE="/certs/${CA:-90d}/cert.pem" \
+  out=$(docker exec -e CURL_CA_BUNDLE="/certs/${1:-90d}/cert.pem" \
     -e CHECK_ATTEMPTS=2 -e CHECK_PAUSE=1 "$p-client" sh /check.sh "$url" 2>&1)
   rc=$?
   set -e
@@ -135,16 +135,25 @@ check
 [ "$rc" -ne 0 ] || fail "a 200 whose body does not say the status is ok should fail the check"
 pass "200 with the status not ok fails"
 
+serve 90 ok '{ "status": "ok", "db": "ok" }'
+check
+[ "$rc" -eq 0 ] || fail "spaces in the health JSON should not fail the check (exit $rc)"
+pass "health JSON with spaces passes"
+
 serve 5 ok "$ok_body"
-CA=5d check
+check 5d
 [ "$rc" -ne 0 ] || fail "a certificate expiring in 5 days should fail the check"
 printf '%s' "$out" | grep -qi 'certificate' || fail "an expiring certificate should name the certificate"
 printf '%s' "$out" | grep -q 'notAfter=' || fail "an expiring certificate should show its expiry date"
 pass "certificate expiring within 14 days fails"
 
 serve 90 ok "$ok_body"
-CA=5d check
+check 5d
 [ "$rc" -ne 0 ] || fail "a certificate the client does not trust should fail the check"
+printf '%s' "$out" | grep -q 'health check attempt 2/2 failed: HTTP 000' ||
+  fail "an untrusted certificate should fail the health check's HTTPS request"
+printf '%s' "$out" | grep -q 'certificate ok' ||
+  fail "an untrusted but long-lived certificate should still pass the expiry check"
 pass "untrusted certificate fails"
 
 docker rm -f "$p-site" >/dev/null

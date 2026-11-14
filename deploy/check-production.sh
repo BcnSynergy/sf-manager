@@ -48,8 +48,8 @@ while :; do
   code=$(printf '%s\n' "$body" | tail -n 1)
   body=$(printf '%s\n' "$body" | sed '$d')
   if [ "$code" = 200 ] &&
-    printf '%s' "$body" | grep -q '"status":"ok"' &&
-    printf '%s' "$body" | grep -q '"db":"ok"'; then
+    printf '%s' "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' &&
+    printf '%s' "$body" | grep -Eq '"db"[[:space:]]*:[[:space:]]*"ok"'; then
     echo "check-production: health ok ($body)"
     break
   fi
@@ -63,8 +63,12 @@ while :; do
 done
 
 # Certificate: read what the server presents, whoever issued it. s_client
-# has no timeout of its own, so a port that drops packets would hang it.
-if cert=$(timeout 30 openssl s_client -connect "$host:$port" -servername "$host" </dev/null 2>/dev/null |
+# has no timeout of its own, so a port that drops packets would hang it;
+# `timeout` bounds it where it exists (not on stock macOS).
+limit=''
+! command -v timeout >/dev/null 2>&1 || limit='timeout 30'
+# shellcheck disable=SC2086 # $limit is empty or two words
+if cert=$($limit openssl s_client -connect "$host:$port" -servername "$host" </dev/null 2>/dev/null |
   openssl x509 2>/dev/null) && [ -n "$cert" ]; then
   enddate=$(printf '%s\n' "$cert" | openssl x509 -noout -enddate)
   if printf '%s\n' "$cert" | openssl x509 -noout -checkend $((min_days * 86400)) >/dev/null; then
