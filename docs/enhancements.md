@@ -1067,7 +1067,7 @@ content type`). Today that is the only 415 it raises, but a future one
   monitoring"). CI tests the script against a fake site
   (`deploy/test-check-production.sh`). The API's Compose healthcheck, with
   Caddy waiting for it, came first (`en-92-healthchecks`, PR #415). Done in
-  `en-92-monitoring` (PR #TBD).
+  `en-92-monitoring` (PR #416).
   Original entry: the production stack has no monitoring or alerting:
   nothing reports a down API, a restart loop after a failed migration, or an
   expiring certificate. Origin: `deployment` (S11) and its pre-push review,
