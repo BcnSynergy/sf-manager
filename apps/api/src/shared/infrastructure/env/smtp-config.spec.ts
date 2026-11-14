@@ -72,6 +72,16 @@ describe('getSmtpConfig', () => {
     });
   });
 
+  it('ignores the other SMTP values outside production when SMTP_HOST is unset', () => {
+    expect(
+      getSmtpConfig({
+        NODE_ENV: 'development',
+        SMTP_PORT: 'abc',
+        SMTP_USER: 'relay-user',
+      }),
+    ).toEqual(getSmtpConfig({ NODE_ENV: 'development' }));
+  });
+
   it('uses the given host without credentials outside production', () => {
     expect(
       getSmtpConfig({

@@ -71,7 +71,7 @@ The API MUST refuse to start when `JWT_SECRET` or `THROTTLE_KEY_SECRET` is short
 
 ### Requirement: Outgoing email settings
 
-The API MUST send email only through an SMTP relay configured by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `SMTP_FROM` (ADR-018), so changing provider needs no code change. In production it MUST refuse to start when `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` or `SMTP_FROM` is missing or empty, and MUST require TLS before sending credentials (implicit TLS on port 465, STARTTLS otherwise). Errors MUST name the variable and MUST NOT contain the password. Outside production, with no `SMTP_HOST`, it MUST send to the local catcher at `localhost:1025` (Mailpit in `docker-compose.yml`), without credentials.
+The API MUST send email only through an SMTP relay configured by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `SMTP_FROM` (ADR-018), so changing provider needs no code change. In production it MUST refuse to start when `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` or `SMTP_FROM` is missing or empty, and MUST require TLS before sending credentials (implicit TLS on port 465, STARTTLS otherwise). Errors MUST name the variable and MUST NOT contain the password. Outside production, with no `SMTP_HOST`, it MUST send to the local catcher at `localhost:1025` (Mailpit in `docker-compose.yml`), without credentials, ignoring the other SMTP values. A failed send MUST be logged with its error codes only, never the recipient or the content.
 
 #### Scenario: Missing SMTP setting in production
 
@@ -81,7 +81,7 @@ The API MUST send email only through an SMTP relay configured by `SMTP_HOST`, `S
 
 #### Scenario: Invalid SMTP setting
 
-- GIVEN `SMTP_PORT` is not a whole number from 1 to 65535, `SMTP_PASSWORD` starts or ends with whitespace, `SMTP_FROM` contains no email address, or only one of `SMTP_USER` and `SMTP_PASSWORD` is set
+- GIVEN `SMTP_HOST` is set (always the case in production) and `SMTP_PORT` is not a whole number from 1 to 65535, `SMTP_PASSWORD` starts or ends with whitespace, `SMTP_FROM` contains no email address, or only one of `SMTP_USER` and `SMTP_PASSWORD` is set
 - WHEN the API starts
 - THEN it exits without serving requests, with an error that names the variable and does not contain the password
 
@@ -90,6 +90,12 @@ The API MUST send email only through an SMTP relay configured by `SMTP_HOST`, `S
 - GIVEN `NODE_ENV` is not `production` and `SMTP_HOST` is unset
 - WHEN the API sends an email
 - THEN it delivers it to `localhost:1025` without credentials, where the Mailpit service catches it
+
+#### Scenario: Failed send
+
+- GIVEN the relay refuses a message or cannot be reached within a few seconds
+- WHEN the API sends an email
+- THEN the send fails, and the API log records the failure with its error codes, without the recipient's address or the message
 
 ### Requirement: Migrations before serving
 

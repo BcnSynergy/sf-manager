@@ -29,6 +29,10 @@ const DEV_DEFAULT: SmtpConfig = {
 };
 
 const MAX_PORT = 65535;
+// Mail submission with STARTTLS, the production default.
+const SUBMISSION_PORT = 587;
+// The one port that speaks TLS from the first byte.
+const IMPLICIT_TLS_PORT = 465;
 
 function present(value: string | undefined): string | undefined {
   return value === undefined || value === '' ? undefined : value;
@@ -37,17 +41,16 @@ function present(value: string | undefined): string | undefined {
 export function getSmtpConfig(env: NodeJS.ProcessEnv): SmtpConfig {
   const production = isProduction(env.NODE_ENV);
   const host = present(env.SMTP_HOST);
-  if (host === undefined && !production) {
+  if (host === undefined) {
+    if (production) {
+      throw new Error('SMTP_HOST must be set in production');
+    }
+    // The other SMTP values describe a relay; without one they are ignored.
     return { ...DEV_DEFAULT };
   }
 
   if (production) {
-    for (const name of [
-      'SMTP_HOST',
-      'SMTP_USER',
-      'SMTP_PASSWORD',
-      'SMTP_FROM',
-    ]) {
+    for (const name of ['SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM']) {
       if (present(env[name]) === undefined) {
         throw new Error(`${name} must be set in production`);
       }
@@ -57,7 +60,7 @@ export function getSmtpConfig(env: NodeJS.ProcessEnv): SmtpConfig {
   const port = parsePositiveInteger(
     'SMTP_PORT',
     env.SMTP_PORT,
-    production ? 587 : DEV_DEFAULT.port,
+    production ? SUBMISSION_PORT : DEV_DEFAULT.port,
     MAX_PORT,
   );
   const user = present(env.SMTP_USER);
@@ -73,9 +76,9 @@ export function getSmtpConfig(env: NodeJS.ProcessEnv): SmtpConfig {
     throw new Error('SMTP_FROM must contain an email address');
   }
 
-  const secure = port === 465;
+  const secure = port === IMPLICIT_TLS_PORT;
   return {
-    host: host as string,
+    host,
     port,
     secure,
     requireTLS: production && !secure,

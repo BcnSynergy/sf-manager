@@ -13,13 +13,14 @@ services:
 
   # Catches the email the API sends in development (password-reset,
   # ADR-018): with no SMTP_HOST set, the API sends to localhost:1025, and the
-  # messages show at http://localhost:8025. Nothing leaves the machine.
+  # messages show at http://localhost:8025. Nothing leaves the machine. Bound
+  # to loopback only: the UI has no login and will show reset links.
   mailpit:
     image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
     restart: unless-stopped
     ports:
-      - '1025:1025'
-      - '8025:8025'
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
 
 volumes:
   postgres-data:

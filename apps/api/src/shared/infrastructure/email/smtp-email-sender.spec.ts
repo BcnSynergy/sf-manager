@@ -11,13 +11,16 @@ const config: SmtpConfig = {
 };
 
 describe('smtpTransportOptions', () => {
-  it('maps the config to an authenticated STARTTLS connection', () => {
+  it('maps the config to an authenticated STARTTLS connection with short timeouts', () => {
     expect(smtpTransportOptions(config)).toEqual({
       host: 'smtp-relay.example.com',
       port: 587,
       secure: false,
       requireTLS: true,
       auth: { user: 'relay-user', pass: 'relay-password-value' },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   });
 
@@ -49,13 +52,28 @@ describe('SmtpEmailSender', () => {
     });
   });
 
-  it('rejects when the relay rejects the message', async () => {
-    const sendMail = jest.fn().mockRejectedValue(new Error('550 rejected'));
-    const sender = new SmtpEmailSender({ sendMail }, config.from);
+  it('logs and rejects when the relay rejects the message', async () => {
+    // nodemailer's messages can quote the recipient, so only the error
+    // codes are logged.
+    const relayError = Object.assign(
+      new Error('550 <user@example.com>: Recipient address rejected'),
+      { code: 'EENVELOPE', responseCode: 550 },
+    );
+    const sendMail = jest.fn().mockRejectedValue(relayError);
+    const warn = jest.fn<void, [string]>();
+    const sender = new SmtpEmailSender({ sendMail }, config.from, { warn });
 
     await expect(
-      sender.send({ to: 'user@example.com', subject: 'S', text: 'T' }),
-    ).rejects.toThrow('550 rejected');
+      sender.send({
+        to: 'user@example.com',
+        subject: 'Secret subject',
+        text: 'Secret body',
+      }),
+    ).rejects.toBe(relayError);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'Email send failed (code EENVELOPE, SMTP 550)',
+    );
   });
 
   it('delivers through a real nodemailer transport', async () => {
