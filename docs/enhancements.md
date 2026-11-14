@@ -1085,6 +1085,8 @@ content type`). Today that is the only 415 it raises, but a future one
   rejection with `undefined` would pin the fallbacks. Origin:
   `password-reset` T1 second native review
   (R3-send-failure-fallback-untested), 2026-11-14.
+- **EN-196** (api robustness): `ConfirmPasswordResetUseCase` spends the link before it replaces the hash and ends the sessions (three steps across three stores, no shared transaction). A database failure between them answers 500 with the link already used, so the user has to ask for a new one, and a failure after the hash change but before the session revoke leaves old sessions alive until the user asks again. A single Prisma transaction across the token, user and refresh-token tables, or compensating un-use of the link, would close it. Origin: `password-reset` T2, 2026-11-15.
+- **EN-197** (api robustness): the reset request does its lookup, token and send in the background (`RequestPasswordResetUseCase`), and nothing awaits that work at shutdown, so a deploy that stops the API right after a request can drop an email already answered `202`. An `onApplicationShutdown` hook awaiting `whenIdle()` would drain it. Origin: `password-reset` T2, 2026-11-15.
 - **EN-198** (api tests): two test-hygiene points in `password-reset` T2a.
   The race test in
   `prisma-password-reset-token-store.adapter.integration.spec.ts` deletes
