@@ -610,6 +610,17 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   or a second alert recipient would close it. Evidence:
   `.github/workflows/production-check.yml`. Origin: `en-92-monitoring`
   native review (R4-silent-monitor-stop), 2026-11-14.
+- **EN-189** (operations tests): `deploy/check-production.sh` runs
+  `openssl s_client` without a bound where `timeout` is missing (stock
+  macOS), so a manual run against a port that drops packets hangs until
+  Ctrl-C instead of failing; a background `kill` watchdog would bound it
+  everywhere. No test covers that branch (the Docker client always has
+  `timeout`); running the check with a `PATH` that hides `timeout` would.
+  The untrusted-certificate case also matches the script's exact messages
+  (`attempt 2/2 failed: HTTP 000`, `certificate ok`), so rewording them
+  breaks the test. The scheduled workflow is unaffected (the runner has
+  `timeout`). Origin: `en-92-monitoring` second native review (R4-001,
+  R3-001, R3-002), 2026-11-14.
 - **EN-99** (web tests): since `print-check-cascade`, `checkAppNavPrintSuppression`
   parses with `postcss`, which rejects stylesheets the old scan accepted: an
   unclosed non-print rule, comment or string at the end of the file fails
