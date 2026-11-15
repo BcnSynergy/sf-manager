@@ -1153,7 +1153,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
-- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #TBD). Origin: `password-reset` T2, 2026-11-15.
+- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #420). Origin: `password-reset` T2, 2026-11-15.
 - **EN-92** (operations): the production site is monitored from outside.
   `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
   every 15 minutes (and by hand): it fails when `/api/health` does not answer
