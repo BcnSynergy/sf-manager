@@ -1164,7 +1164,11 @@ content type`). Today that is the only 415 it raises, but a future one
   pins sign-in with the link and the notice in place checks only the request
   and the absence of an error, not where the user lands after signing in.
   Origin: `password-reset` T3, 2026-11-15, and its native review
-  (R3-login-regression-weak-assert).
+  (R3-login-regression-weak-assert). From the fix review: clearing the reset
+  flag replaces the route with the bare `/login` path, so a query string or
+  hash on that URL would be dropped (no flow reaches it today); and the
+  success-path history assertion relies on `MemoryRouter` not writing to
+  `window.history` (true today; the invalid-link test pins the same entry).
 
 ## Done
 
