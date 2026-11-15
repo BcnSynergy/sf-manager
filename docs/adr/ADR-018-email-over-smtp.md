@@ -39,7 +39,7 @@ Options compared on 2026-11-14:
 - Message content (subjects and bodies, in each supported language) lives in
   the code. No provider REST API, stored template, webhook or tracking
   feature is used, and click and open tracking stay off: reset links carry
-  single-use tokens.
+  single-use tokens (but see the 2026-11-15 addendum: Brevo tracks clicks).
 - Development sends to a local Mailpit container (`docker-compose.yml`,
   `localhost:1025`, web UI on port 8025); tests that exercise sending will
   replace the port with an in-memory fake (added with the reset flow). Nothing leaves a developer's machine.
@@ -56,3 +56,14 @@ Options compared on 2026-11-14:
   the relay at start, and the production check (EN-92) does not cover email,
   so a broken relay shows only as failed sends in the API log.
 - A new runtime dependency, `nodemailer` (pinned), enters the API image.
+
+## Addendum (2026-11-15): click tracking cannot be turned off on Brevo
+
+The first production reset email showed Brevo rewriting the link through its
+click-tracking redirector (`…sendibt3.com/tr/cl/…`), although the decision
+above assumed tracking could stay off. Brevo offers no per-message SMTP
+header for it, and account-wide disabling is reportedly granted on request,
+possibly only on Enterprise plans. The maintainer accepted the exposure for
+now (TD-53): the token is single use, expires in 30 minutes and is spent only
+by submitting the reset form. Asking Brevo support, or moving to a relay
+without forced tracking through the `SMTP_*` values and DNS alone, closes it.

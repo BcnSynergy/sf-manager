@@ -583,9 +583,12 @@ The sender's domain must be authenticated at the relay, or recipients
 reject the mail: `bcnsynergy.com` publishes Brevo's verification TXT and its
 two DKIM CNAMEs (`brevo1._domainkey`, `brevo2._domainkey`). With the
 domain's strict DMARC (`p=reject; adkim=s; aspf=s`) only DKIM aligns, so
-those two records are required; the SPF record does not list Brevo. Keep
-click and open tracking off at the relay: reset links carry a single-use
-token and must reach the user unchanged.
+those two records are required; the SPF record does not list Brevo. Reset
+links carry a single-use token and should reach the user unchanged, but
+Brevo applies click tracking, rewriting links through its own redirector,
+and offers no per-message switch to turn it off, so the token passes
+through Brevo. This is accepted for now and tracked as TD-53; asking Brevo
+support to disable it, or switching relays, fixes it.
 
 To switch relays, change the `SMTP_*` values, authenticate the domain at
 the new relay, and restart the API; no code changes. Brevo's SMTP key
