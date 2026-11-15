@@ -56,3 +56,14 @@ Options compared on 2026-11-14:
   the relay at start, and the production check (EN-92) does not cover email,
   so a broken relay shows only as failed sends in the API log.
 - A new runtime dependency, `nodemailer` (pinned), enters the API image.
+
+## Addendum (2026-11-15): click tracking cannot be turned off on Brevo
+
+The first production reset email showed Brevo rewriting the link through its
+click-tracking redirector (`…sendibt3.com/tr/cl/…`), although the decision
+above assumed tracking could stay off. Brevo offers no per-message SMTP
+header for it, and account-wide disabling is reportedly granted on request,
+possibly only on Enterprise plans. The maintainer accepted the exposure for
+now (TD-53): the token is single use, expires in 30 minutes and is spent only
+by submitting the reset form. Asking Brevo support, or moving to a relay
+without forced tracking through the `SMTP_*` values and DNS alone, closes it.

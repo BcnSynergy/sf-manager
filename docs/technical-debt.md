@@ -24,7 +24,19 @@ project's Engram memory on 2026-10-09.
 
 ### Medium
 
-None.
+- **TD-53**: Brevo rewrites the password-reset link through its click-tracking
+  redirector (`…sendibt3.com/tr/cl/…`), so the single-use reset token (in
+  the link's fragment) passes through and may be logged by Brevo before the
+  user reaches `sfmanager.bcnsynergy.com`. Found on the first production
+  email (password-reset S7, 2026-11-15). Brevo has no per-message SMTP
+  header to turn tracking off; account-wide disabling is reportedly on
+  request, possibly Enterprise only. Accepted for now by the maintainer
+  ("por el momento opcion 3"): the token is single use, expires in 30
+  minutes and is spent only by submitting the reset form (visiting the link
+  does not consume it). Fix: ask Brevo support to disable click tracking for
+  transactional mail, or move to a relay without forced tracking (for
+  example Amazon SES in an EU region) by changing the `SMTP_*` values and
+  DNS only (ADR-018). Origin: `password-reset` T3 production check.
 
 ### Low
 
