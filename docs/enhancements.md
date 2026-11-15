@@ -1176,7 +1176,10 @@ content type`). Today that is the only 415 it raises, but a future one
   move; the reset page strips the fragment with `window.history` behind the
   data router, which keeps `location.hash` with the token in memory while the
   page is open (nothing reads it today); and an empty `#token=` with a token
-  already in the entry's state reuses that token.
+  already in the entry's state reuses that token. No test pins that `forgetToken`
+  keeps the router's own keys (`usr`, `key`, `idx`) in the history state
+  while removing the token (the code spreads them; tests run under
+  `MemoryRouter`, which leaves `window.history` alone).
 
 ## Done
 
