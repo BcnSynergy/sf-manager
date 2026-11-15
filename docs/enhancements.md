@@ -1096,7 +1096,13 @@ content type`). Today that is the only 415 it raises, but a future one
   accessor on the double would keep the compiler checking it. Origin:
   `password-reset` T2a fix native review (R2-race-test-cleanup,
   R3-002, R2-private-field-cast), 2026-11-15. EN-196 and EN-197 are taken
-  by T2b.
+  by T2b. From the PR 2/4 fresh review: the integration test of `deleteExpired`
+  does not pin the expiry instant (`lte` changed to `lt` passes; add a token
+  with `expiresAt == now`); `createReplacingUnused` could lock the user with
+  `FOR NO KEY UPDATE` instead of `FOR UPDATE`, which still serializes resets
+  but does not block the FK checks of `RefreshToken` inserts at login; the
+  in-memory fakes lack a parity spec for consume, deleteExpired and
+  revokeAllForUser.
 - **EN-199** (api robustness): limits of the reset request's shutdown drain
   (EN-197). Nest runs `RequestPasswordResetUseCase.onModuleDestroy` while
   the HTTP listener is still open, so a request accepted during the drain
