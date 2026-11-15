@@ -38,7 +38,9 @@ export interface RequestPasswordResetInput {
 }
 
 const MS_PER_MINUTE = 60_000;
-const DRAIN_TIMEOUT_MS = 10_000;
+// Below Docker's default 10 s stop grace (`docker stop`, Compose), so the
+// warning is logged and the rest of shutdown runs before SIGKILL.
+const DRAIN_TIMEOUT_MS = 8_000;
 
 // password-reset S3, S4, S6. The caller always gets the same answer, so the
 // work (lookup, token, send) is started and not awaited: its duration cannot
@@ -87,7 +89,11 @@ export class RequestPasswordResetUseCase implements OnModuleDestroy {
   }
 
   // Nest runs this on shutdown (main.ts enables the shutdown hooks): the
-  // work already answered with 202 gets `drainTimeoutMs` to finish.
+  // work already answered with 202 gets `drainTimeoutMs` to finish. Known
+  // limits (EN-199): Nest may run PrismaService's own onModuleDestroy
+  // (disconnect) first, which is tolerable only because Prisma reconnects on
+  // the next query; and the HTTP listener closes after these hooks, so a
+  // request accepted during the drain can still lose its email.
   async onModuleDestroy(): Promise<void> {
     if (this.running.size === 0) {
       return;

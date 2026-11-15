@@ -91,6 +91,22 @@ describe('ConfirmPasswordResetUseCase', () => {
     await expect(sessions.isFamilyEnded('family-c')).resolves.toBe(false);
   });
 
+  it('also ends a session opened with the old password while the hash was being replaced', async () => {
+    await issue('good-token');
+    const spy = jest.spyOn(users, 'updatePasswordHashById');
+    spy.mockImplementationOnce(async (id: string, hash: string) => {
+      // A login with the old password lands between the first revocation
+      // and the hash change.
+      await session('late', 'user-1');
+      spy.mockRestore();
+      return users.updatePasswordHashById(id, hash);
+    });
+
+    await useCase.execute({ token: 'good-token', password: NEW_PASSWORD });
+
+    await expect(sessions.isFamilyEnded('family-late')).resolves.toBe(true);
+  });
+
   it('accepts a token once: the second use is the generic invalid-token error and changes nothing', async () => {
     await issue('good-token');
     await useCase.execute({ token: 'good-token', password: NEW_PASSWORD });

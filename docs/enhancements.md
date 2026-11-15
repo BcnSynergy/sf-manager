@@ -1097,10 +1097,25 @@ content type`). Today that is the only 415 it raises, but a future one
   `password-reset` T2a fix native review (R2-race-test-cleanup,
   R3-002, R2-private-field-cast), 2026-11-15. EN-196 and EN-197 are taken
   by T2b.
+- **EN-199** (api robustness): limits of the reset request's shutdown drain
+  (EN-197). Nest runs `RequestPasswordResetUseCase.onModuleDestroy` while
+  the HTTP listener is still open, so a request accepted during the drain
+  gets `202` and its work can still be abandoned; and `PrismaService` may
+  disconnect in its own `onModuleDestroy` first, which works only because
+  Prisma reconnects on the next query. Moving the drain to
+  `beforeApplicationShutdown` after closing the listener, or refusing new
+  requests once shutdown starts, would close both. Test hygiene in the same
+  code: `drainTimeoutMs` is a public mutable field only for tests (an
+  injection token would keep it fixed in production), and the "waits for
+  the work in flight" test proves pending-ness by flushing 20 microtasks
+  instead of using fake timers. Origin: `password-reset` T2b fix native
+  review (R4-drain-accepts-new-requests, R3-drain-accepts-new-work,
+  R2-drain-hook-ordering-undocumented, R2-test-only-public-mutable-field,
+  R2-magic-microtask-loop, R3-drain-pending-assertion-weak), 2026-11-15.
 
 ## Done
 
-- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 10 s (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #TBD). Origin: `password-reset` T2, 2026-11-15.
+- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #TBD). Origin: `password-reset` T2, 2026-11-15.
 - **EN-92** (operations): the production site is monitored from outside.
   `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
   every 15 minutes (and by hand): it fails when `/api/health` does not answer

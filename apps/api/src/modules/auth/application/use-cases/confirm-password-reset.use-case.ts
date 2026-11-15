@@ -66,12 +66,15 @@ export class ConfirmPasswordResetUseCase {
       throw new InvalidResetTokenError();
     }
 
-    // Sessions end before the hash changes, so a failure between the two
-    // steps never leaves a changed password with live sessions: the user is
-    // logged out with the old password and a spent link (EN-196).
+    // Revoke, replace the hash, revoke again. The first revocation runs
+    // before the hash changes, so a failure in between never leaves a changed
+    // password with live sessions (the user is logged out with the old
+    // password and a spent link, EN-196). The second ends any session opened
+    // with the old password while the hash was being replaced.
     const passwordHash = await this.hasher.hash(password.value);
     await this.sessions.revokeAllForUser(user.id, now);
     await this.users.updatePasswordHashById(user.id, passwordHash);
+    await this.sessions.revokeAllForUser(user.id, this.clock.now());
 
     // Opportunistic housekeeping: never gates the reset.
     try {
