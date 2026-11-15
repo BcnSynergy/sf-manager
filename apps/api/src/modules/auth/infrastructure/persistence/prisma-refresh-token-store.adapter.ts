@@ -83,6 +83,13 @@ export class PrismaRefreshTokenStore implements RefreshTokenStore {
     });
   }
 
+  async revokeAllForUser(userId: string, at: Date): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: at },
+    });
+  }
+
   async deleteExpired(now: Date): Promise<void> {
     await this.prisma.refreshToken.deleteMany({
       where: { familyExpiresAt: { lt: now } },

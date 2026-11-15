@@ -48,6 +48,11 @@ export interface RefreshTokenStore {
   // Revokes every token of the family that is not revoked yet.
   revokeFamily(familyId: string, at: Date): Promise<void>;
 
+  // password-reset S5: revokes every token of every family of the user that
+  // is not revoked yet, so all their sessions end (their access tokens stop
+  // working too: they name a family).
+  revokeAllForUser(userId: string, at: Date): Promise<void>;
+
   // True when the family is over: any of its tokens is revoked, or none is
   // left (deleteExpired removed it after its absolute expiry, or it never
   // existed). EN-174: an access token carries its family as the session id,

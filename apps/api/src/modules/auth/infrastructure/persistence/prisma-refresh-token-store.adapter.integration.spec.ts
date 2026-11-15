@@ -231,4 +231,44 @@ describe('PrismaRefreshTokenStore (integration)', () => {
       store.findByHash(pastOwnExpiry.tokenHash),
     ).resolves.not.toBeNull();
   });
+
+  // password-reset S5: a reset ends every session of the user, all families.
+  it('revokes every not-yet-revoked token of a user across families, and only that user', async () => {
+    const earlier = at('2026-11-01T07:00:00.000Z');
+    const now = at('2026-11-01T10:00:00.000Z');
+    const familyA = newToken();
+    const familyB = newToken();
+    const alreadyRevoked = newToken();
+    await Promise.all([
+      store.create(familyA),
+      store.create(familyB),
+      store.create(alreadyRevoked),
+    ]);
+    await store.revokeFamily(alreadyRevoked.familyId, earlier);
+    const otherUserId = randomUUID();
+    await prisma.user.create({
+      data: {
+        id: otherUserId,
+        email: `refresh-store-other-${randomUUID()}@example.com`,
+        passwordHash: 'not-a-real-hash',
+        role: 'SYSTEM_ADMIN',
+      },
+    });
+    const others = newToken({ userId: otherUserId });
+    await store.create(others);
+
+    await store.revokeAllForUser(userId, now);
+
+    await expect(store.isFamilyEnded(familyA.familyId)).resolves.toBe(true);
+    await expect(store.isFamilyEnded(familyB.familyId)).resolves.toBe(true);
+    await expect(store.isFamilyEnded(others.familyId)).resolves.toBe(false);
+    // A token revoked earlier keeps its original stamp.
+    const kept = await prisma.refreshToken.findUnique({
+      where: { id: alreadyRevoked.id },
+    });
+    expect(kept?.revokedAt).toEqual(earlier);
+
+    await prisma.refreshToken.deleteMany({ where: { userId: otherUserId } });
+    await prisma.user.delete({ where: { id: otherUserId } });
+  });
 });

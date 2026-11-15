@@ -1085,6 +1085,17 @@ content type`). Today that is the only 415 it raises, but a future one
   rejection with `undefined` would pin the fallbacks. Origin:
   `password-reset` T1 second native review
   (R3-send-failure-fallback-untested), 2026-11-14.
+- **EN-198** (api tests): two test-hygiene points in `password-reset` T2a.
+  The race test in
+  `prisma-password-reset-token-store.adapter.integration.spec.ts` deletes
+  its user and tokens only after every round passes, so a failing round
+  leaves rows behind in the run's database; move the cleanup to a `finally`
+  or `afterEach`. The in-memory user repository spec reads the stored
+  record through an `as unknown as` cast to a private field; a typed test
+  accessor on the double would keep the compiler checking it. Origin:
+  `password-reset` T2a fix native review (R2-race-test-cleanup,
+  R3-002, R2-private-field-cast), 2026-11-15. EN-196 and EN-197 are taken
+  by T2b.
 
 ## Done
 

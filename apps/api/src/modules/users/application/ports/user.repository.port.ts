@@ -63,6 +63,10 @@ export interface UserRepository {
     },
   ): Promise<void>;
 
+  // password-reset S5: replaces the stored argon2 hash of an active user;
+  // nothing else changes. A soft-deleted or unknown id changes nothing.
+  updatePasswordHashById(id: string, passwordHash: string): Promise<void>;
+
   // Sets deletedAt (ADR-010) — no row deletion.
   softDeleteById(id: string): Promise<void>;
 

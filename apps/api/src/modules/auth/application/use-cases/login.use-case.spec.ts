@@ -44,6 +44,7 @@ describe('LoginUseCase', () => {
       findAll: jest.fn(),
       create: jest.fn(),
       updateById: jest.fn(),
+      updatePasswordHashById: jest.fn(),
       softDeleteById: jest.fn(),
       countActiveByRole: jest.fn(),
       countActiveByMaintenanceCompany: jest.fn(),

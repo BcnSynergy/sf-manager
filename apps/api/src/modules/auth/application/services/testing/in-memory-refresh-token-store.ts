@@ -79,6 +79,15 @@ export class InMemoryRefreshTokenStore implements RefreshTokenStore {
     return Promise.resolve();
   }
 
+  revokeAllForUser(userId: string, at: Date): Promise<void> {
+    for (const token of this.tokens.values()) {
+      if (token.userId === userId && token.revokedAt === null) {
+        token.revokedAt = at;
+      }
+    }
+    return Promise.resolve();
+  }
+
   deleteExpired(now: Date): Promise<void> {
     for (const [id, token] of this.tokens) {
       if (token.familyExpiresAt < now) {
