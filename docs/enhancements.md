@@ -1112,6 +1112,27 @@ content type`). Today that is the only 415 it raises, but a future one
   review (R4-drain-accepts-new-requests, R3-drain-accepts-new-work,
   R2-drain-hook-ordering-undocumented, R2-test-only-public-mutable-field,
   R2-magic-microtask-loop, R3-drain-pending-assertion-weak), 2026-11-15.
+- **EN-200** (security, product decision): the per-email reset limit counts
+  every request for an email from any client and then blocks that email
+  for the window (default 3 per 3600 s). Someone who knows a user's email
+  can send 3 requests an hour from rotating IPs and keep that user from
+  ever getting a reset link. Options: count only requests that actually
+  sent an email, lower the block, or rely on the per-client limit alone.
+  Needs a decision before changing. Origin: `password-reset` cumulative T2
+  native review (R4-email-limit-targeted-lockout), 2026-11-15.
+- **EN-201** (api docs and hygiene): leftovers of the `password-reset` T2
+  cumulative review. README's `THROTTLE_KEY_SECRET` and `TRUST_PROXY` rows
+  still mention only login and refresh, though the reset counters use the
+  same HMAC storage and client key. `password-reset-email.ts` puts the link
+  in `href` without attribute escaping (safe today: `CORS_ORIGIN` is a
+  validated origin and the token is base64url; `escapeHtml` does not escape
+  quotes). `ConfirmPasswordResetUseCase`'s class header omits the second
+  revocation; the log helper `describe` hides its purpose (dropping
+  `error.message`); `PasswordResetEmailLocale` duplicates
+  `PasswordResetLocale`. Origin: same review (R2-readme-throttle-rows-stale,
+  R1-001, R2-unescaped-href-relies-on-remote-invariant,
+  R2-confirm-header-omits-second-revoke, R2-describe-helper-name,
+  R2-redundant-locale-alias), 2026-11-15.
 
 ## Done
 
