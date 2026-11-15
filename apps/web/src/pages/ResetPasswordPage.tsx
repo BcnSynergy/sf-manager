@@ -154,10 +154,16 @@ export function ResetPasswordPage() {
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
             aria-invalid={confirmError}
+            aria-describedby={confirmError ? 'reset-confirm-error' : undefined}
             data-testid="reset-password-confirm"
           />
           {confirmError && (
-            <p role="alert" className="sf-field-error" data-testid="reset-confirm-error">
+            <p
+              id="reset-confirm-error"
+              role="alert"
+              className="sf-field-error"
+              data-testid="reset-confirm-error"
+            >
               {t('auth.passwordReset.reset.mismatch')}
             </p>
           )}

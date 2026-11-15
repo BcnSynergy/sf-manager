@@ -1168,7 +1168,15 @@ content type`). Today that is the only 415 it raises, but a future one
   flag replaces the route with the bare `/login` path, so a query string or
   hash on that URL would be dropped (no flow reaches it today); and the
   success-path history assertion relies on `MemoryRouter` not writing to
-  `window.history` (true today; the invalid-link test pins the same entry).
+  `window.history` (true today; the invalid-link test pins the same entry). From the PR 4/4
+  fresh review: the forgot page mounts its StatusRegion only on success, so
+  the confirmation is not reliably announced and the focused form vanishes
+  with it (keep the region mounted and fill it); the login page's
+  password-changed notice is a plain paragraph with no live region or focus
+  move; the reset page strips the fragment with `window.history` behind the
+  data router, which keeps `location.hash` with the token in memory while the
+  page is open (nothing reads it today); and an empty `#token=` with a token
+  already in the entry's state reuses that token.
 
 ## Done
 

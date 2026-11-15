@@ -185,6 +185,26 @@ describe('ResetPasswordPage', () => {
       'At least 10 characters, with at least one letter and one digit.',
     );
     expect(screen.queryByTestId('reset-invalid-link')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('reset-submit')).toBeEnabled());
+  });
+
+  it('points each field at its own message for assistive technology', () => {
+    renderPage();
+    expect(screen.getByTestId('reset-password')).toHaveAttribute(
+      'aria-describedby',
+      'reset-password-rules',
+    );
+
+    fill('short1', 'different1');
+
+    expect(screen.getByTestId('reset-password')).toHaveAttribute(
+      'aria-describedby',
+      screen.getByTestId('reset-password-error').id,
+    );
+    expect(screen.getByTestId('reset-password-confirm')).toHaveAttribute(
+      'aria-describedby',
+      screen.getByTestId('reset-confirm-error').id,
+    );
   });
 
   it('shows a rate-limit message on 429', async () => {
@@ -195,6 +215,8 @@ describe('ResetPasswordPage', () => {
     expect(await screen.findByTestId('reset-error')).toHaveTextContent(
       'Too many requests. Please try again later.',
     );
+    // The user can try again.
+    await waitFor(() => expect(screen.getByTestId('reset-submit')).toBeEnabled());
   });
 
   it('shows a generic error on a network failure', async () => {

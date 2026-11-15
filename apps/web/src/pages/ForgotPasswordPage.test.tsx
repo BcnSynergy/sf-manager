@@ -99,6 +99,7 @@ describe('ForgotPasswordPage', () => {
     );
     expect(screen.queryByTestId('forgot-confirmation')).toBeNull();
     expect(screen.getByTestId('forgot-email')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('forgot-submit')).toBeEnabled());
   });
 
   it.each([
