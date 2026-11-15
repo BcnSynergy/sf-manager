@@ -184,13 +184,24 @@ describe('Password reset (e2e)', () => {
         .send({ email: 'gone@example.com' });
       await requestUseCase.whenIdle();
 
+      // Identical in status, body and headers (the date aside): in
+      // particular no X-RateLimit-* counter tells how many requests named
+      // this email.
+      const headersOf = (response: request.Response) => {
+        const headers: Record<string, unknown> = { ...response.headers };
+        delete headers.date;
+        return headers;
+      };
       for (const response of [unknown, deleted]) {
         expect(response.status).toBe(known.status);
         expect(response.text).toBe(known.text);
-        expect(response.headers['content-type']).toBe(
-          known.headers['content-type'],
-        );
+        expect(headersOf(response)).toEqual(headersOf(known));
       }
+      expect(
+        Object.keys(known.headers).filter((name) =>
+          name.startsWith('x-ratelimit'),
+        ),
+      ).toEqual([]);
       expect(sender.sent.map((m) => m.to)).toEqual([EMAIL]);
       expect(resetTokens.tokens.size).toBe(1);
     });

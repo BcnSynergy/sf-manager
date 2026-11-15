@@ -111,8 +111,18 @@ describe('Password reset rate limit (e2e)', () => {
     expect(byEmail.status).toBe(429);
     expect(byClient.status).toBe(429);
     expect(byClient.body).toEqual(byEmail.body);
-    expect(Number(byEmail.headers['retry-after'])).toBeGreaterThan(0);
-    expect(Number(byClient.headers['retry-after'])).toBeGreaterThan(0);
+    // Same headers too: one Retry-After (the longer of the two windows, 3600 s
+    // by default) and no X-RateLimit-* counters, so neither the limit that
+    // fired nor anyone's request count shows.
+    expect(byEmail.headers['retry-after']).toBe('3600');
+    expect(byClient.headers['retry-after']).toBe('3600');
+    for (const response of [byEmail, byClient]) {
+      expect(
+        Object.keys(response.headers).filter((name) =>
+          name.startsWith('x-ratelimit'),
+        ),
+      ).toEqual([]);
+    }
   });
 
   it('limits requests per normalized email, counting unknown emails too, with the same 429 and a Retry-After', async () => {
@@ -129,8 +139,9 @@ describe('Password reset rate limit (e2e)', () => {
     const blocked = await post('nobody@example.com');
 
     expect(blocked.status).toBe(429);
-    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
-    expect(Number(blocked.headers['retry-after'])).toBeLessThanOrEqual(600);
+    // The longer of the two windows (900 s per client key, 600 s per email
+    // here), whichever limit fired.
+    expect(blocked.headers['retry-after']).toBe('900');
     await post('someone-else@example.com').expect(202);
   });
 

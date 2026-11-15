@@ -1108,7 +1108,9 @@ content type`). Today that is the only 415 it raises, but a future one
   code: `drainTimeoutMs` is a public mutable field only for tests (an
   injection token would keep it fixed in production), and the "waits for
   the work in flight" test proves pending-ness by flushing 20 microtasks
-  instead of using fake timers. Origin: `password-reset` T2b fix native
+  instead of using fake timers. Also, no test pins `enableShutdownHooks()`
+  in `main.ts`, which the drain depends on (the drain tests call
+  `onModuleDestroy()` directly). Origin: `password-reset` T2b fix native
   review (R4-drain-accepts-new-requests, R3-drain-accepts-new-work,
   R2-drain-hook-ordering-undocumented, R2-test-only-public-mutable-field,
   R2-magic-microtask-loop, R3-drain-pending-assertion-weak), 2026-11-15.
@@ -1132,7 +1134,12 @@ content type`). Today that is the only 415 it raises, but a future one
   `PasswordResetLocale`. Origin: same review (R2-readme-throttle-rows-stale,
   R1-001, R2-unescaped-href-relies-on-remote-invariant,
   R2-confirm-header-omits-second-revoke, R2-describe-helper-name,
-  R2-redundant-locale-alias), 2026-11-15.
+  R2-redundant-locale-alias), 2026-11-15. From the PR 3/4 fresh review:
+  a body with a valid email and an invalid `locale` still counts once
+  against the per-email limit before the pipe answers 400, and
+  `apps/api/test/test-database/rate-limit-env.setup.ts` lacks the
+  `PASSWORD_RESET_*` raises its e2e twin has (no integration suite calls the
+  endpoints yet).
 
 ## Done
 

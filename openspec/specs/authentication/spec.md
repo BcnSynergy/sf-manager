@@ -1300,10 +1300,20 @@ through `PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS`,
 `PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` and
 `PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS`; a value that is not a
 positive integer MUST cause application startup to fail with an error. A
-limited request MUST be answered `429` with a `Retry-After` header, with the
-same status and body for both limits, and MUST NOT disclose which limit
-applied. The counters MUST use the same storage and keyed hashing as the
+limited request MUST be answered `429` with the same status, body and
+headers for both limits, and MUST NOT disclose which limit applied: its
+`Retry-After` MUST be the longer of the two windows, in seconds, whichever
+limit fired. Responses on both endpoints MUST NOT carry rate-limit counter
+headers (`X-RateLimit-*`), which would also tell how many requests named an
+email. The counters MUST use the same storage and keyed hashing as the
 login counters, so the email never appears at rest or in logs in the clear.
+
+#### Scenario: Both limits answer alike
+
+- GIVEN the default windows (900 seconds per client key, 3600 per email)
+- WHEN one request is refused by the per-email limit and another by the per-client-key limit
+- THEN both MUST be `429` with the same body and `Retry-After: 3600`
+- AND neither, nor any `202` from the request endpoint, MUST carry an `X-RateLimit-*` header
 
 #### Scenario: Per-email limit counts unknown emails too
 

@@ -57,3 +57,13 @@ export function getPasswordResetRateLimitConfig(): PasswordResetRateLimitConfig 
     emailWindowMs: emailWindowSeconds * 1000,
   };
 }
+
+// The one Retry-After both reset limits answer with: the longer window, in
+// seconds. A per-limit value (900 vs 3600 by default) would tell which limit
+// fired, which the spec forbids; the longer one never invites a retry that
+// is still blocked.
+export function passwordResetRetryAfterSeconds(
+  config: PasswordResetRateLimitConfig,
+): number {
+  return Math.ceil(Math.max(config.windowMs, config.emailWindowMs) / 1000);
+}

@@ -4,6 +4,7 @@ import {
   InjectThrottlerOptions,
   InjectThrottlerStorage,
   ThrottlerGuard,
+  type ThrottlerLimitDetail,
   type ThrottlerModuleOptions,
   type ThrottlerRequest,
   type ThrottlerStorage,
@@ -11,6 +12,7 @@ import {
 import { loginEmailSchema } from '@sf-manager/validation';
 import {
   PASSWORD_RESET_RATE_LIMIT_CONFIG,
+  passwordResetRetryAfterSeconds,
   type PasswordResetRateLimitConfig,
 } from '../../infrastructure/config/password-reset-rate-limit.config';
 
@@ -51,10 +53,27 @@ export class PasswordResetEmailThrottlerGuard extends ThrottlerGuard {
   ): Promise<boolean> {
     return super.handleRequest({
       ...requestProps,
+      // No X-RateLimit-* counters: they would show which limit applies and,
+      // on the per-email guard, how many requests named an email.
+      throttler: { ...requestProps.throttler, setHeaders: false },
       limit: this.limits.emailMaxRequests,
       ttl: this.limits.emailWindowMs,
       blockDuration: this.limits.emailWindowMs,
     });
+  }
+
+  // Same Retry-After for both reset limits (passwordResetRetryAfterSeconds).
+  protected override throwThrottlingException(
+    context: ExecutionContext,
+    detail: ThrottlerLimitDetail,
+  ): Promise<void> {
+    const { res } = this.getRequestResponse(context);
+    this.setResponseHeader(
+      res,
+      'Retry-After',
+      passwordResetRetryAfterSeconds(this.limits),
+    );
+    return super.throwThrottlingException(context, detail);
   }
 }
 
