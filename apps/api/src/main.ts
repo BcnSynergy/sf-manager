@@ -45,6 +45,10 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document);
   }
 
+  // SIGTERM runs the modules' shutdown hooks (the password reset request
+  // drains its background work there).
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

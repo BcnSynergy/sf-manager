@@ -89,6 +89,32 @@ describe('Password reset rate limit (e2e)', () => {
     }
   });
 
+  it('answers the per-email 429 and the per-client-key 429 identically', async () => {
+    const emailServer = await startApp({
+      PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1000',
+      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '1',
+    });
+    const post = (server: App, email: string) =>
+      request(server).post('/auth/password-reset/request').send({ email });
+    await post(emailServer, 'a@example.com').expect(202);
+    const byEmail = await post(emailServer, 'a@example.com');
+    await app?.get(RequestPasswordResetUseCase).whenIdle();
+    await app?.close();
+
+    const clientServer = await startApp({
+      PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1',
+      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '1000',
+    });
+    await post(clientServer, 'a@example.com').expect(202);
+    const byClient = await post(clientServer, 'a@example.com');
+
+    expect(byEmail.status).toBe(429);
+    expect(byClient.status).toBe(429);
+    expect(byClient.body).toEqual(byEmail.body);
+    expect(Number(byEmail.headers['retry-after'])).toBeGreaterThan(0);
+    expect(Number(byClient.headers['retry-after'])).toBeGreaterThan(0);
+  });
+
   it('limits requests per normalized email, counting unknown emails too, with the same 429 and a Retry-After', async () => {
     const server = await startApp({
       PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1000',
@@ -123,6 +149,11 @@ describe('Password reset rate limit (e2e)', () => {
 
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+    // The confirm endpoint counts on its own: still not limited.
+    await request(server)
+      .post('/auth/password-reset/confirm')
+      .send({ token: 'nope', password: 'abcdefghi1' })
+      .expect(400);
   });
 
   it('limits confirmations per client key apart from requests', async () => {

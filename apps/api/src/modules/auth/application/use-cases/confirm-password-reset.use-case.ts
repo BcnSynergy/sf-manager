@@ -33,8 +33,8 @@ export interface ConfirmPasswordResetInput {
 
 // password-reset S4, S5. The password policy runs first (a weak password
 // throws WeakPasswordError and leaves the link usable), then the token is
-// consumed atomically, then the hash is replaced and every session of the
-// user ends. The token is spent even if a later step fails: the user asks
+// consumed atomically, then every session of the user ends, then the hash
+// is replaced. The token is spent even if a later step fails: the user asks
 // for a new link.
 @Injectable()
 export class ConfirmPasswordResetUseCase {
@@ -66,11 +66,12 @@ export class ConfirmPasswordResetUseCase {
       throw new InvalidResetTokenError();
     }
 
-    await this.users.updatePasswordHashById(
-      user.id,
-      await this.hasher.hash(password.value),
-    );
+    // Sessions end before the hash changes, so a failure between the two
+    // steps never leaves a changed password with live sessions: the user is
+    // logged out with the old password and a spent link (EN-196).
+    const passwordHash = await this.hasher.hash(password.value);
     await this.sessions.revokeAllForUser(user.id, now);
+    await this.users.updatePasswordHashById(user.id, passwordHash);
 
     // Opportunistic housekeeping: never gates the reset.
     try {

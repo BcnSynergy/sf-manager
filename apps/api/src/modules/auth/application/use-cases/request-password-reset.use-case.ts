@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import {
   CLOCK,
   type Clock,
@@ -38,6 +38,7 @@ export interface RequestPasswordResetInput {
 }
 
 const MS_PER_MINUTE = 60_000;
+const DRAIN_TIMEOUT_MS = 10_000;
 
 // password-reset S3, S4, S6. The caller always gets the same answer, so the
 // work (lookup, token, send) is started and not awaited: its duration cannot
@@ -47,9 +48,12 @@ const MS_PER_MINUTE = 60_000;
 // `error.message` (relay and database messages can quote the recipient):
 // only the error name and code.
 @Injectable()
-export class RequestPasswordResetUseCase {
+export class RequestPasswordResetUseCase implements OnModuleDestroy {
   private readonly logger = new Logger(RequestPasswordResetUseCase.name);
   private readonly running = new Set<Promise<void>>();
+  // How long shutdown waits for requests already answered 202 (EN-197); a
+  // hung relay must not block it forever. Public so tests can shorten it.
+  drainTimeoutMs = DRAIN_TIMEOUT_MS;
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
@@ -79,6 +83,25 @@ export class RequestPasswordResetUseCase {
   async whenIdle(): Promise<void> {
     while (this.running.size > 0) {
       await Promise.all([...this.running]);
+    }
+  }
+
+  // Nest runs this on shutdown (main.ts enables the shutdown hooks): the
+  // work already answered with 202 gets `drainTimeoutMs` to finish.
+  async onModuleDestroy(): Promise<void> {
+    if (this.running.size === 0) {
+      return;
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const timedOut = new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), this.drainTimeoutMs);
+    });
+    const outcome = await Promise.race([this.whenIdle(), timedOut]);
+    clearTimeout(timer);
+    if (outcome === 'timeout') {
+      this.logger.warn(
+        'Password reset requests still running at shutdown were abandoned',
+      );
     }
   }
 

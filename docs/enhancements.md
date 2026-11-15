@@ -1085,8 +1085,7 @@ content type`). Today that is the only 415 it raises, but a future one
   rejection with `undefined` would pin the fallbacks. Origin:
   `password-reset` T1 second native review
   (R3-send-failure-fallback-untested), 2026-11-14.
-- **EN-196** (api robustness): `ConfirmPasswordResetUseCase` spends the link before it replaces the hash and ends the sessions (three steps across three stores, no shared transaction). A database failure between them answers 500 with the link already used, so the user has to ask for a new one, and a failure after the hash change but before the session revoke leaves old sessions alive until the user asks again. A single Prisma transaction across the token, user and refresh-token tables, or compensating un-use of the link, would close it. Origin: `password-reset` T2, 2026-11-15.
-- **EN-197** (api robustness): the reset request does its lookup, token and send in the background (`RequestPasswordResetUseCase`), and nothing awaits that work at shutdown, so a deploy that stops the API right after a request can drop an email already answered `202`. An `onApplicationShutdown` hook awaiting `whenIdle()` would drain it. Origin: `password-reset` T2, 2026-11-15.
+- **EN-196** (api robustness): `ConfirmPasswordResetUseCase` is three steps across three stores with no shared transaction: consume the link, end the user's sessions, replace the hash, in that order, so a failure between steps fails safe (never a changed password with live sessions). The remaining gap: a failure after the link is consumed leaves it spent, so the user has to ask for a new one (and may be logged out with the old password). A single Prisma transaction across the token, refresh-token and user tables, or un-using the link on failure, would close it. Origin: `password-reset` T2, 2026-11-15.
 - **EN-198** (api tests): two test-hygiene points in `password-reset` T2a.
   The race test in
   `prisma-password-reset-token-store.adapter.integration.spec.ts` deletes
@@ -1101,6 +1100,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 10 s (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #TBD). Origin: `password-reset` T2, 2026-11-15.
 - **EN-92** (operations): the production site is monitored from outside.
   `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
   every 15 minutes (and by hand): it fails when `/api/health` does not answer

@@ -55,4 +55,25 @@ describe('getPasswordResetRateLimitConfig', () => {
       );
     },
   );
+
+  it.each([
+    'PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS',
+    'PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS',
+  ])('accepts 86400 and rejects 86401 for %s', (variable) => {
+    process.env[variable] = '86400';
+    expect(() => getPasswordResetRateLimitConfig()).not.toThrow();
+
+    process.env[variable] = '86401';
+    expect(() => getPasswordResetRateLimitConfig()).toThrow(
+      new RegExp(variable),
+    );
+  });
+
+  it.each(VARIABLES)('throws naming %s for a non-numeric value', (variable) => {
+    process.env[variable] = 'abc';
+
+    expect(() => getPasswordResetRateLimitConfig()).toThrow(
+      new RegExp(variable),
+    );
+  });
 });

@@ -1,10 +1,11 @@
+import type { PasswordResetLocale } from '@sf-manager/validation';
 import type { EmailMessage } from '../../../../shared/application/ports/email-sender.port';
 
 // password-reset S2, S6 (ADR-018): the message text lives in code, one entry
 // per language the web app offers. The only interpolated values are the link
 // (the origin plus a base64url token, so nothing needs HTML escaping) and the
 // lifetime (a number). The caller adds the recipient.
-export type PasswordResetEmailLocale = 'en' | 'es' | 'ca';
+export type PasswordResetEmailLocale = PasswordResetLocale;
 
 export interface PasswordResetEmailInput {
   locale: PasswordResetEmailLocale;

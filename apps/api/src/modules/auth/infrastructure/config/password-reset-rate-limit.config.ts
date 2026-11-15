@@ -1,7 +1,8 @@
 import { parsePositiveInteger } from '../../../../shared/infrastructure/env/positive-integer';
 
-// password-reset S6: both public endpoints (request and confirm) share one
-// per-client-key limit, and the request endpoint adds a per-email limit that
+// password-reset S6: both public endpoints (request and confirm) read the same
+// per-client-key values, but each handler counts on its own (the throttler
+// key includes the handler). The request endpoint adds a per-email limit that
 // counts every request, whether or not the email has an account, so a 429
 // reveals nothing about accounts. A reset is rare (the email limit is much
 // stricter than login's), while the client-key limit leaves room for an

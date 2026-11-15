@@ -16,6 +16,7 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import {
+  PASSWORD_RESET_LOCALES,
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   type PasswordResetConfirm,
@@ -58,7 +59,11 @@ export class PasswordResetController {
       required: ['email'],
       properties: {
         email: { type: 'string', format: 'email' },
-        locale: { type: 'string', enum: ['en', 'es', 'ca'], default: 'en' },
+        locale: {
+          type: 'string',
+          enum: [...PASSWORD_RESET_LOCALES],
+          default: 'en',
+        },
       },
     },
   })

@@ -212,4 +212,56 @@ describe('RequestPasswordResetUseCase', () => {
     await useCase.whenIdle();
     expect(sender.sent).toHaveLength(2);
   });
+
+  describe('draining at shutdown', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('waits for the work in flight before it resolves', async () => {
+      users.seed(buildUser({}));
+      let releaseSend: () => void = () => undefined;
+      jest.spyOn(sender, 'send').mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseSend = resolve;
+          }),
+      );
+      useCase.execute({ email: EMAIL, locale: 'en' });
+      let drained = false;
+      const drain = useCase.onModuleDestroy().then(() => {
+        drained = true;
+      });
+      for (let i = 0; i < 20; i += 1) {
+        await Promise.resolve();
+      }
+      expect(drained).toBe(false);
+
+      releaseSend();
+      await drain;
+
+      expect(drained).toBe(true);
+    });
+
+    it('gives up after the timeout with a fixed warning when the work hangs', async () => {
+      jest.useFakeTimers();
+      users.seed(buildUser({}));
+      jest
+        .spyOn(sender, 'send')
+        .mockImplementation(() => new Promise(() => {}));
+      useCase.drainTimeoutMs = 1_000;
+      useCase.execute({ email: EMAIL, locale: 'en' });
+
+      const drain = useCase.onModuleDestroy();
+      await jest.advanceTimersByTimeAsync(1_000);
+      await drain;
+
+      expect(logged).toEqual([
+        'Password reset requests still running at shutdown were abandoned',
+      ]);
+    });
+
+    it('resolves at once when nothing is running', async () => {
+      await expect(useCase.onModuleDestroy()).resolves.toBeUndefined();
+      expect(logged).toEqual([]);
+    });
+  });
 });

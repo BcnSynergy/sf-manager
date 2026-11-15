@@ -163,4 +163,32 @@ describe('ConfirmPasswordResetUseCase', () => {
       useCase.execute({ token: 'good-token', password: NEW_PASSWORD }),
     ).resolves.toBeUndefined();
   });
+
+  it('ends the sessions before it changes the hash: a failing hash update leaves the user logged out, with the old password', async () => {
+    await issue('good-token');
+    await session('a', 'user-1');
+    jest
+      .spyOn(users, 'updatePasswordHashById')
+      .mockRejectedValue(new Error('db down'));
+
+    await expect(
+      useCase.execute({ token: 'good-token', password: NEW_PASSWORD }),
+    ).rejects.toThrow('db down');
+
+    await expect(sessions.isFamilyEnded('family-a')).resolves.toBe(true);
+    expect((await users.findById('user-1'))?.passwordHash).toBe('old-hash');
+  });
+
+  it('does not change the hash when ending the sessions fails', async () => {
+    await issue('good-token');
+    jest
+      .spyOn(sessions, 'revokeAllForUser')
+      .mockRejectedValue(new Error('db down'));
+
+    await expect(
+      useCase.execute({ token: 'good-token', password: NEW_PASSWORD }),
+    ).rejects.toThrow('db down');
+
+    expect((await users.findById('user-1'))?.passwordHash).toBe('old-hash');
+  });
 });
