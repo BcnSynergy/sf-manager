@@ -1139,7 +1139,11 @@ content type`). Today that is the only 415 it raises, but a future one
   against the per-email limit before the pipe answers 400, and
   `apps/api/test/test-database/rate-limit-env.setup.ts` lacks the
   `PASSWORD_RESET_*` raises its e2e twin has (no integration suite calls the
-  endpoints yet).
+  endpoints yet). From the B-1 fix review: the two reset guards each copy
+  the `setHeaders: false` and shared `Retry-After` overrides, so the rule that
+  both 429s look alike depends on two copies staying in sync (a shared base
+  class would enforce it); and background reset jobs have no cap on how
+  many run at once (only the SMTP socket timeouts bound each one).
 
 ## Done
 
