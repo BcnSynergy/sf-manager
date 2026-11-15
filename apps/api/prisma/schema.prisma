@@ -557,4 +557,6 @@ model PasswordResetToken {
 
   // Opportunistic cleanup deletes the rows past their expiry.
   @@index([expiresAt])
+  // Replacing a user's unused tokens looks them up by user.
+  @@index([userId])
 }

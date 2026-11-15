@@ -540,4 +540,28 @@ describe('PrismaUserRepository (integration)', () => {
     expect(found?.id).toBe(user.id);
     expect(found?.role).toBe('MANAGER');
   });
+
+  it('updatePasswordHashById changes no row and does not throw for a soft-deleted or an unknown id', async () => {
+    const email = uniqueEmail('hash-deleted');
+    const user = new User({
+      id: idGenerator.generate(),
+      email,
+      passwordHash: 'argon2id$old',
+      role: 'MANAGER',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: new Date(),
+    });
+    await repository.save(user);
+
+    await expect(
+      repository.updatePasswordHashById(user.id, 'argon2id$new'),
+    ).resolves.toBeUndefined();
+    await expect(
+      repository.updatePasswordHashById(randomUUID(), 'argon2id$new'),
+    ).resolves.toBeUndefined();
+
+    const row = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(row?.passwordHash).toBe('argon2id$old');
+  });
 });

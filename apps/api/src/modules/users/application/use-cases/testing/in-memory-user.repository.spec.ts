@@ -115,7 +115,11 @@ describe('InMemoryUserRepository (test double parity)', () => {
     expect((await repository.findByEmail('active@example.com'))?.role).toBe(
       'MANAGER',
     );
-    // The soft-deleted row is invisible to reads, so check through save-free access.
+    // The soft-deleted row is invisible to reads: check the stored record.
+    const stored = (
+      repository as unknown as { usersById: Map<string, User> }
+    ).usersById.get('deleted-1');
+    expect(stored?.passwordHash).toBe('hash');
     const all = await repository.findAll();
     expect(all.map((user) => user.id)).toEqual(['active-1']);
   });

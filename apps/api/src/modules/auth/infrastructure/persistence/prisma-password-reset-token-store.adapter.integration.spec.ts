@@ -158,4 +158,24 @@ describe('PrismaPasswordResetTokenStore (integration)', () => {
       }),
     ).resolves.not.toBeNull();
   });
+
+  it('leaves exactly one usable token when two requests for the same user race', async () => {
+    const racer = await makeUser();
+    for (let round = 0; round < 8; round += 1) {
+      const a = newToken({ userId: racer });
+      const b = newToken({ userId: racer });
+
+      await Promise.all([
+        store.createReplacingUnused(a),
+        store.createReplacingUnused(b),
+      ]);
+
+      const usable = await prisma.passwordResetToken.count({
+        where: { userId: racer, usedAt: null, expiresAt: { gt: at(T_MID) } },
+      });
+      expect(usable).toBe(1);
+    }
+    await prisma.passwordResetToken.deleteMany({ where: { userId: racer } });
+    await prisma.user.delete({ where: { id: racer } });
+  });
 });

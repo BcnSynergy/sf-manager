@@ -12,9 +12,13 @@ export class PrismaPasswordResetTokenStore implements PasswordResetTokenStore {
   constructor(private readonly prisma: PrismaService) {}
 
   // The invalidation and the insert share a transaction: a failed insert
-  // leaves the user's earlier link usable.
+  // leaves the user's earlier link usable. The user's row is locked first,
+  // so two concurrent requests for one user run one after the other (at READ
+  // COMMITTED both would otherwise invalidate the same old rows and each
+  // insert, leaving two usable tokens).
   async createReplacingUnused(token: NewPasswordResetToken): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${token.userId}::uuid FOR UPDATE`;
       await tx.passwordResetToken.updateMany({
         where: { userId: token.userId, usedAt: null },
         data: { usedAt: token.createdAt },

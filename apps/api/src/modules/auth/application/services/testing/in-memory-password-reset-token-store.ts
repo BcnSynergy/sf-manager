@@ -14,6 +14,12 @@ export class InMemoryPasswordResetTokenStore implements PasswordResetTokenStore 
   readonly tokens = new Map<string, StoredPasswordResetToken>();
 
   createReplacingUnused(token: NewPasswordResetToken): Promise<void> {
+    // Like the unique index on tokenHash: refuse before invalidating anything.
+    for (const existing of this.tokens.values()) {
+      if (existing.tokenHash === token.tokenHash) {
+        return Promise.reject(new Error('Duplicate password reset token hash'));
+      }
+    }
     for (const existing of this.tokens.values()) {
       if (existing.userId === token.userId && existing.usedAt === null) {
         existing.usedAt = token.createdAt;
