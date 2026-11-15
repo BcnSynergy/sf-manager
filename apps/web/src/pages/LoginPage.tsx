@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
@@ -27,9 +27,18 @@ import { loginErrorKey } from './login-error-key';
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // password-reset S8: the reset page navigates here with this flag.
-  const passwordChanged =
-    (useLocation().state as { passwordReset?: boolean } | null)?.passwordReset === true;
+  // password-reset S8: the reset page navigates here with this flag. It is
+  // read once and then dropped from the route, so a reload or a Back/Forward
+  // visit does not announce the change again.
+  const location = useLocation();
+  const [passwordChanged] = useState(
+    (location.state as { passwordReset?: boolean } | null)?.passwordReset === true,
+  );
+  useEffect(() => {
+    if ((location.state as { passwordReset?: boolean } | null)?.passwordReset === true) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
   const { login, sessionEnded, clearSessionEnded } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

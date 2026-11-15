@@ -1160,9 +1160,11 @@ content type`). Today that is the only 415 it raises, but a future one
   behavior stayed untouched. The reset page's weak-password message is the one
   rules sentence, not a per-rule reason (too short, no letter, no digit); the
   schema's messages are English, so a per-rule message needs an i18n mapping
-  (see EN-193). The password-changed notice rides on router state, so it
-  shows again after a reload of `/login`. Neither page has a show-password
-  toggle. Origin: `password-reset` T3, 2026-11-15.
+  (see EN-193). Neither page has a show-password toggle. The login test that
+  pins sign-in with the link and the notice in place checks only the request
+  and the absence of an error, not where the user lands after signing in.
+  Origin: `password-reset` T3, 2026-11-15, and its native review
+  (R3-login-regression-weak-assert).
 
 ## Done
 

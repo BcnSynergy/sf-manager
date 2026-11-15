@@ -35,6 +35,17 @@ function takeTokenFromFragment(): string | null {
   return fromHash || (typeof kept === 'string' && kept ? kept : null);
 }
 
+// Once the token is spent (changed password) or refused (invalid link), it
+// has no reason to stay in the history entry.
+function forgetToken(): void {
+  const state = (window.history.state ?? {}) as Record<string, unknown>;
+  if (TOKEN_STATE_KEY in state) {
+    const rest = { ...state };
+    delete rest[TOKEN_STATE_KEY];
+    window.history.replaceState(rest, '');
+  }
+}
+
 // password-reset S8: asks for the new password twice. The strength rule is the
 // shared schema's; the messages come from i18n (the schema's are English).
 export function ResetPasswordPage() {
@@ -64,10 +75,12 @@ export function ResetPasswordPage() {
     setSubmitting(true);
     try {
       await confirmPasswordReset(token, password);
+      forgetToken();
       navigate('/login', { state: { passwordReset: true } });
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_BAD_REQUEST) {
         if (err.code === INVALID_RESET_TOKEN) {
+          forgetToken();
           setLinkInvalid(true);
         } else {
           error.show('auth.passwordReset.reset.rules');

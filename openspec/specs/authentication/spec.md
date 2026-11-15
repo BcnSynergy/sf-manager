@@ -1404,8 +1404,11 @@ authenticated layout and without navigation, with the login page's branding
 and language selector. The page MUST read the reset token only from the URL
 fragment (`#token=<token>`), never from the query string, and MUST remove the
 fragment from the address bar once it has read it, so the token does not stay
-visible or in the history entry. When the URL carries no token, the page MUST
-show the invalid-link message instead of the form.
+visible. Until the token is used, the page MAY keep it in the history entry's
+state (never shown, never sent), so a reload or a remount of the page still
+has it; once the password is changed or the link is refused, the page MUST
+remove it from that state too. When the URL carries no token and the entry
+holds none, the page MUST show the invalid-link message instead of the form.
 
 The form MUST state the password rules (at least 10 characters, one letter and
 one digit) next to the new-password field and ask for the new password twice.

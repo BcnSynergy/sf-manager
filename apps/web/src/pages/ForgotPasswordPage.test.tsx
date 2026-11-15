@@ -51,6 +51,16 @@ describe('ForgotPasswordPage', () => {
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
+  it('sends en when the app language is not one of the email languages', async () => {
+    mockedRequest.mockResolvedValue(undefined);
+    await i18n.changeLanguage('en-US');
+    renderPage();
+    submit('user@example.com');
+
+    await screen.findByTestId('forgot-confirmation');
+    expect(mockedRequest).toHaveBeenCalledWith('user@example.com', 'en');
+  });
+
   it('posts the normalized email with the current language and shows the confirmation', async () => {
     mockedRequest.mockResolvedValue(undefined);
     await i18n.changeLanguage('ca');

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
 import { apiFetch } from '../api/client';
@@ -448,6 +448,26 @@ describe('LoginPage language selector', () => {
     expect(screen.getByTestId('login-password-reset-notice')).toHaveTextContent(
       'Your password has been changed. Sign in with the new one.',
     );
+  });
+
+  it('clears the reset flag from the route once shown, so a reload does not show the notice again', async () => {
+    let seen: unknown = 'unset';
+    function StateProbe() {
+      seen = useLocation().state;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={[{ pathname: '/login', state: { passwordReset: true } }]}>
+          <LoginPage />
+          <StateProbe />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    expect(screen.getByTestId('login-password-reset-notice')).toBeInTheDocument();
+    await waitFor(() => expect(seen).toBeNull());
+    expect(screen.getByTestId('login-password-reset-notice')).toBeInTheDocument();
   });
 
   it('still signs in as before with the link and notice in place', async () => {

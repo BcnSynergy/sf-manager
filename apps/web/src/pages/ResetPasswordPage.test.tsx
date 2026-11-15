@@ -162,6 +162,8 @@ describe('ResetPasswordPage', () => {
 
     const sentinel = await screen.findByTestId('login-sentinel');
     expect(sentinel).toHaveTextContent('"passwordReset":true');
+    // Spent: the token no longer lingers in the history entry either.
+    expect(JSON.stringify(window.history.state ?? {})).not.toContain('abc123');
   });
 
   it('shows the invalid-link message on 400 INVALID_RESET_TOKEN', async () => {
@@ -171,6 +173,7 @@ describe('ResetPasswordPage', () => {
 
     expect(await screen.findByTestId('reset-invalid-link')).toBeInTheDocument();
     expect(screen.getByTestId('reset-request-new')).toHaveAttribute('href', '/forgot-password');
+    expect(JSON.stringify(window.history.state ?? {})).not.toContain('abc123');
   });
 
   it('shows the password rule message on a 400 without the invalid-token code', async () => {
