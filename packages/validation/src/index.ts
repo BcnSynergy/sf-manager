@@ -13,6 +13,7 @@
 // unifying on CJS here avoids a dual ESM/CJS conditional-exports setup for
 // a single small schema file.
 export * from './auth/login.schema';
+export * from './auth/password-reset.schema';
 export * from './users/password.schema';
 export * from './users/create-user.schema';
 export * from './users/update-user.schema';

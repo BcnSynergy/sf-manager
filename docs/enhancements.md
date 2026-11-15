@@ -1085,6 +1085,7 @@ content type`). Today that is the only 415 it raises, but a future one
   rejection with `undefined` would pin the fallbacks. Origin:
   `password-reset` T1 second native review
   (R3-send-failure-fallback-untested), 2026-11-14.
+- **EN-196** (api robustness): `ConfirmPasswordResetUseCase` is three steps across three stores with no shared transaction: consume the link, end the user's sessions, replace the hash, in that order, so a failure between steps fails safe (never a changed password with live sessions). The remaining gap: a failure after the link is consumed leaves it spent, so the user has to ask for a new one (and may be logged out with the old password). A single Prisma transaction across the token, refresh-token and user tables, or un-using the link on failure, would close it. Origin: `password-reset` T2, 2026-11-15.
 - **EN-198** (api tests): two test-hygiene points in `password-reset` T2a.
   The race test in
   `prisma-password-reset-token-store.adapter.integration.spec.ts` deletes
@@ -1095,10 +1096,64 @@ content type`). Today that is the only 415 it raises, but a future one
   accessor on the double would keep the compiler checking it. Origin:
   `password-reset` T2a fix native review (R2-race-test-cleanup,
   R3-002, R2-private-field-cast), 2026-11-15. EN-196 and EN-197 are taken
-  by T2b.
+  by T2b. From the PR 2/4 fresh review: the integration test of `deleteExpired`
+  does not pin the expiry instant (`lte` changed to `lt` passes; add a token
+  with `expiresAt == now`); `createReplacingUnused` could lock the user with
+  `FOR NO KEY UPDATE` instead of `FOR UPDATE`, which still serializes resets
+  but does not block the FK checks of `RefreshToken` inserts at login; the
+  in-memory fakes lack a parity spec for consume, deleteExpired and
+  revokeAllForUser.
+- **EN-199** (api robustness): limits of the reset request's shutdown drain
+  (EN-197). Nest runs `RequestPasswordResetUseCase.onModuleDestroy` while
+  the HTTP listener is still open, so a request accepted during the drain
+  gets `202` and its work can still be abandoned; and `PrismaService` may
+  disconnect in its own `onModuleDestroy` first, which works only because
+  Prisma reconnects on the next query. Moving the drain to
+  `beforeApplicationShutdown` after closing the listener, or refusing new
+  requests once shutdown starts, would close both. Test hygiene in the same
+  code: `drainTimeoutMs` is a public mutable field only for tests (an
+  injection token would keep it fixed in production), and the "waits for
+  the work in flight" test proves pending-ness by flushing 20 microtasks
+  instead of using fake timers. Also, no test pins `enableShutdownHooks()`
+  in `main.ts`, which the drain depends on (the drain tests call
+  `onModuleDestroy()` directly). Origin: `password-reset` T2b fix native
+  review (R4-drain-accepts-new-requests, R3-drain-accepts-new-work,
+  R2-drain-hook-ordering-undocumented, R2-test-only-public-mutable-field,
+  R2-magic-microtask-loop, R3-drain-pending-assertion-weak), 2026-11-15.
+- **EN-200** (security, product decision): the per-email reset limit counts
+  every request for an email from any client and then blocks that email
+  for the window (default 3 per 3600 s). Someone who knows a user's email
+  can send 3 requests an hour from rotating IPs and keep that user from
+  ever getting a reset link. Options: count only requests that actually
+  sent an email, lower the block, or rely on the per-client limit alone.
+  Needs a decision before changing. Origin: `password-reset` cumulative T2
+  native review (R4-email-limit-targeted-lockout), 2026-11-15.
+- **EN-201** (api docs and hygiene): leftovers of the `password-reset` T2
+  cumulative review. README's `THROTTLE_KEY_SECRET` and `TRUST_PROXY` rows
+  still mention only login and refresh, though the reset counters use the
+  same HMAC storage and client key. `password-reset-email.ts` puts the link
+  in `href` without attribute escaping (safe today: `CORS_ORIGIN` is a
+  validated origin and the token is base64url; `escapeHtml` does not escape
+  quotes). `ConfirmPasswordResetUseCase`'s class header omits the second
+  revocation; the log helper `describe` hides its purpose (dropping
+  `error.message`); `PasswordResetEmailLocale` duplicates
+  `PasswordResetLocale`. Origin: same review (R2-readme-throttle-rows-stale,
+  R1-001, R2-unescaped-href-relies-on-remote-invariant,
+  R2-confirm-header-omits-second-revoke, R2-describe-helper-name,
+  R2-redundant-locale-alias), 2026-11-15. From the PR 3/4 fresh review:
+  a body with a valid email and an invalid `locale` still counts once
+  against the per-email limit before the pipe answers 400, and
+  `apps/api/test/test-database/rate-limit-env.setup.ts` lacks the
+  `PASSWORD_RESET_*` raises its e2e twin has (no integration suite calls the
+  endpoints yet). From the B-1 fix review: the two reset guards each copy
+  the `setHeaders: false` and shared `Retry-After` overrides, so the rule that
+  both 429s look alike depends on two copies staying in sync (a shared base
+  class would enforce it); and background reset jobs have no cap on how
+  many run at once (only the SMTP socket timeouts bound each one).
 
 ## Done
 
+- **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #420). Origin: `password-reset` T2, 2026-11-15.
 - **EN-92** (operations): the production site is monitored from outside.
   `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
   every 15 minutes (and by hand): it fails when `/api/health` does not answer

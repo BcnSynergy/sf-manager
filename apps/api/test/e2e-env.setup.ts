@@ -8,3 +8,8 @@ process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS = '1000';
 // suite; login-email-limit.*-spec.ts set and restore low values explicitly.
 process.env.LOGIN_EMAIL_RATE_LIMIT_MAX_FAILURES = '1000';
 process.env.REFRESH_RATE_LIMIT_MAX_ATTEMPTS = '1000';
+// Suites that request or confirm resets repeatedly from one client would trip
+// the password-reset limits (10 per client key, 3 per email); the
+// password-reset-rate-limit suite sets low values explicitly.
+process.env.PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS = '1000';
+process.env.PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS = '1000';

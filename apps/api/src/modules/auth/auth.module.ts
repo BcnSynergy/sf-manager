@@ -9,14 +9,21 @@ import { UsersModule } from '../users/users.module';
 import { LOGIN_FAILURE_LIMITER } from './application/ports/login-failure-limiter.port';
 import { OPAQUE_TOKEN_GENERATOR } from './application/ports/opaque-token-generator.port';
 import { PERMISSION_CHECKER } from './application/ports/permission-checker.port';
+import { PASSWORD_RESET_TOKEN_STORE } from './application/ports/password-reset-token-store.port';
 import { REFRESH_TOKEN_STORE } from './application/ports/refresh-token-store.port';
 import { TOKEN_DENYLIST } from './application/ports/token-denylist.port';
 import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
+import {
+  PASSWORD_RESET_POLICY,
+  PASSWORD_RESET_TOKEN_TTL_MS,
+} from './application/services/password-reset-policy';
 import { REFRESH_TOKEN_POLICY } from './application/services/refresh-token-policy';
 import { RefreshSessionsService } from './application/services/refresh-sessions.service';
+import { ConfirmPasswordResetUseCase } from './application/use-cases/confirm-password-reset.use-case';
 import { GetCurrentUserUseCase } from './application/use-cases/get-current-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { RequestPasswordResetUseCase } from './application/use-cases/request-password-reset.use-case';
 import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case';
 import { RolePermissionChecker } from './infrastructure/authorization/role-permission.checker';
 import {
@@ -24,6 +31,10 @@ import {
   type AuthConfig,
   getAuthConfig,
 } from './infrastructure/config/auth.config';
+import {
+  getPasswordResetRateLimitConfig,
+  PASSWORD_RESET_RATE_LIMIT_CONFIG,
+} from './infrastructure/config/password-reset-rate-limit.config';
 import {
   getRefreshRateLimitConfig,
   REFRESH_RATE_LIMIT_CONFIG,
@@ -38,12 +49,14 @@ import {
 } from './infrastructure/config/throttle-key.config';
 import { ThrottleKeyModule } from './infrastructure/config/throttle-key.module';
 import { PrismaLoginFailureLimiter } from './infrastructure/persistence/prisma-login-failure-limiter.adapter';
+import { PrismaPasswordResetTokenStore } from './infrastructure/persistence/prisma-password-reset-token-store.adapter';
 import { PrismaRefreshTokenStore } from './infrastructure/persistence/prisma-refresh-token-store.adapter';
 import { PrismaThrottlerStorage } from './infrastructure/persistence/prisma-throttler-storage.adapter';
 import { PrismaTokenDenylistAdapter } from './infrastructure/persistence/prisma-token-denylist.adapter';
 import { CryptoOpaqueTokenGenerator } from './infrastructure/token/crypto-opaque-token.generator';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token.issuer';
 import { AuthController } from './presentation/auth.controller';
+import { PasswordResetController } from './presentation/password-reset.controller';
 import { AuthenticatedGuard } from './presentation/guards/authenticated.guard';
 import { PermissionsGuard } from './presentation/guards/permissions.guard';
 
@@ -106,12 +119,35 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
       },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, PasswordResetController],
   providers: [
     LoginUseCase,
     LogoutUseCase,
     GetCurrentUserUseCase,
     RefreshSessionUseCase,
+    // password-reset (S1, S3-S6): the emailed-link flow. The token store is
+    // Prisma-backed; e2e suites that mock PrismaService override it.
+    RequestPasswordResetUseCase,
+    ConfirmPasswordResetUseCase,
+    {
+      provide: PASSWORD_RESET_TOKEN_STORE,
+      useClass: PrismaPasswordResetTokenStore,
+    },
+    // The link points at the web app, whose origin is CORS_ORIGIN (dev and
+    // production alike).
+    {
+      provide: PASSWORD_RESET_POLICY,
+      inject: [AUTH_CONFIG],
+      useFactory: (config: AuthConfig) => ({
+        tokenTtlMs: PASSWORD_RESET_TOKEN_TTL_MS,
+        webOrigin: config.corsOrigin,
+      }),
+    },
+    // Read at boot: an invalid PASSWORD_RESET_*_RATE_LIMIT_* stops startup.
+    {
+      provide: PASSWORD_RESET_RATE_LIMIT_CONFIG,
+      useFactory: getPasswordResetRateLimitConfig,
+    },
     { provide: AUTH_CONFIG, useFactory: getAuthConfig },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     { provide: TOKEN_DENYLIST, useClass: PrismaTokenDenylistAdapter },

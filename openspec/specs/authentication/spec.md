@@ -7,9 +7,9 @@ Source: `sdd/auth-minimal-skeleton` (merged into main specs at archive, 2026-08-
 Answers one question end-to-end: is the request authenticated, yes/no.
 Covers seeded-admin credential verification, access-token and rotating
 refresh-token issuance via httpOnly cookies, session refresh, logout, and
-a guard with a public opt-out. Excludes registration, roles/RBAC, password
-reset, demo mode (proposal Out of Scope). (Refresh tokens added by TD-5,
-ADR-011 Decision 4.)
+a guard with a public opt-out. Excludes registration, roles/RBAC and demo
+mode (proposal Out of Scope). (Refresh tokens added by TD-5, ADR-011 Decision 4; password reset by email
+added by password-reset, ADR-018.)
 
 ## Requirements
 
@@ -321,9 +321,11 @@ same public identity fields as login. (ADR-011 Decision 4, TD-5.)
 ### Requirement: Public Endpoint Opt-Out
 
 The system MUST support marking endpoints public, exempt from the
-guard, and MUST mark `/health`, the login endpoint, the refresh endpoint
-and the logout endpoint public. The refresh and logout endpoints check
-their own cookies ("Session Refresh", "Logout").
+guard, and MUST mark `/health`, the login endpoint, the refresh endpoint,
+the logout endpoint and the two password reset endpoints public. The
+refresh and logout endpoints check their own cookies ("Session Refresh",
+"Logout"); the password reset endpoints are limited as described in
+"Password Reset Rate Limiting".
 
 #### Scenario: Health and login stay reachable
 
@@ -1168,3 +1170,161 @@ The web login page MUST show the existing rate-limited message for this
 - WHEN the response is received
 - THEN the existing rate-limited message MUST be shown, with no countdown and no distinct message for the email limit
 - AND the form MUST remain usable
+
+### Requirement: Password Reset Request
+
+The system MUST let a user without a session ask for a password reset link
+with `POST /auth/password-reset/request`, a public endpoint. The body MUST
+be `{ email, locale? }`: the email is trimmed and lowercased like the login
+email, and `locale` is one of `en`, `es` or `ca` and defaults to `en`. A body
+that fails validation MUST be answered `400` and MUST send nothing.
+
+For a valid body the system MUST always answer `202` with an empty body,
+whether or not the email belongs to an account, so the endpoint cannot be
+used to find out which emails have accounts. The lookup, the creation of the
+token and the sending of the email MUST happen after the answer and MUST NOT
+delay it; a failure in that work (a database error, an email relay that
+refuses the message) MUST NOT change the answer. Such a failure MUST be
+logged without the email address, without the token and without the error's
+message text (it can quote the recipient); only the error's name and code
+MAY be logged.
+
+An email MUST be sent only to an active user: an unknown email and the email
+of a soft-deleted user MUST get no token and no email. The token MUST be a
+random 256-bit value; only its SHA-256 hash MAY be stored, together with its
+expiry, which MUST be 30 minutes after the request. Requesting a new link
+MUST invalidate the user's earlier unused links.
+
+The email MUST be written in the requested language (`en`, `es` or `ca`),
+with the subject and the body in plain text and in HTML, built from text kept
+in the code. It MUST contain the link `<web origin>/reset-password#token=<token>`,
+where the web origin is the configured `CORS_ORIGIN` (the token travels in the
+fragment, so it never reaches a server log or a `Referer` header), MUST say
+that the link expires in 30 minutes, and MUST say that it can be ignored if
+the user did not ask for it.
+
+#### Scenario: Active user receives the link
+
+- GIVEN an active user with email `ana@example.com` and `CORS_ORIGIN` `https://app.example.com`
+- WHEN a client posts `{ "email": " Ana@Example.com ", "locale": "es" }` to the request endpoint
+- THEN the response MUST be `202` with an empty body
+- AND one email MUST be sent to `ana@example.com` in Spanish whose link is `https://app.example.com/reset-password#token=<token>`
+- AND the email MUST state the 30-minute lifetime and that it can be ignored
+- AND only the SHA-256 hash of `<token>` MUST be stored, expiring 30 minutes after the request
+
+#### Scenario: Unknown or soft-deleted email gets the same answer
+
+- GIVEN an email that belongs to no account, and the email of a soft-deleted user
+- WHEN a client posts each of them to the request endpoint
+- THEN each response MUST be identical in status, body and headers to the one for an active user
+- AND no token MUST be stored and no email MUST be sent
+
+#### Scenario: A failing email relay does not change the answer
+
+- GIVEN an active user and an email relay that refuses the message
+- WHEN a client posts the user's email to the request endpoint
+- THEN the response MUST be `202`
+- AND the failure MUST be logged with its error name and code only, never the address or the message text
+
+#### Scenario: A new request invalidates the earlier link
+
+- GIVEN an active user who requested a link and has not used it
+- WHEN the user requests another link
+- THEN the earlier link MUST be rejected as invalid
+- AND the new link MUST work
+
+#### Scenario: Invalid body
+
+- GIVEN a body with a missing or malformed email, or a locale other than `en`, `es` and `ca`
+- WHEN a client posts it to the request endpoint
+- THEN the response MUST be `400` and no email MUST be sent
+
+### Requirement: Password Reset Confirmation
+
+The system MUST let a user set a new password with
+`POST /auth/password-reset/confirm`, a public endpoint, with body
+`{ token, password }`. The password MUST meet the existing password policy
+("Password Strength Policy" in user management); a weak password MUST be
+answered `400` before the token is consumed, so the link stays usable.
+
+The token MUST be single use and MUST be consumed atomically: of two
+concurrent confirmations with the same token, at most one MUST succeed. An
+unknown, expired, already used or replaced token, and the token of a
+soft-deleted user, MUST all be answered with the same `400` carrying the
+machine-readable `code` `INVALID_RESET_TOKEN`, with identical status and body
+for every cause. On success the system MUST replace the user's password hash,
+MUST end every session of that user (all refresh families revoked, so the
+user's access tokens stop working too) and MUST answer `204`. Sessions of
+other users MUST NOT change.
+
+#### Scenario: Password changed and sessions ended
+
+- GIVEN a user with two open sessions and a valid reset link
+- WHEN a client posts the token and a password that meets the policy
+- THEN the response MUST be `204`
+- AND logging in with the new password MUST succeed and with the old password MUST fail
+- AND both earlier sessions MUST be rejected on their next request, access token and refresh alike
+- AND the sessions of other users MUST remain valid
+
+#### Scenario: Invalid, expired or used link
+
+- GIVEN a token that is unknown, one past its 30 minutes, and one already used
+- WHEN a client posts each of them with a valid password
+- THEN each response MUST be `400` with `code` `INVALID_RESET_TOKEN`, identical in body
+- AND no password MUST change
+
+#### Scenario: Weak password keeps the link usable
+
+- GIVEN a valid reset link
+- WHEN a client posts the token with a password that fails the policy
+- THEN the response MUST be `400`
+- AND the same link MUST still work with a password that meets the policy
+
+#### Scenario: Soft-deleted user
+
+- GIVEN a link issued to a user who was soft-deleted afterwards
+- WHEN a client posts the token with a valid password
+- THEN the response MUST be `400` with `code` `INVALID_RESET_TOKEN`
+
+### Requirement: Password Reset Rate Limiting
+
+Both password reset endpoints MUST be limited per client key (resolved as in
+"Client IP Resolution for Rate Limiting"), counted apart from the login and
+refresh limits and apart from each other. The request endpoint MUST also be
+limited per normalized email, counting every request that carries a valid
+email whether or not the email belongs to an account. The defaults MUST be
+10 attempts per 15 minutes per client key and 3 requests per hour per email,
+and the block duration MUST equal the window. They MUST be configurable
+through `PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS`,
+`PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS`,
+`PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` and
+`PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS`; a value that is not a
+positive integer MUST cause application startup to fail with an error. A
+limited request MUST be answered `429` with the same status, body and
+headers for both limits, and MUST NOT disclose which limit applied: its
+`Retry-After` MUST be the longer of the two windows, in seconds, whichever
+limit fired. Responses on both endpoints MUST NOT carry rate-limit counter
+headers (`X-RateLimit-*`), which would also tell how many requests named an
+email. The counters MUST use the same storage and keyed hashing as the
+login counters, so the email never appears at rest or in logs in the clear.
+
+#### Scenario: Both limits answer alike
+
+- GIVEN the default windows (900 seconds per client key, 3600 per email)
+- WHEN one request is refused by the per-email limit and another by the per-client-key limit
+- THEN both MUST be `429` with the same body and `Retry-After: 3600`
+- AND neither, nor any `202` from the request endpoint, MUST carry an `X-RateLimit-*` header
+
+#### Scenario: Per-email limit counts unknown emails too
+
+- GIVEN a per-email limit of 2 requests
+- WHEN a client posts the same unknown email (with different case or padding) three times
+- THEN the first two MUST be answered `202` and the third `429` with `Retry-After`
+- AND a request for another email MUST still be answered `202`
+
+#### Scenario: Per-client-key limit
+
+- GIVEN a per-client-key limit of 2 attempts on the request endpoint
+- WHEN one client posts three requests for different emails
+- THEN the third MUST be answered `429` with `Retry-After`
+- AND the confirmation endpoint's own count MUST be unaffected
