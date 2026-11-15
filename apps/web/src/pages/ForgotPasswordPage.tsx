@@ -52,7 +52,7 @@ export function ForgotPasswordPage() {
           />
         </StatusRegion>
       ) : (
-        <form onSubmit={handleSubmit} noValidate>
+        <form className="sf-form" onSubmit={handleSubmit} noValidate>
           <p>{t('auth.passwordReset.forgot.intro')}</p>
           <label htmlFor="forgot-email-input">{t('auth.emailLabel')}</label>
           <input

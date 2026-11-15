@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,6 +50,39 @@ describe('ResetPasswordPage', () => {
     expect(window.location.hash).toBe('');
     expect(window.location.href).not.toContain('abc123');
     expect(screen.getByTestId('reset-password')).toBeInTheDocument();
+  });
+
+  it('keeps the token under StrictMode, which runs state initializers twice', async () => {
+    // The app renders inside <StrictMode> (main.tsx); a token read and
+    // stripped in one step was lost on the second call.
+    mockedConfirm.mockResolvedValue(undefined);
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/reset-password']}>
+          <Routes>
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    expect(screen.getByTestId('reset-password')).toBeInTheDocument();
+    expect(window.location.hash).toBe('');
+    fill('abcdefghi1', 'abcdefghi1');
+    await waitFor(() => expect(mockedConfirm).toHaveBeenCalledWith('abc123', 'abcdefghi1'));
+  });
+
+  it('keeps the token when the page mounts again after removing it from the address bar', async () => {
+    // A lazy route can mount the page once more (Suspense), after the first
+    // mount already stripped the fragment.
+    mockedConfirm.mockResolvedValue(undefined);
+    renderPage().unmount();
+    expect(window.location.hash).toBe('');
+
+    renderPage();
+    expect(screen.getByTestId('reset-password')).toBeInTheDocument();
+    fill('abcdefghi1', 'abcdefghi1');
+    await waitFor(() => expect(mockedConfirm).toHaveBeenCalledWith('abc123', 'abcdefghi1'));
   });
 
   it('still uses the token after it was removed from the address bar', async () => {
@@ -105,6 +139,19 @@ describe('ResetPasswordPage', () => {
       'The passwords do not match.',
     );
     expect(screen.queryByTestId('reset-password-error')).toBeNull();
+    expect(mockedConfirm).not.toHaveBeenCalled();
+  });
+
+  it('shows both fields own messages when the password is weak and the confirmation differs', () => {
+    renderPage();
+    fill('short1', 'different1');
+
+    expect(screen.getByTestId('reset-password-error')).toBeInTheDocument();
+    expect(screen.getByTestId('reset-confirm-error')).toHaveTextContent(
+      'The passwords do not match.',
+    );
+    // The error stands in for the rules hint instead of repeating it.
+    expect(screen.queryByTestId('reset-password-rules')).toBeNull();
     expect(mockedConfirm).not.toHaveBeenCalled();
   });
 

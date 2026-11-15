@@ -6,6 +6,7 @@ import { HTTP_SERVER_ERROR_MIN, HTTP_TOO_MANY_REQUESTS, HTTP_UNAUTHORIZED } from
 // criterion is auditable rather than aspirational.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const HTTP_NO_CONTENT = 204;
+const HTTP_ACCEPTED = 202;
 
 // status 0 marks a network failure or a response body that could not be
 // parsed at all. `code` is present only when the server sent one —
@@ -123,7 +124,9 @@ export async function apiFetch<T = undefined>(path: string, init: RequestInit = 
     throw new ApiError(response.status, code, extra);
   }
 
-  if (response.status === HTTP_NO_CONTENT) {
+  // 202 Accepted carries no result in this API (the password-reset request
+  // answers it with an empty body), so it resolves like 204.
+  if (response.status === HTTP_NO_CONTENT || response.status === HTTP_ACCEPTED) {
     return undefined as T;
   }
 

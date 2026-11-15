@@ -15,15 +15,24 @@ const HTTP_BAD_REQUEST = 400;
 // The link carries the token in the fragment (`#token=...`), never in the
 // query string, so it never reaches a server log or a Referer header. It is
 // read once, then dropped from the address bar so it does not linger on
-// screen or in the history entry. A lazy state initializer runs once per
-// mount, so a re-render keeps the token that was read.
+// screen. It moves into the history entry's state (never shown, never sent),
+// so the page still has it if it mounts again after the fragment is gone, as
+// a lazy route can; a later visit without the link has no such state.
+const TOKEN_STATE_KEY = 'passwordResetToken';
+
 function takeTokenFromFragment(): string | null {
   const { hash, pathname, search } = window.location;
-  const token = new URLSearchParams(hash.slice(1)).get('token');
+  const state = (window.history.state ?? {}) as Record<string, unknown>;
+  const fromHash = new URLSearchParams(hash.slice(1)).get('token');
   if (hash) {
-    window.history.replaceState(window.history.state, '', pathname + search);
+    window.history.replaceState(
+      fromHash ? { ...state, [TOKEN_STATE_KEY]: fromHash } : state,
+      '',
+      pathname + search,
+    );
   }
-  return token || null;
+  const kept = state[TOKEN_STATE_KEY];
+  return fromHash || (typeof kept === 'string' && kept ? kept : null);
 }
 
 // password-reset S8: asks for the new password twice. The strength rule is the
@@ -45,7 +54,7 @@ export function ResetPasswordPage() {
     error.clear();
 
     const weak = !passwordSchema.safeParse(password).success;
-    const mismatch = !weak && password !== confirm;
+    const mismatch = password !== confirm;
     setPasswordError(weak);
     setConfirmError(mismatch);
     if (weak || mismatch || token === null) {
@@ -87,7 +96,7 @@ export function ResetPasswordPage() {
 
   return (
     <PublicCard title={t('auth.passwordReset.reset.title')}>
-      <form onSubmit={handleSubmit} noValidate>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
         <div className="sf-field">
           <label htmlFor="reset-password-input">
             {t('auth.passwordReset.reset.passwordLabel')}
@@ -102,13 +111,25 @@ export function ResetPasswordPage() {
             aria-describedby="reset-password-rules"
             data-testid="reset-password"
           />
-          <small id="reset-password-rules" data-testid="reset-password-rules">
-            {t('auth.passwordReset.reset.rules')}
-          </small>
-          {passwordError && (
-            <p role="alert" data-testid="reset-password-error">
+          {/* The rules are the hint; once they are broken the same text turns
+              into the field's error instead of appearing twice. */}
+          {passwordError ? (
+            <p
+              id="reset-password-rules"
+              role="alert"
+              className="sf-field-error"
+              data-testid="reset-password-error"
+            >
               {t('auth.passwordReset.reset.rules')}
             </p>
+          ) : (
+            <small
+              id="reset-password-rules"
+              className="sf-field-hint"
+              data-testid="reset-password-rules"
+            >
+              {t('auth.passwordReset.reset.rules')}
+            </small>
           )}
         </div>
         <div className="sf-field">
@@ -123,7 +144,7 @@ export function ResetPasswordPage() {
             data-testid="reset-password-confirm"
           />
           {confirmError && (
-            <p role="alert" data-testid="reset-confirm-error">
+            <p role="alert" className="sf-field-error" data-testid="reset-confirm-error">
               {t('auth.passwordReset.reset.mismatch')}
             </p>
           )}

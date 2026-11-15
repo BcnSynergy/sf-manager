@@ -48,6 +48,14 @@ describe('apiFetch', () => {
     await expect(apiFetch('/users/1')).resolves.toBeUndefined();
   });
 
+  it('resolves to undefined on a 202 Accepted response without reading a body', async () => {
+    // The password-reset request answers 202 with an empty body; parsing it
+    // as JSON would turn a success into ApiError(0).
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 202 })));
+
+    await expect(apiFetch('/auth/password-reset/request')).resolves.toBeUndefined();
+  });
+
   it('throws ApiError with the discriminator code on a 409 response', async () => {
     vi.stubGlobal(
       'fetch',
