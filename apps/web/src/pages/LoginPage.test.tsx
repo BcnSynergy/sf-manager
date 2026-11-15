@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
 import { apiFetch } from '../api/client';
@@ -19,10 +19,10 @@ function mockFetch(loginResponse: Partial<Response>) {
   });
 }
 
-function renderLoginPage() {
+function renderLoginPage(state?: unknown) {
   return render(
     <AuthProvider>
-      <MemoryRouter initialEntries={['/login']}>
+      <MemoryRouter initialEntries={[{ pathname: '/login', state }]}>
         <LoginPage />
       </MemoryRouter>
     </AuthProvider>,
@@ -428,6 +428,62 @@ describe('LoginPage language selector', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     expect(await screen.findByTestId('login-error')).toHaveTextContent(message);
+  });
+
+  // password-reset S8: the link to the forgot-password page, and the notice
+  // the reset page leaves through the router state.
+  it('links to the forgot-password page', () => {
+    renderLoginPage();
+
+    expect(screen.getByTestId('login-forgot-password')).toHaveAttribute('href', '/forgot-password');
+    expect(screen.getByTestId('login-forgot-password')).toHaveTextContent('Forgot your password?');
+  });
+
+  it('shows the password-changed notice only when the reset page sent the user here', () => {
+    const { unmount } = renderLoginPage();
+    expect(screen.queryByTestId('login-password-reset-notice')).toBeNull();
+    unmount();
+
+    renderLoginPage({ passwordReset: true });
+    expect(screen.getByTestId('login-password-reset-notice')).toHaveTextContent(
+      'Your password has been changed. Sign in with the new one.',
+    );
+  });
+
+  it('clears the reset flag from the route once shown, so a reload does not show the notice again', async () => {
+    let seen: unknown = 'unset';
+    function StateProbe() {
+      seen = useLocation().state;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={[{ pathname: '/login', state: { passwordReset: true } }]}>
+          <LoginPage />
+          <StateProbe />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    expect(screen.getByTestId('login-password-reset-notice')).toBeInTheDocument();
+    await waitFor(() => expect(seen).toBeNull());
+    expect(screen.getByTestId('login-password-reset-notice')).toBeInTheDocument();
+  });
+
+  it('still signs in as before with the link and notice in place', async () => {
+    renderLoginPage({ passwordReset: true });
+
+    fireEvent.change(screen.getByTestId('login-email'), {
+      target: { value: 'admin@sf-manager.example' },
+    });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'right-password' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
+    });
+    expect(screen.queryByTestId('login-error')).toBeNull();
   });
 
   it('shows the maker credit in the active locale', async () => {

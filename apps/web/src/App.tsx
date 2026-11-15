@@ -15,6 +15,14 @@ const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })),
 );
 
+// password-reset S8: the two public password reset pages, lazy like LoginPage.
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })),
+);
+
 // nav-menu/design.md Decision 1: the <Routes> tree is extracted into its own
 // exported AppRoutes component so tests can mount it inside their own
 // MemoryRouter without ever nesting a Router inside the shipped
@@ -31,6 +39,22 @@ export function AppRoutes() {
         element={
           <PageSuspense>
             <LoginPage />
+          </PageSuspense>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PageSuspense>
+            <ForgotPasswordPage />
+          </PageSuspense>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PageSuspense>
+            <ResetPasswordPage />
           </PageSuspense>
         }
       />

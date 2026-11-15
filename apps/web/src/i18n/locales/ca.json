@@ -648,7 +648,29 @@
     "loginUnavailable": "No es pot connectar amb el servidor. Torna-ho a provar d'aquí a un moment.",
     "sessionEnded": "La teva sessió ha acabat. Torna a iniciar la sessió.",
     "logoAlt": "SF-Manager",
-    "logoutLabel": "Tanca sessió"
+    "logoutLabel": "Tanca sessió",
+    "passwordReset": {
+      "forgotLink": "Has oblidat la contrasenya?",
+      "changedNotice": "La teva contrasenya s'ha canviat. Inicia la sessió amb la nova.",
+      "rateLimited": "Massa sol·licituds. Torna-ho a provar més tard.",
+      "backToLogin": "Torna a l'inici de sessió",
+      "forgot": {
+        "title": "Has oblidat la contrasenya?",
+        "intro": "Introdueix el teu correu i t'enviarem un enllaç per crear una contrasenya nova.",
+        "submit": "Envia l'enllaç",
+        "confirmation": "Si existeix un compte amb aquest correu, hem enviat un enllaç; caduca d'aquí a 30 minuts."
+      },
+      "reset": {
+        "title": "Crea una contrasenya nova",
+        "passwordLabel": "Contrasenya nova",
+        "confirmLabel": "Repeteix la contrasenya nova",
+        "rules": "Mínim 10 caràcters, amb almenys una lletra i un número.",
+        "mismatch": "Les contrasenyes no coincideixen.",
+        "submit": "Canvia la contrasenya",
+        "invalidLink": "Aquest enllaç no és vàlid o ha caducat.",
+        "requestNew": "Sol·licita un enllaç nou"
+      }
+    }
   },
   "brand": {
     "credit": "Un producte de BCNSynergy"

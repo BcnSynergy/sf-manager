@@ -655,10 +655,23 @@ code {
   display: grid;
   gap: var(--space-4);
 }
-/* One label with its control (and, later, its hint or error). */
+/* One label with its control and, below it, its hint or its error. */
 .sf-field {
   display: grid;
   gap: var(--space-2);
+}
+.sf-field-hint,
+.sf-field-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+.sf-field-hint {
+  color: var(--ink-muted);
+}
+.sf-field-error {
+  color: var(--danger);
+  font-weight: 600;
 }
 /* The term of a read-only value shown as a field (it has no control to
    label), with the global label's weight. */

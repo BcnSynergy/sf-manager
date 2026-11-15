@@ -1069,7 +1069,10 @@ content type`). Today that is the only 415 it raises, but a future one
   messages are hard-coded English (the password schema's strings, Zod's
   default for the email), so map each issue's path or rule to i18n keys
   rather than showing the message as is. The edit form's email-only message
-  may deserve the same. Origin: production use, 2026-11-14: a 9-character
+  may deserve the same. Partly addressed for the reset form only: the
+  reset-password page states the password rules next to the field and shows
+  each failing field's message next to it (`password-reset` T3); the new-user
+  form is still open. Origin: production use, 2026-11-14: a 9-character
   password (`Admin123!`) read as the email being rejected.
 - **EN-194** (dev setup): `docker compose up -d` now also starts Mailpit,
   which publishes host ports 1025 and 8025 (loopback only). On a machine
@@ -1150,6 +1153,33 @@ content type`). Today that is the only 415 it raises, but a future one
   both 429s look alike depends on two copies staying in sync (a shared base
   class would enforce it); and background reset jobs have no cap on how
   many run at once (only the SMTP socket timeouts bound each one).
+
+- **EN-202** (web, `password-reset` T3 leftovers): `LoginPage` and
+  `PublicCard` repeat the same card markup (logo, credit, language selector);
+  moving the login page onto `PublicCard` was left out so the login page's
+  behavior stayed untouched. The reset page's weak-password message is the one
+  rules sentence, not a per-rule reason (too short, no letter, no digit); the
+  schema's messages are English, so a per-rule message needs an i18n mapping
+  (see EN-193). Neither page has a show-password toggle. The login test that
+  pins sign-in with the link and the notice in place checks only the request
+  and the absence of an error, not where the user lands after signing in.
+  Origin: `password-reset` T3, 2026-11-15, and its native review
+  (R3-login-regression-weak-assert). From the fix review: clearing the reset
+  flag replaces the route with the bare `/login` path, so a query string or
+  hash on that URL would be dropped (no flow reaches it today); and the
+  success-path history assertion relies on `MemoryRouter` not writing to
+  `window.history` (true today; the invalid-link test pins the same entry). From the PR 4/4
+  fresh review: the forgot page mounts its StatusRegion only on success, so
+  the confirmation is not reliably announced and the focused form vanishes
+  with it (keep the region mounted and fill it); the login page's
+  password-changed notice is a plain paragraph with no live region or focus
+  move; the reset page strips the fragment with `window.history` behind the
+  data router, which keeps `location.hash` with the token in memory while the
+  page is open (nothing reads it today); and an empty `#token=` with a token
+  already in the entry's state reuses that token. No test pins that `forgetToken`
+  keeps the router's own keys (`usr`, `key`, `idx`) in the history state
+  while removing the token (the code spreads them; tests run under
+  `MemoryRouter`, which leaves `window.history` alone).
 
 ## Done
 
