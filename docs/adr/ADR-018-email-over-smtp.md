@@ -39,7 +39,7 @@ Options compared on 2026-11-14:
 - Message content (subjects and bodies, in each supported language) lives in
   the code. No provider REST API, stored template, webhook or tracking
   feature is used, and click and open tracking stay off: reset links carry
-  single-use tokens.
+  single-use tokens (but see the 2026-11-15 addendum: Brevo tracks clicks).
 - Development sends to a local Mailpit container (`docker-compose.yml`,
   `localhost:1025`, web UI on port 8025); tests that exercise sending will
   replace the port with an in-memory fake (added with the reset flow). Nothing leaves a developer's machine.

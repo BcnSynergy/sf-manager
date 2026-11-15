@@ -585,9 +585,10 @@ two DKIM CNAMEs (`brevo1._domainkey`, `brevo2._domainkey`). With the
 domain's strict DMARC (`p=reject; adkim=s; aspf=s`) only DKIM aligns, so
 those two records are required; the SPF record does not list Brevo. Reset
 links carry a single-use token and should reach the user unchanged, but
-Brevo's free plan forces click tracking: it rewrites links through its own
-redirector, so the token passes through Brevo. This is accepted for now and
-tracked as TD-53 (a relay without forced tracking fixes it).
+Brevo applies click tracking, rewriting links through its own redirector,
+and offers no per-message switch to turn it off, so the token passes
+through Brevo. This is accepted for now and tracked as TD-53; asking Brevo
+support to disable it, or switching relays, fixes it.
 
 To switch relays, change the `SMTP_*` values, authenticate the domain at
 the new relay, and restart the API; no code changes. Brevo's SMTP key

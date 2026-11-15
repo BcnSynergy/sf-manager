@@ -36,7 +36,9 @@ project's Engram memory on 2026-10-09.
   does not consume it). Fix: ask Brevo support to disable click tracking for
   transactional mail, or move to a relay without forced tracking (for
   example Amazon SES in an EU region) by changing the `SMTP_*` values and
-  DNS only (ADR-018). Origin: `password-reset` T3 production check.
+  DNS only (ADR-018). The comment in `apps/web/src/pages/ResetPasswordPage.tsx`
+  that the fragment token "never reaches a server log" should be qualified
+  until then. Origin: `password-reset` T3 production check.
 
 ### Low
 
