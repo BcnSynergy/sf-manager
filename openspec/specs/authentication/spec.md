@@ -1328,3 +1328,153 @@ login counters, so the email never appears at rest or in logs in the clear.
 - WHEN one client posts three requests for different emails
 - THEN the third MUST be answered `429` with `Retry-After`
 - AND the confirmation endpoint's own count MUST be unaffected
+
+### Requirement: Forgot Password Link and Notice (Web)
+
+The login page MUST show a "Forgot your password?" link (EN, ES and CA) to
+the public route `/forgot-password`. When the user arrives at `/login` from a
+successful password reset, the page MUST show the notice "Your password has
+been changed. Sign in with the new one." (EN, ES and CA) and MUST NOT show it
+on any other visit. The link and the notice MUST NOT change how signing in
+behaves.
+
+#### Scenario: Link to the forgot-password page
+
+- GIVEN a visitor on `/login`
+- WHEN the page renders
+- THEN it MUST show a "Forgot your password?" link to `/forgot-password`
+
+#### Scenario: Notice after a reset
+
+- GIVEN a user who has just changed the password on `/reset-password`
+- WHEN the app lands on `/login`
+- THEN the page MUST show "Your password has been changed. Sign in with the new one."
+- AND a visit to `/login` that did not come from a successful reset MUST NOT show it
+
+### Requirement: Forgot Password Page (Web)
+
+The web app MUST serve `/forgot-password` without a session, outside the
+authenticated layout and without navigation, with the login page's branding
+and language selector. The page MUST ask for an email, validated before any
+request with the shared request schema (the same one the API enforces), and
+on submit MUST post `{ email, locale }` to `POST /auth/password-reset/request`,
+where `email` is the schema-normalized value and `locale` is the app's
+current language (`en`, `es` or `ca`).
+
+Whenever the API answers `202`, the page MUST replace the form with the same
+confirmation, "If an account exists for that email, we have sent a link; it
+expires in 30 minutes." (EN, ES and CA), and a link back to `/login`; it MUST
+NOT show anything that depends on whether the email belongs to an account.
+A `429` MUST show a distinct "too many requests, try again later" message and
+keep the form usable. A network failure or any other error MUST show the
+generic "Something went wrong. Please try again." message and keep the form
+usable.
+
+#### Scenario: Invalid email blocked client-side
+
+- GIVEN the forgot-password page
+- WHEN the user submits an email that is not a valid address
+- THEN the page MUST show "Enter a valid email address."
+- AND no request MUST be sent
+
+#### Scenario: Identical confirmation
+
+- GIVEN the forgot-password page with the language set to Catalan
+- WHEN the user submits ` User@Example.COM`
+- THEN the page MUST post `{ "email": "user@example.com", "locale": "ca" }`
+- AND on `202` it MUST show the confirmation in Catalan and a link to `/login`, whether or not an account exists for that email
+
+#### Scenario: Rate limited
+
+- GIVEN the API answers `429`
+- WHEN the user submits a valid email
+- THEN the page MUST show the "too many requests" message, not the confirmation
+- AND the email field MUST remain available
+
+#### Scenario: Other failure
+
+- GIVEN the API is unreachable or answers a `5xx`
+- WHEN the user submits a valid email
+- THEN the page MUST show the generic error, not the confirmation
+
+### Requirement: Reset Password Page (Web)
+
+The web app MUST serve `/reset-password` without a session, outside the
+authenticated layout and without navigation, with the login page's branding
+and language selector. The page MUST read the reset token only from the URL
+fragment (`#token=<token>`), never from the query string, and MUST remove the
+fragment from the address bar once it has read it, so the token does not stay
+visible or in the history entry. When the URL carries no token, the page MUST
+show the invalid-link message instead of the form.
+
+The form MUST state the password rules (at least 10 characters, one letter and
+one digit) next to the new-password field and ask for the new password twice.
+Before any request it MUST validate the password with the shared password
+schema and check that both entries match, showing the failing field's own
+message next to that field: the rules message next to the password field,
+"The passwords do not match." next to the confirmation field. On submit it
+MUST post `{ token, password }` to `POST /auth/password-reset/confirm`.
+
+On `204` the app MUST navigate to `/login`, where the password-changed notice
+shows. On `400` with `code` `INVALID_RESET_TOKEN` the page MUST show "This
+link is invalid or has expired." with a link to `/forgot-password`. On any
+other `400` it MUST show the password rules message. A `429` MUST show the
+"too many requests" message and any other failure the generic error; in those
+cases the form MUST stay usable with the token kept in memory.
+
+#### Scenario: Token taken from the fragment and removed
+
+- GIVEN the URL `/reset-password#token=abc123`
+- WHEN the page loads
+- THEN the address bar MUST no longer contain `abc123`
+- AND submitting a valid password MUST post `{ "token": "abc123", "password": ... }`
+
+#### Scenario: Token in the query string is ignored
+
+- GIVEN the URL `/reset-password?token=abc123`
+- WHEN the page loads
+- THEN it MUST show "This link is invalid or has expired." with a link to `/forgot-password`
+
+#### Scenario: Missing token
+
+- GIVEN the URL `/reset-password` with no fragment
+- WHEN the page loads
+- THEN it MUST show the invalid-link message, a link to `/forgot-password`, and no form
+
+#### Scenario: Weak password
+
+- GIVEN the reset form with a valid link
+- WHEN the user submits `short1` twice
+- THEN the rules message MUST show next to the password field
+- AND no request MUST be sent
+
+#### Scenario: Passwords differ
+
+- GIVEN the reset form with a valid link
+- WHEN the user submits `abcdefghi1` and `abcdefghi2`
+- THEN "The passwords do not match." MUST show next to the confirmation field only
+- AND no request MUST be sent
+
+#### Scenario: Success
+
+- GIVEN the reset form with a valid link
+- WHEN the user submits a password that meets the policy twice and the API answers `204`
+- THEN the app MUST navigate to `/login` showing the password-changed notice
+
+#### Scenario: Invalid or expired link
+
+- GIVEN the API answers `400` with `code` `INVALID_RESET_TOKEN`
+- WHEN the user submits a valid password
+- THEN the page MUST show "This link is invalid or has expired." with a link to `/forgot-password`
+
+#### Scenario: Password rejected by the API
+
+- GIVEN the API answers `400` without that code
+- WHEN the user submits a password the client accepted
+- THEN the page MUST show the password rules message and keep the form
+
+#### Scenario: Rate limited or unavailable
+
+- GIVEN the API answers `429`, or cannot be reached
+- WHEN the user submits a valid password
+- THEN the page MUST show the "too many requests" message, or the generic error, and keep the form

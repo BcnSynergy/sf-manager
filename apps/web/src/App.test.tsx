@@ -324,6 +324,24 @@ describe('AppRoutes structural wiring (exhaustive)', () => {
     expect(screen.queryByTestId('nav-root')).not.toBeInTheDocument();
   });
 
+  // password-reset S8: both pages are public and sit outside AppLayout.
+  it.each([
+    ['/forgot-password', 'forgot-email'],
+    ['/reset-password', 'reset-invalid-link'],
+  ])('renders %s without a session and with no nav', async (path, testId) => {
+    vi.stubGlobal('fetch', mockFetch());
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    await screen.findByTestId(testId);
+    expect(screen.queryByTestId('nav-root')).not.toBeInTheDocument();
+  });
+
   // app-navigation "An Unknown Path Shows a Not-Found Page" (EN-161): the
   // catch-all route sits under AppLayout and ProtectedRoute like every
   // authenticated page, with no role restriction.

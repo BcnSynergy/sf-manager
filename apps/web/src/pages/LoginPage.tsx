@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { loginRequestSchema } from '@sf-manager/validation';
 import { useAuth } from '../auth/AuthProvider';
 import { Alert } from '../components/Alert';
@@ -27,6 +27,9 @@ import { loginErrorKey } from './login-error-key';
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // password-reset S8: the reset page navigates here with this flag.
+  const passwordChanged =
+    (useLocation().state as { passwordReset?: boolean } | null)?.passwordReset === true;
   const { login, sessionEnded, clearSessionEnded } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +93,9 @@ export function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             data-testid="login-password"
           />
+          {passwordChanged && (
+            <p data-testid="login-password-reset-notice">{t('auth.passwordReset.changedNotice')}</p>
+          )}
           {sessionEnded && !error.message && (
             <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
           )}
@@ -100,6 +106,9 @@ export function LoginPage() {
             {t('auth.submitLabel')}
           </button>
         </form>
+        <Link to="/forgot-password" data-testid="login-forgot-password">
+          {t('auth.passwordReset.forgotLink')}
+        </Link>
         <div className="sf-login-foot">
           <span className="sf-credit" data-testid="login-credit">
             <picture>

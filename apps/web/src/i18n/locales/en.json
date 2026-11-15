@@ -648,7 +648,29 @@
     "loginUnavailable": "Cannot reach the server. Please try again in a moment.",
     "sessionEnded": "Your session has ended. Please sign in again.",
     "logoAlt": "SF-Manager",
-    "logoutLabel": "Log out"
+    "logoutLabel": "Log out",
+    "passwordReset": {
+      "forgotLink": "Forgot your password?",
+      "changedNotice": "Your password has been changed. Sign in with the new one.",
+      "rateLimited": "Too many requests. Please try again later.",
+      "backToLogin": "Back to sign in",
+      "forgot": {
+        "title": "Forgot your password?",
+        "intro": "Enter your email and we will send you a link to set a new password.",
+        "submit": "Send link",
+        "confirmation": "If an account exists for that email, we have sent a link; it expires in 30 minutes."
+      },
+      "reset": {
+        "title": "Set a new password",
+        "passwordLabel": "New password",
+        "confirmLabel": "Repeat the new password",
+        "rules": "At least 10 characters, with at least one letter and one digit.",
+        "mismatch": "The passwords do not match.",
+        "submit": "Change password",
+        "invalidLink": "This link is invalid or has expired.",
+        "requestNew": "Request a new link"
+      }
+    }
   },
   "brand": {
     "credit": "A BCNSynergy product"

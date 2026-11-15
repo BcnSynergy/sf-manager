@@ -648,7 +648,29 @@
     "loginUnavailable": "No se puede conectar con el servidor. Vuelve a intentarlo en un momento.",
     "sessionEnded": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
     "logoAlt": "SF-Manager",
-    "logoutLabel": "Cerrar sesión"
+    "logoutLabel": "Cerrar sesión",
+    "passwordReset": {
+      "forgotLink": "¿Has olvidado tu contraseña?",
+      "changedNotice": "Tu contraseña se ha cambiado. Inicia sesión con la nueva.",
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
+      "backToLogin": "Volver al inicio de sesión",
+      "forgot": {
+        "title": "¿Has olvidado tu contraseña?",
+        "intro": "Introduce tu correo y te enviaremos un enlace para crear una contraseña nueva.",
+        "submit": "Enviar enlace",
+        "confirmation": "Si existe una cuenta con ese correo, hemos enviado un enlace; caduca en 30 minutos."
+      },
+      "reset": {
+        "title": "Crea una contraseña nueva",
+        "passwordLabel": "Contraseña nueva",
+        "confirmLabel": "Repite la contraseña nueva",
+        "rules": "Mínimo 10 caracteres, con al menos una letra y un número.",
+        "mismatch": "Las contraseñas no coinciden.",
+        "submit": "Cambiar contraseña",
+        "invalidLink": "Este enlace no es válido o ha caducado.",
+        "requestNew": "Solicitar un enlace nuevo"
+      }
+    }
   },
   "brand": {
     "credit": "Un producto de BCNSynergy"
