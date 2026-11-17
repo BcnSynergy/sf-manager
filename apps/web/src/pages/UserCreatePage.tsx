@@ -14,6 +14,28 @@ import { mapRoleToLabelKey } from '../users/role-labels';
 const ROLE_OPTIONS = roleSchema.options;
 const DEFAULT_ROLE: Role = 'SYSTEM_ADMIN';
 
+type FieldName = 'email' | 'password' | 'maintenanceCompanyId';
+
+// EN-193: the schema's issue messages are hard-coded English, so each
+// failing field maps to its own i18n key by the issue's path, never by
+// showing the issue's message.
+const FIELD_ERROR_KEYS: Record<FieldName, string> = {
+  email: 'users.create.emailError',
+  password: 'users.create.passwordRules',
+  maintenanceCompanyId: 'users.create.companyError',
+};
+
+function failingFields(issues: readonly { path: readonly PropertyKey[] }[]): Set<FieldName> {
+  const fields = new Set<FieldName>();
+  for (const issue of issues) {
+    const field = issue.path[0];
+    if (field === 'email' || field === 'password' || field === 'maintenanceCompanyId') {
+      fields.add(field);
+    }
+  }
+  return fields;
+}
+
 // spec.md "Create User": client-side validation against the shared
 // createUserSchema/passwordSchema MUST run before any network request
 // (ADR-015 single source of truth, mirrors LoginPage.tsx's pattern). On
@@ -48,6 +70,7 @@ export function UserCreatePage() {
     clear: clearError,
   } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Set<FieldName>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -90,9 +113,11 @@ export function UserCreatePage() {
       maintenanceCompanyId: showCompanySelector ? companyId : undefined,
     });
     if (!result.success) {
-      showError(t('users.create.validationError'));
+      setFieldErrors(failingFields(result.error.issues));
+      showError('users.create.validationError');
       return;
     }
+    setFieldErrors(new Set());
 
     setSubmitting(true);
     try {
@@ -100,7 +125,7 @@ export function UserCreatePage() {
       navigate('/users');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -119,18 +144,52 @@ export function UserCreatePage() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            aria-invalid={fieldErrors.has('email')}
+            aria-describedby={fieldErrors.has('email') ? 'user-create-email-error' : undefined}
             data-testid="user-create-email"
           />
+          {fieldErrors.has('email') && (
+            <p
+              id="user-create-email-error"
+              className="sf-field-error"
+              data-testid="user-create-email-error"
+            >
+              {t(FIELD_ERROR_KEYS.email)}
+            </p>
+          )}
         </div>
         <div className="sf-field">
           <label htmlFor="user-create-password-input">{t('users.create.passwordLabel')}</label>
           <input
             id="user-create-password-input"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={fieldErrors.has('password')}
+            aria-describedby="user-create-password-rules"
             data-testid="user-create-password"
           />
+          {/* Same pattern as ResetPasswordPage: the rules are the hint, and
+              once broken the same text becomes the field's error instead of
+              appearing twice. */}
+          {fieldErrors.has('password') ? (
+            <p
+              id="user-create-password-rules"
+              className="sf-field-error"
+              data-testid="user-create-password-error"
+            >
+              {t(FIELD_ERROR_KEYS.password)}
+            </p>
+          ) : (
+            <small
+              id="user-create-password-rules"
+              className="sf-field-hint"
+              data-testid="user-create-password-rules"
+            >
+              {t(FIELD_ERROR_KEYS.password)}
+            </small>
+          )}
         </div>
         <div className="sf-field">
           <label htmlFor="user-create-role-input">{t('users.create.roleLabel')}</label>
@@ -155,6 +214,10 @@ export function UserCreatePage() {
               value={companyId}
               onChange={(event) => setCompanyId(event.target.value)}
               required
+              aria-invalid={fieldErrors.has('maintenanceCompanyId')}
+              aria-describedby={
+                fieldErrors.has('maintenanceCompanyId') ? 'user-create-company-error' : undefined
+              }
               data-testid="user-create-company"
             >
               <option value="" disabled>
@@ -166,10 +229,21 @@ export function UserCreatePage() {
                 </option>
               ))}
             </select>
+            {fieldErrors.has('maintenanceCompanyId') && (
+              <p
+                id="user-create-company-error"
+                className="sf-field-error"
+                data-testid="user-create-company-error"
+              >
+                {t(FIELD_ERROR_KEYS.maintenanceCompanyId)}
+              </p>
+            )}
           </div>
         )}
         {error && (
-          <Alert key={errorAlertKey} tone="danger" testId="user-create-error" message={error} />
+          // The alert stores an i18n key, so it follows a language switch
+          // like the field errors do (use-alert-message.ts).
+          <Alert key={errorAlertKey} tone="danger" testId="user-create-error" message={t(error)} />
         )}
         <div className="sf-actions">
           <button

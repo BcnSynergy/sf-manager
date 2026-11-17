@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import * as usersApi from '../api/users';
@@ -47,6 +47,144 @@ describe('UserCreatePage', () => {
 
     expect(await screen.findByTestId('user-create-error')).toBeInTheDocument();
     expect(mockedCreateUser).not.toHaveBeenCalled();
+  });
+
+  // EN-193: say which field failed, next to it, instead of one generic
+  // message that reads as if the email were rejected.
+  describe('field errors', () => {
+    const RULES = 'At least 10 characters, with at least one letter and one digit.';
+
+    it('states the password rules under the field before any submission', () => {
+      renderPage();
+
+      expect(screen.getByTestId('user-create-password-rules')).toHaveTextContent(RULES);
+      expect(screen.getByTestId('user-create-password')).toHaveAttribute(
+        'aria-describedby',
+        'user-create-password-rules',
+      );
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+    });
+
+    it('marks only the password when a valid email has a weak password', async () => {
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: 'Admin123!' },
+      });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-password-error')).toHaveTextContent(RULES);
+      expect(screen.getByTestId('user-create-password')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByTestId('user-create-email-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute('aria-invalid', 'false');
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('marks only the email when an invalid email has a valid password', async () => {
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), {
+        target: { value: 'not-an-email' },
+      });
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: VALID_PASSWORD },
+      });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-email-error')).toHaveTextContent(
+        'Enter a valid email address.',
+      );
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute(
+        'aria-describedby',
+        'user-create-email-error',
+      );
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-password-rules')).toBeInTheDocument();
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('marks both fields when both are invalid', async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-email-error')).toBeInTheDocument();
+      expect(screen.getByTestId('user-create-password-error')).toHaveTextContent(RULES);
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('marks the company when a maintenance role has no company chosen', async () => {
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: VALID_PASSWORD },
+      });
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'MAINTENANCE_TECHNICIAN' },
+      });
+      await screen.findByTestId('user-create-company');
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-company-error')).toHaveTextContent(
+        'Select a maintenance company.',
+      );
+      expect(screen.getByTestId('user-create-company')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByTestId('user-create-email-error')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+    });
+
+    it('points to the marked fields in the alert instead of naming both fields', async () => {
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short' } });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-error')).toHaveTextContent(
+        'Fix the fields marked below.',
+      );
+    });
+
+    it('clears a field error once the corrected form is submitted', async () => {
+      mockedCreateUser.mockRejectedValue(new ApiError(409, 'EMAIL_ALREADY_IN_USE'));
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short' } });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-password-error');
+
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: VALID_PASSWORD },
+      });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      await waitFor(() => expect(mockedCreateUser).toHaveBeenCalledTimes(1));
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-password-rules')).toBeInTheDocument();
+    });
+  });
+
+  it('keeps the alert in the same language as the field errors after a language switch', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByTestId('user-create-submit'));
+    await screen.findByTestId('user-create-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('user-create-error')).toHaveTextContent(
+        'Corrige los campos marcados abajo.',
+      );
+      expect(screen.getByTestId('user-create-email-error')).toHaveTextContent(
+        'Introduce una dirección de correo electrónico válida.',
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   // EN-76: the handler clears the error and sets the same text again in
