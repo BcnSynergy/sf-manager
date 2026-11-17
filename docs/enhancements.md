@@ -1,6 +1,4 @@
-# Enhanc- **EN-193** (web UX): the new-user form showed one generic message on any client-side validation failure, so a 9-character password (`Admin123!`) read as the email being rejected. Each failing field (email, password, maintenance company) now shows its own i18n message next to it, mapped from the schema issue path rather than the schema's English message, and the password rules are stated under the field before submission (the reset page's pattern). The alert above the form now reads "Fix the fields marked below." The edit form's email-only message is unchanged. Done in `user-create-field-errors` (spec `user-admin-ui`). Origin: production use, 2026-11-14.
-
-ements
+# Enhancements
 
 Register of optional improvements to SF-Manager: things that would make the
 system better but that nothing currently requires. Known defects, gaps, and
@@ -1167,8 +1165,13 @@ content type`). Today that is the only 415 it raises, but a future one
 
 - **EN-203** (web i18n): several forms store their alert as already translated text (`showError(t(...))`), so after a language switch the alert stays in the old language while the rest of the page changes. `use-alert-message.ts` already supports storing the i18n key and rendering `t(message)`. Pages still storing text: `organization-profile/OrganizationLogoSection.tsx`, and in `pages/`: `ChecklistQuestionCreatePage`, `ChecklistQuestionEditPage`, `CommunityCreatePage`, `CommunityEditPage`, `InspectableElementCreatePage`, `InspectableElementEditPage`, `MaintenanceCompanyCreatePage`, `MaintenanceCompanyEditPage`, `OrganizationProfilePage`, `ReviewTemplateCreatePage`, `UserEditPage`. Origin: `user-create-field-errors` browser pass, 2026-11-17 (fixed there for `UserCreatePage` only).
 
+- **EN-204** (web test coverage): no `UserCreatePage` component test submits with the email, the password and the company all invalid at once and checks that all three fields are marked. Zod 4.6.7 reports all three paths today (the company `superRefine` still runs when the base fields fail), but a future Zod or refinement change could hide the company issue. Origin: `user-create-field-errors` fresh review S-2, 2026-11-17.
+- **EN-205** (web UX): on the new-user form a field stays marked as failed until the next submit, even after the user corrects it. Clearing that field's mark in its `onChange` would follow the user's progress; the reset page has the same behavior, so change both or neither. Origin: `user-create-field-errors` fresh review S-1, 2026-11-17.
+- **EN-206** (web robustness): if `createUserSchema` ever fails on a path the new-user form does not map (anything but `email`, `password`, `maintenanceCompanyId`, for example `role`), the alert says "Fix the fields marked below." but no field is marked. Unreachable today (the role is a `<select>` of valid values); a generic fallback message when the mapped set is empty would cover it. Origin: `user-create-field-errors` Gentle review (R3-empty-field-set-fallback), 2026-11-17.
+
 ## Done
 
+- **EN-193** (web UX): the new-user form showed one generic message on any client-side validation failure, so a 9-character password (`Admin123!`) read as the email being rejected. Each failing field (email, password, maintenance company) now shows its own i18n message next to it, mapped from the schema issue path rather than the schema's English message, and the password rules are stated under the field before submission (the reset page's pattern). The alert above the form now reads "Fix the fields marked below." The edit form's email-only message is unchanged. Done in `user-create-field-errors` (spec `user-admin-ui`). Origin: production use, 2026-11-14.
 - **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #420). Origin: `password-reset` T2, 2026-11-15.
 - **EN-92** (operations): the production site is monitored from outside.
   `.github/workflows/production-check.yml` runs `deploy/check-production.sh`
