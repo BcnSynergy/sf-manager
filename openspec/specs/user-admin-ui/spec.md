@@ -151,6 +151,23 @@ without a manual page reload.
 - THEN the form MUST show a validation error
 - AND no network request MUST be sent
 
+#### Scenario: Password rules are stated before submission
+
+- GIVEN the `SYSTEM_ADMIN` opens the create user form
+- WHEN no submission has been made yet
+- THEN the password rules (at least 10 characters, at least one letter,
+  at least one digit) MUST be shown under the password field
+
+#### Scenario: Validation error names the failing field
+
+- GIVEN the `SYSTEM_ADMIN` submits the create form with one or more of
+  the email, the password, or the required maintenance company invalid
+- WHEN client-side validation rejects it
+- THEN each failing field, and only those, MUST show its own error next
+  to it, in the selected language
+- AND a valid email MUST NOT be shown as rejected because the password
+  failed, nor the reverse
+
 #### Scenario: Duplicate email shows a specific message
 
 - GIVEN the submitted email already belongs to an active user
