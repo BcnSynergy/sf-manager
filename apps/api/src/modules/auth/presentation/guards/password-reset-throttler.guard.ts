@@ -11,7 +11,6 @@ import {
 } from '@nestjs/throttler';
 import {
   PASSWORD_RESET_RATE_LIMIT_CONFIG,
-  passwordResetRetryAfterSeconds,
   type PasswordResetRateLimitConfig,
 } from '../../infrastructure/config/password-reset-rate-limit.config';
 import { toClientKey } from './client-key';
@@ -20,6 +19,8 @@ import { toClientKey } from './client-key';
 // and /confirm, tracked like login's (toClientKey) but counted on its own
 // (the throttler key includes the handler); the limit and window replace the
 // module-wide throttler's (login's) with PASSWORD_RESET_RATE_LIMIT_CONFIG.
+// The only reset limit: a per-email one would let anyone lock a user out of
+// resetting (EN-200).
 @Injectable()
 export class PasswordResetThrottlerGuard extends ThrottlerGuard {
   constructor(
@@ -41,8 +42,7 @@ export class PasswordResetThrottlerGuard extends ThrottlerGuard {
   ): Promise<boolean> {
     return super.handleRequest({
       ...requestProps,
-      // No X-RateLimit-* counters: they would show which limit applies and,
-      // on the per-email guard, how many requests named an email.
+      // No X-RateLimit-* counters (spec: "Password Reset Rate Limiting").
       throttler: { ...requestProps.throttler, setHeaders: false },
       limit: this.limits.maxAttempts,
       ttl: this.limits.windowMs,
@@ -50,7 +50,7 @@ export class PasswordResetThrottlerGuard extends ThrottlerGuard {
     });
   }
 
-  // Same Retry-After for both reset limits (passwordResetRetryAfterSeconds).
+  // Retry-After is the whole window, in seconds: the block lasts that long.
   protected override throwThrottlingException(
     context: ExecutionContext,
     detail: ThrottlerLimitDetail,
@@ -59,7 +59,7 @@ export class PasswordResetThrottlerGuard extends ThrottlerGuard {
     this.setResponseHeader(
       res,
       'Retry-After',
-      passwordResetRetryAfterSeconds(this.limits),
+      Math.ceil(this.limits.windowMs / 1000),
     );
     return super.throwThrottlingException(context, detail);
   }

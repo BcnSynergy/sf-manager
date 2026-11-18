@@ -1290,37 +1290,42 @@ other users MUST NOT change.
 
 Both password reset endpoints MUST be limited per client key (resolved as in
 "Client IP Resolution for Rate Limiting"), counted apart from the login and
-refresh limits and apart from each other. The request endpoint MUST also be
-limited per normalized email, counting every request that carries a valid
-email whether or not the email belongs to an account. The defaults MUST be
-10 attempts per 15 minutes per client key and 3 requests per hour per email,
-and the block duration MUST equal the window. They MUST be configurable
-through `PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS`,
-`PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS`,
+refresh limits and apart from each other. The request endpoint MUST NOT be
+limited per email: anyone who knows a user's email could spend such a limit
+from rotating addresses and keep that user from ever getting a reset link.
+The accepted trade-off is that a client with many addresses can send many
+reset emails to one inbox; it gains no access to the account. The defaults
+MUST be 10 attempts per 15 minutes per client key, and the block duration
+MUST equal the window. They MUST be configurable through
+`PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS` and
+`PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS`; a value that is not a positive
+integer MUST cause application startup to fail with an error. The former
 `PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` and
-`PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS`; a value that is not a
-positive integer MUST cause application startup to fail with an error. A
-limited request MUST be answered `429` with the same status, body and
-headers for both limits, and MUST NOT disclose which limit applied: its
-`Retry-After` MUST be the longer of the two windows, in seconds, whichever
-limit fired. Responses on both endpoints MUST NOT carry rate-limit counter
-headers (`X-RateLimit-*`), which would also tell how many requests named an
-email. The counters MUST use the same storage and keyed hashing as the
-login counters, so the email never appears at rest or in logs in the clear.
+`PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS` MUST be ignored, whatever
+their value, so a configuration that still sets them keeps starting. A
+limited request MUST be answered `429` with a `Retry-After` equal to the
+window, in seconds. Responses on both endpoints MUST NOT carry rate-limit
+counter headers (`X-RateLimit-*`). The counters MUST use the same storage
+and keyed hashing as the login counters.
 
-#### Scenario: Both limits answer alike
+#### Scenario: No per-email limit
 
-- GIVEN the default windows (900 seconds per client key, 3600 per email)
-- WHEN one request is refused by the per-email limit and another by the per-client-key limit
-- THEN both MUST be `429` with the same body and `Retry-After: 3600`
-- AND neither, nor any `202` from the request endpoint, MUST carry an `X-RateLimit-*` header
+- GIVEN the per-client-key limit is not reached, and `PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` is set to `1`
+- WHEN a client posts the same email (with different case or padding) three times
+- THEN all three MUST be answered `202`
 
-#### Scenario: Per-email limit counts unknown emails too
+#### Scenario: Former per-email variables are ignored
 
-- GIVEN a per-email limit of 2 requests
-- WHEN a client posts the same unknown email (with different case or padding) three times
-- THEN the first two MUST be answered `202` and the third `429` with `Retry-After`
-- AND a request for another email MUST still be answered `202`
+- GIVEN `PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` is set to `0` and `PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS` to non-numeric text
+- WHEN the application starts
+- THEN it MUST start, and a reset request MUST be answered `202`
+
+#### Scenario: Per-client-key 429
+
+- GIVEN a per-client-key limit of 1 attempt in a 600-second window on the request endpoint
+- WHEN one client posts a second request
+- THEN it MUST be answered `429` with `Retry-After: 600`
+- AND neither response MUST carry an `X-RateLimit-*` header
 
 #### Scenario: Per-client-key limit
 
