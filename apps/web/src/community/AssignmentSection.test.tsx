@@ -182,6 +182,16 @@ describe('AssignmentSection', () => {
     await waitFor(() => expect(ops.assign).toHaveBeenCalledWith('user-new'));
     expect(await screen.findByTestId('representatives-row-user-new')).toBeInTheDocument();
     expect(ops.list).toHaveBeenCalledTimes(2);
+    // The picker refreshes with the rows, so the user who just got a row is
+    // no longer offered and the selection is cleared.
+    expect(ops.listCandidates).toHaveBeenCalledTimes(2);
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(select).toHaveValue('');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).not.toContain('user-new');
   });
 
   it('shows the generic mapped message on an ASSIGNMENT_ALREADY_EXISTS 409', async () => {
