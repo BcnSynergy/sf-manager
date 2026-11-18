@@ -105,6 +105,7 @@
       "columnUser": "Usuario",
       "columnStatus": "Estado",
       "columnActions": "Acciones",
+      "selectPlaceholder": "Selecciona un usuario",
       "status": {
         "active": "Activo",
         "deactivated": "Desactivado"

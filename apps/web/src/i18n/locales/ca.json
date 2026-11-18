@@ -105,6 +105,7 @@
       "columnUser": "Usuari",
       "columnStatus": "Estat",
       "columnActions": "Accions",
+      "selectPlaceholder": "Selecciona un usuari",
       "status": {
         "active": "Actiu",
         "deactivated": "Desactivat"

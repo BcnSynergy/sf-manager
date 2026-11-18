@@ -423,12 +423,6 @@ windowEndsAt <= now()`) four times and the window-end expression five
   `QUARTERLY` draft as a seeded technician, or pin the seed draft's
   frequency. Origin: `review-schedule-in-progress` (#236) archive native review,
   finding `R3-browser-scenario-conditional`, 2026-10-16.
-- **EN-57** (web UX): The community details page lists representatives and
-  technicians by raw user id (a UUID) and assigns one by typing a user id
-  (`apps/web/src/community/AssignmentSection.tsx`). Show each assignee's email
-  and pick the user from a list of eligible users instead. This changes a flow,
-  so it needs its own slice. Origin: `ui-redesign-foundation` screens canvas,
-  2026-10-16.
 - **EN-58** (web print): The `.label-print` print scope forces black only on
   `dt`/`dd`, while the review document scope also covers `th`, `td`, `code`
   and headings. The redesign's base styles give `th`, `td` and `code` token
@@ -1162,6 +1156,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-57** (web UX): the community details page listed representatives and technicians by raw user id and assigned one by typing a user id. Each row now shows the user's email (falling back to the id when the user is not in `GET /users`), and each section assigns by picking from a list of users with its eligible role, leaving out users who already have a row. Web only: the page reuses `GET /users`, which only `SYSTEM_ADMIN` reaches, like the page itself. Done in `community-assignee-picker` (spec `community-admin-ui`). Origin: `ui-redesign-foundation` screens canvas, 2026-10-16.
 - **EN-200** (security): the password reset request was also limited per email (3 per hour from any client), so anyone who knew a user's email could spend that limit from rotating IPs and keep the user from ever getting a reset link. The per-email limit is gone; only the per-client-key limit remains (10 per 15 minutes), and its 429 carries `Retry-After` equal to its own window. `PASSWORD_RESET_EMAIL_RATE_LIMIT_*` are no longer read, so a leftover value cannot stop startup. Accepted trade-off: a client with many addresses can send many reset emails to one inbox, with no access to the account. Done in `reset-email-limit` (PR #429, spec `authentication`). Origin: `password-reset` cumulative T2 native review (R4-email-limit-targeted-lockout), 2026-11-15.
 - **EN-193** (web UX): the new-user form showed one generic message on any client-side validation failure, so a 9-character password (`Admin123!`) read as the email being rejected. Each failing field (email, password, maintenance company) now shows its own i18n message next to it, mapped from the schema issue path rather than the schema's English message, and the password rules are stated under the field before submission (the reset page's pattern). The alert above the form now reads "Fix the fields marked below." The edit form's email-only message is unchanged. Done in `user-create-field-errors` (PR #428, spec `user-admin-ui`). Origin: production use, 2026-11-14.
 - **EN-197** (api robustness): the reset request does its lookup, token and send in the background, so a deploy that stopped the API right after a request could drop an email already answered `202`. `RequestPasswordResetUseCase` now implements `onModuleDestroy` and waits for that work for up to 8 s, below Docker's 10 s stop grace (a fixed warning is logged if the timeout wins), and `main.ts` calls `enableShutdownHooks()`. Done in `password-reset` (PR #420). Origin: `password-reset` T2, 2026-11-15.

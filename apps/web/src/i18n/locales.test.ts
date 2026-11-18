@@ -95,6 +95,7 @@ describe('locale key-set parity (en/es/ca)', () => {
     'community.assignment.columnUser',
     'community.assignment.columnStatus',
     'community.assignment.columnActions',
+    'community.assignment.selectPlaceholder',
     'community.assignment.status.active',
     'community.assignment.status.deactivated',
     // create (Phase 5)

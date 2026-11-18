@@ -13,12 +13,22 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // design.md Decision 3 — the shared container instantiated once for
 // representatives and once for technicians. Deliberately carries no
 // exclusivity/mode knowledge: it owns only its own list/loading/error
-// state, an assign-by-userId form, and refetch-on-mutation. Whether a
+// state, an assign form that picks from its candidate users, and
+// refetch-on-mutation. Whether a
 // second row flips to deactivated after this section's `assign`/
 // `reactivate` calls is decided entirely server-side and observed purely
 // by re-rendering whatever `ops.list()` returns next (Data Flow diagram).
+// EN-57: a user the section may assign, shown by email. The caller decides
+// eligibility (the role filter lives in CommunityDetailPage, next to the
+// endpoints); the section only drops users that already have a row.
+export type AssignmentCandidate = {
+  id: string;
+  email: string;
+};
+
 export type AssignmentOps = {
   list: () => Promise<Assignment[]>;
+  listCandidates: () => Promise<AssignmentCandidate[]>;
   assign: (userId: string) => Promise<unknown>;
   deactivate: (userId: string) => Promise<unknown>;
   reactivate: (userId: string) => Promise<unknown>;
@@ -46,6 +56,7 @@ export type AssignmentSectionProps = {
 export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSectionProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Assignment[]>([]);
+  const [candidates, setCandidates] = useState<AssignmentCandidate[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
@@ -62,11 +73,13 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // (not async/await) so every setState call lives inside a promise
   // continuation, satisfying the react-hooks "no setState directly in an
   // effect" rule, and reused unchanged for the post-mutation refetch.
+  // The candidates are refetched with the rows, so the picker never offers a
+  // user who just got a row.
   const loadRows = useCallback(() => {
-    return ops
-      .list()
-      .then((result) => {
+    return Promise.all([ops.list(), ops.listCandidates()])
+      .then(([result, candidateResult]) => {
         setRows(result);
+        setCandidates(candidateResult);
         setLoadState('loaded');
         setLoadErrorKey(null);
       })
@@ -96,6 +109,12 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
     }
     return mapApiErrorToMessageKey(apiError);
   }
+
+  const emailById = new Map(candidates.map((candidate) => [candidate.id, candidate.email]));
+  const assignedUserIds = new Set(rows.map((row) => row.userId));
+  // A user with a deactivated row is reactivated from that row, not assigned
+  // again, so every user with a row is left out.
+  const assignableCandidates = candidates.filter((candidate) => !assignedUserIds.has(candidate.id));
 
   async function handleAssignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -199,7 +218,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
             <tbody>
               {rows.map((row) => (
                 <tr key={row.userId} data-testid={`${testIdPrefix}-row-${row.userId}`}>
-                  <td className="sf-data">{row.userId}</td>
+                  <td className="sf-data">{emailById.get(row.userId) ?? row.userId}</td>
                   <td>
                     <span
                       className={
@@ -243,12 +262,19 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
 
       <form onSubmit={(event) => void handleAssignSubmit(event)} noValidate>
         <label htmlFor={`${testIdPrefix}-assign-input`}>{t(keys.assignLabel)}</label>
-        <input
+        <select
           id={`${testIdPrefix}-assign-input`}
           data-testid={`${testIdPrefix}-assign-input`}
           value={userIdInput}
           onChange={(event) => setUserIdInput(event.target.value)}
-        />
+        >
+          <option value="">{t('community.assignment.selectPlaceholder')}</option>
+          {assignableCandidates.map((candidate) => (
+            <option key={candidate.id} value={candidate.id}>
+              {candidate.email}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           className="sf-btn sf-btn-primary"

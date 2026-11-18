@@ -6,13 +6,13 @@ The `SYSTEM_ADMIN`-gated web surface for managing communities: route
 gating, active-community list, create/edit forms, confirmed
 soft-delete, the community detail view with both assignment sections
 (representatives, technicians), the assignment lifecycle actions
-(assign by pasted `userId`, deactivate, reactivate), and the
+(assign by picking an eligible user, deactivate, reactivate), and the
 `ApiError` → localized-message contract. Validates the existing
 `community` API against a real consumer (ADR-006 course-correction
 slice, second and final retrofit). Reached from the global navigation's
 Communities item, offered to `SYSTEM_ADMIN` on every authenticated page
-(`app-navigation`). No user search/autocomplete,
-cross-community assignment views, community-scoped authorization,
+(`app-navigation`). No user search/autocomplete beyond the
+eligible-user picker, cross-community assignment views, community-scoped authorization,
 pagination/filtering/sorting, restore of soft-deleted communities, or
 audit-log UI.
 
@@ -148,8 +148,9 @@ disappear from the list without a manual page reload.
 The system MUST show a community's fields plus two clearly separated
 sections — Representatives and Technicians — on `CommunityDetailPage`.
 Each section MUST list both active and deactivated assignment rows
-with a visible status, identifying the assigned person only by
-`userId` — no email or name lookup is performed.
+with a visible status, identifying the assigned person by email. The
+email comes from the user list (`GET /users`); a row whose user is not
+in that list falls back to its `userId`.
 
 #### Scenario: Detail page shows both assignment sections
 
@@ -167,19 +168,67 @@ with a visible status, identifying the assigned person only by
 - THEN the deactivated row MUST still be listed, with a visible
   deactivated status, not hidden
 
-#### Scenario: Assignment rows identify the user by raw userId
+#### Scenario: Assignment rows identify the user by email
 
 - GIVEN a community has one or more assignment rows
 - WHEN the `SYSTEM_ADMIN` views a Representatives or Technicians
   section
-- THEN each row MUST display the assigned user's raw `userId`
-- AND the system MUST NOT perform an email or name lookup for that
-  row
+- THEN each row MUST display the assigned user's email, not the raw
+  `userId`
+
+#### Scenario: A row whose user is not in the user list falls back to the userId
+
+- GIVEN an assignment row whose `userId` is not returned by `GET /users`
+  with the section's eligible role
+- WHEN the `SYSTEM_ADMIN` views that section
+- THEN that row MUST display the raw `userId`
+
+### Requirement: Eligible-User Picker
+
+Each assignment section MUST assign by selecting a user from a list,
+not by typing a `userId`. The list MUST show each user by email and
+MUST offer only users whose global role is eligible for that section
+(`COMMUNITY_REPRESENTATIVE` for Representatives,
+`MAINTENANCE_TECHNICIAN` for Technicians). It MUST leave out every
+user who already has an assignment row, active or deactivated, in that
+section; a deactivated row is reactivated from the row itself. The
+picker MUST refresh together with the section after every assignment
+action. Submitting with no user selected MUST NOT send a request. The
+API's own eligibility check still applies.
+
+#### Scenario: The picker offers only eligible users by email
+
+- GIVEN users with roles `COMMUNITY_REPRESENTATIVE`,
+  `MAINTENANCE_TECHNICIAN` and `SYSTEM_ADMIN` exist
+- WHEN the `SYSTEM_ADMIN` opens a community detail page
+- THEN the Representatives picker MUST list only the
+  `COMMUNITY_REPRESENTATIVE` user and the Technicians picker only the
+  `MAINTENANCE_TECHNICIAN` user, each shown by email
+
+#### Scenario: Users who already have a row are not offered
+
+- GIVEN a section has an active row for user A and a deactivated row
+  for user B, and user C is eligible with no row
+- WHEN the `SYSTEM_ADMIN` opens the picker in that section
+- THEN only user C MUST be offered
+
+#### Scenario: Nothing is sent without a selection
+
+- GIVEN no user is selected in the picker
+- WHEN the `SYSTEM_ADMIN` submits the assignment
+- THEN no assignment request MUST be sent
+
+#### Scenario: The user list cannot be loaded
+
+- GIVEN `GET /users` fails
+- WHEN the `SYSTEM_ADMIN` opens a community detail page
+- THEN each assignment section MUST show its error state, as it does
+  when the assignment list fails
 
 ### Requirement: Representative Assignment Lifecycle
 
 The system MUST let a `SYSTEM_ADMIN` assign a representative to a
-community by pasting a `userId`, deactivate an active representative
+community by picking an eligible user, deactivate an active representative
 behind confirmation, and reactivate a deactivated one. The UI MUST
 make the server's single-active-representative exclusivity rule
 observable: after an assignment or reactivation that activates one
@@ -188,10 +237,10 @@ representative for that same community as deactivated, not removed.
 The UI MUST NOT surface the multi-community representative warning
 field, even when the API response includes one.
 
-#### Scenario: Assigning a representative by pasted userId
+#### Scenario: Assigning a representative from the picker
 
-- GIVEN the `SYSTEM_ADMIN` pastes a valid, eligible `userId` into the
-  representative assignment input
+- GIVEN the `SYSTEM_ADMIN` selects an eligible user in the
+  representative picker
 - WHEN the assignment succeeds
 - THEN the new representative MUST appear active in the section
   without a manual reload
@@ -231,7 +280,7 @@ field, even when the API response includes one.
 ### Requirement: Technician Assignment Lifecycle
 
 The system MUST let a `SYSTEM_ADMIN` assign a technician to a
-community by pasting a `userId`, deactivate an active technician
+community by picking an eligible user, deactivate an active technician
 behind confirmation, and reactivate a deactivated one, applying no
 exclusivity: multiple technicians MUST remain active simultaneously.
 
@@ -268,7 +317,7 @@ automatic retry anywhere in the web app.
 
 #### Scenario: Already-assigned shown distinctly, telling the admin to reactivate
 
-- GIVEN the `SYSTEM_ADMIN` assigns a `userId` that already has an
+- GIVEN the `SYSTEM_ADMIN` assigns a user that already has an
   assignment (active or deactivated) for that role in that community
 - WHEN the request fails with 409
 - THEN a message telling the admin to reactivate the existing record
@@ -277,7 +326,7 @@ automatic retry anywhere in the web app.
 
 #### Scenario: Ineligible role shown distinctly
 
-- GIVEN the `SYSTEM_ADMIN` assigns a `userId` whose current global
+- GIVEN the `SYSTEM_ADMIN` assigns a user whose current global
   role does not match the target assignment type
 - WHEN the request fails with 409
 - THEN a specific ineligible-role message MUST be shown,
@@ -296,7 +345,7 @@ automatic retry anywhere in the web app.
 
 The system MUST show one generic, honest message for a 404 on any
 assign, deactivate, or reactivate action — covering an unknown
-community, an unknown or ineligible pasted `userId`, or a stale
+community, an unknown or ineligible user, or a stale
 assignment reference — without attempting to distinguish the cause.
 
 #### Scenario: 404 on assign shows a generic message

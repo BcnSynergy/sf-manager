@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import type { Assignment } from '../api/community';
-import { AssignmentSection } from './AssignmentSection';
+import { AssignmentSection, type AssignmentCandidate } from './AssignmentSection';
 
 const keys = {
   title: 'test.section.title',
@@ -14,9 +14,21 @@ const keys = {
   ineligible: 'test.section.ineligible',
 };
 
+// Every user id the assign tests pick from the select must be a candidate:
+// a <select> only takes a value that one of its options carries.
+const defaultCandidates: AssignmentCandidate[] = [
+  'user-new',
+  'user-dup',
+  'user-ineligible',
+  'user-pending',
+  'new-active',
+  'user-x',
+].map((id) => ({ id, email: `${id}@example.com` }));
+
 function makeOps(
   overrides: Partial<{
     list: () => Promise<Assignment[]>;
+    listCandidates: () => Promise<AssignmentCandidate[]>;
     assign: (userId: string) => Promise<unknown>;
     deactivate: (userId: string) => Promise<unknown>;
     reactivate: (userId: string) => Promise<unknown>;
@@ -24,6 +36,9 @@ function makeOps(
 ) {
   return {
     list: vi.fn<() => Promise<Assignment[]>>().mockResolvedValue([]),
+    listCandidates: vi
+      .fn<() => Promise<AssignmentCandidate[]>>()
+      .mockResolvedValue(defaultCandidates),
     assign: vi.fn().mockResolvedValue(undefined),
     deactivate: vi.fn().mockResolvedValue(undefined),
     reactivate: vi.fn().mockResolvedValue(undefined),
@@ -61,7 +76,68 @@ describe('AssignmentSection', () => {
     expect(screen.queryByTestId('representatives-loading')).not.toBeInTheDocument();
   });
 
-  it('renders each row with the raw userId and its status label, not the raw enum value', async () => {
+  it('shows an error state when the candidate users request fails', async () => {
+    const ops = makeOps({ listCandidates: vi.fn().mockRejectedValue(new ApiError(0)) });
+
+    renderSection(ops);
+
+    expect(await screen.findByTestId('representatives-error')).toBeInTheDocument();
+  });
+
+  it('identifies each row by the user email, falling back to the userId when unknown', async () => {
+    const ops = makeOps({
+      list: vi.fn().mockResolvedValue([
+        { communityId: 'c1', userId: 'user-known', deactivatedAt: null },
+        { communityId: 'c1', userId: 'user-unknown', deactivatedAt: null },
+      ]),
+      listCandidates: vi.fn().mockResolvedValue([{ id: 'user-known', email: 'known@example.com' }]),
+    });
+
+    renderSection(ops);
+
+    const knownRow = await screen.findByTestId('representatives-row-user-known');
+    expect(knownRow).toHaveTextContent('known@example.com');
+    expect(knownRow).not.toHaveTextContent('user-known');
+    expect(screen.getByTestId('representatives-row-user-unknown')).toHaveTextContent(
+      'user-unknown',
+    );
+  });
+
+  it('offers only candidates without an assignment row, listed by email', async () => {
+    const ops = makeOps({
+      list: vi.fn().mockResolvedValue([
+        { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
+        { communityId: 'c1', userId: 'user-old', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+      ]),
+      listCandidates: vi.fn().mockResolvedValue([
+        { id: 'user-active', email: 'active@example.com' },
+        { id: 'user-old', email: 'old@example.com' },
+        { id: 'user-free', email: 'free@example.com' },
+      ]),
+    });
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-row-user-active');
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(select.tagName).toBe('SELECT');
+    const options = within(select).getAllByRole('option');
+    expect(options.map((option) => option.getAttribute('value'))).toEqual(['', 'user-free']);
+    expect(options[1]).toHaveTextContent('free@example.com');
+  });
+
+  it('does not call assign when no user is selected', async () => {
+    const ops = makeOps();
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-empty');
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+    expect(ops.assign).not.toHaveBeenCalled();
+  });
+
+  it('renders each row with its user and its status label, not the raw enum value', async () => {
     const ops = makeOps({
       list: vi.fn().mockResolvedValue([
         { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
@@ -84,7 +160,7 @@ describe('AssignmentSection', () => {
     expect(deactivatedRow).toHaveTextContent('Deactivated');
   });
 
-  it('assigns a pasted userId and refetches the list on success', async () => {
+  it('assigns the selected user and refetches the list on success', async () => {
     const ops = makeOps({
       list: vi
         .fn()
