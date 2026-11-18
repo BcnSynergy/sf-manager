@@ -150,6 +150,7 @@ describe('AssignmentSection', () => {
     fireEvent.change(screen.getByTestId('representatives-assign-input'), {
       target: { value: 'user-new' },
     });
+    expect(screen.getByTestId('representatives-assign-input')).toHaveValue('user-new');
     fireEvent.click(screen.getByTestId('representatives-reactivate-user-old'));
     await screen.findByTestId('representatives-row-user-new');
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
