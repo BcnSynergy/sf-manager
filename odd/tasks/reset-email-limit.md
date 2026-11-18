@@ -10,7 +10,7 @@ Objective: remove the per-email limit on password reset requests so nobody can l
 
 ## Tasks
 
-- T1 — S1-S3 — inline (no writer trigger: one understood unit) — done — RED 3 e2e (202 expected got 429; Retry-After 600 got 3600; boot with leftover var) → GREEN; commits: e83d360, follow-up (S-1..S-3 tests)
+- T1 — S1-S3 — inline (no writer trigger: one understood unit) — done — RED 3 e2e (202 expected got 429; Retry-After 600 got 3600; boot with leftover var) → GREEN; commits: e83d360, 26052f0 (S-1..S-3 tests); PR #429
 
 ## Log
 
