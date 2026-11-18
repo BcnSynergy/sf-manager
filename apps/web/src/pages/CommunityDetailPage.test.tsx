@@ -4,15 +4,28 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
+import * as usersApi from '../api/users';
 import { CommunityDetailPage } from './CommunityDetailPage';
 
 vi.mock('../api/community');
+vi.mock('../api/users');
 
 const mockedListCommunities = vi.mocked(communityApi.listCommunities);
 const mockedListRepresentatives = vi.mocked(communityApi.listRepresentatives);
 const mockedListTechnicians = vi.mocked(communityApi.listTechnicians);
 const mockedAddRepresentative = vi.mocked(communityApi.addRepresentative);
 const mockedDeactivateRepresentative = vi.mocked(communityApi.deactivateRepresentative);
+const mockedListUsers = vi.mocked(usersApi.listUsers);
+
+function makeUser(id: string, role: usersApi.User['role']): usersApi.User {
+  return {
+    id,
+    email: `${id}@example.com`,
+    role,
+    maintenanceCompanyId: null,
+    managerCapabilities: [],
+  };
+}
 
 const communityA = {
   id: 'community-1',
@@ -48,6 +61,27 @@ describe('CommunityDetailPage', () => {
     vi.clearAllMocks();
     mockedListRepresentatives.mockResolvedValue([]);
     mockedListTechnicians.mockResolvedValue([]);
+    mockedListUsers.mockResolvedValue([]);
+  });
+
+  it('offers each section only the users with its eligible role', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+    mockedListUsers.mockResolvedValue([
+      makeUser('rep-1', 'COMMUNITY_REPRESENTATIVE'),
+      makeUser('tech-1', 'MAINTENANCE_TECHNICIAN'),
+      makeUser('admin-1', 'SYSTEM_ADMIN'),
+    ]);
+
+    renderPage(communityA.id);
+
+    const optionValues = async (testIdPrefix: string) => {
+      const select = await screen.findByTestId(`${testIdPrefix}-assign-input`);
+      return within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value'));
+    };
+    expect(await optionValues('representatives')).toEqual(['', 'rep-1']);
+    expect(await optionValues('technicians')).toEqual(['', 'tech-1']);
   });
 
   it('shows a loading state while the community fetch is in flight', () => {
@@ -159,6 +193,7 @@ describe('CommunityDetailPage', () => {
 
   it('renders the representative exclusivity swap after a mocked add, scoped to the representatives section', async () => {
     mockedListCommunities.mockResolvedValue([communityA]);
+    mockedListUsers.mockResolvedValue([makeUser('new-rep', 'COMMUNITY_REPRESENTATIVE')]);
     mockedListRepresentatives
       .mockResolvedValueOnce([
         { communityId: communityA.id, userId: 'incumbent', deactivatedAt: null },

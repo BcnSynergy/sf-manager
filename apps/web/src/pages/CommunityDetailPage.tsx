@@ -10,8 +10,14 @@ import {
   reactivateRepresentative,
   reactivateTechnician,
 } from '../api/community';
+import { listUsers } from '../api/users';
+import type { Role } from '@sf-manager/validation';
 import { PageHeader } from '../components/PageHeader';
-import { AssignmentSection, type AssignmentOps } from '../community/AssignmentSection';
+import {
+  AssignmentSection,
+  type AssignmentCandidate,
+  type AssignmentOps,
+} from '../community/AssignmentSection';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
 
@@ -33,12 +39,23 @@ const TECHNICIAN_KEYS = {
   ineligible: 'community.technicians.ineligible',
 };
 
+// EN-57: the users each section may assign. Mirrors the API's only
+// eligibility rule (assignment-eligibility.policy.ts: the required role per
+// assignment kind); the API still enforces it with INELIGIBLE_ROLE.
+async function listCandidatesWithRole(role: Role): Promise<AssignmentCandidate[]> {
+  const users = await listUsers();
+  return users
+    .filter((user) => user.role === role)
+    .map((user) => ({ id: user.id, email: user.email }));
+}
+
 // design.md Decision 3 — the only thing that differs between the two
 // sections is endpoints/copy/testid prefix, injected here; AssignmentSection
 // itself owns no exclusivity/mode knowledge.
 function buildRepresentativeOps(communityId: string): AssignmentOps {
   return {
     list: () => listRepresentatives(communityId),
+    listCandidates: () => listCandidatesWithRole('COMMUNITY_REPRESENTATIVE'),
     assign: (userId) => addRepresentative(communityId, userId),
     deactivate: (userId) => deactivateRepresentative(communityId, userId),
     reactivate: (userId) => reactivateRepresentative(communityId, userId),
@@ -48,6 +65,7 @@ function buildRepresentativeOps(communityId: string): AssignmentOps {
 function buildTechnicianOps(communityId: string): AssignmentOps {
   return {
     list: () => listTechnicians(communityId),
+    listCandidates: () => listCandidatesWithRole('MAINTENANCE_TECHNICIAN'),
     assign: (userId) => addTechnician(communityId, userId),
     deactivate: (userId) => deactivateTechnician(communityId, userId),
     reactivate: (userId) => reactivateTechnician(communityId, userId),
