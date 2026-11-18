@@ -126,6 +126,38 @@ describe('AssignmentSection', () => {
     expect(options[1]).toHaveTextContent('free@example.com');
   });
 
+  it('drops a selection that a refresh no longer offers', async () => {
+    const deactivatedRow = {
+      communityId: 'c1',
+      userId: 'user-old',
+      deactivatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    const ops = makeOps({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce([deactivatedRow])
+        // Meanwhile another admin assigned user-new, so the refresh after the
+        // reactivation brings a row for the user still selected here.
+        .mockResolvedValueOnce([
+          { ...deactivatedRow, deactivatedAt: null },
+          { communityId: 'c1', userId: 'user-new', deactivatedAt: null },
+        ]),
+    });
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-row-user-old');
+    fireEvent.change(screen.getByTestId('representatives-assign-input'), {
+      target: { value: 'user-new' },
+    });
+    fireEvent.click(screen.getByTestId('representatives-reactivate-user-old'));
+    await screen.findByTestId('representatives-row-user-new');
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+    expect(screen.getByTestId('representatives-assign-input')).toHaveValue('');
+    expect(ops.assign).not.toHaveBeenCalled();
+  });
+
   it('does not call assign when no user is selected', async () => {
     const ops = makeOps();
 

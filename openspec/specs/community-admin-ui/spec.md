@@ -149,8 +149,9 @@ The system MUST show a community's fields plus two clearly separated
 sections — Representatives and Technicians — on `CommunityDetailPage`.
 Each section MUST list both active and deactivated assignment rows
 with a visible status, identifying the assigned person by email. The
-email comes from the user list (`GET /users`); a row whose user is not
-in that list falls back to its `userId`.
+email comes from the users `GET /users` returns with the section's
+eligible role; a row whose user is not among them falls back to its
+`userId`.
 
 #### Scenario: Detail page shows both assignment sections
 
@@ -173,8 +174,8 @@ in that list falls back to its `userId`.
 - GIVEN a community has one or more assignment rows
 - WHEN the `SYSTEM_ADMIN` views a Representatives or Technicians
   section
-- THEN each row MUST display the assigned user's email, not the raw
-  `userId`
+- THEN each row whose user `GET /users` returns with the section's
+  eligible role MUST display that user's email, not the raw `userId`
 
 #### Scenario: A row whose user is not in the user list falls back to the userId
 
@@ -193,7 +194,9 @@ MUST offer only users whose global role is eligible for that section
 user who already has an assignment row, active or deactivated, in that
 section; a deactivated row is reactivated from the row itself. The
 picker MUST refresh together with the section after every assignment
-action. Submitting with no user selected MUST NOT send a request. The
+action. Submitting with no user selected MUST NOT send a request; a
+selected user that the refreshed picker no longer offers counts as no
+selection. The
 API's own eligibility check still applies.
 
 #### Scenario: The picker offers only eligible users by email
@@ -217,6 +220,13 @@ API's own eligibility check still applies.
 - GIVEN no user is selected in the picker
 - WHEN the `SYSTEM_ADMIN` submits the assignment
 - THEN no assignment request MUST be sent
+
+#### Scenario: A selection the refresh no longer offers is dropped
+
+- GIVEN the `SYSTEM_ADMIN` selected user A in a picker
+- WHEN a refresh of that section brings a row for user A
+- THEN the picker MUST show no selection
+- AND submitting MUST NOT send an assignment request
 
 #### Scenario: The user list cannot be loaded
 

@@ -14,10 +14,11 @@ type LoadState = 'loading' | 'loaded' | 'error';
 // representatives and once for technicians. Deliberately carries no
 // exclusivity/mode knowledge: it owns only its own list/loading/error
 // state, an assign form that picks from its candidate users, and
-// refetch-on-mutation. Whether a
-// second row flips to deactivated after this section's `assign`/
-// `reactivate` calls is decided entirely server-side and observed purely
-// by re-rendering whatever `ops.list()` returns next (Data Flow diagram).
+// refetch-on-mutation. Whether a second row flips to deactivated after this
+// section's `assign`/`reactivate` calls is decided entirely server-side and
+// observed purely by re-rendering whatever `ops.list()` returns next (Data
+// Flow diagram).
+
 // EN-57: a user the section may assign, shown by email. The caller decides
 // eligibility (the role filter lives in CommunityDetailPage, next to the
 // endpoints); the section only drops users that already have a row.
@@ -115,11 +116,16 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // A user with a deactivated row is reactivated from that row, not assigned
   // again, so every user with a row is left out.
   const assignableCandidates = candidates.filter((candidate) => !assignedUserIds.has(candidate.id));
+  // A refresh can drop the selected user (another admin assigned them
+  // meanwhile); the selection then counts as empty, as the select shows.
+  const selectedUserId = assignableCandidates.some((candidate) => candidate.id === userIdInput)
+    ? userIdInput
+    : '';
 
   async function handleAssignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearAssignError();
-    const userId = userIdInput.trim();
+    const userId = selectedUserId;
     if (!userId) {
       return;
     }
@@ -265,7 +271,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
         <select
           id={`${testIdPrefix}-assign-input`}
           data-testid={`${testIdPrefix}-assign-input`}
-          value={userIdInput}
+          value={selectedUserId}
           onChange={(event) => setUserIdInput(event.target.value)}
         >
           <option value="">{t('community.assignment.selectPlaceholder')}</option>
