@@ -1311,8 +1311,8 @@ and keyed hashing as the login counters.
 #### Scenario: No per-email limit
 
 - GIVEN the per-client-key limit is not reached, and `PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS` is set to `1`
-- WHEN a client posts the same email (with different case or padding) three times
-- THEN all three MUST be answered `202`
+- WHEN a client posts the same email (with different case or padding) four times
+- THEN all four MUST be answered `202`
 
 #### Scenario: Former per-email variables are ignored
 

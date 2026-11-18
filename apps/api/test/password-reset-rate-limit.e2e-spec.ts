@@ -101,9 +101,12 @@ describe('Password reset rate limit (e2e)', () => {
 
     // A known-account email would be blocked just the same if it were
     // limited; an unknown one keeps the test free of email side effects.
+    // Four requests: one more than the old default (3 per hour), so a
+    // per-email limit brought back under any variable name still fails here.
     await post('nobody@example.com').expect(202);
     await post('  NOBODY@example.com ').expect(202);
     await post('nobody@example.com').expect(202);
+    await post('Nobody@Example.com').expect(202);
   });
 
   it('answers the per-client-key 429 with Retry-After equal to its window and no X-RateLimit-* headers', async () => {
@@ -159,12 +162,19 @@ describe('Password reset rate limit (e2e)', () => {
         .post('/auth/password-reset/confirm')
         .send({ token: 'nope', password: 'abcdefghi1' });
 
-    await confirm().expect(400);
+    const accepted = await confirm().expect(400);
     await confirm().expect(400);
     const blocked = await confirm();
 
     expect(blocked.status).toBe(429);
-    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+    expect(blocked.headers['retry-after']).toBe('600');
+    for (const response of [accepted, blocked]) {
+      expect(
+        Object.keys(response.headers).filter((name) =>
+          name.startsWith('x-ratelimit'),
+        ),
+      ).toEqual([]);
+    }
     await request(server)
       .post('/auth/password-reset/request')
       .send({ email: 'a@example.com' })
