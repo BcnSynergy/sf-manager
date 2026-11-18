@@ -20,7 +20,8 @@ import { USER_REPOSITORY } from '../src/modules/users/application/ports/user.rep
 import { InMemoryUserRepository } from '../src/modules/users/application/use-cases/testing/in-memory-user.repository';
 
 // password-reset S6: the limits on their own app so counts start at zero.
-// An invalid value stops the app at boot.
+// An invalid value stops the app at boot. EN-200 removed the per-email limit:
+// its old variables stay listed so the suite can prove they are ignored.
 const ENV_KEYS = [
   'JWT_SECRET',
   'THROTTLE_KEY_SECRET',
@@ -89,34 +90,39 @@ describe('Password reset rate limit (e2e)', () => {
     }
   });
 
-  it('answers the per-email 429 and the per-client-key 429 identically', async () => {
-    const emailServer = await startApp({
+  it('does not limit requests per email (EN-200), even with the old per-email variables set', async () => {
+    const server = await startApp({
       PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1000',
       PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '1',
+      PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS: '600',
     });
-    const post = (server: App, email: string) =>
+    const post = (email: string) =>
       request(server).post('/auth/password-reset/request').send({ email });
-    await post(emailServer, 'a@example.com').expect(202);
-    const byEmail = await post(emailServer, 'a@example.com');
-    await app?.get(RequestPasswordResetUseCase).whenIdle();
-    await app?.close();
 
-    const clientServer = await startApp({
+    // A known-account email would be blocked just the same if it were
+    // limited; an unknown one keeps the test free of email side effects.
+    // Four requests: one more than the old default (3 per hour), so a
+    // per-email limit brought back under any variable name still fails here.
+    await post('nobody@example.com').expect(202);
+    await post('  NOBODY@example.com ').expect(202);
+    await post('nobody@example.com').expect(202);
+    await post('Nobody@Example.com').expect(202);
+  });
+
+  it('answers the per-client-key 429 with Retry-After equal to its window and no X-RateLimit-* headers', async () => {
+    const server = await startApp({
       PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1',
-      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '1000',
+      PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS: '600',
     });
-    await post(clientServer, 'a@example.com').expect(202);
-    const byClient = await post(clientServer, 'a@example.com');
+    const post = (email: string) =>
+      request(server).post('/auth/password-reset/request').send({ email });
 
-    expect(byEmail.status).toBe(429);
-    expect(byClient.status).toBe(429);
-    expect(byClient.body).toEqual(byEmail.body);
-    // Same headers too: one Retry-After (the longer of the two windows, 3600 s
-    // by default) and no X-RateLimit-* counters, so neither the limit that
-    // fired nor anyone's request count shows.
-    expect(byEmail.headers['retry-after']).toBe('3600');
-    expect(byClient.headers['retry-after']).toBe('3600');
-    for (const response of [byEmail, byClient]) {
+    const accepted = await post('a@example.com').expect(202);
+    const blocked = await post('b@example.com');
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers['retry-after']).toBe('600');
+    for (const response of [accepted, blocked]) {
       expect(
         Object.keys(response.headers).filter((name) =>
           name.startsWith('x-ratelimit'),
@@ -125,31 +131,10 @@ describe('Password reset rate limit (e2e)', () => {
     }
   });
 
-  it('limits requests per normalized email, counting unknown emails too, with the same 429 and a Retry-After', async () => {
-    const server = await startApp({
-      PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '1000',
-      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '2',
-      PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS: '600',
-    });
-    const post = (email: string) =>
-      request(server).post('/auth/password-reset/request').send({ email });
-
-    await post('nobody@example.com').expect(202);
-    await post('  NOBODY@example.com ').expect(202);
-    const blocked = await post('nobody@example.com');
-
-    expect(blocked.status).toBe(429);
-    // The longer of the two windows (900 s per client key, 600 s per email
-    // here), whichever limit fired.
-    expect(blocked.headers['retry-after']).toBe('900');
-    await post('someone-else@example.com').expect(202);
-  });
-
   it('limits requests per client key, with the same 429 and a Retry-After', async () => {
     const server = await startApp({
       PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '2',
       PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS: '600',
-      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '1000',
     });
     const post = (email: string) =>
       request(server).post('/auth/password-reset/request').send({ email });
@@ -177,12 +162,19 @@ describe('Password reset rate limit (e2e)', () => {
         .post('/auth/password-reset/confirm')
         .send({ token: 'nope', password: 'abcdefghi1' });
 
-    await confirm().expect(400);
+    const accepted = await confirm().expect(400);
     await confirm().expect(400);
     const blocked = await confirm();
 
     expect(blocked.status).toBe(429);
-    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+    expect(blocked.headers['retry-after']).toBe('600');
+    for (const response of [accepted, blocked]) {
+      expect(
+        Object.keys(response.headers).filter((name) =>
+          name.startsWith('x-ratelimit'),
+        ),
+      ).toEqual([]);
+    }
     await request(server)
       .post('/auth/password-reset/request')
       .send({ email: 'a@example.com' })
@@ -191,7 +183,19 @@ describe('Password reset rate limit (e2e)', () => {
 
   it('stops the app at boot for an invalid limit', async () => {
     await expect(
-      startApp({ PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '0' }),
-    ).rejects.toThrow(/PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS/);
+      startApp({ PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS: '0' }),
+    ).rejects.toThrow(/PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS/);
+  });
+
+  it('ignores a leftover invalid per-email variable instead of stopping at boot', async () => {
+    const server = await startApp({
+      PASSWORD_RESET_EMAIL_RATE_LIMIT_MAX_REQUESTS: '0',
+      PASSWORD_RESET_EMAIL_RATE_LIMIT_WINDOW_SECONDS: 'abc',
+    });
+
+    await request(server)
+      .post('/auth/password-reset/request')
+      .send({ email: 'a@example.com' })
+      .expect(202);
   });
 });

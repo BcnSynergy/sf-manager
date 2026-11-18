@@ -143,7 +143,7 @@ import { PermissionsGuard } from './presentation/guards/permissions.guard';
         webOrigin: config.corsOrigin,
       }),
     },
-    // Read at boot: an invalid PASSWORD_RESET_*_RATE_LIMIT_* stops startup.
+    // Read at boot: an invalid PASSWORD_RESET_RATE_LIMIT_* stops startup.
     {
       provide: PASSWORD_RESET_RATE_LIMIT_CONFIG,
       useFactory: getPasswordResetRateLimitConfig,
