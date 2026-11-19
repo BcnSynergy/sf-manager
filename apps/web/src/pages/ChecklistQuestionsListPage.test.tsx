@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionsListPage } from './ChecklistQuestionsListPage';
@@ -246,5 +247,22 @@ describe('ChecklistQuestionsListPage', () => {
     expect(alert).toHaveClass('sf-alert', 'sf-alert-danger');
     expect(alert).toBe(screen.getByTestId('checklist-question-list-delete-error'));
     expect(alert.querySelector('p')?.textContent).toBe(i18n.t('checklistQuestion.error.notFound'));
+  });
+
+  // EN-211: the alert stores the i18n key, so it follows a language switch.
+  it('shows the deletion error in the new language after a language switch', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([questionOne]);
+    mockedSoftDeleteChecklistQuestion.mockRejectedValue(new ApiError(404));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`checklist-question-list-delete-${questionOne.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await screen.findByTestId('checklist-question-list-delete-error');
+
+    await expectAlertFollowsLanguage(
+      'checklist-question-list-delete-error',
+      'checklistQuestion.error.notFound',
+    );
   });
 });
