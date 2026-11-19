@@ -132,6 +132,24 @@ describe('CommunityCreatePage', () => {
     expect(screen.queryByTestId('communities-list-sentinel')).not.toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateCommunity.mockRejectedValue(new ApiError(400));
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('community-create-name'), {
+      target: { value: VALID_NAME },
+    });
+    fireEvent.change(screen.getByTestId('community-create-address'), {
+      target: { value: VALID_ADDRESS },
+    });
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    await screen.findByTestId('community-create-error');
+
+    await expectAlertFollowsLanguage('community-create-error', 'community.error.validationFailed');
+  });
+
   describe('design system', () => {
     it('renders the form under a page header, one field group per label and control', () => {
       renderPage();

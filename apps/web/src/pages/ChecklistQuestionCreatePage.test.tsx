@@ -132,6 +132,22 @@ describe('ChecklistQuestionCreatePage', () => {
     expect(await screen.findByTestId('checklist-question-create-error')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateChecklistQuestion.mockRejectedValue(new ApiError(0));
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('checklist-question-create-text'), {
+      target: { value: VALID_TEXT },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-create-frequency-QUARTERLY'));
+    fireEvent.click(screen.getByTestId('checklist-question-create-submit'));
+
+    await screen.findByTestId('checklist-question-create-error');
+
+    await expectAlertFollowsLanguage('checklist-question-create-error', 'common.error.network');
+  });
+
   describe('design system', () => {
     it('renders the title in a page header and the form as field groups with the submit as the primary action', () => {
       renderPage();

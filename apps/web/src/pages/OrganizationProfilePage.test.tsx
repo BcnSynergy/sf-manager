@@ -386,6 +386,25 @@ describe('OrganizationProfilePage', () => {
     expect(screen.getByTestId('organization-profile-incomplete')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the save error in the new language after a language switch', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(400));
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    await screen.findByTestId('organization-profile-error');
+
+    await expectAlertFollowsLanguage('organization-profile-error', 'organizationProfile.saveError');
+  });
+
   it('disables every field input while a save is in flight, closing the race window for a conflicting edit', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
     let resolveUpdate: (value: typeof filledProfile) => void = () => {};

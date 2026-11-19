@@ -381,6 +381,23 @@ describe('ReviewSessionElementPage', () => {
     expect(await screen.findByTestId('review-session-element-saved')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the missing-observations error in the new language after a language switch', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    renderPage();
+
+    await screen.findByTestId('review-session-element-question-q1');
+    fireEvent.click(screen.getByTestId('review-session-element-mark-unreviewed'));
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+
+    await screen.findByTestId('review-session-element-save-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-element-save-error',
+      'reviewSession.error.missingObservations',
+    );
+  });
+
   it('keeps the entered answers on screen when the save request fails', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
     mockedRecordEntry.mockRejectedValue(new ApiError(0));

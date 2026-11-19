@@ -175,6 +175,23 @@ describe('MaintenanceCompanyEditPage', () => {
     expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
+    mockedUpdateMaintenanceCompany.mockRejectedValue(new ApiError(409, 'TAX_ID_ALREADY_IN_USE'));
+
+    renderPage(companyB.id);
+
+    fireEvent.click(await screen.findByTestId('maintenance-company-edit-submit'));
+
+    await screen.findByTestId('maintenance-company-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-error',
+      'maintenanceCompany.error.duplicateTaxId',
+    );
+  });
+
   it('requires confirmation before calling softDeleteMaintenanceCompany', async () => {
     mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
 
@@ -232,6 +249,26 @@ describe('MaintenanceCompanyEditPage', () => {
       'This tax ID is already in use by another active maintenance company.',
     );
     expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the delete error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+    mockedSoftDeleteMaintenanceCompany.mockRejectedValue(
+      new ApiError(409, 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS'),
+    );
+
+    renderPage(companyA.id);
+
+    fireEvent.click(await screen.findByTestId('maintenance-company-edit-delete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('maintenance-company-edit-delete-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-delete-error',
+      'maintenanceCompany.error.hasActiveUsers',
+    );
   });
 
   describe('design system', () => {

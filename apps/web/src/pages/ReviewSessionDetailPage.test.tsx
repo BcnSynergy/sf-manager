@@ -162,6 +162,21 @@ describe('ReviewSessionDetailPage', () => {
     expect(mockedDiscardReviewSession).not.toHaveBeenCalled();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the discard error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedDiscardReviewSession.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-discard'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-discard-error');
+
+    await expectAlertFollowsLanguage('review-session-detail-discard-error', 'common.error.network');
+  });
+
   it('labels the completing control Sign and close', async () => {
     mockedReadReviewSession.mockResolvedValue(draftSession);
 
@@ -303,6 +318,24 @@ describe('ReviewSessionDetailPage', () => {
     const gapLink = await screen.findByTestId('review-session-detail-gap-link-23456789AB');
     expect(gapLink).toHaveAttribute('href', `/review-sessions/${SESSION_ID}/elements/23456789AB`);
     expect(screen.getByTestId('review-session-detail-gap-link-CDEFGHJKMN')).toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the complete error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedCompleteReviewSession.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-complete-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-detail-complete-error',
+      'common.error.network',
+    );
   });
 
   describe('design system styling', () => {

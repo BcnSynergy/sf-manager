@@ -175,6 +175,19 @@ describe('InspectableElementCreatePage', () => {
     expect(await screen.findByTestId('inspectable-element-create-error')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateInspectableElement.mockRejectedValue(new ApiError(0));
+    renderPage();
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByTestId('inspectable-element-create-submit'));
+
+    await screen.findByTestId('inspectable-element-create-error');
+
+    await expectAlertFollowsLanguage('inspectable-element-create-error', 'common.error.network');
+  });
+
   describe('design system', () => {
     it('renders the title in a page header and the form as field groups with the submit as the primary action', () => {
       renderPage();

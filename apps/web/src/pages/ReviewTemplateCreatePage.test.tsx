@@ -129,6 +129,26 @@ describe('ReviewTemplateCreatePage', () => {
     );
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateDraftReviewTemplate.mockRejectedValue(
+      new ApiError(409, 'REVIEW_TEMPLATE_DRAFT_EXISTS'),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('review-template-create-name'), {
+      target: { value: VALID_NAME },
+    });
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    await screen.findByTestId('review-template-create-error');
+
+    await expectAlertFollowsLanguage(
+      'review-template-create-error',
+      'reviewTemplate.error.draftExists',
+    );
+  });
+
   describe('design system', () => {
     it('renders the title in a page header and the form as field groups with the submit as the primary action', () => {
       renderPage();

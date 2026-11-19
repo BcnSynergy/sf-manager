@@ -206,6 +206,19 @@ describe('UserEditPage', () => {
     expect(screen.queryByTestId('users-list-sentinel')).not.toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedUpdateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
+    renderPage(otherUser.id);
+
+    fireEvent.click(await screen.findByTestId('user-edit-submit'));
+
+    await screen.findByTestId('user-edit-error');
+
+    await expectAlertFollowsLanguage('user-edit-error', 'users.error.lastSystemAdmin');
+  });
+
   it('shows a distinct concurrency-conflict message on a 409 TRANSACTION_CONFLICT response, without retrying', async () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     mockedUpdateUser.mockRejectedValue(new ApiError(409, 'TRANSACTION_CONFLICT'));
