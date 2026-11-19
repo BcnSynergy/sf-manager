@@ -84,6 +84,56 @@ describe('CommunityDetailPage', () => {
     expect(await optionValues('technicians')).toEqual(['', 'tech-1']);
   });
 
+  it('requests the user list once for both sections, and not again after an assignment action', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+    mockedListUsers.mockResolvedValue([makeUser('rep-1', 'COMMUNITY_REPRESENTATIVE')]);
+    mockedListRepresentatives
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { communityId: communityA.id, userId: 'rep-1', deactivatedAt: null },
+      ]);
+    mockedAddRepresentative.mockResolvedValue({
+      communityId: communityA.id,
+      userId: 'rep-1',
+      deactivatedAt: null,
+    });
+
+    renderPage(communityA.id);
+
+    const select = await screen.findByTestId('representatives-assign-input');
+    await within(select).findByRole('option', { name: 'rep-1@example.com' });
+    fireEvent.change(select, { target: { value: 'rep-1' } });
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+    expect(await screen.findByTestId('representatives-row-rep-1')).toHaveTextContent(
+      'rep-1@example.com',
+    );
+    expect(mockedListRepresentatives).toHaveBeenCalledTimes(2);
+    expect(mockedListUsers).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the assignment rows and replaces each picker with an error when the user list fails', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+    mockedListUsers.mockRejectedValue(new ApiError(0));
+    mockedListRepresentatives.mockResolvedValue([
+      { communityId: communityA.id, userId: 'rep-1', deactivatedAt: null },
+    ]);
+
+    renderPage(communityA.id);
+
+    expect(await screen.findByTestId('representatives-candidates-error')).toBeInTheDocument();
+    expect(await screen.findByTestId('technicians-candidates-error')).toBeInTheDocument();
+    // Without the user list the row falls back to its userId.
+    expect(screen.getByTestId('representatives-row-rep-1')).toHaveTextContent('rep-1');
+    expect(screen.getByTestId('representatives-deactivate-rep-1')).toBeInTheDocument();
+    expect(screen.getByTestId('technicians-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('representatives-error')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('technicians-error')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('representatives-assign-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('representatives-assign-submit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('technicians-assign-input')).not.toBeInTheDocument();
+  });
+
   it('shows a loading state while the community fetch is in flight', () => {
     mockedListCommunities.mockReturnValue(new Promise(() => {}));
 

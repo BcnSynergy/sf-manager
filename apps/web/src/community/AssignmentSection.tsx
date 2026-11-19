@@ -27,9 +27,16 @@ export type AssignmentCandidate = {
   email: string;
 };
 
+// EN-207: the page loads the user list once and hands each section its
+// eligible users, so the section never requests them itself. A failed user
+// list only takes the picker away; the rows and their actions stay.
+export type AssignmentCandidates =
+  | { state: 'loading' }
+  | { state: 'loaded'; users: AssignmentCandidate[] }
+  | { state: 'error'; errorKey: string };
+
 export type AssignmentOps = {
   list: () => Promise<Assignment[]>;
-  listCandidates: () => Promise<AssignmentCandidate[]>;
   assign: (userId: string) => Promise<unknown>;
   deactivate: (userId: string) => Promise<unknown>;
   reactivate: (userId: string) => Promise<unknown>;
@@ -46,6 +53,7 @@ export type AssignmentSectionKeys = {
 
 export type AssignmentSectionProps = {
   ops: AssignmentOps;
+  candidates: AssignmentCandidates;
   testIdPrefix: string;
   keys: AssignmentSectionKeys;
 };
@@ -54,10 +62,14 @@ export type AssignmentSectionProps = {
 // boolean/mode prop that changes behaviour (e.g. isExclusive, mode,
 // allowsMultipleActive). If a real behavioural difference ever emerges,
 // the fix is splitting into two components, not adding a prop here.
-export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSectionProps) {
+export function AssignmentSection({
+  ops,
+  candidates: candidateList,
+  testIdPrefix,
+  keys,
+}: AssignmentSectionProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Assignment[]>([]);
-  const [candidates, setCandidates] = useState<AssignmentCandidate[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
@@ -74,13 +86,13 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // (not async/await) so every setState call lives inside a promise
   // continuation, satisfying the react-hooks "no setState directly in an
   // effect" rule, and reused unchanged for the post-mutation refetch.
-  // The candidates are refetched with the rows, so the picker never offers a
-  // user who just got a row.
+  // The picker is filtered by these rows, so after a refetch it never offers
+  // a user who just got a row.
   const loadRows = useCallback(() => {
-    return Promise.all([ops.list(), ops.listCandidates()])
-      .then(([result, candidateResult]) => {
+    return ops
+      .list()
+      .then((result) => {
         setRows(result);
-        setCandidates(candidateResult);
         setLoadState('loaded');
         setLoadErrorKey(null);
       })
@@ -111,6 +123,10 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
     return mapApiErrorToMessageKey(apiError);
   }
 
+  // Without the rows the section cannot tell who already has one, so it
+  // offers nobody until they load.
+  const candidates =
+    candidateList.state === 'loaded' && loadState === 'loaded' ? candidateList.users : [];
   const emailById = new Map(candidates.map((candidate) => [candidate.id, candidate.email]));
   const assignedUserIds = new Set(rows.map((row) => row.userId));
   // A user with a deactivated row is reactivated from that row, not assigned
@@ -267,28 +283,37 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
       )}
 
       <form onSubmit={(event) => void handleAssignSubmit(event)} noValidate>
-        <label htmlFor={`${testIdPrefix}-assign-input`}>{t(keys.assignLabel)}</label>
-        <select
-          id={`${testIdPrefix}-assign-input`}
-          data-testid={`${testIdPrefix}-assign-input`}
-          value={selectedUserId}
-          onChange={(event) => setUserIdInput(event.target.value)}
-        >
-          <option value="">{t('community.assignment.selectPlaceholder')}</option>
-          {assignableCandidates.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.email}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="sf-btn sf-btn-primary"
-          data-testid={`${testIdPrefix}-assign-submit`}
-          disabled={mutationPending}
-        >
-          {t(keys.assignLabel)}
-        </button>
+        {candidateList.state === 'error' ? (
+          <p className="sf-empty" data-testid={`${testIdPrefix}-candidates-error`}>
+            {t(candidateList.errorKey)}
+          </p>
+        ) : (
+          <>
+            <label htmlFor={`${testIdPrefix}-assign-input`}>{t(keys.assignLabel)}</label>
+            <select
+              id={`${testIdPrefix}-assign-input`}
+              data-testid={`${testIdPrefix}-assign-input`}
+              value={selectedUserId}
+              onChange={(event) => setUserIdInput(event.target.value)}
+              disabled={candidateList.state === 'loading'}
+            >
+              <option value="">{t('community.assignment.selectPlaceholder')}</option>
+              {assignableCandidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.email}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="sf-btn sf-btn-primary"
+              data-testid={`${testIdPrefix}-assign-submit`}
+              disabled={mutationPending}
+            >
+              {t(keys.assignLabel)}
+            </button>
+          </>
+        )}
         {assignErrorKey && (
           <Alert
             key={assignErrorAlertKey}

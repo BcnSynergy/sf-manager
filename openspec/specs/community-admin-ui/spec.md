@@ -193,11 +193,20 @@ MUST offer only users whose global role is eligible for that section
 `MAINTENANCE_TECHNICIAN` for Technicians). It MUST leave out every
 user who already has an assignment row, active or deactivated, in that
 section; a deactivated row is reactivated from the row itself. The
-picker MUST refresh together with the section after every assignment
-action. Submitting with no user selected MUST NOT send a request; a
-selected user that the refreshed picker no longer offers counts as no
-selection. The
-API's own eligibility check still applies.
+community detail page MUST request `GET /users` once per visit and
+share that list between both sections; an assignment action MUST NOT
+request it again. The picker MUST refresh together with the section's
+rows after every assignment action. Submitting with no user selected
+MUST NOT send a request; a selected user that the refreshed picker no
+longer offers counts as no selection. The API's own eligibility check
+still applies.
+
+#### Scenario: The user list is requested once
+
+- GIVEN the `SYSTEM_ADMIN` opens a community detail page
+- WHEN they assign a user in one section
+- THEN `GET /users` MUST have been requested exactly once
+- AND the section's assignment list MUST be requested again
 
 #### Scenario: The picker offers only eligible users by email
 
@@ -232,8 +241,10 @@ API's own eligibility check still applies.
 
 - GIVEN `GET /users` fails
 - WHEN the `SYSTEM_ADMIN` opens a community detail page
-- THEN each assignment section MUST show its error state, as it does
-  when the assignment list fails
+- THEN each assignment section MUST still show its rows, each by its
+  raw `userId`, with their deactivate and reactivate actions
+- AND each section MUST show an error in place of its picker and offer
+  no assignment
 
 ### Requirement: Representative Assignment Lifecycle
 
