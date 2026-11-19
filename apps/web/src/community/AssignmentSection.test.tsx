@@ -16,7 +16,10 @@ const keys: AssignmentSectionKeys = {
   assignLabel: 'test.section.assignLabel',
   confirmTitle: 'test.section.confirmTitle',
   confirmMessage: 'test.section.confirmMessage',
-  ineligible: 'community.representatives.ineligible',
+  // A real key (show only takes one), but the technicians' key on a section
+  // rendered as representatives: a section that ignored keys.ineligible and
+  // used the representatives' copy would fail the ineligible-role test.
+  ineligible: 'community.technicians.ineligible',
 };
 
 // Every user id the assign tests pick from the select must be a candidate:

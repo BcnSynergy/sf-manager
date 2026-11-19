@@ -43,6 +43,8 @@ export type AssignmentOps = {
   reactivate: (userId: string) => Promise<unknown>;
 };
 
+// Only `ineligible` is a MessageKey: it is the one key the section passes to
+// useAlertMessage().show (EN-210). The others go straight to t().
 export type AssignmentSectionKeys = {
   title: string;
   empty: string;
