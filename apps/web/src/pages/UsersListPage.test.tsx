@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import * as usersApi from '../api/users';
@@ -248,6 +249,20 @@ describe('UsersListPage', () => {
       'The last system administrator cannot be removed.',
     );
     expect(screen.getByTestId(`users-list-row-${otherUser.id}`)).toBeInTheDocument();
+  });
+
+  // EN-211: the alert stores the i18n key, so it follows a language switch.
+  it('shows the deactivation error in the new language after a language switch', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedDeactivateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`users-list-deactivate-${otherUser.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await screen.findByTestId('users-list-action-error');
+
+    await expectAlertFollowsLanguage('users-list-action-error', 'users.error.lastSystemAdmin');
   });
 
   it('names the table by its heading and scopes every column header', async () => {

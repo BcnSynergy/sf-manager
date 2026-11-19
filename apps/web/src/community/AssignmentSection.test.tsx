@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import type { Assignment } from '../api/community';
 import {
@@ -322,6 +323,27 @@ describe('AssignmentSection', () => {
     // assert the rendered EN copy, not the raw i18n key.
     expect(await screen.findByTestId('representatives-assign-error')).toHaveTextContent(
       'This user is already assigned.',
+    );
+  });
+
+  // EN-211: the alert stores the i18n key, so it follows a language switch.
+  it('shows the assign error in the new language after a language switch', async () => {
+    const ops = makeOps({
+      assign: vi.fn().mockRejectedValue(new ApiError(409, 'ASSIGNMENT_ALREADY_EXISTS')),
+    });
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-empty');
+    fireEvent.change(screen.getByTestId('representatives-assign-input'), {
+      target: { value: 'user-dup' },
+    });
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+    await screen.findByTestId('representatives-assign-error');
+
+    await expectAlertFollowsLanguage(
+      'representatives-assign-error',
+      'community.error.assignmentExists',
     );
   });
 
