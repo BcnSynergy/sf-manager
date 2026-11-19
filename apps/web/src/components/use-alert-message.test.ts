@@ -3,6 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { useAlertMessage } from './use-alert-message';
 
 describe('useAlertMessage', () => {
+  // EN-210: the alert stores an i18n key and the page translates it on
+  // render, so `show` only accepts a key from the English resources. Text
+  // that is already translated, or a misspelled key, does not compile.
+  it('accepts an i18n key and rejects anything else at compile time', () => {
+    const { result } = renderHook(() => useAlertMessage());
+
+    act(() => result.current.show('common.error.network'));
+    expect(result.current.message).toBe('common.error.network');
+
+    // @ts-expect-error translated text is not a message key
+    act(() => result.current.show('Something went wrong. Please try again.'));
+    // @ts-expect-error a misspelled key is not a message key
+    act(() => result.current.show('common.error.netwrk'));
+  });
+
   it('starts with no message', () => {
     const { result } = renderHook(() => useAlertMessage());
 
@@ -12,8 +27,8 @@ describe('useAlertMessage', () => {
   it('shows and clears a message', () => {
     const { result } = renderHook(() => useAlertMessage());
 
-    act(() => result.current.show('Name is required.'));
-    expect(result.current.message).toBe('Name is required.');
+    act(() => result.current.show('common.error.network'));
+    expect(result.current.message).toBe('common.error.network');
 
     act(() => result.current.clear());
     expect(result.current.message).toBeNull();
@@ -24,15 +39,15 @@ describe('useAlertMessage', () => {
   it('gives every show a new key, even for the same text cleared in the same tick', () => {
     const { result } = renderHook(() => useAlertMessage());
 
-    act(() => result.current.show('Name is required.'));
+    act(() => result.current.show('common.error.network'));
     const firstKey = result.current.key;
 
     act(() => {
       result.current.clear();
-      result.current.show('Name is required.');
+      result.current.show('common.error.network');
     });
 
-    expect(result.current.message).toBe('Name is required.');
+    expect(result.current.message).toBe('common.error.network');
     expect(result.current.key).not.toBe(firstKey);
   });
 
@@ -40,7 +55,7 @@ describe('useAlertMessage', () => {
     const { result, rerender } = renderHook(() => useAlertMessage());
     const { show, clear } = result.current;
 
-    act(() => result.current.show('Name is required.'));
+    act(() => result.current.show('common.error.network'));
     rerender();
 
     expect(result.current.show).toBe(show);

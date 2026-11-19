@@ -7,6 +7,7 @@ import { Alert } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
 import { mapAssignmentStatusToLabelKey } from './assignment-status-labels';
 import { mapApiErrorToMessageKey } from './error-messages';
+import type { MessageKey } from '../i18n/message-key';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -42,13 +43,15 @@ export type AssignmentOps = {
   reactivate: (userId: string) => Promise<unknown>;
 };
 
+// Only `ineligible` is a MessageKey: it is the one key the section passes to
+// useAlertMessage().show (EN-210). The others go straight to t().
 export type AssignmentSectionKeys = {
   title: string;
   empty: string;
   assignLabel: string;
   confirmTitle: string;
   confirmMessage: string;
-  ineligible: string;
+  ineligible: MessageKey;
 };
 
 export type AssignmentSectionProps = {
@@ -115,7 +118,7 @@ export function AssignmentSection({
   // (design.md Interfaces/Contracts AssignmentSectionProps.keys.ineligible;
   // tasks.md 3.2, PR2 review flag). Every other code/status keeps the
   // generic mapper's result unchanged.
-  function resolveAssignErrorKey(error: unknown): string {
+  function resolveAssignErrorKey(error: unknown): MessageKey {
     const apiError = error instanceof ApiError ? error : new ApiError(0);
     if (apiError.status === 409 && apiError.code === 'INELIGIBLE_ROLE') {
       return keys.ineligible;

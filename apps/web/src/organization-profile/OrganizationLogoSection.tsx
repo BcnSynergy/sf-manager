@@ -10,6 +10,7 @@ import {
 import { Alert, StatusRegion } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAlertMessage } from '../components/use-alert-message';
+import type { MessageKey } from '../i18n/message-key';
 
 // organization-logo S2: the API's own limits, checked here first so an
 // obviously wrong file never costs a request. The API still decides by the
@@ -218,7 +219,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
 
 // Branches on status and code only, never on the server's message text
 // (organization-profile-admin-ui, "No Server-Message String Coupling").
-function uploadErrorKey(error: unknown): string {
+function uploadErrorKey(error: unknown): MessageKey {
   if (error instanceof ApiError && error.status === HTTP_PAYLOAD_TOO_LARGE) {
     return 'organizationProfile.logoTooLargeError';
   }

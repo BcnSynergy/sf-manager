@@ -1,11 +1,12 @@
 import type { ApiError } from '../api/client';
 import type { ReviewTemplateErrorCode } from '../api/review-template';
+import type { MessageKey } from '../i18n/message-key';
 
 // Maps a caught ApiError{status,code} to an i18n key — mirrors
 // checklist-question/error-messages.ts's contract exactly (spec "Coded
 // Error Handling Without Server-Message Coupling"). This function reads
 // only `status` and `code`; it MUST NEVER read `.message`.
-const CODE_MESSAGE_KEYS: Record<ReviewTemplateErrorCode, string> = {
+const CODE_MESSAGE_KEYS: Record<ReviewTemplateErrorCode, MessageKey> = {
   REVIEW_TEMPLATE_NOT_FOUND: 'reviewTemplate.error.notFound',
   REVIEW_TEMPLATE_NOT_EDITABLE: 'reviewTemplate.error.notEditable',
   REVIEW_TEMPLATE_EMPTY: 'reviewTemplate.error.empty',
@@ -19,7 +20,7 @@ const HTTP_NOT_FOUND = 404;
 
 const NETWORK_ERROR_KEY = 'common.error.network';
 
-export function mapApiErrorToMessageKey(error: ApiError): string {
+export function mapApiErrorToMessageKey(error: ApiError): MessageKey {
   if (error.code !== undefined && error.code in CODE_MESSAGE_KEYS) {
     return CODE_MESSAGE_KEYS[error.code as ReviewTemplateErrorCode];
   }
