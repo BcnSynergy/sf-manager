@@ -458,6 +458,42 @@ describe('ReviewTemplateDetailPage', () => {
       );
       expect(await screen.findByTestId('review-template-list-sentinel')).toBeInTheDocument();
     });
+
+    // EN-209: the alert stores the i18n key, so it follows a language switch.
+    it('shows the delete error in the new language after a language switch', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+      mockedSoftDeleteDraftReviewTemplate.mockRejectedValue(new ApiError(500));
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-template-detail-delete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      await screen.findByTestId('review-template-detail-delete-error');
+
+      await expectAlertFollowsLanguage(
+        'review-template-detail-delete-error',
+        'common.error.network',
+      );
+    });
+
+    // EN-209: the alert stores the i18n key, so it follows a language switch.
+    it('shows the save error in the new language after a language switch', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+      mockedSetReviewTemplateQuestions.mockRejectedValue(new ApiError(500));
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-template-detail-save'));
+
+      await screen.findByTestId('review-template-detail-save-error');
+
+      await expectAlertFollowsLanguage('review-template-detail-save-error', 'common.error.network');
+    });
   });
 
   describe('design system', () => {

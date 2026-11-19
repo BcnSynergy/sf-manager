@@ -169,6 +169,27 @@ describe('MaintenanceCompanyCreatePage', () => {
     expect(await screen.findByTestId('maintenance-company-create-error')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateMaintenanceCompany.mockRejectedValue(new ApiError(0));
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('maintenance-company-create-name'), {
+      target: { value: VALID_NAME },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-tax-id'), {
+      target: { value: VALID_TAX_ID },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-contact-info'), {
+      target: { value: VALID_CONTACT_INFO },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-create-submit'));
+
+    await screen.findByTestId('maintenance-company-create-error');
+
+    await expectAlertFollowsLanguage('maintenance-company-create-error', 'common.error.network');
+  });
+
   describe('design system', () => {
     it('renders the form under a page header, one field group per label and control', () => {
       renderPage();

@@ -145,6 +145,19 @@ describe('CommunityEditPage', () => {
     expect(screen.queryByTestId('communities-list-sentinel')).not.toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListCommunities.mockResolvedValue([communityA, communityB]);
+    mockedUpdateCommunity.mockRejectedValue(new ApiError(400));
+    renderPage(communityB.id);
+
+    fireEvent.click(await screen.findByTestId('community-edit-submit'));
+
+    await screen.findByTestId('community-edit-error');
+
+    await expectAlertFollowsLanguage('community-edit-error', 'community.error.validationFailed');
+  });
+
   describe('design system', () => {
     it('renders the loading, not-found and error states in empty-state boxes under a page header', async () => {
       mockedListCommunities.mockReturnValue(new Promise(() => {}));
