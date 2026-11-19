@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunityEditPage } from './CommunityEditPage';
@@ -130,14 +131,7 @@ describe('CommunityEditPage', () => {
 
     await screen.findByTestId('community-edit-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('community-edit-error')).toHaveTextContent(
-        i18n.getFixedT('es')('community.edit.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage('community-edit-error', 'community.edit.validationError');
   });
 
   it('shows a mapped error message on a server-side rejection, without reading ApiError.message', async () => {

@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { InspectableElementEditPage } from './InspectableElementEditPage';
@@ -199,14 +200,10 @@ describe('InspectableElementEditPage', () => {
 
     await screen.findByTestId('inspectable-element-edit-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('inspectable-element-edit-error')).toHaveTextContent(
-        i18n.getFixedT('es')('inspectableElement.edit.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'inspectable-element-edit-error',
+      'inspectableElement.edit.validationError',
+    );
   });
 
   it('shows the generic not-found message when the update is rejected with code: INSPECTABLE_ELEMENT_NOT_FOUND', async () => {

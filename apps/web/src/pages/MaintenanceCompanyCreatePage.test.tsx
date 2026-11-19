@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import { MaintenanceCompanyCreatePage } from './MaintenanceCompanyCreatePage';
@@ -92,14 +93,10 @@ describe('MaintenanceCompanyCreatePage', () => {
 
     await screen.findByTestId('maintenance-company-create-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('maintenance-company-create-error')).toHaveTextContent(
-        i18n.getFixedT('es')('maintenanceCompany.create.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'maintenance-company-create-error',
+      'maintenanceCompany.create.validationError',
+    );
   });
 
   it('navigates to the maintenance companies list without a manual reload on a valid submission', async () => {

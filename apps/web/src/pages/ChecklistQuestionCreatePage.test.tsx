@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionCreatePage } from './ChecklistQuestionCreatePage';
@@ -87,14 +88,10 @@ describe('ChecklistQuestionCreatePage', () => {
 
     await screen.findByTestId('checklist-question-create-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('checklist-question-create-error')).toHaveTextContent(
-        i18n.getFixedT('es')('checklistQuestion.create.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'checklist-question-create-error',
+      'checklistQuestion.create.validationError',
+    );
   });
 
   it('creates the question and navigates to the list without a manual reload on valid submission (spec: Valid submission creates and lists the question)', async () => {

@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
@@ -158,14 +159,10 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     chooseFile(logoFile(2 * 1024 * 1024 + 1));
     fireEvent.click(screen.getByTestId('organization-logo-upload'));
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('organization-logo-error')).toHaveTextContent(
-        i18n.getFixedT('es')('organizationProfile.logoTooLargeError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'organization-logo-error',
+      'organizationProfile.logoTooLargeError',
+    );
   });
 
   it('accepts a file of exactly 2 MB', async () => {

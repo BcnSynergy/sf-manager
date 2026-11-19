@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionEditPage } from './ChecklistQuestionEditPage';
@@ -128,14 +129,10 @@ describe('ChecklistQuestionEditPage', () => {
 
     await screen.findByTestId('checklist-question-edit-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('checklist-question-edit-error')).toHaveTextContent(
-        i18n.getFixedT('es')('checklistQuestion.edit.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'checklist-question-edit-error',
+      'checklistQuestion.edit.validationError',
+    );
   });
 
   it('requires confirmation before soft-deleting, and the confirm copy does not imply a blocking dependency (spec: Confirmed Soft-Delete)', async () => {

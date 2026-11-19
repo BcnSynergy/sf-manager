@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewTemplateApi from '../api/review-template';
 import { ReviewTemplateCreatePage } from './ReviewTemplateCreatePage';
@@ -79,14 +80,10 @@ describe('ReviewTemplateCreatePage', () => {
 
     await screen.findByTestId('review-template-create-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('review-template-create-error')).toHaveTextContent(
-        i18n.getFixedT('es')('reviewTemplate.create.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'review-template-create-error',
+      'reviewTemplate.create.validationError',
+    );
   });
 
   it('creates the draft and navigates to the list without a manual reload on valid submission (spec: Valid submission creates the draft)', async () => {

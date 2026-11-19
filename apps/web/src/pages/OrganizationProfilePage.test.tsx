@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
@@ -361,14 +362,10 @@ describe('OrganizationProfilePage', () => {
 
     await screen.findByTestId('organization-profile-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('organization-profile-error')).toHaveTextContent(
-        i18n.getFixedT('es')('organizationProfile.clearedFieldError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'organization-profile-error',
+      'organizationProfile.clearedFieldError',
+    );
   });
 
   it('keeps the entered values and shows an error when the save request fails', async () => {

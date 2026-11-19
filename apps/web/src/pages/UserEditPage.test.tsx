@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import type { ManagerCapability } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
@@ -189,14 +190,7 @@ describe('UserEditPage', () => {
 
     await screen.findByTestId('user-edit-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('user-edit-error')).toHaveTextContent(
-        i18n.getFixedT('es')('users.edit.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage('user-edit-error', 'users.edit.validationError');
   });
 
   it('shows a distinct last-admin-lockout message on a 409 LAST_SYSTEM_ADMIN response', async () => {

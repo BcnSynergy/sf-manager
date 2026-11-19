@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import i18n from '../i18n';
+import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { InspectableElementCreatePage } from './InspectableElementCreatePage';
@@ -117,14 +118,10 @@ describe('InspectableElementCreatePage', () => {
 
     await screen.findByTestId('inspectable-element-create-error');
 
-    await act(() => i18n.changeLanguage('es'));
-    try {
-      expect(screen.getByTestId('inspectable-element-create-error')).toHaveTextContent(
-        i18n.getFixedT('es')('inspectableElement.create.validationError'),
-      );
-    } finally {
-      await act(() => i18n.changeLanguage('en'));
-    }
+    await expectAlertFollowsLanguage(
+      'inspectable-element-create-error',
+      'inspectableElement.create.validationError',
+    );
   });
 
   it('navigates to the community elements list without a manual reload on a valid submission', async () => {
