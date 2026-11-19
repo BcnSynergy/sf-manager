@@ -172,8 +172,6 @@ describe('ReviewSessionElementPage', () => {
     expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
   });
 
-  // EN-76: the handler clears the error and sets the same text again in
-  // one tick; the alert must still be a new element so it is announced.
   // EN-203: the alert stores the i18n key, so it follows a language switch.
   it('shows the save error in the new language after a language switch', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
@@ -190,6 +188,8 @@ describe('ReviewSessionElementPage', () => {
     );
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
   it('announces the save error again when the same incomplete answers are saved again', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
 

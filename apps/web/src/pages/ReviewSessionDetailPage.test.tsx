@@ -108,8 +108,6 @@ describe('ReviewSessionDetailPage', () => {
     expect(screen.queryByTestId('element-page')).not.toBeInTheDocument();
   });
 
-  // EN-76: the handler clears the error and sets the same text again in
-  // one tick; the alert must still be a new element so it is announced.
   // EN-203: the alert stores the i18n key, so it follows a language switch.
   it('shows the code validation error in the new language after a language switch', async () => {
     mockedReadReviewSession.mockResolvedValue(draftSession);
@@ -124,6 +122,8 @@ describe('ReviewSessionDetailPage', () => {
     );
   });
 
+  // EN-76: the handler clears the error and sets the same text again in
+  // one tick; the alert must still be a new element so it is announced.
   it('announces the code validation error again when an empty code is submitted again', async () => {
     mockedReadReviewSession.mockResolvedValue(draftSession);
 
