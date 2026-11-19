@@ -123,7 +123,10 @@ export function AssignmentSection({
     return mapApiErrorToMessageKey(apiError);
   }
 
-  const candidates = candidateList.state === 'loaded' ? candidateList.users : [];
+  // Without the rows the section cannot tell who already has one, so it
+  // offers nobody until they load.
+  const candidates =
+    candidateList.state === 'loaded' && loadState === 'loaded' ? candidateList.users : [];
   const emailById = new Map(candidates.map((candidate) => [candidate.id, candidate.email]));
   const assignedUserIds = new Set(rows.map((row) => row.userId));
   // A user with a deactivated row is reactivated from that row, not assigned

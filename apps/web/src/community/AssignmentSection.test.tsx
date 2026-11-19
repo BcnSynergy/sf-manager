@@ -106,6 +106,20 @@ describe('AssignmentSection', () => {
     expect(screen.queryByTestId('representatives-assign-submit')).not.toBeInTheDocument();
   });
 
+  it('offers no user when the assignment list failed, since it cannot tell who has a row', async () => {
+    const ops = makeOps({ list: vi.fn().mockRejectedValue(new ApiError(0)) });
+
+    renderSection(ops, 'representatives', loaded([{ id: 'rep-1', email: 'rep-1@example.com' }]));
+
+    await screen.findByTestId('representatives-error');
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).toEqual(['']);
+  });
+
   it('still reactivates a deactivated row when the user list failed', async () => {
     const ops = makeOps({
       list: vi
@@ -113,7 +127,7 @@ describe('AssignmentSection', () => {
         .mockResolvedValueOnce([
           { communityId: 'c1', userId: 'user-old', deactivatedAt: '2026-08-01T00:00:00.000Z' },
         ])
-        .mockResolvedValueOnce([{ communityId: 'c1', userId: 'user-old', deactivatedAt: null }]),
+        .mockResolvedValue([{ communityId: 'c1', userId: 'user-old', deactivatedAt: null }]),
     });
 
     renderSection(ops, 'representatives', { state: 'error', errorKey: 'common.error.network' });
