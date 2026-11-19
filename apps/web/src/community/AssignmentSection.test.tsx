@@ -471,6 +471,32 @@ describe('AssignmentSection', () => {
     expect(screen.getByTestId('representatives-row-new-active')).toHaveTextContent('Active');
   });
 
+  it('forgets a selection that stops being offered, so offering the user again does not reselect them (EN-208)', async () => {
+    const ops = makeOps();
+    const { rerender } = renderSection(ops);
+    const select = await screen.findByTestId<HTMLSelectElement>('representatives-assign-input');
+
+    fireEvent.change(select, { target: { value: 'user-new' } });
+    expect(select.value).toBe('user-new');
+
+    const withoutSelected = defaultCandidates.filter((candidate) => candidate.id !== 'user-new');
+    const renderWith = (users: AssignmentCandidate[]) =>
+      rerender(
+        <AssignmentSection
+          ops={ops}
+          candidates={loaded(users)}
+          testIdPrefix="representatives"
+          keys={keys}
+        />,
+      );
+
+    renderWith(withoutSelected);
+    expect(select.value).toBe('');
+
+    renderWith(defaultCandidates);
+    expect(select.value).toBe('');
+  });
+
   it('supports a different testIdPrefix without any behavioral prop', async () => {
     const ops = makeOps({
       list: vi

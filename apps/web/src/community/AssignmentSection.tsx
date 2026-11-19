@@ -133,10 +133,14 @@ export function AssignmentSection({
   // again, so every user with a row is left out.
   const assignableCandidates = candidates.filter((candidate) => !assignedUserIds.has(candidate.id));
   // A refresh can drop the selected user (another admin assigned them
-  // meanwhile); the selection then counts as empty, as the select shows.
-  const selectedUserId = assignableCandidates.some((candidate) => candidate.id === userIdInput)
-    ? userIdInput
-    : '';
+  // meanwhile). The selection is then forgotten, not just hidden, so the
+  // user is not reselected if they are offered again (EN-208). Adjusting
+  // state during render avoids an extra effect pass.
+  const selectionOffered = assignableCandidates.some((candidate) => candidate.id === userIdInput);
+  if (userIdInput !== '' && !selectionOffered) {
+    setUserIdInput('');
+  }
+  const selectedUserId = selectionOffered ? userIdInput : '';
 
   async function handleAssignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
