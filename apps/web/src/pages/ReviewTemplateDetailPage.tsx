@@ -188,7 +188,7 @@ export function ReviewTemplateDetailPage() {
       applyTemplate(updated);
     } catch (caughtError) {
       showSaveError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
     } finally {
       setSaving(false);
@@ -212,7 +212,7 @@ export function ReviewTemplateDetailPage() {
       applyTemplate(refreshed);
     } catch (caughtError) {
       showActivateError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
     } finally {
       setActivating(false);
@@ -235,7 +235,7 @@ export function ReviewTemplateDetailPage() {
       navigate('/review-templates');
     } catch (caughtError) {
       showDeleteError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDeleting(false);
     }
@@ -349,7 +349,7 @@ export function ReviewTemplateDetailPage() {
           key={activateErrorAlertKey}
           tone="danger"
           testId="review-template-detail-activate-error"
-          message={activateError}
+          message={t(activateError)}
         />
       )}
       {isDraft && deleteError && (
@@ -357,7 +357,7 @@ export function ReviewTemplateDetailPage() {
           key={deleteErrorAlertKey}
           tone="danger"
           testId="review-template-detail-delete-error"
-          message={deleteError}
+          message={t(deleteError)}
         />
       )}
 
@@ -490,7 +490,7 @@ export function ReviewTemplateDetailPage() {
               key={saveErrorAlertKey}
               tone="danger"
               testId="review-template-detail-save-error"
-              message={saveError}
+              message={t(saveError)}
             />
           )}
           {/* Secondary on purpose: Activate in the page header is the one

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import * as reviewTemplateApi from '../api/review-template';
@@ -403,6 +404,24 @@ describe('ReviewTemplateDetailPage', () => {
       await waitFor(() => expect(mockedActivateReviewTemplate).toHaveBeenCalledWith(TEMPLATE_ID));
       expect(await screen.findByTestId('review-template-detail-status')).toHaveTextContent(
         'Active',
+      );
+    });
+
+    // EN-203: the alert stores the i18n key, so it follows a language switch.
+    it('shows the activation error in the new language after a language switch', async () => {
+      mockedReadReviewTemplate.mockResolvedValue(draftTemplate);
+      mockedListChecklistQuestions.mockResolvedValue([]);
+      mockedListReviewTemplates.mockResolvedValue([]);
+      mockedActivateReviewTemplate.mockRejectedValue(new ApiError(409, 'REVIEW_TEMPLATE_EMPTY'));
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-template-detail-activate'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      await screen.findByTestId('review-template-detail-activate-error');
+
+      await expectAlertFollowsLanguage(
+        'review-template-detail-activate-error',
+        'reviewTemplate.error.empty',
       );
     });
 

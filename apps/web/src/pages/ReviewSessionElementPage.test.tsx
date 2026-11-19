@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
 import { ReviewSessionElementPage } from './ReviewSessionElementPage';
@@ -173,6 +174,22 @@ describe('ReviewSessionElementPage', () => {
 
   // EN-76: the handler clears the error and sets the same text again in
   // one tick; the alert must still be a new element so it is announced.
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the save error in the new language after a language switch', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    renderPage();
+
+    await screen.findByTestId('review-session-element-question-q1');
+    fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
+    fireEvent.click(screen.getByTestId('review-session-element-save'));
+    await screen.findByTestId('review-session-element-save-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-element-save-error',
+      'reviewSession.error.answersDoNotMatchTemplate',
+    );
+  });
+
   it('announces the save error again when the same incomplete answers are saved again', async () => {
     mockedResolveElementByCode.mockResolvedValue(resolved);
 
