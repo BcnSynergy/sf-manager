@@ -161,7 +161,7 @@ export function UserEditPage() {
       managerCapabilities,
     });
     if (!result.success) {
-      showError(t('users.edit.validationError'));
+      showError('users.edit.validationError');
       return;
     }
 
@@ -175,7 +175,7 @@ export function UserEditPage() {
       navigate('/users');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -283,7 +283,7 @@ export function UserEditPage() {
           </fieldset>
         )}
         {error && (
-          <Alert key={errorAlertKey} tone="danger" testId="user-edit-error" message={error} />
+          <Alert key={errorAlertKey} tone="danger" testId="user-edit-error" message={t(error)} />
         )}
         <div className="sf-actions">
           <button

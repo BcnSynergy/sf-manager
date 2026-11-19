@@ -65,7 +65,7 @@ export function ReviewTemplateCreatePage() {
       name,
     });
     if (!result.success) {
-      showError(t('reviewTemplate.create.validationError'));
+      showError('reviewTemplate.create.validationError');
       return;
     }
 
@@ -75,7 +75,7 @@ export function ReviewTemplateCreatePage() {
       navigate('/review-templates');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -138,7 +138,7 @@ export function ReviewTemplateCreatePage() {
             key={errorAlertKey}
             tone="danger"
             testId="review-template-create-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

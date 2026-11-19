@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import type { ManagerCapability } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
@@ -175,6 +176,21 @@ describe('UserEditPage', () => {
     const second = screen.getByTestId('user-edit-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    renderPage(otherUser.id);
+
+    fireEvent.change(await screen.findByTestId('user-edit-email'), {
+      target: { value: 'not-an-email' },
+    });
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    await screen.findByTestId('user-edit-error');
+
+    await expectAlertFollowsLanguage('user-edit-error', 'users.edit.validationError');
   });
 
   it('shows a distinct last-admin-lockout message on a 409 LAST_SYSTEM_ADMIN response', async () => {

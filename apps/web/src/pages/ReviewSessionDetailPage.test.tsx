@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
 import { ReviewSessionDetailPage } from './ReviewSessionDetailPage';
@@ -105,6 +106,20 @@ describe('ReviewSessionDetailPage', () => {
 
     expect(await screen.findByTestId('review-session-detail-code-error')).toBeInTheDocument();
     expect(screen.queryByTestId('element-page')).not.toBeInTheDocument();
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the code validation error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-code-submit'));
+    await screen.findByTestId('review-session-detail-code-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-detail-code-error',
+      'reviewSession.detail.codeValidationError',
+    );
   });
 
   // EN-76: the handler clears the error and sets the same text again in

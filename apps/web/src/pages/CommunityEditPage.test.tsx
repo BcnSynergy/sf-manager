@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunityEditPage } from './CommunityEditPage';
@@ -116,6 +117,21 @@ describe('CommunityEditPage', () => {
     const second = screen.getByTestId('community-edit-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListCommunities.mockResolvedValue([communityA, communityB]);
+    renderPage(communityB.id);
+
+    fireEvent.change(await screen.findByTestId('community-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('community-edit-submit'));
+
+    await screen.findByTestId('community-edit-error');
+
+    await expectAlertFollowsLanguage('community-edit-error', 'community.edit.validationError');
   });
 
   it('shows a mapped error message on a server-side rejection, without reading ApiError.message', async () => {

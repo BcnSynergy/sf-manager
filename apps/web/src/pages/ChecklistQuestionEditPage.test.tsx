@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionEditPage } from './ChecklistQuestionEditPage';
@@ -114,6 +115,24 @@ describe('ChecklistQuestionEditPage', () => {
     const second = screen.getByTestId('checklist-question-edit-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([question]);
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('checklist-question-edit-text'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-edit-submit'));
+
+    await screen.findByTestId('checklist-question-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'checklist-question-edit-error',
+      'checklistQuestion.edit.validationError',
+    );
   });
 
   it('requires confirmation before soft-deleting, and the confirm copy does not imply a blocking dependency (spec: Confirmed Soft-Delete)', async () => {

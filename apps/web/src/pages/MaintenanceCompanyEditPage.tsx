@@ -94,7 +94,7 @@ export function MaintenanceCompanyEditPage() {
 
     const result = updateMaintenanceCompanySchema.safeParse({ name, taxId, contactInfo });
     if (!result.success) {
-      showError(t('maintenanceCompany.edit.validationError'));
+      showError('maintenanceCompany.edit.validationError');
       return;
     }
 
@@ -108,7 +108,7 @@ export function MaintenanceCompanyEditPage() {
       navigate('/maintenance-companies');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -131,7 +131,7 @@ export function MaintenanceCompanyEditPage() {
       navigate('/maintenance-companies');
     } catch (caughtError) {
       showDeleteError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDeleting(false);
     }
@@ -217,7 +217,7 @@ export function MaintenanceCompanyEditPage() {
             key={errorAlertKey}
             tone="danger"
             testId="maintenance-company-edit-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">
@@ -238,7 +238,7 @@ export function MaintenanceCompanyEditPage() {
           key={deleteErrorAlertKey}
           tone="danger"
           testId="maintenance-company-edit-delete-error"
-          message={deleteError}
+          message={t(deleteError)}
         />
       )}
       <div className="sf-actions">

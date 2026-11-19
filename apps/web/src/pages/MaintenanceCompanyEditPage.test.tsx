@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import { MaintenanceCompanyEditPage } from './MaintenanceCompanyEditPage';
@@ -138,6 +139,25 @@ describe('MaintenanceCompanyEditPage', () => {
     const second = screen.getByTestId('maintenance-company-edit-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
+
+    renderPage(companyB.id);
+
+    fireEvent.change(await screen.findByTestId('maintenance-company-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-edit-submit'));
+
+    await screen.findByTestId('maintenance-company-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-error',
+      'maintenanceCompany.edit.validationError',
+    );
   });
 
   it('shows the duplicate-taxId message when the update is rejected with code: TAX_ID_ALREADY_IN_USE', async () => {

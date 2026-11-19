@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { InspectableElementCreatePage } from './InspectableElementCreatePage';
@@ -98,6 +99,29 @@ describe('InspectableElementCreatePage', () => {
     const second = screen.getByTestId('inspectable-element-create-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('inspectable-element-create-name'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByTestId('inspectable-element-create-location'), {
+      target: { value: VALID_LOCATION },
+    });
+    fireEvent.change(screen.getByTestId('inspectable-element-create-installed-at'), {
+      target: { value: VALID_INSTALLED_AT },
+    });
+    fireEvent.click(screen.getByTestId('inspectable-element-create-submit'));
+
+    await screen.findByTestId('inspectable-element-create-error');
+
+    await expectAlertFollowsLanguage(
+      'inspectable-element-create-error',
+      'inspectableElement.create.validationError',
+    );
   });
 
   it('navigates to the community elements list without a manual reload on a valid submission', async () => {

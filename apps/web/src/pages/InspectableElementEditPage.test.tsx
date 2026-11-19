@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { InspectableElementEditPage } from './InspectableElementEditPage';
@@ -184,6 +185,25 @@ describe('InspectableElementEditPage', () => {
     const second = screen.getByTestId('inspectable-element-edit-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA]);
+
+    renderPage(elementA.id);
+
+    fireEvent.change(await screen.findByTestId('inspectable-element-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('inspectable-element-edit-submit'));
+
+    await screen.findByTestId('inspectable-element-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'inspectable-element-edit-error',
+      'inspectableElement.edit.validationError',
+    );
   });
 
   it('shows the generic not-found message when the update is rejected with code: INSPECTABLE_ELEMENT_NOT_FOUND', async () => {

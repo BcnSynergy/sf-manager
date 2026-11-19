@@ -61,7 +61,7 @@ export function CommunityEditPage() {
 
     const result = updateCommunitySchema.safeParse({ name, address, locale });
     if (!result.success) {
-      showError(t('community.edit.validationError'));
+      showError('community.edit.validationError');
       return;
     }
 
@@ -75,7 +75,7 @@ export function CommunityEditPage() {
       navigate('/communities');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -156,7 +156,12 @@ export function CommunityEditPage() {
           </select>
         </div>
         {error && (
-          <Alert key={errorAlertKey} tone="danger" testId="community-edit-error" message={error} />
+          <Alert
+            key={errorAlertKey}
+            tone="danger"
+            testId="community-edit-error"
+            message={t(error)}
+          />
         )}
         <div className="sf-actions">
           <button
