@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunityCreatePage } from './CommunityCreatePage';
@@ -59,6 +59,28 @@ describe('CommunityCreatePage', () => {
     const second = screen.getByTestId('community-create-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('community-create-name'), { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('community-create-address'), {
+      target: { value: VALID_ADDRESS },
+    });
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    await screen.findByTestId('community-create-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('community-create-error')).toHaveTextContent(
+        i18n.getFixedT('es')('community.create.validationError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('renders locale options through the locale label map, not the raw enum value', () => {

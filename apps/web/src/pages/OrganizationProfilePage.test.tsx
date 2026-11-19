@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
@@ -346,6 +346,29 @@ describe('OrganizationProfilePage', () => {
     const second = screen.getByTestId('organization-profile-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('organization-profile-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    await screen.findByTestId('organization-profile-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('organization-profile-error')).toHaveTextContent(
+        i18n.getFixedT('es')('organizationProfile.clearedFieldError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('keeps the entered values and shows an error when the save request fails', async () => {

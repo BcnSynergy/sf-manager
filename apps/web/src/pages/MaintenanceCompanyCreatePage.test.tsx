@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import { MaintenanceCompanyCreatePage } from './MaintenanceCompanyCreatePage';
@@ -73,6 +73,33 @@ describe('MaintenanceCompanyCreatePage', () => {
     const second = screen.getByTestId('maintenance-company-create-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('maintenance-company-create-name'), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-tax-id'), {
+      target: { value: VALID_TAX_ID },
+    });
+    fireEvent.change(screen.getByTestId('maintenance-company-create-contact-info'), {
+      target: { value: VALID_CONTACT_INFO },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-create-submit'));
+
+    await screen.findByTestId('maintenance-company-create-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('maintenance-company-create-error')).toHaveTextContent(
+        i18n.getFixedT('es')('maintenanceCompany.create.validationError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('navigates to the maintenance companies list without a manual reload on a valid submission', async () => {

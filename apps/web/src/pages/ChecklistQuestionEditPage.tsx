@@ -123,7 +123,7 @@ export function ChecklistQuestionEditPage() {
 
     const result = updateChecklistQuestionSchema.safeParse({ text, frequencies });
     if (!result.success) {
-      showError(t('checklistQuestion.edit.validationError'));
+      showError('checklistQuestion.edit.validationError');
       return;
     }
 
@@ -137,7 +137,7 @@ export function ChecklistQuestionEditPage() {
       navigate('/checklist-questions');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -160,7 +160,7 @@ export function ChecklistQuestionEditPage() {
       navigate('/checklist-questions');
     } catch (caughtError) {
       showDeleteError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDeleting(false);
     }
@@ -253,7 +253,7 @@ export function ChecklistQuestionEditPage() {
             key={errorAlertKey}
             tone="danger"
             testId="checklist-question-edit-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">
@@ -274,7 +274,7 @@ export function ChecklistQuestionEditPage() {
           key={deleteErrorAlertKey}
           tone="danger"
           testId="checklist-question-edit-delete-error"
-          message={deleteError}
+          message={t(deleteError)}
         />
       )}
       <div className="sf-actions">

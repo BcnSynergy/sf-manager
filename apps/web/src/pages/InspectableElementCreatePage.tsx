@@ -64,12 +64,12 @@ export function InspectableElementCreatePage() {
       installedAt,
     });
     if (!result.success) {
-      showError(t('inspectableElement.create.validationError'));
+      showError('inspectableElement.create.validationError');
       return;
     }
 
     if (communityId === undefined) {
-      showError(t('inspectableElement.error.notFound'));
+      showError('inspectableElement.error.notFound');
       return;
     }
 
@@ -79,7 +79,7 @@ export function InspectableElementCreatePage() {
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -173,7 +173,7 @@ export function InspectableElementCreatePage() {
             key={errorAlertKey}
             tone="danger"
             testId="inspectable-element-create-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

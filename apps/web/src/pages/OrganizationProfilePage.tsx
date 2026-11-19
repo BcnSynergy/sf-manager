@@ -160,18 +160,18 @@ export function OrganizationProfilePage() {
     }
 
     if (clearedAnExistingValue) {
-      showError(t('organizationProfile.clearedFieldError'));
+      showError('organizationProfile.clearedFieldError');
       return;
     }
 
     if (Object.keys(payload).length === 0) {
-      showError(t('organizationProfile.emptySubmitError'));
+      showError('organizationProfile.emptySubmitError');
       return;
     }
 
     const result = updateOrganizationProfileSchema.safeParse(payload);
     if (!result.success) {
-      showError(t('organizationProfile.validationError'));
+      showError('organizationProfile.validationError');
       return;
     }
 
@@ -183,7 +183,7 @@ export function OrganizationProfilePage() {
       setSaved(fieldValues);
       setSuccess(true);
     } catch {
-      showError(t('organizationProfile.saveError'));
+      showError('organizationProfile.saveError');
     } finally {
       setSubmitting(false);
     }
@@ -267,7 +267,7 @@ export function OrganizationProfilePage() {
             key={errorAlertKey}
             tone="danger"
             testId="organization-profile-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

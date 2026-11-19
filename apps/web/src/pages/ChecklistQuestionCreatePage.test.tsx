@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionCreatePage } from './ChecklistQuestionCreatePage';
@@ -74,6 +74,27 @@ describe('ChecklistQuestionCreatePage', () => {
     const second = screen.getByTestId('checklist-question-create-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('checklist-question-create-text'), {
+      target: { value: VALID_TEXT },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-create-submit'));
+
+    await screen.findByTestId('checklist-question-create-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('checklist-question-create-error')).toHaveTextContent(
+        i18n.getFixedT('es')('checklistQuestion.create.validationError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('creates the question and navigates to the list without a manual reload on valid submission (spec: Valid submission creates and lists the question)', async () => {

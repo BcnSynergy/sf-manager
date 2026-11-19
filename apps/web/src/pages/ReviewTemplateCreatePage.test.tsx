@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewTemplateApi from '../api/review-template';
 import { ReviewTemplateCreatePage } from './ReviewTemplateCreatePage';
@@ -69,6 +69,24 @@ describe('ReviewTemplateCreatePage', () => {
     const second = screen.getByTestId('review-template-create-error');
     expect(second).toHaveTextContent(first.textContent ?? '');
     expect(second).not.toBe(first);
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    await screen.findByTestId('review-template-create-error');
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('review-template-create-error')).toHaveTextContent(
+        i18n.getFixedT('es')('reviewTemplate.create.validationError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('creates the draft and navigates to the list without a manual reload on valid submission (spec: Valid submission creates the draft)', async () => {

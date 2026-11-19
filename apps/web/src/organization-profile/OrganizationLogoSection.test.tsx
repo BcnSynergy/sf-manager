@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import '../i18n';
 import i18n from '../i18n';
@@ -149,6 +149,23 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
       'The logo must be 2 MB or smaller.',
     );
     expect(mockedUpload).not.toHaveBeenCalled();
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the rejection in the new language after a language switch', async () => {
+    render(<OrganizationLogoSection hasLogo={false} />);
+
+    chooseFile(logoFile(2 * 1024 * 1024 + 1));
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await act(() => i18n.changeLanguage('es'));
+    try {
+      expect(screen.getByTestId('organization-logo-error')).toHaveTextContent(
+        i18n.getFixedT('es')('organizationProfile.logoTooLargeError'),
+      );
+    } finally {
+      await act(() => i18n.changeLanguage('en'));
+    }
   });
 
   it('accepts a file of exactly 2 MB', async () => {

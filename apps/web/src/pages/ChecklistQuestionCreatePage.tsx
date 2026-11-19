@@ -65,7 +65,7 @@ export function ChecklistQuestionCreatePage() {
       text,
     });
     if (!result.success) {
-      showError(t('checklistQuestion.create.validationError'));
+      showError('checklistQuestion.create.validationError');
       return;
     }
 
@@ -75,7 +75,7 @@ export function ChecklistQuestionCreatePage() {
       navigate('/checklist-questions');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -140,7 +140,7 @@ export function ChecklistQuestionCreatePage() {
             key={errorAlertKey}
             tone="danger"
             testId="checklist-question-create-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

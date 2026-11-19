@@ -75,11 +75,11 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
     setSuccessKey(null);
 
     if (file.size > LOGO_MAX_BYTES) {
-      showError(t('organizationProfile.logoTooLargeError'));
+      showError('organizationProfile.logoTooLargeError');
       return;
     }
     if (!LOGO_TYPES.includes(file.type)) {
-      showError(t('organizationProfile.logoUnsupportedError'));
+      showError('organizationProfile.logoUnsupportedError');
       return;
     }
 
@@ -96,7 +96,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       }
       setSuccessKey('organizationProfile.logoUploadSuccess');
     } catch (uploadError) {
-      showError(t(uploadErrorKey(uploadError)));
+      showError(uploadErrorKey(uploadError));
     } finally {
       setUploading(false);
     }
@@ -116,7 +116,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       // in the section.
       headingRef.current?.focus();
     } catch {
-      showError(t('organizationProfile.logoRemoveError'));
+      showError('organizationProfile.logoRemoveError');
       refocusRemoveRef.current = true;
     } finally {
       setRemoving(false);
@@ -177,7 +177,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
             key={errorAlertKey}
             tone="danger"
             testId="organization-logo-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

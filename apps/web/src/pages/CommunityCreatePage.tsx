@@ -43,7 +43,7 @@ export function CommunityCreatePage() {
 
     const result = createCommunitySchema.safeParse({ name, address, locale });
     if (!result.success) {
-      showError(t('community.create.validationError'));
+      showError('community.create.validationError');
       return;
     }
 
@@ -53,7 +53,7 @@ export function CommunityCreatePage() {
       navigate('/communities');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -107,7 +107,7 @@ export function CommunityCreatePage() {
             key={errorAlertKey}
             tone="danger"
             testId="community-create-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">
