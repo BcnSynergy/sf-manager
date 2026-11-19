@@ -10,14 +10,17 @@ import {
   reactivateRepresentative,
   reactivateTechnician,
 } from '../api/community';
-import { listUsers } from '../api/users';
+import { useEffect, useState } from 'react';
+import { ApiError } from '../api/client';
+import { listUsers, type User } from '../api/users';
 import type { Role } from '@sf-manager/validation';
 import { PageHeader } from '../components/PageHeader';
 import {
   AssignmentSection,
-  type AssignmentCandidate,
+  type AssignmentCandidates,
   type AssignmentOps,
 } from '../community/AssignmentSection';
+import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
 
@@ -39,14 +42,52 @@ const TECHNICIAN_KEYS = {
   ineligible: 'community.technicians.ineligible',
 };
 
+// EN-207: one GET /users per page visit, shared by both sections. An
+// assignment action changes no user, so the list is not requested again;
+// the section filters out users with a row after each refetch.
+type UserList =
+  { state: 'loading' } | { state: 'loaded'; users: User[] } | { state: 'error'; errorKey: string };
+
+function useUserList(): UserList {
+  const [userList, setUserList] = useState<UserList>({ state: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    listUsers()
+      .then((users) => {
+        if (!cancelled) {
+          setUserList({ state: 'loaded', users });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setUserList({
+            state: 'error',
+            errorKey: mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return userList;
+}
+
 // EN-57: the users each section may assign. Mirrors the API's only
 // eligibility rule (assignment-eligibility.policy.ts: the required role per
 // assignment kind); the API still enforces it with INELIGIBLE_ROLE.
-async function listCandidatesWithRole(role: Role): Promise<AssignmentCandidate[]> {
-  const users = await listUsers();
-  return users
-    .filter((user) => user.role === role)
-    .map((user) => ({ id: user.id, email: user.email }));
+function candidatesWithRole(userList: UserList, role: Role): AssignmentCandidates {
+  if (userList.state !== 'loaded') {
+    return userList;
+  }
+  return {
+    state: 'loaded',
+    users: userList.users
+      .filter((user) => user.role === role)
+      .map((user) => ({ id: user.id, email: user.email })),
+  };
 }
 
 // design.md Decision 3 — the only thing that differs between the two
@@ -55,7 +96,6 @@ async function listCandidatesWithRole(role: Role): Promise<AssignmentCandidate[]
 function buildRepresentativeOps(communityId: string): AssignmentOps {
   return {
     list: () => listRepresentatives(communityId),
-    listCandidates: () => listCandidatesWithRole('COMMUNITY_REPRESENTATIVE'),
     assign: (userId) => addRepresentative(communityId, userId),
     deactivate: (userId) => deactivateRepresentative(communityId, userId),
     reactivate: (userId) => reactivateRepresentative(communityId, userId),
@@ -65,7 +105,6 @@ function buildRepresentativeOps(communityId: string): AssignmentOps {
 function buildTechnicianOps(communityId: string): AssignmentOps {
   return {
     list: () => listTechnicians(communityId),
-    listCandidates: () => listCandidatesWithRole('MAINTENANCE_TECHNICIAN'),
     assign: (userId) => addTechnician(communityId, userId),
     deactivate: (userId) => deactivateTechnician(communityId, userId),
     reactivate: (userId) => reactivateTechnician(communityId, userId),
@@ -92,6 +131,7 @@ export function CommunityDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { community, loadState } = useCommunity(id);
+  const userList = useUserList();
 
   return (
     <main>
@@ -148,11 +188,13 @@ export function CommunityDetailPage() {
         <>
           <AssignmentSection
             ops={buildRepresentativeOps(id)}
+            candidates={candidatesWithRole(userList, 'COMMUNITY_REPRESENTATIVE')}
             testIdPrefix="representatives"
             keys={REPRESENTATIVE_KEYS}
           />
           <AssignmentSection
             ops={buildTechnicianOps(id)}
+            candidates={candidatesWithRole(userList, 'MAINTENANCE_TECHNICIAN')}
             testIdPrefix="technicians"
             keys={TECHNICIAN_KEYS}
           />
