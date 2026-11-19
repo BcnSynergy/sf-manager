@@ -106,6 +106,25 @@ describe('AssignmentSection', () => {
     expect(screen.queryByTestId('representatives-assign-submit')).not.toBeInTheDocument();
   });
 
+  it('still reactivates a deactivated row when the user list failed', async () => {
+    const ops = makeOps({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce([
+          { communityId: 'c1', userId: 'user-old', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+        ])
+        .mockResolvedValueOnce([{ communityId: 'c1', userId: 'user-old', deactivatedAt: null }]),
+    });
+
+    renderSection(ops, 'representatives', { state: 'error', errorKey: 'common.error.network' });
+
+    fireEvent.click(await screen.findByTestId('representatives-reactivate-user-old'));
+
+    await waitFor(() => expect(ops.reactivate).toHaveBeenCalledWith('user-old'));
+    expect(await screen.findByTestId('representatives-deactivate-user-old')).toBeInTheDocument();
+    expect(screen.getByTestId('representatives-candidates-error')).toBeInTheDocument();
+  });
+
   it('shows a disabled, empty picker while the user list is loading', async () => {
     renderSection(makeOps(), 'representatives', { state: 'loading' });
 
