@@ -1,5 +1,6 @@
 import type { ApiError } from '../api/client';
 import type { ReviewSessionErrorCode } from '../api/review-session';
+import type { MessageKey } from '../i18n/message-key';
 
 // Maps a caught ApiError{status,code} to an i18n key — same "read only
 // status/code, never .message" contract as every other error-messages.ts in
@@ -14,7 +15,7 @@ import type { ReviewSessionErrorCode } from '../api/review-session';
 // Decision 6), so mapping that one code to one message key already IS the
 // uniform-message guarantee; this mapper adds no further branching that
 // could reintroduce a per-cause message.
-const CODE_MESSAGE_KEYS: Record<ReviewSessionErrorCode, string> = {
+const CODE_MESSAGE_KEYS: Record<ReviewSessionErrorCode, MessageKey> = {
   COMMUNITY_NOT_IN_SCOPE: 'reviewSession.error.communityNotInScope',
   ACTIVE_TEMPLATE_NOT_FOUND: 'reviewSession.error.activeTemplateNotFound',
   OPEN_DRAFT_ALREADY_EXISTS: 'reviewSession.error.openDraftAlreadyExists',
@@ -31,7 +32,7 @@ const HTTP_BAD_REQUEST = 400;
 
 const NETWORK_ERROR_KEY = 'common.error.network';
 
-export function mapApiErrorToMessageKey(error: ApiError): string {
+export function mapApiErrorToMessageKey(error: ApiError): MessageKey {
   if (error.code !== undefined && error.code in CODE_MESSAGE_KEYS) {
     return CODE_MESSAGE_KEYS[error.code as ReviewSessionErrorCode];
   }

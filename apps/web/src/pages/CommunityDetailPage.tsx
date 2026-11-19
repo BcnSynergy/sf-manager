@@ -19,12 +19,13 @@ import {
   AssignmentSection,
   type AssignmentCandidates,
   type AssignmentOps,
+  type AssignmentSectionKeys,
 } from '../community/AssignmentSection';
 import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
 
-const REPRESENTATIVE_KEYS = {
+const REPRESENTATIVE_KEYS: AssignmentSectionKeys = {
   title: 'community.representatives.title',
   empty: 'community.representatives.empty',
   assignLabel: 'community.representatives.assignLabel',
@@ -33,7 +34,7 @@ const REPRESENTATIVE_KEYS = {
   ineligible: 'community.representatives.ineligible',
 };
 
-const TECHNICIAN_KEYS = {
+const TECHNICIAN_KEYS: AssignmentSectionKeys = {
   title: 'community.technicians.title',
   empty: 'community.technicians.empty',
   assignLabel: 'community.technicians.assignLabel',

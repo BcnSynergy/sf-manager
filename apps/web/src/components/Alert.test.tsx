@@ -61,7 +61,7 @@ describe('Alert', () => {
   // in one tick is a new alert element, so it is announced again.
   it('mounts a new alert element when the same message is shown again', () => {
     const { result } = renderHook(() => useAlertMessage());
-    act(() => result.current.show('Name is required.'));
+    act(() => result.current.show('common.error.network'));
     const page = () =>
       result.current.message === null ? null : (
         <Alert
@@ -76,12 +76,12 @@ describe('Alert', () => {
 
     act(() => {
       result.current.clear();
-      result.current.show('Name is required.');
+      result.current.show('common.error.network');
     });
     rerender(page());
 
     const second = screen.getByTestId('save-error');
-    expect(second).toHaveTextContent('Name is required.');
+    expect(second).toHaveTextContent('common.error.network');
     expect(second).not.toBe(first);
   });
 });

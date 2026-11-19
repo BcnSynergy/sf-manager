@@ -1,21 +1,22 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import type { Assignment } from '../api/community';
 import {
   AssignmentSection,
   type AssignmentCandidate,
   type AssignmentCandidates,
+  type AssignmentSectionKeys,
 } from './AssignmentSection';
 
-const keys = {
+const keys: AssignmentSectionKeys = {
   title: 'test.section.title',
   empty: 'test.section.empty',
   assignLabel: 'test.section.assignLabel',
   confirmTitle: 'test.section.confirmTitle',
   confirmMessage: 'test.section.confirmMessage',
-  ineligible: 'test.section.ineligible',
+  ineligible: 'community.representatives.ineligible',
 };
 
 // Every user id the assign tests pick from the select must be a candidate:
@@ -341,8 +342,8 @@ describe('AssignmentSection', () => {
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
 
     const errorNode = await screen.findByTestId('representatives-assign-error');
-    expect(errorNode).toHaveTextContent(keys.ineligible);
-    expect(errorNode).not.toHaveTextContent('community.error.ineligibleRole');
+    expect(errorNode).toHaveTextContent(i18n.t(keys.ineligible));
+    expect(errorNode).not.toHaveTextContent(i18n.t('community.error.ineligibleRole'));
   });
 
   it('requires confirmation before calling ops.deactivate', async () => {
