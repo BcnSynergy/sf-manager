@@ -37,8 +37,8 @@ project's Engram memory on 2026-10-09.
   transactional mail, or move to a relay without forced tracking (for
   example Amazon SES in an EU region) by changing the `SMTP_*` values and
   DNS only (ADR-018). The comment in `apps/web/src/pages/ResetPasswordPage.tsx`
-  that the fragment token "never reaches a server log" should be qualified
-  until then. Origin: `password-reset` T3 production check.
+  about the fragment token now names this exception (2026-11-20). Origin:
+  `password-reset` T3 production check.
 
 ### Low
 
@@ -53,20 +53,26 @@ project's Engram memory on 2026-10-09.
   deployment"), which runs the images CI publishes (EN-91); deploying
   from CI is EN-185.
 
-- **TD-52**: Two open Dependabot alerts in dev-only packages have no fix
-  inside the ranges their parents allow. Alert #71 (GHSA-g3hv-75wg-m249,
-  medium: denial of service via glob pattern expansion) hits `minimatch`
-  10.2.6, pulled by `eslint`, `@eslint/config-array`,
-  `@typescript-eslint/typescript-estree`, `test-exclude` and `glob` 13 (via
-  `@jest/reporters`), and 9.0.9 under `test-exclude`'s nested `glob` 10.5.0;
-  the fix is in 11.0.1, but the latest versions of those parents still ask
-  for `^10.2.x`. Alert #69 (GHSA-gcqx-w48m-w2h4, low: prototype poisoning in
-  `mergeObject()`) hits `deepmerge` 4.3.1 via `jest-config`; no patched
-  version exists. Both only process our own lint, test and coverage config,
-  never user input. Neither image ships them: the web image holds only the
-  built `dist`, and since EN-93 the API image installs production
-  dependencies only (`apps/api/Dockerfile`). Recheck when the parents move to `minimatch` 11 or `deepmerge` is
-  patched, and do not force either with `overrides`. Origin:
+- **TD-52**: Two open Dependabot alerts have no fix inside the ranges
+  their parents allow (rechecked 2026-11-20). Alert #71
+  (GHSA-g3hv-75wg-m249, medium: denial of service via glob pattern
+  expansion) hits `minimatch`; the fix is in 11.0.1. The latest `eslint`,
+  `@eslint/config-array`, `@typescript-eslint/typescript-estree` and `glob`
+  now ask for `^11`, but `test-exclude` still asks for `^10.2.2` (10.2.6,
+  plus 9.0.9 under its nested `glob` 10.5.0), so the alert stays open until
+  it moves. Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
+  `Schema.TemplateLiteral`) hits `effect` 3.20.0, which `@prisma/config`
+  pins exactly, also in its latest version (7.10.1); the fix is in 3.22.1.
+  `minimatch` is dev-only: it processes our own lint, test and coverage
+  config, and no image ships it (the web image holds only the built `dist`,
+  and since EN-93 the API image installs production dependencies only,
+  `apps/api/Dockerfile`). `effect` does ship in the API image, because
+  `prisma` is a production dependency (it applies migrations at start), but
+  `@prisma/config` uses it only to load our own `prisma.config.ts`, never
+  user input. Alert #69 (`deepmerge` 4.3.1 via `jest-config`) was closed by
+  GitHub on 2026-11-20 with the package unchanged. Recheck when
+  `test-exclude` moves to `minimatch` 11 or Prisma moves to `effect`
+  3.22.1+, and do not force either with `overrides`. Origin:
   `security-dev-alerts` triage, 2026-11-09.
 
 ## Resolved
