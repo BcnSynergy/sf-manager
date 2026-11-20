@@ -84,7 +84,7 @@ export function OrganizationProfilePage() {
   const [saved, setSaved] = useState<Record<ProfileFieldKey, string>>(EMPTY_PROFILE);
   const [hasLogo, setHasLogo] = useState(false);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

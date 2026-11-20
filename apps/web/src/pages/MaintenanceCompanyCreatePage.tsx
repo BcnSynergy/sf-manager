@@ -25,7 +25,7 @@ export function MaintenanceCompanyCreatePage() {
   const [taxId, setTaxId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

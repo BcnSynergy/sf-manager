@@ -49,7 +49,7 @@ export function ReviewSessionDetailPage() {
 
   const [code, setCode] = useState('');
   const {
-    message: codeError,
+    messageKey: codeError,
     key: codeErrorAlertKey,
     show: showCodeError,
     clear: clearCodeError,
@@ -58,7 +58,7 @@ export function ReviewSessionDetailPage() {
   const [pendingComplete, setPendingComplete] = useState(false);
   const [completing, setCompleting] = useState(false);
   const {
-    message: completeError,
+    messageKey: completeError,
     key: completeErrorAlertKey,
     show: showCompleteError,
     clear: clearCompleteError,
@@ -68,7 +68,7 @@ export function ReviewSessionDetailPage() {
   const [pendingDiscard, setPendingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const {
-    message: discardError,
+    messageKey: discardError,
     key: discardErrorAlertKey,
     show: showDiscardError,
     clear: clearDiscardError,

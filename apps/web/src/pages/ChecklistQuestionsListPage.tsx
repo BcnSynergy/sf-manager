@@ -36,7 +36,7 @@ export function ChecklistQuestionsListPage() {
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const {
-    message: deleteErrorKey,
+    messageKey: deleteErrorKey,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,

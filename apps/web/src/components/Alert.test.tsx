@@ -1,6 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Alert, StatusRegion } from './Alert';
+import i18n from '../i18n';
 import { useAlertMessage } from './use-alert-message';
 
 describe('Alert', () => {
@@ -58,17 +59,18 @@ describe('Alert', () => {
   });
 
   // EN-76: keyed by useAlertMessage, the same text shown again after a clear
-  // in one tick is a new alert element, so it is announced again.
+  // in one tick is a new alert element, so it is announced again. Like a real
+  // page, it renders the translated key (EN-212).
   it('mounts a new alert element when the same message is shown again', () => {
     const { result } = renderHook(() => useAlertMessage());
     act(() => result.current.show('common.error.network'));
     const page = () =>
-      result.current.message === null ? null : (
+      result.current.messageKey === null ? null : (
         <Alert
           key={result.current.key}
           tone="danger"
           testId="save-error"
-          message={result.current.message}
+          message={i18n.t(result.current.messageKey)}
         />
       );
     const { rerender } = render(page());
@@ -81,7 +83,7 @@ describe('Alert', () => {
     rerender(page());
 
     const second = screen.getByTestId('save-error');
-    expect(second).toHaveTextContent('common.error.network');
+    expect(second).toHaveTextContent('Something went wrong. Please try again.');
     expect(second).not.toBe(first);
   });
 });

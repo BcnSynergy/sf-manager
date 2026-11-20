@@ -55,7 +55,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const [successKey, setSuccessKey] = useState<string | null>(null);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

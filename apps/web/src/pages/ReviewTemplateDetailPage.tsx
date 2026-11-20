@@ -69,7 +69,7 @@ export function ReviewTemplateDetailPage() {
 
   const [saving, setSaving] = useState(false);
   const {
-    message: saveError,
+    messageKey: saveError,
     key: saveErrorAlertKey,
     show: showSaveError,
     clear: clearSaveError,
@@ -78,7 +78,7 @@ export function ReviewTemplateDetailPage() {
   const [pendingActivate, setPendingActivate] = useState(false);
   const [activating, setActivating] = useState(false);
   const {
-    message: activateError,
+    messageKey: activateError,
     key: activateErrorAlertKey,
     show: showActivateError,
     clear: clearActivateError,
@@ -87,7 +87,7 @@ export function ReviewTemplateDetailPage() {
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const {
-    message: deleteError,
+    messageKey: deleteError,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,

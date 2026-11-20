@@ -59,7 +59,7 @@ export function UserEditPage() {
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
   const [canViewAllReviews, setCanViewAllReviews] = useState(false);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

@@ -34,7 +34,7 @@ export function ReviewSessionNewPage() {
   const [communityId, setCommunityId] = useState('');
   const [templateId, setTemplateId] = useState('');
   const {
-    message: formError,
+    messageKey: formError,
     key: formErrorAlertKey,
     show: showFormError,
     clear: clearFormError,

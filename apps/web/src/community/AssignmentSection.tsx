@@ -77,7 +77,7 @@ export function AssignmentSection({
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
   const {
-    message: assignErrorKey,
+    messageKey: assignErrorKey,
     key: assignErrorAlertKey,
     show: showAssignError,
     clear: clearAssignError,

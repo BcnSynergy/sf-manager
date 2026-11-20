@@ -51,7 +51,7 @@ export function ChecklistQuestionEditPage() {
   const [text, setText] = useState('');
   const [frequencies, setFrequencies] = useState<ReviewFrequency[]>([]);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
@@ -59,7 +59,7 @@ export function ChecklistQuestionEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
   const {
-    message: deleteError,
+    messageKey: deleteError,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,

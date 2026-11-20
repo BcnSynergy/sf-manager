@@ -39,7 +39,7 @@ export function UsersListPage() {
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeactivateId, setPendingDeactivateId] = useState<string | null>(null);
   const {
-    message: actionErrorKey,
+    messageKey: actionErrorKey,
     key: actionErrorAlertKey,
     show: showActionError,
     clear: clearActionError,

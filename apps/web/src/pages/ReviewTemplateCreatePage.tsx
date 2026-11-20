@@ -48,7 +48,7 @@ export function ReviewTemplateCreatePage() {
   const [frequency, setFrequency] = useState<ReviewFrequency>(DEFAULT_FREQUENCY);
   const [name, setName] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
