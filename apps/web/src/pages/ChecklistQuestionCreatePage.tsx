@@ -40,7 +40,7 @@ export function ChecklistQuestionCreatePage() {
   const [frequencies, setFrequencies] = useState<ReviewFrequency[]>([]);
   const [text, setText] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

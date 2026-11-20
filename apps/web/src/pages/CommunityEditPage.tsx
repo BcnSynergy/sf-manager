@@ -33,7 +33,7 @@ export function CommunityEditPage() {
   const [address, setAddress] = useState('');
   const [locale, setLocale] = useState<Locale>('en');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

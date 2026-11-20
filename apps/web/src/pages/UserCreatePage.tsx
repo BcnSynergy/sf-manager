@@ -64,7 +64,7 @@ export function UserCreatePage() {
   const [companyId, setCompanyId] = useState('');
   const [companies, setCompanies] = useState<MaintenanceCompany[]>([]);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

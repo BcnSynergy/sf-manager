@@ -48,14 +48,14 @@ export function InspectableElementEditPage() {
   const [serialNumber, setSerialNumber] = useState('');
   const [installedAt, setInstalledAt] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
   } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   const {
-    message: deleteError,
+    messageKey: deleteError,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,
@@ -69,7 +69,7 @@ export function InspectableElementEditPage() {
   // mixed into the main form submit).
   const [deactivated, setDeactivated] = useState(false);
   const {
-    message: decommissionError,
+    messageKey: decommissionError,
     key: decommissionErrorAlertKey,
     show: showDecommissionError,
     clear: clearDecommissionError,

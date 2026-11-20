@@ -54,7 +54,7 @@ export function ReviewSessionElementPage() {
 
   const [saving, setSaving] = useState(false);
   const {
-    message: saveError,
+    messageKey: saveError,
     key: saveErrorAlertKey,
     show: showSaveError,
     clear: clearSaveError,

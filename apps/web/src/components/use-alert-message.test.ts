@@ -10,7 +10,7 @@ describe('useAlertMessage', () => {
     const { result } = renderHook(() => useAlertMessage());
 
     act(() => result.current.show('common.error.network'));
-    expect(result.current.message).toBe('common.error.network');
+    expect(result.current.messageKey).toBe('common.error.network');
 
     // @ts-expect-error translated text is not a message key
     act(() => result.current.show('Something went wrong. Please try again.'));
@@ -21,17 +21,17 @@ describe('useAlertMessage', () => {
   it('starts with no message', () => {
     const { result } = renderHook(() => useAlertMessage());
 
-    expect(result.current.message).toBeNull();
+    expect(result.current.messageKey).toBeNull();
   });
 
   it('shows and clears a message', () => {
     const { result } = renderHook(() => useAlertMessage());
 
     act(() => result.current.show('common.error.network'));
-    expect(result.current.message).toBe('common.error.network');
+    expect(result.current.messageKey).toBe('common.error.network');
 
     act(() => result.current.clear());
-    expect(result.current.message).toBeNull();
+    expect(result.current.messageKey).toBeNull();
   });
 
   // EN-76: a handler that clears the alert and shows the same text again in
@@ -47,7 +47,7 @@ describe('useAlertMessage', () => {
       result.current.show('common.error.network');
     });
 
-    expect(result.current.message).toBe('common.error.network');
+    expect(result.current.messageKey).toBe('common.error.network');
     expect(result.current.key).not.toBe(firstKey);
   });
 

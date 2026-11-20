@@ -30,7 +30,7 @@ export function CommunityCreatePage() {
   const [address, setAddress] = useState('');
   const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

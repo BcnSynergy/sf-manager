@@ -44,7 +44,7 @@ export function MaintenanceCompanyEditPage() {
   const [taxId, setTaxId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
@@ -52,7 +52,7 @@ export function MaintenanceCompanyEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
   const {
-    message: deleteError,
+    messageKey: deleteError,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,

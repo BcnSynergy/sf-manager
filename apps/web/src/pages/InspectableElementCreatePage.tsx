@@ -40,7 +40,7 @@ export function InspectableElementCreatePage() {
   const [serialNumber, setSerialNumber] = useState('');
   const [installedAt, setInstalledAt] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,

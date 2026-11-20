@@ -105,11 +105,16 @@ export function LoginPage() {
           {passwordChanged && (
             <p data-testid="login-password-reset-notice">{t('auth.passwordReset.changedNotice')}</p>
           )}
-          {sessionEnded && !error.message && (
+          {sessionEnded && !error.messageKey && (
             <p data-testid="login-session-ended">{t('auth.sessionEnded')}</p>
           )}
-          {error.message && (
-            <Alert key={error.key} tone="danger" testId="login-error" message={t(error.message)} />
+          {error.messageKey && (
+            <Alert
+              key={error.key}
+              tone="danger"
+              testId="login-error"
+              message={t(error.messageKey)}
+            />
           )}
           <button type="submit" className="sf-btn-primary" data-testid="login-submit">
             {t('auth.submitLabel')}

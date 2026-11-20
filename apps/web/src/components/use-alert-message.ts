@@ -9,7 +9,7 @@ type AlertMessage = { messageKey: MessageKey; key: number };
 // resets, so a handler that calls `clear()` and then `show()` with the same
 // text in one tick (React batches both) still gets a new key. `show` takes
 // an i18n key, never translated text (EN-210), and the page renders
-// `t(message)`, so the alert follows a language switch (EN-203).
+// `t(messageKey)`, so the alert follows a language switch (EN-203).
 export function useAlertMessage() {
   const [alert, setAlert] = useState<AlertMessage | null>(null);
   const counter = useRef(0);
@@ -20,5 +20,5 @@ export function useAlertMessage() {
   }, []);
   const clear = useCallback(() => setAlert(null), []);
 
-  return { message: alert?.messageKey ?? null, key: alert?.key ?? 0, show, clear };
+  return { messageKey: alert?.messageKey ?? null, key: alert?.key ?? 0, show, clear };
 }
