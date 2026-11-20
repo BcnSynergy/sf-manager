@@ -61,9 +61,10 @@ project's Engram memory on 2026-10-09.
   for `^11`, but two parents still hold it at 10 in their latest releases:
   `@jest/reporters` (30.5.2) asks for `glob` `^13.0.6`, and every `glob` 13
   asks for `minimatch` `^10.2.2` (only `glob` 14 moved to `^11`); and
-  `babel-plugin-istanbul` (8.0.0) asks for `test-exclude` `^7.0.1` (10.2.6,
-  plus 9.0.9 under its nested `glob` 10.5.0), while even `test-exclude`
-  8.0.0 still asks for `minimatch` `^10.2.2`. Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
+  `babel-plugin-istanbul` (8.0.0) asks for `test-exclude` `^7.0.1`, and
+  `test-exclude` 7 asks for `minimatch` `^10.2.2` (installed: `minimatch`
+  10.2.6, plus 9.0.9 under its nested `glob` 10.5.0), as does the latest
+  `test-exclude` (8.0.0). Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
   `Schema.TemplateLiteral`) hits `effect` 3.20.0, which `@prisma/config`
   pins exactly, also in its latest version (7.10.1); the fix is in 3.22.1.
   `minimatch` is dev-only: it processes our own lint, test and coverage
