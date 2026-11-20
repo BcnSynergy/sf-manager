@@ -60,9 +60,10 @@ project's Engram memory on 2026-10-09.
   `@eslint/config-array` and `@typescript-eslint/typescript-estree` now ask
   for `^11`, but two parents still hold it at 10 in their latest releases:
   `@jest/reporters` (30.5.2) asks for `glob` `^13.0.6`, and every `glob` 13
-  asks for `minimatch` `^10.2.2` (only `glob` 14 moved to `^11`); and
+  it allows asks for `minimatch` `^10.2.2` (only `glob` 14 moved to
+  `^11`); and
   `babel-plugin-istanbul` (8.0.0) asks for `test-exclude` `^7.0.1`, and
-  `test-exclude` 7 asks for `minimatch` `^10.2.2` (installed: `minimatch`
+  `test-exclude` 7.0.2 asks for `minimatch` `^10.2.2` (installed: `minimatch`
   10.2.6, plus 9.0.9 under its nested `glob` 10.5.0), as does the latest
   `test-exclude` (8.0.0). Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
   `Schema.TemplateLiteral`) hits `effect` 3.20.0, which `@prisma/config`
