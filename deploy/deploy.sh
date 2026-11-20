@@ -49,6 +49,8 @@ tag="sha-$(printf %s "$sha" | cut -c1-7)"
 say() { echo "deploy: $1" >&2 || true; }
 # restore REASON: checks out the previous commit first, then reports.
 restore() {
+  # A second signal (HUP after TERM) must not start a second restore.
+  trap '' HUP INT TERM
   if git checkout -q --detach "$previous"; then
     say "$1; checkout restored to $previous"
   else

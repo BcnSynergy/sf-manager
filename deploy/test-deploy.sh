@@ -199,6 +199,7 @@ if run "$second" pull-locked; then fail 'failed restore: exit 0'; fi
 grep -q "could not check out $first again; the checkout is at $second" "$work/out" ||
   fail "failed restore: no message in: $(cat "$work/out")"
 grep -q ' up ' "$work/docker.log" && fail 'failed restore: up was called'
+tag_is "$baseline_tag" || fail 'failed restore: prod.env changed'
 rm -f "$work/checkout/.git/index.lock"
 
 # An interrupted pull (a cancelled run) restores the checkout too.
@@ -223,6 +224,9 @@ reset
 ) || true
 head_is "$first" || fail 'closed output: checkout not restored'
 tag_is "$baseline_tag" || fail 'closed output: prod.env changed'
+grep -qx "\[sha-$(short "$second")\] .* pull api web" "$work/docker.log" ||
+  fail "closed output: the pull never ran: $(cat "$work/docker.log")"
+grep -q ' up ' "$work/docker.log" && fail 'closed output: up was called'
 
 # A failed up fails the deploy.
 reset
