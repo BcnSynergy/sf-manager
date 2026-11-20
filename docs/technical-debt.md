@@ -30,10 +30,18 @@ project's Engram memory on 2026-10-09.
   user reaches `sfmanager.bcnsynergy.com`. Found on the first production
   email (password-reset S7, 2026-11-15). Brevo has no per-message SMTP
   header to turn tracking off; account-wide disabling is reportedly on
-  request, possibly Enterprise only. Accepted for now by the maintainer
-  ("por el momento opcion 3"): the token is single use, expires in 30
-  minutes and is spent only by submitting the reset form (visiting the link
-  does not consume it). Fix: ask Brevo support to disable click tracking for
+  request, possibly Enterprise only. Brevo's "anonymous email tracking"
+  (help article 11643306229906, checked 2026-11-20) can be turned on for
+  transactional mail separately from campaigns, but it only anonymizes data
+  that identifies the recipient (for example their email or IP address).
+  Clicks are still counted, so links are presumably still rewritten and the
+  token still passes through Brevo (the article does not say; unverified
+  until a test email is sent with it on). Accepted for now by the
+  maintainer ("por el momento opcion 3"): the token is single use, expires
+  in 30 minutes and is spent only by submitting the reset form (visiting
+  the link does not consume it). Meanwhile, turn on anonymous tracking for
+  transactional mail: it reduces what Brevo can tie to a token, but does
+  not close this item. Fix: ask Brevo support to disable click tracking for
   transactional mail, or move to a relay without forced tracking (for
   example Amazon SES in an EU region) by changing the `SMTP_*` values and
   DNS only (ADR-018). The comment in `apps/web/src/pages/ResetPasswordPage.tsx`
