@@ -560,6 +560,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   and `::warning::`. A test that runs that step body would prove the
   one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
   2026-11-20.
+- **EN-216** (delivery tests): no test in `deploy/test-deploy.sh` covers
+  the trap reset in `restore` or `trap - HUP INT TERM PIPE` after the pull
+  in `deploy/deploy.sh`; deleting both still passes the suite. Without the
+  second, a signal during `up -d` would restore the previous checkout while
+  `prod.env` and the stack already run the new tag. A fake-docker case that
+  sends TERM during `up` and asserts the checkout stays on the new commit
+  would pin it. A signal between the checkout and the trap install (a few
+  milliseconds) can also still leave the checkout on the new commit.
+  Origin: `en-185-ci-deploy` scoped fresh review W-2 and N-4, 2026-11-20.
 - **EN-215** (delivery readability): in `deploy/deploy.sh`, the comment on
   why the pull runs before `prod.env` names the new tag sits above the
   `say` and `restore` helpers, about 20 lines before the pull it explains.

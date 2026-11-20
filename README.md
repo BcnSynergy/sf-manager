@@ -454,8 +454,8 @@ HTTPS URL. One-time setup:
    echo "restrict,command=\"$HOME/bin/sf-manager-deploy\" $pub" >>~/.ssh/authorized_keys
    ```
 
-   Run the first three lines again whenever `deploy/deploy.sh` changes.
-   They write a new file and move it into place only once `git show`
+   Run the commands above the `pub=` line again whenever `deploy/deploy.sh`
+   changes. They write a new file and move it into place only once `git show`
    succeeds: an empty script would exit 0, and the workflow would report a
    deploy that never ran.
 
