@@ -560,6 +560,16 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   and `::warning::`. A test that runs that step body would prove the
   one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
   2026-11-20.
+- **EN-217** (delivery resilience): when a cancelled run only closes the
+  SSH session's pipes (no hangup signal), `deploy/deploy.sh` keeps going.
+  The pull runs with SIGPIPE ignored, so it can still succeed; the script
+  then edits `prod.env` and runs `up -d` with SIGPIPE back at its default,
+  and `up` can die on its next progress write while it recreates
+  containers. Routing docker's output to a log file on the server (and
+  printing it afterwards with `say`) would let a cancelled deploy either
+  finish or stop cleanly. Until then, README "Deploying from CI" says how
+  to check the server and redeploy after a cancelled run. Origin:
+  `en-185-ci-deploy` Gentle review R3-001, 2026-11-20.
 - **EN-216** (delivery tests): no test in `deploy/test-deploy.sh` covers
   the trap reset in `restore` or `trap - HUP INT TERM PIPE` after the pull
   in `deploy/deploy.sh`; deleting both still passes the suite. Without the
