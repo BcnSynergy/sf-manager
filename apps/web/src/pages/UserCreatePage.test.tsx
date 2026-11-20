@@ -136,6 +136,45 @@ describe('UserCreatePage', () => {
       expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
     });
 
+    // EN-204: with every field failing, the company must still be marked, not
+    // only the first issues the schema reports.
+    it('marks all three fields when the email, the password and the company are all invalid', async () => {
+      renderPage();
+
+      fireEvent.change(screen.getByTestId('user-create-email'), {
+        target: { value: 'not-an-email' },
+      });
+      // 'short' breaks two password rules, so the company is the schema's
+      // fourth issue: keep a password that fails twice, or a page bug that
+      // marks only the first three issues goes unnoticed.
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short' } });
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'MAINTENANCE_TECHNICIAN' },
+      });
+      await screen.findByTestId('user-create-company');
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-company-error')).toHaveTextContent(
+        'Select a maintenance company.',
+      );
+      expect(screen.getByTestId('user-create-company')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('user-create-company')).toHaveAttribute(
+        'aria-describedby',
+        'user-create-company-error',
+      );
+      expect(screen.getByTestId('user-create-email-error')).toHaveTextContent(
+        'Enter a valid email address.',
+      );
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute(
+        'aria-describedby',
+        'user-create-email-error',
+      );
+      expect(screen.getByTestId('user-create-password-error')).toHaveTextContent(RULES);
+      expect(screen.getByTestId('user-create-password')).toHaveAttribute('aria-invalid', 'true');
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
+
     it('points to the marked fields in the alert instead of naming both fields', async () => {
       renderPage();
 
