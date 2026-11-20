@@ -51,7 +51,7 @@ project's Engram memory on 2026-10-09.
 
 ### Low
 
-- **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): deploy, coverage
+- **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
   SHA-pinned actions. The API typecheck step landed in
   `td-32-api-typecheck` (#219). Dependabot landed for Docker images (EN-95)
@@ -59,8 +59,8 @@ project's Engram memory on 2026-10-09.
   `openspec/changes/archive/2026-10-06-ci-pipeline/archive-report.md`
   ("Follow-ups and deferred items", line 83 onward). Origin: `ci-pipeline`.
   `deployment` added a manual production stack (README "Production
-  deployment"), which runs the images CI publishes (EN-91); deploying
-  from CI is EN-185.
+  deployment"), which runs the images CI publishes (EN-91); the `Deploy`
+  workflow deploys from CI by hand (EN-185, done in `en-185-ci-deploy`).
 
 - **TD-52**: Two open Dependabot alerts have no fix inside the ranges
   their parents allow (rechecked 2026-11-20). Alert #71

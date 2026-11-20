@@ -1,0 +1,96 @@
+name: Deploy
+
+# Deploys a commit of main to production (EN-185; spec `deployment`,
+# "Deploy from CI"; README "Deploying from CI"). Started by hand only. The
+# job waits for approval in the `production` environment, which holds the
+# deploy secrets, so only an approved run can read them. To deploy every
+# green main automatically instead, change the trigger; the job stays the
+# same.
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Commit of main to deploy (SHA); empty deploys the current main
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# One deploy at a time; a second one waits instead of cancelling the first.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Forks would deploy to a server they do not run.
+    if: github.repository == 'BcnSynergy/sf-manager'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://sfmanager.bcnsynergy.com
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve the commit
+        id: commit
+        env:
+          INPUT_COMMIT: ${{ inputs.commit }}
+        run: |
+          input="${INPUT_COMMIT:-origin/main}"
+          sha=$(git rev-parse --verify --quiet --end-of-options "$input^{commit}") || {
+            echo "::error::unknown commit '$input'"
+            exit 1
+          }
+          git merge-base --is-ancestor "$sha" origin/main || {
+            echo "::error::$sha is not on main"
+            exit 1
+          }
+          # Same short form as deploy/deploy.sh on the server.
+          short=$(printf %s "$sha" | cut -c1-7)
+          echo "sha=$sha" >>"$GITHUB_OUTPUT"
+          echo "short=$short" >>"$GITHUB_OUTPUT"
+          echo "Deploying $sha (sha-$short)" >>"$GITHUB_STEP_SUMMARY"
+      # CI publishes images only for commits that were green on main, so a
+      # missing image means the commit never passed (or publish failed).
+      - name: Check the images were published
+        env:
+          SHORT: ${{ steps.commit.outputs.short }}
+        run: |
+          for app in api web; do
+            image="ghcr.io/bcnsynergy/sf-manager-$app:sha-$SHORT"
+            docker buildx imagetools inspect "$image" >/dev/null || {
+              echo "::error::$image is not published; was the commit green on main?"
+              exit 1
+            }
+          done
+      # The key's authorized_keys entry forces deploy/deploy.sh on the
+      # server, so the commit SHA is the only thing this step can send.
+      - name: Deploy on the server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_TARGET: ${{ secrets.DEPLOY_SSH_TARGET }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          for name in DEPLOY_SSH_KEY DEPLOY_SSH_KNOWN_HOSTS DEPLOY_SSH_TARGET; do
+            [ -n "$(printenv "$name")" ] || {
+              echo "::error::secret $name is not set in the production environment"
+              exit 1
+            }
+          done
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf "$ssh_dir"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_KEY" >"$ssh_dir/key"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" >"$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key"
+          ssh -i "$ssh_dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+            -o ConnectTimeout=30 "$DEPLOY_SSH_TARGET" "$SHA"
+      - name: Check https://sfmanager.bcnsynergy.com
+        run: sh deploy/check-production.sh https://sfmanager.bcnsynergy.com

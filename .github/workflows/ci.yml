@@ -105,6 +105,10 @@ jobs:
       - name: Production check script
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: sh deploy/test-check-production.sh
+      # The server side of the deploy workflow (EN-185), with a fake docker.
+      - name: Deploy script
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: sh deploy/test-deploy.sh
       # Builds the production images and starts the whole stack on
       # https://localhost, so a broken Dockerfile or base-image update
       # (Dependabot) fails the PR (EN-91).

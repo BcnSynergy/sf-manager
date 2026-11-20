@@ -1,0 +1,31 @@
+# EN-185: Deploy to Production from CI
+
+Objective: a manually triggered GitHub Actions workflow deploys a green `main` commit to production, behind the `production` environment's approval. Branch `en-185-ci-deploy/01-manual-deploy` (from main 7324516). Delivery: `single-pr` (forecast about 380 authored lines). Runners: `sh deploy/test-deploy.sh`, `npm run format:check`.
+Locator: `odd/tasks/en-185-ci-deploy.md` (Engram mirror: `odd/en-185-ci-deploy/tasks`). Spec change: yes, `openspec/specs/deployment/spec.md` (user confirmed 2026-11-20).
+
+## Specs
+
+- **S1** Trigger: manual only (`workflow_dispatch`), option A chosen by the user over automatic deploy after every green `main` ("si" to "¿Empezamos con A?", 2026-11-20). The job runs in the GitHub environment `production`, which requires the maintainer's approval. Input: the commit to deploy; empty means the current `main`.
+- **S2** Only a commit that is on `main` and has published images (`sha-<short SHA>` for api and web; CI publishes only green `main` commits) is deployed. Anything else fails before the server changes.
+- **S3** Server side: a dedicated SSH key whose `authorized_keys` entry forces one deploy script (`command=`, no port/agent/X11 forwarding, no pty). The script accepts only a full 40-hex commit SHA, refuses a commit not on `origin/main`, then runs the README upgrade steps: check out the commit, set `IMAGE_TAG=sha-<short SHA>` in `prod.env`, `pull api web`, `up -d --no-build`. Any failing step fails the deploy. The script lives outside the checkout, so checking out an older commit cannot remove it.
+- **S4** After the server step, the workflow runs `deploy/check-production.sh` against the production URL; its failure fails the deploy run.
+- **S5** Secrets (SSH key, pinned host key, host/user) are secrets of the `production` environment only, so only an approved deploy job can read them. The user creates the key and sets the secrets; Claude does not handle the private key.
+- **S6** Docs: spec requirement "Deploy from CI" in `openspec/specs/deployment/spec.md`; README "Production deployment" gains the CI deploy path and its one-time setup; EN-185 moves to Done; TD-32 drops "deploy". Reverting to automatic deploy later is a trigger change only (user asked "podemos mas adelante revertir la decision?").
+
+## Tasks
+
+| ID  | Specs          | Route                                                                                        | Status  | Commit |
+| --- | -------------- | -------------------------------------------------------------------------------------------- | ------- | ------ |
+| T1  | S3             | inline                                                                                       | done    | see L3 |
+| T2  | S1, S2, S4, S5 | inline                                                                                       | done    | see L3 |
+| T3  | S6             | inline                                                                                       | done    | see L3 |
+| T4  | S3, S5         | user (server key + secrets + environment), Claude installs the script over SSH with fresh OK | pending |        |
+| T5  | S1-S4          | first real deploy run, after merge                                                           | pending |        |
+
+Risk: items 2 (credentials) and 5 (delivery): fresh-context review required (already required per PR).
+
+## Log
+
+- **L1** (2026-11-20, user): "si" to "¿Sigo con EN-185, el despliegue a producción desde la CI?"; then "si" to option A (manual button with `production` approval); asked "podemos mas adelante revertir la decision?" (answer: yes, trigger-only change); then "si" to the spec change in `openspec/specs/deployment/spec.md`.
+- **L2** Design notes: `publish` in `ci.yml` tags `sha-$(git rev-parse --short=7 HEAD)` only after `ci` is green on a `main` push, so image existence implies green `main`. `up -d` already waits for the API healthcheck (Caddy depends on it), so a failed healthcheck fails the server step. Next: T1.
+- **L3** T1-T3 written inline. T1: `deploy/test-deploy.sh` RED without the script (4 failures), GREEN with `deploy/deploy.sh`; mutation probes all caught (charset filter removed: the upper-case SHA deployed `sha-3BCE77F`; length, ancestry, cat-file message, fetch, checkout, IMAGE_TAG append, pull, `--no-build`, 7-char tag, `set -e`). CI step "Deploy script" added to `ci.yml`. T2: `.github/workflows/deploy.yml`; its "Resolve the commit" step run locally: empty input and short SHA resolve, `nonexistent`, `--output=x` (no file created) and a dangling commit are refused. Images, SSH and production-check steps are verified only by T5. T3: spec requirement "Deploy from CI" (5 scenarios), README "Deploying from CI" with one-time setup, EN-185 to Done, new EN-213 (rebuilt images, split from EN-185), TD-32 drops deploy. `npm run format:check` clean.

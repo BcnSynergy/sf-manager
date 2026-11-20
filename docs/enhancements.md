@@ -553,15 +553,11 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
-- **EN-185** (delivery): deploying is manual: the operator checks out a
-  commit on the server, sets `IMAGE_TAG` and pulls (README "Production
-  deployment"). Deploying from CI after a green `main` run would need server
-  access (SSH host, user and key) as repository secrets and a decision on
-  when to deploy (every green `main`, or a manual trigger). Note that
-  `publish-platform` rebuilds the images instead of pushing the ones `ci`
-  smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
-  registry state). Origin: split from EN-91 in `en-91-registry-deploy`,
-  2026-11-13; covers the deploy part of TD-32.
+- **EN-213** (delivery): `publish-platform` rebuilds the images instead of
+  pushing the ones `ci` smoke-tested, so the pushed bytes can differ
+  (unpinned `apt-get` and npm registry state), and the deploy workflow
+  (EN-185) deploys the pushed ones. Origin: split from EN-185 in
+  `en-185-ci-deploy`, 2026-11-20 (first noted in EN-185, split from EN-91).
 - **EN-186** (delivery): nothing tests that the documented start command
   refuses to run an unpublished image. `deploy/smoke-test.sh` builds the
   images with `up -d --build`, so neither the "Image not published" scenario
@@ -1153,6 +1149,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-185** (delivery): deploying was manual: the operator checked out a commit on the server, set `IMAGE_TAG` and pulled. The `Deploy` workflow (`.github/workflows/deploy.yml`) now does it when started by hand, after the maintainer approves the `production` environment, which alone holds the deploy secrets. It refuses a commit that is not on `main` or has no published images, deploys over SSH with a key whose `authorized_keys` entry forces `deploy/deploy.sh` (only a full commit SHA of `main` is accepted), and runs the production check. Manual trigger chosen over deploying every green `main`; switching is a trigger change. The rebuilt-images note moved to EN-213. Done in `en-185-ci-deploy` (PR pending, spec `deployment`). Origin: split from EN-91 in `en-91-registry-deploy`, 2026-11-13; covers the deploy part of TD-32.
 - **EN-204** (web test coverage): no `UserCreatePage` component test submitted with the email, the password and the company all invalid at once. A new test does, and checks that all three fields are marked and no request is sent. It fails if the page marks only the first issues the schema reports. In this case the company issue comes from the base field (`maintenanceCompanyId` rejects the empty string the page sends), not from the `superRefine`, which for a maintenance role only reports a missing (`undefined`) company. Done in `user-create-field-errors` (PR #438). Origin: `user-create-field-errors` fresh review S-2, 2026-11-17.
 
 - **EN-212** (web readability): `useAlertMessage` returned the stored key as `message`, although since EN-210 it is a `MessageKey`, not text. It now returns it as `messageKey`, and every caller (24 pages and components, plus the hook's own tests) reads that name. The EN-76 test in `components/Alert.test.tsx` now renders `t(messageKey)` like a real page and checks the translated text instead of the raw key. Done in `alert-message-keys` (PR #437). Origin: `alert-message-keys` Gentle review (R2-001) and fresh review S-2, 2026-11-19.
