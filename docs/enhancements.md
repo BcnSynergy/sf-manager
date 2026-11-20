@@ -553,6 +553,18 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
+- **EN-214** (delivery tests): the `Deploy` workflow's glue around
+  `deploy/resolve-commit.sh` (stderr captured in `resolve.err`, lines
+  joined with spaces into one `::error::` annotation, `exit 1`) has no
+  automated test; it was checked by hand with an input holding a newline
+  and `::warning::`. A test that runs that step body would prove the
+  one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
+  2026-11-20.
+- **EN-215** (delivery readability): in `deploy/deploy.sh`, the comment on
+  why the pull runs before `prod.env` names the new tag sits above the
+  `say` and `restore` helpers, about 20 lines before the pull it explains.
+  Move it next to the pull. Origin: `en-185-ci-deploy` Gentle review
+  R2-001, 2026-11-20.
 - **EN-213** (delivery): `publish-platform` rebuilds the images instead of
   pushing the ones `ci` smoke-tested, so the pushed bytes can differ
   (unpinned `apt-get` and npm registry state), and the deploy workflow
