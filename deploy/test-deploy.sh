@@ -62,13 +62,15 @@ esac
 EOF
 chmod +x "$work/bin/docker"
 
-# Fresh checkout at $first with a prod.env, before each case.
+# Fresh checkout before each case: at $first, with a prod.env whose
+# IMAGE_TAG is $baseline_tag. "Unchanged" below means still at these values.
+baseline_tag=sha-0000000
 reset() {
   rm -rf "$work/checkout" "$work/docker.log"
   git clone -q "$work/origin" "$work/checkout"
   git -C "$work/checkout" checkout -q --detach "$first"
-  printf 'POSTGRES_PASSWORD=secret\nIMAGE_TAG=sha-0000000\nSITE_ADDRESS=example.test\n' \
-    >"$work/checkout/prod.env"
+  printf 'POSTGRES_PASSWORD=secret\nIMAGE_TAG=%s\nSITE_ADDRESS=example.test\n' \
+    "$baseline_tag" >"$work/checkout/prod.env"
   : >"$work/docker.log"
 }
 
@@ -103,7 +105,7 @@ refused() {
   grep -q "$3" "$work/out" || fail "$1: no '$3' in: $(cat "$work/out")"
   [ -s "$work/docker.log" ] && fail "$1: docker was called"
   head_is "$first" || fail "$1: checkout moved"
-  tag_is sha-0000000 || fail "$1: prod.env changed"
+  tag_is "$baseline_tag" || fail "$1: prod.env changed"
   return 0
 }
 
@@ -178,7 +180,7 @@ grep -qx "\[sha-$(short "$second")\] .* pull api web" "$work/docker.log" ||
 grep -q 'pulling the .* images failed' "$work/out" ||
   fail "failed pull: no error message in: $(cat "$work/out")"
 head_is "$first" || fail 'failed pull: checkout not restored'
-tag_is sha-0000000 || fail 'failed pull: prod.env changed'
+tag_is "$baseline_tag" || fail 'failed pull: prod.env changed'
 
 # A failed up fails the deploy.
 reset

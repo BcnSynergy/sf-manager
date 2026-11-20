@@ -39,14 +39,17 @@ git merge-base --is-ancestor "$sha" origin/main || refuse "$sha is not on main"
 
 previous=$(git rev-parse HEAD)
 git checkout -q --detach "$sha"
-# CI tags the images with `git rev-parse --short=7`.
+# CI tags the images with `git rev-parse --short=7`, which gives more
+# characters only when 7 are ambiguous; then the pull says `not found`.
 tag="sha-$(printf %s "$sha" | cut -c1-7)"
 # Pull before prod.env names the new tag (a shell IMAGE_TAG overrides the
 # file), so a failed pull leaves the checkout and prod.env matching the
 # running stack.
 if ! IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml --env-file prod.env pull api web; then
-  git checkout -q --detach "$previous"
-  echo "deploy: pulling the $tag images failed; checkout restored to $previous, prod.env unchanged" >&2
+  echo "deploy: pulling the $tag images failed; prod.env unchanged" >&2
+  git checkout -q --detach "$previous" ||
+    refuse "could not check out $previous again; the checkout is at $sha"
+  echo "deploy: checkout restored to $previous" >&2
   exit 1
 fi
 grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env

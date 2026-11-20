@@ -425,27 +425,42 @@ deploy an older commit of `main`; as with a manual rollback, migrations the
 newer version applied stay. It never starts on its own: to deploy every
 green `main` automatically, change its trigger.
 
+If a run is cancelled or fails while it deploys, the server may be left
+between steps. Check it with `git -C ~/sf-manager log --oneline -1`,
+`grep IMAGE_TAG ~/sf-manager/prod.env` and `docker compose ... ps`, and deploy
+again (the same or another commit) to bring all three in line.
+
 On the server, the deploy key can only run `deploy/deploy.sh`: its
 `authorized_keys` entry forces that script, which accepts nothing but a full
 commit SHA of `main`. A copy lives outside the checkout, so checking out an
-older commit cannot remove it. One-time setup:
+older commit cannot remove it. The script fetches `main` with the checkout's
+own `origin` remote and no SSH agent, so that remote must be the public
+HTTPS URL. One-time setup:
 
 1. On your machine, create a key for this purpose only, without a
-   passphrase: `ssh-keygen -t ed25519 -N '' -C sf-manager-deploy -f sf-manager-deploy`.
-2. On the server, install the script from a checkout that has it, and add
-   the public key (the one line in `sf-manager-deploy.pub`) with the forced
-   command (`restrict` turns off forwarding and the terminal):
+   passphrase. In Git Bash (Windows PowerShell 5.1 drops the empty `''`):
+   `ssh-keygen -t ed25519 -N '' -C sf-manager-deploy -f sf-manager-deploy`.
+2. On the server, install the script from `main` without moving the
+   checkout, and add the public key (the one line in
+   `sf-manager-deploy.pub`) with the forced command (`restrict` turns off
+   forwarding and the terminal):
 
    ```sh
-   mkdir -p ~/bin && install -m 755 ~/sf-manager/deploy/deploy.sh ~/bin/sf-manager-deploy
+   mkdir -p ~/bin
+   git -C ~/sf-manager fetch -q origin main &&
+     git -C ~/sf-manager show origin/main:deploy/deploy.sh >~/bin/sf-manager-deploy &&
+     chmod 755 ~/bin/sf-manager-deploy
    pub='<contents of sf-manager-deploy.pub>'
    echo "restrict,command=\"$HOME/bin/sf-manager-deploy\" $pub" >>~/.ssh/authorized_keys
    ```
 
-   Reinstall the script whenever `deploy/deploy.sh` changes.
+   Run the first three lines again whenever `deploy/deploy.sh` changes.
 
 3. In the repository's Settings > Environments, create `production`, add
-   yourself as a required reviewer, and add these environment secrets:
+   yourself as a required reviewer, limit "Deployment branches and tags" to
+   the `main` branch (otherwise a workflow file changed on another branch
+   could run with the secrets once approved), and add these environment
+   secrets:
    - `DEPLOY_SSH_KEY`: the private key file `sf-manager-deploy`.
    - `DEPLOY_SSH_TARGET`: `ubuntu@<server address>`.
    - `DEPLOY_SSH_KNOWN_HOSTS`: the server's host key as a `known_hosts`

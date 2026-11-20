@@ -43,7 +43,9 @@ jobs:
           INPUT_COMMIT: ${{ inputs.commit }}
         run: |
           sha=$(sh deploy/resolve-commit.sh "$INPUT_COMMIT" 2>resolve.err) || {
-            echo "::error::$(cat resolve.err)"
+            # One line: a newline in the input must not start a new
+            # workflow command.
+            echo "::error::$(tr -d '\r\n' <resolve.err)"
             exit 1
           }
           # Same short form as deploy/deploy.sh on the server.
@@ -60,7 +62,7 @@ jobs:
           for app in api web; do
             image="ghcr.io/bcnsynergy/sf-manager-$app:sha-$SHORT"
             docker buildx imagetools inspect "$image" >/dev/null || {
-              echo "::error::$image is not published; was the commit green on main?"
+              echo "::error::$image is not published; was the commit green on main? (CI uses more than 7 characters when 7 are ambiguous; see README)"
               exit 1
             }
           done
