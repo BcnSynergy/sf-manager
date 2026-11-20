@@ -34,9 +34,10 @@ project's Engram memory on 2026-10-09.
   (help article 11643306229906, checked 2026-11-20) can be turned on for
   transactional mail separately from campaigns, but it only anonymizes data
   that identifies the recipient (for example their email or IP address).
-  Confirmed 2026-11-20: with it on for transactional mail, a production
-  reset email still linked through the click-tracking redirector
-  (`…sendibt2.com/tr/cl/…`), so the token still passes through Brevo.
+  Clicks are still counted, and confirmed 2026-11-20: with it on for
+  transactional mail, a production reset email still linked through the
+  click-tracking redirector (`…sendibt2.com/tr/cl/…`; the redirector host
+  varies, `sendibt2`/`sendibt3`), so the token still passes through Brevo.
   Accepted for now by the maintainer ("por el momento opcion 3"): the
   token is single use, expires in 30 minutes and is spent only by
   submitting the reset form (visiting the link does not consume it).
