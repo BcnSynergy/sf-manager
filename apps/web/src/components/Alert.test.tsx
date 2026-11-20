@@ -83,7 +83,8 @@ describe('Alert', () => {
     rerender(page());
 
     const second = screen.getByTestId('save-error');
-    expect(second).toHaveTextContent('Something went wrong. Please try again.');
+    expect(second).toHaveTextContent(i18n.t('common.error.network'));
+    expect(second).not.toHaveTextContent('common.error.network');
     expect(second).not.toBe(first);
   });
 });
