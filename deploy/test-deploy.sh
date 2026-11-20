@@ -10,6 +10,10 @@
 # SCRIPT and RESOLVE default to deploy/deploy.sh and
 # deploy/resolve-commit.sh; passing a modified copy shows which case catches
 # a change.
+
+# Each case sets the script's environment inside a ( ... ) subshell on
+# purpose, so nothing leaks into the next case.
+# shellcheck disable=SC2030,SC2031
 set -eu
 
 abs() { echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; }
