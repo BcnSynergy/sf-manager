@@ -560,6 +560,15 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   and `::warning::`. A test that runs that step body would prove the
   one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
   2026-11-20.
+- **EN-219** (delivery tests): two robustness gaps in
+  `deploy/test-deploy.sh`. The closed-output case relies on `true` having
+  exited before the slow fake pull fails a second later; on a loaded runner
+  the reader may still be open and the case would pass without exercising
+  SIGPIPE. A reader closed before the deploy starts (a FIFO, or a fake
+  docker that waits for the reader to be gone) would make it deterministic.
+  Also, the by-hand and closed-output cases copy `run()`'s environment
+  setup inline; a shared helper would keep the three in sync. Origin:
+  `en-185-ci-deploy` Gentle review R3-001 and R2-003, 2026-11-20.
 - **EN-218** (delivery diagnostics): `deploy/resolve-commit.sh` reports
   any non-zero exit of `git merge-base --is-ancestor` as "is not on main",
   but exit 128 is a git error (for example a missing or shallow

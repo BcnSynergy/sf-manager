@@ -425,6 +425,12 @@ deploy an older commit of `main`; as with a manual rollback, migrations the
 newer version applied stay. It never starts on its own: to deploy every
 green `main` automatically, change its trigger.
 
+The workflow and the server look for the images under the first 7
+characters of the SHA. CI uses more only when 7 are ambiguous in its
+checkout (see step 2 of "Production deployment"); a deploy of such a commit
+then fails with the images "not published", and the commit has to be
+deployed by hand with the tag from the package's version list.
+
 If a run is cancelled or fails while it deploys, the server may be left
 between steps. Check it with `git -C ~/sf-manager log --oneline -1`,
 `grep IMAGE_TAG ~/sf-manager/prod.env` and `docker compose ... ps`, and deploy
