@@ -57,10 +57,13 @@ project's Engram memory on 2026-10-09.
   their parents allow (rechecked 2026-11-20). Alert #71
   (GHSA-g3hv-75wg-m249, medium: denial of service via glob pattern
   expansion) hits `minimatch`; the fix is in 11.0.1. The latest `eslint`,
-  `@eslint/config-array`, `@typescript-eslint/typescript-estree` and `glob`
-  now ask for `^11`, but `test-exclude` still asks for `^10.2.2` (10.2.6,
-  plus 9.0.9 under its nested `glob` 10.5.0), so the alert stays open until
-  it moves. Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
+  `@eslint/config-array` and `@typescript-eslint/typescript-estree` now ask
+  for `^11`, but two parents still hold it at 10 in their latest releases:
+  `@jest/reporters` (30.5.2) asks for `glob` `^13.0.6`, and every `glob` 13
+  asks for `minimatch` `^10.2.2` (only `glob` 14 moved to `^11`); and
+  `babel-plugin-istanbul` (8.0.0) asks for `test-exclude` `^7.0.1` (10.2.6,
+  plus 9.0.9 under its nested `glob` 10.5.0), while even `test-exclude`
+  8.0.0 still asks for `minimatch` `^10.2.2`. Alert #72 (GHSA-7589-6fvf-x4pw, high: ReDoS in
   `Schema.TemplateLiteral`) hits `effect` 3.20.0, which `@prisma/config`
   pins exactly, also in its latest version (7.10.1); the fix is in 3.22.1.
   `minimatch` is dev-only: it processes our own lint, test and coverage
@@ -69,10 +72,12 @@ project's Engram memory on 2026-10-09.
   `apps/api/Dockerfile`). `effect` does ship in the API image, because
   `prisma` is a production dependency (it applies migrations at start), but
   `@prisma/config` uses it only to load our own `prisma.config.ts`, never
-  user input. Alert #69 (`deepmerge` 4.3.1 via `jest-config`) was closed by
-  GitHub on 2026-11-20 with the package unchanged. Recheck when
-  `test-exclude` moves to `minimatch` 11 or Prisma moves to `effect`
-  3.22.1+, and do not force either with `overrides`. Origin:
+  user input, which is why this entry stays Low despite the high advisory.
+  Alert #69 (`deepmerge` 4.3.1 via `jest-config`) was marked fixed by
+  GitHub on 2026-11-20 with the package unchanged. Recheck when both
+  `@jest/reporters` and `babel-plugin-istanbul` (through `test-exclude`)
+  reach `minimatch` 11, or Prisma moves to `effect` 3.22.1+, and do not
+  force either with `overrides`. Origin:
   `security-dev-alerts` triage, 2026-11-09.
 
 ## Resolved
