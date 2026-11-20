@@ -64,6 +64,8 @@ case " $* " in
       pull) exit 1 ;;
       pull-locked) touch .git/index.lock && exit 1 ;;
       pull-term) kill -TERM "$PPID" ;;
+      # Outlives the reader of the deploy's output, then fails.
+      pull-slow) sleep 1 && exit 1 ;;
     esac
     ;;
   *" up "*) [ "${FAKE_DOCKER_FAIL:-}" != up ] ;;
@@ -207,6 +209,20 @@ grep -q 'interrupted during the pull' "$work/out" ||
 grep -q ' up ' "$work/docker.log" && fail 'interrupted pull: up was called'
 head_is "$first" || fail 'interrupted pull: checkout not restored'
 tag_is "$baseline_tag" || fail 'interrupted pull: prod.env changed'
+
+# A cancelled run can close the output instead: the deploy's next message
+# would raise SIGPIPE. The pull fails after the reader is gone, and the
+# checkout is still restored.
+reset
+(
+  export SSH_ORIGINAL_COMMAND="$second" SFM_DEPLOY_DIR="$work/checkout" \
+    FAKE_DOCKER_LOG="$work/docker.log" FAKE_DOCKER_FAIL=pull-slow \
+    PATH="$work/bin:$PATH"
+  unset IMAGE_TAG
+  sh "$script" 2>&1 | true
+) || true
+head_is "$first" || fail 'closed output: checkout not restored'
+tag_is "$baseline_tag" || fail 'closed output: prod.env changed'
 
 # A failed up fails the deploy.
 reset
