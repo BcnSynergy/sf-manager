@@ -13,11 +13,13 @@ const INVALID_RESET_TOKEN = 'INVALID_RESET_TOKEN';
 const HTTP_BAD_REQUEST = 400;
 
 // The link carries the token in the fragment (`#token=...`), never in the
-// query string, so it never reaches a server log or a Referer header. It is
-// read once, then dropped from the address bar so it does not linger on
-// screen. It moves into the history entry's state (never shown, never sent),
-// so the page still has it if it mounts again after the fragment is gone, as
-// a lazy route can; a later visit without the link has no such state.
+// query string, so it never reaches our server's logs or a Referer header.
+// An email provider that rewrites links for click tracking still sees the
+// whole link, fragment included (TD-53). The token is read once, then
+// dropped from the address bar so it does not linger on screen. It moves
+// into the history entry's state (never shown, never sent), so the page
+// still has it if it mounts again after the fragment is gone, as a lazy
+// route can; a later visit without the link has no such state.
 const TOKEN_STATE_KEY = 'passwordResetToken';
 
 function takeTokenFromFragment(): string | null {
