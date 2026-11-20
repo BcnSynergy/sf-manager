@@ -45,13 +45,21 @@ tag="sha-$(printf %s "$sha" | cut -c1-7)"
 # Pull before prod.env names the new tag (a shell IMAGE_TAG overrides the
 # file), so a failed pull leaves the checkout and prod.env matching the
 # running stack.
+restore() {
+  if git checkout -q --detach "$previous"; then
+    echo "deploy: checkout restored to $previous" >&2
+  else
+    echo "deploy: could not check out $previous again; the checkout is at $sha" >&2
+  fi
+  exit 1
+}
+# A cancelled run drops the SSH session during the pull: restore then too.
+trap 'echo "deploy: interrupted during the pull" >&2; restore' HUP INT TERM
 if ! IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml --env-file prod.env pull api web; then
   echo "deploy: pulling the $tag images failed; prod.env unchanged" >&2
-  git checkout -q --detach "$previous" ||
-    refuse "could not check out $previous again; the checkout is at $sha"
-  echo "deploy: checkout restored to $previous" >&2
-  exit 1
+  restore
 fi
+trap - HUP INT TERM
 grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
 

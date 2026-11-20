@@ -45,7 +45,7 @@ jobs:
           sha=$(sh deploy/resolve-commit.sh "$INPUT_COMMIT" 2>resolve.err) || {
             # One line: a newline in the input must not start a new
             # workflow command.
-            echo "::error::$(tr -d '\r\n' <resolve.err)"
+            echo "::error::$(tr '\r\n' '  ' <resolve.err)"
             exit 1
           }
           # Same short form as deploy/deploy.sh on the server.

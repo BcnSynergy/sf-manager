@@ -51,12 +51,21 @@ side=$(cat "$work/side")
 
 # Fake docker: records each call with the IMAGE_TAG it sees in its
 # environment; FAKE_DOCKER_FAIL=pull|up makes that subcommand fail.
+# pull-locked also locks the checkout's index (the deploy runs in the
+# checkout), so restoring the previous commit fails too; pull-term sends
+# TERM to the deploy script, as a dropped SSH session would.
 mkdir "$work/bin"
 cat >"$work/bin/docker" <<'EOF'
 #!/bin/sh
 echo "[${IMAGE_TAG:-}] $*" >>"$FAKE_DOCKER_LOG"
 case " $* " in
-  *" pull "*) [ "${FAKE_DOCKER_FAIL:-}" != pull ] ;;
+  *" pull "*)
+    case "${FAKE_DOCKER_FAIL:-}" in
+      pull) exit 1 ;;
+      pull-locked) touch .git/index.lock && exit 1 ;;
+      pull-term) kill -TERM "$PPID" ;;
+    esac
+    ;;
   *" up "*) [ "${FAKE_DOCKER_FAIL:-}" != up ] ;;
 esac
 EOF
@@ -182,6 +191,23 @@ grep -q 'pulling the .* images failed' "$work/out" ||
 head_is "$first" || fail 'failed pull: checkout not restored'
 tag_is "$baseline_tag" || fail 'failed pull: prod.env changed'
 
+# A failed pull whose restore also fails says where the checkout is.
+reset
+if run "$second" pull-locked; then fail 'failed restore: exit 0'; fi
+grep -q "could not check out $first again; the checkout is at $second" "$work/out" ||
+  fail "failed restore: no message in: $(cat "$work/out")"
+grep -q ' up ' "$work/docker.log" && fail 'failed restore: up was called'
+rm -f "$work/checkout/.git/index.lock"
+
+# An interrupted pull (a cancelled run) restores the checkout too.
+reset
+if run "$second" pull-term; then fail 'interrupted pull: exit 0'; fi
+grep -q 'interrupted during the pull' "$work/out" ||
+  fail "interrupted pull: no message in: $(cat "$work/out")"
+grep -q ' up ' "$work/docker.log" && fail 'interrupted pull: up was called'
+head_is "$first" || fail 'interrupted pull: checkout not restored'
+tag_is "$baseline_tag" || fail 'interrupted pull: prod.env changed'
+
 # A failed up fails the deploy.
 reset
 if run "$second" up; then fail 'failed up: exit 0'; fi
@@ -191,8 +217,9 @@ reset
 resolves() {
   (cd "$work/checkout" && sh "$resolve" "$1") >"$work/out" 2>"$work/err"
 }
+main_head=$(git -C "$work/origin" rev-parse main)
 if resolves ''; then
-  [ "$(cat "$work/out")" = "$latest" ] || fail "resolve empty: printed $(cat "$work/out")"
+  [ "$(cat "$work/out")" = "$main_head" ] || fail "resolve empty: printed $(cat "$work/out")"
 else
   fail "resolve empty: exit non-zero: $(cat "$work/err")"
 fi

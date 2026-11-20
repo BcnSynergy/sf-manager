@@ -448,13 +448,16 @@ HTTPS URL. One-time setup:
    ```sh
    mkdir -p ~/bin
    git -C ~/sf-manager fetch -q origin main &&
-     git -C ~/sf-manager show origin/main:deploy/deploy.sh >~/bin/sf-manager-deploy &&
-     chmod 755 ~/bin/sf-manager-deploy
+     git -C ~/sf-manager show origin/main:deploy/deploy.sh >~/bin/sf-manager-deploy.new &&
+     chmod 755 ~/bin/sf-manager-deploy.new && mv ~/bin/sf-manager-deploy.new ~/bin/sf-manager-deploy
    pub='<contents of sf-manager-deploy.pub>'
    echo "restrict,command=\"$HOME/bin/sf-manager-deploy\" $pub" >>~/.ssh/authorized_keys
    ```
 
    Run the first three lines again whenever `deploy/deploy.sh` changes.
+   They write a new file and move it into place only once `git show`
+   succeeds: an empty script would exit 0, and the workflow would report a
+   deploy that never ran.
 
 3. In the repository's Settings > Environments, create `production`, add
    yourself as a required reviewer, limit "Deployment branches and tags" to
