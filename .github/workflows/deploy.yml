@@ -42,7 +42,10 @@ jobs:
         env:
           INPUT_COMMIT: ${{ inputs.commit }}
         run: |
-          sha=$(sh deploy/resolve-commit.sh "$INPUT_COMMIT")
+          sha=$(sh deploy/resolve-commit.sh "$INPUT_COMMIT" 2>resolve.err) || {
+            echo "::error::$(cat resolve.err)"
+            exit 1
+          }
           # Same short form as deploy/deploy.sh on the server.
           short=$(printf %s "$sha" | cut -c1-7)
           echo "sha=$sha" >>"$GITHUB_OUTPUT"

@@ -46,7 +46,7 @@ tag="sha-$(printf %s "$sha" | cut -c1-7)"
 # running stack.
 if ! IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml --env-file prod.env pull api web; then
   git checkout -q --detach "$previous"
-  echo "deploy: pulling the $tag images failed; production still runs $previous" >&2
+  echo "deploy: pulling the $tag images failed; checkout restored to $previous, prod.env unchanged" >&2
   exit 1
 fi
 grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env

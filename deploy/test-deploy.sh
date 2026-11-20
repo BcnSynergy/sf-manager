@@ -13,6 +13,8 @@
 set -eu
 
 abs() { echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; }
+# The image tag form of deploy/deploy.sh: the first 7 characters of a SHA.
+short() { printf %s "$1" | cut -c1-7; }
 script=$(abs "${1:-deploy/deploy.sh}")
 resolve=$(abs "${2:-deploy/resolve-commit.sh}")
 work=$(mktemp -d)
@@ -107,7 +109,7 @@ refused() {
 
 full='expected a full 40-character commit SHA'
 refused 'empty input' '' "$full"
-refused 'short SHA' "$(printf %s "$second" | cut -c1-7)" "$full"
+refused 'short SHA' "$(short "$second")" "$full"
 refused 'upper-case SHA' "$(printf %s "$second" | tr a-f A-F)" "$full"
 refused 'extra argument' "$second --force" "$full"
 refused 'shell metacharacters' "$second;id" "$full"
@@ -122,13 +124,13 @@ reset
 echo four >"$work/origin/file"
 git_q -C "$work/origin" commit -q -am four
 latest=$(git -C "$work/origin" rev-parse HEAD)
-short=$(printf %s "$latest" | cut -c1-7)
+latest_tag="sha-$(short "$latest")"
 if run "$latest"; then
   head_is "$latest" || fail 'deploy: checkout is not at the commit'
-  tag_is "sha-$short" || fail 'deploy: IMAGE_TAG not set'
+  tag_is "$latest_tag" || fail 'deploy: IMAGE_TAG not set'
   grep -qx 'POSTGRES_PASSWORD=secret' "$work/checkout/prod.env" ||
     fail 'deploy: other prod.env lines changed'
-  docker_calls_are "sha-$short" deploy
+  docker_calls_are "$latest_tag" deploy
 else
   fail "deploy: exit non-zero: $(cat "$work/out")"
 fi
@@ -136,12 +138,12 @@ fi
 # Rolls back to an older commit on main.
 reset
 git -C "$work/checkout" checkout -q --detach "$second"
-sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=sha-$(printf %s "$second" | cut -c1-7)/" \
+sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=sha-$(short "$second")/" \
   "$work/checkout/prod.env"
 if run "$first"; then
   head_is "$first" || fail 'rollback: checkout is not at the commit'
-  tag_is "sha-$(printf %s "$first" | cut -c1-7)" || fail 'rollback: IMAGE_TAG not set'
-  docker_calls_are "sha-$(printf %s "$first" | cut -c1-7)" rollback
+  tag_is "sha-$(short "$first")" || fail 'rollback: IMAGE_TAG not set'
+  docker_calls_are "sha-$(short "$first")" rollback
 else
   fail "rollback: exit non-zero: $(cat "$work/out")"
 fi
@@ -155,6 +157,8 @@ if (
   sh "$script" "$second"
 ) >"$work/out" 2>&1; then
   head_is "$second" || fail 'by hand: checkout is not at the commit'
+  tag_is "sha-$(short "$second")" || fail 'by hand: IMAGE_TAG not set'
+  docker_calls_are "sha-$(short "$second")" 'by hand'
 else
   fail "by hand: exit non-zero: $(cat "$work/out")"
 fi
@@ -163,12 +167,16 @@ fi
 reset
 sed -i '/^IMAGE_TAG=/d' "$work/checkout/prod.env"
 run "$second" || fail "missing IMAGE_TAG: exit non-zero: $(cat "$work/out")"
-tag_is "sha-$(printf %s "$second" | cut -c1-7)" || fail 'missing IMAGE_TAG: not added'
+tag_is "sha-$(short "$second")" || fail 'missing IMAGE_TAG: not added'
 
 # A failed pull stops before up and leaves the files as they were.
 reset
 if run "$second" pull; then fail 'failed pull: exit 0'; fi
 grep -q ' up ' "$work/docker.log" && fail 'failed pull: up was called'
+grep -qx "\[sha-$(short "$second")\] .* pull api web" "$work/docker.log" ||
+  fail "failed pull: no pull of the new tag in: $(cat "$work/docker.log")"
+grep -q 'pulling the .* images failed' "$work/out" ||
+  fail "failed pull: no error message in: $(cat "$work/out")"
 head_is "$first" || fail 'failed pull: checkout not restored'
 tag_is sha-0000000 || fail 'failed pull: prod.env changed'
 
@@ -186,7 +194,7 @@ if resolves ''; then
 else
   fail "resolve empty: exit non-zero: $(cat "$work/err")"
 fi
-if resolves "$(printf %s "$first" | cut -c1-7)"; then
+if resolves "$(short "$first")"; then
   [ "$(cat "$work/out")" = "$first" ] || fail "resolve short SHA: printed $(cat "$work/out")"
 else
   fail "resolve short SHA: exit non-zero: $(cat "$work/err")"
