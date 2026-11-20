@@ -1,17 +1,20 @@
 #!/bin/sh
-# Tests for deploy/deploy.sh (EN-185; spec `deployment`, "Deploy from CI").
-# Builds a throwaway origin repository and a checkout of it, and puts a fake
-# `docker` first on PATH that records its arguments, so no container or
-# server is involved. CI runs it on every PR and push to main; run it from
-# the repository root:
+# Tests for deploy/deploy.sh and deploy/resolve-commit.sh (EN-185; spec
+# `deployment`, "Deploy from CI"). Builds a throwaway origin repository and
+# a checkout of it, and puts a fake `docker` first on PATH that records its
+# arguments, so no container or server is involved. CI runs it on every PR
+# and push to main; run it from the repository root:
 #
-#   sh deploy/test-deploy.sh [SCRIPT]
+#   sh deploy/test-deploy.sh [SCRIPT [RESOLVE]]
 #
-# SCRIPT defaults to deploy/deploy.sh; passing a modified copy shows which
-# case catches a change.
+# SCRIPT and RESOLVE default to deploy/deploy.sh and
+# deploy/resolve-commit.sh; passing a modified copy shows which case catches
+# a change.
 set -eu
 
-script="$(cd "$(dirname "${1:-deploy/deploy.sh}")" && pwd)/$(basename "${1:-deploy/deploy.sh}")"
+abs() { echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; }
+script=$(abs "${1:-deploy/deploy.sh}")
+resolve=$(abs "${2:-deploy/resolve-commit.sh}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT TERM
@@ -44,12 +47,12 @@ first=$(cat "$work/first")
 second=$(cat "$work/second")
 side=$(cat "$work/side")
 
-# Fake docker: records each call; FAKE_DOCKER_FAIL=pull|up makes that
-# subcommand fail.
+# Fake docker: records each call with the IMAGE_TAG it sees in its
+# environment; FAKE_DOCKER_FAIL=pull|up makes that subcommand fail.
 mkdir "$work/bin"
 cat >"$work/bin/docker" <<'EOF'
 #!/bin/sh
-echo "$*" >>"$FAKE_DOCKER_LOG"
+echo "[${IMAGE_TAG:-}] $*" >>"$FAKE_DOCKER_LOG"
 case " $* " in
   *" pull "*) [ "${FAKE_DOCKER_FAIL:-}" != pull ] ;;
   *" up "*) [ "${FAKE_DOCKER_FAIL:-}" != up ] ;;
@@ -73,8 +76,18 @@ run() {
     export SSH_ORIGINAL_COMMAND="$1" SFM_DEPLOY_DIR="$work/checkout" \
       FAKE_DOCKER_LOG="$work/docker.log" FAKE_DOCKER_FAIL="${2:-}" \
       PATH="$work/bin:$PATH"
+    unset IMAGE_TAG
     sh "$script"
   ) >"$work/out" 2>&1
+}
+
+# docker_calls_are TAG NAME: the deploy pulled TAG's images, then started
+# the stack from prod.env alone.
+docker_calls_are() {
+  expected="[$1] compose -f docker-compose.prod.yml --env-file prod.env pull api web
+[] compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build"
+  [ "$(cat "$work/docker.log")" = "$expected" ] ||
+    fail "$2: docker calls were: $(cat "$work/docker.log")"
 }
 
 head_is() { [ "$(git -C "$work/checkout" rev-parse HEAD)" = "$1" ]; }
@@ -115,10 +128,7 @@ if run "$latest"; then
   tag_is "sha-$short" || fail 'deploy: IMAGE_TAG not set'
   grep -qx 'POSTGRES_PASSWORD=secret' "$work/checkout/prod.env" ||
     fail 'deploy: other prod.env lines changed'
-  expected="compose -f docker-compose.prod.yml --env-file prod.env pull api web
-compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build"
-  [ "$(cat "$work/docker.log")" = "$expected" ] ||
-    fail "deploy: docker calls were: $(cat "$work/docker.log")"
+  docker_calls_are "sha-$short" deploy
 else
   fail "deploy: exit non-zero: $(cat "$work/out")"
 fi
@@ -126,10 +136,27 @@ fi
 # Rolls back to an older commit on main.
 reset
 git -C "$work/checkout" checkout -q --detach "$second"
+sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=sha-$(printf %s "$second" | cut -c1-7)/" \
+  "$work/checkout/prod.env"
 if run "$first"; then
   head_is "$first" || fail 'rollback: checkout is not at the commit'
+  tag_is "sha-$(printf %s "$first" | cut -c1-7)" || fail 'rollback: IMAGE_TAG not set'
+  docker_calls_are "sha-$(printf %s "$first" | cut -c1-7)" rollback
 else
   fail "rollback: exit non-zero: $(cat "$work/out")"
+fi
+
+# By hand: the commit as the first argument, no SSH_ORIGINAL_COMMAND.
+reset
+if (
+  unset SSH_ORIGINAL_COMMAND IMAGE_TAG
+  export SFM_DEPLOY_DIR="$work/checkout" FAKE_DOCKER_LOG="$work/docker.log" \
+    PATH="$work/bin:$PATH"
+  sh "$script" "$second"
+) >"$work/out" 2>&1; then
+  head_is "$second" || fail 'by hand: checkout is not at the commit'
+else
+  fail "by hand: exit non-zero: $(cat "$work/out")"
 fi
 
 # Adds IMAGE_TAG to a prod.env that lacks it.
@@ -138,14 +165,44 @@ sed -i '/^IMAGE_TAG=/d' "$work/checkout/prod.env"
 run "$second" || fail "missing IMAGE_TAG: exit non-zero: $(cat "$work/out")"
 tag_is "sha-$(printf %s "$second" | cut -c1-7)" || fail 'missing IMAGE_TAG: not added'
 
-# A failed pull stops before up.
+# A failed pull stops before up and leaves the files as they were.
 reset
 if run "$second" pull; then fail 'failed pull: exit 0'; fi
 grep -q ' up ' "$work/docker.log" && fail 'failed pull: up was called'
+head_is "$first" || fail 'failed pull: checkout not restored'
+tag_is sha-0000000 || fail 'failed pull: prod.env changed'
 
 # A failed up fails the deploy.
 reset
 if run "$second" up; then fail 'failed up: exit 0'; fi
+
+# resolve-commit.sh, in a clone as the workflow runs it.
+reset
+resolves() {
+  (cd "$work/checkout" && sh "$resolve" "$1") >"$work/out" 2>"$work/err"
+}
+if resolves ''; then
+  [ "$(cat "$work/out")" = "$latest" ] || fail "resolve empty: printed $(cat "$work/out")"
+else
+  fail "resolve empty: exit non-zero: $(cat "$work/err")"
+fi
+if resolves "$(printf %s "$first" | cut -c1-7)"; then
+  [ "$(cat "$work/out")" = "$first" ] || fail "resolve short SHA: printed $(cat "$work/out")"
+else
+  fail "resolve short SHA: exit non-zero: $(cat "$work/err")"
+fi
+# unresolved NAME INPUT MESSAGE: fails with MESSAGE and prints no SHA.
+unresolved() {
+  if resolves "$2"; then fail "resolve $1: exit 0"; fi
+  [ -s "$work/out" ] && fail "resolve $1: printed $(cat "$work/out")"
+  grep -q "$3" "$work/err" || fail "resolve $1: no '$3' in: $(cat "$work/err")"
+  return 0
+}
+git -C "$work/checkout" fetch -q origin side
+unresolved 'unknown commit' nonexistent 'unknown commit'
+unresolved 'option as input' "--output=$work/x" 'unknown commit'
+[ -e "$work/x" ] && fail 'resolve option as input: git wrote a file'
+unresolved 'commit not on main' "$side" 'is not on main'
 
 if [ "$failures" -ne 0 ]; then
   echo "test-deploy: $failures failure(s)" >&2

@@ -42,15 +42,7 @@ jobs:
         env:
           INPUT_COMMIT: ${{ inputs.commit }}
         run: |
-          input="${INPUT_COMMIT:-origin/main}"
-          sha=$(git rev-parse --verify --quiet --end-of-options "$input^{commit}") || {
-            echo "::error::unknown commit '$input'"
-            exit 1
-          }
-          git merge-base --is-ancestor "$sha" origin/main || {
-            echo "::error::$sha is not on main"
-            exit 1
-          }
+          sha=$(sh deploy/resolve-commit.sh "$INPUT_COMMIT")
           # Same short form as deploy/deploy.sh on the server.
           short=$(printf %s "$sha" | cut -c1-7)
           echo "sha=$sha" >>"$GITHUB_OUTPUT"

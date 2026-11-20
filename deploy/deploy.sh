@@ -37,13 +37,21 @@ git fetch -q origin main
 git cat-file -e "$sha^{commit}" 2>/dev/null || refuse "unknown commit $sha"
 git merge-base --is-ancestor "$sha" origin/main || refuse "$sha is not on main"
 
+previous=$(git rev-parse HEAD)
 git checkout -q --detach "$sha"
 # CI tags the images with `git rev-parse --short=7`.
 tag="sha-$(printf %s "$sha" | cut -c1-7)"
+# Pull before prod.env names the new tag (a shell IMAGE_TAG overrides the
+# file), so a failed pull leaves the checkout and prod.env matching the
+# running stack.
+if ! IMAGE_TAG="$tag" docker compose -f docker-compose.prod.yml --env-file prod.env pull api web; then
+  git checkout -q --detach "$previous"
+  echo "deploy: pulling the $tag images failed; production still runs $previous" >&2
+  exit 1
+fi
 grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
 
-docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
 # Waits for the API healthcheck: Caddy starts only once the API is healthy.
 docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 echo "deploy: production now runs $tag ($sha)"
