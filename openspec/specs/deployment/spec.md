@@ -165,6 +165,47 @@ A GitHub Actions workflow MUST check the production site from outside the server
 - WHEN the scheduled check runs
 - THEN the check fails, naming the certificate and its expiry date
 
+### Requirement: Deploy from CI
+
+A GitHub Actions workflow MUST deploy one commit to production when started by hand, and MUST NOT start on any other event. Its job MUST run in the GitHub environment `production`, which requires the maintainer's approval, accepts runs from the `main` branch only, and alone holds the deploy secrets (the SSH key, the server's pinned host key and the SSH target). The commit is an input; empty means the current `main`. The workflow MUST refuse, before contacting the server, a commit that is not on `main` or whose API and web images CI did not publish (CI publishes them only for commits green on `main`). On the server, the deploy key's `authorized_keys` entry MUST force one deploy script, installed outside the checkout, and MUST NOT allow port, agent or X11 forwarding or a terminal. The script MUST accept only a full 40-character lower-case commit SHA, MUST refuse a commit that is not on `origin/main`, and then MUST run the upgrade steps of "One-command production stack": check out the commit, pull the API and web images tagged `sha-<first 7 characters of the SHA>`, set `IMAGE_TAG` in `prod.env` to that tag (adding the line when missing, leaving the other lines unchanged) and start the stack with `up -d --no-build`. When the pull fails, or a hangup or termination signal interrupts it (for example when a cancelled run drops the SSH session), the script MUST check out the previous commit again and leave `prod.env` unchanged. Any failing step MUST fail the deploy. After the server step, the workflow MUST run the production check of "Production monitoring", and its failure MUST fail the run. The workflow MUST run only in this repository, never in forks.
+
+#### Scenario: Deploy a green commit
+
+- GIVEN a commit on `main` whose images CI published
+- WHEN the maintainer starts the deploy workflow with that commit and approves the `production` environment
+- THEN the server's checkout is at that commit, `prod.env` has `IMAGE_TAG=sha-<short SHA>`, the stack runs the images published for it, and the production check succeeds
+
+#### Scenario: Roll back
+
+- GIVEN production runs a commit of `main`
+- WHEN the maintainer deploys an older commit of `main`
+- THEN production runs the older commit's images; migrations the newer version applied are not undone
+
+#### Scenario: Commit not on main or not published
+
+- GIVEN a commit that is not on `main`, or whose images CI did not publish
+- WHEN the maintainer starts the deploy workflow with it
+- THEN the run fails before contacting the server, and production is unchanged
+
+#### Scenario: Anything but a full commit SHA
+
+- GIVEN the deploy key
+- WHEN it is used to send anything other than a full 40-character lower-case SHA of a commit on `origin/main` (a short or upper-case SHA, extra arguments, a shell command, an unknown commit or one off `main`)
+- THEN the script refuses it, naming the reason, without touching the checkout, `prod.env` or Docker
+
+#### Scenario: Failed pull
+
+- GIVEN the images for the commit cannot be pulled
+- WHEN the deploy runs
+- THEN the running stack is not restarted and the run fails
+- AND the checkout is back at the previous commit and `prod.env` is unchanged, so both still match the running stack
+
+#### Scenario: Cancelled during the pull
+
+- GIVEN a deploy whose pull is still running
+- WHEN the run is cancelled and the script gets a hangup or termination signal
+- THEN the stack is not restarted, the checkout is back at the previous commit and `prod.env` is unchanged
+
 ### Requirement: First admin
 
 The operator MUST be able to create or reset the system admin inside the production stack with one documented command that reads `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` from the operator's shell. The production image runs with `NODE_ENV=production`, so this command MUST NOT create the dev seed accounts or dataset. The long-running API container SHALL NOT receive the seed credentials.

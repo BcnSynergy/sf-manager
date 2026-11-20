@@ -407,11 +407,76 @@ manifest fetch answered 200), although GitHub documents new packages as
 private by default; why they came out public is unconfirmed. Pulls need no
 token while they stay public; check or change that in each package's
 Package settings. The server runs them through `IMAGE_TAG` (see
-"Production deployment"); deploying from CI is not set up.
+"Production deployment"), or the deploy workflow does (see "Deploying from
+CI").
 
-Automated deploys are not part of this setup yet (EN-185); for monitoring
-see "Monitoring". Swagger is off at `/api/docs` unless `prod.env` sets
-`API_DOCS_ENABLED=true`.
+For monitoring see "Monitoring". Swagger is off at `/api/docs` unless
+`prod.env` sets `API_DOCS_ENABLED=true`.
+
+### Deploying from CI
+
+The `Deploy` workflow (`.github/workflows/deploy.yml`, EN-185) runs step 4
+of "Production deployment" for you. Start it from the Actions tab ("Run
+workflow"), optionally with the commit to deploy; empty deploys the current
+`main`. It waits for your approval in the `production` environment, refuses
+a commit that is not on `main` or has no published images, then deploys
+over SSH and runs the production check (see "Monitoring"). To roll back,
+deploy an older commit of `main`; as with a manual rollback, migrations the
+newer version applied stay. It never starts on its own: to deploy every
+green `main` automatically, change its trigger.
+
+The workflow and the server look for the images under the first 7
+characters of the SHA. CI uses more only when 7 are ambiguous in its
+checkout (see step 2 of "Production deployment"); a deploy of such a commit
+then fails with the images "not published", and the commit has to be
+deployed by hand with the tag from the package's version list.
+
+If a run is cancelled or fails while it deploys, the server may be left
+between steps. Check it with `git -C ~/sf-manager log --oneline -1`,
+`grep IMAGE_TAG ~/sf-manager/prod.env` and `docker compose ... ps`, and deploy
+again (the same or another commit) to bring all three in line.
+
+On the server, the deploy key can only run `deploy/deploy.sh`: its
+`authorized_keys` entry forces that script, which accepts nothing but a full
+commit SHA of `main`. A copy lives outside the checkout, so checking out an
+older commit cannot remove it. The script fetches `main` with the checkout's
+own `origin` remote and no SSH agent, so that remote must be the public
+HTTPS URL. One-time setup:
+
+1. On your machine, create a key for this purpose only, without a
+   passphrase. In Git Bash (Windows PowerShell 5.1 drops the empty `''`):
+   `ssh-keygen -t ed25519 -N '' -C sf-manager-deploy -f sf-manager-deploy`.
+2. On the server, install the script from `main` without moving the
+   checkout, and add the public key (the one line in
+   `sf-manager-deploy.pub`) with the forced command (`restrict` turns off
+   forwarding and the terminal):
+
+   ```sh
+   mkdir -p ~/bin
+   git -C ~/sf-manager fetch -q origin main &&
+     git -C ~/sf-manager show origin/main:deploy/deploy.sh >~/bin/sf-manager-deploy.new &&
+     chmod 755 ~/bin/sf-manager-deploy.new && mv ~/bin/sf-manager-deploy.new ~/bin/sf-manager-deploy
+   pub='<contents of sf-manager-deploy.pub>'
+   echo "restrict,command=\"$HOME/bin/sf-manager-deploy\" $pub" >>~/.ssh/authorized_keys
+   ```
+
+   Run the commands above the `pub=` line again whenever `deploy/deploy.sh`
+   changes. They write a new file and move it into place only once `git show`
+   succeeds: an empty script would exit 0, and the workflow would report a
+   deploy that never ran.
+
+3. In the repository's Settings > Environments, create `production`, add
+   yourself as a required reviewer, limit "Deployment branches and tags" to
+   the `main` branch (otherwise a workflow file changed on another branch
+   could run with the secrets once approved), and add these environment
+   secrets:
+   - `DEPLOY_SSH_KEY`: the private key file `sf-manager-deploy`.
+   - `DEPLOY_SSH_TARGET`: `ubuntu@<server address>`.
+   - `DEPLOY_SSH_KNOWN_HOSTS`: the server's host key as a `known_hosts`
+     line, taken from the server itself rather than from the network:
+     `echo "<server address> $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`.
+
+   Then delete the private key from your machine.
 
 ### Monitoring
 

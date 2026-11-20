@@ -553,15 +553,57 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   Evidence:
   `apps/web/src/pages/ReviewSessionDetailPage.tsx` entries table. Origin:
   `ui-restyle-review-session-detail` PR 1 fresh review, 2026-10-20.
-- **EN-185** (delivery): deploying is manual: the operator checks out a
-  commit on the server, sets `IMAGE_TAG` and pulls (README "Production
-  deployment"). Deploying from CI after a green `main` run would need server
-  access (SSH host, user and key) as repository secrets and a decision on
-  when to deploy (every green `main`, or a manual trigger). Note that
-  `publish-platform` rebuilds the images instead of pushing the ones `ci`
-  smoke-tested, so the pushed bytes can differ (unpinned `apt-get` and npm
-  registry state). Origin: split from EN-91 in `en-91-registry-deploy`,
-  2026-11-13; covers the deploy part of TD-32.
+- **EN-214** (delivery tests): the `Deploy` workflow's glue around
+  `deploy/resolve-commit.sh` (stderr captured in `resolve.err`, lines
+  joined with spaces into one `::error::` annotation, `exit 1`) has no
+  automated test; it was checked by hand with an input holding a newline
+  and `::warning::`. A test that runs that step body would prove the
+  one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
+  2026-11-20.
+- **EN-219** (delivery tests): two robustness gaps in
+  `deploy/test-deploy.sh`. The closed-output case relies on `true` having
+  exited before the slow fake pull fails a second later; on a loaded runner
+  the reader may still be open and the case would pass without exercising
+  SIGPIPE. A reader closed before the deploy starts (a FIFO, or a fake
+  docker that waits for the reader to be gone) would make it deterministic.
+  Also, the by-hand and closed-output cases copy `run()`'s environment
+  setup inline; a shared helper would keep the three in sync. Origin:
+  `en-185-ci-deploy` Gentle review R3-001 and R2-003, 2026-11-20.
+- **EN-218** (delivery diagnostics): `deploy/resolve-commit.sh` reports
+  any non-zero exit of `git merge-base --is-ancestor` as "is not on main",
+  but exit 128 is a git error (for example a missing or shallow
+  `origin/main`), so the refusal reason can mislead. The refusal itself is
+  right. Tell exit 1 apart from other codes, or let git's stderr through.
+  Origin: `en-185-ci-deploy` Gentle review R3-001, 2026-11-20.
+- **EN-217** (delivery resilience): when a cancelled run only closes the
+  SSH session's pipes (no hangup signal), `deploy/deploy.sh` keeps going.
+  The pull runs with SIGPIPE ignored, so it can still succeed; the script
+  then edits `prod.env` and runs `up -d` with SIGPIPE back at its default,
+  and `up` can die on its next progress write while it recreates
+  containers. Routing docker's output to a log file on the server (and
+  printing it afterwards with `say`) would let a cancelled deploy either
+  finish or stop cleanly. Until then, README "Deploying from CI" says how
+  to check the server and redeploy after a cancelled run. Origin:
+  `en-185-ci-deploy` Gentle review R3-001, 2026-11-20.
+- **EN-216** (delivery tests): no test in `deploy/test-deploy.sh` covers
+  the trap reset in `restore` or `trap - HUP INT TERM PIPE` after the pull
+  in `deploy/deploy.sh`; deleting both still passes the suite. Without the
+  second, a signal during `up -d` would restore the previous checkout while
+  `prod.env` and the stack already run the new tag. A fake-docker case that
+  sends TERM during `up` and asserts the checkout stays on the new commit
+  would pin it. A signal between the checkout and the trap install (a few
+  milliseconds) can also still leave the checkout on the new commit.
+  Origin: `en-185-ci-deploy` scoped fresh review W-2 and N-4, 2026-11-20.
+- **EN-215** (delivery readability): in `deploy/deploy.sh`, the comment on
+  why the pull runs before `prod.env` names the new tag sits above the
+  `say` and `restore` helpers, about 20 lines before the pull it explains.
+  Move it next to the pull. Origin: `en-185-ci-deploy` Gentle review
+  R2-001, 2026-11-20.
+- **EN-213** (delivery): `publish-platform` rebuilds the images instead of
+  pushing the ones `ci` smoke-tested, so the pushed bytes can differ
+  (unpinned `apt-get` and npm registry state), and the deploy workflow
+  (EN-185) deploys the pushed ones. Origin: split from EN-185 in
+  `en-185-ci-deploy`, 2026-11-20 (first noted in EN-185, split from EN-91).
 - **EN-186** (delivery): nothing tests that the documented start command
   refuses to run an unpublished image. `deploy/smoke-test.sh` builds the
   images with `up -d --build`, so neither the "Image not published" scenario
@@ -1153,6 +1195,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-185** (delivery): deploying was manual: the operator checked out a commit on the server, set `IMAGE_TAG` and pulled. The `Deploy` workflow (`.github/workflows/deploy.yml`) now does it when started by hand, after the maintainer approves the `production` environment, which alone holds the deploy secrets. It refuses a commit that is not on `main` or has no published images, deploys over SSH with a key whose `authorized_keys` entry forces `deploy/deploy.sh` (only a full commit SHA of `main` is accepted), and runs the production check. Manual trigger chosen over deploying every green `main`; switching is a trigger change. The rebuilt-images note moved to EN-213. Done in `en-185-ci-deploy` (PR #444, spec `deployment`). Origin: split from EN-91 in `en-91-registry-deploy`, 2026-11-13; covers the deploy part of TD-32.
 - **EN-204** (web test coverage): no `UserCreatePage` component test submitted with the email, the password and the company all invalid at once. A new test does, and checks that all three fields are marked and no request is sent. It fails if the page marks only the first issues the schema reports. In this case the company issue comes from the base field (`maintenanceCompanyId` rejects the empty string the page sends), not from the `superRefine`, which for a maintenance role only reports a missing (`undefined`) company. Done in `user-create-field-errors` (PR #438). Origin: `user-create-field-errors` fresh review S-2, 2026-11-17.
 
 - **EN-212** (web readability): `useAlertMessage` returned the stored key as `message`, although since EN-210 it is a `MessageKey`, not text. It now returns it as `messageKey`, and every caller (24 pages and components, plus the hook's own tests) reads that name. The EN-76 test in `components/Alert.test.tsx` now renders `t(messageKey)` like a real page and checks the translated text instead of the raw key. Done in `alert-message-keys` (PR #437). Origin: `alert-message-keys` Gentle review (R2-001) and fresh review S-2, 2026-11-19.
