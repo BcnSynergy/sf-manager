@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
 import { MaintenanceCompanyEditPage } from './MaintenanceCompanyEditPage';
@@ -140,6 +141,25 @@ describe('MaintenanceCompanyEditPage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
+
+    renderPage(companyB.id);
+
+    fireEvent.change(await screen.findByTestId('maintenance-company-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('maintenance-company-edit-submit'));
+
+    await screen.findByTestId('maintenance-company-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-error',
+      'maintenanceCompany.edit.validationError',
+    );
+  });
+
   it('shows the duplicate-taxId message when the update is rejected with code: TAX_ID_ALREADY_IN_USE', async () => {
     mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
     mockedUpdateMaintenanceCompany.mockRejectedValue(new ApiError(409, 'TAX_ID_ALREADY_IN_USE'));
@@ -153,6 +173,23 @@ describe('MaintenanceCompanyEditPage', () => {
       'This tax ID is already in use by another active maintenance company.',
     );
     expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA, companyB]);
+    mockedUpdateMaintenanceCompany.mockRejectedValue(new ApiError(409, 'TAX_ID_ALREADY_IN_USE'));
+
+    renderPage(companyB.id);
+
+    fireEvent.click(await screen.findByTestId('maintenance-company-edit-submit'));
+
+    await screen.findByTestId('maintenance-company-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-error',
+      'maintenanceCompany.error.duplicateTaxId',
+    );
   });
 
   it('requires confirmation before calling softDeleteMaintenanceCompany', async () => {
@@ -212,6 +249,26 @@ describe('MaintenanceCompanyEditPage', () => {
       'This tax ID is already in use by another active maintenance company.',
     );
     expect(screen.queryByTestId('maintenance-companies-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the delete error in the new language after a language switch', async () => {
+    mockedListMaintenanceCompanies.mockResolvedValue([companyA]);
+    mockedSoftDeleteMaintenanceCompany.mockRejectedValue(
+      new ApiError(409, 'MAINTENANCE_COMPANY_HAS_ACTIVE_USERS'),
+    );
+
+    renderPage(companyA.id);
+
+    fireEvent.click(await screen.findByTestId('maintenance-company-edit-delete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('maintenance-company-edit-delete-error');
+
+    await expectAlertFollowsLanguage(
+      'maintenance-company-edit-delete-error',
+      'maintenanceCompany.error.hasActiveUsers',
+    );
   });
 
   describe('design system', () => {

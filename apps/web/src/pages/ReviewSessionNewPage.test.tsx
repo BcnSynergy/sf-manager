@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
 import { ReviewSessionNewPage } from './ReviewSessionNewPage';
@@ -84,6 +85,21 @@ describe('ReviewSessionNewPage', () => {
       expect(mockedOpenReviewSession).toHaveBeenCalledWith({ communityId: 'c1', templateId: 't1' });
     });
     expect(await screen.findByTestId('detail-page')).toBeInTheDocument();
+  });
+
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the open-session error in the new language after a language switch', async () => {
+    mockedGetReviewScope.mockResolvedValue(scope);
+    mockedOpenReviewSession.mockRejectedValue(new ApiError(409, 'OPEN_DRAFT_ALREADY_EXISTS'));
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-new-submit'));
+    await screen.findByTestId('review-session-new-error-message');
+
+    await expectAlertFollowsLanguage(
+      'review-session-new-error-message',
+      'reviewSession.error.openDraftAlreadyExists',
+    );
   });
 
   it('shows a mapped error message on a 409 open-draft conflict without navigating', async () => {

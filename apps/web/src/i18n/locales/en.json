@@ -45,7 +45,10 @@
       "companyLabel": "Maintenance company",
       "companyPlaceholder": "Select a maintenance company",
       "submitLabel": "Create user",
-      "validationError": "Enter a valid email and a password that meets the strength requirements."
+      "validationError": "Fix the fields marked below.",
+      "emailError": "Enter a valid email address.",
+      "passwordRules": "At least 10 characters, with at least one letter and one digit.",
+      "companyError": "Select a maintenance company."
     },
     "edit": {
       "title": "Edit user",
@@ -102,6 +105,7 @@
       "columnUser": "User",
       "columnStatus": "Status",
       "columnActions": "Actions",
+      "selectPlaceholder": "Select a user",
       "status": {
         "active": "Active",
         "deactivated": "Deactivated"

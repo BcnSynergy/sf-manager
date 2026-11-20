@@ -168,8 +168,8 @@ export function ResetPasswordPage() {
             </p>
           )}
         </div>
-        {error.message && (
-          <Alert key={error.key} tone="danger" testId="reset-error" message={t(error.message)} />
+        {error.messageKey && (
+          <Alert key={error.key} tone="danger" testId="reset-error" message={t(error.messageKey)} />
         )}
         <button
           type="submit"

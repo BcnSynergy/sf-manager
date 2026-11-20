@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
@@ -151,6 +152,19 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     expect(mockedUpload).not.toHaveBeenCalled();
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the rejection in the new language after a language switch', async () => {
+    render(<OrganizationLogoSection hasLogo={false} />);
+
+    chooseFile(logoFile(2 * 1024 * 1024 + 1));
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await expectAlertFollowsLanguage(
+      'organization-logo-error',
+      'organizationProfile.logoTooLargeError',
+    );
+  });
+
   it('accepts a file of exactly 2 MB', async () => {
     mockedUpload.mockResolvedValue(profile);
     render(<OrganizationLogoSection hasLogo={false} />);
@@ -225,6 +239,22 @@ describe('OrganizationLogoSection (organization-logo S1, S2)', () => {
     expect(screen.getByRole('alert')).not.toBe(first);
     expect(screen.getByRole('alert')).toHaveTextContent(
       'The logo must be a PNG, JPEG, WebP or SVG image.',
+    );
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows a failed upload in the new language after a language switch', async () => {
+    mockedUpload.mockRejectedValue(new ApiError(500));
+    render(<OrganizationLogoSection hasLogo={false} />);
+
+    chooseFile(logoFile());
+    fireEvent.click(screen.getByTestId('organization-logo-upload'));
+
+    await screen.findByTestId('organization-logo-error');
+
+    await expectAlertFollowsLanguage(
+      'organization-logo-error',
+      'organizationProfile.logoUploadError',
     );
   });
 
@@ -323,6 +353,22 @@ describe('OrganizationLogoSection: removing the logo (EN-110)', () => {
     );
     expect(screen.getByTestId('organization-logo-preview')).toBeInTheDocument();
     expect(screen.queryByTestId('organization-logo-success')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows a failed removal in the new language after a language switch', async () => {
+    mockedRemove.mockRejectedValue(new ApiError(500, 'boom'));
+    render(<OrganizationLogoSection hasLogo />);
+
+    fireEvent.click(screen.getByTestId('organization-logo-remove'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('organization-logo-error');
+
+    await expectAlertFollowsLanguage(
+      'organization-logo-error',
+      'organizationProfile.logoRemoveError',
+    );
   });
 
   it('can remove a logo whose image failed to load', () => {

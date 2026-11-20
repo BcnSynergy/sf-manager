@@ -54,7 +54,7 @@ export function ReviewSessionElementPage() {
 
   const [saving, setSaving] = useState(false);
   const {
-    message: saveError,
+    messageKey: saveError,
     key: saveErrorAlertKey,
     show: showSaveError,
     clear: clearSaveError,
@@ -128,7 +128,7 @@ export function ReviewSessionElementPage() {
     try {
       if (markUnreviewed) {
         if (observations.trim() === '') {
-          showSaveError(t('reviewSession.error.missingObservations'));
+          showSaveError('reviewSession.error.missingObservations');
           setSaving(false);
           return;
         }
@@ -137,7 +137,7 @@ export function ReviewSessionElementPage() {
         });
       } else {
         if (answers.size !== resolved.questions.length) {
-          showSaveError(t('reviewSession.error.answersDoNotMatchTemplate'));
+          showSaveError('reviewSession.error.answersDoNotMatchTemplate');
           setSaving(false);
           return;
         }
@@ -156,7 +156,7 @@ export function ReviewSessionElementPage() {
       // entered answers": no state reset here on failure — `answers`/
       // `observations` stay exactly as the user left them.
       showSaveError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
     } finally {
       setSaving(false);
@@ -345,7 +345,7 @@ export function ReviewSessionElementPage() {
             key={saveErrorAlertKey}
             tone="danger"
             testId="review-session-element-save-error"
-            message={saveError}
+            message={t(saveError)}
           />
         )}
         <div className="sf-actions">

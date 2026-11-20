@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunitiesListPage } from './CommunitiesListPage';
@@ -175,6 +176,23 @@ describe('CommunitiesListPage', () => {
 
     expect(await screen.findByTestId('communities-list-action-error')).toBeInTheDocument();
     expect(screen.getByTestId(`communities-list-row-${communityA.id}`)).toBeInTheDocument();
+  });
+
+  // EN-211: the alert stores the i18n key, so it follows a language switch.
+  it('shows the deletion error in the new language after a language switch', async () => {
+    mockedListCommunities.mockResolvedValue([communityA]);
+    mockedSoftDeleteCommunity.mockRejectedValue(new ApiError(404));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId(`communities-list-delete-${communityA.id}`));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await screen.findByTestId('communities-list-action-error');
+
+    await expectAlertFollowsLanguage(
+      'communities-list-action-error',
+      'community.error.assignmentTargetNotFound',
+    );
   });
 
   it('names the table by its heading and scopes every column header', async () => {

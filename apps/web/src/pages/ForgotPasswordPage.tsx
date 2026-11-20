@@ -63,8 +63,13 @@ export function ForgotPasswordPage() {
             onChange={(event) => setEmail(event.target.value)}
             data-testid="forgot-email"
           />
-          {error.message && (
-            <Alert key={error.key} tone="danger" testId="forgot-error" message={t(error.message)} />
+          {error.messageKey && (
+            <Alert
+              key={error.key}
+              tone="danger"
+              testId="forgot-error"
+              message={t(error.messageKey)}
+            />
           )}
           <button
             type="submit"

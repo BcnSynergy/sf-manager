@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewTemplateApi from '../api/review-template';
 import { ReviewTemplateCreatePage } from './ReviewTemplateCreatePage';
@@ -71,6 +72,20 @@ describe('ReviewTemplateCreatePage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    await screen.findByTestId('review-template-create-error');
+
+    await expectAlertFollowsLanguage(
+      'review-template-create-error',
+      'reviewTemplate.create.validationError',
+    );
+  });
+
   it('creates the draft and navigates to the list without a manual reload on valid submission (spec: Valid submission creates the draft)', async () => {
     mockedCreateDraftReviewTemplate.mockResolvedValue({
       id: 'template-1',
@@ -111,6 +126,26 @@ describe('ReviewTemplateCreatePage', () => {
     const error = await screen.findByTestId('review-template-create-error');
     expect(error).toHaveTextContent(
       'A draft already exists for this element type and review frequency.',
+    );
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateDraftReviewTemplate.mockRejectedValue(
+      new ApiError(409, 'REVIEW_TEMPLATE_DRAFT_EXISTS'),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('review-template-create-name'), {
+      target: { value: VALID_NAME },
+    });
+    fireEvent.click(screen.getByTestId('review-template-create-submit'));
+
+    await screen.findByTestId('review-template-create-error');
+
+    await expectAlertFollowsLanguage(
+      'review-template-create-error',
+      'reviewTemplate.error.draftExists',
     );
   });
 

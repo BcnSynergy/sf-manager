@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as inspectableElementApi from '../api/inspectable-element';
 import { InspectableElementEditPage } from './InspectableElementEditPage';
@@ -186,6 +187,25 @@ describe('InspectableElementEditPage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA]);
+
+    renderPage(elementA.id);
+
+    fireEvent.change(await screen.findByTestId('inspectable-element-edit-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('inspectable-element-edit-submit'));
+
+    await screen.findByTestId('inspectable-element-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'inspectable-element-edit-error',
+      'inspectableElement.edit.validationError',
+    );
+  });
+
   it('shows the generic not-found message when the update is rejected with code: INSPECTABLE_ELEMENT_NOT_FOUND', async () => {
     mockedListInspectableElements.mockResolvedValue([elementA]);
     mockedUpdateInspectableElement.mockRejectedValue(
@@ -199,6 +219,25 @@ describe('InspectableElementEditPage', () => {
     const error = await screen.findByTestId('inspectable-element-edit-error');
     expect(error).toHaveTextContent('This community or inspectable element could not be found.');
     expect(screen.queryByTestId('community-elements-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA]);
+    mockedUpdateInspectableElement.mockRejectedValue(
+      new ApiError(404, 'INSPECTABLE_ELEMENT_NOT_FOUND'),
+    );
+
+    renderPage(elementA.id);
+
+    fireEvent.click(await screen.findByTestId('inspectable-element-edit-submit'));
+
+    await screen.findByTestId('inspectable-element-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'inspectable-element-edit-error',
+      'inspectableElement.error.notFound',
+    );
   });
 
   it('requires confirmation before calling softDeleteInspectableElement', async () => {
@@ -250,6 +289,24 @@ describe('InspectableElementEditPage', () => {
 
     expect(await screen.findByTestId('inspectable-element-edit-delete-error')).toBeInTheDocument();
     expect(screen.queryByTestId('community-elements-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the delete error in the new language after a language switch', async () => {
+    mockedListInspectableElements.mockResolvedValue([elementA]);
+    mockedSoftDeleteInspectableElement.mockRejectedValue(new ApiError(0));
+
+    renderPage(elementA.id);
+
+    fireEvent.click(await screen.findByTestId('inspectable-element-edit-delete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('inspectable-element-edit-delete-error');
+
+    await expectAlertFollowsLanguage(
+      'inspectable-element-edit-delete-error',
+      'common.error.network',
+    );
   });
 
   // inspectable-element-admin-ui spec.md "Decommission and Reactivate
@@ -356,6 +413,24 @@ describe('InspectableElementEditPage', () => {
         await screen.findByTestId('inspectable-element-edit-decommission-error'),
       ).toBeInTheDocument();
       expect(screen.getByTestId('inspectable-element-edit-decommission')).toBeInTheDocument();
+    });
+
+    // EN-209: the alert stores the i18n key, so it follows a language switch.
+    it('shows the decommission error in the new language after a language switch', async () => {
+      mockedListInspectableElements.mockResolvedValue([elementA]);
+      mockedUpdateInspectableElement.mockRejectedValue(new ApiError(0));
+
+      renderPage(elementA.id);
+
+      fireEvent.click(await screen.findByTestId('inspectable-element-edit-decommission'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      await screen.findByTestId('inspectable-element-edit-decommission-error');
+
+      await expectAlertFollowsLanguage(
+        'inspectable-element-edit-decommission-error',
+        'common.error.network',
+      );
     });
   });
 

@@ -45,7 +45,10 @@
       "companyLabel": "Empresa de manteniment",
       "companyPlaceholder": "Selecciona una empresa de manteniment",
       "submitLabel": "Crear usuari",
-      "validationError": "Introdueix un correu electrònic vàlid i una contrasenya que compleixi els requisits de seguretat."
+      "validationError": "Corregeix els camps marcats a sota.",
+      "emailError": "Introdueix una adreça de correu electrònic vàlida.",
+      "passwordRules": "Mínim 10 caràcters, amb almenys una lletra i un número.",
+      "companyError": "Selecciona una empresa de manteniment."
     },
     "edit": {
       "title": "Edita l'usuari",
@@ -102,6 +105,7 @@
       "columnUser": "Usuari",
       "columnStatus": "Estat",
       "columnActions": "Accions",
+      "selectPlaceholder": "Selecciona un usuari",
       "status": {
         "active": "Actiu",
         "deactivated": "Desactivat"

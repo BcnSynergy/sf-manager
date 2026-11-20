@@ -34,7 +34,7 @@ export function ReviewSessionNewPage() {
   const [communityId, setCommunityId] = useState('');
   const [templateId, setTemplateId] = useState('');
   const {
-    message: formError,
+    messageKey: formError,
     key: formErrorAlertKey,
     show: showFormError,
     clear: clearFormError,
@@ -67,7 +67,7 @@ export function ReviewSessionNewPage() {
     clearFormError();
 
     if (communityId === '' || templateId === '') {
-      showFormError(t('reviewSession.new.validationError'));
+      showFormError('reviewSession.new.validationError');
       return;
     }
 
@@ -77,7 +77,7 @@ export function ReviewSessionNewPage() {
       navigate(`/review-sessions/${session.id}`);
     } catch (caughtError) {
       showFormError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -172,7 +172,7 @@ export function ReviewSessionNewPage() {
             key={formErrorAlertKey}
             tone="danger"
             testId="review-session-new-error-message"
-            message={formError}
+            message={t(formError)}
           />
         )}
         <div className="sf-actions">

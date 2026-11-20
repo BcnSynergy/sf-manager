@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import type { ManagerCapability } from '@sf-manager/validation';
 import { ApiError } from '../api/client';
 import * as maintenanceCompanyApi from '../api/maintenance-company';
@@ -177,6 +178,21 @@ describe('UserEditPage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    renderPage(otherUser.id);
+
+    fireEvent.change(await screen.findByTestId('user-edit-email'), {
+      target: { value: 'not-an-email' },
+    });
+    fireEvent.click(screen.getByTestId('user-edit-submit'));
+
+    await screen.findByTestId('user-edit-error');
+
+    await expectAlertFollowsLanguage('user-edit-error', 'users.edit.validationError');
+  });
+
   it('shows a distinct last-admin-lockout message on a 409 LAST_SYSTEM_ADMIN response', async () => {
     mockedListUsers.mockResolvedValue([admin, otherUser]);
     mockedUpdateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
@@ -188,6 +204,19 @@ describe('UserEditPage', () => {
       'The last system administrator cannot be removed.',
     );
     expect(screen.queryByTestId('users-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListUsers.mockResolvedValue([admin, otherUser]);
+    mockedUpdateUser.mockRejectedValue(new ApiError(409, 'LAST_SYSTEM_ADMIN'));
+    renderPage(otherUser.id);
+
+    fireEvent.click(await screen.findByTestId('user-edit-submit'));
+
+    await screen.findByTestId('user-edit-error');
+
+    await expectAlertFollowsLanguage('user-edit-error', 'users.error.lastSystemAdmin');
   });
 
   it('shows a distinct concurrency-conflict message on a 409 TRANSACTION_CONFLICT response, without retrying', async () => {

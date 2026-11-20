@@ -28,7 +28,7 @@ export function CommunitiesListPage() {
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const {
-    message: actionErrorKey,
+    messageKey: actionErrorKey,
     key: actionErrorAlertKey,
     show: showActionError,
     clear: clearActionError,

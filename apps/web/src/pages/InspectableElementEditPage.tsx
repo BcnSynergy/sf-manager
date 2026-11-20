@@ -48,14 +48,14 @@ export function InspectableElementEditPage() {
   const [serialNumber, setSerialNumber] = useState('');
   const [installedAt, setInstalledAt] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
   } = useAlertMessage();
   const [submitting, setSubmitting] = useState(false);
   const {
-    message: deleteError,
+    messageKey: deleteError,
     key: deleteErrorAlertKey,
     show: showDeleteError,
     clear: clearDeleteError,
@@ -69,7 +69,7 @@ export function InspectableElementEditPage() {
   // mixed into the main form submit).
   const [deactivated, setDeactivated] = useState(false);
   const {
-    message: decommissionError,
+    messageKey: decommissionError,
     key: decommissionErrorAlertKey,
     show: showDecommissionError,
     clear: clearDecommissionError,
@@ -140,7 +140,7 @@ export function InspectableElementEditPage() {
       installedAt,
     });
     if (!result.success) {
-      showError(t('inspectableElement.edit.validationError'));
+      showError('inspectableElement.edit.validationError');
       return;
     }
 
@@ -154,7 +154,7 @@ export function InspectableElementEditPage() {
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -177,7 +177,7 @@ export function InspectableElementEditPage() {
       navigate(`/communities/${communityId}/inspectable-elements`);
     } catch (caughtError) {
       showDeleteError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDeleting(false);
     }
@@ -208,7 +208,7 @@ export function InspectableElementEditPage() {
       // spec.md "A failed action is reported and does not change the shown
       // state" — `deactivated` is left untouched on failure.
       showDecommissionError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
     } finally {
       setDecommissionSubmitting(false);
@@ -356,7 +356,7 @@ export function InspectableElementEditPage() {
             key={errorAlertKey}
             tone="danger"
             testId="inspectable-element-edit-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">
@@ -377,7 +377,7 @@ export function InspectableElementEditPage() {
           key={deleteErrorAlertKey}
           tone="danger"
           testId="inspectable-element-edit-delete-error"
-          message={deleteError}
+          message={t(deleteError)}
         />
       )}
       {decommissionError && (
@@ -385,7 +385,7 @@ export function InspectableElementEditPage() {
           key={decommissionErrorAlertKey}
           tone="danger"
           testId="inspectable-element-edit-decommission-error"
-          message={decommissionError}
+          message={t(decommissionError)}
         />
       )}
       <div className="sf-actions">

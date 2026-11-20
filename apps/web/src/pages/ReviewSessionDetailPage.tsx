@@ -49,7 +49,7 @@ export function ReviewSessionDetailPage() {
 
   const [code, setCode] = useState('');
   const {
-    message: codeError,
+    messageKey: codeError,
     key: codeErrorAlertKey,
     show: showCodeError,
     clear: clearCodeError,
@@ -58,7 +58,7 @@ export function ReviewSessionDetailPage() {
   const [pendingComplete, setPendingComplete] = useState(false);
   const [completing, setCompleting] = useState(false);
   const {
-    message: completeError,
+    messageKey: completeError,
     key: completeErrorAlertKey,
     show: showCompleteError,
     clear: clearCompleteError,
@@ -68,7 +68,7 @@ export function ReviewSessionDetailPage() {
   const [pendingDiscard, setPendingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const {
-    message: discardError,
+    messageKey: discardError,
     key: discardErrorAlertKey,
     show: showDiscardError,
     clear: clearDiscardError,
@@ -109,7 +109,7 @@ export function ReviewSessionDetailPage() {
 
     const trimmed = code.trim().toUpperCase();
     if (trimmed === '') {
-      showCodeError(t('reviewSession.detail.codeValidationError'));
+      showCodeError('reviewSession.detail.codeValidationError');
       return;
     }
 
@@ -137,7 +137,7 @@ export function ReviewSessionDetailPage() {
         const codes = apiError.extra?.elementCodes;
         setUnreviewedCodes(Array.isArray(codes) ? (codes as string[]) : []);
       }
-      showCompleteError(t(mapApiErrorToMessageKey(apiError)));
+      showCompleteError(mapApiErrorToMessageKey(apiError));
     } finally {
       setCompleting(false);
     }
@@ -159,7 +159,7 @@ export function ReviewSessionDetailPage() {
       navigate('/review-sessions');
     } catch (caughtError) {
       showDiscardError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setDiscarding(false);
     }
@@ -232,7 +232,7 @@ export function ReviewSessionDetailPage() {
           key={completeErrorAlertKey}
           tone="danger"
           testId="review-session-detail-complete-error"
-          message={completeError}
+          message={t(completeError)}
         />
       )}
       {isDraft && unreviewedCodes && unreviewedCodes.length > 0 && (
@@ -258,7 +258,7 @@ export function ReviewSessionDetailPage() {
           key={discardErrorAlertKey}
           tone="danger"
           testId="review-session-detail-discard-error"
-          message={discardError}
+          message={t(discardError)}
         />
       )}
 
@@ -355,7 +355,7 @@ export function ReviewSessionDetailPage() {
                 key={codeErrorAlertKey}
                 tone="danger"
                 testId="review-session-detail-code-error"
-                message={codeError}
+                message={t(codeError)}
               />
             )}
             <button

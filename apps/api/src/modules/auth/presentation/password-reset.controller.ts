@@ -29,7 +29,6 @@ import { WeakPasswordError } from '../../users/domain/errors/weak-password.error
 import { ConfirmPasswordResetUseCase } from '../application/use-cases/confirm-password-reset.use-case';
 import { RequestPasswordResetUseCase } from '../application/use-cases/request-password-reset.use-case';
 import { InvalidResetTokenError } from '../domain/invalid-reset-token.error';
-import { PasswordResetEmailThrottlerGuard } from './guards/password-reset-email-throttler.guard';
 import { PasswordResetThrottlerGuard } from './guards/password-reset-throttler.guard';
 
 // Machine-readable cause of the one 400 the confirm endpoint adds to the
@@ -38,8 +37,9 @@ import { PasswordResetThrottlerGuard } from './guards/password-reset-throttler.g
 export type PasswordResetErrorCode = 'INVALID_RESET_TOKEN';
 
 // password-reset S1, S3-S6: both endpoints are public (the user has no
-// session) and rate-limited per client key; the request endpoint also per
-// email. Lives apart from AuthController so session handling stays as it was.
+// session) and rate-limited per client key only: a per-email limit would let
+// anyone lock a user out of resetting (EN-200). Lives apart from
+// AuthController so session handling stays as it was.
 @ApiTags('auth')
 @Controller('auth/password-reset')
 export class PasswordResetController {
@@ -50,7 +50,7 @@ export class PasswordResetController {
 
   // S3: the same 202 whatever the email is; the work runs after the answer.
   @Public()
-  @UseGuards(PasswordResetThrottlerGuard, PasswordResetEmailThrottlerGuard)
+  @UseGuards(PasswordResetThrottlerGuard)
   @Post('request')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiBody({
@@ -73,8 +73,7 @@ export class PasswordResetController {
   })
   @ApiBadRequestResponse({ description: 'Invalid email or locale.' })
   @ApiTooManyRequestsResponse({
-    description:
-      'Too many requests from this client or for this email; see Retry-After.',
+    description: 'Too many requests from this client; see Retry-After.',
   })
   request(
     @Body(new ZodValidationPipe(passwordResetRequestSchema))

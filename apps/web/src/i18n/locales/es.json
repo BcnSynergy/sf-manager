@@ -45,7 +45,10 @@
       "companyLabel": "Empresa de mantenimiento",
       "companyPlaceholder": "Selecciona una empresa de mantenimiento",
       "submitLabel": "Crear usuario",
-      "validationError": "Introduce un correo electrónico válido y una contraseña que cumpla los requisitos de seguridad."
+      "validationError": "Corrige los campos marcados abajo.",
+      "emailError": "Introduce una dirección de correo electrónico válida.",
+      "passwordRules": "Mínimo 10 caracteres, con al menos una letra y un número.",
+      "companyError": "Selecciona una empresa de mantenimiento."
     },
     "edit": {
       "title": "Editar usuario",
@@ -102,6 +105,7 @@
       "columnUser": "Usuario",
       "columnStatus": "Estado",
       "columnActions": "Acciones",
+      "selectPlaceholder": "Selecciona un usuario",
       "status": {
         "active": "Activo",
         "deactivated": "Desactivado"

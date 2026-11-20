@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as checklistQuestionApi from '../api/checklist-question';
 import { ChecklistQuestionEditPage } from './ChecklistQuestionEditPage';
@@ -116,6 +117,24 @@ describe('ChecklistQuestionEditPage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([question]);
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('checklist-question-edit-text'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByTestId('checklist-question-edit-submit'));
+
+    await screen.findByTestId('checklist-question-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'checklist-question-edit-error',
+      'checklistQuestion.edit.validationError',
+    );
+  });
+
   it('requires confirmation before soft-deleting, and the confirm copy does not imply a blocking dependency (spec: Confirmed Soft-Delete)', async () => {
     mockedListChecklistQuestions.mockResolvedValue([question]);
 
@@ -144,6 +163,24 @@ describe('ChecklistQuestionEditPage', () => {
     expect(await screen.findByTestId('checklist-question-list-sentinel')).toBeInTheDocument();
   });
 
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the delete error in the new language after a language switch', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([question]);
+    mockedSoftDeleteChecklistQuestion.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('checklist-question-edit-delete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('checklist-question-edit-delete-error');
+
+    await expectAlertFollowsLanguage(
+      'checklist-question-edit-delete-error',
+      'common.error.network',
+    );
+  });
+
   it('shows the generic not-found message when the server rejects with code: CHECKLIST_QUESTION_NOT_FOUND', async () => {
     mockedListChecklistQuestions.mockResolvedValue([question]);
     mockedUpdateChecklistQuestion.mockRejectedValue(
@@ -157,6 +194,26 @@ describe('ChecklistQuestionEditPage', () => {
 
     const error = await screen.findByTestId('checklist-question-edit-error');
     expect(error).toHaveTextContent('This checklist question could not be found.');
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedListChecklistQuestions.mockResolvedValue([question]);
+    mockedUpdateChecklistQuestion.mockRejectedValue(
+      new ApiError(404, 'CHECKLIST_QUESTION_NOT_FOUND'),
+    );
+
+    renderPage();
+
+    await screen.findByTestId('checklist-question-edit-text');
+    fireEvent.click(screen.getByTestId('checklist-question-edit-submit'));
+
+    await screen.findByTestId('checklist-question-edit-error');
+
+    await expectAlertFollowsLanguage(
+      'checklist-question-edit-error',
+      'checklistQuestion.error.notFound',
+    );
   });
 
   describe('design system', () => {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
 import { ReviewSessionDetailPage } from './ReviewSessionDetailPage';
@@ -107,6 +108,20 @@ describe('ReviewSessionDetailPage', () => {
     expect(screen.queryByTestId('element-page')).not.toBeInTheDocument();
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the code validation error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-code-submit'));
+    await screen.findByTestId('review-session-detail-code-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-detail-code-error',
+      'reviewSession.detail.codeValidationError',
+    );
+  });
+
   // EN-76: the handler clears the error and sets the same text again in
   // one tick; the alert must still be a new element so it is announced.
   it('announces the code validation error again when an empty code is submitted again', async () => {
@@ -145,6 +160,21 @@ describe('ReviewSessionDetailPage', () => {
     fireEvent.click(screen.getByTestId('confirm-dialog-cancel'));
 
     expect(mockedDiscardReviewSession).not.toHaveBeenCalled();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the discard error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedDiscardReviewSession.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-discard'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-discard-error');
+
+    await expectAlertFollowsLanguage('review-session-detail-discard-error', 'common.error.network');
   });
 
   it('labels the completing control Sign and close', async () => {
@@ -288,6 +318,24 @@ describe('ReviewSessionDetailPage', () => {
     const gapLink = await screen.findByTestId('review-session-detail-gap-link-23456789AB');
     expect(gapLink).toHaveAttribute('href', `/review-sessions/${SESSION_ID}/elements/23456789AB`);
     expect(screen.getByTestId('review-session-detail-gap-link-CDEFGHJKMN')).toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the complete error in the new language after a language switch', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedCompleteReviewSession.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-complete-error');
+
+    await expectAlertFollowsLanguage(
+      'review-session-detail-complete-error',
+      'common.error.network',
+    );
   });
 
   describe('design system styling', () => {

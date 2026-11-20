@@ -1,5 +1,6 @@
 import type { ApiError } from '../api/client';
 import type { CommunityErrorCode } from '../api/community';
+import type { MessageKey } from '../i18n/message-key';
 
 // Maps a caught ApiError{status,code} to an i18n key — mirrors
 // users/error-messages.ts's contract exactly (spec "No Server-Message
@@ -13,7 +14,7 @@ import type { CommunityErrorCode } from '../api/community';
 // copy (representative vs technician) for that one cause — this map's
 // `INELIGIBLE_ROLE` entry is the fallback, not necessarily the final
 // rendered copy.
-const CODE_MESSAGE_KEYS: Record<CommunityErrorCode, string> = {
+const CODE_MESSAGE_KEYS: Record<CommunityErrorCode, MessageKey> = {
   ASSIGNMENT_ALREADY_EXISTS: 'community.error.assignmentExists',
   INELIGIBLE_ROLE: 'community.error.ineligibleRole',
   TRANSACTION_CONFLICT: 'community.error.tryAgain',
@@ -25,7 +26,7 @@ const HTTP_NOT_FOUND = 404;
 
 const NETWORK_ERROR_KEY = 'common.error.network';
 
-export function mapApiErrorToMessageKey(error: ApiError): string {
+export function mapApiErrorToMessageKey(error: ApiError): MessageKey {
   if (error.code !== undefined && error.code in CODE_MESSAGE_KEYS) {
     return CODE_MESSAGE_KEYS[error.code as CommunityErrorCode];
   }

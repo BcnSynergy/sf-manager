@@ -25,7 +25,7 @@ export function MaintenanceCompanyCreatePage() {
   const [taxId, setTaxId] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
@@ -38,7 +38,7 @@ export function MaintenanceCompanyCreatePage() {
 
     const result = createMaintenanceCompanySchema.safeParse({ name, taxId, contactInfo });
     if (!result.success) {
-      showError(t('maintenanceCompany.create.validationError'));
+      showError('maintenanceCompany.create.validationError');
       return;
     }
 
@@ -48,7 +48,7 @@ export function MaintenanceCompanyCreatePage() {
       navigate('/maintenance-companies');
     } catch (caughtError) {
       showError(
-        t(mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0))),
+        mapApiErrorToMessageKey(caughtError instanceof ApiError ? caughtError : new ApiError(0)),
       );
       setSubmitting(false);
     }
@@ -101,7 +101,7 @@ export function MaintenanceCompanyCreatePage() {
             key={errorAlertKey}
             tone="danger"
             testId="maintenance-company-create-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">

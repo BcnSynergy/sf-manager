@@ -1,18 +1,38 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import type { Assignment } from '../api/community';
-import { AssignmentSection } from './AssignmentSection';
+import {
+  AssignmentSection,
+  type AssignmentCandidate,
+  type AssignmentCandidates,
+  type AssignmentSectionKeys,
+} from './AssignmentSection';
 
-const keys = {
+const keys: AssignmentSectionKeys = {
   title: 'test.section.title',
   empty: 'test.section.empty',
   assignLabel: 'test.section.assignLabel',
   confirmTitle: 'test.section.confirmTitle',
   confirmMessage: 'test.section.confirmMessage',
-  ineligible: 'test.section.ineligible',
+  // A real key (show only takes one), but the technicians' key on a section
+  // rendered as representatives: a section that ignored keys.ineligible and
+  // used the representatives' copy would fail the ineligible-role test.
+  ineligible: 'community.technicians.ineligible',
 };
+
+// Every user id the assign tests pick from the select must be a candidate:
+// a <select> only takes a value that one of its options carries.
+const defaultCandidates: AssignmentCandidate[] = [
+  'user-new',
+  'user-dup',
+  'user-ineligible',
+  'user-pending',
+  'new-active',
+  'user-x',
+].map((id) => ({ id, email: `${id}@example.com` }));
 
 function makeOps(
   overrides: Partial<{
@@ -31,8 +51,18 @@ function makeOps(
   };
 }
 
-function renderSection(ops: ReturnType<typeof makeOps>, testIdPrefix = 'representatives') {
-  return render(<AssignmentSection ops={ops} testIdPrefix={testIdPrefix} keys={keys} />);
+function loaded(users: AssignmentCandidate[]): AssignmentCandidates {
+  return { state: 'loaded', users };
+}
+
+function renderSection(
+  ops: ReturnType<typeof makeOps>,
+  testIdPrefix = 'representatives',
+  candidates: AssignmentCandidates = loaded(defaultCandidates),
+) {
+  return render(
+    <AssignmentSection ops={ops} candidates={candidates} testIdPrefix={testIdPrefix} keys={keys} />,
+  );
 }
 
 describe('AssignmentSection', () => {
@@ -61,7 +91,165 @@ describe('AssignmentSection', () => {
     expect(screen.queryByTestId('representatives-loading')).not.toBeInTheDocument();
   });
 
-  it('renders each row with the raw userId and its status label, not the raw enum value', async () => {
+  it('keeps the rows and their actions but replaces the picker with an error when the user list failed', async () => {
+    const ops = makeOps({
+      list: vi
+        .fn()
+        .mockResolvedValue([{ communityId: 'c1', userId: 'user-x', deactivatedAt: null }]),
+    });
+
+    renderSection(ops, 'representatives', { state: 'error', errorKey: 'common.error.network' });
+
+    const row = await screen.findByTestId('representatives-row-user-x');
+    expect(row).toHaveTextContent('user-x');
+    expect(screen.getByTestId('representatives-deactivate-user-x')).toBeInTheDocument();
+    expect(screen.queryByTestId('representatives-error')).not.toBeInTheDocument();
+    expect(screen.getByTestId('representatives-candidates-error')).toHaveTextContent(
+      'Something went wrong. Please try again.',
+    );
+    expect(screen.queryByTestId('representatives-assign-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('representatives-assign-submit')).not.toBeInTheDocument();
+  });
+
+  it('offers no user when the assignment list failed, since it cannot tell who has a row', async () => {
+    const ops = makeOps({ list: vi.fn().mockRejectedValue(new ApiError(0)) });
+
+    renderSection(ops, 'representatives', loaded([{ id: 'rep-1', email: 'rep-1@example.com' }]));
+
+    await screen.findByTestId('representatives-error');
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).toEqual(['']);
+  });
+
+  it('still reactivates a deactivated row when the user list failed', async () => {
+    const ops = makeOps({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce([
+          { communityId: 'c1', userId: 'user-old', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+        ])
+        .mockResolvedValue([{ communityId: 'c1', userId: 'user-old', deactivatedAt: null }]),
+    });
+
+    renderSection(ops, 'representatives', { state: 'error', errorKey: 'common.error.network' });
+
+    fireEvent.click(await screen.findByTestId('representatives-reactivate-user-old'));
+
+    await waitFor(() => expect(ops.reactivate).toHaveBeenCalledWith('user-old'));
+    expect(await screen.findByTestId('representatives-deactivate-user-old')).toBeInTheDocument();
+    expect(screen.getByTestId('representatives-candidates-error')).toBeInTheDocument();
+  });
+
+  it('shows a disabled, empty picker while the user list is loading', async () => {
+    renderSection(makeOps(), 'representatives', { state: 'loading' });
+
+    await screen.findByTestId('representatives-empty');
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(select).toBeDisabled();
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).toEqual(['']);
+  });
+
+  it('identifies each row by the user email, falling back to the userId when unknown', async () => {
+    const ops = makeOps({
+      list: vi.fn().mockResolvedValue([
+        { communityId: 'c1', userId: 'user-known', deactivatedAt: null },
+        { communityId: 'c1', userId: 'user-unknown', deactivatedAt: null },
+      ]),
+    });
+
+    renderSection(
+      ops,
+      'representatives',
+      loaded([{ id: 'user-known', email: 'known@example.com' }]),
+    );
+
+    const knownRow = await screen.findByTestId('representatives-row-user-known');
+    expect(knownRow).toHaveTextContent('known@example.com');
+    expect(knownRow).not.toHaveTextContent('user-known');
+    expect(screen.getByTestId('representatives-row-user-unknown')).toHaveTextContent(
+      'user-unknown',
+    );
+  });
+
+  it('offers only candidates without an assignment row, listed by email', async () => {
+    const ops = makeOps({
+      list: vi.fn().mockResolvedValue([
+        { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
+        { communityId: 'c1', userId: 'user-old', deactivatedAt: '2026-08-01T00:00:00.000Z' },
+      ]),
+    });
+
+    renderSection(
+      ops,
+      'representatives',
+      loaded([
+        { id: 'user-active', email: 'active@example.com' },
+        { id: 'user-old', email: 'old@example.com' },
+        { id: 'user-free', email: 'free@example.com' },
+      ]),
+    );
+
+    await screen.findByTestId('representatives-row-user-active');
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(select.tagName).toBe('SELECT');
+    const options = within(select).getAllByRole('option');
+    expect(options.map((option) => option.getAttribute('value'))).toEqual(['', 'user-free']);
+    expect(options[1]).toHaveTextContent('free@example.com');
+  });
+
+  it('drops a selection that a refresh no longer offers', async () => {
+    const deactivatedRow = {
+      communityId: 'c1',
+      userId: 'user-old',
+      deactivatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    const ops = makeOps({
+      list: vi
+        .fn()
+        .mockResolvedValueOnce([deactivatedRow])
+        // Meanwhile another admin assigned user-new, so the refresh after the
+        // reactivation brings a row for the user still selected here.
+        .mockResolvedValueOnce([
+          { ...deactivatedRow, deactivatedAt: null },
+          { communityId: 'c1', userId: 'user-new', deactivatedAt: null },
+        ]),
+    });
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-row-user-old');
+    fireEvent.change(screen.getByTestId('representatives-assign-input'), {
+      target: { value: 'user-new' },
+    });
+    expect(screen.getByTestId('representatives-assign-input')).toHaveValue('user-new');
+    fireEvent.click(screen.getByTestId('representatives-reactivate-user-old'));
+    await screen.findByTestId('representatives-row-user-new');
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+    expect(screen.getByTestId('representatives-assign-input')).toHaveValue('');
+    expect(ops.assign).not.toHaveBeenCalled();
+  });
+
+  it('does not call assign when no user is selected', async () => {
+    const ops = makeOps();
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-empty');
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+
+    expect(ops.assign).not.toHaveBeenCalled();
+  });
+
+  it('renders each row with its user and its status label, not the raw enum value', async () => {
     const ops = makeOps({
       list: vi.fn().mockResolvedValue([
         { communityId: 'c1', userId: 'user-active', deactivatedAt: null },
@@ -84,7 +272,7 @@ describe('AssignmentSection', () => {
     expect(deactivatedRow).toHaveTextContent('Deactivated');
   });
 
-  it('assigns a pasted userId and refetches the list on success', async () => {
+  it('assigns the selected user and refetches the list on success', async () => {
     const ops = makeOps({
       list: vi
         .fn()
@@ -106,6 +294,15 @@ describe('AssignmentSection', () => {
     await waitFor(() => expect(ops.assign).toHaveBeenCalledWith('user-new'));
     expect(await screen.findByTestId('representatives-row-user-new')).toBeInTheDocument();
     expect(ops.list).toHaveBeenCalledTimes(2);
+    // The picker is filtered by the refreshed rows, so the user who just got
+    // a row is no longer offered and the selection is cleared.
+    const select = screen.getByTestId('representatives-assign-input');
+    expect(select).toHaveValue('');
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).not.toContain('user-new');
   });
 
   it('shows the generic mapped message on an ASSIGNMENT_ALREADY_EXISTS 409', async () => {
@@ -129,6 +326,27 @@ describe('AssignmentSection', () => {
     );
   });
 
+  // EN-211: the alert stores the i18n key, so it follows a language switch.
+  it('shows the assign error in the new language after a language switch', async () => {
+    const ops = makeOps({
+      assign: vi.fn().mockRejectedValue(new ApiError(409, 'ASSIGNMENT_ALREADY_EXISTS')),
+    });
+
+    renderSection(ops);
+
+    await screen.findByTestId('representatives-empty');
+    fireEvent.change(screen.getByTestId('representatives-assign-input'), {
+      target: { value: 'user-dup' },
+    });
+    fireEvent.click(screen.getByTestId('representatives-assign-submit'));
+    await screen.findByTestId('representatives-assign-error');
+
+    await expectAlertFollowsLanguage(
+      'representatives-assign-error',
+      'community.error.assignmentExists',
+    );
+  });
+
   // tasks.md 3.2 (PR2 review flag) — a mocked assign whose failure carries
   // INELIGIBLE_ROLE (409) MUST render AssignmentSection's own
   // keys.ineligible-derived copy, NOT community/error-messages.ts's generic
@@ -149,8 +367,8 @@ describe('AssignmentSection', () => {
     fireEvent.click(screen.getByTestId('representatives-assign-submit'));
 
     const errorNode = await screen.findByTestId('representatives-assign-error');
-    expect(errorNode).toHaveTextContent(keys.ineligible);
-    expect(errorNode).not.toHaveTextContent('community.error.ineligibleRole');
+    expect(errorNode).toHaveTextContent(i18n.t(keys.ineligible));
+    expect(errorNode).not.toHaveTextContent(i18n.t('community.error.ineligibleRole'));
   });
 
   it('requires confirmation before calling ops.deactivate', async () => {
@@ -277,6 +495,32 @@ describe('AssignmentSection', () => {
       expect(screen.getByTestId('representatives-row-incumbent')).toHaveTextContent('Deactivated'),
     );
     expect(screen.getByTestId('representatives-row-new-active')).toHaveTextContent('Active');
+  });
+
+  it('forgets a selection that stops being offered, so offering the user again does not reselect them (EN-208)', async () => {
+    const ops = makeOps();
+    const { rerender } = renderSection(ops);
+    const select = await screen.findByTestId<HTMLSelectElement>('representatives-assign-input');
+
+    fireEvent.change(select, { target: { value: 'user-new' } });
+    expect(select.value).toBe('user-new');
+
+    const withoutSelected = defaultCandidates.filter((candidate) => candidate.id !== 'user-new');
+    const renderWith = (users: AssignmentCandidate[]) =>
+      rerender(
+        <AssignmentSection
+          ops={ops}
+          candidates={loaded(users)}
+          testIdPrefix="representatives"
+          keys={keys}
+        />,
+      );
+
+    renderWith(withoutSelected);
+    expect(select.value).toBe('');
+
+    renderWith(defaultCandidates);
+    expect(select.value).toBe('');
   });
 
   it('supports a different testIdPrefix without any behavioral prop', async () => {

@@ -7,16 +7,35 @@ import { Alert } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
 import { mapAssignmentStatusToLabelKey } from './assignment-status-labels';
 import { mapApiErrorToMessageKey } from './error-messages';
+import type { MessageKey } from '../i18n/message-key';
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
 // design.md Decision 3 — the shared container instantiated once for
 // representatives and once for technicians. Deliberately carries no
 // exclusivity/mode knowledge: it owns only its own list/loading/error
-// state, an assign-by-userId form, and refetch-on-mutation. Whether a
-// second row flips to deactivated after this section's `assign`/
-// `reactivate` calls is decided entirely server-side and observed purely
-// by re-rendering whatever `ops.list()` returns next (Data Flow diagram).
+// state, an assign form that picks from its candidate users, and
+// refetch-on-mutation. Whether a second row flips to deactivated after this
+// section's `assign`/`reactivate` calls is decided entirely server-side and
+// observed purely by re-rendering whatever `ops.list()` returns next (Data
+// Flow diagram).
+
+// EN-57: a user the section may assign, shown by email. The caller decides
+// eligibility (the role filter lives in CommunityDetailPage, next to the
+// endpoints); the section only drops users that already have a row.
+export type AssignmentCandidate = {
+  id: string;
+  email: string;
+};
+
+// EN-207: the page loads the user list once and hands each section its
+// eligible users, so the section never requests them itself. A failed user
+// list only takes the picker away; the rows and their actions stay.
+export type AssignmentCandidates =
+  | { state: 'loading' }
+  | { state: 'loaded'; users: AssignmentCandidate[] }
+  | { state: 'error'; errorKey: string };
+
 export type AssignmentOps = {
   list: () => Promise<Assignment[]>;
   assign: (userId: string) => Promise<unknown>;
@@ -24,17 +43,20 @@ export type AssignmentOps = {
   reactivate: (userId: string) => Promise<unknown>;
 };
 
+// Only `ineligible` is a MessageKey: it is the one key the section passes to
+// useAlertMessage().show (EN-210). The others go straight to t().
 export type AssignmentSectionKeys = {
   title: string;
   empty: string;
   assignLabel: string;
   confirmTitle: string;
   confirmMessage: string;
-  ineligible: string;
+  ineligible: MessageKey;
 };
 
 export type AssignmentSectionProps = {
   ops: AssignmentOps;
+  candidates: AssignmentCandidates;
   testIdPrefix: string;
   keys: AssignmentSectionKeys;
 };
@@ -43,14 +65,19 @@ export type AssignmentSectionProps = {
 // boolean/mode prop that changes behaviour (e.g. isExclusive, mode,
 // allowsMultipleActive). If a real behavioural difference ever emerges,
 // the fix is splitting into two components, not adding a prop here.
-export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSectionProps) {
+export function AssignmentSection({
+  ops,
+  candidates: candidateList,
+  testIdPrefix,
+  keys,
+}: AssignmentSectionProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Assignment[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [userIdInput, setUserIdInput] = useState('');
   const {
-    message: assignErrorKey,
+    messageKey: assignErrorKey,
     key: assignErrorAlertKey,
     show: showAssignError,
     clear: clearAssignError,
@@ -62,6 +89,8 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // (not async/await) so every setState call lives inside a promise
   // continuation, satisfying the react-hooks "no setState directly in an
   // effect" rule, and reused unchanged for the post-mutation refetch.
+  // The picker is filtered by these rows, so after a refetch it never offers
+  // a user who just got a row.
   const loadRows = useCallback(() => {
     return ops
       .list()
@@ -89,7 +118,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
   // (design.md Interfaces/Contracts AssignmentSectionProps.keys.ineligible;
   // tasks.md 3.2, PR2 review flag). Every other code/status keeps the
   // generic mapper's result unchanged.
-  function resolveAssignErrorKey(error: unknown): string {
+  function resolveAssignErrorKey(error: unknown): MessageKey {
     const apiError = error instanceof ApiError ? error : new ApiError(0);
     if (apiError.status === 409 && apiError.code === 'INELIGIBLE_ROLE') {
       return keys.ineligible;
@@ -97,10 +126,29 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
     return mapApiErrorToMessageKey(apiError);
   }
 
+  // Without the rows the section cannot tell who already has one, so it
+  // offers nobody until they load.
+  const candidates =
+    candidateList.state === 'loaded' && loadState === 'loaded' ? candidateList.users : [];
+  const emailById = new Map(candidates.map((candidate) => [candidate.id, candidate.email]));
+  const assignedUserIds = new Set(rows.map((row) => row.userId));
+  // A user with a deactivated row is reactivated from that row, not assigned
+  // again, so every user with a row is left out.
+  const assignableCandidates = candidates.filter((candidate) => !assignedUserIds.has(candidate.id));
+  // A refresh can drop the selected user (another admin assigned them
+  // meanwhile). The selection is then forgotten, not just hidden, so the
+  // user is not reselected if they are offered again (EN-208). Adjusting
+  // state during render avoids an extra effect pass.
+  const selectionOffered = assignableCandidates.some((candidate) => candidate.id === userIdInput);
+  if (userIdInput !== '' && !selectionOffered) {
+    setUserIdInput('');
+  }
+  const selectedUserId = selectionOffered ? userIdInput : '';
+
   async function handleAssignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearAssignError();
-    const userId = userIdInput.trim();
+    const userId = selectedUserId;
     if (!userId) {
       return;
     }
@@ -199,7 +247,7 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
             <tbody>
               {rows.map((row) => (
                 <tr key={row.userId} data-testid={`${testIdPrefix}-row-${row.userId}`}>
-                  <td className="sf-data">{row.userId}</td>
+                  <td className="sf-data">{emailById.get(row.userId) ?? row.userId}</td>
                   <td>
                     <span
                       className={
@@ -242,21 +290,37 @@ export function AssignmentSection({ ops, testIdPrefix, keys }: AssignmentSection
       )}
 
       <form onSubmit={(event) => void handleAssignSubmit(event)} noValidate>
-        <label htmlFor={`${testIdPrefix}-assign-input`}>{t(keys.assignLabel)}</label>
-        <input
-          id={`${testIdPrefix}-assign-input`}
-          data-testid={`${testIdPrefix}-assign-input`}
-          value={userIdInput}
-          onChange={(event) => setUserIdInput(event.target.value)}
-        />
-        <button
-          type="submit"
-          className="sf-btn sf-btn-primary"
-          data-testid={`${testIdPrefix}-assign-submit`}
-          disabled={mutationPending}
-        >
-          {t(keys.assignLabel)}
-        </button>
+        {candidateList.state === 'error' ? (
+          <p className="sf-empty" data-testid={`${testIdPrefix}-candidates-error`}>
+            {t(candidateList.errorKey)}
+          </p>
+        ) : (
+          <>
+            <label htmlFor={`${testIdPrefix}-assign-input`}>{t(keys.assignLabel)}</label>
+            <select
+              id={`${testIdPrefix}-assign-input`}
+              data-testid={`${testIdPrefix}-assign-input`}
+              value={selectedUserId}
+              onChange={(event) => setUserIdInput(event.target.value)}
+              disabled={candidateList.state === 'loading'}
+            >
+              <option value="">{t('community.assignment.selectPlaceholder')}</option>
+              {assignableCandidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.email}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="sf-btn sf-btn-primary"
+              data-testid={`${testIdPrefix}-assign-submit`}
+              disabled={mutationPending}
+            >
+              {t(keys.assignLabel)}
+            </button>
+          </>
+        )}
         {assignErrorKey && (
           <Alert
             key={assignErrorAlertKey}

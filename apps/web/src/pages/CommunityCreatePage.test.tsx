@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as communityApi from '../api/community';
 import { CommunityCreatePage } from './CommunityCreatePage';
@@ -61,6 +62,21 @@ describe('CommunityCreatePage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('community-create-name'), { target: { value: '' } });
+    fireEvent.change(screen.getByTestId('community-create-address'), {
+      target: { value: VALID_ADDRESS },
+    });
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    await screen.findByTestId('community-create-error');
+
+    await expectAlertFollowsLanguage('community-create-error', 'community.create.validationError');
+  });
+
   it('renders locale options through the locale label map, not the raw enum value', () => {
     renderPage();
 
@@ -114,6 +130,24 @@ describe('CommunityCreatePage', () => {
 
     expect(await screen.findByTestId('community-create-error')).toBeInTheDocument();
     expect(screen.queryByTestId('communities-list-sentinel')).not.toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the API error in the new language after a language switch', async () => {
+    mockedCreateCommunity.mockRejectedValue(new ApiError(400));
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('community-create-name'), {
+      target: { value: VALID_NAME },
+    });
+    fireEvent.change(screen.getByTestId('community-create-address'), {
+      target: { value: VALID_ADDRESS },
+    });
+    fireEvent.click(screen.getByTestId('community-create-submit'));
+
+    await screen.findByTestId('community-create-error');
+
+    await expectAlertFollowsLanguage('community-create-error', 'community.error.validationFailed');
   });
 
   describe('design system', () => {

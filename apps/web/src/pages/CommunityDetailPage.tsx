@@ -10,12 +10,22 @@ import {
   reactivateRepresentative,
   reactivateTechnician,
 } from '../api/community';
+import { useEffect, useState } from 'react';
+import { ApiError } from '../api/client';
+import { listUsers, type User } from '../api/users';
+import type { Role } from '@sf-manager/validation';
 import { PageHeader } from '../components/PageHeader';
-import { AssignmentSection, type AssignmentOps } from '../community/AssignmentSection';
+import {
+  AssignmentSection,
+  type AssignmentCandidates,
+  type AssignmentOps,
+  type AssignmentSectionKeys,
+} from '../community/AssignmentSection';
+import { mapApiErrorToMessageKey } from '../community/error-messages';
 import { mapLocaleToLabelKey } from '../community/locale-labels';
 import { useCommunity } from '../community/use-community';
 
-const REPRESENTATIVE_KEYS = {
+const REPRESENTATIVE_KEYS: AssignmentSectionKeys = {
   title: 'community.representatives.title',
   empty: 'community.representatives.empty',
   assignLabel: 'community.representatives.assignLabel',
@@ -24,7 +34,7 @@ const REPRESENTATIVE_KEYS = {
   ineligible: 'community.representatives.ineligible',
 };
 
-const TECHNICIAN_KEYS = {
+const TECHNICIAN_KEYS: AssignmentSectionKeys = {
   title: 'community.technicians.title',
   empty: 'community.technicians.empty',
   assignLabel: 'community.technicians.assignLabel',
@@ -32,6 +42,54 @@ const TECHNICIAN_KEYS = {
   confirmMessage: 'community.technicians.confirmMessage',
   ineligible: 'community.technicians.ineligible',
 };
+
+// EN-207: one GET /users per page visit, shared by both sections. An
+// assignment action changes no user, so the list is not requested again;
+// the section filters out users with a row after each refetch.
+type UserList =
+  { state: 'loading' } | { state: 'loaded'; users: User[] } | { state: 'error'; errorKey: string };
+
+function useUserList(): UserList {
+  const [userList, setUserList] = useState<UserList>({ state: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    listUsers()
+      .then((users) => {
+        if (!cancelled) {
+          setUserList({ state: 'loaded', users });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setUserList({
+            state: 'error',
+            errorKey: mapApiErrorToMessageKey(error instanceof ApiError ? error : new ApiError(0)),
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return userList;
+}
+
+// EN-57: the users each section may assign. Mirrors the API's only
+// eligibility rule (assignment-eligibility.policy.ts: the required role per
+// assignment kind); the API still enforces it with INELIGIBLE_ROLE.
+function candidatesWithRole(userList: UserList, role: Role): AssignmentCandidates {
+  if (userList.state !== 'loaded') {
+    return userList;
+  }
+  return {
+    state: 'loaded',
+    users: userList.users
+      .filter((user) => user.role === role)
+      .map((user) => ({ id: user.id, email: user.email })),
+  };
+}
 
 // design.md Decision 3 — the only thing that differs between the two
 // sections is endpoints/copy/testid prefix, injected here; AssignmentSection
@@ -74,6 +132,7 @@ export function CommunityDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { community, loadState } = useCommunity(id);
+  const userList = useUserList();
 
   return (
     <main>
@@ -130,11 +189,13 @@ export function CommunityDetailPage() {
         <>
           <AssignmentSection
             ops={buildRepresentativeOps(id)}
+            candidates={candidatesWithRole(userList, 'COMMUNITY_REPRESENTATIVE')}
             testIdPrefix="representatives"
             keys={REPRESENTATIVE_KEYS}
           />
           <AssignmentSection
             ops={buildTechnicianOps(id)}
+            candidates={candidatesWithRole(userList, 'MAINTENANCE_TECHNICIAN')}
             testIdPrefix="technicians"
             keys={TECHNICIAN_KEYS}
           />

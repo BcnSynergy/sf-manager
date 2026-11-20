@@ -10,6 +10,7 @@ import {
 import { Alert, StatusRegion } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAlertMessage } from '../components/use-alert-message';
+import type { MessageKey } from '../i18n/message-key';
 
 // organization-logo S2: the API's own limits, checked here first so an
 // obviously wrong file never costs a request. The API still decides by the
@@ -54,7 +55,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
   const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const [successKey, setSuccessKey] = useState<string | null>(null);
   const {
-    message: error,
+    messageKey: error,
     key: errorAlertKey,
     show: showError,
     clear: clearError,
@@ -75,11 +76,11 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
     setSuccessKey(null);
 
     if (file.size > LOGO_MAX_BYTES) {
-      showError(t('organizationProfile.logoTooLargeError'));
+      showError('organizationProfile.logoTooLargeError');
       return;
     }
     if (!LOGO_TYPES.includes(file.type)) {
-      showError(t('organizationProfile.logoUnsupportedError'));
+      showError('organizationProfile.logoUnsupportedError');
       return;
     }
 
@@ -96,7 +97,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       }
       setSuccessKey('organizationProfile.logoUploadSuccess');
     } catch (uploadError) {
-      showError(t(uploadErrorKey(uploadError)));
+      showError(uploadErrorKey(uploadError));
     } finally {
       setUploading(false);
     }
@@ -116,7 +117,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
       // in the section.
       headingRef.current?.focus();
     } catch {
-      showError(t('organizationProfile.logoRemoveError'));
+      showError('organizationProfile.logoRemoveError');
       refocusRemoveRef.current = true;
     } finally {
       setRemoving(false);
@@ -177,7 +178,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
             key={errorAlertKey}
             tone="danger"
             testId="organization-logo-error"
-            message={error}
+            message={t(error)}
           />
         )}
         <div className="sf-actions">
@@ -218,7 +219,7 @@ export function OrganizationLogoSection({ hasLogo: initialHasLogo }: Props) {
 
 // Branches on status and code only, never on the server's message text
 // (organization-profile-admin-ui, "No Server-Message String Coupling").
-function uploadErrorKey(error: unknown): string {
+function uploadErrorKey(error: unknown): MessageKey {
   if (error instanceof ApiError && error.status === HTTP_PAYLOAD_TOO_LARGE) {
     return 'organizationProfile.logoTooLargeError';
   }

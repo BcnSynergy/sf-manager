@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
+import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as organizationProfileApi from '../api/organization-profile';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
@@ -348,6 +349,25 @@ describe('OrganizationProfilePage', () => {
     expect(second).not.toBe(first);
   });
 
+  // EN-203: the alert stores the i18n key, so it follows a language switch.
+  it('shows the validation error in the new language after a language switch', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+
+    renderPage();
+
+    fireEvent.change(await screen.findByTestId('organization-profile-name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    await screen.findByTestId('organization-profile-error');
+
+    await expectAlertFollowsLanguage(
+      'organization-profile-error',
+      'organizationProfile.clearedFieldError',
+    );
+  });
+
   it('keeps the entered values and shows an error when the save request fails', async () => {
     mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
     mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(400));
@@ -364,6 +384,25 @@ describe('OrganizationProfilePage', () => {
     expect(await screen.findByTestId('organization-profile-error')).toBeInTheDocument();
     expect(screen.getByTestId('organization-profile-name')).toHaveValue('Acme Property Management');
     expect(screen.getByTestId('organization-profile-incomplete')).toBeInTheDocument();
+  });
+
+  // EN-209: the alert stores the i18n key, so it follows a language switch.
+  it('shows the save error in the new language after a language switch', async () => {
+    mockedGetOrganizationProfile.mockResolvedValue(blankProfile);
+    mockedUpdateOrganizationProfile.mockRejectedValue(new ApiError(400));
+
+    renderPage();
+
+    await screen.findByTestId('organization-profile-incomplete');
+
+    fireEvent.change(screen.getByTestId('organization-profile-name'), {
+      target: { value: 'Acme Property Management' },
+    });
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+
+    await screen.findByTestId('organization-profile-error');
+
+    await expectAlertFollowsLanguage('organization-profile-error', 'organizationProfile.saveError');
   });
 
   it('disables every field input while a save is in flight, closing the race window for a conflicting edit', async () => {

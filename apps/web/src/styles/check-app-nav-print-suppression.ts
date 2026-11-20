@@ -62,7 +62,11 @@ function effectiveDisplay(container: Container): Display | undefined {
   let winner: Display | undefined;
   for (const node of container.nodes ?? []) {
     if (node.type !== 'decl' || node.prop.toLowerCase() !== 'display') continue;
-    const display = { value: node.value.trim().toLowerCase(), important: node.important };
+    // postcss >= 8.5.33 types `important` as optional; absent means not important.
+    const display = {
+      value: node.value.trim().toLowerCase(),
+      important: Boolean(node.important),
+    };
     if (display.important || !winner?.important) winner = display;
   }
   return winner;
