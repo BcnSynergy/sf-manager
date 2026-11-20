@@ -17,8 +17,8 @@ Locator: `odd/tasks/en-185-ci-deploy.md` (Engram mirror: `odd/en-185-ci-deploy/t
 | ID  | Specs          | Route                                                                                        | Status  | Commit  |
 | --- | -------------- | -------------------------------------------------------------------------------------------- | ------- | ------- |
 | T1  | S3             | inline                                                                                       | done    | PR #444 |
-| T2  | S1, S2, S4, S5 | inline                                                                                       | done    | see L3  |
-| T3  | S6             | inline                                                                                       | done    | see L3  |
+| T2  | S1, S2, S4, S5 | inline                                                                                       | done    | PR #444 |
+| T3  | S6             | inline                                                                                       | done    | PR #444 |
 | T4  | S3, S5         | user (server key + secrets + environment), Claude installs the script over SSH with fresh OK | pending |         |
 | T5  | S1-S4          | first real deploy run, after merge                                                           | pending |         |
 
@@ -39,3 +39,4 @@ Risk: items 2 (credentials) and 5 (delivery): fresh-context review required (alr
 - **L11** Scoped fresh review of f268e37..f01fce7: APPROVE (probes under dash; worktree clean and removed). Fixed W-1 (README: "the commands above the `pub=` line", not "the first three lines") and S-1 (spec: an interrupted pull restores too; scenario "Cancelled during the pull"). Registered W-2/N-4 as EN-216 (no test for the trap resets; tiny signal window before the trap). Next: push, PR, PR number in EN-185 Done (fresh W-3).
 - **L12** Gentle review of 6bc0f87..0f6d6b4 (four lenses, high, user granted) approved and acknowledged (lineage review-d0205746b1173503). Reliability R3-001 WARNING: the "Cancelled during the pull" scenario promised more than the script does (closed pipes without a signal: the pull can succeed and `up` runs, and can die on SIGPIPE). Spec narrowed to hangup or termination signals; the closed-pipe case registered as EN-217.
 - **L13** Pushed; PR #444 opened. EN-185 Done carries the PR number. Next: CI green, user OK to merge, then T4 (setup) and T5 (first run).
+- **L14** Gentle review of 6bc0f87..8bcaeb5 (four lenses, high, user granted) approved and acknowledged (lineage review-dbfd33e16b1d92b5). R2-002 fixed (T1-T3 all point to PR #444); R3-001 registered as EN-218 (resolve-commit reports git errors as "not on main"); R2-001 is EN-215 already.

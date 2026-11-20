@@ -560,6 +560,12 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   and `::warning::`. A test that runs that step body would prove the
   one-line annotation. Origin: `en-185-ci-deploy` Gentle review R3-001,
   2026-11-20.
+- **EN-218** (delivery diagnostics): `deploy/resolve-commit.sh` reports
+  any non-zero exit of `git merge-base --is-ancestor` as "is not on main",
+  but exit 128 is a git error (for example a missing or shallow
+  `origin/main`), so the refusal reason can mislead. The refusal itself is
+  right. Tell exit 1 apart from other codes, or let git's stderr through.
+  Origin: `en-185-ci-deploy` Gentle review R3-001, 2026-11-20.
 - **EN-217** (delivery resilience): when a cancelled run only closes the
   SSH session's pipes (no hangup signal), `deploy/deploy.sh` keeps going.
   The pull runs with SIGPIPE ignored, so it can still succeed; the script
