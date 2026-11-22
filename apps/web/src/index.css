@@ -1188,6 +1188,11 @@ main.sf-login {
     display: none;
   }
 
+  /* EN-228: the "Other photos" heading stays on the page of its photos. */
+  .review-document-print .review-document-other-photos h3 {
+    break-after: avoid;
+  }
+
   .review-document-print {
     background: #fff;
     color: #000;

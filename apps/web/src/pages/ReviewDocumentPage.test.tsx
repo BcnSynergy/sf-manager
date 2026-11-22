@@ -607,6 +607,19 @@ describe('record photos', () => {
     ).toHaveLength(1);
   });
 
+  it('prints the "Other photos" group even for a document without entries', async () => {
+    mockedReadReviewDocument.mockResolvedValue({ ...recordDocument, entries: [] });
+    mockedListPhotos.mockResolvedValue([photos[0]]);
+
+    renderPage();
+    const other = await screen.findByTestId('review-document-record-other-photos');
+
+    expect(within(other).getAllByRole('img')).toHaveLength(1);
+    expect(
+      within(screen.getByTestId('review-document-record-entries')).queryAllByRole('listitem'),
+    ).toHaveLength(0);
+  });
+
   it('prints no "Other photos" group when every photo has its entry', async () => {
     mockedReadReviewDocument.mockResolvedValue(recordDocument);
     mockedListPhotos.mockResolvedValue(photos);

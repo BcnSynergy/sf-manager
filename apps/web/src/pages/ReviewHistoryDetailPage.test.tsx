@@ -493,7 +493,11 @@ describe('ReviewHistoryDetailPage', () => {
       ]);
       const links = within(other).getAllByRole('link');
       expect(links[0]).toHaveAttribute('target', '_blank');
-      expect(links[0]).toHaveAccessibleName('Open other photo 1 in a new tab');
+      expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+        'Open other photo 1 in a new tab',
+        'Open other photo 2 in a new tab',
+      ]);
       expect(screen.getByTestId('review-history-detail-entry-e1')).not.toContainElement(other);
       expect(
         within(screen.getByTestId('review-history-detail-photos-e1')).getAllByRole('img'),

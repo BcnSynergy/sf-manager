@@ -89,8 +89,8 @@ document never leaves its photos out silently. A photo whose element has
 no entry in the record (the element left the session's set of elements
 between the upload and the completion) MUST be printed in one "Other
 photos" group after the entries, oldest first, as a plain image with the
-text alternative "Other photo N"; there is no such group when every photo
-has its entry (EN-228).
+text alternative "Other photo N", also when the record has no entry; there
+is no such group when every photo has its entry (EN-228).
 (Previously, before EN-227: the document showed no photos.)
 
 #### Scenario: A completed session's document renders all regions

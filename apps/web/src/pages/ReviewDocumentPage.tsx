@@ -327,7 +327,10 @@ function RecordRegion({
         ))}
       </ul>
       {otherPhotos.length > 0 && (
-        <div data-testid="review-document-record-other-photos">
+        <div
+          className="review-document-other-photos"
+          data-testid="review-document-record-other-photos"
+        >
           <h3>{t('reviewDocument.record.otherPhotosTitle')}</h3>
           <div className="review-document-photos">
             {otherPhotos.map((photo, index) => (
