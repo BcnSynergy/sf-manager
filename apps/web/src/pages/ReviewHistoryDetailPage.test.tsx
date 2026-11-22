@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { act, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -458,6 +458,37 @@ describe('ReviewHistoryDetailPage', () => {
         'The photos of this review could not be loaded.',
       );
       expect(screen.getByTestId('review-history-detail-entry-e1')).toBeInTheDocument();
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+    });
+
+    it('sends no photo request when the review itself cannot be opened', async () => {
+      mockedReadReviewHistory.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
+
+      renderPage();
+
+      await screen.findByTestId('review-history-detail-error');
+      expect(mockedListPhotos).not.toHaveBeenCalled();
+    });
+
+    it("never shows a previous session's photos after the route moves to another session", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === SESSION_ID ? Promise.resolve(photos) : new Promise(() => {}),
+      );
+      const router = createMemoryRouter(
+        [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+        { initialEntries: [`/review-history/${SESSION_ID}`] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByTestId('review-history-detail-photos-e1');
+
+      await act(() => router.navigate('/review-history/session-2'));
+
+      expect(await screen.findByText('completed-session-2')).toBeInTheDocument();
+      expect(mockedListPhotos).toHaveBeenLastCalledWith('session-2');
+      expect(screen.queryByTestId('review-history-detail-photos-e1')).not.toBeInTheDocument();
       expect(screen.queryAllByRole('img')).toHaveLength(0);
     });
 

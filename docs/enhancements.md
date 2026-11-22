@@ -1217,6 +1217,15 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-228** (web): the review history detail shows a photo only inside the
+  entry of its element, so a photo whose element has no entry is never
+  shown, although `GET /review-history/:sessionId/photos` lists it.
+  Completion records an entry for every element in the session's universe,
+  so this only happens when an element leaves the universe (deactivated or
+  deleted) between the photo upload and the completion. Show such photos in
+  a separate "other photos" group, or block completion while a photo's
+  element is outside the universe. Origin: `en-164-review-photos` PR 3/3
+  fresh review W-1, 2026-11-22.
 - **EN-227** (feature): the printable review document (FR-010,
   `review-document`, `review-document-ui`) shows no photos. EN-164 left them
   out of this slice on purpose: the history detail view shows them, the

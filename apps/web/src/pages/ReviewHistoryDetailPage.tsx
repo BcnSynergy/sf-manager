@@ -14,7 +14,11 @@ import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels'
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';
-type PhotosState = 'loading' | 'loaded' | 'error';
+// The photos of one session, tagged with that session's id so a result is
+// only ever shown next to the detail it belongs to.
+type PhotosResult =
+  | { sessionId: string; state: 'loaded'; photos: ReviewHistoryPhoto[] }
+  | { sessionId: string; state: 'error' };
 
 // design.md Decision 7: a FORK, not a reuse, of ReviewSessionDetailPage.tsx.
 // This is a read-only record of a COMPLETED session — there is no draft
@@ -48,8 +52,7 @@ export function ReviewHistoryDetailPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [detail, setDetail] = useState<ReviewHistoryDetail | null>(null);
   const [errorMessageKey, setErrorMessageKey] = useState<string>('common.error.network');
-  const [photosState, setPhotosState] = useState<PhotosState>('loading');
-  const [photos, setPhotos] = useState<ReviewHistoryPhoto[]>([]);
+  const [photosResult, setPhotosResult] = useState<PhotosResult | null>(null);
 
   const loadDetail = useCallback(() => {
     if (sessionId === undefined) {
@@ -79,29 +82,30 @@ export function ReviewHistoryDetailPage() {
     void loadDetail();
   }, [loadDetail]);
 
-  // EN-164 S5 (T3): the photos load on their own, so a failure here never
-  // hides the review itself; it shows one note instead.
+  // EN-164 S5 (T3): the photos load once the review itself has loaded (a
+  // review the caller cannot open needs no photo request), and on their own:
+  // a failure here never hides the review, it shows one note instead.
+  const loadedSessionId = detail?.id;
   useEffect(() => {
-    if (sessionId === undefined) {
+    if (loadedSessionId === undefined) {
       return;
     }
     let active = true;
-    listReviewHistoryPhotos(sessionId)
+    listReviewHistoryPhotos(loadedSessionId)
       .then((listed) => {
         if (active) {
-          setPhotos(listed);
-          setPhotosState('loaded');
+          setPhotosResult({ sessionId: loadedSessionId, state: 'loaded', photos: listed });
         }
       })
       .catch(() => {
         if (active) {
-          setPhotosState('error');
+          setPhotosResult({ sessionId: loadedSessionId, state: 'error' });
         }
       });
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [loadedSessionId]);
 
   if (loadState === 'loading') {
     return (
@@ -128,6 +132,9 @@ export function ReviewHistoryDetailPage() {
   const questionTextById = new Map(
     detail.questions.map((question) => [question.questionId, question.text]),
   );
+  // A result of another session (the route changed) is never shown.
+  const currentPhotos = photosResult?.sessionId === detail.id ? photosResult : null;
+  const photos = currentPhotos?.state === 'loaded' ? currentPhotos.photos : [];
   // Oldest first within each element, as the server lists them.
   const photosByElementId = new Map<string, ReviewHistoryPhoto[]>();
   for (const photo of photos) {
@@ -177,7 +184,7 @@ export function ReviewHistoryDetailPage() {
 
       <section className="sf-section" data-testid="review-history-detail-entries">
         <h2>{t('reviewHistory.detail.entriesTitle')}</h2>
-        {photosState === 'error' && (
+        {currentPhotos?.state === 'error' && (
           <p className="sf-empty" data-testid="review-history-detail-photos-error">
             {t('reviewHistory.detail.photosLoadError')}
           </p>

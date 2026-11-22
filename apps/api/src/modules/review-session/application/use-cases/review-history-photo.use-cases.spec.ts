@@ -145,6 +145,14 @@ describe('review history photo use cases', () => {
       ).resolves.toEqual(jpegHeader());
     });
 
+    it('returns the bytes to a representative assigned to the community, who did not perform the session', async () => {
+      scope.assign('rep-1', 'community-1');
+
+      await expect(
+        read.execute('session-1', 'photo-1', representative),
+      ).resolves.toEqual(jpegHeader());
+    });
+
     it('rejects a caller outside the history scope and a draft with ReviewSessionNotFoundError, before reading any file', async () => {
       const get = jest.spyOn(files, 'get');
 

@@ -737,7 +737,10 @@ a Completed Review Are Read Through the History Guards_) inside the entry
 of the element each belongs to, oldest first, as thumbnails that each open
 the full photo in a new tab, with a numbered text alternative ("Photo 1")
 and a numbered accessible name for the link. An entry without photos MUST
-show no photo list. The photos MUST load separately from the record: when
+show no photo list. A photo whose element has no entry in the record (the
+element left the session's set of elements between the upload and the
+completion) is not shown; see EN-228. The photos MUST load separately from
+the record, only once the record has loaded: when
 they cannot be loaded, the record MUST still render in full, with one note
 saying the photos could not be loaded. The view MUST NOT offer any control
 to add, replace or remove a photo.
