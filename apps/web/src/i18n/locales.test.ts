@@ -575,6 +575,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     // EN-227: photos in the record.
     'reviewDocument.record.photoAlt',
     'reviewDocument.record.photosLoadError',
+    // EN-228: photos whose element has no entry.
+    'reviewDocument.record.otherPhotosTitle',
+    'reviewDocument.record.otherPhotoAlt',
     'reviewDocument.print.button',
     // View document link (review-export PR 13, task 13.4). Sits under
     // reviewDocument.* (not reviewHistory.*) per review-document-ui spec's

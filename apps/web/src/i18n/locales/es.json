@@ -556,6 +556,9 @@
       "photoAlt": "Foto {{number}}",
       "photoOpenLabel": "Abrir la foto {{number}} en una pestaña nueva",
       "photosLoadError": "No se han podido cargar las fotos de esta revisión.",
+      "otherPhotosTitle": "Otras fotos",
+      "otherPhotoAlt": "Otra foto {{number}}",
+      "otherPhotoOpenLabel": "Abrir la otra foto {{number}} en una pestaña nueva",
       "documentLink": "Ver documento"
     },
     "elementHistory": {
@@ -606,7 +609,9 @@
       "questionTextUnknown": "Pregunta desconocida",
       "unreviewedLabel": "No revisado:",
       "photoAlt": "Foto {{number}} de {{element}}",
-      "photosLoadError": "No se han podido cargar las fotos de esta revisión."
+      "photosLoadError": "No se han podido cargar las fotos de esta revisión.",
+      "otherPhotosTitle": "Otras fotos",
+      "otherPhotoAlt": "Otra foto {{number}}"
     },
     "print": {
       "button": "Imprimir"

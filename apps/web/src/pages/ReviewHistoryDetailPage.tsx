@@ -150,6 +150,11 @@ export function ReviewHistoryDetailPage() {
     forElement.push(photo);
     photosByElementId.set(photo.inspectableElementId, forElement);
   }
+  // EN-228: a photo whose element has no entry (the element left the
+  // session's elements between the upload and the completion) is shown in
+  // one "Other photos" group, so no photo of the review is hidden.
+  const entryElementIds = new Set(detail.entries.map((entry) => entry.inspectableElementId));
+  const otherPhotos = photos.filter((photo) => !entryElementIds.has(photo.inspectableElementId));
 
   return (
     <main>
@@ -293,6 +298,31 @@ export function ReviewHistoryDetailPage() {
               </li>
             ))}
           </ul>
+        )}
+        {otherPhotos.length > 0 && (
+          <section className="sf-panel" data-testid="review-history-detail-other-photos">
+            <h3 className="sf-section-title">{t('reviewHistory.detail.otherPhotosTitle')}</h3>
+            <ul className="sf-photo-list">
+              {otherPhotos.map((photo, index) => (
+                <li key={photo.id} className="sf-photo-item">
+                  <a
+                    href={reviewHistoryPhotoUrl(detail.id, photo.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t('reviewHistory.detail.otherPhotoOpenLabel', {
+                      number: index + 1,
+                    })}
+                  >
+                    <img
+                      className="sf-photo-thumb"
+                      src={reviewHistoryPhotoUrl(detail.id, photo.id)}
+                      alt={t('reviewHistory.detail.otherPhotoAlt', { number: index + 1 })}
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </section>
     </main>

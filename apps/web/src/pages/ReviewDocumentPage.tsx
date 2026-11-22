@@ -300,6 +300,10 @@ function RecordRegion({
     forElement.push(photo);
     photosByElementId.set(photo.inspectableElementId, forElement);
   }
+  // EN-228: a photo whose element has no entry prints in one "Other photos"
+  // group after the entries, so the printed document leaves no photo out.
+  const entryElementIds = new Set(document.entries.map((entry) => entry.inspectableElementId));
+  const otherPhotos = photos.filter((photo) => !entryElementIds.has(photo.inspectableElementId));
 
   return (
     <section data-testid="review-document-record">
@@ -322,6 +326,21 @@ function RecordRegion({
           />
         ))}
       </ul>
+      {otherPhotos.length > 0 && (
+        <div data-testid="review-document-record-other-photos">
+          <h3>{t('reviewDocument.record.otherPhotosTitle')}</h3>
+          <div className="review-document-photos">
+            {otherPhotos.map((photo, index) => (
+              <img
+                key={photo.id}
+                className="review-document-photo"
+                src={reviewHistoryPhotoUrl(document.id, photo.id)}
+                alt={t('reviewDocument.record.otherPhotoAlt', { number: index + 1 })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

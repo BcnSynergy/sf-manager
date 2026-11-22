@@ -556,6 +556,9 @@
       "photoAlt": "Foto {{number}}",
       "photoOpenLabel": "Obrir la foto {{number}} en una pestanya nova",
       "photosLoadError": "No s'han pogut carregar les fotos d'aquesta revisió.",
+      "otherPhotosTitle": "Altres fotos",
+      "otherPhotoAlt": "Altra foto {{number}}",
+      "otherPhotoOpenLabel": "Obrir l'altra foto {{number}} en una pestanya nova",
       "documentLink": "Veure document"
     },
     "elementHistory": {
@@ -606,7 +609,9 @@
       "questionTextUnknown": "Pregunta desconeguda",
       "unreviewedLabel": "No revisat:",
       "photoAlt": "Foto {{number}} de {{element}}",
-      "photosLoadError": "No s'han pogut carregar les fotos d'aquesta revisió."
+      "photosLoadError": "No s'han pogut carregar les fotos d'aquesta revisió.",
+      "otherPhotosTitle": "Altres fotos",
+      "otherPhotoAlt": "Altra foto {{number}}"
     },
     "print": {
       "button": "Imprimeix"
