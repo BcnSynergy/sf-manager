@@ -485,6 +485,25 @@
       "unreviewedLabel": "No revisado",
       "notRecorded": "No se registró ninguna entrada para este elemento en esta sesión."
     },
+    "photos": {
+      "title": "Fotos",
+      "loading": "Cargando fotos...",
+      "loadError": "No se han podido cargar las fotos.",
+      "empty": "Todavía no hay fotos.",
+      "addLabel": "Añadir foto",
+      "uploading": "Subiendo foto...",
+      "alt": "Foto {{number}}",
+      "removeLabel": "Eliminar foto",
+      "removeConfirmTitle": "¿Eliminar esta foto?",
+      "removeConfirmMessage": "La foto se eliminará de esta revisión.",
+      "limitHint": "Este elemento ya tiene {{max}} fotos, el máximo.",
+      "limitReached": "Este elemento ya tiene el número máximo de fotos.",
+      "tooLarge": "Esta foto es demasiado grande para subirla.",
+      "readError": "Este archivo no se ha podido leer como foto.",
+      "uploadError": "No se ha podido subir la foto.",
+      "removeError": "No se ha podido eliminar la foto.",
+      "notFound": "Esta foto ya no existe."
+    },
     "answer": {
       "yes": "Sí",
       "no": "No",

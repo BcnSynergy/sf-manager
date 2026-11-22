@@ -14,11 +14,11 @@ Locator: `odd/tasks/en-164-review-photos.md` (Engram mirror: `odd/en-164-review-
 
 ## Tasks
 
-| ID  | Specs          | Route                        | Status              | Commit |
-| --- | -------------- | ---------------------------- | ------------------- | ------ |
-| T1  | S1-S4, S6      | delegated (context backstop) | done (checks green) |        |
-| T2  | S2, S3, S5, S6 | inline                       | pending             |        |
-| T3  | S3, S4, S5, S6 | inline                       | pending             |        |
+| ID  | Specs          | Route                        | Status        | Commit |
+| --- | -------------- | ---------------------------- | ------------- | ------ |
+| T1  | S1-S4, S6      | delegated (context backstop) | done (merged) | #447   |
+| T2  | S2, S3, S5, S6 | inline                       | in review     |        |
+| T3  | S3, S4, S5, S6 | inline                       | pending       |        |
 
 - T1 (PR 1/3, API): migration (`ReviewPhoto` table), domain rules, upload / list / read / delete routes for a draft, discard deletes the files, `review-session-management` spec.
 - T2 (PR 2/3, web field flow): compression, add/remove control and thumbnails on the element page, `review-session-ui` spec, i18n.
@@ -36,3 +36,4 @@ Risk: items 1 (migration, new table), 2 (permissions and file serving) and 4 (th
 - **L6** Gentle review of 25443c7 (reliability; user granted) approved and acknowledged (lineage review-69b6914b885750f1): WARNING R3 the W-1 element check on list returned 404 for a completed session's element deactivated later, against the spec's "any status"; SUGGESTION shared template setup needs serial runs (`test:integration` already uses `--runInBand`). Scoped fresh recheck of d9ed6e6..25443c7: APPROVE, B-1 and B-2 fixed (full integration twice 308/308; moving the key read outside the lock fails the race test). Applied inline: list no longer checks the element (spec: adding checks it; listing any other element returns none; completed photos stay listable after deactivation), RED 2 unit tests then GREEN; recheck S-1 registered as EN-224 (unused `discardDraft`). Checks: review-session unit 247, photos e2e 22, typecheck, lint, format clean.
 - **L7** Gentle review of d9ed6e6..8861062 (reliability; user granted) approved and acknowledged (lineage review-91b3adec6e6edd94), two WARNINGs, both fixed: R3 the spec still had the W-1 sentence (listing applies the element check), now removed; R3 8861062 had deleted three upload unit tests by mistake (the parent's edit replaced the first of two tests with the same title), restored from 25443c7 with only the list test replaced. Unit file: 23 passed; lint and format clean.
 - **L8** Gentle review of d9ed6e6..c7f77dd (reliability; user granted) approved and acknowledged (lineage review-48a67acc1cf3745b); one SUGGESTION (e2e cross-session test cleanup) registered as EN-225.
+- **L9** (2026-11-22) T1 merged as PR #447. T2 written inline on `en-164-review-photos/02-web-field-photos`: `api/review-photos.ts`, `compress-photo.ts` (createImageBitmap with `imageOrientation: 'from-image'`, canvas, JPEG 0.8, long side 1600 px), `ReviewPhotosSection` (file input `accept="image/*"` `capture="environment"`, upload on choose, thumbnails linking to the full photo, remove after confirmation, limit note at 3, read-only on a completed session), wired into `ReviewSessionElementPage` (draft and completed views); EN/ES/CA keys under `reviewSession.photos`; `review-session-ui` spec: Manual Code Entry narrowed to code reading, new requirement Element Photos, attachment prohibitions keep the photo control as the one exception. Tests written after the code (no RED observed). Checks: web vitest 1795 passed, lint, `tsc -b`, `format:check` clean. Browser pass pending.

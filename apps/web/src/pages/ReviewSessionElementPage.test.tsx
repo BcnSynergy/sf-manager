@@ -5,9 +5,15 @@ import '../i18n';
 import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
+import * as reviewPhotosApi from '../api/review-photos';
 import { ReviewSessionElementPage } from './ReviewSessionElementPage';
 
 vi.mock('../api/review-session');
+vi.mock('../api/review-photos', async (importOriginal) => ({
+  ...(await importOriginal<typeof reviewPhotosApi>()),
+  listReviewPhotos: vi.fn(),
+}));
+const mockedListReviewPhotos = vi.mocked(reviewPhotosApi.listReviewPhotos);
 
 const mockedResolveElementByCode = vi.mocked(reviewSessionApi.resolveElementByCode);
 const mockedRecordEntry = vi.mocked(reviewSessionApi.recordEntry);
@@ -79,6 +85,29 @@ describe('ReviewSessionElementPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedReadReviewSession.mockResolvedValue(sessionWithStatus('draft'));
+    mockedListReviewPhotos.mockResolvedValue([]);
+  });
+
+  // EN-164 S5: the photo control of the element being reviewed.
+  it('offers the photo control for the resolved element of a draft session', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    renderPage();
+
+    expect(await screen.findByTestId('review-photos-add')).toBeInTheDocument();
+    expect(mockedListReviewPhotos).toHaveBeenCalledWith(SESSION_ID, 'element-1');
+  });
+
+  it("shows a completed session's photos read-only", async () => {
+    mockedResolveElementByCode.mockResolvedValue({ ...resolved, entry: recordedYesYes });
+    mockedReadReviewSession.mockResolvedValue(sessionWithStatus('completed'));
+    mockedListReviewPhotos.mockResolvedValue([
+      { id: 'photo-1', createdAt: '2026-09-08T00:00:00.000Z' },
+    ]);
+    renderPage();
+
+    expect(await screen.findByTestId('review-photo-photo-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-photo-remove-photo-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('review-photos-add')).not.toBeInTheDocument();
   });
 
   it('shows a loading state while the resolve request is in flight', () => {
@@ -461,7 +490,9 @@ describe('ReviewSessionElementPage', () => {
       const question = await screen.findByTestId('review-session-element-question-q1');
       expect(question).toHaveClass('sf-field');
       expect(screen.getByTestId('review-session-element-questions')).toHaveClass('sf-section');
-      expect(screen.getByRole('heading', { level: 2 })).toHaveClass('sf-section-title');
+      expect(screen.getByRole('heading', { level: 2, name: 'Questions' })).toHaveClass(
+        'sf-section-title',
+      );
       const answer = screen.getByTestId('review-session-element-answer-q1-YES');
       expect(answer.parentElement).toHaveClass('sf-choice');
       expect(
