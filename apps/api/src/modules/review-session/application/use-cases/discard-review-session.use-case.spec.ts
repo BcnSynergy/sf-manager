@@ -38,12 +38,7 @@ describe('DiscardReviewSessionUseCase', () => {
     sessionAccess = new SessionAccessService(repository, scopeChecker);
     photos = new InMemoryReviewPhotoRepository(repository);
     files = new InMemoryFileStorage();
-    useCase = new DiscardReviewSessionUseCase(
-      sessionAccess,
-      repository,
-      photos,
-      files,
-    );
+    useCase = new DiscardReviewSessionUseCase(sessionAccess, photos, files);
   });
 
   it('discards a draft session and removes it from the repository', async () => {

@@ -19,6 +19,9 @@ CREATE UNIQUE INDEX "ReviewPhoto_storageKey_key" ON "ReviewPhoto"("storageKey");
 -- CreateIndex
 CREATE INDEX "ReviewPhoto_reviewSessionId_inspectableElementId_idx" ON "ReviewPhoto"("reviewSessionId", "inspectableElementId");
 
+-- CreateIndex
+CREATE INDEX "ReviewPhoto_inspectableElementId_idx" ON "ReviewPhoto"("inspectableElementId");
+
 -- AddForeignKey (hand-written, invisible to Prisma: ADR-013).
 -- ON DELETE CASCADE: discarding a draft removes its photo rows (the use case
 -- deletes the files). ON DELETE RESTRICT on the element, like

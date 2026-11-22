@@ -2,6 +2,9 @@ import type { ReviewPhoto } from '../../domain/review-photo';
 
 export type AddReviewPhotoResult = 'added' | 'not_editable' | 'limit_reached';
 
+export type DiscardReviewSessionResult =
+  { outcome: 'discarded'; storageKeys: string[] } | { outcome: 'not_editable' };
+
 export type DeleteReviewPhotoResult =
   | { outcome: 'deleted'; storageKey: string }
   | { outcome: 'not_found' }
@@ -41,9 +44,15 @@ export interface ReviewPhotoRepository {
     photoId: string,
   ): Promise<DeleteReviewPhotoResult>;
 
-  // For discard: the keys whose files must go when the session is deleted
-  // (the rows go with it through ON DELETE CASCADE).
-  listKeysForSession(reviewSessionId: string): Promise<string[]>;
+  // Discard (EN-164 S4): in ONE transaction under the session row lock,
+  // refuses unless the session is a draft, reads the photo keys and deletes
+  // the session (`WHERE status='draft'`; the rows go with it through ON
+  // DELETE CASCADE). Reading the keys under the same lock as the delete is
+  // what guarantees no committed photo's key is left out: an add either
+  // committed before the lock (its key is returned) or is refused after.
+  discardDraftWithPhotoKeys(
+    reviewSessionId: string,
+  ): Promise<DiscardReviewSessionResult>;
 }
 
 export const REVIEW_PHOTO_REPOSITORY = Symbol('REVIEW_PHOTO_REPOSITORY');

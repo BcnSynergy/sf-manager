@@ -283,8 +283,9 @@ see _Completed Sessions Are Immutable_.
 ### Requirement: Photos of a Draft Review Session
 
 The system MUST let the performer of a `draft` session attach photos to an
-element of that session, and list, read and delete them while the session
-is a `draft`. A photo MUST belong to one element within one session (the
+element of that session and delete them while the session is a `draft`.
+The performer MUST be able to list and read the photos of their own
+session in any status. A photo MUST belong to one element within one session (the
 pair of session and element), never to an element's recorded entry, so
 re-recording the element's answers MUST NOT change its photos. The element
 MUST be one the session could record an entry for (see _Resolve an Element
@@ -295,7 +296,12 @@ Only the session's performer MAY add, list, read or delete its photos,
 through the same scope checks as every other session operation: an unknown
 session, another user's session and a since-deactivated assignment MUST be
 indistinguishable (not found). Add and delete MUST be refused once the
-session is `completed`; a completed session's photos are fixed. Photos
+session is `completed`; a completed session's photos are fixed, but its
+performer MAY still list and read them here (reading by everyone else who
+may see a completed review belongs to `review-history`). Listing an
+element's photos MUST apply the same element check as adding, so an
+element outside the session's scope MUST be rejected as not found there
+too. Photos
 MUST live as long as their session: nothing deletes them automatically,
 and discarding a `draft` session MUST delete its photos, stored files
 included.
@@ -387,6 +393,18 @@ content security policy.
 - GIVEN U has a photo in a session that has been completed
 - WHEN U uploads another photo or deletes that one
 - THEN each response MUST be 409 REVIEW_SESSION_NOT_EDITABLE and the photo and its file MUST be unchanged
+
+#### Scenario: The performer still reads a completed session's photos
+
+- GIVEN U has a photo in a session that has been completed
+- WHEN U lists that element's photos or reads the photo
+- THEN each response MUST be 200 with the photo
+
+#### Scenario: Listing photos of an element outside the session's scope is refused
+
+- GIVEN U performs a session for community C
+- WHEN U lists the photos of an element of another community or an unknown id
+- THEN the response MUST be 404 ELEMENT_NOT_FOUND
 
 #### Scenario: Discarding a draft deletes its photos and files
 

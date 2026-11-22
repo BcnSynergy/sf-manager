@@ -2,6 +2,7 @@ import type { ReviewPhoto } from '../../../domain/review-photo';
 import type {
   AddReviewPhotoResult,
   DeleteReviewPhotoResult,
+  DiscardReviewSessionResult,
   ReviewPhotoRepository,
 } from '../../ports/review-photo.repository.port';
 import type { InMemoryReviewSessionRepository } from './in-memory-review-session.repository';
@@ -95,11 +96,17 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
     });
   }
 
-  listKeysForSession(reviewSessionId: string): Promise<string[]> {
-    return Promise.resolve(
-      this.all()
-        .filter((photo) => photo.reviewSessionId === reviewSessionId)
-        .map((photo) => photo.storageKey),
-    );
+  async discardDraftWithPhotoKeys(
+    reviewSessionId: string,
+  ): Promise<DiscardReviewSessionResult> {
+    if (this.sessions.statusOf(reviewSessionId) !== 'draft') {
+      return { outcome: 'not_editable' };
+    }
+    const storageKeys = this.all()
+      .filter((photo) => photo.reviewSessionId === reviewSessionId)
+      .map((photo) => photo.storageKey);
+    // The photos disappear with the session (cascade, see all()).
+    await this.sessions.discardDraft(reviewSessionId);
+    return { outcome: 'discarded', storageKeys };
   }
 }

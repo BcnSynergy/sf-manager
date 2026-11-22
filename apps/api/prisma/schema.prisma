@@ -485,6 +485,9 @@ model ReviewPhoto {
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([reviewSessionId, inspectableElementId])
+  // Like ElementReviewEntry: Postgres does not index FK columns, and the
+  // composite index above leads with reviewSessionId.
+  @@index([inspectableElementId])
 }
 
 // review-session/design.md Decision 9: `questionId` is provenance only,

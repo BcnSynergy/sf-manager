@@ -5,6 +5,7 @@ import type { ReviewPhoto } from '../../domain/review-photo';
 import type {
   AddReviewPhotoResult,
   DeleteReviewPhotoResult,
+  DiscardReviewSessionResult,
   ReviewPhotoRepository,
 } from '../../application/ports/review-photo.repository.port';
 
@@ -121,12 +122,29 @@ export class PrismaReviewPhotoRepository implements ReviewPhotoRepository {
     });
   }
 
-  async listKeysForSession(reviewSessionId: string): Promise<string[]> {
-    const rows = await this.prisma.reviewPhoto.findMany({
-      where: { reviewSessionId },
-      select: { storageKey: true },
-      orderBy: ORDER_BY,
+  async discardDraftWithPhotoKeys(
+    reviewSessionId: string,
+  ): Promise<DiscardReviewSessionResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const status = await this.lockSession(tx, reviewSessionId);
+      if (status !== 'draft') {
+        return { outcome: 'not_editable' };
+      }
+      const rows = await tx.reviewPhoto.findMany({
+        where: { reviewSessionId },
+        select: { storageKey: true },
+        orderBy: ORDER_BY,
+      });
+      const deleted = await tx.reviewSession.deleteMany({
+        where: { id: reviewSessionId, status: 'draft' },
+      });
+      if (deleted.count === 0) {
+        return { outcome: 'not_editable' };
+      }
+      return {
+        outcome: 'discarded',
+        storageKeys: rows.map((row) => row.storageKey),
+      };
     });
-    return rows.map((row) => row.storageKey);
   }
 }

@@ -566,7 +566,10 @@ describe('Review photos (e2e)', () => {
       ).toHaveLength(3);
     });
 
-    it('keeps exactly 3 photos when 5 uploads of one element arrive together', async () => {
+    // Not concurrency coverage: the in-memory repository is synchronous, so
+    // this only checks the HTTP outcomes of five requests in a row. The real
+    // race is prisma-review-photo.repository.integration.spec.ts.
+    it('answers 201 three times and 409 twice for five uploads of one element sent together (in-memory repository)', async () => {
       const element = await createElement(admin, communityId, 'Race element');
       const before = built.fileStorage.keys().length;
 
@@ -641,6 +644,16 @@ describe('Review photos (e2e)', () => {
       expect(response.body).toMatchObject({
         code: 'REVIEW_PHOTO_UPLOAD_INVALID',
       });
+    });
+
+    it('answers 404 ELEMENT_NOT_FOUND when listing the photos of an element outside the session', async () => {
+      for (const id of [
+        foreignElement.id,
+        '0192f0c0-0000-7000-8000-000000000000',
+      ]) {
+        const response = await tech.get(photosUrl(session.id, id)).expect(404);
+        expect(response.body).toMatchObject({ code: 'ELEMENT_NOT_FOUND' });
+      }
     });
 
     it('answers 404 ELEMENT_NOT_FOUND for an element of another community and for an unknown element', async () => {
@@ -723,6 +736,24 @@ describe('Review photos (e2e)', () => {
       expect(response.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
       await tech2.delete(`/review-sessions/${own.id}`).expect(204);
     });
+
+    it('does not serve or delete a photo of S1 through S2 of the SAME performer', async () => {
+      // tech holds S1 (community 1) and opens S2 in the completion community.
+      await assignTechnician(admin, completionCommunityId, 'rp-tech-id');
+      const second = await openSession(tech, completionCommunityId, templateId);
+      const keys = built.fileStorage.keys();
+
+      const read = await tech.get(photoUrl(second.id, photoId)).expect(404);
+      expect(read.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+      const removed = await tech
+        .delete(photoUrl(second.id, photoId))
+        .expect(404);
+      expect(removed.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+
+      expect(built.fileStorage.keys()).toEqual(keys);
+      await tech.get(photoUrl(session.id, photoId)).expect(200);
+      await tech.delete(`/review-sessions/${second.id}`).expect(204);
+    });
   });
 
   describe('delete (S3) and draft-only (S3)', () => {
@@ -788,6 +819,15 @@ describe('Review photos (e2e)', () => {
           .all()
           .filter((photo) => photo.reviewSessionId === completionSession.id),
       ).toHaveLength(1);
+
+      // The performer still lists and reads it (S3: any status).
+      const listed = await tech3
+        .get(photosUrl(completionSession.id, completionElement.id))
+        .expect(200);
+      expect(
+        (listed.body as Array<{ id: string }>).map((row) => row.id),
+      ).toEqual([id]);
+      await tech3.get(photoUrl(completionSession.id, id)).expect(200);
     });
   });
 

@@ -11,12 +11,10 @@ import {
   INSPECTABLE_ELEMENT_REPOSITORY,
   type InspectableElementRepository,
 } from '../../../inspectable-element/application/ports/inspectable-element.repository.port';
-import { InspectableElementNotFoundError } from '../../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import {
   REVIEW_TEMPLATE_REPOSITORY,
   type ReviewTemplateRepository,
 } from '../../../review-template/application/ports/review-template.repository.port';
-import { ActiveTemplateNotFoundError } from '../../domain/errors/active-template-not-found.error';
 import {
   ReviewPhotoLimitReachedError,
   ReviewPhotoTooLargeError,
@@ -33,6 +31,7 @@ import {
   REVIEW_PHOTO_REPOSITORY,
   type ReviewPhotoRepository,
 } from '../ports/review-photo.repository.port';
+import { assertElementReviewable } from '../services/assert-element-reviewable';
 import {
   Actor,
   SessionAccessService,
@@ -77,22 +76,12 @@ export class UploadReviewPhotoUseCase {
       throw new ReviewSessionNotEditableError();
     }
 
-    // Same scoping as RecordEntryUseCase: the element must be reviewable in
-    // this session's community and element type; every miss is one 404.
-    const template = await this.templateRepository.findFrozenWithSnapshot(
-      session.templateId,
-    );
-    if (!template) {
-      throw new ActiveTemplateNotFoundError();
-    }
-    const element = await this.elementRepository.findReviewableById(
-      session.communityId,
-      template.elementType,
+    await assertElementReviewable(
+      this.templateRepository,
+      this.elementRepository,
+      session,
       elementId,
     );
-    if (!element) {
-      throw new InspectableElementNotFoundError();
-    }
 
     if (content.length > REVIEW_PHOTO_MAX_BYTES) {
       throw new ReviewPhotoTooLargeError();

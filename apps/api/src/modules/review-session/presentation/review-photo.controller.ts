@@ -62,9 +62,11 @@ const photoIdPipe = () =>
 
 // EN-164 S1-S4: the photos of a DRAFT review session, for the performer
 // only (every use case goes through SessionAccessService first: an unknown,
-// foreign or out-of-scope session is one 404). Photos of a completed session
-// are read through the history routes, not here. The storage key never
-// appears in any response.
+// foreign or out-of-scope session is one 404). Add and delete work only while
+// the session is a draft (409 otherwise); list and read work for the
+// performer in any session status. Everyone else who may see a completed
+// review reads its photos through the history routes (T3), not here. The
+// storage key never appears in any response.
 @ApiTags('review-sessions')
 @Controller('review-sessions/:sessionId')
 export class ReviewPhotoController {

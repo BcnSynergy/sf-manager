@@ -97,7 +97,7 @@ describe('review photo use cases', () => {
       files,
       ids,
     );
-    list = new ListReviewPhotosUseCase(access, photos);
+    list = new ListReviewPhotosUseCase(access, templates, elements, photos);
     read = new ReadReviewPhotoUseCase(access, photos, files);
     remove = new DeleteReviewPhotoUseCase(access, photos, files);
 
@@ -222,6 +222,17 @@ describe('review photo use cases', () => {
       expect(files.keys()).toEqual([]);
     });
 
+    it('never writes a file for a completed session (the draft check runs before the put)', async () => {
+      await sessions.complete('session-1', new Date());
+      const put = jest.spyOn(files, 'put');
+
+      await expect(
+        upload.execute('session-1', 'element-1', jpegHeader(), actor),
+      ).rejects.toBeInstanceOf(ReviewSessionNotEditableError);
+
+      expect(put).not.toHaveBeenCalled();
+    });
+
     it('rejects an element outside the session community, deactivated or unknown as not found', async () => {
       elements.seed(
         element({
@@ -307,6 +318,39 @@ describe('review photo use cases', () => {
         { id: first.id, createdAt: first.createdAt },
         { id: second.id, createdAt: second.createdAt },
       ]);
+    });
+
+    it('rejects an element outside the session community, deactivated or unknown as not found', async () => {
+      elements.seed(
+        element({
+          id: 'element-other',
+          communityId: 'community-2',
+          code: 'X9',
+        }),
+      );
+      elements.seed(
+        element({ id: 'element-gone', code: 'X8', deactivatedAt: new Date() }),
+      );
+
+      for (const id of ['element-other', 'element-gone', 'unknown']) {
+        await expect(
+          list.execute('session-1', id, actor),
+        ).rejects.toBeInstanceOf(InspectableElementNotFoundError);
+      }
+    });
+
+    it('lists a completed session photos for its performer', async () => {
+      const { id } = await upload.execute(
+        'session-1',
+        'element-1',
+        jpegHeader(),
+        actor,
+      );
+      await sessions.complete('session-1', new Date());
+
+      const result = await list.execute('session-1', 'element-1', actor);
+
+      expect(result.map((photo) => photo.id)).toEqual([id]);
     });
 
     it("hides another performer's session as not found", async () => {

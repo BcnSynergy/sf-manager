@@ -72,6 +72,19 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
         deletedAt: null,
       }),
     );
+    // The run database is shared with the other integration suites (one
+    // active template and at most one draft per lineage), so this follows
+    // prisma-review-session.repository.integration.spec.ts: clear stray
+    // drafts (they never have snapshot rows), retire the lineage's active
+    // row, then flip a fresh draft to active with the next version, since
+    // this suite only needs an `active` FK target, not a question snapshot.
+    await prisma.reviewTemplate.deleteMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        status: 'draft',
+      },
+    });
     templateId = idGenerator.generate();
     await templates.create(
       new ReviewTemplate({
@@ -86,9 +99,29 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
         deletedAt: null,
       }),
     );
+    await prisma.reviewTemplate.updateMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        status: 'active',
+      },
+      data: { status: 'retired' },
+    });
+    const priorVersions = await prisma.reviewTemplate.findMany({
+      where: {
+        elementType: 'EXTINGUISHER',
+        frequency: 'QUARTERLY',
+        version: { not: null },
+      },
+      select: { version: true },
+    });
     await prisma.reviewTemplate.update({
       where: { id: templateId },
-      data: { status: 'active', version: 1 },
+      data: {
+        status: 'active',
+        version:
+          Math.max(0, ...priorVersions.map((row) => row.version ?? 0)) + 1,
+      },
     });
   });
 
@@ -151,8 +184,8 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     reviewSessionId: string,
     inspectableElementId: string,
     createdAt = new Date(),
+    id = idGenerator.generate(),
   ): ReviewPhoto => {
-    const id = idGenerator.generate();
     return {
       id,
       reviewSessionId,
@@ -177,12 +210,6 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     await expect(
       photos.findInSession(otherSessionId, stored.id),
     ).resolves.toBeNull();
-    await expect(photos.listKeysForSession(sessionId)).resolves.toEqual([
-      stored.storageKey,
-    ]);
-    await expect(photos.listKeysForSession(otherSessionId)).resolves.toEqual(
-      [],
-    );
   });
 
   it('lists an element photos oldest first, ties broken by id', async () => {
@@ -191,11 +218,20 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     const otherElementId = await createElement();
     const older = photo(sessionId, elementId, new Date('2026-01-01T00:00:00Z'));
     const newer = photo(sessionId, elementId, new Date('2026-01-02T00:00:00Z'));
-    const tieA = photo(sessionId, elementId, new Date('2026-01-03T00:00:00Z'));
-    const tieB = {
-      ...photo(sessionId, elementId, new Date('2026-01-03T00:00:00Z')),
-    };
-    // The generated ids are time-ordered, so tieA.id < tieB.id.
+    // Fixed ids: the order of equal timestamps is the id's, not the
+    // generator's (UUIDv7 ids made in one millisecond are not ordered).
+    const tieA = photo(
+      sessionId,
+      elementId,
+      new Date('2026-01-03T00:00:00Z'),
+      '0192f0c0-0000-7000-8000-00000000000a',
+    );
+    const tieB = photo(
+      sessionId,
+      elementId,
+      new Date('2026-01-03T00:00:00Z'),
+      '0192f0c0-0000-7000-8000-00000000000b',
+    );
     await photos.addToDraft(newer, 5);
     await photos.addToDraft(tieB, 5);
     await photos.addToDraft(older, 5);
@@ -322,6 +358,115 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     expect(
       await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
     ).toBe(0);
+  });
+
+  it('discards a draft returning the keys of its photos, rows and session gone', async () => {
+    const sessionId = await createDraft();
+    const otherSessionId = await createDraft();
+    const elementId = await createElement();
+    const first = photo(sessionId, elementId);
+    const second = photo(sessionId, elementId);
+    const foreign = photo(otherSessionId, elementId);
+    for (const row of [first, second, foreign]) {
+      await photos.addToDraft(row, 3);
+    }
+
+    const result = await photos.discardDraftWithPhotoKeys(sessionId);
+
+    expect(result.outcome).toBe('discarded');
+    expect(
+      result.outcome === 'discarded' ? [...result.storageKeys].sort() : [],
+    ).toEqual([first.storageKey, second.storageKey].sort());
+    expect(await prisma.reviewSession.count({ where: { id: sessionId } })).toBe(
+      0,
+    );
+    expect(
+      await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
+    ).toBe(0);
+    expect(await prisma.reviewPhoto.count({ where: { id: foreign.id } })).toBe(
+      1,
+    );
+  });
+
+  it('refuses to discard a completed or unknown session and keeps its photos', async () => {
+    const sessionId = await createDraft();
+    const elementId = await createElement();
+    await photos.addToDraft(photo(sessionId, elementId), 3);
+    await sessions.complete(sessionId, new Date());
+
+    await expect(photos.discardDraftWithPhotoKeys(sessionId)).resolves.toEqual({
+      outcome: 'not_editable',
+    });
+    await expect(
+      photos.discardDraftWithPhotoKeys(idGenerator.generate()),
+    ).resolves.toEqual({ outcome: 'not_editable' });
+    expect(
+      await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
+    ).toBe(1);
+  });
+
+  // EN-164 S4: an add racing a discard. Every add that committed must have
+  // its key in the keys the discard returned (so its file is deleted); an add
+  // that lost the race is refused. Repeated, because the interleaving is
+  // timing-dependent.
+  it('never leaves a committed photo key out of a racing discard', async () => {
+    for (let round = 0; round < 15; round++) {
+      const sessionId = await createDraft();
+      const elementId = await createElement();
+      const adds = Array.from({ length: 3 }, () => photo(sessionId, elementId));
+
+      const [discard, ...added] = await Promise.all([
+        photos.discardDraftWithPhotoKeys(sessionId),
+        ...adds.map((row) => otherPhotos.addToDraft(row, 3)),
+      ]);
+
+      expect(discard.outcome).toBe('discarded');
+      const returned =
+        discard.outcome === 'discarded' ? discard.storageKeys : [];
+      adds.forEach((row, index) => {
+        if (added[index] === 'added') {
+          expect(returned).toContain(row.storageKey);
+        } else {
+          expect(added[index]).toBe('not_editable');
+        }
+      });
+      expect(
+        await prisma.reviewPhoto.count({
+          where: { reviewSessionId: sessionId },
+        }),
+      ).toBe(0);
+    }
+  });
+
+  // S-3: complete() writes the session row the add locks, so an add either
+  // committed first (its row is there) or is refused; no photo lands on a
+  // completed session after the fact.
+  it('keeps add and complete consistent when they race', async () => {
+    for (let round = 0; round < 10; round++) {
+      const sessionId = await createDraft();
+      const elementId = await createElement();
+      const adds = Array.from({ length: 3 }, () => photo(sessionId, elementId));
+
+      const [completed, ...added] = await Promise.all([
+        sessions.complete(sessionId, new Date()),
+        ...adds.map((row) => otherPhotos.addToDraft(row, 3)),
+      ]);
+
+      expect(completed).toBe(true);
+      const rows = await prisma.reviewPhoto.findMany({
+        where: { reviewSessionId: sessionId },
+      });
+      expect(rows.map((row) => row.id).sort()).toEqual(
+        adds
+          .filter((_, index) => added[index] === 'added')
+          .map((row) => row.id)
+          .sort(),
+      );
+      // Once completed, nothing more can land.
+      await expect(
+        photos.addToDraft(photo(sessionId, elementId), 3),
+      ).resolves.toBe('not_editable');
+    }
   });
 
   it('keeps the element FK as RESTRICT: an element with photos cannot be hard-deleted', async () => {
