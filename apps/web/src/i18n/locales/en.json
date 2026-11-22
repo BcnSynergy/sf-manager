@@ -485,6 +485,27 @@
       "unreviewedLabel": "Not reviewed",
       "notRecorded": "No entry was recorded for this element in this session."
     },
+    "photos": {
+      "title": "Photos",
+      "loading": "Loading photos...",
+      "loadError": "The photos could not be loaded.",
+      "empty": "No photos yet.",
+      "addLabel": "Add photo",
+      "uploading": "Uploading photo...",
+      "alt": "Photo {{number}}",
+      "removeLabel": "Remove photo",
+      "removeConfirmTitle": "Remove this photo?",
+      "removeConfirmMessage": "The photo will be deleted from this review.",
+      "limitHint": "This element already has {{max}} photos, the maximum.",
+      "limitReached": "This element already has the maximum number of photos.",
+      "tooLarge": "This photo is too large to upload.",
+      "readError": "This file could not be read as a photo.",
+      "uploadError": "The photo could not be uploaded.",
+      "removeError": "The photo could not be removed.",
+      "notFound": "This photo no longer exists.",
+      "openLabel": "Open photo {{number}} in a new tab",
+      "removeNumberedLabel": "Remove photo {{number}}"
+    },
     "answer": {
       "yes": "Yes",
       "no": "No",

@@ -485,6 +485,27 @@
       "unreviewedLabel": "No revisat",
       "notRecorded": "No s'ha registrat cap entrada per a aquest element en aquesta sessió."
     },
+    "photos": {
+      "title": "Fotos",
+      "loading": "Carregant fotos...",
+      "loadError": "No s'han pogut carregar les fotos.",
+      "empty": "Encara no hi ha fotos.",
+      "addLabel": "Afegeix una foto",
+      "uploading": "Pujant la foto...",
+      "alt": "Foto {{number}}",
+      "removeLabel": "Elimina la foto",
+      "removeConfirmTitle": "Vols eliminar aquesta foto?",
+      "removeConfirmMessage": "La foto s'eliminarà d'aquesta revisió.",
+      "limitHint": "Aquest element ja té {{max}} fotos, el màxim.",
+      "limitReached": "Aquest element ja té el nombre màxim de fotos.",
+      "tooLarge": "Aquesta foto és massa gran per pujar-la.",
+      "readError": "Aquest fitxer no s'ha pogut llegir com a foto.",
+      "uploadError": "No s'ha pogut pujar la foto.",
+      "removeError": "No s'ha pogut eliminar la foto.",
+      "notFound": "Aquesta foto ja no existeix.",
+      "openLabel": "Obre la foto {{number}} en una pestanya nova",
+      "removeNumberedLabel": "Elimina la foto {{number}}"
+    },
     "answer": {
       "yes": "Sí",
       "no": "No",

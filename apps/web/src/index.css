@@ -636,6 +636,32 @@ code {
   border-radius: var(--radius-md);
 }
 
+/* EN-164: an element's review photos, as a row of thumbnails that wraps on a
+   phone; each thumbnail links to the full photo, with its Remove under it. */
+.sf-photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sf-photo-item {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.sf-photo-thumb {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
 /* The organization logo at the head of the review document's letterhead,
    on screen and in print: never taller than a letterhead line block, on the
    white it prints on (dark or transparent logos stay visible in dark mode). */

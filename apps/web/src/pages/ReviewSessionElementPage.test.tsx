@@ -1,13 +1,19 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
+import * as reviewPhotosApi from '../api/review-photos';
 import { ReviewSessionElementPage } from './ReviewSessionElementPage';
 
 vi.mock('../api/review-session');
+vi.mock('../api/review-photos', async (importOriginal) => ({
+  ...(await importOriginal<typeof reviewPhotosApi>()),
+  listReviewPhotos: vi.fn(),
+}));
+const mockedListReviewPhotos = vi.mocked(reviewPhotosApi.listReviewPhotos);
 
 const mockedResolveElementByCode = vi.mocked(reviewSessionApi.resolveElementByCode);
 const mockedRecordEntry = vi.mocked(reviewSessionApi.recordEntry);
@@ -67,6 +73,12 @@ const recordedYesYes = {
   recordedAt: '2026-09-08T00:00:00.000Z',
 };
 
+// The answers form's own status region (the photo section has its own).
+function formStatusRegion() {
+  const form = screen.getByTestId('review-session-element-save').closest('form') as HTMLElement;
+  return within(form).getByRole('status');
+}
+
 async function saveYesYes() {
   await screen.findByTestId('review-session-element-question-q1');
   fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
@@ -79,6 +91,29 @@ describe('ReviewSessionElementPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedReadReviewSession.mockResolvedValue(sessionWithStatus('draft'));
+    mockedListReviewPhotos.mockResolvedValue([]);
+  });
+
+  // EN-164 S5: the photo control of the element being reviewed.
+  it('offers the photo control for the resolved element of a draft session', async () => {
+    mockedResolveElementByCode.mockResolvedValue(resolved);
+    renderPage();
+
+    expect(await screen.findByTestId('review-photos-add')).toBeInTheDocument();
+    expect(mockedListReviewPhotos).toHaveBeenCalledWith(SESSION_ID, 'element-1');
+  });
+
+  it("shows a completed session's photos read-only", async () => {
+    mockedResolveElementByCode.mockResolvedValue({ ...resolved, entry: recordedYesYes });
+    mockedReadReviewSession.mockResolvedValue(sessionWithStatus('completed'));
+    mockedListReviewPhotos.mockResolvedValue([
+      { id: 'photo-1', createdAt: '2026-09-08T00:00:00.000Z' },
+    ]);
+    renderPage();
+
+    expect(await screen.findByTestId('review-photo-photo-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-photo-remove-photo-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('review-photos-add')).not.toBeInTheDocument();
   });
 
   it('shows a loading state while the resolve request is in flight', () => {
@@ -225,7 +260,7 @@ describe('ReviewSessionElementPage', () => {
     renderPage();
 
     await screen.findByTestId('review-session-element-question-q1');
-    const region = screen.getByRole('status');
+    const region = formStatusRegion();
     expect(region).toBeEmptyDOMElement();
 
     fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
@@ -236,7 +271,7 @@ describe('ReviewSessionElementPage', () => {
     expect(saved).not.toHaveAttribute('role');
     expect(region).toContainElement(saved);
     expect(region).toContainElement(screen.getByTestId('review-session-element-continue'));
-    expect(screen.getByRole('status')).toBe(region);
+    expect(formStatusRegion()).toBe(region);
   });
 
   // EN-80: on a long form at phone width a confirmation above the form is
@@ -248,7 +283,7 @@ describe('ReviewSessionElementPage', () => {
     renderPage();
     await saveYesYes();
 
-    const region = screen.getByRole('status');
+    const region = formStatusRegion();
     const questions = screen.getByTestId('review-session-element-questions');
     const save = screen.getByTestId('review-session-element-save');
     expect(region).toContainElement(screen.getByTestId('review-session-element-saved'));
@@ -461,7 +496,9 @@ describe('ReviewSessionElementPage', () => {
       const question = await screen.findByTestId('review-session-element-question-q1');
       expect(question).toHaveClass('sf-field');
       expect(screen.getByTestId('review-session-element-questions')).toHaveClass('sf-section');
-      expect(screen.getByRole('heading', { level: 2 })).toHaveClass('sf-section-title');
+      expect(screen.getByRole('heading', { level: 2, name: 'Questions' })).toHaveClass(
+        'sf-section-title',
+      );
       const answer = screen.getByTestId('review-session-element-answer-q1-YES');
       expect(answer.parentElement).toHaveClass('sf-choice');
       expect(

@@ -14,7 +14,7 @@ and community-scope rules by `authorization`. A history list and a
 read-only historical-session view now exist, owned by the separate
 `review-history-ui` capability; the field flow described here still adds
 none of its own, and gains only a navigation entry point into that
-surface. Out of scope: camera / QR scanning, offline capability of any
+surface. Out of scope: camera code reading / QR scanning, offline capability of any
 kind, per-element history views, list filtering / pagination / sorting /
 search, due-date or overdue indicators (the field flow's own views add
 none; the global navigation's Review schedule item, offered to this flow's
@@ -26,7 +26,8 @@ review document — the printable review document is owned by
 `review-document-ui`, and this flow has no link to it at all; the only
 link ships on `review-history-ui`'s read-only historical session view,
 whose read is scoped by history, not by performer (superseded proposal
-question 3, 2026-09-23), photos and attachments.
+question 3, 2026-09-23), and attachments other than element photos (EN-164,
+see _Element Photos_).
 
 ## Requirements
 
@@ -151,10 +152,14 @@ shown and no session MUST be started.
 ### Requirement: Manual Code Entry Only
 
 The system MUST accept an element's `code` as typed text. The UI MUST NOT
-open a camera, request camera permission, or depend on any scanning or
-device-capture library. Codes MUST be accepted case-insensitively where
-the underlying alphabet permits, and MUST be trimmed of surrounding
-whitespace before submission.
+open a camera to read a code, and MUST NOT depend on any scanning or
+device-capture library. The only camera use in the field flow is the photo
+control (see _Element Photos_), which goes through the browser's standard
+file input and MUST NOT read or resolve a code. Codes MUST be accepted
+case-insensitively where the underlying alphabet permits, and MUST be
+trimmed of surrounding whitespace before submission.
+(Previously: the UI MUST NOT open a camera or request camera permission at
+all. EN-164 adds element photos, which a phone may take with its camera.)
 
 #### Scenario: A code is entered by typing
 
@@ -166,7 +171,9 @@ whitespace before submission.
 
 - GIVEN the web app's dependencies and code after this change
 - WHEN they are inspected
-- THEN none MUST provide camera capture, QR scanning or a media-device permission prompt
+- THEN none MUST provide QR scanning or a scanning or device-capture library, and none MUST call a media-device API directly
+- AND the only camera access MUST be the photo control's file input
+  (Previously: "none MUST provide camera capture, QR scanning or a media-device permission prompt".)
 
 ### Requirement: Answer an Element's Questions
 
@@ -211,6 +218,63 @@ has edited the form MUST NOT be confirmed.
 - GIVEN the record request fails
 - WHEN the failure is shown
 - THEN a distinct error state MUST be shown and the user's entered answers MUST still be on screen
+
+### Requirement: Element Photos
+
+While answering an element of a `draft` session, the performer MUST be
+offered a control to add photos of that element, at most 3 per element per
+session (the rules are owned by `review-session-management`, _Photos of a Draft Review
+Session_). The control MUST be a standard file input that accepts
+images and asks for the rear camera (`capture="environment"`): on a phone it
+opens the camera, on a desktop a file picker. Before upload, the web app
+MUST resize each photo to at most 1600 px on its long side and re-encode it
+as JPEG at quality 0.8, which also drops its metadata (GPS included). A
+photo is uploaded as soon as it is chosen, separately from saving the
+answers. The element's photos MUST be shown as thumbnails, each linking to
+the full photo, and each MUST be removable while the session is a draft,
+after a confirmation. At 3 photos the add control MUST give way to a note
+that the maximum is reached. On the element view of a `completed` session
+the photos MUST be shown read-only, with no add or remove control. Loading,
+empty and error states MUST be distinct, and errors MUST branch on status
+and code only.
+
+#### Scenario: A photo is compressed and uploaded
+
+- GIVEN the performer is answering an element of a draft session
+- WHEN they choose or take a photo
+- THEN the web app MUST upload a JPEG of at most 1600 px on its long side, encoded at quality 0.8
+- AND its thumbnail MUST be shown with the element's other photos
+
+#### Scenario: The control asks for the camera
+
+- GIVEN the photo control is rendered
+- WHEN its file input is inspected
+- THEN it MUST accept images and carry `capture="environment"`
+
+#### Scenario: The limit replaces the add control
+
+- GIVEN the element has 3 photos in the session
+- WHEN the photo section is rendered
+- THEN no add control MUST be offered, and a note MUST say the maximum is reached
+
+#### Scenario: A photo is removed after confirmation
+
+- GIVEN the element has a photo in a draft session
+- WHEN the performer chooses to remove it and confirms
+- THEN the photo MUST be deleted and its thumbnail removed
+- AND cancelling MUST send no request
+
+#### Scenario: A file the browser cannot read is not uploaded
+
+- GIVEN the chosen file cannot be decoded as an image
+- WHEN it is chosen
+- THEN an error MUST be shown and nothing MUST be uploaded
+
+#### Scenario: A completed session's photos are read-only
+
+- GIVEN a completed session
+- WHEN its element view is rendered
+- THEN the element's photos MUST be shown with no add or remove control
 
 ### Requirement: Rejected Codes Get One Uniform Message
 
@@ -382,7 +446,8 @@ view and MUST be left as it is, apart from the **Sign and close**
 relabel. The field flow MUST NOT add a due-date or overdue indicator, a
 signing action other than the completion action itself, an export,
 print, download or send action, any link to the review document, or an
-attachment/photo control. No surface anywhere MUST add a
+attachment control other than the element photo control (_Element
+Photos_). No surface anywhere MUST add a
 per-element history view, nor a company-wide or global **list of reviews or
 sessions**, nor pagination, date-range filtering, sorting or search over
 reviews.
@@ -407,7 +472,8 @@ company-wide or global review view" is narrowed to a company-wide or global
 **list of reviews or sessions**, and the global navigation's Review schedule
 item is named as permitted, because the navigation renders on the field
 flow's pages and the schedule page is neither a list of sessions nor a
-review view.)
+review view. Before EN-164, "an attachment/photo control" was forbidden
+outright; the element photo control is now the one permitted exception.)
 
 #### Scenario: No offline infrastructure is added
 
@@ -426,8 +492,8 @@ review view.)
 
 - GIVEN every view of the review-session field flow
 - WHEN its own controls are enumerated, the global navigation's items excluded
-- THEN none MUST offer due dates, overdue lists, a signing control other than **Sign and close**, export, print, download, send, a link to the review document, photos or attachments
-  (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control.)
+- THEN none MUST offer due dates, overdue lists, a signing control other than **Sign and close**, export, print, download, send, a link to the review document, or attachments other than the element photo control
+  (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control. Before EN-164: "photos or attachments".)
 
 #### Scenario: The global navigation's Review schedule item is permitted on field-flow pages
 

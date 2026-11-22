@@ -51,6 +51,18 @@ project's Engram memory on 2026-10-09.
 
 ### Low
 
+- **TD-54**: Review photos (EN-164) are read by plain browser requests, an
+  `<img>` thumbnail and a link that opens the full photo in a new tab, so
+  they rely on the access cookie alone. That cookie lasts as long as the
+  access token (`JWT_EXPIRES_IN`, 15 minutes by default), and `apiFetch`'s
+  silent refresh does not cover these requests. A technician who leaves the
+  element page open past that and then taps a thumbnail gets a raw 401 JSON
+  body in the new tab instead of the photo. The organization logo uses the
+  same pattern, but its image is fetched on page load, not opened later.
+  Fix by refreshing the session before opening the photo, or by serving it
+  through a fetch that refreshes. Origin: `en-164-review-photos` PR 2/3
+  fresh review W-2, 2026-11-22.
+
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
   SHA-pinned actions. The API typecheck step landed in
