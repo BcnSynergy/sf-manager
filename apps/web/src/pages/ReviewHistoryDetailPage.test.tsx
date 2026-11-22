@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewHistoryApi from '../api/review-history';
-import { ReviewHistoryDetailPage } from './ReviewHistoryDetailPage';
+import { ReviewHistoryDetailPage, ReviewHistoryDetailView } from './ReviewHistoryDetailPage';
 
 vi.mock('../api/review-history');
 
@@ -429,6 +429,151 @@ describe('ReviewHistoryDetailPage', () => {
 
     expect(screen.getByText('completed-session-c')).toBeInTheDocument();
     expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+  });
+
+  // EN-230 review W-1: the page remounts its view on a session change, so
+  // these tests change `sessionId` on ONE mounted view to keep the view's own
+  // guards pinned (EN-229 detail guard, EN-164 photo session tag).
+  describe('view guards without a remount', () => {
+    function renderView(sessionId: string) {
+      return render(
+        <MemoryRouter>
+          <ReviewHistoryDetailView sessionId={sessionId} />
+        </MemoryRouter>,
+      );
+    }
+
+    function rerenderView(rerender: (ui: React.ReactNode) => void, sessionId: string) {
+      rerender(
+        <MemoryRouter>
+          <ReviewHistoryDetailView sessionId={sessionId} />
+        </MemoryRouter>,
+      );
+    }
+
+    it('drops a detail response for a session the view has already left', async () => {
+      let resolveB: (value: typeof detail) => void = () => {};
+      mockedReadReviewHistory.mockImplementation((id) =>
+        id === 'session-b'
+          ? new Promise((resolve) => {
+              resolveB = resolve;
+            })
+          : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByText('completed-session-a');
+
+      rerenderView(rerender, 'session-b');
+      rerenderView(rerender, 'session-c');
+      await screen.findByText('completed-session-c');
+      await act(async () => {
+        resolveB({ ...detail, id: 'session-b', completedAt: 'completed-session-b' });
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('completed-session-c')).toBeInTheDocument();
+      expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+    });
+
+    it("never shows the previous session's photos next to the next session's record", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === 'session-a'
+          ? Promise.resolve([
+              { id: 'p1', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' },
+            ])
+          : new Promise(() => {}),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByTestId('review-history-detail-photos-e1');
+
+      rerenderView(rerender, 'session-b');
+      await screen.findByText('completed-session-b');
+
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+    });
+
+    it('keeps the current session photos when the previous session photo list arrives late', async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      let resolveA: (value: reviewHistoryApi.ReviewHistoryPhoto[]) => void = () => {};
+      mockedListPhotos.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((resolve) => {
+              resolveA = resolve;
+            })
+          : Promise.resolve([
+              { id: 'pb', inspectableElementId: 'e1', createdAt: '2026-09-01T00:20:00.000Z' },
+            ]),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByText('completed-session-a');
+
+      rerenderView(rerender, 'session-b');
+      const photosB = await screen.findByTestId('review-history-detail-photos-e1');
+      expect(within(photosB).getByRole('img')).toHaveAttribute(
+        'src',
+        '/api/review-history/session-b/photos/pb',
+      );
+      await act(async () => {
+        resolveA([{ id: 'pa', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' }]);
+        await Promise.resolve();
+      });
+
+      const images = within(screen.getByTestId('review-history-detail-photos-e1')).getAllByRole(
+        'img',
+      );
+      expect(images.map((image) => image.getAttribute('src'))).toEqual([
+        '/api/review-history/session-b/photos/pb',
+      ]);
+    });
+  });
+
+  // EN-230: moving to another session shows the loading state, never the
+  // previous session's record, photos or error under the new URL.
+  it("shows the loading state, not the previous session's record, while the next session loads", async () => {
+    mockedReadReviewHistory.mockImplementation((id) =>
+      id === 'session-b'
+        ? new Promise(() => {})
+        : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+    );
+    mockedListPhotos.mockResolvedValue([
+      { id: 'p1', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' },
+    ]);
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+      { initialEntries: ['/review-history/session-a'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId('review-history-detail-photos-e1');
+
+    await act(() => router.navigate('/review-history/session-b'));
+
+    expect(screen.getByTestId('review-history-detail-loading')).toBeInTheDocument();
+    expect(screen.queryByText('completed-session-a')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+  });
+
+  it("does not keep the previous session's error while the next session loads", async () => {
+    mockedReadReviewHistory.mockImplementation((id) =>
+      id === 'session-b'
+        ? new Promise(() => {})
+        : Promise.reject(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND')),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+      { initialEntries: ['/review-history/session-a'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId('review-history-detail-error');
+
+    await act(() => router.navigate('/review-history/session-b'));
+
+    expect(screen.getByTestId('review-history-detail-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-history-detail-error')).not.toBeInTheDocument();
   });
 
   // EN-164 S5 (T3): the photos of a completed review next to each element.

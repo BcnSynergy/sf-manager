@@ -1217,13 +1217,6 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
-- **EN-230** (web): `ReviewHistoryDetailPage` does not go back to its
-  loading state when the route moves to another session: while B loads,
-  A's record and A's photos stay on screen under B's URL, and an earlier
-  error stays until B's request settles. Present before EN-229, which only
-  dropped out-of-order responses. Reset to loading on a session change, for
-  example by keying the page on `sessionId`. Origin: `en-229-stale-history-detail`
-  fresh review S-1, 2026-11-22.
 - **EN-231** (web): the review document disables its print control until
   the photo list arrives (EN-227), but the browser's own print shortcut
   (Ctrl+P) still works while it is pending and prints the document with no
@@ -1233,6 +1226,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-230** (web): `ReviewHistoryDetailPage` did not go back to its loading state when the route moved to another session, so while B loaded, A's record and photos (or an earlier error) stayed on screen under B's URL. The page now renders its view keyed on the session id, so a session change mounts a fresh view that starts loading. Two page tests navigate A to B with B pending and check the loading state, with no record, photo or error of A (both failed before the change). Because the remount alone now keeps an old response off screen, the view is exported and two tests change `sessionId` on one mounted view, so the EN-229 detail guard and the photo session tag stay pinned (each fails when its guard is removed). Done in `en-230-history-detail-reset` (PR #453). Origin: `en-229-stale-history-detail` fresh review S-1, 2026-11-22.
 - **EN-228** (web): a photo whose element has no entry in the review (the element was deactivated or deleted between the upload and the completion) was listed by `GET /review-history/:sessionId/photos` but shown nowhere. The review history detail and the printable document now show such photos in one "Other photos" group after the entries ("Other photo N"; thumbnails with links on the history detail, plain images in the document), also when the review has no entry. The maintainer chose this over blocking completion. Done in `en-228-other-photos` (PR #452; specs `review-history-ui`, `review-document-ui`). Origin: `en-164-review-photos` PR 3/3 fresh review W-1 and `en-227-document-photos` fresh review W-2, 2026-11-22.
 - **EN-227** (feature): the printable review document now shows the photos of the review. Each entry prints its element's photos after its answers or reason, oldest first, about 5 cm wide, whole (`object-fit: contain`) and never split across pages, with the alternative text "Photo N of <code>". The page loads them from `GET /review-history/:sessionId/photos` once the document has loaded (same scope as the document read; no API change), keeps the print control disabled until the list is answered, and prints one note when the photos cannot be loaded. Done in `en-227-document-photos` (PR #451; spec `review-document-ui`). Origin: `en-164-review-photos` decision S4, 2026-11-22.
 - **EN-229** (web): `ReviewHistoryDetailPage` had no guard against a stale detail response, so moving from session A to B to C with B's response arriving after C's showed B's record under C's URL. The detail read now runs in an effect with an `active` guard, so a response for a session the route has left is dropped. A page test navigates A to B to C, resolves B last and checks that C stays on screen (it fails without the guard). Done in `en-229-stale-history-detail` (PR #450). Origin: `en-164-review-photos` PR 3/3 pre-merge fresh review S-3, 2026-11-22.
