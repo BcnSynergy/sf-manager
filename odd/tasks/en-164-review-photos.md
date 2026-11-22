@@ -17,7 +17,7 @@ Locator: `odd/tasks/en-164-review-photos.md` (Engram mirror: `odd/en-164-review-
 | ID  | Specs          | Route                        | Status        | Commit |
 | --- | -------------- | ---------------------------- | ------------- | ------ |
 | T1  | S1-S4, S6      | delegated (context backstop) | done (merged) | #447   |
-| T2  | S2, S3, S5, S6 | inline                       | in review     |        |
+| T2  | S2, S3, S5, S6 | inline                       | in review     | #448   |
 | T3  | S3, S4, S5, S6 | inline                       | pending       |        |
 
 - T1 (PR 1/3, API): migration (`ReviewPhoto` table), domain rules, upload / list / read / delete routes for a draft, discard deletes the files, `review-session-management` spec.
