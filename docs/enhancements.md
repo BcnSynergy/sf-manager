@@ -1191,6 +1191,14 @@ content type`). Today that is the only 415 it raises, but a future one
   unauthenticated route (throttling, size limit, `application/csp-report`
   and `application/reports+json` parsing). Origin: split from EN-106 in
   `en-106-csp-followups`, 2026-11-22.
+- **EN-221** (web tests): eight web tests read source files through
+  `join(process.cwd(), ...)` (for example `zod-config.test.ts`,
+  `index-html.test.ts`), so they only find the files when Vitest runs from
+  `apps/web`; `new URL(..., import.meta.url)` is not an option under jsdom
+  (http scheme). Also, the `zod-config.test.ts` import-order check compares
+  the exact import text, so it relies on Prettier's quotes and semicolons.
+  Origin: `en-106-csp-followups` Gentle review (R3 WARNING and
+  SUGGESTION), 2026-11-22.
 
 ## Done
 
