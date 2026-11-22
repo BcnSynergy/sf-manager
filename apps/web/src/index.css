@@ -675,6 +675,23 @@ code {
   background: var(--logo-backdrop);
 }
 
+/* EN-227: the photos of an element in the review document, about 5 cm wide
+   in print, in a row that wraps (an image is never split across two pages).
+   `contain` keeps the whole photo visible (evidence is not cropped). */
+.review-document-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.review-document-photo {
+  width: 5cm;
+  height: 3.75cm;
+  object-fit: contain;
+  border: 1px solid var(--border);
+}
+
 /* Form layout: fields further apart than a label from its own control. The
    controls keep the global input/select styles above. */
 .sf-form {
@@ -1183,7 +1200,8 @@ main.sf-login {
      `.review-document-print` — in dark mode `--ink` is #f2efea, so "Session
      data"/"Record" would print near-white on white. Base `dt` uses
      `--ink-muted` and table cells/headers carry their own colors and fills
-     too, so they get the same explicit override. CSS itself is not
+     too, so they get the same explicit override, as does the photo border
+     (EN-227), which would otherwise print dark grey. CSS itself is not
      unit-testable — verified by print-preview browser check, not a Vitest
      assertion. */
   .review-document-print h1,
@@ -1192,7 +1210,8 @@ main.sf-login {
   .review-document-print dt,
   .review-document-print th,
   .review-document-print td,
-  .review-document-print code {
+  .review-document-print code,
+  .review-document-print .review-document-photo {
     color: #000;
     background: #fff;
     border-color: #000;

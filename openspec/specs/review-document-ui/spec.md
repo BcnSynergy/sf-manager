@@ -68,9 +68,25 @@ a blank cell, exactly as the neutral element label does; this is
 distinct from a session carrying no company at all, which omits the
 company line entirely. A completed session with zero entries MUST still
 render its letterhead, session data and signature footer, with the
-record region showing no entry and no error. The page MUST NOT hide,
+record region showing no entry and no error about its entries (the
+photo note below may still appear there). The page MUST NOT hide,
 re-sort or truncate entries, and MUST NOT render a signature image or a
 signer name other than the email.
+
+Each entry MUST also show the photos of its element in that session
+(`review-history` _Photos of a Completed Review Are Read Through the
+History Guards_), after its answers or reason, oldest first, each about
+5 cm wide in print, whole (not cropped), never split across two pages, and
+with a text alternative naming its number and the element ("Photo 1 of
+AA1", or the neutral element label). An entry without photos MUST show
+none. The photos MUST be plain images, not links. They MUST be requested
+only once the document itself has loaded, from the review history photo
+routes, which have exactly the document's scope; the document read itself
+is unchanged. When they cannot be loaded, the document MUST still render
+in full, and one note saying the photos of the review could not be loaded
+MUST appear in the record region and MUST be printed, so a printed
+document never leaves its photos out silently.
+(Previously, before EN-227: the document showed no photos.)
 
 #### Scenario: A completed session's document renders all regions
 
@@ -107,6 +123,18 @@ signer name other than the email.
 - GIVEN an entry whose element id resolves no row at all
 - WHEN the page renders
 - THEN it MUST show a localized neutral label with the entry's answers or reason
+
+#### Scenario: Each element's photos print inside its entry
+
+- GIVEN a completed session with two photos of element AA1 and one of element ZZ9
+- WHEN its document page renders
+- THEN AA1's entry MUST show its two photos in order and ZZ9's entry its one photo, as plain images with the text alternatives "Photo 1 of AA1", "Photo 2 of AA1" and "Photo 1 of ZZ9", and an entry without photos MUST show none
+
+#### Scenario: A photo failure is printed, not hidden
+
+- GIVEN a completed session whose photos cannot be loaded
+- WHEN its document page renders and is printed
+- THEN every entry MUST still render, and one note saying the photos could not be loaded MUST appear in the printed output
 
 #### Scenario: Entries are rendered in the server's deterministic order
 
@@ -186,12 +214,21 @@ warning, which depends only on the six text fields.
 
 The page MUST offer exactly **one** print control, which MUST open the
 browser's print dialog — from which the user may also save as PDF. The
+control MUST stay disabled until the photo list has been answered (with
+photos, none, or a failure), so the document is never printed before its
+photos are known (EN-227). The
 printed output MUST contain only the document: the global navigation,
 the print control, the incomplete-profile warning and every other
 screen-only control MUST NOT appear in it. Conformance MUST be
 established against a real print preview on a running application, not
 only by a test asserting a print rule exists. On screen, the page MUST
 render the global navigation normally.
+
+#### Scenario: Printing waits for the photo list
+
+- GIVEN a document page whose photo list has not been answered yet
+- WHEN the print control renders
+- THEN it MUST be disabled, and it MUST become enabled once the photo list is answered or fails
 
 #### Scenario: The print control opens the browser print dialog
 

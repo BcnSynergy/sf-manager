@@ -604,7 +604,9 @@
       "title": "Record",
       "elementUnknown": "Unknown element",
       "questionTextUnknown": "Unknown question",
-      "unreviewedLabel": "Not reviewed:"
+      "unreviewedLabel": "Not reviewed:",
+      "photoAlt": "Photo {{number}} of {{element}}",
+      "photosLoadError": "The photos of this review could not be loaded."
     },
     "print": {
       "button": "Print"

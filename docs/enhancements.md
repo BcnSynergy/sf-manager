@@ -1217,14 +1217,6 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
-- **EN-227** (feature): the printable review document (FR-010,
-  `review-document`, `review-document-ui`) shows no photos. EN-164 left them
-  out of this slice on purpose: the history detail view shows them, the
-  document does not. Showing them needs a layout decision (thumbnails per
-  element, or a photo appendix), print size and page breaks, and whether
-  the document read returns photo ids or the page loads them through
-  `GET /review-history/:sessionId/photos`. Origin: `en-164-review-photos`
-  decision S4, 2026-11-22.
 - **EN-228** (web): the review history detail shows a photo only inside the
   entry of its element, so a photo whose element has no entry is never
   shown, although `GET /review-history/:sessionId/photos` lists it.
@@ -1232,8 +1224,11 @@ content type`). Today that is the only 415 it raises, but a future one
   so this only happens when an element leaves the universe (deactivated or
   deleted) between the photo upload and the completion. Show such photos in
   a separate "other photos" group, or block completion while a photo's
-  element is outside the universe. Origin: `en-164-review-photos` PR 3/3
-  fresh review W-1, 2026-11-22.
+  element is outside the universe. The printable review document
+  (`ReviewDocumentPage`, EN-227) has the same gap: such a photo is left out
+  of the printed document without a note. Origin: `en-164-review-photos`
+  PR 3/3 fresh review W-1, 2026-11-22; document added by the
+  `en-227-document-photos` fresh review W-2.
 - **EN-230** (web): `ReviewHistoryDetailPage` does not go back to its
   loading state when the route moves to another session: while B loads,
   A's record and A's photos stay on screen under B's URL, and an earlier
@@ -1241,9 +1236,16 @@ content type`). Today that is the only 415 it raises, but a future one
   dropped out-of-order responses. Reset to loading on a session change, for
   example by keying the page on `sessionId`. Origin: `en-229-stale-history-detail`
   fresh review S-1, 2026-11-22.
+- **EN-231** (web): the review document disables its print control until
+  the photo list arrives (EN-227), but the browser's own print shortcut
+  (Ctrl+P) still works while it is pending and prints the document with no
+  photos and no note. Show a printed "loading photos" line while the list
+  is pending, or accept the gap (the list usually arrives in well under a
+  second). Origin: `en-227-document-photos` fresh review S-4, 2026-11-22.
 
 ## Done
 
+- **EN-227** (feature): the printable review document now shows the photos of the review. Each entry prints its element's photos after its answers or reason, oldest first, about 5 cm wide, whole (`object-fit: contain`) and never split across pages, with the alternative text "Photo N of <code>". The page loads them from `GET /review-history/:sessionId/photos` once the document has loaded (same scope as the document read; no API change), keeps the print control disabled until the list is answered, and prints one note when the photos cannot be loaded. Done in `en-227-document-photos` (PR #451; spec `review-document-ui`). Origin: `en-164-review-photos` decision S4, 2026-11-22.
 - **EN-229** (web): `ReviewHistoryDetailPage` had no guard against a stale detail response, so moving from session A to B to C with B's response arriving after C's showed B's record under C's URL. The detail read now runs in an effect with an `active` guard, so a response for a session the route has left is dropped. A page test navigates A to B to C, resolves B last and checks that C stays on screen (it fails without the guard). Done in `en-229-stale-history-detail` (PR #450). Origin: `en-164-review-photos` PR 3/3 pre-merge fresh review S-3, 2026-11-22.
 - **EN-164** (feature): photos of a review. The technician attaches up to 3 photos to each element reviewed in a draft session, taken with the phone camera (`capture="environment"`) or chosen from files; the web app resizes each to at most 1600 px and re-encodes it as JPEG 0.8 (dropping EXIF), and the API accepts only JPEG by content, at most 2 MiB, 3 per element under concurrent uploads (session row lock). A photo belongs to the element within the session, lives as long as the review, and is deleted with a discarded draft, file included. The performer adds and removes photos while the session is a draft; whoever may read a completed review in the history sees its photos next to each element. Photos in the printable document moved to EN-227. Done in `en-164-review-photos` (PRs #447, #448 and PR 3/3; specs `review-session-management`, `review-session-ui`, `review-history`, `review-history-ui`). Origin: product discussion, 2026-11-09.
 - **EN-106** (security): two leftovers from the CSP in `apps/web/Caddyfile`. `zod-config.test.ts` now checks that `./zod-config` is the first import of `main.tsx` (it fails when the import moves below `react`). The element label page (QR) and the review document page, screen and print rules, were exercised in a browser on the production build served with the production CSP: no violations (an injected inline script was blocked, so the policy was active). Violation reporting moved to EN-220. Done in `en-106-csp-followups` (PR #446). Origin: `en-94-security-headers` pre-push review (#289), 2026-10-26.

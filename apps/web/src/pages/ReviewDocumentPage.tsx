@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client';
 import {
+  listReviewHistoryPhotos,
   readReviewDocument,
   reviewDocumentLogoUrl,
+  reviewHistoryPhotoUrl,
   type ReviewDocument,
   type ReviewDocumentEntry,
   type ReviewDocumentLetterhead,
+  type ReviewHistoryPhoto,
 } from '../api/review-history';
 import { mapElementTypeToLabelKey } from '../inspectable-element/element-type-labels';
 import { mapReviewFrequencyToLabelKey } from '../checklist-question/review-frequency-labels';
@@ -20,6 +23,12 @@ import { formatDocumentDate, formatDocumentDateTime } from '../review-session/fo
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'unreachable' | 'error';
+
+// EN-227: the photo list of one document, tagged with its session id so a
+// result is only ever used for the document it belongs to.
+type PhotosResult =
+  | { sessionId: string; state: 'loaded'; photos: ReviewHistoryPhoto[] }
+  | { sessionId: string; state: 'error' };
 
 // review-document-ui spec "The Document Page Is Gated on the Five History
 // Roles" / "Loading and Unreachable States". PR 10 is the page SHELL only:
@@ -208,11 +217,16 @@ function SignatureFooter({ document, locale }: { document: ReviewDocument; local
 function RecordEntry({
   entry,
   questionTextById,
+  sessionId,
+  photos,
 }: {
   entry: ReviewDocumentEntry;
   questionTextById: ReadonlyMap<string, string>;
+  sessionId: string;
+  photos: readonly ReviewHistoryPhoto[];
 }) {
   const { t } = useTranslation();
+  const elementLabel = entry.elementCode ?? t('reviewDocument.record.elementUnknown');
 
   return (
     <li data-testid={`review-document-record-entry-${entry.inspectableElementId}`}>
@@ -239,6 +253,26 @@ function RecordEntry({
           </span>
         </p>
       )}
+      {/* EN-227: the element's photos print with its entry, oldest first.
+          Plain images, no link: the document offers no action but print. */}
+      {photos.length > 0 && (
+        <div
+          className="review-document-photos"
+          data-testid={`review-document-record-photos-${entry.inspectableElementId}`}
+        >
+          {photos.map((photo, index) => (
+            <img
+              key={photo.id}
+              className="review-document-photo"
+              src={reviewHistoryPhotoUrl(sessionId, photo.id)}
+              alt={t('reviewDocument.record.photoAlt', {
+                number: index + 1,
+                element: elementLabel,
+              })}
+            />
+          ))}
+        </div>
+      )}
     </li>
   );
 }
@@ -247,21 +281,44 @@ function RecordEntry({
 // region shows no entry and no error, never an empty-state message: an
 // empty `<ul>` already satisfies "no entry"; adding placeholder copy here
 // would be a claim the spec does not make.
-function RecordRegion({ document }: { document: ReviewDocument }) {
+function RecordRegion({
+  document,
+  photos,
+  photosFailed,
+}: {
+  document: ReviewDocument;
+  photos: readonly ReviewHistoryPhoto[];
+  photosFailed: boolean;
+}) {
   const { t } = useTranslation();
   const questionTextById = new Map(
     document.questions.map((question) => [question.questionId, question.text]),
   );
+  const photosByElementId = new Map<string, ReviewHistoryPhoto[]>();
+  for (const photo of photos) {
+    const forElement = photosByElementId.get(photo.inspectableElementId) ?? [];
+    forElement.push(photo);
+    photosByElementId.set(photo.inspectableElementId, forElement);
+  }
 
   return (
     <section data-testid="review-document-record">
       <h2>{t('reviewDocument.record.title')}</h2>
+      {/* EN-227: printed, not print-hidden, so a printed document never
+          leaves its photos out without saying so. */}
+      {photosFailed && (
+        <p data-testid="review-document-record-photos-error">
+          {t('reviewDocument.record.photosLoadError')}
+        </p>
+      )}
       <ul data-testid="review-document-record-entries">
         {document.entries.map((entry) => (
           <RecordEntry
             key={entry.inspectableElementId}
             entry={entry}
             questionTextById={questionTextById}
+            sessionId={document.id}
+            photos={photosByElementId.get(entry.inspectableElementId) ?? []}
           />
         ))}
       </ul>
@@ -276,6 +333,7 @@ export function ReviewDocumentPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [document, setDocument] = useState<ReviewDocument | null>(null);
   const [errorMessageKey, setErrorMessageKey] = useState<string>('common.error.network');
+  const [photosResult, setPhotosResult] = useState<PhotosResult | null>(null);
 
   const loadDocument = useCallback(() => {
     if (sessionId === undefined) {
@@ -309,6 +367,31 @@ export function ReviewDocumentPage() {
     void loadDocument();
   }, [loadDocument]);
 
+  // EN-227: the photos load once the document itself has loaded (a document
+  // the caller cannot open needs no photo request), through the history
+  // photo route, which has the same scope as the document read.
+  const loadedSessionId = document?.id;
+  useEffect(() => {
+    if (loadedSessionId === undefined) {
+      return;
+    }
+    let active = true;
+    listReviewHistoryPhotos(loadedSessionId)
+      .then((listed) => {
+        if (active) {
+          setPhotosResult({ sessionId: loadedSessionId, state: 'loaded', photos: listed });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPhotosResult({ sessionId: loadedSessionId, state: 'error' });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadedSessionId]);
+
   if (loadState === 'loading') {
     return (
       <main>
@@ -336,6 +419,8 @@ export function ReviewDocumentPage() {
     );
   }
 
+  const currentPhotos = photosResult?.sessionId === document.id ? photosResult : null;
+
   // `.review-document-print` (index.css, mirrors `.label-print`'s
   // convention) scopes the print rules that hide every `[data-print-hide]`
   // element (page heading, incomplete-profile warning, print button) and
@@ -351,7 +436,11 @@ export function ReviewDocumentPage() {
           sessionId={document.id}
         />
         <SessionDataRegion document={document} locale={i18n.language} />
-        <RecordRegion document={document} />
+        <RecordRegion
+          document={document}
+          photos={currentPhotos?.state === 'loaded' ? currentPhotos.photos : []}
+          photosFailed={currentPhotos?.state === 'error'}
+        />
         <SignatureFooter document={document} locale={i18n.language} />
       </div>
       {/* spec: "Print Through the Browser, Document Only" / "The Document
@@ -362,6 +451,9 @@ export function ReviewDocumentPage() {
         type="button"
         data-testid="review-document-print-button"
         data-print-hide
+        // EN-227: printing before the photo list arrives would leave the
+        // photos out of the printed document.
+        disabled={currentPhotos === null}
         onClick={() => window.print()}
       >
         {t('reviewDocument.print.button')}
