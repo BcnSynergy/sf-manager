@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
@@ -671,6 +671,8 @@ describe('print control', () => {
     await screen.findByTestId('review-document-content');
     const printButton = screen.getByTestId('review-document-print-button');
     expect(printButton).toHaveAttribute('data-print-hide');
+    // EN-227: print is enabled once the photo list has arrived.
+    await waitFor(() => expect(printButton).toBeEnabled());
 
     printButton.click();
 
