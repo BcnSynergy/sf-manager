@@ -53,7 +53,10 @@ export function ReviewHistoryDetailPage() {
   return <ReviewHistoryDetailView key={sessionId} sessionId={sessionId} />;
 }
 
-function ReviewHistoryDetailView({ sessionId }: { sessionId: string | undefined }) {
+// Exported for tests only: they change `sessionId` on one mounted view to
+// pin the guards below (EN-229 out-of-order detail, EN-164 photo session
+// tag), which the page's remount alone no longer exercises.
+export function ReviewHistoryDetailView({ sessionId }: { sessionId: string | undefined }) {
   const { t } = useTranslation();
 
   const [loadState, setLoadState] = useState<LoadState>('loading');

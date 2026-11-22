@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewHistoryApi from '../api/review-history';
-import { ReviewHistoryDetailPage } from './ReviewHistoryDetailPage';
+import { ReviewHistoryDetailPage, ReviewHistoryDetailView } from './ReviewHistoryDetailPage';
 
 vi.mock('../api/review-history');
 
@@ -429,6 +429,71 @@ describe('ReviewHistoryDetailPage', () => {
 
     expect(screen.getByText('completed-session-c')).toBeInTheDocument();
     expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+  });
+
+  // EN-230 review W-1: the page remounts its view on a session change, so
+  // these tests change `sessionId` on ONE mounted view to keep the view's own
+  // guards pinned (EN-229 detail guard, EN-164 photo session tag).
+  describe('view guards without a remount', () => {
+    function renderView(sessionId: string) {
+      return render(
+        <MemoryRouter>
+          <ReviewHistoryDetailView sessionId={sessionId} />
+        </MemoryRouter>,
+      );
+    }
+
+    function rerenderView(rerender: (ui: React.ReactNode) => void, sessionId: string) {
+      rerender(
+        <MemoryRouter>
+          <ReviewHistoryDetailView sessionId={sessionId} />
+        </MemoryRouter>,
+      );
+    }
+
+    it('drops a detail response for a session the view has already left', async () => {
+      let resolveB: (value: typeof detail) => void = () => {};
+      mockedReadReviewHistory.mockImplementation((id) =>
+        id === 'session-b'
+          ? new Promise((resolve) => {
+              resolveB = resolve;
+            })
+          : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByText('completed-session-a');
+
+      rerenderView(rerender, 'session-b');
+      rerenderView(rerender, 'session-c');
+      await screen.findByText('completed-session-c');
+      await act(async () => {
+        resolveB({ ...detail, id: 'session-b', completedAt: 'completed-session-b' });
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('completed-session-c')).toBeInTheDocument();
+      expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+    });
+
+    it("never shows the previous session's photos next to the next session's record", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === 'session-a'
+          ? Promise.resolve([
+              { id: 'p1', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' },
+            ])
+          : new Promise(() => {}),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByTestId('review-history-detail-photos-e1');
+
+      rerenderView(rerender, 'session-b');
+      await screen.findByText('completed-session-b');
+
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+    });
   });
 
   // EN-230: moving to another session shows the loading state, never the
