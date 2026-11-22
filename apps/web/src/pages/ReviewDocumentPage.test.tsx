@@ -17,8 +17,10 @@ vi.mock('../api/review-history', async (importOriginal) => ({
 const mockedReadReviewDocument = vi.mocked(reviewHistoryApi.readReviewDocument);
 const mockedListPhotos = vi.mocked(reviewHistoryApi.listReviewHistoryPhotos);
 
-// EN-227: no photos unless a test says otherwise.
+// EN-227: no photos unless a test says otherwise; no document read left over
+// from an earlier test.
 beforeEach(() => {
+  mockedReadReviewDocument.mockReset();
   mockedListPhotos.mockClear();
   mockedListPhotos.mockResolvedValue([]);
 });

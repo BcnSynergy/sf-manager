@@ -1200,7 +1200,8 @@ main.sf-login {
      `.review-document-print` — in dark mode `--ink` is #f2efea, so "Session
      data"/"Record" would print near-white on white. Base `dt` uses
      `--ink-muted` and table cells/headers carry their own colors and fills
-     too, so they get the same explicit override. CSS itself is not
+     too, so they get the same explicit override, as does the photo border
+     (EN-227), which would otherwise print dark grey. CSS itself is not
      unit-testable — verified by print-preview browser check, not a Vitest
      assertion. */
   .review-document-print h1,
