@@ -11,9 +11,17 @@ import { ReviewDocumentPage } from './ReviewDocumentPage';
 vi.mock('../api/review-history', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/review-history')>()),
   readReviewDocument: vi.fn(),
+  listReviewHistoryPhotos: vi.fn(),
 }));
 
 const mockedReadReviewDocument = vi.mocked(reviewHistoryApi.readReviewDocument);
+const mockedListPhotos = vi.mocked(reviewHistoryApi.listReviewHistoryPhotos);
+
+// EN-227: no photos unless a test says otherwise.
+beforeEach(() => {
+  mockedListPhotos.mockClear();
+  mockedListPhotos.mockResolvedValue([]);
+});
 
 const SESSION_ID = 'session-1';
 
@@ -534,6 +542,98 @@ describe('record region', () => {
     const entry = screen.getByTestId('review-document-record-entry-e-orphan');
     expect(entry).toHaveTextContent('Unknown question');
     expect(entry).not.toHaveTextContent('q-missing');
+  });
+});
+
+// EN-227: the photos of the review, inside the entry of their element.
+describe('record photos', () => {
+  const photos = [
+    { id: 'p1', inspectableElementId: 'e-aa', createdAt: '2026-09-01T00:01:00.000Z' },
+    { id: 'p2', inspectableElementId: 'e-zz', createdAt: '2026-09-01T00:02:00.000Z' },
+    { id: 'p3', inspectableElementId: 'e-aa', createdAt: '2026-09-01T00:03:00.000Z' },
+  ];
+
+  it("prints each element's photos inside its own entry, in order, from the history photo route, with no link", async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    mockedListPhotos.mockResolvedValue(photos);
+
+    renderPage();
+    const aa = await screen.findByTestId('review-document-record-photos-e-aa');
+
+    expect(screen.getByTestId('review-document-record-entry-e-aa')).toContainElement(aa);
+    const images = within(aa).getAllByRole('img');
+    expect(images.map((image) => image.getAttribute('src'))).toEqual([
+      reviewHistoryApi.reviewHistoryPhotoUrl(SESSION_ID, 'p1'),
+      reviewHistoryApi.reviewHistoryPhotoUrl(SESSION_ID, 'p3'),
+    ]);
+    expect(images.map((image) => image.getAttribute('alt'))).toEqual([
+      'Photo 1 of AA1',
+      'Photo 2 of AA1',
+    ]);
+    expect(images[0]).not.toHaveAttribute('data-print-hide');
+    expect(within(aa).queryAllByRole('link')).toHaveLength(0);
+    expect(mockedListPhotos).toHaveBeenCalledWith(SESSION_ID);
+
+    const zz = screen.getByTestId('review-document-record-photos-e-zz');
+    expect(screen.getByTestId('review-document-record-entry-e-zz')).toContainElement(zz);
+    expect(within(zz).getAllByRole('img')).toHaveLength(1);
+    expect(screen.queryByTestId('review-document-record-photos-e-unknown')).not.toBeInTheDocument();
+  });
+
+  it('names an element with no resolvable row neutrally in the photo text alternative', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    mockedListPhotos.mockResolvedValue([
+      { id: 'p9', inspectableElementId: 'e-unknown', createdAt: '2026-09-01T00:09:00.000Z' },
+    ]);
+
+    renderPage();
+    const unknown = await screen.findByTestId('review-document-record-photos-e-unknown');
+
+    expect(within(unknown).getByRole('img')).toHaveAttribute('alt', 'Photo 1 of Unknown element');
+  });
+
+  it('keeps the document whole and prints one note when the photos cannot be loaded', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    mockedListPhotos.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+    const note = await screen.findByTestId('review-document-record-photos-error');
+
+    expect(note).toHaveTextContent('The photos of this review could not be loaded.');
+    expect(note).not.toHaveAttribute('data-print-hide');
+    expect(screen.getByTestId('review-document-record-entry-e-zz')).toBeInTheDocument();
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    expect(screen.getByTestId('review-document-print-button')).toBeEnabled();
+  });
+
+  it('keeps the print control disabled until the photo list has arrived', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    let resolvePhotos: (value: typeof photos) => void = () => {};
+    mockedListPhotos.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePhotos = resolve;
+      }),
+    );
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+    expect(screen.getByTestId('review-document-print-button')).toBeDisabled();
+
+    await act(async () => {
+      resolvePhotos(photos);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('review-document-print-button')).toBeEnabled();
+  });
+
+  it('sends no photo request when the document cannot be opened', async () => {
+    mockedReadReviewDocument.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
+
+    renderPage();
+    await screen.findByTestId('review-document-unreachable');
+
+    expect(mockedListPhotos).not.toHaveBeenCalled();
   });
 });
 

@@ -604,7 +604,9 @@
       "title": "Registre",
       "elementUnknown": "Element desconegut",
       "questionTextUnknown": "Pregunta desconeguda",
-      "unreviewedLabel": "No revisat:"
+      "unreviewedLabel": "No revisat:",
+      "photoAlt": "Foto {{number}} de {{element}}",
+      "photosLoadError": "No s'han pogut carregar les fotos d'aquesta revisió."
     },
     "print": {
       "button": "Imprimeix"

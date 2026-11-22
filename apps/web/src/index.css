@@ -675,6 +675,24 @@ code {
   background: var(--logo-backdrop);
 }
 
+/* EN-227: the photos of an element in the review document, about 5 cm wide
+   in print, in a row that wraps; a photo is never split across two pages.
+   `contain` keeps the whole photo visible (evidence is not cropped). */
+.review-document-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.review-document-photo {
+  width: 5cm;
+  height: 3.75cm;
+  object-fit: contain;
+  break-inside: avoid;
+  border: 1px solid var(--border);
+}
+
 /* Form layout: fields further apart than a label from its own control. The
    controls keep the global input/select styles above. */
 .sf-form {

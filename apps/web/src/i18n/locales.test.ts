@@ -572,6 +572,9 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewDocument.record.elementUnknown',
     'reviewDocument.record.questionTextUnknown',
     'reviewDocument.record.unreviewedLabel',
+    // EN-227: photos in the record.
+    'reviewDocument.record.photoAlt',
+    'reviewDocument.record.photosLoadError',
     'reviewDocument.print.button',
     // View document link (review-export PR 13, task 13.4). Sits under
     // reviewDocument.* (not reviewHistory.*) per review-document-ui spec's
