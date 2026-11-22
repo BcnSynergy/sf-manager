@@ -494,6 +494,42 @@ describe('ReviewHistoryDetailPage', () => {
 
       expect(screen.queryAllByRole('img')).toHaveLength(0);
     });
+
+    it('keeps the current session photos when the previous session photo list arrives late', async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      let resolveA: (value: reviewHistoryApi.ReviewHistoryPhoto[]) => void = () => {};
+      mockedListPhotos.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((resolve) => {
+              resolveA = resolve;
+            })
+          : Promise.resolve([
+              { id: 'pb', inspectableElementId: 'e1', createdAt: '2026-09-01T00:20:00.000Z' },
+            ]),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByText('completed-session-a');
+
+      rerenderView(rerender, 'session-b');
+      const photosB = await screen.findByTestId('review-history-detail-photos-e1');
+      expect(within(photosB).getByRole('img')).toHaveAttribute(
+        'src',
+        '/api/review-history/session-b/photos/pb',
+      );
+      await act(async () => {
+        resolveA([{ id: 'pa', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' }]);
+        await Promise.resolve();
+      });
+
+      const images = within(screen.getByTestId('review-history-detail-photos-e1')).getAllByRole(
+        'img',
+      );
+      expect(images.map((image) => image.getAttribute('src'))).toEqual([
+        '/api/review-history/session-b/photos/pb',
+      ]);
+    });
   });
 
   // EN-230: moving to another session shows the loading state, never the
