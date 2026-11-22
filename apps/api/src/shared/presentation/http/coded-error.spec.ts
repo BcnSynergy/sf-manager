@@ -92,4 +92,20 @@ describe('buildCodedError', () => {
       'SOME_LOCAL_CODE',
     );
   });
+
+  it('builds a 413 Payload Too Large body carrying the given message and code', () => {
+    const error = buildCodedError(
+      HttpStatus.PAYLOAD_TOO_LARGE,
+      'The photo is too large.',
+      'REVIEW_PHOTO_TOO_LARGE',
+    );
+
+    expect(error.getStatus()).toBe(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(error.getResponse()).toEqual({
+      statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
+      error: 'Payload Too Large',
+      message: 'The photo is too large.',
+      code: 'REVIEW_PHOTO_TOO_LARGE',
+    });
+  });
 });

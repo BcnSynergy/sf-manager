@@ -27,17 +27,21 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 // machine-readable code needed on a 403 response (every prior 403 in this
 // codebase is the bare PermissionsGuard rejection with no body beyond the
 // default Nest shape).
+// EN-164: PAYLOAD_TOO_LARGE is additive too — REVIEW_PHOTO_TOO_LARGE is the
+// first 413 that carries a machine-readable code.
 type CodedErrorStatus =
   | HttpStatus.BAD_REQUEST
   | HttpStatus.CONFLICT
   | HttpStatus.NOT_FOUND
-  | HttpStatus.FORBIDDEN;
+  | HttpStatus.FORBIDDEN
+  | HttpStatus.PAYLOAD_TOO_LARGE;
 
 const STATUS_TEXT: Record<CodedErrorStatus, string> = {
   [HttpStatus.BAD_REQUEST]: 'Bad Request',
   [HttpStatus.CONFLICT]: 'Conflict',
   [HttpStatus.NOT_FOUND]: 'Not Found',
   [HttpStatus.FORBIDDEN]: 'Forbidden',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'Payload Too Large',
 };
 
 // review-session/design.md Decision 2: the 4th, optional `extra` parameter

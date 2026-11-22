@@ -468,6 +468,28 @@ model ElementReviewEntry {
   @@index([inspectableElementId])
 }
 
+// EN-164 S1: a photo belongs to one element reviewed in one review session,
+// keyed by (reviewSessionId, inspectableElementId) and NOT by the
+// ElementReviewEntry id, which record-entry regenerates on every save. The
+// file lives in FILE_STORAGE under `storageKey` (`review-photos/<id>.jpg`).
+// Both FKs are hand-written in migration.sql, invisible to Prisma (ADR-013):
+// reviewSessionId ON DELETE CASCADE (a discarded draft takes its rows with
+// it; its files are deleted by the use case), inspectableElementId ON DELETE
+// RESTRICT like ElementReviewEntry.
+model ReviewPhoto {
+  id                   String   @id @db.Uuid // UUIDv7 from the app (ADR-009)
+  reviewSessionId      String   @db.Uuid
+  inspectableElementId String   @db.Uuid
+  storageKey           String   @unique
+  sizeBytes            Int
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([reviewSessionId, inspectableElementId])
+  // Like ElementReviewEntry: Postgres does not index FK columns, and the
+  // composite index above leads with reviewSessionId.
+  @@index([inspectableElementId])
+}
+
 // review-session/design.md Decision 9: `questionId` is provenance only,
 // mirroring `ReviewTemplateQuestion.questionId` — the frozen wording lives
 // on the template snapshot, not copied here. The FK to

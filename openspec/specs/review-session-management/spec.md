@@ -20,7 +20,8 @@ directly is a **write-path fact**: a session records the maintenance
 company on whose behalf it was performed, frozen at performance time. Out
 of scope here: global visibility, per-element history filtering,
 scheduling / due dates / reminders (FR-009), offline operation, camera
-scanning, photos, attachments, per-answer notes, defect records, and
+scanning, attachments other than review photos (EN-164, see _Photos of a
+Draft Review Session_), per-answer notes, defect records, and
 notifications. Signing is completion itself (see _Completion Is the
 Signing Act_); the printable review document is owned by
 `review-document` and `review-document-ui`, not by this capability; a
@@ -278,6 +279,143 @@ see _Completed Sessions Are Immutable_.
 - GIVEN user U holds a `draft` session and user W is also actively assigned to the same community
 - WHEN W attempts to discard U's session
 - THEN the request MUST be rejected and the session MUST remain resumable by U
+
+### Requirement: Photos of a Draft Review Session
+
+The system MUST let the performer of a `draft` session attach photos to an
+element of that session and delete them while the session is a `draft`.
+The performer MUST be able to list and read the photos of their own
+session in any status. A photo MUST belong to one element within one session (the
+pair of session and element), never to an element's recorded entry, so
+re-recording the element's answers MUST NOT change its photos. A photo
+MUST only be added to an element the session could record an entry for (see
+_Resolve an Element by Code Within the Session's Scope_); adding one to any
+other element MUST be rejected as not found. Listing the photos of any other
+element MUST return none, and a completed session's photos MUST stay
+listable after their element is deactivated or deleted.
+
+Only the session's performer MAY add, list, read or delete its photos,
+through the same scope checks as every other session operation: an unknown
+session, another user's session and a since-deactivated assignment MUST be
+indistinguishable (not found). Add and delete MUST be refused once the
+session is `completed`; a completed session's photos are fixed, but its
+performer MAY still list and read them here (reading by everyone else who
+may see a completed review belongs to `review-history`). Photos
+MUST live as long as their session: nothing deletes them automatically,
+and discarding a `draft` session MUST delete its photos, stored files
+included.
+
+The system MUST accept only JPEG images, decided by the content of the file
+and not by its name or declared type, of at most 2 MiB (2 097 152 bytes),
+and at most 3 photos per element per session. These limits MUST hold under
+concurrent uploads: when several uploads for one element race, the number
+of stored photos MUST NOT exceed 3, and a refused upload MUST leave no
+stored file behind. No response MUST carry the storage key of a photo; a
+photo is identified by its id and creation time only. A photo MUST be
+served as `image/jpeg` with caching disabled, `nosniff` and a sandboxing
+content security policy.
+
+#### Scenario: The performer attaches a photo to an element
+
+- GIVEN user U performs a `draft` session and element E is reviewable in it
+- WHEN U uploads a JPEG of at most 2 MiB for E
+- THEN the response MUST be 201 with the photo's id and creation time and no storage key, the file MUST be stored, and listing E's photos MUST return it
+
+#### Scenario: The fourth photo of an element is refused
+
+- GIVEN E already has 3 photos in the session
+- WHEN U uploads another JPEG for E
+- THEN the response MUST be 409 REVIEW_PHOTO_LIMIT_REACHED, E MUST still have exactly 3 photos, and no file MUST remain stored for the refused upload
+
+#### Scenario: The limit counts per element
+
+- GIVEN E has 3 photos in the session and element F has none
+- WHEN U uploads a JPEG for F
+- THEN the response MUST be 201
+
+#### Scenario: Concurrent uploads never exceed the limit
+
+- GIVEN E has no photos in the session
+- WHEN several uploads for E arrive at the same time
+- THEN exactly 3 MUST succeed, the others MUST be refused with REVIEW_PHOTO_LIMIT_REACHED, and E MUST have exactly 3 photos and 3 stored files
+
+#### Scenario: A file that is not a JPEG is refused
+
+- GIVEN U performs a `draft` session
+- WHEN U uploads a PNG, even one declared as `image/jpeg`
+- THEN the response MUST be 400 REVIEW_PHOTO_UNSUPPORTED_FORMAT and nothing MUST be stored
+
+#### Scenario: A file over 2 MiB is refused
+
+- GIVEN U performs a `draft` session
+- WHEN U uploads a JPEG larger than 2 MiB
+- THEN the response MUST be 413 REVIEW_PHOTO_TOO_LARGE and nothing MUST be stored, while a JPEG of exactly 2 MiB MUST be accepted
+
+#### Scenario: A request without a usable file is refused
+
+- GIVEN U performs a `draft` session
+- WHEN U sends no file in the `file` field, or a malformed form
+- THEN the response MUST be 400 (REVIEW_PHOTO_FILE_MISSING or REVIEW_PHOTO_UPLOAD_INVALID) and nothing MUST be stored
+
+#### Scenario: An element outside the session's scope is refused
+
+- GIVEN U performs a `draft` session for community C
+- WHEN U uploads a photo for an element of another community, a decommissioned element, a soft-deleted element or an unknown id
+- THEN every response MUST be 404 ELEMENT_NOT_FOUND and nothing MUST be stored
+
+#### Scenario: Another user cannot reach someone else's photos
+
+- GIVEN user U performs a `draft` session with photos and user W is also actively assigned to the same community
+- WHEN W adds, lists, reads or deletes photos of U's session
+- THEN every response MUST be 404 REVIEW_SESSION_NOT_FOUND and U's photos and files MUST be unchanged
+
+#### Scenario: A photo is read only through its own session
+
+- GIVEN U has a photo in session S1 and another `draft` session S2
+- WHEN U reads that photo through S2, or reads an unknown photo id
+- THEN the response MUST be 404 REVIEW_PHOTO_NOT_FOUND
+
+#### Scenario: The performer reads a photo
+
+- GIVEN U has a photo in a `draft` session
+- WHEN U reads it
+- THEN the response MUST be 200 `image/jpeg` with the stored bytes, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; sandbox`
+
+#### Scenario: The performer deletes a photo from a draft
+
+- GIVEN U has a photo in a `draft` session
+- WHEN U deletes it
+- THEN the response MUST be 204, the photo and its file MUST be gone, and deleting it again MUST be 404 REVIEW_PHOTO_NOT_FOUND
+
+#### Scenario: A completed session's photos are fixed
+
+- GIVEN U has a photo in a session that has been completed
+- WHEN U uploads another photo or deletes that one
+- THEN each response MUST be 409 REVIEW_SESSION_NOT_EDITABLE and the photo and its file MUST be unchanged
+
+#### Scenario: The performer still reads a completed session's photos
+
+- GIVEN U has a photo in a session that has been completed
+- WHEN U lists that element's photos or reads the photo
+- THEN each response MUST be 200 with the photo
+
+#### Scenario: Listing photos of an element outside the session's scope returns none
+
+- GIVEN U performs a session for community C
+- WHEN U lists the photos of an element of another community or an unknown id
+- THEN the response MUST be 200 with an empty list
+
+#### Scenario: A completed session's photos stay listable after their element is deactivated
+
+- GIVEN U has a photo of element E in a completed session, and E is then deactivated
+- WHEN U lists E's photos in that session
+- THEN the response MUST be 200 with the photo
+
+#### Scenario: Discarding a draft deletes its photos and files
+
+- GIVEN U has a `draft` session with photos, and another session with photos
+- WHEN U discards the draft
+- THEN the response MUST be 2xx, the discarded session's photos and stored files MUST be gone, and the other session's photos and files MUST be unchanged
 
 ### Requirement: Resolve an Element by Code Within the Session's Scope
 
@@ -591,7 +729,7 @@ the FR-009 row are now narrowed in the same way, see below.)
 | FR-008 (closed — per-element history shipped in `review-history` / `review-history-ui`) | Per-element history — any query, route, page or use case in **this** capability's own routes, use cases or repository reads returning one inspectable element's past reviews; that surface belongs to `review-history` and `review-history-ui` instead. Any cross-session query in **this** capability's own routes, use cases or repository reads, including any company-scoped, installation-wide or capability-gated one. Any `managerCapabilities` or `VIEW_ALL_REVIEWS` reference inside this capability: the manager capability MUST affect the `review-history` read and the `review-schedule` read only, and MUST grant nothing on this capability's write flow |
 | FR-009                                                                                  | Within **this** capability's own routes, use cases and repository reads: scheduling service, due dates, overdue lists, cadence rules or reminders. The read-only due and overdue list belongs to `review-schedule`; reminders, notifications and any scheduled job remain deferred everywhere                                                                                                                                                                                                                                                                                                                                                                           |
 | FR-010                                                                                  | Any `signed` status or any code path transitioning a session to it; any signing operation other than completion; any document read, PDF, file or export generation in **this** capability's own routes, use cases or repository reads — the review document belongs to `review-document`; any email or sending path; a signature image or signer name (slice 2)                                                                                                                                                                                                                                                                                                         |
-| —                                                                                       | Photos, attachments, per-answer free-text notes, defect or incident records, corrective actions, notifications                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| —                                                                                       | Attachments other than review photos (EN-164), per-answer free-text notes, defect or incident records, corrective actions, notifications                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 (Previously, FR-008 row: "the manager capability MUST affect the
 `review-history` read only". FR-009 row: "Scheduling service, due dates,
@@ -660,4 +798,4 @@ anywhere.)
 
 - GIVEN the answer contract after this change
 - WHEN it is inspected
-- THEN it MUST carry an answer value only, with no photo, attachment or free-text note field
+- THEN it MUST carry an answer value only, with no photo, attachment or free-text note field (review photos belong to the element within the session, never to an answer; see _Photos of a Draft Review Session_)

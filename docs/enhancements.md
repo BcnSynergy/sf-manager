@@ -1199,6 +1199,34 @@ content type`). Today that is the only 415 it raises, but a future one
   the exact import text, so it relies on Prettier's quotes and semicolons.
   Origin: `en-106-csp-followups` Gentle review (R3 WARNING and
   SUGGESTION), 2026-11-22.
+- **EN-222** (review photos): a photo file can be left behind with no row:
+  the process dies between `fileStorage.put` and the insert, or a quiet
+  file delete (upload cleanup, photo delete, discard) fails and is only
+  logged. Nothing sweeps `review-photos/` for keys without a `ReviewPhoto`
+  row. Origin: `en-164-review-photos` fresh review and Gentle review,
+  2026-11-22.
+- **EN-223** (review photos): the two race tests in
+  `prisma-review-photo.repository.integration.spec.ts` (add against discard,
+  add against complete) repeat 10 to 15 rounds on two connections and so
+  catch a missing lock only with high probability, not with certainty; a
+  deterministic version would hold the session lock from one connection
+  while the other starts. Origin: `en-164-review-photos` fresh review,
+  2026-11-22.
+- **EN-224** (api readability): `ReviewSessionRepository.discardDraft()` has
+  no production caller any more: the discard use case goes through
+  `ReviewPhotoRepository.discardDraftWithPhotoKeys`, which locks the session
+  and returns the photo keys. Only tests and the in-memory fake still use
+  it, so the two discard paths can drift apart. Remove it, or route its
+  tests through the new method. Origin: `en-164-review-photos` scoped fresh
+  review S-1, 2026-11-22.
+- **EN-225** (api tests): the same-performer cross-session case in
+  `apps/api/test/review-photos.e2e-spec.ts` assigns the technician to the
+  completion community and opens a second draft there, closing it only on
+  its last line; a failed assertion leaves the draft open, and the
+  assignment stays for the later delete tests, so the file's tests depend on
+  run order. Clean up in a `finally`/`afterEach`, or use a community nothing
+  else uses. Origin: `en-164-review-photos` Gentle review (R3-001),
+  2026-11-22.
 
 ## Done
 

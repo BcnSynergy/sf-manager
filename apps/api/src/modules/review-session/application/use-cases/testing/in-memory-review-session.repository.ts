@@ -37,6 +37,12 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     this.sessionsById.set(session.id, session);
   }
 
+  // EN-164: lets InMemoryReviewPhotoRepository read a session's status
+  // without a performer; undefined when the session does not exist.
+  statusOf(id: string): ReviewSession['status'] | undefined {
+    return this.sessionsById.get(id)?.status;
+  }
+
   private openDraftKey(session: ReviewSession): string {
     return `${session.communityId}::${session.templateId}::${session.performedById}`;
   }
