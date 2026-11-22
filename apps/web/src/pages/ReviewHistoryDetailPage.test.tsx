@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { act, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
@@ -9,6 +9,8 @@ import { ReviewHistoryDetailPage } from './ReviewHistoryDetailPage';
 vi.mock('../api/review-history');
 
 const mockedReadReviewHistory = vi.mocked(reviewHistoryApi.readReviewHistory);
+const mockedListPhotos = vi.mocked(reviewHistoryApi.listReviewHistoryPhotos);
+const mockedPhotoUrl = vi.mocked(reviewHistoryApi.reviewHistoryPhotoUrl);
 
 const SESSION_ID = 'session-1';
 
@@ -56,6 +58,10 @@ function renderPage() {
 describe('ReviewHistoryDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedListPhotos.mockResolvedValue([]);
+    mockedPhotoUrl.mockImplementation(
+      (sessionId, photoId) => `/api/review-history/${sessionId}/photos/${photoId}`,
+    );
   });
 
   it('shows a loading state while the detail request is in flight', () => {
@@ -392,6 +398,129 @@ describe('ReviewHistoryDetailPage', () => {
       expect(await screen.findByTestId('review-history-detail-entries-empty')).toHaveClass(
         'sf-empty',
       );
+    });
+  });
+
+  // EN-164 S5 (T3): the photos of a completed review next to each element.
+  describe('photos', () => {
+    const photos = [
+      { id: 'p1', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' },
+      { id: 'p2', inspectableElementId: 'e2', createdAt: '2026-09-01T00:20:00.000Z' },
+      { id: 'p3', inspectableElementId: 'e1', createdAt: '2026-09-01T00:30:00.000Z' },
+    ];
+
+    it("shows each element's photos inside its own entry, in order, each linking to the full photo in a new tab", async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue(photos);
+
+      renderPage();
+
+      const first = await screen.findByTestId('review-history-detail-photos-e1');
+      expect(screen.getByTestId('review-history-detail-entry-e1')).toContainElement(first);
+      const images = within(first).getAllByRole('img');
+      expect(images.map((image) => image.getAttribute('src'))).toEqual([
+        '/api/review-history/session-1/photos/p1',
+        '/api/review-history/session-1/photos/p3',
+      ]);
+      expect(images.map((image) => image.getAttribute('alt'))).toEqual(['Photo 1', 'Photo 2']);
+      const links = within(first).getAllByRole('link');
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/api/review-history/session-1/photos/p1',
+        '/api/review-history/session-1/photos/p3',
+      ]);
+      expect(links[0]).toHaveAttribute('target', '_blank');
+      expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(links[0]).toHaveAccessibleName('Open photo 1 in a new tab');
+      expect(mockedListPhotos).toHaveBeenCalledWith(SESSION_ID);
+
+      const second = screen.getByTestId('review-history-detail-photos-e2');
+      expect(screen.getByTestId('review-history-detail-entry-e2')).toContainElement(second);
+      expect(within(second).getAllByRole('img')).toHaveLength(1);
+    });
+
+    it('renders no photo list for an element without photos', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue([photos[1]]);
+
+      renderPage();
+
+      await screen.findByTestId('review-history-detail-photos-e2');
+      expect(screen.queryByTestId('review-history-detail-photos-e1')).not.toBeInTheDocument();
+    });
+
+    it('still renders the review when the photos cannot be loaded, with one note saying so', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockRejectedValue(new ApiError(0));
+
+      renderPage();
+
+      expect(await screen.findByTestId('review-history-detail-photos-error')).toHaveTextContent(
+        'The photos of this review could not be loaded.',
+      );
+      expect(screen.getByTestId('review-history-detail-entry-e1')).toBeInTheDocument();
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+    });
+
+    it('sends no photo request when the review itself cannot be opened', async () => {
+      mockedReadReviewHistory.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
+
+      renderPage();
+
+      await screen.findByTestId('review-history-detail-error');
+      expect(mockedListPhotos).not.toHaveBeenCalled();
+    });
+
+    it("never shows a previous session's photos after the route moves to another session", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === SESSION_ID ? Promise.resolve(photos) : new Promise(() => {}),
+      );
+      const router = createMemoryRouter(
+        [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+        { initialEntries: [`/review-history/${SESSION_ID}`] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByTestId('review-history-detail-photos-e1');
+
+      await act(() => router.navigate('/review-history/session-2'));
+
+      expect(await screen.findByText('completed-session-2')).toBeInTheDocument();
+      expect(mockedListPhotos).toHaveBeenLastCalledWith('session-2');
+      expect(screen.queryByTestId('review-history-detail-photos-e1')).not.toBeInTheDocument();
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+    });
+
+    it("never shows a previous session's photo error note after the route moves to another session", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === SESSION_ID ? Promise.reject(new ApiError(0)) : new Promise(() => {}),
+      );
+      const router = createMemoryRouter(
+        [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+        { initialEntries: [`/review-history/${SESSION_ID}`] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByTestId('review-history-detail-photos-error');
+
+      await act(() => router.navigate('/review-history/session-2'));
+
+      expect(await screen.findByText('completed-session-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-history-detail-photos-error')).not.toBeInTheDocument();
+    });
+
+    it('offers no control to add or remove a photo', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue(photos);
+
+      renderPage();
+
+      await screen.findByTestId('review-history-detail-photos-e1');
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+      expect(document.querySelector('input, form')).toBeNull();
     });
   });
 });

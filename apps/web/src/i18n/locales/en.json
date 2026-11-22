@@ -552,6 +552,10 @@
       "questionTextUnknown": "Unknown question",
       "entryUnreviewedLabel": "Not reviewed",
       "elementHistoryLink": "View element history",
+      "photosLabel": "Photos",
+      "photoAlt": "Photo {{number}}",
+      "photoOpenLabel": "Open photo {{number}} in a new tab",
+      "photosLoadError": "The photos of this review could not be loaded.",
       "documentLink": "View document"
     },
     "elementHistory": {

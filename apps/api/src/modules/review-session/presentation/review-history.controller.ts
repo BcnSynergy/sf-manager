@@ -25,6 +25,11 @@ import { sessionIdPipe } from './session-id.pipe';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
+import { ReviewPhotoNotFoundError } from '../domain/errors/review-photo.errors';
+import { REVIEW_PHOTO_CONTENT_TYPE } from '../domain/review-photo';
+import { ListReviewHistoryPhotosUseCase } from '../application/use-cases/list-review-history-photos.use-case';
+import { ReadReviewHistoryPhotoUseCase } from '../application/use-cases/read-review-history-photo.use-case';
+import { ReviewHistoryPhotoDto } from './dto/review-history-photo.dto';
 import { ListReviewHistoryUseCase } from '../application/use-cases/list-review-history.use-case';
 import { ReadReviewHistoryUseCase } from '../application/use-cases/read-review-history.use-case';
 import { ReadElementReviewHistoryUseCase } from '../application/use-cases/read-element-review-history.use-case';
@@ -57,6 +62,8 @@ export class ReviewHistoryController {
     private readonly readElementReviewHistoryUseCase: ReadElementReviewHistoryUseCase,
     private readonly readReviewDocumentUseCase: ReadReviewDocumentUseCase,
     private readonly readReviewDocumentLogoUseCase: ReadReviewDocumentLogoUseCase,
+    private readonly listReviewHistoryPhotosUseCase: ListReviewHistoryPhotosUseCase,
+    private readonly readReviewHistoryPhotoUseCase: ReadReviewHistoryPhotoUseCase,
   ) {}
 
   @Get('review-history')
@@ -201,6 +208,78 @@ export class ReviewHistoryController {
     });
   }
 
+  // EN-164 S3/S5 (T3): the photos of a completed review, behind the same
+  // gate and the same 404 as the history detail read above. Each row names
+  // its element, so the client places it next to that element's entry.
+  @Get('review-history/:sessionId/photos')
+  @RequirePermission('reviewSession:read')
+  @ApiOkResponse({ type: ReviewHistoryPhotoDto, isArray: true })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: INVALID_SESSION_ID.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      "The review is unreachable, exactly as for the history detail read's " +
+      '404. Body carries code: REVIEW_SESSION_NOT_FOUND.',
+  })
+  async listPhotos(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
+  ): Promise<ReviewHistoryPhotoDto[]> {
+    try {
+      return await this.listReviewHistoryPhotosUseCase.execute(sessionId, {
+        userId: user.sub,
+        role: user.role,
+      });
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
+  // EN-164 S3 (T3): the bytes of one photo, with the same headers as the
+  // performer's photo read (review-photo.controller.ts).
+  @Get('review-history/:sessionId/photos/:photoId')
+  @RequirePermission('reviewSession:read')
+  @Header('Cache-Control', 'no-store')
+  @Header('Content-Security-Policy', "default-src 'none'; sandbox")
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiProduces(REVIEW_PHOTO_CONTENT_TYPE)
+  @ApiOkResponse({ description: 'The photo (image/jpeg).' })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description: 'Malformed id (INVALID_SESSION_ID, INVALID_PHOTO_ID).',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The review is unreachable (REVIEW_SESSION_NOT_FOUND, as for the ' +
+      'history detail read), or the photo is not in it (REVIEW_PHOTO_NOT_FOUND).',
+  })
+  async readPhoto(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
+    @Param('photoId', uuidParamPipe('INVALID_PHOTO_ID', 'Malformed photo id.'))
+    photoId: string,
+  ): Promise<StreamableFile> {
+    let content: Buffer;
+    try {
+      content = await this.readReviewHistoryPhotoUseCase.execute(
+        sessionId,
+        photoId,
+        { userId: user.sub, role: user.role },
+      );
+    } catch (error) {
+      throw this.mapError(error);
+    }
+    return new StreamableFile(content, {
+      type: REVIEW_PHOTO_CONTENT_TYPE,
+      length: content.length,
+    });
+  }
+
   // review-history-per-element/design.md Decision 6: one nested route on
   // THIS controller, never on InspectableElementController — the gate is
   // `reviewSession:read` (a review-history read keyed by an element), never
@@ -268,6 +347,13 @@ export class ReviewHistoryController {
         HttpStatus.NOT_FOUND,
         error.message,
         'ACTIVE_TEMPLATE_NOT_FOUND',
+      );
+    }
+    if (error instanceof ReviewPhotoNotFoundError) {
+      return buildCodedError(
+        HttpStatus.NOT_FOUND,
+        error.message,
+        'REVIEW_PHOTO_NOT_FOUND',
       );
     }
     if (error instanceof InspectableElementNotFoundError) {

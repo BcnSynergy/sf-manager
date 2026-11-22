@@ -170,3 +170,23 @@ export function readReviewDocument(sessionId: string): Promise<ReviewDocument> {
 export function reviewDocumentLogoUrl(sessionId: string): string {
   return `${API_BASE_URL}/review-history/${sessionId}/document/logo`;
 }
+
+// EN-164 T3: the photos of a completed review, behind the same gate as the
+// detail read (GET /review-history/:sessionId/photos). Each row names its
+// element so the page places it next to that element's entry. No storage
+// key ever appears; the file is read from reviewHistoryPhotoUrl().
+export type ReviewHistoryPhoto = {
+  id: string;
+  inspectableElementId: string;
+  createdAt: string;
+};
+
+export function listReviewHistoryPhotos(sessionId: string): Promise<ReviewHistoryPhoto[]> {
+  return apiFetch<ReviewHistoryPhoto[]>(`/review-history/${sessionId}/photos`);
+}
+
+// An <img> source and a link target, not a fetch: the browser sends the
+// session cookie itself (TD-54).
+export function reviewHistoryPhotoUrl(sessionId: string, photoId: string): string {
+  return `${API_BASE_URL}/review-history/${sessionId}/photos/${photoId}`;
+}

@@ -32,6 +32,10 @@ export interface ReviewPhotoRepository {
     inspectableElementId: string,
   ): Promise<ReviewPhoto[]>;
 
+  // Every photo of one session, `createdAt ASC, id ASC`. Callers reach it
+  // only after ReviewHistoryAccessService.loadCompletedForActor (EN-164 T3).
+  listForSession(reviewSessionId: string): Promise<ReviewPhoto[]>;
+
   findInSession(
     reviewSessionId: string,
     photoId: string,

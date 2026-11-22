@@ -31,6 +31,8 @@ import { UploadReviewPhotoUseCase } from './application/use-cases/upload-review-
 import { ListReviewPhotosUseCase } from './application/use-cases/list-review-photos.use-case';
 import { ReadReviewPhotoUseCase } from './application/use-cases/read-review-photo.use-case';
 import { DeleteReviewPhotoUseCase } from './application/use-cases/delete-review-photo.use-case';
+import { ListReviewHistoryPhotosUseCase } from './application/use-cases/list-review-history-photos.use-case';
+import { ReadReviewHistoryPhotoUseCase } from './application/use-cases/read-review-history-photo.use-case';
 import { ReviewPhotoController } from './presentation/review-photo.controller';
 import { ReviewSessionController } from './presentation/review-session.controller';
 import { ReviewHistoryController } from './presentation/review-history.controller';
@@ -115,6 +117,8 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ListReviewPhotosUseCase,
     ReadReviewPhotoUseCase,
     DeleteReviewPhotoUseCase,
+    ListReviewHistoryPhotosUseCase,
+    ReadReviewHistoryPhotoUseCase,
   ],
 })
 export class ReviewSessionModule {}

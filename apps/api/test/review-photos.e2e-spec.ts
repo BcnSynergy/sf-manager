@@ -866,4 +866,138 @@ describe('Review photos (e2e)', () => {
       expect(built.sessionRepository.statusOf(own.id)).toBeUndefined();
     });
   });
+
+  // EN-164 S3/S5 (T3): the photos of a completed review, read through the
+  // review history with the history's own gate.
+  describe('review history (S3, S5)', () => {
+    const historyPhotosUrl = (sessionId: string) =>
+      `/review-history/${sessionId}/photos`;
+    const historyPhotoUrl = (sessionId: string, photoId: string) =>
+      `/review-history/${sessionId}/photos/${photoId}`;
+    let completed: SessionBody;
+    let photoId: string;
+    let draft: SessionBody;
+    let draftPhotoId: string;
+
+    beforeAll(async () => {
+      completed = await openSession(tech3, completionCommunityId, templateId);
+      const created = await upload(
+        tech3,
+        completed.id,
+        completionElement.id,
+      ).expect(201);
+      photoId = (created.body as { id: string }).id;
+      await tech3
+        .put(`/review-sessions/${completed.id}/entries/${completionElement.id}`)
+        .send({ answers: [{ questionId, value: 'YES' }] })
+        .expect(200);
+      await tech3.post(`/review-sessions/${completed.id}/complete`).expect(200);
+
+      draft = await openSession(tech3, completionCommunityId, templateId);
+      const draftCreated = await upload(
+        tech3,
+        draft.id,
+        completionElement.id,
+      ).expect(201);
+      draftPhotoId = (draftCreated.body as { id: string }).id;
+    });
+
+    afterAll(async () => {
+      await tech3.delete(`/review-sessions/${draft.id}`).expect(204);
+    });
+
+    it('lists the photos of a completed review as [{ id, inspectableElementId, createdAt }] to its performer and to an admin', async () => {
+      for (const agent of [tech3, admin]) {
+        const response = await agent
+          .get(historyPhotosUrl(completed.id))
+          .expect(200);
+        const rows = response.body as Array<Record<string, unknown>>;
+        expect(rows).toHaveLength(1);
+        expect(Object.keys(rows[0]).sort()).toEqual([
+          'createdAt',
+          'id',
+          'inspectableElementId',
+        ]);
+        expect(rows[0]).toMatchObject({
+          id: photoId,
+          inspectableElementId: completionElement.id,
+        });
+        expect(Number.isNaN(Date.parse(String(rows[0].createdAt)))).toBe(false);
+      }
+    });
+
+    it('serves the bytes as image/jpeg with the no-store, sandbox and nosniff headers', async () => {
+      const response = await admin
+        .get(historyPhotoUrl(completed.id, photoId))
+        .buffer(true)
+        .parse((res, done) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => done(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+      expect(response.headers['content-type']).toBe('image/jpeg');
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.headers['content-security-policy']).toBe(
+        "default-src 'none'; sandbox",
+      );
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.body).toEqual(jpegHeader());
+    });
+
+    it('answers 404 REVIEW_SESSION_NOT_FOUND to a caller outside the history scope, as the detail read does', async () => {
+      const checks = [
+        await tech.get(`/review-history/${completed.id}`),
+        await tech.get(historyPhotosUrl(completed.id)),
+        await tech.get(historyPhotoUrl(completed.id, photoId)),
+      ];
+      for (const response of checks) {
+        expect(response.status).toBe(404);
+        expect(response.body).toMatchObject({
+          code: 'REVIEW_SESSION_NOT_FOUND',
+        });
+      }
+    });
+
+    it('answers 404 REVIEW_SESSION_NOT_FOUND for a draft, even to its performer', async () => {
+      const checks = [
+        await tech3.get(historyPhotosUrl(draft.id)),
+        await tech3.get(historyPhotoUrl(draft.id, draftPhotoId)),
+      ];
+      for (const response of checks) {
+        expect(response.status).toBe(404);
+        expect(response.body).toMatchObject({
+          code: 'REVIEW_SESSION_NOT_FOUND',
+        });
+      }
+    });
+
+    it('answers 404 REVIEW_PHOTO_NOT_FOUND for a photo of another session and an unknown photo', async () => {
+      const foreign = await tech3
+        .get(historyPhotoUrl(completed.id, draftPhotoId))
+        .expect(404);
+      expect(foreign.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+      const unknown = await tech3
+        .get(
+          historyPhotoUrl(completed.id, '01900000-0000-7000-8000-000000000000'),
+        )
+        .expect(404);
+      expect(unknown.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+    });
+
+    it('answers 400 for malformed ids and 401 without a session', async () => {
+      const badSession = await admin
+        .get(historyPhotosUrl('not-a-uuid'))
+        .expect(400);
+      expect(badSession.body).toMatchObject({ code: 'INVALID_SESSION_ID' });
+      const badPhoto = await admin
+        .get(historyPhotoUrl(completed.id, 'not-a-uuid'))
+        .expect(400);
+      expect(badPhoto.body).toMatchObject({ code: 'INVALID_PHOTO_ID' });
+
+      const anon = request(built.app.getHttpServer());
+      await anon.get(historyPhotosUrl(completed.id)).expect(401);
+      await anon.get(historyPhotoUrl(completed.id, photoId)).expect(401);
+    });
+  });
 });

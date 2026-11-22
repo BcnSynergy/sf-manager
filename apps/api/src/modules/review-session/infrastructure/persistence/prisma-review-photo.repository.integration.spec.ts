@@ -248,6 +248,41 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     ]);
   });
 
+  it('lists every photo of a session across its elements, oldest first, ties broken by id, and none of another session', async () => {
+    const sessionId = await createDraft();
+    const otherSessionId = await createDraft();
+    const elementId = await createElement();
+    const otherElementId = await createElement();
+    const first = photo(
+      sessionId,
+      otherElementId,
+      new Date('2026-02-01T00:00:00Z'),
+    );
+    const tieC = photo(
+      sessionId,
+      elementId,
+      new Date('2026-02-02T00:00:00Z'),
+      '0192f0c0-0000-7000-8000-00000000000c',
+    );
+    const tieD = photo(
+      sessionId,
+      otherElementId,
+      new Date('2026-02-02T00:00:00Z'),
+      '0192f0c0-0000-7000-8000-00000000000d',
+    );
+    await photos.addToDraft(tieD, 3);
+    await photos.addToDraft(tieC, 3);
+    await photos.addToDraft(first, 3);
+    await photos.addToDraft(photo(otherSessionId, elementId), 3);
+
+    const listed = await photos.listForSession(sessionId);
+
+    expect(listed).toEqual([first, tieC, tieD]);
+    await expect(
+      photos.listForSession(idGenerator.generate()),
+    ).resolves.toEqual([]);
+  });
+
   it('refuses the 4th photo of an element with limit_reached and counts per element', async () => {
     const sessionId = await createDraft();
     const elementId = await createElement();

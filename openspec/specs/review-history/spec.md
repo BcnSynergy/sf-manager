@@ -1218,6 +1218,57 @@ session and check its scope afterwards.
 > review-history reads" still holds, which is the base table's clause before
 > the review-schedule read was added to it.)
 
+### Requirement: Photos of a Completed Review Are Read Through the History Guards
+
+The photos of a `completed` session (see `review-session-management`
+_Photos of a Draft Review Session_) MUST be readable by exactly the callers
+who may read that session through the history detail read, and by nobody
+else. Listing them and reading one photo's file are history reads of one
+session and MUST be bound by the same session-level guards as the review
+document read (_The Review Document Read Inherits the Session-Level History
+Guards_): the session MUST be resolved through the same five scopes and the
+same scoped reads first, and a session the caller cannot read, a `draft`
+and an unknown id MUST be indistinguishable (`404 REVIEW_SESSION_NOT_FOUND`),
+before any photo or file is read.
+
+Listing MUST return every photo of the session, oldest first, each with its
+id, the id of its element and its creation time, and never its storage key.
+A photo that is not in the session, or whose file is missing, MUST be
+`404 REVIEW_PHOTO_NOT_FOUND`. A photo MUST be served as `image/jpeg` with
+caching disabled, `nosniff` and a sandboxing content security policy. These
+reads MUST NOT add, change or delete any photo (_History Adds No Write
+Path_).
+
+#### Scenario: A reader of the review lists its photos
+
+- GIVEN a `completed` session S with a photo for element E, and a caller who may read S in the history (its performer, or a system admin)
+- WHEN the caller lists S's photos
+- THEN the response MUST be 200 with one row carrying the photo's id, E's id and the creation time, and no storage key
+
+#### Scenario: A caller who cannot read the review gets the history's 404
+
+- GIVEN a `completed` session S that a technician who did not perform it cannot read in the history
+- WHEN that technician lists S's photos or reads one of them
+- THEN each response MUST be `404 REVIEW_SESSION_NOT_FOUND`, identical to the history detail read of S
+
+#### Scenario: A draft's photos are not readable through the history
+
+- GIVEN a `draft` session with a photo, read by its own performer
+- WHEN the performer lists its photos or reads that photo through the history
+- THEN each response MUST be `404 REVIEW_SESSION_NOT_FOUND`
+
+#### Scenario: A photo of another session is not found
+
+- GIVEN a `completed` session S the caller may read and a photo P of another session
+- WHEN the caller reads P through S
+- THEN the response MUST be `404 REVIEW_PHOTO_NOT_FOUND`, and an unknown photo id MUST answer the same
+
+#### Scenario: The photo is served safely
+
+- GIVEN a photo of a `completed` session the caller may read
+- WHEN the caller reads it through the history
+- THEN the response MUST be 200 with `Content-Type: image/jpeg`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; sandbox`
+
 ### Requirement: History Adds No Write Path
 
 This capability MUST be read-only end to end. It MUST NOT introduce any

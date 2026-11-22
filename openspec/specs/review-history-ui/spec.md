@@ -728,9 +728,23 @@ the caller did not perform whenever the server returns it.
 
 The view MUST offer exactly **one** non-mutating **View document** link,
 leading to that session's document page (`review-document-ui`), for
-every one of the five history roles. That link MUST be the view's only
-addition: its existing rendering of entries, answers and observations,
-and its per-entry element-history links, MUST be unchanged.
+every one of the five history roles. Apart from that link and the
+element photos below, its existing rendering of entries, answers and
+observations, and its per-entry element-history links, MUST be unchanged.
+
+The view MUST show the photos of the session (`review-history` _Photos of
+a Completed Review Are Read Through the History Guards_) inside the entry
+of the element each belongs to, oldest first, as thumbnails that each open
+the full photo in a new tab, with a numbered text alternative ("Photo 1")
+and a numbered accessible name for the link. An entry without photos MUST
+show no photo list. A photo whose element has no entry in the record (the
+element left the session's set of elements between the upload and the
+completion) MAY be left out; it is a known limitation, see EN-228. The photos MUST load separately from
+the record, only once the record has loaded: when
+they cannot be loaded, the record MUST still render in full, with one note
+saying the photos could not be loaded. The view MUST NOT offer any control
+to add, replace or remove a photo.
+(Previously: the **View document** link was the view's only addition.)
 
 #### Scenario: The recorded record is rendered in full
 
@@ -766,7 +780,26 @@ and its per-entry element-history links, MUST be unchanged.
 
 - GIVEN the read-only session view before and after this change
 - WHEN both are compared
-- THEN the only difference MUST be the added **View document** link
+- THEN the only differences MUST be the added **View document** link and the element photos
+  (Previously: "the only difference MUST be the added **View document** link".)
+
+#### Scenario: Each element's photos show inside its entry
+
+- GIVEN a completed session with two photos of element E1 and one of element E2, read by any of the five history roles
+- WHEN its read-only view renders
+- THEN E1's entry MUST show its two photos in order and E2's entry its one photo, each a thumbnail linking to the full photo in a new tab, and an entry without photos MUST show no photo list
+
+#### Scenario: A photo failure does not hide the record
+
+- GIVEN a completed session whose photos cannot be loaded
+- WHEN its read-only view renders
+- THEN every entry MUST still render with its answers and observations, and one note MUST say the photos of the review could not be loaded
+
+#### Scenario: No photo control renders
+
+- GIVEN the read-only view of a completed session with photos
+- WHEN its controls are enumerated
+- THEN none MUST offer to add, replace or remove a photo
 
 ### Requirement: An Unreachable Session Gets One Uniform Message
 
@@ -845,10 +878,13 @@ every role that reaches it. It MUST NOT add pagination, infinite scroll,
 a date-range filter, a sort control or a search box **on any of the
 three**; and MUST NOT add signing, export, print, download or send
 controls, scheduling, due-date or overdue indicators, compliance
-dashboards, per-community or per-technician statistics, attachments or
-notifications. The one exception is the single **View document** link
+dashboards, per-community or per-technician statistics, attachments other
+than the element photos of a completed review, or notifications. The one
+exception is the single **View document** link
 on the read-only session view (_Read-Only Historical Session View_),
-which is navigation, not an export control. The
+which is navigation, not an export control. The element photos shown on
+that view (same requirement) are read-only content of the record, not a
+control. The
 installation-wide list is explicitly included — reachable by **two**
 roles, a `SYSTEM_ADMIN` unconditionally and a granted `MANAGER` — and it
 is by far the largest list in the app; so is a long-lived element's own
@@ -945,5 +981,6 @@ restated to exclude the navigation's items.)
 
 - GIVEN every view of the review-history surface, the element history page included
 - WHEN its own controls are enumerated, the global navigation's items excluded
-- THEN none MUST offer signing, export, print, download, send, due dates, overdue lists, statistics, dashboards, photos, attachments or notifications — the session detail view's single **View document** link being the only document-related control, and the list and element history page offering none
+- THEN none MUST offer signing, export, print, download, send, due dates, overdue lists, statistics, dashboards, photo or attachment controls, or notifications — the session detail view's single **View document** link being the only document-related control, the element photos on that view being read-only content, and the list and element history page offering none
+  (Previously, before EN-164: "photos, attachments", with no photo shown on any view.)
   (Previously: "WHEN its controls are enumerated", with no exclusion, which would have counted the global navigation's Review schedule item as an overdue-list control. The navigation's items are checked by `app-navigation`.)

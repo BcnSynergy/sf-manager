@@ -59,9 +59,12 @@ project's Engram memory on 2026-10-09.
   element page open past that and then taps a thumbnail gets a raw 401 JSON
   body in the new tab instead of the photo. The organization logo uses the
   same pattern, but its image is fetched on page load, not opened later.
+  The review history detail (EN-164 PR 3/3) shows photos the same way, so a
+  reader who leaves it open past that gets the same 401.
   Fix by refreshing the session before opening the photo, or by serving it
   through a fetch that refreshes. Origin: `en-164-review-photos` PR 2/3
-  fresh review W-2, 2026-11-22.
+  fresh review W-2, 2026-11-22; history detail added by PR 3/3 fresh review
+  S-1.
 
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and

@@ -955,24 +955,6 @@ content type`). Today that is the only 415 it raises, but a future one
   native camera)" premise in `docs/architecture/domain-model-inspections.md`.
   Independent of EN-164. Origin: product discussion, 2026-11-09.
 
-- **EN-164** (feature): Attach photos to a review, captured with the device
-  camera or chosen from files. On mobile,
-  `<input type="file" accept="image/*" capture="environment">` opens the
-  camera without a permission prompt; desktop browsers ignore `capture`
-  and show a file picker. Not in any FR today, so it starts as a new FR
-  with its own slice (ADR-006). Needs a spec change in `review-session-ui`:
-  photos and attachments are out of scope, "Manual Code Entry Only"
-  forbids camera capture and device-capture libraries, and the field flow
-  forbids "an attachment/photo control". Open decisions: what a photo
-  belongs to (session, element or answer); storage, size limits and
-  client-side compression, starting from the existing `LocalFileStorage`
-  port (ADR-012, used for the organization logo); who may view a photo
-  (ADR-011 scopes); backup size and retention (each dump already archives
-  the `api-files` volume since TD-42, so photos grow that archive); and
-  whether photos appear in the review document (FR-010). Independent of
-  EN-163. Origin: product discussion, 2026-11-09; kept out of the MVP
-  unless clients or regulations require photo evidence.
-
 - **EN-165** (web): two notes on the "Cannot reach the server" retry
   (`session-restore-unavailable`). `AuthProvider`'s session check turns
   every unavailable cause (network error, 429, 5xx, unavailable refresh,
@@ -1235,9 +1217,34 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-228** (web): the review history detail shows a photo only inside the
+  entry of its element, so a photo whose element has no entry is never
+  shown, although `GET /review-history/:sessionId/photos` lists it.
+  Completion records an entry for every element in the session's universe,
+  so this only happens when an element leaves the universe (deactivated or
+  deleted) between the photo upload and the completion. Show such photos in
+  a separate "other photos" group, or block completion while a photo's
+  element is outside the universe. Origin: `en-164-review-photos` PR 3/3
+  fresh review W-1, 2026-11-22.
+- **EN-229** (web): `ReviewHistoryDetailPage` has no guard against a stale
+  detail response. Moving from session A to B to C, with B's response
+  arriving after C's, shows B's record under C's URL (the photos follow B,
+  so they stay consistent with the record shown). Present before EN-164;
+  add an `active` guard or tag the detail with its id, as the photos
+  already are. Origin: `en-164-review-photos` PR 3/3 pre-merge fresh review
+  S-3, 2026-11-22.
+- **EN-227** (feature): the printable review document (FR-010,
+  `review-document`, `review-document-ui`) shows no photos. EN-164 left them
+  out of this slice on purpose: the history detail view shows them, the
+  document does not. Showing them needs a layout decision (thumbnails per
+  element, or a photo appendix), print size and page breaks, and whether
+  the document read returns photo ids or the page loads them through
+  `GET /review-history/:sessionId/photos`. Origin: `en-164-review-photos`
+  decision S4, 2026-11-22.
 
 ## Done
 
+- **EN-164** (feature): photos of a review. The technician attaches up to 3 photos to each element reviewed in a draft session, taken with the phone camera (`capture="environment"`) or chosen from files; the web app resizes each to at most 1600 px and re-encodes it as JPEG 0.8 (dropping EXIF), and the API accepts only JPEG by content, at most 2 MiB, 3 per element under concurrent uploads (session row lock). A photo belongs to the element within the session, lives as long as the review, and is deleted with a discarded draft, file included. The performer adds and removes photos while the session is a draft; whoever may read a completed review in the history sees its photos next to each element. Photos in the printable document moved to EN-227. Done in `en-164-review-photos` (PRs #447, #448 and PR 3/3; specs `review-session-management`, `review-session-ui`, `review-history`, `review-history-ui`). Origin: product discussion, 2026-11-09.
 - **EN-106** (security): two leftovers from the CSP in `apps/web/Caddyfile`. `zod-config.test.ts` now checks that `./zod-config` is the first import of `main.tsx` (it fails when the import moves below `react`). The element label page (QR) and the review document page, screen and print rules, were exercised in a browser on the production build served with the production CSP: no violations (an injected inline script was blocked, so the policy was active). Violation reporting moved to EN-220. Done in `en-106-csp-followups` (PR #446). Origin: `en-94-security-headers` pre-push review (#289), 2026-10-26.
 - **EN-185** (delivery): deploying was manual: the operator checked out a commit on the server, set `IMAGE_TAG` and pulled. The `Deploy` workflow (`.github/workflows/deploy.yml`) now does it when started by hand, after the maintainer approves the `production` environment, which alone holds the deploy secrets. It refuses a commit that is not on `main` or has no published images, deploys over SSH with a key whose `authorized_keys` entry forces `deploy/deploy.sh` (only a full commit SHA of `main` is accepted), and runs the production check. Manual trigger chosen over deploying every green `main`; switching is a trigger change. The rebuilt-images note moved to EN-213. Done in `en-185-ci-deploy` (PR #444, spec `deployment`); first real deploy 2026-11-22 (run 45003297293, `sha-98ca626`). Origin: split from EN-91 in `en-91-registry-deploy`, 2026-11-13; covers the deploy part of TD-32.
 - **EN-204** (web test coverage): no `UserCreatePage` component test submitted with the email, the password and the company all invalid at once. A new test does, and checks that all three fields are marked and no request is sent. It fails if the page marks only the first issues the schema reports. In this case the company issue comes from the base field (`maintenanceCompanyId` rejects the empty string the page sends), not from the `superRefine`, which for a maintenance role only reports a missing (`undefined`) company. Done in `user-create-field-errors` (PR #438). Origin: `user-create-field-errors` fresh review S-2, 2026-11-17.

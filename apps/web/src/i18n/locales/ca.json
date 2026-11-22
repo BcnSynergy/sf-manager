@@ -552,6 +552,10 @@
       "questionTextUnknown": "Pregunta desconeguda",
       "entryUnreviewedLabel": "No revisat",
       "elementHistoryLink": "Veure historial de l'element",
+      "photosLabel": "Fotos",
+      "photoAlt": "Foto {{number}}",
+      "photoOpenLabel": "Obrir la foto {{number}} en una pestanya nova",
+      "photosLoadError": "No s'han pogut carregar les fotos d'aquesta revisió.",
       "documentLink": "Veure document"
     },
     "elementHistory": {
