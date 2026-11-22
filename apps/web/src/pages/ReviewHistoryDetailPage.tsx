@@ -2,12 +2,19 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
-import { readReviewHistory, type ReviewHistoryDetail } from '../api/review-history';
+import {
+  listReviewHistoryPhotos,
+  readReviewHistory,
+  reviewHistoryPhotoUrl,
+  type ReviewHistoryDetail,
+  type ReviewHistoryPhoto,
+} from '../api/review-history';
 import { PageHeader } from '../components/PageHeader';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
 type LoadState = 'loading' | 'loaded' | 'error';
+type PhotosState = 'loading' | 'loaded' | 'error';
 
 // design.md Decision 7: a FORK, not a reuse, of ReviewSessionDetailPage.tsx.
 // This is a read-only record of a COMPLETED session — there is no draft
@@ -41,6 +48,8 @@ export function ReviewHistoryDetailPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [detail, setDetail] = useState<ReviewHistoryDetail | null>(null);
   const [errorMessageKey, setErrorMessageKey] = useState<string>('common.error.network');
+  const [photosState, setPhotosState] = useState<PhotosState>('loading');
+  const [photos, setPhotos] = useState<ReviewHistoryPhoto[]>([]);
 
   const loadDetail = useCallback(() => {
     if (sessionId === undefined) {
@@ -70,6 +79,30 @@ export function ReviewHistoryDetailPage() {
     void loadDetail();
   }, [loadDetail]);
 
+  // EN-164 S5 (T3): the photos load on their own, so a failure here never
+  // hides the review itself; it shows one note instead.
+  useEffect(() => {
+    if (sessionId === undefined) {
+      return;
+    }
+    let active = true;
+    listReviewHistoryPhotos(sessionId)
+      .then((listed) => {
+        if (active) {
+          setPhotos(listed);
+          setPhotosState('loaded');
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPhotosState('error');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
+
   if (loadState === 'loading') {
     return (
       <main>
@@ -95,6 +128,13 @@ export function ReviewHistoryDetailPage() {
   const questionTextById = new Map(
     detail.questions.map((question) => [question.questionId, question.text]),
   );
+  // Oldest first within each element, as the server lists them.
+  const photosByElementId = new Map<string, ReviewHistoryPhoto[]>();
+  for (const photo of photos) {
+    const forElement = photosByElementId.get(photo.inspectableElementId) ?? [];
+    forElement.push(photo);
+    photosByElementId.set(photo.inspectableElementId, forElement);
+  }
 
   return (
     <main>
@@ -137,6 +177,11 @@ export function ReviewHistoryDetailPage() {
 
       <section className="sf-section" data-testid="review-history-detail-entries">
         <h2>{t('reviewHistory.detail.entriesTitle')}</h2>
+        {photosState === 'error' && (
+          <p className="sf-empty" data-testid="review-history-detail-photos-error">
+            {t('reviewHistory.detail.photosLoadError')}
+          </p>
+        )}
         {detail.entries.length === 0 ? (
           <p className="sf-empty" data-testid="review-history-detail-entries-empty">
             {t('reviewHistory.detail.entriesEmpty')}
@@ -201,6 +246,34 @@ export function ReviewHistoryDetailPage() {
                       {entry.observations ?? ''}
                     </span>
                   </p>
+                )}
+                {(photosByElementId.get(entry.inspectableElementId) ?? []).length > 0 && (
+                  <ul
+                    className="sf-photo-list"
+                    aria-label={t('reviewHistory.detail.photosLabel')}
+                    data-testid={`review-history-detail-photos-${entry.inspectableElementId}`}
+                  >
+                    {(photosByElementId.get(entry.inspectableElementId) ?? []).map(
+                      (photo, index) => (
+                        <li key={photo.id} className="sf-photo-item">
+                          <a
+                            href={reviewHistoryPhotoUrl(detail.id, photo.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={t('reviewHistory.detail.photoOpenLabel', {
+                              number: index + 1,
+                            })}
+                          >
+                            <img
+                              className="sf-photo-thumb"
+                              src={reviewHistoryPhotoUrl(detail.id, photo.id)}
+                              alt={t('reviewHistory.detail.photoAlt', { number: index + 1 })}
+                            />
+                          </a>
+                        </li>
+                      ),
+                    )}
+                  </ul>
                 )}
               </li>
             ))}
