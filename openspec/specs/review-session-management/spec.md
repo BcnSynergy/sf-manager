@@ -300,10 +300,7 @@ session, another user's session and a since-deactivated assignment MUST be
 indistinguishable (not found). Add and delete MUST be refused once the
 session is `completed`; a completed session's photos are fixed, but its
 performer MAY still list and read them here (reading by everyone else who
-may see a completed review belongs to `review-history`). Listing an
-element's photos MUST apply the same element check as adding, so an
-element outside the session's scope MUST be rejected as not found there
-too. Photos
+may see a completed review belongs to `review-history`). Photos
 MUST live as long as their session: nothing deletes them automatically,
 and discarding a `draft` session MUST delete its photos, stored files
 included.

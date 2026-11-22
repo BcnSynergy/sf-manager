@@ -5,6 +5,7 @@ import { InMemoryReviewTemplateRepository } from '../../../review-template/appli
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
 import { InMemoryInspectableElementRepository } from '../../../inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
 import { InspectableElement } from '../../../inspectable-element/domain/inspectable-element.entity';
+import { InspectableElementNotFoundError } from '../../../inspectable-element/domain/errors/inspectable-element-not-found.error';
 import {
   jpegHeader,
   pngHeader,
@@ -230,6 +231,93 @@ describe('review photo use cases', () => {
       ).rejects.toBeInstanceOf(ReviewSessionNotEditableError);
 
       expect(put).not.toHaveBeenCalled();
+    });
+
+    it('rejects an element outside the session community, deactivated or unknown as not found', async () => {
+      elements.seed(
+        element({
+          id: 'element-other',
+          communityId: 'community-2',
+          code: 'X9',
+        }),
+      );
+      elements.seed(
+        element({
+          id: 'element-gone',
+          code: 'X8',
+          deactivatedAt: new Date(),
+        }),
+      );
+
+      for (const id of ['element-other', 'element-gone', 'unknown']) {
+        await expect(
+          upload.execute('session-1', id, jpegHeader(), actor),
+        ).rejects.toBeInstanceOf(InspectableElementNotFoundError);
+      }
+      expect(files.keys()).toEqual([]);
+    });
+
+    it('deletes the stored file when the repository refuses (session completed after the load)', async () => {
+      const racing = {
+        ...photos,
+        addToDraft: () => Promise.resolve('not_editable' as const),
+      } as unknown as InMemoryReviewPhotoRepository;
+      const racingUpload = new UploadReviewPhotoUseCase(
+        access,
+        templates,
+        elements,
+        racing,
+        files,
+        ids,
+      );
+
+      await expect(
+        racingUpload.execute('session-1', 'element-1', jpegHeader(), actor),
+      ).rejects.toBeInstanceOf(ReviewSessionNotEditableError);
+      expect(files.keys()).toEqual([]);
+    });
+
+    it('deletes the stored file when the repository throws', async () => {
+      const failing = {
+        addToDraft: () => Promise.reject(new Error('db down')),
+      } as unknown as InMemoryReviewPhotoRepository;
+      const failingUpload = new UploadReviewPhotoUseCase(
+        access,
+        templates,
+        elements,
+        failing,
+        files,
+        ids,
+      );
+
+      await expect(
+        failingUpload.execute('session-1', 'element-1', jpegHeader(), actor),
+      ).rejects.toThrow('db down');
+      expect(files.keys()).toEqual([]);
+    });
+  });
+
+  describe('list', () => {
+    it('lists id and createdAt only, oldest first, for the element', async () => {
+      const first = await upload.execute(
+        'session-1',
+        'element-1',
+        jpegHeader(),
+        actor,
+      );
+      const second = await upload.execute(
+        'session-1',
+        'element-1',
+        jpegHeader(),
+        actor,
+      );
+
+      const result = await list.execute('session-1', 'element-1', actor);
+
+      expect(result).toEqual([
+        { id: first.id, createdAt: first.createdAt },
+        { id: second.id, createdAt: second.createdAt },
+      ]);
     });
 
     it('returns no photos for an element without photos in the session, foreign or unknown', async () => {
