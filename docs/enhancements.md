@@ -1217,6 +1217,14 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-227** (feature): the printable review document (FR-010,
+  `review-document`, `review-document-ui`) shows no photos. EN-164 left them
+  out of this slice on purpose: the history detail view shows them, the
+  document does not. Showing them needs a layout decision (thumbnails per
+  element, or a photo appendix), print size and page breaks, and whether
+  the document read returns photo ids or the page loads them through
+  `GET /review-history/:sessionId/photos`. Origin: `en-164-review-photos`
+  decision S4, 2026-11-22.
 - **EN-228** (web): the review history detail shows a photo only inside the
   entry of its element, so a photo whose element has no entry is never
   shown, although `GET /review-history/:sessionId/photos` lists it.
@@ -1233,14 +1241,6 @@ content type`). Today that is the only 415 it raises, but a future one
   dropped out-of-order responses. Reset to loading on a session change, for
   example by keying the page on `sessionId`. Origin: `en-229-stale-history-detail`
   fresh review S-1, 2026-11-22.
-- **EN-227** (feature): the printable review document (FR-010,
-  `review-document`, `review-document-ui`) shows no photos. EN-164 left them
-  out of this slice on purpose: the history detail view shows them, the
-  document does not. Showing them needs a layout decision (thumbnails per
-  element, or a photo appendix), print size and page breaks, and whether
-  the document read returns photo ids or the page loads them through
-  `GET /review-history/:sessionId/photos`. Origin: `en-164-review-photos`
-  decision S4, 2026-11-22.
 
 ## Done
 
