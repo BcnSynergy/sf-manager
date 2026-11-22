@@ -45,9 +45,16 @@ type PhotosResult =
 // review-history-company-scope design.md Decision 8: `performedByEmail` is
 // rendered for every role, no manager-specific variant — same placeholder
 // treatment as an unresolvable community name elsewhere in this surface.
+// EN-230: keyed on the session id, so moving to another session mounts a
+// fresh view that starts in its loading state; the previous session's
+// record, photos or error never stay on screen under the new URL.
 export function ReviewHistoryDetailPage() {
-  const { t } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
+  return <ReviewHistoryDetailView key={sessionId} sessionId={sessionId} />;
+}
+
+function ReviewHistoryDetailView({ sessionId }: { sessionId: string | undefined }) {
+  const { t } = useTranslation();
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [detail, setDetail] = useState<ReviewHistoryDetail | null>(null);

@@ -431,6 +431,50 @@ describe('ReviewHistoryDetailPage', () => {
     expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
   });
 
+  // EN-230: moving to another session shows the loading state, never the
+  // previous session's record, photos or error under the new URL.
+  it("shows the loading state, not the previous session's record, while the next session loads", async () => {
+    mockedReadReviewHistory.mockImplementation((id) =>
+      id === 'session-b'
+        ? new Promise(() => {})
+        : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+    );
+    mockedListPhotos.mockResolvedValue([
+      { id: 'p1', inspectableElementId: 'e1', createdAt: '2026-09-01T00:10:00.000Z' },
+    ]);
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+      { initialEntries: ['/review-history/session-a'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId('review-history-detail-photos-e1');
+
+    await act(() => router.navigate('/review-history/session-b'));
+
+    expect(screen.getByTestId('review-history-detail-loading')).toBeInTheDocument();
+    expect(screen.queryByText('completed-session-a')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+  });
+
+  it("does not keep the previous session's error while the next session loads", async () => {
+    mockedReadReviewHistory.mockImplementation((id) =>
+      id === 'session-b'
+        ? new Promise(() => {})
+        : Promise.reject(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND')),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+      { initialEntries: ['/review-history/session-a'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId('review-history-detail-error');
+
+    await act(() => router.navigate('/review-history/session-b'));
+
+    expect(screen.getByTestId('review-history-detail-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-history-detail-error')).not.toBeInTheDocument();
+  });
+
   // EN-164 S5 (T3): the photos of a completed review next to each element.
   describe('photos', () => {
     const photos = [
