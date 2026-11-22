@@ -68,7 +68,8 @@ a blank cell, exactly as the neutral element label does; this is
 distinct from a session carrying no company at all, which omits the
 company line entirely. A completed session with zero entries MUST still
 render its letterhead, session data and signature footer, with the
-record region showing no entry and no error. The page MUST NOT hide,
+record region showing no entry and no error about its entries (the
+photo note below may still appear there). The page MUST NOT hide,
 re-sort or truncate entries, and MUST NOT render a signature image or a
 signer name other than the email.
 

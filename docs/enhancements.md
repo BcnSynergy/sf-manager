@@ -1224,8 +1224,11 @@ content type`). Today that is the only 415 it raises, but a future one
   so this only happens when an element leaves the universe (deactivated or
   deleted) between the photo upload and the completion. Show such photos in
   a separate "other photos" group, or block completion while a photo's
-  element is outside the universe. Origin: `en-164-review-photos` PR 3/3
-  fresh review W-1, 2026-11-22.
+  element is outside the universe. The printable review document
+  (`ReviewDocumentPage`, EN-227) has the same gap: such a photo is left out
+  of the printed document without a note. Origin: `en-164-review-photos`
+  PR 3/3 fresh review W-1, 2026-11-22; document added by the
+  `en-227-document-photos` fresh review W-2.
 - **EN-230** (web): `ReviewHistoryDetailPage` does not go back to its
   loading state when the route moves to another session: while B loads,
   A's record and A's photos stay on screen under B's URL, and an earlier
@@ -1233,6 +1236,12 @@ content type`). Today that is the only 415 it raises, but a future one
   dropped out-of-order responses. Reset to loading on a session change, for
   example by keying the page on `sessionId`. Origin: `en-229-stale-history-detail`
   fresh review S-1, 2026-11-22.
+- **EN-231** (web): the review document disables its print control until
+  the photo list arrives (EN-227), but the browser's own print shortcut
+  (Ctrl+P) still works while it is pending and prints the document with no
+  photos and no note. Show a printed "loading photos" line while the list
+  is pending, or accept the gap (the list usually arrives in well under a
+  second). Origin: `en-227-document-photos` fresh review S-4, 2026-11-22.
 
 ## Done
 

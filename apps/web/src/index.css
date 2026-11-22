@@ -676,7 +676,7 @@ code {
 }
 
 /* EN-227: the photos of an element in the review document, about 5 cm wide
-   in print, in a row that wraps; a photo is never split across two pages.
+   in print, in a row that wraps (an image is never split across two pages).
    `contain` keeps the whole photo visible (evidence is not cropped). */
 .review-document-photos {
   display: flex;
@@ -689,7 +689,6 @@ code {
   width: 5cm;
   height: 3.75cm;
   object-fit: contain;
-  break-inside: avoid;
   border: 1px solid var(--border);
 }
 
@@ -1210,7 +1209,8 @@ main.sf-login {
   .review-document-print dt,
   .review-document-print th,
   .review-document-print td,
-  .review-document-print code {
+  .review-document-print code,
+  .review-document-print .review-document-photo {
     color: #000;
     background: #fff;
     border-color: #000;

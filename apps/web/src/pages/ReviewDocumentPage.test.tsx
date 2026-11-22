@@ -627,6 +627,29 @@ describe('record photos', () => {
     expect(screen.getByTestId('review-document-print-button')).toBeEnabled();
   });
 
+  it("never shows a previous document's photos, and keeps print disabled, after the route moves to another document", async () => {
+    mockedReadReviewDocument.mockImplementation((id) =>
+      Promise.resolve({ ...recordDocument, id, communityName: `community-${id}` }),
+    );
+    mockedListPhotos.mockImplementation((id) =>
+      id === SESSION_ID ? Promise.resolve(photos) : new Promise(() => {}),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId/document', element: <ReviewDocumentPage /> }],
+      { initialEntries: [`/review-history/${SESSION_ID}/document`] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId('review-document-record-photos-e-aa');
+    expect(screen.getByTestId('review-document-print-button')).toBeEnabled();
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    expect(await screen.findByText('community-session-2')).toBeInTheDocument();
+    expect(mockedListPhotos).toHaveBeenLastCalledWith('session-2');
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    expect(screen.getByTestId('review-document-print-button')).toBeDisabled();
+  });
+
   it('sends no photo request when the document cannot be opened', async () => {
     mockedReadReviewDocument.mockRejectedValue(new ApiError(404, 'REVIEW_SESSION_NOT_FOUND'));
 
