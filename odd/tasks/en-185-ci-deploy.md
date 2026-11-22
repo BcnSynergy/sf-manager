@@ -14,13 +14,13 @@ Locator: `odd/tasks/en-185-ci-deploy.md` (Engram mirror: `odd/en-185-ci-deploy/t
 
 ## Tasks
 
-| ID  | Specs          | Route                                                                                        | Status  | Commit  |
-| --- | -------------- | -------------------------------------------------------------------------------------------- | ------- | ------- |
-| T1  | S3             | inline                                                                                       | done    | PR #444 |
-| T2  | S1, S2, S4, S5 | inline                                                                                       | done    | PR #444 |
-| T3  | S6             | inline                                                                                       | done    | PR #444 |
-| T4  | S3, S5         | user (server key + secrets + environment), Claude installs the script over SSH with fresh OK | pending |         |
-| T5  | S1-S4          | first real deploy run, after merge                                                           | pending |         |
+| ID  | Specs          | Route                                                                                        | Status | Commit  |
+| --- | -------------- | -------------------------------------------------------------------------------------------- | ------ | ------- |
+| T1  | S3             | inline                                                                                       | done   | PR #444 |
+| T2  | S1, S2, S4, S5 | inline                                                                                       | done   | PR #444 |
+| T3  | S6             | inline                                                                                       | done   | PR #444 |
+| T4  | S3, S5         | user (server key + secrets + environment), Claude installs the script over SSH with fresh OK | done   | L17     |
+| T5  | S1-S4          | first real deploy run, after merge                                                           | done   | L18     |
 
 Risk: items 2 (credentials) and 5 (delivery): fresh-context review required (already required per PR).
 
@@ -42,3 +42,5 @@ Risk: items 2 (credentials) and 5 (delivery): fresh-context review required (alr
 - **L14** Gentle review of 6bc0f87..8bcaeb5 (four lenses, high, user granted) approved and acknowledged (lineage review-dbfd33e16b1d92b5). R2-002 fixed (T1-T3 all point to PR #444); R3-001 registered as EN-218 (resolve-commit reports git errors as "not on main"); R2-001 is EN-215 already.
 - **L15** CI on 8bcaeb5 failed at Shellcheck: SC2030/SC2031 (info) in `deploy/test-deploy.sh`, from the deliberate per-case `( ... )` subshells. Not caught locally because ShellCheck is not installed here. File-level disable with its reason; `koalaman/shellcheck:v0.9.0` (the runner version) over `deploy/*.sh` exits 0. Run it before pushing shell changes.
 - **L16** Gentle review of 6bc0f87..09f6f3f (four lenses, high, user granted) approved and acknowledged (lineage review-1ea1272fd13976ed). R2-002 fixed (README "Deploying from CI" explains the ambiguous 7-char tag case); R2-003 and R3-001 registered as EN-219; R2-001 is EN-215. CI green on 09f6f3f.
+- **L17** (2026-11-22) T4 server part done with the user's OK: origin is `https://github.com/BcnSynergy/sf-manager.git`; `~/bin/sf-manager-deploy` installed from `origin/main` (matches, 3062 bytes); `restrict,command=` line added to `authorized_keys` (backup `authorized_keys.bak-2026-11-22`); checkout untouched at 9fcbc587. Host key line handed to the user. Pending: user creates the `production` environment and its three secrets, deletes the private key; then T5.
+- **L18** (2026-11-22) User set up the `production` environment (required reviewer BcnSynergy, `main` only) and the three secrets, and deleted the private key (checked). T5: Deploy run 45003297293 on `main` 98ca626, approved by the user: every step green (resolve, images, server, production check); server log "production now runs sha-98ca626"; `/api/health` ok. EN-185 complete.
