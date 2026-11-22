@@ -710,14 +710,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   `curl -i https://<SITE_ADDRESS>/api/docs` and `/api/docs-json` after the
   next deploy would confirm it. Origin: `td-40-api-docs` pre-merge review
   (#287), 2026-10-26.
-- **EN-106** (security): the Content Security Policy in `apps/web/Caddyfile`
-  has no `report-to`/`report-uri`, so a violation in production (a page the
-  policy breaks) is seen only in that user's console. The QR page
-  (`ElementQrCode.tsx`) and the print flow were not exercised under the
-  policy in a browser. Also, `zod-config.test.ts` checks the jitless flag
-  but not that `main.tsx` imports `./zod-config` first, which only a comment
-  guards. Origin: `en-94-security-headers` pre-push review (#289),
-  2026-10-26.
 - **EN-107** (delivery): after EN-95, CI's Postgres service image
   (`.github/workflows/ci.yml`, `image: postgres:18-alpine`) is still a
   floating tag, and no Dependabot ecosystem updates workflow service images,
@@ -1192,9 +1184,25 @@ content type`). Today that is the only 415 it raises, but a future one
 
 - **EN-205** (web UX): on the new-user form a field stays marked as failed until the next submit, even after the user corrects it. Clearing that field's mark in its `onChange` would follow the user's progress; the reset page has the same behavior, so change both or neither. Origin: `user-create-field-errors` fresh review S-1, 2026-11-17.
 - **EN-206** (web robustness): if `createUserSchema` ever fails on a path the new-user form does not map (anything but `email`, `password`, `maintenanceCompanyId`, for example `role`), the alert says "Fix the fields marked below." but no field is marked. Unreachable today (the role is a `<select>` of valid values); a generic fallback message when the mapped set is empty would cover it. Origin: `user-create-field-errors` Gentle review (R3-empty-field-set-fallback), 2026-11-17.
+- **EN-220** (security): the Content Security Policy in `apps/web/Caddyfile`
+  has no `report-to`/`report-uri`, so a violation in production (a page the
+  policy breaks) is seen only in that user's console. Deferred: an external
+  collector would receive users' URLs, and an own endpoint means a public
+  unauthenticated route (throttling, size limit, `application/csp-report`
+  and `application/reports+json` parsing). Origin: split from EN-106 in
+  `en-106-csp-followups`, 2026-11-22.
+- **EN-221** (web tests): eight web tests read source files through
+  `join(process.cwd(), ...)` (for example `zod-config.test.ts`,
+  `index-html.test.ts`), so they only find the files when Vitest runs from
+  `apps/web`; `new URL(..., import.meta.url)` is not an option under jsdom
+  (http scheme). Also, the `zod-config.test.ts` import-order check compares
+  the exact import text, so it relies on Prettier's quotes and semicolons.
+  Origin: `en-106-csp-followups` Gentle review (R3 WARNING and
+  SUGGESTION), 2026-11-22.
 
 ## Done
 
+- **EN-106** (security): two leftovers from the CSP in `apps/web/Caddyfile`. `zod-config.test.ts` now checks that `./zod-config` is the first import of `main.tsx` (it fails when the import moves below `react`). The element label page (QR) and the review document page, screen and print rules, were exercised in a browser on the production build served with the production CSP: no violations (an injected inline script was blocked, so the policy was active). Violation reporting moved to EN-220. Done in `en-106-csp-followups` (PR #446). Origin: `en-94-security-headers` pre-push review (#289), 2026-10-26.
 - **EN-185** (delivery): deploying was manual: the operator checked out a commit on the server, set `IMAGE_TAG` and pulled. The `Deploy` workflow (`.github/workflows/deploy.yml`) now does it when started by hand, after the maintainer approves the `production` environment, which alone holds the deploy secrets. It refuses a commit that is not on `main` or has no published images, deploys over SSH with a key whose `authorized_keys` entry forces `deploy/deploy.sh` (only a full commit SHA of `main` is accepted), and runs the production check. Manual trigger chosen over deploying every green `main`; switching is a trigger change. The rebuilt-images note moved to EN-213. Done in `en-185-ci-deploy` (PR #444, spec `deployment`); first real deploy 2026-11-22 (run 45003297293, `sha-98ca626`). Origin: split from EN-91 in `en-91-registry-deploy`, 2026-11-13; covers the deploy part of TD-32.
 - **EN-204** (web test coverage): no `UserCreatePage` component test submitted with the email, the password and the company all invalid at once. A new test does, and checks that all three fields are marked and no request is sent. It fails if the page marks only the first issues the schema reports. In this case the company issue comes from the base field (`maintenanceCompanyId` rejects the empty string the page sends), not from the `superRefine`, which for a maintenance role only reports a missing (`undefined`) company. Done in `user-create-field-errors` (PR #438). Origin: `user-create-field-errors` fresh review S-2, 2026-11-17.
 
