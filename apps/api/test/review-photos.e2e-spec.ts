@@ -646,13 +646,13 @@ describe('Review photos (e2e)', () => {
       });
     });
 
-    it('answers 404 ELEMENT_NOT_FOUND when listing the photos of an element outside the session', async () => {
+    it('lists no photos for an element of another community or an unknown element', async () => {
       for (const id of [
         foreignElement.id,
         '0192f0c0-0000-7000-8000-000000000000',
       ]) {
-        const response = await tech.get(photosUrl(session.id, id)).expect(404);
-        expect(response.body).toMatchObject({ code: 'ELEMENT_NOT_FOUND' });
+        const response = await tech.get(photosUrl(session.id, id)).expect(200);
+        expect(response.body).toEqual([]);
       }
     });
 

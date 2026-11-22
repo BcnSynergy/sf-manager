@@ -1212,6 +1212,13 @@ content type`). Today that is the only 415 it raises, but a future one
   deterministic version would hold the session lock from one connection
   while the other starts. Origin: `en-164-review-photos` fresh review,
   2026-11-22.
+- **EN-224** (api readability): `ReviewSessionRepository.discardDraft()` has
+  no production caller any more: the discard use case goes through
+  `ReviewPhotoRepository.discardDraftWithPhotoKeys`, which locks the session
+  and returns the photo keys. Only tests and the in-memory fake still use
+  it, so the two discard paths can drift apart. Remove it, or route its
+  tests through the new method. Origin: `en-164-review-photos` scoped fresh
+  review S-1, 2026-11-22.
 
 ## Done
 

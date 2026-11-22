@@ -287,10 +287,12 @@ element of that session and delete them while the session is a `draft`.
 The performer MUST be able to list and read the photos of their own
 session in any status. A photo MUST belong to one element within one session (the
 pair of session and element), never to an element's recorded entry, so
-re-recording the element's answers MUST NOT change its photos. The element
-MUST be one the session could record an entry for (see _Resolve an Element
-by Code Within the Session's Scope_); any other element MUST be rejected
-as not found.
+re-recording the element's answers MUST NOT change its photos. A photo
+MUST only be added to an element the session could record an entry for (see
+_Resolve an Element by Code Within the Session's Scope_); adding one to any
+other element MUST be rejected as not found. Listing the photos of any other
+element MUST return none, and a completed session's photos MUST stay
+listable after their element is deactivated or deleted.
 
 Only the session's performer MAY add, list, read or delete its photos,
 through the same scope checks as every other session operation: an unknown
@@ -400,11 +402,17 @@ content security policy.
 - WHEN U lists that element's photos or reads the photo
 - THEN each response MUST be 200 with the photo
 
-#### Scenario: Listing photos of an element outside the session's scope is refused
+#### Scenario: Listing photos of an element outside the session's scope returns none
 
 - GIVEN U performs a session for community C
 - WHEN U lists the photos of an element of another community or an unknown id
-- THEN the response MUST be 404 ELEMENT_NOT_FOUND
+- THEN the response MUST be 200 with an empty list
+
+#### Scenario: A completed session's photos stay listable after their element is deactivated
+
+- GIVEN U has a photo of element E in a completed session, and E is then deactivated
+- WHEN U lists E's photos in that session
+- THEN the response MUST be 200 with the photo
 
 #### Scenario: Discarding a draft deletes its photos and files
 
