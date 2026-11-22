@@ -1219,6 +1219,14 @@ content type`). Today that is the only 415 it raises, but a future one
   it, so the two discard paths can drift apart. Remove it, or route its
   tests through the new method. Origin: `en-164-review-photos` scoped fresh
   review S-1, 2026-11-22.
+- **EN-225** (api tests): the same-performer cross-session case in
+  `apps/api/test/review-photos.e2e-spec.ts` assigns the technician to the
+  completion community and opens a second draft there, closing it only on
+  its last line; a failed assertion leaves the draft open, and the
+  assignment stays for the later delete tests, so the file's tests depend on
+  run order. Clean up in a `finally`/`afterEach`, or use a community nothing
+  else uses. Origin: `en-164-review-photos` Gentle review (R3-001),
+  2026-11-22.
 
 ## Done
 
