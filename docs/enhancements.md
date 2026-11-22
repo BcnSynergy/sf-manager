@@ -1226,6 +1226,13 @@ content type`). Today that is the only 415 it raises, but a future one
   a separate "other photos" group, or block completion while a photo's
   element is outside the universe. Origin: `en-164-review-photos` PR 3/3
   fresh review W-1, 2026-11-22.
+- **EN-230** (web): `ReviewHistoryDetailPage` does not go back to its
+  loading state when the route moves to another session: while B loads,
+  A's record and A's photos stay on screen under B's URL, and an earlier
+  error stays until B's request settles. Present before EN-229, which only
+  dropped out-of-order responses. Reset to loading on a session change, for
+  example by keying the page on `sessionId`. Origin: `en-229-stale-history-detail`
+  fresh review S-1, 2026-11-22.
 - **EN-227** (feature): the printable review document (FR-010,
   `review-document`, `review-document-ui`) shows no photos. EN-164 left them
   out of this slice on purpose: the history detail view shows them, the
