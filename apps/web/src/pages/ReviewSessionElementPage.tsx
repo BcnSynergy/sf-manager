@@ -242,7 +242,12 @@ export function ReviewSessionElementPage() {
             <span>{entry.observations ?? ''}</span>
           </p>
         )}
-        <ReviewPhotosSection sessionId={sessionId!} elementId={resolved.element.id} readOnly />
+        <ReviewPhotosSection
+          key={resolved.element.id}
+          sessionId={sessionId!}
+          elementId={resolved.element.id}
+          readOnly
+        />
         <div className="sf-actions">
           <button
             type="button"
@@ -262,6 +267,7 @@ export function ReviewSessionElementPage() {
       <PageHeader title={t('reviewSession.element.title')} />
       {elementPanel}
       <ReviewPhotosSection
+        key={resolved.element.id}
         sessionId={sessionId!}
         elementId={resolved.element.id}
         readOnly={false}

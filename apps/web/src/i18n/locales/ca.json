@@ -502,7 +502,9 @@
       "readError": "Aquest fitxer no s'ha pogut llegir com a foto.",
       "uploadError": "No s'ha pogut pujar la foto.",
       "removeError": "No s'ha pogut eliminar la foto.",
-      "notFound": "Aquesta foto ja no existeix."
+      "notFound": "Aquesta foto ja no existeix.",
+      "openLabel": "Obre la foto {{number}} en una pestanya nova",
+      "removeNumberedLabel": "Elimina la foto {{number}}"
     },
     "answer": {
       "yes": "Sí",

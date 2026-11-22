@@ -10,7 +10,7 @@ import {
   type ReviewPhotoErrorCode,
 } from '../api/review-photos';
 import type { ReviewSessionErrorCode } from '../api/review-session';
-import { Alert } from '../components/Alert';
+import { Alert, StatusRegion } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAlertMessage } from '../components/use-alert-message';
 import type { MessageKey } from '../i18n/message-key';
@@ -37,12 +37,21 @@ type LoadState = 'loading' | 'loaded' | 'error';
 export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const mountedRef = useRef(true);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [photos, setPhotos] = useState<ReviewPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const { messageKey: error, key: errorAlertKey, show: showError, clear } = useAlertMessage();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +71,18 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
       active = false;
     };
   }, [sessionId, elementId]);
+
+  // After a limit rejection (a photo added elsewhere, for example in another
+  // tab), the list here is stale: read it again so the limit note shows.
+  function reloadPhotos() {
+    listReviewPhotos(sessionId, elementId)
+      .then((listed) => {
+        if (mountedRef.current) {
+          setPhotos(listed);
+        }
+      })
+      .catch(() => undefined);
+  }
 
   async function handleFile(file: File | undefined) {
     if (inputRef.current) {
@@ -83,6 +104,9 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
       const photo = await uploadReviewPhoto(sessionId, elementId, compressed);
       setPhotos((current) => [...current, photo]);
     } catch (uploadError) {
+      if (uploadError instanceof ApiError && uploadError.code === 'REVIEW_PHOTO_LIMIT_REACHED') {
+        reloadPhotos();
+      }
       showError(photoErrorKey(uploadError, 'reviewSession.photos.uploadError'));
     } finally {
       setUploading(false);
@@ -96,6 +120,9 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
     try {
       await deleteReviewPhoto(sessionId, photoId);
       setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+      // The Remove button that had focus is gone; keep the keyboard user in
+      // the section.
+      headingRef.current?.focus();
     } catch (removeError) {
       // Already gone (removed elsewhere): drop it here too.
       if (removeError instanceof ApiError && removeError.code === 'REVIEW_PHOTO_NOT_FOUND') {
@@ -112,7 +139,7 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
 
   return (
     <section className="sf-section" aria-labelledby="review-photos-title">
-      <h2 id="review-photos-title" className="sf-section-title">
+      <h2 ref={headingRef} id="review-photos-title" className="sf-section-title" tabIndex={-1}>
         {t('reviewSession.photos.title')}
       </h2>
       {loadState === 'loading' && (
@@ -138,6 +165,7 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
                 href={reviewPhotoUrl(sessionId, photo.id)}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label={t('reviewSession.photos.openLabel', { number: index + 1 })}
                 data-testid={`review-photo-link-${photo.id}`}
               >
                 <img
@@ -153,6 +181,7 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
                   className="sf-btn sf-btn-danger"
                   onClick={() => setConfirmingId(photo.id)}
                   disabled={busy}
+                  aria-label={t('reviewSession.photos.removeNumberedLabel', { number: index + 1 })}
                   data-testid={`review-photo-remove-${photo.id}`}
                 >
                   {t('reviewSession.photos.removeLabel')}
@@ -162,11 +191,13 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
           ))}
         </ul>
       )}
-      {uploading && (
-        <p className="sf-empty" data-testid="review-photos-uploading">
-          {t('reviewSession.photos.uploading')}
-        </p>
-      )}
+      <StatusRegion>
+        {uploading && (
+          <p className="sf-empty" data-testid="review-photos-uploading">
+            {t('reviewSession.photos.uploading')}
+          </p>
+        )}
+      </StatusRegion>
       {error && (
         <Alert key={errorAlertKey} tone="danger" testId="review-photos-error" message={t(error)} />
       )}

@@ -1227,6 +1227,14 @@ content type`). Today that is the only 415 it raises, but a future one
   run order. Clean up in a `finally`/`afterEach`, or use a community nothing
   else uses. Origin: `en-164-review-photos` Gentle review (R3-001),
   2026-11-22.
+- **EN-226** (web): `compressPhoto`
+  (`apps/web/src/review-session/compress-photo.ts`) decodes the whole photo
+  with `createImageBitmap` before scaling it down, so a 48 MP phone photo
+  takes its full size in memory for a moment. Decoding at a reduced size
+  (`resizeWidth`/`resizeHeight`, keeping `imageOrientation: 'from-image'`)
+  would lower peak memory on low-end phones. Not seen failing; verify on a
+  real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
+  review S-3, 2026-11-22.
 
 ## Done
 

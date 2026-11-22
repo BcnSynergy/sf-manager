@@ -502,7 +502,9 @@
       "readError": "This file could not be read as a photo.",
       "uploadError": "The photo could not be uploaded.",
       "removeError": "The photo could not be removed.",
-      "notFound": "This photo no longer exists."
+      "notFound": "This photo no longer exists.",
+      "openLabel": "Open photo {{number}} in a new tab",
+      "removeNumberedLabel": "Remove photo {{number}}"
     },
     "answer": {
       "yes": "Yes",

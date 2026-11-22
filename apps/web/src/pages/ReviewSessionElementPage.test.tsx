@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -72,6 +72,12 @@ const recordedYesYes = {
   ],
   recordedAt: '2026-09-08T00:00:00.000Z',
 };
+
+// The answers form's own status region (the photo section has its own).
+function formStatusRegion() {
+  const form = screen.getByTestId('review-session-element-save').closest('form') as HTMLElement;
+  return within(form).getByRole('status');
+}
 
 async function saveYesYes() {
   await screen.findByTestId('review-session-element-question-q1');
@@ -254,7 +260,7 @@ describe('ReviewSessionElementPage', () => {
     renderPage();
 
     await screen.findByTestId('review-session-element-question-q1');
-    const region = screen.getByRole('status');
+    const region = formStatusRegion();
     expect(region).toBeEmptyDOMElement();
 
     fireEvent.click(screen.getByTestId('review-session-element-answer-q1-YES'));
@@ -265,7 +271,7 @@ describe('ReviewSessionElementPage', () => {
     expect(saved).not.toHaveAttribute('role');
     expect(region).toContainElement(saved);
     expect(region).toContainElement(screen.getByTestId('review-session-element-continue'));
-    expect(screen.getByRole('status')).toBe(region);
+    expect(formStatusRegion()).toBe(region);
   });
 
   // EN-80: on a long form at phone width a confirmation above the form is
@@ -277,7 +283,7 @@ describe('ReviewSessionElementPage', () => {
     renderPage();
     await saveYesYes();
 
-    const region = screen.getByRole('status');
+    const region = formStatusRegion();
     const questions = screen.getByTestId('review-session-element-questions');
     const save = screen.getByTestId('review-session-element-save');
     expect(region).toContainElement(screen.getByTestId('review-session-element-saved'));

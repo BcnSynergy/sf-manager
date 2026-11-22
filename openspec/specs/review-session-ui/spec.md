@@ -223,8 +223,8 @@ has edited the form MUST NOT be confirmed.
 
 While answering an element of a `draft` session, the performer MUST be
 offered a control to add photos of that element, at most 3 per element per
-session (the rules are owned by `review-session-management`, _Photos of a
-Reviewed Element_). The control MUST be a standard file input that accepts
+session (the rules are owned by `review-session-management`, _Photos of a Draft Review
+Session_). The control MUST be a standard file input that accepts
 images and asks for the rear camera (`capture="environment"`): on a phone it
 opens the camera, on a desktop a file picker. Before upload, the web app
 MUST resize each photo to at most 1600 px on its long side and re-encode it
