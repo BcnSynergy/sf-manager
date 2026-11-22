@@ -85,7 +85,12 @@ routes, which have exactly the document's scope; the document read itself
 is unchanged. When they cannot be loaded, the document MUST still render
 in full, and one note saying the photos of the review could not be loaded
 MUST appear in the record region and MUST be printed, so a printed
-document never leaves its photos out silently.
+document never leaves its photos out silently. A photo whose element has
+no entry in the record (the element left the session's set of elements
+between the upload and the completion) MUST be printed in one "Other
+photos" group after the entries, oldest first, as a plain image with the
+text alternative "Other photo N", also when the record has no entry; there
+is no such group when every photo has its entry (EN-228).
 (Previously, before EN-227: the document showed no photos.)
 
 #### Scenario: A completed session's document renders all regions
@@ -129,6 +134,12 @@ document never leaves its photos out silently.
 - GIVEN a completed session with two photos of element AA1 and one of element ZZ9
 - WHEN its document page renders
 - THEN AA1's entry MUST show its two photos in order and ZZ9's entry its one photo, as plain images with the text alternatives "Photo 1 of AA1", "Photo 2 of AA1" and "Photo 1 of ZZ9", and an entry without photos MUST show none
+
+#### Scenario: A photo without an entry prints under "Other photos"
+
+- GIVEN a completed session with a photo whose element has no entry in the record
+- WHEN its document page renders and is printed
+- THEN that photo MUST appear in one "Other photos" group after the entries, as a plain image with the text alternative "Other photo 1"
 
 #### Scenario: A photo failure is printed, not hidden
 

@@ -739,7 +739,11 @@ the full photo in a new tab, with a numbered text alternative ("Photo 1")
 and a numbered accessible name for the link. An entry without photos MUST
 show no photo list. A photo whose element has no entry in the record (the
 element left the session's set of elements between the upload and the
-completion) MAY be left out; it is a known limitation, see EN-228. The photos MUST load separately from
+completion) MUST be shown in one "Other photos" group after the entries,
+oldest first, as the same thumbnails with a numbered text alternative
+("Other photo 1") and accessible name, also when the record has no entry;
+there is no such group when every photo has its entry (EN-228).
+(Previously: such a photo MAY be left out, a known limitation.) The photos MUST load separately from
 the record, only once the record has loaded: when
 they cannot be loaded, the record MUST still render in full, with one note
 saying the photos could not be loaded. The view MUST NOT offer any control
@@ -788,6 +792,12 @@ to add, replace or remove a photo.
 - GIVEN a completed session with two photos of element E1 and one of element E2, read by any of the five history roles
 - WHEN its read-only view renders
 - THEN E1's entry MUST show its two photos in order and E2's entry its one photo, each a thumbnail linking to the full photo in a new tab, and an entry without photos MUST show no photo list
+
+#### Scenario: A photo without an entry shows under "Other photos"
+
+- GIVEN a completed session with a photo whose element has no entry in the record
+- WHEN its read-only view renders
+- THEN that photo MUST be shown in one "Other photos" group after the entries, as "Other photo 1", and no entry MUST show it
 
 #### Scenario: A photo failure does not hide the record
 

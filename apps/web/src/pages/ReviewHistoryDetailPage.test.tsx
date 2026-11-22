@@ -468,6 +468,65 @@ describe('ReviewHistoryDetailPage', () => {
       expect(within(second).getAllByRole('img')).toHaveLength(1);
     });
 
+    // EN-228: a photo whose element has no entry (the element left the
+    // session's elements before completion) is shown under "Other photos".
+    it('shows a photo whose element has no entry in one "Other photos" group after the entries', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue([
+        photos[0],
+        { id: 'p8', inspectableElementId: 'e-gone', createdAt: '2026-09-01T00:40:00.000Z' },
+        { id: 'p9', inspectableElementId: 'e-gone2', createdAt: '2026-09-01T00:50:00.000Z' },
+      ]);
+
+      renderPage();
+
+      const other = await screen.findByTestId('review-history-detail-other-photos');
+      expect(within(other).getByRole('heading', { name: 'Other photos' })).toBeInTheDocument();
+      const images = within(other).getAllByRole('img');
+      expect(images.map((image) => image.getAttribute('src'))).toEqual([
+        '/api/review-history/session-1/photos/p8',
+        '/api/review-history/session-1/photos/p9',
+      ]);
+      expect(images.map((image) => image.getAttribute('alt'))).toEqual([
+        'Other photo 1',
+        'Other photo 2',
+      ]);
+      const links = within(other).getAllByRole('link');
+      for (const link of links) {
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      }
+      expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+        'Open other photo 1 in a new tab',
+        'Open other photo 2 in a new tab',
+      ]);
+      expect(screen.getByTestId('review-history-detail-entry-e1')).not.toContainElement(other);
+      expect(
+        within(screen.getByTestId('review-history-detail-photos-e1')).getAllByRole('img'),
+      ).toHaveLength(1);
+    });
+
+    it('shows no "Other photos" group when every photo has its entry', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue(photos);
+
+      renderPage();
+
+      await screen.findByTestId('review-history-detail-photos-e1');
+      expect(screen.queryByTestId('review-history-detail-other-photos')).not.toBeInTheDocument();
+    });
+
+    it('shows the "Other photos" group even for a review without entries', async () => {
+      mockedReadReviewHistory.mockResolvedValue({ ...detail, entries: [] });
+      mockedListPhotos.mockResolvedValue([photos[0]]);
+
+      renderPage();
+
+      const other = await screen.findByTestId('review-history-detail-other-photos');
+      expect(within(other).getAllByRole('img')).toHaveLength(1);
+      expect(screen.getByTestId('review-history-detail-entries-empty')).toBeInTheDocument();
+    });
+
     it('renders no photo list for an element without photos', async () => {
       mockedReadReviewHistory.mockResolvedValue(detail);
       mockedListPhotos.mockResolvedValue([photos[1]]);

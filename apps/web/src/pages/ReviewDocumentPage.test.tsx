@@ -582,6 +582,54 @@ describe('record photos', () => {
     expect(screen.queryByTestId('review-document-record-photos-e-unknown')).not.toBeInTheDocument();
   });
 
+  // EN-228: a photo whose element has no entry prints under "Other photos".
+  it('prints a photo whose element has no entry in one "Other photos" group after the entries, with no link', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    mockedListPhotos.mockResolvedValue([
+      photos[0],
+      { id: 'p8', inspectableElementId: 'e-gone', createdAt: '2026-09-01T00:40:00.000Z' },
+    ]);
+
+    renderPage();
+    const other = await screen.findByTestId('review-document-record-other-photos');
+
+    expect(within(other).getByRole('heading', { name: 'Other photos' })).toBeInTheDocument();
+    const images = within(other).getAllByRole('img');
+    expect(images.map((image) => image.getAttribute('src'))).toEqual([
+      reviewHistoryApi.reviewHistoryPhotoUrl(SESSION_ID, 'p8'),
+    ]);
+    expect(images[0]).toHaveAttribute('alt', 'Other photo 1');
+    expect(within(other).queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getByTestId('review-document-record')).toContainElement(other);
+    expect(screen.getByTestId('review-document-record-entries')).not.toContainElement(other);
+    expect(
+      within(screen.getByTestId('review-document-record-photos-e-aa')).getAllByRole('img'),
+    ).toHaveLength(1);
+  });
+
+  it('prints the "Other photos" group even for a document without entries', async () => {
+    mockedReadReviewDocument.mockResolvedValue({ ...recordDocument, entries: [] });
+    mockedListPhotos.mockResolvedValue([photos[0]]);
+
+    renderPage();
+    const other = await screen.findByTestId('review-document-record-other-photos');
+
+    expect(within(other).getAllByRole('img')).toHaveLength(1);
+    expect(
+      within(screen.getByTestId('review-document-record-entries')).queryAllByRole('listitem'),
+    ).toHaveLength(0);
+  });
+
+  it('prints no "Other photos" group when every photo has its entry', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    mockedListPhotos.mockResolvedValue(photos);
+
+    renderPage();
+    await screen.findByTestId('review-document-record-photos-e-aa');
+
+    expect(screen.queryByTestId('review-document-record-other-photos')).not.toBeInTheDocument();
+  });
+
   it('names an element with no resolvable row neutrally in the photo text alternative', async () => {
     mockedReadReviewDocument.mockResolvedValue(recordDocument);
     mockedListPhotos.mockResolvedValue([
