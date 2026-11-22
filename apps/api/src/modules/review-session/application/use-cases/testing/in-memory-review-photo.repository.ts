@@ -7,6 +7,14 @@ import type {
 } from '../../ports/review-photo.repository.port';
 import type { InMemoryReviewSessionRepository } from './in-memory-review-session.repository';
 
+// `createdAt ASC, id ASC`, as the Prisma adapter orders.
+function byCreation(a: ReviewPhoto, b: ReviewPhoto): number {
+  return (
+    a.createdAt.getTime() - b.createdAt.getTime() ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  );
+}
+
 // Test double for ReviewPhotoRepository. The session status comes from the
 // in-memory session repository, and a photo whose session no longer exists is
 // invisible, which mirrors ON DELETE CASCADE after a discard. Each method is
@@ -57,11 +65,15 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
             photo.reviewSessionId === reviewSessionId &&
             photo.inspectableElementId === inspectableElementId,
         )
-        .sort(
-          (a, b) =>
-            a.createdAt.getTime() - b.createdAt.getTime() ||
-            (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-        ),
+        .sort(byCreation),
+    );
+  }
+
+  listForSession(reviewSessionId: string): Promise<ReviewPhoto[]> {
+    return Promise.resolve(
+      this.all()
+        .filter((photo) => photo.reviewSessionId === reviewSessionId)
+        .sort(byCreation),
     );
   }
 

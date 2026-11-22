@@ -89,6 +89,14 @@ export class PrismaReviewPhotoRepository implements ReviewPhotoRepository {
     return rows.map(toPhoto);
   }
 
+  async listForSession(reviewSessionId: string): Promise<ReviewPhoto[]> {
+    const rows = await this.prisma.reviewPhoto.findMany({
+      where: { reviewSessionId },
+      orderBy: ORDER_BY,
+    });
+    return rows.map(toPhoto);
+  }
+
   async findInSession(
     reviewSessionId: string,
     photoId: string,
