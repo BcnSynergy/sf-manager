@@ -492,8 +492,10 @@ describe('ReviewHistoryDetailPage', () => {
         'Other photo 2',
       ]);
       const links = within(other).getAllByRole('link');
-      expect(links[0]).toHaveAttribute('target', '_blank');
-      expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
+      for (const link of links) {
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      }
       expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
         'Open other photo 1 in a new tab',
         'Open other photo 2 in a new tab',
