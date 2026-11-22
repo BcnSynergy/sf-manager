@@ -4,10 +4,12 @@ import { InspectableElementModule } from '../inspectable-element/inspectable-ele
 import { OrganizationProfileModule } from '../organization-profile/organization-profile.module';
 import { ReviewTemplateModule } from '../review-template/review-template.module';
 import { UsersModule } from '../users/users.module';
+import { REVIEW_PHOTO_REPOSITORY } from './application/ports/review-photo.repository.port';
 import { REVIEW_SESSION_REPOSITORY } from './application/ports/review-session.repository.port';
 import { USER_DIRECTORY } from './application/ports/user-directory.port';
 import { REVIEW_DOCUMENT_NAME_DIRECTORY } from './application/ports/review-document-name-directory.port';
 import { PrismaReviewSessionRepository } from './infrastructure/persistence/prisma-review-session.repository';
+import { PrismaReviewPhotoRepository } from './infrastructure/persistence/prisma-review-photo.repository';
 import { PrismaUserDirectory } from './infrastructure/persistence/prisma-user-directory';
 import { PrismaReviewDocumentNameDirectory } from './infrastructure/persistence/prisma-review-document-name-directory';
 import { SessionAccessService } from './application/services/session-access.service';
@@ -25,6 +27,11 @@ import { ReadReviewSessionUseCase } from './application/use-cases/read-review-se
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
 import { CompleteReviewSessionUseCase } from './application/use-cases/complete-review-session.use-case';
+import { UploadReviewPhotoUseCase } from './application/use-cases/upload-review-photo.use-case';
+import { ListReviewPhotosUseCase } from './application/use-cases/list-review-photos.use-case';
+import { ReadReviewPhotoUseCase } from './application/use-cases/read-review-photo.use-case';
+import { DeleteReviewPhotoUseCase } from './application/use-cases/delete-review-photo.use-case';
+import { ReviewPhotoController } from './presentation/review-photo.controller';
 import { ReviewSessionController } from './presentation/review-session.controller';
 import { ReviewHistoryController } from './presentation/review-history.controller';
 
@@ -63,11 +70,20 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     UsersModule,
     OrganizationProfileModule,
   ],
-  controllers: [ReviewSessionController, ReviewHistoryController],
+  controllers: [
+    ReviewSessionController,
+    ReviewPhotoController,
+    ReviewHistoryController,
+  ],
   providers: [
     {
       provide: REVIEW_SESSION_REPOSITORY,
       useClass: PrismaReviewSessionRepository,
+    },
+    // EN-164: photos of a draft session; module-local, not exported.
+    {
+      provide: REVIEW_PHOTO_REPOSITORY,
+      useClass: PrismaReviewPhotoRepository,
     },
     // review-history-company-scope/design.md Decision 5: module-local,
     // non-authorizing cross-module read — bound here, not exported (no
@@ -95,6 +111,10 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ResolveElementByCodeUseCase,
     RecordEntryUseCase,
     CompleteReviewSessionUseCase,
+    UploadReviewPhotoUseCase,
+    ListReviewPhotosUseCase,
+    ReadReviewPhotoUseCase,
+    DeleteReviewPhotoUseCase,
   ],
 })
 export class ReviewSessionModule {}

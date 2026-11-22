@@ -1,0 +1,34 @@
+# EN-164 — Review photos (slice 1)
+
+Objective: the technician attaches up to 3 photos to each element reviewed in a draft session; the review history detail shows them. Delivery: `stacked-to-main`, branches `en-164-review-photos/<NN>-<slug>` (forecast about 1300 authored lines in 3 PRs). Runners: Jest in `apps/api` (`npm test`, `npm run test:e2e`, `npm run test:integration`), Vitest in `apps/web`, `npm run format:check`.
+Locator: `odd/tasks/en-164-review-photos.md` (Engram mirror: `odd/en-164-review-photos/tasks`). Spec change: yes (user confirmed 2026-11-22).
+
+## Specs
+
+- **S1** Ownership (user chose "Al elemento revisado dentro de la sesión"): a photo belongs to one element reviewed in one review session, keyed by (review session, inspectable element), not by the `ElementReviewEntry` id, which `record-entry` regenerates on every save.
+- **S2** Storage and limits (user: "ME PARECE BIEN"): files go through the existing `FILE_STORAGE` port (`LocalFileStorage`, `api-files` volume, already in the off-site backups). The web app resizes each photo to at most 1600 px on the long side and re-encodes it as JPEG at quality 0.8 before upload (this also drops EXIF, GPS included). The API accepts only JPEG (checked by content, not by declared type), at most 2 MB, and at most 3 photos per element per session.
+- **S3** Permissions (user: "si"): only the performer of the session adds or removes photos, and only while the session is a draft; a completed session's photos are fixed. Whoever may see a completed review in the history (same five roles and ADR-011 scopes) sees its photos; nobody else does.
+- **S4** Retention and document (user: "si"): photos live as long as their review; no automatic deletion. Discarding a draft deletes its photos, files included. Photos do not appear in the printable review document (FR-010) in this slice; that is registered as a new EN.
+- **S5** UI (user: "si" to the slice scope): (1) while reviewing an element, an "Add photo" control: on mobile it opens the camera (`capture="environment"`), on desktop a file picker; (2) compress, upload, show thumbnails, remove while the session is a draft, at most 3 per element; (3) the review history detail shows the photos next to each element.
+- **S6** Specs: `review-session-ui` drops its photo/attachment and camera prohibitions and gains the photo control; `review-session-management` gains the photo rules (S1-S4); `review-history` and `review-history-ui` gain reading the photos. Every user-facing string has EN, ES and CA translations.
+
+## Tasks
+
+| ID  | Specs          | Route                        | Status              | Commit |
+| --- | -------------- | ---------------------------- | ------------------- | ------ |
+| T1  | S1-S4, S6      | delegated (context backstop) | done (checks green) |        |
+| T2  | S2, S3, S5, S6 | inline                       | pending             |        |
+| T3  | S3, S4, S5, S6 | inline                       | pending             |        |
+
+- T1 (PR 1/3, API): migration (`ReviewPhoto` table), domain rules, upload / list / read / delete routes for a draft, discard deletes the files, `review-session-management` spec.
+- T2 (PR 2/3, web field flow): compression, add/remove control and thumbnails on the element page, `review-session-ui` spec, i18n.
+- T3 (PR 3/3, history): read route for a completed session behind the history access service, photos in `ReviewHistoryDetailPage`, `review-history` and `review-history-ui` specs, new EN for photos in the document, EN-164 to Done.
+
+Risk: items 1 (migration, new table), 2 (permissions and file serving) and 4 (the 3-photo limit under concurrent uploads): independent fresh-context review per PR.
+
+## Log
+
+- **L1** (2026-11-22, user): "entonces podemos hacer EN-164". Decisions, each proposed by Claude and accepted by the user: ownership "Al elemento revisado dentro de la sesión"; storage and limits "ME PARECE BIEN"; permissions "si"; retention, no document photos, and slice scope "si"; spec change "si".
+- **L2** Map (explorer): `FILE_STORAGE` port `put/get/delete` (`shared/application/ports/file-storage.port.ts`), keys `[a-z0-9-]` segments; logo upload is the model (`upload-organization-logo.use-case.ts`, `logo-file.interceptor.ts`, `logo-upload-error.filter.ts`; GET served with `no-store`, `default-src 'none'; sandbox`, `nosniff`). Performer and draft checks: `session-access.service.ts` `loadForActor`, `upsertEntry` guard `status='draft'`. Discard is a hard delete with DB cascades, so files must be deleted by the use case. History reads go through `review-history-access.service.ts` `loadCompletedForActor`; the document-logo route (`review-history.controller.ts`) is the model for a gated file read. Next: T1.
+- **L3** T1 delegated to one bounded writer (Writer trigger (b), context backstop: the parent session is long). Design passed to it: `ReviewPhoto` table keyed by (session, element); `addToDraft` locks the session row (`FOR UPDATE`), checks draft and count in one transaction (limit holds under concurrent uploads); file `put` before the row, quiet delete on failure; routes POST/GET list under `review-sessions/:sessionId/elements/:elementId/photos`, GET/DELETE `review-sessions/:sessionId/photos/:photoId`; discard deletes files after the cascade.
+- **L4** T1 written by the delegated writer, covering S1-S4 and the `review-session-management` part of S6. Writer checks: `npm test` 1875 passed, `test:e2e` 607 passed (20 in `review-photos.e2e-spec.ts`), `test:integration` 304 passed (9 for the photo repository), typecheck and lint clean. RED observed for the use cases (missing module) and the concurrency rule (without `FOR UPDATE`, 8 concurrent adds gave 8 rows instead of 3); the adapter, e2e and spec were written after the code (GREEN only). Deviations: `coded-error.ts` accepts 413; the JPEG check reuses `detectLogoFormat`; the review-history e2e suite overrides the photo repository (discard now reads photo keys); the performer can read a photo of their own completed session. Parent spot check: `npm run test:e2e -- review-photos` 20 passed. Size: about 1020 code lines, 1830 test lines, 150 spec lines.

@@ -40,6 +40,8 @@ import { INSPECTABLE_ELEMENT_REPOSITORY } from '../src/modules/inspectable-eleme
 import { InMemoryInspectableElementRepository } from '../src/modules/inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
 import { REVIEW_SESSION_REPOSITORY } from '../src/modules/review-session/application/ports/review-session.repository.port';
 import { InMemoryReviewSessionRepository } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-session.repository';
+import { REVIEW_PHOTO_REPOSITORY } from '../src/modules/review-session/application/ports/review-photo.repository.port';
+import { InMemoryReviewPhotoRepository } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-photo.repository';
 import {
   USER_DIRECTORY,
   type UserDirectory,
@@ -237,6 +239,10 @@ async function buildApp(seed: {
     .useValue(elementRepository)
     .overrideProvider(REVIEW_SESSION_REPOSITORY)
     .useValue(sessionRepository)
+    // EN-164: discard reads the session's photo keys; the real adapter
+    // would need the stubbed Prisma.
+    .overrideProvider(REVIEW_PHOTO_REPOSITORY)
+    .useValue(new InMemoryReviewPhotoRepository(sessionRepository))
     .overrideProvider(USER_DIRECTORY)
     .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
     .overrideProvider(MAINTENANCE_COMPANY_LOOKUP)
