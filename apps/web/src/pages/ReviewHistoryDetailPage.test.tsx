@@ -401,6 +401,36 @@ describe('ReviewHistoryDetailPage', () => {
     });
   });
 
+  // EN-229: a detail response that arrives after the route has moved on
+  // never replaces the detail of the session now in the URL.
+  it('shows the current session after a fast route change, even when an older detail response arrives last', async () => {
+    let resolveB: (value: typeof detail) => void = () => {};
+    mockedReadReviewHistory.mockImplementation((id) =>
+      id === 'session-b'
+        ? new Promise((resolve) => {
+            resolveB = resolve;
+          })
+        : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+      { initialEntries: ['/review-history/session-a'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByText('completed-session-a');
+
+    await act(() => router.navigate('/review-history/session-b'));
+    await act(() => router.navigate('/review-history/session-c'));
+    await screen.findByText('completed-session-c');
+    await act(async () => {
+      resolveB({ ...detail, id: 'session-b', completedAt: 'completed-session-b' });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('completed-session-c')).toBeInTheDocument();
+    expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+  });
+
   // EN-164 S5 (T3): the photos of a completed review next to each element.
   describe('photos', () => {
     const photos = [
