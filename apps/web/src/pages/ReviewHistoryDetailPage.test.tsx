@@ -492,6 +492,26 @@ describe('ReviewHistoryDetailPage', () => {
       expect(screen.queryAllByRole('img')).toHaveLength(0);
     });
 
+    it("never shows a previous session's photo error note after the route moves to another session", async () => {
+      mockedReadReviewHistory.mockImplementation((id) =>
+        Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === SESSION_ID ? Promise.reject(new ApiError(0)) : new Promise(() => {}),
+      );
+      const router = createMemoryRouter(
+        [{ path: '/review-history/:sessionId', element: <ReviewHistoryDetailPage /> }],
+        { initialEntries: [`/review-history/${SESSION_ID}`] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByTestId('review-history-detail-photos-error');
+
+      await act(() => router.navigate('/review-history/session-2'));
+
+      expect(await screen.findByText('completed-session-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-history-detail-photos-error')).not.toBeInTheDocument();
+    });
+
     it('offers no control to add or remove a photo', async () => {
       mockedReadReviewHistory.mockResolvedValue(detail);
       mockedListPhotos.mockResolvedValue(photos);

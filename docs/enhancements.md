@@ -1226,6 +1226,13 @@ content type`). Today that is the only 415 it raises, but a future one
   a separate "other photos" group, or block completion while a photo's
   element is outside the universe. Origin: `en-164-review-photos` PR 3/3
   fresh review W-1, 2026-11-22.
+- **EN-229** (web): `ReviewHistoryDetailPage` has no guard against a stale
+  detail response. Moving from session A to B to C, with B's response
+  arriving after C's, shows B's record under C's URL (the photos follow B,
+  so they stay consistent with the record shown). Present before EN-164;
+  add an `active` guard or tag the detail with its id, as the photos
+  already are. Origin: `en-164-review-photos` PR 3/3 pre-merge fresh review
+  S-3, 2026-11-22.
 - **EN-227** (feature): the printable review document (FR-010,
   `review-document`, `review-document-ui`) shows no photos. EN-164 left them
   out of this slice on purpose: the history detail view shows them, the
