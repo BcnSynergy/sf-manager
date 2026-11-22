@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/client';
@@ -54,33 +54,41 @@ export function ReviewHistoryDetailPage() {
   const [errorMessageKey, setErrorMessageKey] = useState<string>('common.error.network');
   const [photosResult, setPhotosResult] = useState<PhotosResult | null>(null);
 
-  const loadDetail = useCallback(() => {
+  // EN-229: `active` drops a response that arrives after the route has moved
+  // to another session, so an older detail never replaces the current one.
+  useEffect(() => {
+    let active = true;
     if (sessionId === undefined) {
       // Mirrors ReviewSessionDetailPage.tsx's identical guard: every
       // setState call must live inside a promise continuation, even on
       // this synchronous branch, to satisfy the react-hooks
       // no-setState-in-effect rule.
-      return Promise.resolve().then(() => {
-        setErrorMessageKey('common.error.network');
-        setLoadState('error');
+      void Promise.resolve().then(() => {
+        if (active) {
+          setErrorMessageKey('common.error.network');
+          setLoadState('error');
+        }
       });
+    } else {
+      readReviewHistory(sessionId)
+        .then((loaded) => {
+          if (active) {
+            setDetail(loaded);
+            setLoadState('loaded');
+          }
+        })
+        .catch((error: unknown) => {
+          if (active) {
+            const apiError = error instanceof ApiError ? error : new ApiError(0);
+            setErrorMessageKey(mapApiErrorToMessageKey(apiError));
+            setLoadState('error');
+          }
+        });
     }
-
-    return readReviewHistory(sessionId)
-      .then((loaded) => {
-        setDetail(loaded);
-        setLoadState('loaded');
-      })
-      .catch((error: unknown) => {
-        const apiError = error instanceof ApiError ? error : new ApiError(0);
-        setErrorMessageKey(mapApiErrorToMessageKey(apiError));
-        setLoadState('error');
-      });
+    return () => {
+      active = false;
+    };
   }, [sessionId]);
-
-  useEffect(() => {
-    void loadDetail();
-  }, [loadDetail]);
 
   // EN-164 S5 (T3): the photos load once the review itself has loaded (a
   // review the caller cannot open needs no photo request), and on their own:
