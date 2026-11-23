@@ -874,6 +874,29 @@ describe('session change', () => {
       expect(screen.queryByText('community-session-b')).not.toBeInTheDocument();
     });
 
+    it('drops a failure for a session the view has already left', async () => {
+      let rejectA: (reason: unknown) => void = () => {};
+      mockedReadReviewDocument.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((_resolve, reject) => {
+              rejectA = reject;
+            })
+          : Promise.resolve({ ...document, id, communityName: `community-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+
+      rerender(<ReviewDocumentView sessionId="session-b" />);
+      await screen.findByText('community-session-b');
+
+      await act(async () => {
+        rejectA(new ApiError(404));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('community-session-b')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-document-unreachable')).not.toBeInTheDocument();
+    });
+
     it("never shows the previous document's photos while the next document's photo list is pending", async () => {
       mockedReadReviewDocument.mockImplementation((id) =>
         Promise.resolve({ ...recordDocument, id, communityName: `community-${id}` }),

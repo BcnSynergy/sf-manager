@@ -368,7 +368,9 @@ export function ReviewDocumentPage() {
 
 // Exported for tests only: they change `sessionId` on one mounted view to
 // pin the guards below (EN-232 out-of-order document, EN-227 photo session
-// tag), which the page's remount alone no longer exercises.
+// tag), which the page's remount alone no longer exercises. The view does
+// not reset its own state on a `sessionId` change; it relies on the page's
+// key for that.
 export function ReviewDocumentView({ sessionId }: { sessionId: string | undefined }) {
   const { t, i18n } = useTranslation();
 
