@@ -108,6 +108,39 @@ describe('ScanCodeDialog (EN-163)', () => {
     expect(onDetected).not.toHaveBeenCalled();
   });
 
+  it('does not report a code read that finishes after a cancel', async () => {
+    const { stream } = fakeStream();
+    getUserMedia.mockResolvedValue(stream);
+    let finishRead: (value: string) => void = () => undefined;
+    const read = vi.fn().mockReturnValue(new Promise<string>((resolve) => (finishRead = resolve)));
+    mockedCreateReader.mockResolvedValue({ read });
+
+    const { onDetected, onClose } = renderDialog();
+    await waitFor(() => expect(read).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await act(async () => {
+      finishRead('AB12CD34EF');
+    });
+
+    expect(onClose).toHaveBeenCalled();
+    expect(onDetected).not.toHaveBeenCalled();
+  });
+
+  it('stops the camera when the dialog is cancelled with Esc or the back gesture', async () => {
+    const { stream, track } = fakeStream();
+    getUserMedia.mockResolvedValue(stream);
+    mockedCreateReader.mockResolvedValue({ read: vi.fn().mockResolvedValue(null) });
+
+    const { onDetected, onClose } = renderDialog();
+    await waitFor(() => expect(mockedCreateReader).toHaveBeenCalled());
+
+    fireEvent(screen.getByTestId('scan-code-dialog'), new Event('cancel'));
+
+    expect(track.stop).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDetected).not.toHaveBeenCalled();
+  });
+
   it('stops a camera that starts after the dialog was closed', async () => {
     const { stream, track } = fakeStream();
     let grant: (value: MediaStream) => void = () => undefined;
