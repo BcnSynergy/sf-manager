@@ -103,7 +103,7 @@ project's Engram memory on 2026-10-09.
   closes the tab and ends the session as any other request does. Thumbnails
   still load on page load, like the organization logo. Origin:
   `en-164-review-photos` PR 2/3 fresh review W-2 and PR 3/3 S-1, 2026-11-22.
-  Resolved by `td-54-photo-session-refresh` (PR pending), 2026-11-23.
+  Resolved by `td-54-photo-session-refresh` (PR #457), 2026-11-23.
 
 - **TD-51**: The root `package.json` (and the lockfile's root entry) now
   declares the Node engine as `^24.15.0 || >=26`, the range the NestJS 12 dev
