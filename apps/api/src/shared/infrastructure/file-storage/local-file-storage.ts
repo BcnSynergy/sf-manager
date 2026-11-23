@@ -1,7 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { FileStorage } from '../../application/ports/file-storage.port';
+import type {
+  FileStorage,
+  StoredFile,
+} from '../../application/ports/file-storage.port';
 
 // Lowercase segments separated by single slashes, with an optional
 // extension on the last one: no `..`, no absolute path, no empty segment.
@@ -40,6 +52,33 @@ export class LocalFileStorage implements FileStorage {
 
   async delete(key: string): Promise<void> {
     await rm(this.pathFor(key), { force: true });
+  }
+
+  // A temporary file of a put in progress (or one interrupted by a crash)
+  // has a name that is not a valid key, so it is never listed: only
+  // complete files are.
+  async list(directory: string): Promise<StoredFile[]> {
+    const directoryPath = this.pathFor(directory);
+    let entries: Dirent[];
+    try {
+      entries = await readdir(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    const files: StoredFile[] = [];
+    for (const entry of entries) {
+      const key = `${directory}/${entry.name}`;
+      if (!entry.isFile() || !KEY_PATTERN.test(key)) continue;
+      try {
+        const { mtime } = await stat(join(directoryPath, entry.name));
+        files.push({ key, storedAt: mtime });
+      } catch (error) {
+        // Deleted between the listing and the stat: nothing to list.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+    }
+    return files;
   }
 
   private pathFor(key: string): string {

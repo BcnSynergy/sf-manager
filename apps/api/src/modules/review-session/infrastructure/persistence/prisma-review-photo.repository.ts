@@ -44,6 +44,15 @@ function toPhoto(row: Row): ReviewPhoto {
 export class PrismaReviewPhotoRepository implements ReviewPhotoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>> {
+    if (storageKeys.length === 0) return new Set();
+    const rows = await this.prisma.reviewPhoto.findMany({
+      where: { storageKey: { in: storageKeys } },
+      select: { storageKey: true },
+    });
+    return new Set(rows.map((row) => row.storageKey));
+  }
+
   // Locks the row and returns its status, or null when it does not exist.
   private async lockSession(
     tx: Prisma.TransactionClient,

@@ -57,6 +57,12 @@ export interface ReviewPhotoRepository {
   discardDraftWithPhotoKeys(
     reviewSessionId: string,
   ): Promise<DiscardReviewSessionResult>;
+
+  // EN-222: the subset of `storageKeys` that some photo row references, in
+  // any session and status. The orphan file sweep deletes only the others.
+  // Not scoped to a session: the sweep is a system task, never reached by a
+  // request.
+  findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>>;
 }
 
 export const REVIEW_PHOTO_REPOSITORY = Symbol('REVIEW_PHOTO_REPOSITORY');

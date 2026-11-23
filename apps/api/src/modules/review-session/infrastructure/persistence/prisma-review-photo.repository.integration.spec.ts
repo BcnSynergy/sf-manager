@@ -504,6 +504,35 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     }
   });
 
+  // EN-222: the orphan file sweep keeps every key a row references, in any
+  // session, draft or completed.
+  it('reports which storage keys a row references, in draft and completed sessions', async () => {
+    const draftId = await createDraft();
+    const completedId = await createDraft();
+    const elementId = await createElement();
+    const inDraft = photo(draftId, elementId);
+    const inCompleted = photo(completedId, elementId);
+    await photos.addToDraft(inDraft, 3);
+    await photos.addToDraft(inCompleted, 3);
+    await expect(sessions.complete(completedId, new Date())).resolves.toBe(
+      true,
+    );
+    const orphanKey = `review-photos/${idGenerator.generate()}.jpg`;
+
+    const referenced = await photos.findReferencedStorageKeys([
+      inDraft.storageKey,
+      orphanKey,
+      inCompleted.storageKey,
+    ]);
+
+    expect([...referenced].sort()).toEqual(
+      [inDraft.storageKey, inCompleted.storageKey].sort(),
+    );
+    await expect(photos.findReferencedStorageKeys([])).resolves.toEqual(
+      new Set(),
+    );
+  });
+
   it('keeps the element FK as RESTRICT: an element with photos cannot be hard-deleted', async () => {
     const sessionId = await createDraft();
     const elementId = await createElement();
