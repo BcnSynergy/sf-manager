@@ -1217,20 +1217,17 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
-- **EN-232** (web): `ReviewDocumentPage` has the two gaps EN-229 and
-  EN-230 closed on the review history detail. Its document read
-  (`loadDocument`) does not go back to the loading state when the route
-  moves to another session, and it has no guard against a stale response,
-  so document A can stay on screen under B's URL while B loads, or replace
-  B if A's response arrives last. While B loads, A's document stays shown
-  with print enabled (its photo answer matches A's id), so printing at B's
-  URL prints A; an earlier error or unreachable state also stays on screen.
-  The photo list already drops other sessions' answers (EN-227). Not seen failing; same fix as EN-229/EN-230
-  (an `active` guard, or a view keyed on the session id). Origin:
-  `en-231-photos-loading-note` fresh review N-8, 2026-11-23.
+- **EN-233** (web): `ReviewHistoryDetailView` guards its detail read's
+  failure branch with `active` (EN-229), but no test pins that guard: a
+  late failure for session A, arriving after B has loaded on one mounted
+  view, would replace B's record with A's error if the guard were removed.
+  Add one rerender test with A rejected late, as `ReviewDocumentView` has
+  since EN-232. Not seen failing (the guard is in place). Origin:
+  `en-232-document-reset` fresh review W-1, 2026-11-23.
 
 ## Done
 
+- **EN-232** (web): `ReviewDocumentPage` did not go back to its loading state when the route moved to another session, and its document read had no guard against a stale response. While B loaded, A's document (or an earlier error or unreachable message) stayed on screen under B's URL, with print enabled for A, and A's response arriving last could replace B. The page now renders its view keyed on the session id, so a session change mounts a fresh view that starts loading, and the document read runs in an effect with an `active` guard. Two page tests navigate A to B with B pending and check the loading state, with no document, print control or unreachable message of A (both failed before the change). The view is exported, and three tests change `sessionId` on one mounted view to pin the document guard on success and on failure and the EN-227 photo session tag (each fails when its guard is removed). Same fix as EN-229/EN-230 on the review history detail. Done in `en-232-document-reset` (PR #455). Origin: `en-231-photos-loading-note` fresh review N-8, 2026-11-23.
 - **EN-231** (web): the review document disabled its print control until the photo list arrived (EN-227), but the browser's own print shortcut (Ctrl+P) still worked while the list was pending and printed the document with no photos and no note. While the list is pending, the record region now shows a printed note saying the photos are loading; it goes once the list is answered or fails. The maintainer chose the note over accepting the gap. Two page tests pin the note while pending and its removal on success and on failure (both failed before the change), and the existing route-change test now checks the note returns for the new document. Done in `en-231-photos-loading-note` (PR #454; spec `review-document-ui`). Origin: `en-227-document-photos` fresh review S-4, 2026-11-22.
 - **EN-230** (web): `ReviewHistoryDetailPage` did not go back to its loading state when the route moved to another session, so while B loaded, A's record and photos (or an earlier error) stayed on screen under B's URL. The page now renders its view keyed on the session id, so a session change mounts a fresh view that starts loading. Two page tests navigate A to B with B pending and check the loading state, with no record, photo or error of A (both failed before the change). Because the remount alone now keeps an old response off screen, the view is exported and two tests change `sessionId` on one mounted view, so the EN-229 detail guard and the photo session tag stay pinned (each fails when its guard is removed). Done in `en-230-history-detail-reset` (PR #453). Origin: `en-229-stale-history-detail` fresh review S-1, 2026-11-22.
 - **EN-228** (web): a photo whose element has no entry in the review (the element was deactivated or deleted between the upload and the completion) was listed by `GET /review-history/:sessionId/photos` but shown nowhere. The review history detail and the printable document now show such photos in one "Other photos" group after the entries ("Other photo N"; thumbnails with links on the history detail, plain images in the document), also when the review has no entry. The maintainer chose this over blocking completion. Done in `en-228-other-photos` (PR #452; specs `review-history-ui`, `review-document-ui`). Origin: `en-164-review-photos` PR 3/3 fresh review W-1 and `en-227-document-photos` fresh review W-2, 2026-11-22.

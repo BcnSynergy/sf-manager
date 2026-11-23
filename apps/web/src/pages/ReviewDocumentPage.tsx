@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { ApiError } from '../api/client';
@@ -358,46 +358,67 @@ function RecordRegion({
   );
 }
 
+// EN-232: keyed on the session id, so moving to another session mounts a
+// fresh view that starts in its loading state; the previous document, its
+// photos or its error never stay on screen (or printable) under the new URL.
 export function ReviewDocumentPage() {
-  const { t, i18n } = useTranslation();
   const { sessionId } = useParams<{ sessionId: string }>();
+  return <ReviewDocumentView key={sessionId} sessionId={sessionId} />;
+}
+
+// Exported for tests only: they change `sessionId` on one mounted view to
+// pin the guards below (EN-232 out-of-order document, EN-227 photo session
+// tag), which the page's remount alone no longer exercises. The view does
+// not reset its own state on a `sessionId` change; it relies on the page's
+// key for that.
+export function ReviewDocumentView({ sessionId }: { sessionId: string | undefined }) {
+  const { t, i18n } = useTranslation();
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [document, setDocument] = useState<ReviewDocument | null>(null);
   const [errorMessageKey, setErrorMessageKey] = useState<string>('common.error.network');
   const [photosResult, setPhotosResult] = useState<PhotosResult | null>(null);
 
-  const loadDocument = useCallback(() => {
+  // EN-232: `active` drops a response that arrives after the view has moved
+  // to another session, so an older document never replaces the current one.
+  useEffect(() => {
+    let active = true;
     if (sessionId === undefined) {
       // Every setState call must live inside a promise continuation, even
       // on this synchronous guard clause — mirrors
       // ReviewHistoryDetailPage.tsx's identical guard (react-hooks
       // no-setState-in-effect rule).
-      return Promise.resolve().then(() => {
-        setErrorMessageKey('common.error.network');
-        setLoadState('error');
-      });
-    }
-
-    return readReviewDocument(sessionId)
-      .then((loaded) => {
-        setDocument(loaded);
-        setLoadState('loaded');
-      })
-      .catch((error: unknown) => {
-        const apiError = error instanceof ApiError ? error : new ApiError(0);
-        if (apiError.status === HTTP_NOT_FOUND) {
-          setLoadState('unreachable');
-          return;
+      void Promise.resolve().then(() => {
+        if (active) {
+          setErrorMessageKey('common.error.network');
+          setLoadState('error');
         }
-        setErrorMessageKey(mapApiErrorToMessageKey(apiError));
-        setLoadState('error');
       });
+    } else {
+      readReviewDocument(sessionId)
+        .then((loaded) => {
+          if (active) {
+            setDocument(loaded);
+            setLoadState('loaded');
+          }
+        })
+        .catch((error: unknown) => {
+          if (!active) {
+            return;
+          }
+          const apiError = error instanceof ApiError ? error : new ApiError(0);
+          if (apiError.status === HTTP_NOT_FOUND) {
+            setLoadState('unreachable');
+            return;
+          }
+          setErrorMessageKey(mapApiErrorToMessageKey(apiError));
+          setLoadState('error');
+        });
+    }
+    return () => {
+      active = false;
+    };
   }, [sessionId]);
-
-  useEffect(() => {
-    void loadDocument();
-  }, [loadDocument]);
 
   // EN-227: the photos load once the document itself has loaded (a document
   // the caller cannot open needs no photo request), through the history

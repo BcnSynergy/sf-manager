@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewHistoryApi from '../api/review-history';
-import { ReviewDocumentPage } from './ReviewDocumentPage';
+import { ReviewDocumentPage, ReviewDocumentView } from './ReviewDocumentPage';
 
 // Only the fetch is mocked: the logo URL helper stays real, so the tests
 // see the address the browser would request.
@@ -795,5 +795,128 @@ describe('print control', () => {
     await screen.findByTestId('review-document-content');
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('data-print-hide');
+  });
+});
+
+// EN-232: moving to another session starts that document from its loading
+// state; the previous document, or its error, never stays on screen (or
+// printable) under the new URL.
+describe('session change', () => {
+  function renderRoutedPage() {
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId/document', element: <ReviewDocumentPage /> }],
+      { initialEntries: [`/review-history/${SESSION_ID}/document`] },
+    );
+    render(<RouterProvider router={router} />);
+    return router;
+  }
+
+  it('shows the loading state, with no previous document or print control, while the next document loads', async () => {
+    mockedReadReviewDocument.mockImplementation((id) =>
+      id === SESSION_ID
+        ? Promise.resolve({ ...document, communityName: 'community-session-1' })
+        : new Promise(() => {}),
+    );
+    const router = renderRoutedPage();
+    await screen.findByText('community-session-1');
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    expect(screen.getByTestId('review-document-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-document-content')).not.toBeInTheDocument();
+    expect(screen.queryByText('community-session-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('review-document-print-button')).not.toBeInTheDocument();
+  });
+
+  it('shows the loading state, not the previous unreachable message, while the next document loads', async () => {
+    mockedReadReviewDocument.mockImplementation((id) =>
+      id === SESSION_ID ? Promise.reject(new ApiError(404)) : new Promise(() => {}),
+    );
+    const router = renderRoutedPage();
+    await screen.findByTestId('review-document-unreachable');
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    expect(screen.getByTestId('review-document-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-document-unreachable')).not.toBeInTheDocument();
+  });
+
+  // The page remounts its view on a session change, so these tests change
+  // `sessionId` on one mounted view to pin the guards the remount alone
+  // no longer exercises.
+  describe('one mounted view', () => {
+    function renderView(sessionId: string) {
+      return render(<ReviewDocumentView sessionId={sessionId} />);
+    }
+
+    it('drops a document response for a session the view has already left', async () => {
+      let resolveB: (value: reviewHistoryApi.ReviewDocument) => void = () => {};
+      mockedReadReviewDocument.mockImplementation((id) =>
+        id === 'session-b'
+          ? new Promise((resolve) => {
+              resolveB = resolve;
+            })
+          : Promise.resolve({ ...document, id, communityName: `community-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByText('community-session-a');
+
+      rerender(<ReviewDocumentView sessionId="session-b" />);
+      rerender(<ReviewDocumentView sessionId="session-c" />);
+      await screen.findByText('community-session-c');
+
+      await act(async () => {
+        resolveB({ ...document, id: 'session-b', communityName: 'community-session-b' });
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('community-session-c')).toBeInTheDocument();
+      expect(screen.queryByText('community-session-b')).not.toBeInTheDocument();
+    });
+
+    it('drops a failure for a session the view has already left', async () => {
+      let rejectA: (reason: unknown) => void = () => {};
+      mockedReadReviewDocument.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((_resolve, reject) => {
+              rejectA = reject;
+            })
+          : Promise.resolve({ ...document, id, communityName: `community-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+
+      rerender(<ReviewDocumentView sessionId="session-b" />);
+      await screen.findByText('community-session-b');
+
+      await act(async () => {
+        rejectA(new ApiError(404));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('community-session-b')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-document-unreachable')).not.toBeInTheDocument();
+    });
+
+    it("never shows the previous document's photos while the next document's photo list is pending", async () => {
+      mockedReadReviewDocument.mockImplementation((id) =>
+        Promise.resolve({ ...recordDocument, id, communityName: `community-${id}` }),
+      );
+      mockedListPhotos.mockImplementation((id) =>
+        id === 'session-a'
+          ? Promise.resolve([
+              { id: 'p1', inspectableElementId: 'e-aa', createdAt: '2026-09-01T00:01:00.000Z' },
+            ])
+          : new Promise(() => {}),
+      );
+      const { rerender } = renderView('session-a');
+      await screen.findByTestId('review-document-record-photos-e-aa');
+
+      rerender(<ReviewDocumentView sessionId="session-b" />);
+      await screen.findByText('community-session-b');
+
+      expect(screen.queryAllByRole('img')).toHaveLength(0);
+      expect(screen.getByTestId('review-document-record-photos-loading')).toBeInTheDocument();
+      expect(screen.getByTestId('review-document-print-button')).toBeDisabled();
+    });
   });
 });
