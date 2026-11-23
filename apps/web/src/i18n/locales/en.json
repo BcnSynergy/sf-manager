@@ -610,6 +610,7 @@
       "unreviewedLabel": "Not reviewed:",
       "photoAlt": "Photo {{number}} of {{element}}",
       "photosLoadError": "The photos of this review could not be loaded.",
+      "photosLoading": "Loading the photos of this review...",
       "otherPhotosTitle": "Other photos",
       "otherPhotoAlt": "Other photo {{number}}"
     },

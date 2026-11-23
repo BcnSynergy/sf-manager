@@ -677,6 +677,52 @@ describe('record photos', () => {
     expect(screen.getByTestId('review-document-print-button')).toBeEnabled();
   });
 
+  it('prints a loading note while the photo list is pending, and drops it once the list arrives', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    let resolvePhotos: (value: typeof photos) => void = () => {};
+    mockedListPhotos.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePhotos = resolve;
+      }),
+    );
+
+    renderPage();
+    const note = await screen.findByTestId('review-document-record-photos-loading');
+
+    expect(note).toHaveTextContent('Loading the photos of this review...');
+    expect(note).not.toHaveAttribute('data-print-hide');
+    expect(note.closest('[data-print-hide]')).toBeNull();
+
+    await act(async () => {
+      resolvePhotos(photos);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByTestId('review-document-record-photos-loading')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-document-record-photos-e-aa')).toBeInTheDocument();
+  });
+
+  it('replaces the loading note with the failure note when the photos cannot be loaded', async () => {
+    mockedReadReviewDocument.mockResolvedValue(recordDocument);
+    let rejectPhotos: (reason: unknown) => void = () => {};
+    mockedListPhotos.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectPhotos = reject;
+      }),
+    );
+
+    renderPage();
+    await screen.findByTestId('review-document-record-photos-loading');
+
+    await act(async () => {
+      rejectPhotos(new ApiError(0));
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByTestId('review-document-record-photos-loading')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-document-record-photos-error')).toBeInTheDocument();
+  });
+
   it("never shows a previous document's photos, and keeps print disabled, after the route moves to another document", async () => {
     mockedReadReviewDocument.mockImplementation((id) =>
       Promise.resolve({ ...recordDocument, id, communityName: `community-${id}` }),
@@ -697,6 +743,9 @@ describe('record photos', () => {
     expect(await screen.findByText('community-session-2')).toBeInTheDocument();
     expect(mockedListPhotos).toHaveBeenLastCalledWith('session-2');
     expect(screen.queryAllByRole('img')).toHaveLength(0);
+    // EN-231: the previous document's answered list never hides the new
+    // document's loading note.
+    expect(screen.getByTestId('review-document-record-photos-loading')).toBeInTheDocument();
     expect(screen.getByTestId('review-document-print-button')).toBeDisabled();
   });
 

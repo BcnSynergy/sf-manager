@@ -575,6 +575,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     // EN-227: photos in the record.
     'reviewDocument.record.photoAlt',
     'reviewDocument.record.photosLoadError',
+    // EN-231: printed note while the photo list is pending.
+    'reviewDocument.record.photosLoading',
     // EN-228: photos whose element has no entry.
     'reviewDocument.record.otherPhotosTitle',
     'reviewDocument.record.otherPhotoAlt',

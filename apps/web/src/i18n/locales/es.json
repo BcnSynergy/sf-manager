@@ -610,6 +610,7 @@
       "unreviewedLabel": "No revisado:",
       "photoAlt": "Foto {{number}} de {{element}}",
       "photosLoadError": "No se han podido cargar las fotos de esta revisión.",
+      "photosLoading": "Cargando las fotos de esta revisión...",
       "otherPhotosTitle": "Otras fotos",
       "otherPhotoAlt": "Otra foto {{number}}"
     },
