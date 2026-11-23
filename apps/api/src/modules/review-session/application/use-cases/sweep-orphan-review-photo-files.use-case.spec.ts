@@ -116,6 +116,25 @@ describe('SweepOrphanReviewPhotoFilesUseCase', () => {
     );
   });
 
+  it('logs a zero count, with no warning, when no file is old enough', async () => {
+    await storeFile('review-photos/new.jpg', minutesAgo(5));
+
+    await expect(useCase.execute()).resolves.toBe(0);
+
+    expect(log).toHaveBeenCalledWith('Swept 0 orphan review photo file(s)');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('counts no photo of a discarded session as a row', async () => {
+    seedPhoto('discarded-session', 'gone');
+    await storeFile('review-photos/gone.jpg', minutesAgo(120));
+
+    await expect(useCase.execute()).resolves.toBe(0);
+
+    expect(storage.keys()).toEqual(['review-photos/gone.jpg']);
+    expect(warn).toHaveBeenCalled();
+  });
+
   it('only looks under review-photos/', async () => {
     await storeFile('logos/old.png', minutesAgo(60 * 24 * 30));
 

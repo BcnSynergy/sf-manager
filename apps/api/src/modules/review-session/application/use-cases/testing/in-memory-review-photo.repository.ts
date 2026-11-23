@@ -35,8 +35,8 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
     this.photos.push(photo);
   }
 
-  // Rows of a discarded session are gone (ON DELETE CASCADE), so only
-  // visible photos count.
+  // Both read only visible photos: rows of a discarded session are gone
+  // (ON DELETE CASCADE).
   hasAnyPhoto(): Promise<boolean> {
     return Promise.resolve(this.all().length > 0);
   }

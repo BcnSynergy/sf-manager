@@ -543,4 +543,17 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
       prisma.inspectableElement.delete({ where: { id: elementId } }),
     ).rejects.toThrow();
   });
+
+  // EN-222: the sweep's mass-delete guard. Runs last in this file: the
+  // integration run is in band (one suite at a time), and no later test here
+  // needs photo rows.
+  it('reports no photo once every photo row is gone', async () => {
+    const sessionId = await createDraft();
+    await photos.addToDraft(photo(sessionId, await createElement()), 3);
+    await expect(photos.hasAnyPhoto()).resolves.toBe(true);
+
+    await prisma.reviewPhoto.deleteMany({});
+
+    await expect(photos.hasAnyPhoto()).resolves.toBe(false);
+  });
 });
