@@ -72,9 +72,35 @@ describe('ReviewPhotoSweepScheduler', () => {
   });
 
   it('does not keep the process alive', () => {
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
     scheduler.onApplicationBootstrap();
 
-    expect(jest.getTimerCount()).toBe(1);
-    expect(scheduler.hasRefedTimer()).toBe(false);
+    const timer = setTimeoutSpy.mock.results[0].value as NodeJS.Timeout;
+    expect(timer.hasRef()).toBe(false);
+  });
+
+  it('never starts a sweep while the previous one is still running', async () => {
+    execute.mockReturnValueOnce(new Promise(() => undefined));
+    scheduler.onApplicationBootstrap();
+
+    await jest.advanceTimersByTimeAsync(
+      REVIEW_PHOTO_SWEEP_FIRST_DELAY_MS + REVIEW_PHOTO_SWEEP_INTERVAL_MS * 3,
+    );
+
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('schedules nothing more when shut down during a sweep', async () => {
+    let finish: (deleted: number) => void = () => undefined;
+    execute.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    scheduler.onApplicationBootstrap();
+    await jest.advanceTimersByTimeAsync(REVIEW_PHOTO_SWEEP_FIRST_DELAY_MS);
+
+    scheduler.onApplicationShutdown();
+    finish(0);
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(jest.getTimerCount()).toBe(0);
   });
 });

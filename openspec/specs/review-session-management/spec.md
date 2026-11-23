@@ -431,7 +431,11 @@ inserted) safe. A file that a row references MUST NEVER be deleted by the
 sweep, whatever its age. The sweep MUST run a few minutes after the API
 starts and then every 24 hours, MUST NOT delay start-up or requests, and
 MUST log how many files it deleted. A file it cannot delete, or a sweep that
-fails, MUST be logged and MUST NOT stop later sweeps.
+fails, MUST be logged and MUST NOT stop later sweeps. When old files exist
+but there is no `ReviewPhoto` row at all, the sweep MUST delete nothing and
+MUST log a warning: that state points at a database that does not match the
+files (for example an empty one after a failed restore), and deleting would
+wipe every photo.
 
 #### Scenario: An old file with no row is deleted
 
@@ -451,6 +455,13 @@ fails, MUST be logged and MUST NOT stop later sweeps.
 - GIVEN a photo stored a year ago whose row still exists
 - WHEN the sweep runs
 - THEN its file MUST be kept
+
+#### Scenario: Nothing is deleted when no photo row exists
+
+- GIVEN files under `review-photos/` stored days ago
+- AND no `ReviewPhoto` row exists at all
+- WHEN the sweep runs
+- THEN no file MUST be deleted and a warning MUST be logged
 
 #### Scenario: A failed delete does not stop the sweep
 

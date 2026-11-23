@@ -531,6 +531,7 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     await expect(photos.findReferencedStorageKeys([])).resolves.toEqual(
       new Set(),
     );
+    await expect(photos.hasAnyPhoto()).resolves.toBe(true);
   });
 
   it('keeps the element FK as RESTRICT: an element with photos cannot be hard-deleted', async () => {

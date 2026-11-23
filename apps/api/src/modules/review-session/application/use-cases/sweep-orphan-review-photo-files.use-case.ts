@@ -24,7 +24,8 @@ export const ORPHAN_PHOTO_FILE_MIN_AGE_MS = 60 * 60 * 1000;
 // delete that failed after a photo delete or a discard (those are logged,
 // never thrown). A row is never removed here, so a referenced file is never
 // touched. A file that cannot be deleted is logged and the others are still
-// tried. Returns how many files were deleted.
+// tried. When no photo row exists at all, nothing is deleted (see below).
+// Returns how many files were deleted.
 @Injectable()
 export class SweepOrphanReviewPhotoFilesUseCase {
   private readonly logger = new Logger(SweepOrphanReviewPhotoFilesUseCase.name);
@@ -41,6 +42,21 @@ export class SweepOrphanReviewPhotoFilesUseCase {
     const oldEnough = (await this.fileStorage.list(REVIEW_PHOTO_DIRECTORY))
       .filter((file) => file.storedAt.getTime() < cutoff)
       .map((file) => file.key);
+    if (oldEnough.length === 0) {
+      this.logger.log('Swept 0 orphan review photo file(s)');
+      return 0;
+    }
+    // Old files but no photo row at all: the API is most likely running on a
+    // database that does not match the files volume (an empty one after a
+    // failed restore, a reset dev database). Deleting would wipe every file,
+    // so nothing is deleted until a photo row exists.
+    if (!(await this.photoRepository.hasAnyPhoto())) {
+      this.logger.warn(
+        `Skipped the orphan review photo file sweep: ${oldEnough.length} old file(s) but no photo row at all ` +
+          '(is the API on the database restored with these files?)',
+      );
+      return 0;
+    }
     // Read after the listing: a row inserted meanwhile belongs to a file
     // that was already stored, so it is seen here and kept.
     const referenced =

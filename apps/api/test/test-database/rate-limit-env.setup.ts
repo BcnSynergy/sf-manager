@@ -1,3 +1,14 @@
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// EN-222: test apps never use the dev upload directory (apps/api/storage,
+// the default outside production). Booting AppModule also starts the orphan
+// review photo file sweep, which would delete dev photo files that the test
+// database has no rows for if an app stayed up long enough.
+process.env.FILE_STORAGE_DIR = join(tmpdir(), 'sf-manager-test-files');
+mkdirSync(process.env.FILE_STORAGE_DIR, { recursive: true });
+
 // Once the Postgres-backed throttler storage is wired (login-rate-limit-
 // hardening PR 3), login counters persist in the hermetic database for the
 // whole integration run. Specs that call POST /auth/login from the default

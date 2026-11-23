@@ -37,6 +37,10 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
 
   // Rows of a discarded session are gone (ON DELETE CASCADE), so only
   // visible photos count.
+  hasAnyPhoto(): Promise<boolean> {
+    return Promise.resolve(this.all().length > 0);
+  }
+
   findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>> {
     const referenced = new Set(this.all().map((photo) => photo.storageKey));
     return Promise.resolve(

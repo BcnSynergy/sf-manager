@@ -68,11 +68,13 @@ describe('SweepOrphanReviewPhotoFilesUseCase', () => {
   });
 
   it('deletes an old file no row references and reports the count', async () => {
+    seedPhoto('session-1', 'kept');
+    await storeFile('review-photos/kept.jpg', minutesAgo(10));
     await storeFile('review-photos/orphan.jpg', minutesAgo(120));
 
     await expect(useCase.execute()).resolves.toBe(1);
 
-    expect(storage.keys()).toEqual([]);
+    expect(storage.keys()).toEqual(['review-photos/kept.jpg']);
     expect(log).toHaveBeenCalledWith('Swept 1 orphan review photo file(s)');
   });
 
@@ -98,6 +100,22 @@ describe('SweepOrphanReviewPhotoFilesUseCase', () => {
     expect(storage.keys()).toEqual(['review-photos/kept.jpg']);
   });
 
+  it('deletes nothing when no photo row exists at all, and warns', async () => {
+    await storeFile('review-photos/a.jpg', minutesAgo(120));
+    await storeFile('review-photos/b.jpg', minutesAgo(60 * 24 * 30));
+
+    await expect(useCase.execute()).resolves.toBe(0);
+
+    expect(storage.keys()).toEqual([
+      'review-photos/a.jpg',
+      'review-photos/b.jpg',
+    ]);
+    expect(warn).toHaveBeenCalledWith(
+      'Skipped the orphan review photo file sweep: 2 old file(s) but no photo row at all ' +
+        '(is the API on the database restored with these files?)',
+    );
+  });
+
   it('only looks under review-photos/', async () => {
     await storeFile('logos/old.png', minutesAgo(60 * 24 * 30));
 
@@ -120,6 +138,7 @@ describe('SweepOrphanReviewPhotoFilesUseCase', () => {
       storage,
       new FixedClock(NOW),
     );
+    seedPhoto('session-1', 'kept');
     await storeFile('review-photos/a.jpg', minutesAgo(120));
     await storeFile('review-photos/b.jpg', minutesAgo(120));
 

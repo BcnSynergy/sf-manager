@@ -53,6 +53,13 @@ export class PrismaReviewPhotoRepository implements ReviewPhotoRepository {
     return new Set(rows.map((row) => row.storageKey));
   }
 
+  async hasAnyPhoto(): Promise<boolean> {
+    const row = await this.prisma.reviewPhoto.findFirst({
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   // Locks the row and returns its status, or null when it does not exist.
   private async lockSession(
     tx: Prisma.TransactionClient,

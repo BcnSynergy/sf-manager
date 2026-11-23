@@ -37,11 +37,6 @@ export class ReviewPhotoSweepScheduler
     this.timer = undefined;
   }
 
-  // For the test that pins the unref'd timer.
-  hasRefedTimer(): boolean {
-    return this.timer?.hasRef() ?? false;
-  }
-
   private schedule(delayMs: number): void {
     if (this.stopped) return;
     this.timer = setTimeout(() => void this.run(), delayMs);

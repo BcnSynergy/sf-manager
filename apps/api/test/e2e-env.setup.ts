@@ -1,3 +1,14 @@
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// EN-222: test apps never use the dev upload directory (apps/api/storage,
+// the default outside production). Booting AppModule also starts the orphan
+// review photo file sweep, which would delete dev photo files that the test
+// database has no rows for if an app stayed up long enough.
+process.env.FILE_STORAGE_DIR = join(tmpdir(), 'sf-manager-test-files');
+mkdirSync(process.env.FILE_STORAGE_DIR, { recursive: true });
+
 // The e2e suites log in once per user (some seed a dozen users) inside a
 // single app, which would exhaust the default 10-attempt login limit.
 // Raise it for every suite; login-rate-limit.e2e-spec.ts deletes this
