@@ -743,6 +743,9 @@ describe('record photos', () => {
     expect(await screen.findByText('community-session-2')).toBeInTheDocument();
     expect(mockedListPhotos).toHaveBeenLastCalledWith('session-2');
     expect(screen.queryAllByRole('img')).toHaveLength(0);
+    // EN-231: the previous document's answered list never hides the new
+    // document's loading note.
+    expect(screen.getByTestId('review-document-record-photos-loading')).toBeInTheDocument();
     expect(screen.getByTestId('review-document-print-button')).toBeDisabled();
   });
 

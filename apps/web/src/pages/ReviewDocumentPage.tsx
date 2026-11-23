@@ -314,7 +314,7 @@ function RecordRegion({
           leaves its photos out without saying so. */}
       {/* EN-231: printed too. The print control waits for the photo list,
           but the browser's own print shortcut does not, so a document
-          printed before the list arrives says its photos are missing. */}
+          printed before the list arrives says its photos are still loading. */}
       {photosPending && (
         <p data-testid="review-document-record-photos-loading">
           {t('reviewDocument.record.photosLoading')}

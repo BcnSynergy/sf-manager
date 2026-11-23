@@ -1217,6 +1217,15 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-232** (web): `ReviewDocumentPage` has the two gaps EN-229 and
+  EN-230 closed on the review history detail. Its document read
+  (`loadDocument`) does not go back to the loading state when the route
+  moves to another session, and it has no guard against a stale response,
+  so document A can stay on screen under B's URL while B loads, or replace
+  B if A's response arrives last. The photo list already drops other
+  sessions' answers (EN-227). Not seen failing; same fix as EN-229/EN-230
+  (an `active` guard, or a view keyed on the session id). Origin:
+  `en-231-photos-loading-note` fresh review N-8, 2026-11-23.
 
 ## Done
 
