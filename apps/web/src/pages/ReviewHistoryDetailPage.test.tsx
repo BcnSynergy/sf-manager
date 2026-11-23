@@ -475,6 +475,29 @@ describe('ReviewHistoryDetailPage', () => {
       expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
     });
 
+    // EN-233: pins the guard on the failure branch of the detail read.
+    it('drops a failure for a session the view has already left', async () => {
+      let rejectA: (reason: unknown) => void = () => {};
+      mockedReadReviewHistory.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((_resolve, reject) => {
+              rejectA = reject;
+            })
+          : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+
+      rerenderView(rerender, 'session-b');
+      await screen.findByText('completed-session-b');
+      await act(async () => {
+        rejectA(new ApiError(0));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('completed-session-b')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-history-detail-error')).not.toBeInTheDocument();
+    });
+
     it("never shows the previous session's photos next to the next session's record", async () => {
       mockedReadReviewHistory.mockImplementation((id) =>
         Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
