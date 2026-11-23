@@ -433,7 +433,8 @@ describe('ReviewHistoryDetailPage', () => {
 
   // EN-230 review W-1: the page remounts its view on a session change, so
   // these tests change `sessionId` on ONE mounted view to keep the view's own
-  // guards pinned (EN-229 detail guard, EN-164 photo session tag).
+  // guards pinned (EN-229 detail guard on success and, since EN-233, on
+  // failure; EN-164 photo session tag).
   describe('view guards without a remount', () => {
     function renderView(sessionId: string) {
       return render(
@@ -473,6 +474,29 @@ describe('ReviewHistoryDetailPage', () => {
 
       expect(screen.getByText('completed-session-c')).toBeInTheDocument();
       expect(screen.queryByText('completed-session-b')).not.toBeInTheDocument();
+    });
+
+    // EN-233: pins the guard on the failure branch of the detail read.
+    it('drops a failure for a session the view has already left', async () => {
+      let rejectA: (reason: unknown) => void = () => {};
+      mockedReadReviewHistory.mockImplementation((id) =>
+        id === 'session-a'
+          ? new Promise((_resolve, reject) => {
+              rejectA = reject;
+            })
+          : Promise.resolve({ ...detail, id, completedAt: `completed-${id}` }),
+      );
+      const { rerender } = renderView('session-a');
+
+      rerenderView(rerender, 'session-b');
+      await screen.findByText('completed-session-b');
+      await act(async () => {
+        rejectA(new ApiError(0));
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('completed-session-b')).toBeInTheDocument();
+      expect(screen.queryByTestId('review-history-detail-error')).not.toBeInTheDocument();
     });
 
     it("never shows the previous session's photos next to the next session's record", async () => {
