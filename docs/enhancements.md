@@ -936,25 +936,6 @@ content type`). Today that is the only 415 it raises, but a future one
   `cross-env`), so a hoisting change breaks one line, not six. Origin:
   `nest-12` (PR #370) Gentle AI readability review, 2026-11-08.
 
-- **EN-163** (web, FR-007): Scan an element's QR label with the device
-  camera during a review session, as an alternative to typing the code.
-  A "Scan" control fills the same code field, so manual entry stays the
-  fallback and the API and data model do not change. Needs a spec change
-  in `review-session-ui`: the overview ("Codes are typed, not scanned"),
-  the out-of-scope list ("camera / QR scanning") and the requirement
-  "Manual Code Entry Only", which forbids opening a camera, asking for
-  camera permission, or any scanning library. Update the FR-007 status
-  ("no camera scanning") when it ships. Camera access (`getUserMedia`)
-  needs a secure context (production is HTTPS through Caddy; a phone on
-  the LAN dev server over HTTP is not). The native `BarcodeDetector` API is
-  not enough on its own: it is unsupported in Firefox and disabled by
-  default in Safari, so in practice no browser on iPhone has it (iOS
-  browsers use WebKit), and Chromium wires it up only where the OS has a
-  decoder (Android, macOS, ChromeOS). Plan a polyfill (for example a
-  ZXing-based one) behind feature detection. Also correct the "on web (no
-  native camera)" premise in `docs/architecture/domain-model-inspections.md`.
-  Independent of EN-164. Origin: product discussion, 2026-11-09.
-
 - **EN-165** (web): two notes on the "Cannot reach the server" retry
   (`session-restore-unavailable`). `AuthProvider`'s session check turns
   every unavailable cause (network error, 429, 5xx, unavailable refresh,
@@ -1220,6 +1201,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-163** (web, FR-007): a technician can now scan an element's QR label with the device camera during a review session. A Scan control next to the code field (shown only where the browser can open a camera, which needs HTTPS) opens the rear camera in a dialog; the code read opens that element exactly like a typed code (the maintainer chose opening the element over only filling the field), and typed entry stays the fallback. The browser's native `BarcodeDetector` is used where it reads QR codes; elsewhere (Firefox, Safari, every iOS browser) `jsqr` loads on demand in its own chunk. The maintainer chose jsQR (plain JavaScript, unmaintained since 2021, no dependencies) over a ZXing WebAssembly reader, which the production CSP (`deployment` spec) would block without adding `'wasm-unsafe-eval'`. No API or data model change. Done in `en-163-qr-scan` (PR #458; specs `review-session-ui`, `review-session-management`). Origin: product discussion, 2026-11-09.
 - **EN-233** (web): `ReviewHistoryDetailView` guarded its detail read's failure branch with `active` (EN-229), but no test pinned that guard: with it removed, a late failure for session A, arriving after B had loaded on one mounted view, would replace B's record with A's error, and every test still passed. A view rerender test now rejects A late and checks that B's record stays with no error (it fails when the guard is removed). Test-only. Done in `en-233-history-failure-guard` (PR #456). Origin: `en-232-document-reset` fresh review W-1, 2026-11-23.
 - **EN-232** (web): `ReviewDocumentPage` did not go back to its loading state when the route moved to another session, and its document read had no guard against a stale response. While B loaded, A's document (or an earlier error or unreachable message) stayed on screen under B's URL, with print enabled for A, and A's response arriving last could replace B. The page now renders its view keyed on the session id, so a session change mounts a fresh view that starts loading, and the document read runs in an effect with an `active` guard. Two page tests navigate A to B with B pending and check the loading state, with no document, print control or unreachable message of A (both failed before the change). The view is exported, and three tests change `sessionId` on one mounted view to pin the document guard on success and on failure and the EN-227 photo session tag (each fails when its guard is removed). Same fix as EN-229/EN-230 on the review history detail. Done in `en-232-document-reset` (PR #455). Origin: `en-231-photos-loading-note` fresh review N-8, 2026-11-23.
 - **EN-231** (web): the review document disabled its print control until the photo list arrived (EN-227), but the browser's own print shortcut (Ctrl+P) still worked while the list was pending and printed the document with no photos and no note. While the list is pending, the record region now shows a printed note saying the photos are loading; it goes once the list is answered or fails. The maintainer chose the note over accepting the gap. Two page tests pin the note while pending and its removal on success and on failure (both failed before the change), and the existing route-change test now checks the note returns for the new document. Done in `en-231-photos-loading-note` (PR #454; spec `review-document-ui`). Origin: `en-227-document-photos` fresh review S-4, 2026-11-22.

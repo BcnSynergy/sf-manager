@@ -118,7 +118,7 @@ export function discardReviewSession(sessionId: string): Promise<undefined> {
 }
 
 // `code` is uppercased by the caller before this is invoked (review-session-ui
-// spec "Manual Code Entry Only" — codes are accepted case-insensitively
+// spec "Code Entry, Typed or Scanned" — codes are accepted case-insensitively
 // where the underlying alphabet permits; ELEMENT_CODE_ALPHABET is
 // uppercase-only, so uppercasing client-side before the request is the
 // whole of "case-insensitive" here) — this function does not re-normalize,

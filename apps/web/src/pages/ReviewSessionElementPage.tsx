@@ -20,12 +20,12 @@ const ANSWER_VALUES: AnswerValue[] = ['YES', 'NO', 'NOT_APPLICABLE'];
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
-// review-session-ui spec "Manual Code Entry Only": this route is reached
-// exclusively by typing a code on ReviewSessionDetailPage.tsx (or clicking a
-// gap link built from a server-supplied code) and resolving it through
-// GET .../elements/:code — no camera or QR scanning resolves a code. The
-// only camera use is the photo control (EN-164, ReviewPhotosSection), whose
-// file input may open the camera to take a photo of the element.
+// review-session-ui spec "Code Entry, Typed or Scanned": this route is
+// reached by typing or scanning (EN-163) a code on
+// ReviewSessionDetailPage.tsx (or clicking a gap link built from a
+// server-supplied code) and resolving it through GET .../elements/:code. A
+// scanned code arrives here exactly like a typed one. The photo control
+// (EN-164, ReviewPhotosSection) only takes photos and never resolves a code.
 //
 // review-session-ui spec "Rejected Codes Get One Uniform Message": whatever
 // the resolve call's underlying rejection cause was (unknown, foreign

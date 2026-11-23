@@ -13,12 +13,14 @@ import { PageHeader } from '../components/PageHeader';
 import { Alert } from '../components/Alert';
 import { useAlertMessage } from '../components/use-alert-message';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
+import { canScan } from '../review-session/qr-reader';
+import { ScanCodeDialog } from '../review-session/ScanCodeDialog';
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'error';
 
-// review-session-ui spec "Manual Code Entry Only": a plain text input, no
-// camera/scanner control of any kind (deliberately excluded — see the
-// module-level comment on ReviewSessionElementPage.tsx). Submitting
+// review-session-ui spec "Code Entry, Typed or Scanned": a plain text
+// input, plus a Scan control (EN-163) where the browser can open a camera.
+// A scanned code goes through the same openCode() as a typed one. Submitting
 // navigates to the code's answer route rather than resolving inline —
 // design.md Decision 10's "four distinct, reload-survivable web routes":
 // resolution (and the uniform-rejection-message rendering, spec "Rejected
@@ -48,6 +50,7 @@ export function ReviewSessionDetailPage() {
   const [session, setSession] = useState<ReviewSessionDetail | null>(null);
 
   const [code, setCode] = useState('');
+  const [scanning, setScanning] = useState(false);
   const {
     messageKey: codeError,
     key: codeErrorAlertKey,
@@ -105,9 +108,20 @@ export function ReviewSessionDetailPage() {
 
   function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    openCode(code);
+  }
+
+  // EN-163: a scanned code is opened exactly like a typed one.
+  function handleScanned(scanned: string) {
+    setScanning(false);
+    setCode(scanned);
+    openCode(scanned);
+  }
+
+  function openCode(raw: string) {
     clearCodeError();
 
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = raw.trim().toUpperCase();
     if (trimmed === '') {
       showCodeError('reviewSession.detail.codeValidationError');
       return;
@@ -365,8 +379,25 @@ export function ReviewSessionDetailPage() {
             >
               {t('reviewSession.detail.codeSubmitLabel')}
             </button>
+            {canScan() && (
+              <button
+                type="button"
+                className="sf-btn sf-btn-ghost"
+                onClick={() => {
+                  clearCodeError();
+                  setScanning(true);
+                }}
+                data-testid="review-session-detail-scan"
+              >
+                {t('reviewSession.detail.scanLabel')}
+              </button>
+            )}
           </form>
         </section>
+      )}
+
+      {scanning && (
+        <ScanCodeDialog open onDetected={handleScanned} onClose={() => setScanning(false)} />
       )}
 
       {/* One dialog mounted at a time — same collision-avoidance rationale
