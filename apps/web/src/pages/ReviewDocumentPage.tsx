@@ -284,10 +284,12 @@ function RecordEntry({
 function RecordRegion({
   document,
   photos,
+  photosPending,
   photosFailed,
 }: {
   document: ReviewDocument;
   photos: readonly ReviewHistoryPhoto[];
+  photosPending: boolean;
   photosFailed: boolean;
 }) {
   const { t } = useTranslation();
@@ -310,6 +312,14 @@ function RecordRegion({
       <h2>{t('reviewDocument.record.title')}</h2>
       {/* EN-227: printed, not print-hidden, so a printed document never
           leaves its photos out without saying so. */}
+      {/* EN-231: printed too. The print control waits for the photo list,
+          but the browser's own print shortcut does not, so a document
+          printed before the list arrives says its photos are missing. */}
+      {photosPending && (
+        <p data-testid="review-document-record-photos-loading">
+          {t('reviewDocument.record.photosLoading')}
+        </p>
+      )}
       {photosFailed && (
         <p data-testid="review-document-record-photos-error">
           {t('reviewDocument.record.photosLoadError')}
@@ -461,6 +471,7 @@ export function ReviewDocumentPage() {
         <RecordRegion
           document={document}
           photos={currentPhotos?.state === 'loaded' ? currentPhotos.photos : []}
+          photosPending={currentPhotos === null}
           photosFailed={currentPhotos?.state === 'error'}
         />
         <SignatureFooter document={document} locale={i18n.language} />

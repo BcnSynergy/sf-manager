@@ -85,7 +85,12 @@ routes, which have exactly the document's scope; the document read itself
 is unchanged. When they cannot be loaded, the document MUST still render
 in full, and one note saying the photos of the review could not be loaded
 MUST appear in the record region and MUST be printed, so a printed
-document never leaves its photos out silently. A photo whose element has
+document never leaves its photos out silently. While the photo list has
+not been answered yet, one note saying the photos of the review are
+loading MUST appear in the record region and MUST be printed, and it MUST
+go once the list is answered or fails, because the browser's own print
+command can print the page while the print control is still disabled
+(EN-231). A photo whose element has
 no entry in the record (the element left the session's set of elements
 between the upload and the completion) MUST be printed in one "Other
 photos" group after the entries, oldest first, as a plain image with the
@@ -146,6 +151,12 @@ is no such group when every photo has its entry (EN-228).
 - GIVEN a completed session whose photos cannot be loaded
 - WHEN its document page renders and is printed
 - THEN every entry MUST still render, and one note saying the photos could not be loaded MUST appear in the printed output
+
+#### Scenario: A pending photo list is printed as loading
+
+- GIVEN a document page whose photo list has not been answered yet
+- WHEN it is printed through the browser's own print command
+- THEN one note saying the photos are loading MUST appear in the printed output, and it MUST be gone once the photo list is answered or fails
 
 #### Scenario: Entries are rendered in the server's deterministic order
 
