@@ -12,6 +12,7 @@ import {
 import type { ReviewSessionErrorCode } from '../api/review-session';
 import { Alert, StatusRegion } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PhotoLink } from '../components/PhotoLink';
 import { useAlertMessage } from '../components/use-alert-message';
 import type { MessageKey } from '../i18n/message-key';
 import { compressPhoto } from './compress-photo';
@@ -161,10 +162,8 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
         <ul className="sf-photo-list" data-testid="review-photos-list">
           {photos.map((photo, index) => (
             <li key={photo.id} className="sf-photo-item">
-              <a
+              <PhotoLink
                 href={reviewPhotoUrl(sessionId, photo.id)}
-                target="_blank"
-                rel="noopener noreferrer"
                 aria-label={t('reviewSession.photos.openLabel', { number: index + 1 })}
                 data-testid={`review-photo-link-${photo.id}`}
               >
@@ -174,7 +173,7 @@ export function ReviewPhotosSection({ sessionId, elementId, readOnly }: Props) {
                   alt={t('reviewSession.photos.alt', { number: index + 1 })}
                   data-testid={`review-photo-${photo.id}`}
                 />
-              </a>
+              </PhotoLink>
               {!readOnly && (
                 <button
                   type="button"

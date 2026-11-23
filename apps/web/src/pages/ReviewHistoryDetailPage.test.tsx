@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
@@ -673,6 +673,50 @@ describe('ReviewHistoryDetailPage', () => {
       expect(
         within(screen.getByTestId('review-history-detail-photos-e1')).getAllByRole('img'),
       ).toHaveLength(1);
+    });
+
+    // TD-54: both photo groups open through PhotoLink, which checks the
+    // session before loading the photo in the new tab.
+    it('opens an entry photo and an "Other photos" photo after checking the session', async () => {
+      mockedReadReviewHistory.mockResolvedValue(detail);
+      mockedListPhotos.mockResolvedValue([
+        photos[0],
+        { id: 'p8', inspectableElementId: 'e-gone', createdAt: '2026-09-01T00:40:00.000Z' },
+      ]);
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));
+      const tabs = [0, 1].map(() => ({ opener: window, location: { href: '' }, close: vi.fn() }));
+      const openSpy = vi.spyOn(window, 'open');
+      tabs.forEach((tab) => openSpy.mockReturnValueOnce(tab as unknown as Window));
+
+      try {
+        renderPage();
+        const entryLink = within(
+          await screen.findByTestId('review-history-detail-photos-e1'),
+        ).getByRole('link');
+        const otherLink = within(
+          screen.getByTestId('review-history-detail-other-photos'),
+        ).getByRole('link');
+
+        expect(fireEvent.click(entryLink)).toBe(false);
+        expect(fireEvent.click(otherLink)).toBe(false);
+
+        await waitFor(() =>
+          expect(tabs.map((tab) => tab.location.href)).toEqual([
+            '/api/review-history/session-1/photos/p1',
+            '/api/review-history/session-1/photos/p8',
+          ]),
+        );
+        expect(openSpy).toHaveBeenCalledWith('', '_blank');
+        expect(fetchSpy.mock.calls.map(([url]) => String(url))).toEqual([
+          expect.stringMatching(/\/auth\/me$/),
+          expect.stringMatching(/\/auth\/me$/),
+        ]);
+      } finally {
+        fetchSpy.mockRestore();
+        openSpy.mockRestore();
+      }
     });
 
     it('shows no "Other photos" group when every photo has its entry', async () => {

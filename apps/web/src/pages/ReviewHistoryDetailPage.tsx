@@ -10,6 +10,7 @@ import {
   type ReviewHistoryPhoto,
 } from '../api/review-history';
 import { PageHeader } from '../components/PageHeader';
+import { PhotoLink } from '../components/PhotoLink';
 import { mapAnswerValueToLabelKey } from '../review-session/answer-value-labels';
 import { mapApiErrorToMessageKey } from '../review-session/error-messages';
 
@@ -286,10 +287,8 @@ export function ReviewHistoryDetailView({ sessionId }: { sessionId: string | und
                     {(photosByElementId.get(entry.inspectableElementId) ?? []).map(
                       (photo, index) => (
                         <li key={photo.id} className="sf-photo-item">
-                          <a
+                          <PhotoLink
                             href={reviewHistoryPhotoUrl(detail.id, photo.id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             aria-label={t('reviewHistory.detail.photoOpenLabel', {
                               number: index + 1,
                             })}
@@ -299,7 +298,7 @@ export function ReviewHistoryDetailView({ sessionId }: { sessionId: string | und
                               src={reviewHistoryPhotoUrl(detail.id, photo.id)}
                               alt={t('reviewHistory.detail.photoAlt', { number: index + 1 })}
                             />
-                          </a>
+                          </PhotoLink>
                         </li>
                       ),
                     )}
@@ -315,10 +314,8 @@ export function ReviewHistoryDetailView({ sessionId }: { sessionId: string | und
             <ul className="sf-photo-list">
               {otherPhotos.map((photo, index) => (
                 <li key={photo.id} className="sf-photo-item">
-                  <a
+                  <PhotoLink
                     href={reviewHistoryPhotoUrl(detail.id, photo.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     aria-label={t('reviewHistory.detail.otherPhotoOpenLabel', {
                       number: index + 1,
                     })}
@@ -328,7 +325,7 @@ export function ReviewHistoryDetailView({ sessionId }: { sessionId: string | und
                       src={reviewHistoryPhotoUrl(detail.id, photo.id)}
                       alt={t('reviewHistory.detail.otherPhotoAlt', { number: index + 1 })}
                     />
-                  </a>
+                  </PhotoLink>
                 </li>
               ))}
             </ul>

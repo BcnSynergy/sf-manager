@@ -51,21 +51,6 @@ project's Engram memory on 2026-10-09.
 
 ### Low
 
-- **TD-54**: Review photos (EN-164) are read by plain browser requests, an
-  `<img>` thumbnail and a link that opens the full photo in a new tab, so
-  they rely on the access cookie alone. That cookie lasts as long as the
-  access token (`JWT_EXPIRES_IN`, 15 minutes by default), and `apiFetch`'s
-  silent refresh does not cover these requests. A technician who leaves the
-  element page open past that and then taps a thumbnail gets a raw 401 JSON
-  body in the new tab instead of the photo. The organization logo uses the
-  same pattern, but its image is fetched on page load, not opened later.
-  The review history detail (EN-164 PR 3/3) shows photos the same way, so a
-  reader who leaves it open past that gets the same 401.
-  Fix by refreshing the session before opening the photo, or by serving it
-  through a fetch that refreshes. Origin: `en-164-review-photos` PR 2/3
-  fresh review W-2, 2026-11-22; history detail added by PR 3/3 fresh review
-  S-1.
-
 - **TD-32**: CI scope deferred by `ci-pipeline` (ADR-006): coverage
   upload, matrix builds, Playwright, extra caching, parallel jobs, and
   SHA-pinned actions. The API typecheck step landed in
@@ -107,6 +92,18 @@ project's Engram memory on 2026-10-09.
   `security-dev-alerts` triage, 2026-11-09.
 
 ## Resolved
+
+- **TD-54**: Review photos (EN-164) opened in a new tab by a plain browser
+  request that sent the access cookie alone, without `apiFetch`'s silent
+  refresh, so a page left open past the access token's lifetime showed a raw
+  401 JSON body instead of the photo. The photo links on the element page and
+  the review history detail now use `PhotoLink`: a plain click opens the tab
+  at once, checks the session with `GET /auth/me` through `apiFetch` (which
+  refreshes an expired one), then loads the photo there; a refused session
+  closes the tab and ends the session as any other request does. Thumbnails
+  still load on page load, like the organization logo. Origin:
+  `en-164-review-photos` PR 2/3 fresh review W-2 and PR 3/3 S-1, 2026-11-22.
+  Resolved by `td-54-photo-session-refresh` (PR pending), 2026-11-23.
 
 - **TD-51**: The root `package.json` (and the lockfile's root entry) now
   declares the Node engine as `^24.15.0 || >=26`, the range the NestJS 12 dev
