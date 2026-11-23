@@ -186,7 +186,8 @@ export function listReviewHistoryPhotos(sessionId: string): Promise<ReviewHistor
 }
 
 // An <img> source and a link target, not a fetch: the browser sends the
-// session cookie itself (TD-54).
+// session cookie itself. The link is a PhotoLink, which refreshes the
+// session before opening the photo (TD-54).
 export function reviewHistoryPhotoUrl(sessionId: string, photoId: string): string {
   return `${API_BASE_URL}/review-history/${sessionId}/photos/${photoId}`;
 }

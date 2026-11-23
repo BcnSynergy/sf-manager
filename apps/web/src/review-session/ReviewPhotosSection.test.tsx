@@ -268,6 +268,33 @@ describe('ReviewPhotosSection', () => {
     expect(mockedList).toHaveBeenCalledTimes(2);
   });
 
+  // TD-54: the full photo opens through PhotoLink, which checks the session
+  // before loading the photo in the new tab.
+  it('opens the full photo in a new tab after checking the session', async () => {
+    mockedList.mockResolvedValue([photo('p1')]);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const tab = { opener: window, location: { href: '' }, close: vi.fn() };
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+
+    try {
+      renderSection();
+      const link = await screen.findByTestId('review-photo-link-p1');
+
+      expect(fireEvent.click(link)).toBe(false);
+
+      await waitFor(() =>
+        expect(tab.location.href).toBe(reviewPhotosApi.reviewPhotoUrl(SESSION_ID, 'p1')),
+      );
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\/auth\/me$/);
+    } finally {
+      fetchSpy.mockRestore();
+      openSpy.mockRestore();
+    }
+  });
+
   it('names each control by its photo number and moves focus to the heading after a removal', async () => {
     mockedList.mockResolvedValue([photo('p1'), photo('p2')]);
     mockedDelete.mockResolvedValue(undefined);
