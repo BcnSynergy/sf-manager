@@ -12,10 +12,15 @@ vi.mock('../api/client', async (importOriginal) => {
 const mockedApiFetch = vi.mocked(client.apiFetch);
 const URL_OF_PHOTO = 'http://api.test/review-sessions/s1/photos/p1';
 
-type FakeTab = { opener: unknown; location: { href: string }; close: ReturnType<typeof vi.fn> };
+type FakeTab = {
+  opener: unknown;
+  closed: boolean;
+  location: { href: string };
+  close: ReturnType<typeof vi.fn>;
+};
 
 function fakeTab(): FakeTab {
-  return { opener: window, location: { href: 'about:blank' }, close: vi.fn() };
+  return { opener: window, closed: false, location: { href: 'about:blank' }, close: vi.fn() };
 }
 
 function renderLink() {
@@ -99,11 +104,46 @@ describe('PhotoLink (TD-54)', () => {
     expect(mockedApiFetch).not.toHaveBeenCalled();
   });
 
-  it('leaves a modified click to the browser', () => {
-    const notPrevented = fireEvent.click(renderLink(), { ctrlKey: true });
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta (cmd)', { metaKey: true }],
+    ['shift', { shiftKey: true }],
+    ['alt', { altKey: true }],
+    ['non-left button', { button: 1 }],
+  ])('leaves a %s click to the browser', (_name, init) => {
+    const notPrevented = fireEvent.click(renderLink(), init);
 
     expect(notPrevented).toBe(true);
     expect(openSpy).not.toHaveBeenCalled();
     expect(mockedApiFetch).not.toHaveBeenCalled();
+  });
+
+  it("leaves the click alone when the caller's onClick prevented it", () => {
+    render(
+      <PhotoLink href={URL_OF_PHOTO} onClick={(event) => event.preventDefault()} data-testid="l">
+        <span>thumb</span>
+      </PhotoLink>,
+    );
+
+    fireEvent.click(screen.getByTestId('l'));
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(mockedApiFetch).not.toHaveBeenCalled();
+  });
+
+  it('does not load the photo into a tab the user closed during the check', async () => {
+    const tab = fakeTab();
+    openSpy.mockReturnValue(tab as unknown as Window);
+    let finishCheck: (value: undefined) => void = () => undefined;
+    const check = new Promise<undefined>((resolve) => (finishCheck = resolve));
+    mockedApiFetch.mockReturnValue(check);
+
+    fireEvent.click(renderLink());
+    tab.closed = true;
+    finishCheck(undefined);
+    await check;
+    await Promise.resolve();
+
+    expect(tab.location.href).toBe('about:blank');
   });
 });

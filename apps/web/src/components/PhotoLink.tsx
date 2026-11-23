@@ -17,7 +17,10 @@ type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | '
 // one) and only then loads the photo there. A refused session closes the tab
 // and apiFetch's handler ends the session here; any other failure still
 // loads the photo, so the browser shows what went wrong. A modified click, or
-// a browser that blocks the tab, keeps the plain link behavior.
+// a browser that blocks the tab, keeps the plain link behavior. On the
+// scripted path `rel` no longer applies: the opener is cleared by hand, and
+// the photo request may carry a Referer, which only names this app to its
+// own API.
 export function PhotoLink({ href, children, onClick, ...rest }: Props) {
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     onClick?.(event);
@@ -37,18 +40,19 @@ export function PhotoLink({ href, children, onClick, ...rest }: Props) {
     }
     event.preventDefault();
     tab.opener = null;
-    apiFetch('/auth/me').then(
-      () => {
+    const load = () => {
+      // The user may have closed the blank tab while the check ran.
+      if (!tab.closed) {
         tab.location.href = href;
-      },
-      (error: unknown) => {
-        if (error instanceof ApiError && error.status === HTTP_UNAUTHORIZED) {
-          tab.close();
-        } else {
-          tab.location.href = href;
-        }
-      },
-    );
+      }
+    };
+    apiFetch('/auth/me').then(load, (error: unknown) => {
+      if (error instanceof ApiError && error.status === HTTP_UNAUTHORIZED) {
+        tab.close();
+      } else {
+        load();
+      }
+    });
   }
 
   return (

@@ -39,7 +39,8 @@ export function deleteReviewPhoto(sessionId: string, photoId: string): Promise<u
 }
 
 // The photo is an <img> source and a link target, not a fetch: the browser
-// sends the session cookie itself. A photo never changes, so its id alone
+// sends the session cookie itself. The link is a PhotoLink, which refreshes
+// the session before opening the photo (TD-54). A photo never changes, so its id alone
 // makes the URL unique.
 export function reviewPhotoUrl(sessionId: string, photoId: string): string {
   return `${API_BASE_URL}/review-sessions/${sessionId}/photos/${photoId}`;
