@@ -8,13 +8,14 @@ answer that element's questions → repeat → pause or complete, plus
 resuming and discarding a draft. This is the **first** surface in the app
 reachable by a non-`SYSTEM_ADMIN` role — both `MAINTENANCE_TECHNICIAN` and
 `COMMUNITY_REPRESENTATIVE` use the **same** flow, with no simplified
-representative variant. Codes are **typed**, not scanned. Behaviour of the
+representative variant. Codes are typed, or scanned from the element's QR
+label with the device camera (EN-163). Behaviour of the
 underlying operations is owned by `review-session-management`; permission
 and community-scope rules by `authorization`. A history list and a
 read-only historical-session view now exist, owned by the separate
 `review-history-ui` capability; the field flow described here still adds
 none of its own, and gains only a navigation entry point into that
-surface. Out of scope: camera code reading / QR scanning, offline capability of any
+surface. Out of scope: offline capability of any
 kind, per-element history views, list filtering / pagination / sorting /
 search, due-date or overdue indicators (the field flow's own views add
 none; the global navigation's Review schedule item, offered to this flow's
@@ -149,17 +150,30 @@ shown and no session MUST be started.
 - WHEN the session-start view is rendered
 - THEN each case MUST show its own distinct state, never a blank screen
 
-### Requirement: Manual Code Entry Only
+### Requirement: Code Entry, Typed or Scanned
 
-The system MUST accept an element's `code` as typed text. The UI MUST NOT
-open a camera to read a code, and MUST NOT depend on any scanning or
-device-capture library. The only camera use in the field flow is the photo
-control (see _Element Photos_), which goes through the browser's standard
-file input and MUST NOT read or resolve a code. Codes MUST be accepted
-case-insensitively where the underlying alphabet permits, and MUST be
-trimmed of surrounding whitespace before submission.
-(Previously: the UI MUST NOT open a camera or request camera permission at
-all. EN-164 adds element photos, which a phone may take with its camera.)
+The system MUST accept an element's `code` as typed text. Codes MUST be
+accepted case-insensitively where the underlying alphabet permits, and MUST
+be trimmed of surrounding whitespace before submission.
+
+Next to the code field, the system MUST offer a **Scan** control when the
+browser can open a camera (it exposes `navigator.mediaDevices.getUserMedia`,
+which needs a secure context), and MUST NOT offer it otherwise. Scan opens
+the rear camera (`facingMode: environment`) in a dialog and reads QR codes
+only. When a code is read, the system MUST stop the camera, close the
+dialog and open that element exactly as a typed and submitted code would
+(same trimming, case folding, validation and route), so a code the session
+does not accept gets the uniform rejection message. While scanning, the
+user MUST be able to cancel, which stops the camera and returns to the code
+field. A camera that is denied or fails, or a reader that cannot load,
+MUST show a message in the dialog and leave typed entry available. The
+system MUST use the browser's native barcode reader when it supports QR
+codes and otherwise load a bundled reader, served from the app's own origin
+(never a third-party host), only when Scan is used. Typed entry stays the
+fallback in every case.
+(Previously: Manual Code Entry Only. The UI MUST NOT open a camera to read
+a code, and MUST NOT depend on any scanning or device-capture library; the
+only camera use was the photo control's file input. Changed by EN-163.)
 
 #### Scenario: A code is entered by typing
 
@@ -167,13 +181,33 @@ all. EN-164 adds element photos, which a phone may take with its camera.)
 - WHEN they type an element's `code` and submit it
 - THEN the element's questions MUST be presented
 
-#### Scenario: No camera or scanner dependency exists
+#### Scenario: A scanned code opens the element
 
-- GIVEN the web app's dependencies and code after this change
-- WHEN they are inspected
-- THEN none MUST provide QR scanning or a scanning or device-capture library, and none MUST call a media-device API directly
-- AND the only camera access MUST be the photo control's file input
-  (Previously: "none MUST provide camera capture, QR scanning or a media-device permission prompt".)
+- GIVEN the user is in an open session on a device with a camera
+- WHEN they press Scan and the camera reads an element's QR label
+- THEN the camera MUST stop and the dialog MUST close
+- AND the element's questions MUST be presented, as for a typed code
+
+#### Scenario: Scan is not offered without camera support
+
+- GIVEN a browser without `navigator.mediaDevices.getUserMedia` (for
+  example a page served over plain HTTP)
+- WHEN the user is in an open session
+- THEN no Scan control MUST be shown and typed entry MUST work as before
+
+#### Scenario: A denied or failing camera is reported
+
+- GIVEN the user presses Scan
+- WHEN camera access is denied or fails, or the reader cannot load
+- THEN the dialog MUST show a message saying the camera could not be used
+- AND closing it MUST return to the code field with typed entry available
+
+#### Scenario: Cancelling stops the camera
+
+- GIVEN the scan dialog is open with the camera running
+- WHEN the user cancels
+- THEN the camera MUST stop and the dialog MUST close without opening an
+  element
 
 ### Requirement: Answer an Element's Questions
 

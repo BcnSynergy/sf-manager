@@ -212,9 +212,9 @@ identification is driven by an **app-generated `code`** instead:
   avoids ambiguity if an element is ever reassigned between communities).
   Rendered as a QR code encoding the bare `code` string itself (not a
   URL), with the `code` also printed as plain text under the QR for the
-  manual fallback. Scanning app-side looks the code up directly; on web
-  (no native camera) the same code works as a manually entered/pasted
-  lookup value. `code` is immutable once generated: it is never accepted
+  manual fallback. Scanning looks the code up directly: the web app reads the
+  QR with the device camera (EN-163), and the same code also works as a
+  manually entered/pasted lookup value. `code` is immutable once generated: it is never accepted
   on create (server-generated, like `id`) or on update (stripped by the
   write contract before reaching the use case), so there is no
   regeneration/reassignment endpoint. Printing today is single-element

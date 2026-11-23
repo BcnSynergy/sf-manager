@@ -20,8 +20,10 @@ directly is a **write-path fact**: a session records the maintenance
 company on whose behalf it was performed, frozen at performance time. Out
 of scope here: global visibility, per-element history filtering,
 scheduling / due dates / reminders (FR-009), offline operation, camera
-scanning, attachments other than review photos (EN-164, see _Photos of a
-Draft Review Session_), per-answer notes, defect records, and
+scanning on the server side (a code scanned in the web app reaches the API
+exactly like a typed one; see `review-session-ui`), attachments other
+than review photos (EN-164, see _Photos of a Draft Review Session_),
+per-answer notes, defect records, and
 notifications. Signing is completion itself (see _Completion Is the
 Signing Act_); the printable review document is owned by
 `review-document` and `review-document-ui`, not by this capability; a

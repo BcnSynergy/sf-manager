@@ -569,6 +569,16 @@ code {
   justify-content: flex-end;
 }
 
+/* EN-163: the camera preview inside the scan dialog, as wide as the dialog. */
+.sf-scan-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--ink);
+}
+
 /* A titled group of content inside a page, such as one table of a grouped
    list: full width, its h2 above its content. */
 .sf-section {

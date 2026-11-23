@@ -1,13 +1,42 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useParams } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../i18n';
 import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
+import * as qrReader from '../review-session/qr-reader';
 import { ReviewSessionDetailPage } from './ReviewSessionDetailPage';
 
 vi.mock('../api/review-session');
+vi.mock('../review-session/qr-reader', () => ({ canScan: vi.fn(() => false) }));
+// EN-163: the scan dialog itself is tested in ScanCodeDialog.test.tsx; here a
+// stand-in reports a code or cancels, as the real one would.
+vi.mock('../review-session/ScanCodeDialog', () => ({
+  ScanCodeDialog: ({
+    onDetected,
+    onClose,
+  }: {
+    onDetected: (code: string) => void;
+    onClose: () => void;
+  }) => (
+    <div data-testid="scan-dialog-stub">
+      <button type="button" onClick={() => onDetected(' ab3456789c ')}>
+        stub-detect
+      </button>
+      <button type="button" onClick={onClose}>
+        stub-cancel
+      </button>
+    </div>
+  ),
+}));
+
+const mockedCanScan = vi.mocked(qrReader.canScan);
+
+function ElementRouteStub() {
+  const { code } = useParams<{ code: string }>();
+  return <div data-testid="element-page">{code}</div>;
+}
 
 const mockedReadReviewSession = vi.mocked(reviewSessionApi.readReviewSession);
 const mockedCompleteReviewSession = vi.mocked(reviewSessionApi.completeReviewSession);
@@ -34,10 +63,7 @@ function renderPage() {
     <MemoryRouter initialEntries={[`/review-sessions/${SESSION_ID}`]}>
       <Routes>
         <Route path="/review-sessions/:sessionId" element={<ReviewSessionDetailPage />} />
-        <Route
-          path="/review-sessions/:sessionId/elements/:code"
-          element={<div data-testid="element-page">element</div>}
-        />
+        <Route path="/review-sessions/:sessionId/elements/:code" element={<ElementRouteStub />} />
         <Route
           path="/review-sessions"
           element={<div data-testid="review-sessions-page">list</div>}
@@ -95,6 +121,58 @@ describe('ReviewSessionDetailPage', () => {
     fireEvent.click(screen.getByTestId('review-session-detail-code-submit'));
 
     expect(await screen.findByTestId('element-page')).toBeInTheDocument();
+  });
+
+  // EN-163: review-session-ui "Code Entry, Typed or Scanned".
+  describe('scan', () => {
+    it('offers no Scan control when the browser cannot open a camera', async () => {
+      mockedCanScan.mockReturnValue(false);
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      await screen.findByTestId('review-session-detail-code-input');
+      expect(screen.queryByTestId('review-session-detail-scan')).not.toBeInTheDocument();
+    });
+
+    it('opens a scanned code exactly like a typed one', async () => {
+      mockedCanScan.mockReturnValue(true);
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      const scan = await screen.findByTestId('review-session-detail-scan');
+      expect(scan).toHaveTextContent('Scan');
+      expect(screen.queryByTestId('scan-dialog-stub')).not.toBeInTheDocument();
+      fireEvent.click(scan);
+      fireEvent.click(screen.getByRole('button', { name: 'stub-detect' }));
+
+      expect(await screen.findByTestId('element-page')).toHaveTextContent('AB3456789C');
+    });
+
+    it('closes the scan dialog on cancel and keeps typed entry', async () => {
+      mockedCanScan.mockReturnValue(true);
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+
+      renderPage();
+
+      fireEvent.click(await screen.findByTestId('review-session-detail-scan'));
+      fireEvent.click(screen.getByRole('button', { name: 'stub-cancel' }));
+
+      expect(screen.queryByTestId('scan-dialog-stub')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('element-page')).not.toBeInTheDocument();
+      expect(screen.getByTestId('review-session-detail-code-input')).toBeInTheDocument();
+    });
+
+    it('offers no Scan control on a completed session', async () => {
+      mockedCanScan.mockReturnValue(true);
+      mockedReadReviewSession.mockResolvedValue(completedSession);
+
+      renderPage();
+
+      await screen.findByTestId('review-session-detail-status');
+      expect(screen.queryByTestId('review-session-detail-scan')).not.toBeInTheDocument();
+    });
   });
 
   it('shows a validation error and does not navigate on an empty code submit', async () => {
