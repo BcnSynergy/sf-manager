@@ -433,7 +433,8 @@ describe('ReviewHistoryDetailPage', () => {
 
   // EN-230 review W-1: the page remounts its view on a session change, so
   // these tests change `sessionId` on ONE mounted view to keep the view's own
-  // guards pinned (EN-229 detail guard, EN-164 photo session tag).
+  // guards pinned (EN-229 detail guard on success and, since EN-233, on
+  // failure; EN-164 photo session tag).
   describe('view guards without a remount', () => {
     function renderView(sessionId: string) {
       return render(
