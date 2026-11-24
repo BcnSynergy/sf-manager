@@ -90,11 +90,11 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
   // PrismaReviewSessionRepository's mapped FK-violation behaviour.
   //
   // Fresh-context review finding M1: explicit `status !== 'draft'` guard
-  // mirroring complete()/discardDraft() below — `false` is the concurrency
+  // mirroring complete()/discardDraftWithPhotoKeys() below — `false` is the concurrency
   // backstop's mapped result (PrismaReviewSessionRepository's own `WHERE
   // status='draft'` guard), not a domain-guard throw. A fresh lookup here
   // (rather than reusing a caller-held aggregate reference) is what lets
-  // this fake observe a concurrent complete()/discardDraft() that already
+  // this fake observe a concurrent complete()/discardDraftWithPhotoKeys() that already
   // replaced the map entry.
   upsertEntry(entry: ElementReviewEntry): Promise<boolean> {
     const session = this.sessionsById.get(entry.reviewSessionId);
@@ -134,13 +134,11 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     return Promise.resolve(true);
   }
 
-  discardDraft(id: string): Promise<boolean> {
-    const session = this.sessionsById.get(id);
-    if (!session || session.status !== 'draft') {
-      return Promise.resolve(false);
-    }
+  // Test helper, not on the port (EN-224): InMemoryReviewPhotoRepository's
+  // discardDraftWithPhotoKeys checks the draft status, then deletes the
+  // session through this.
+  deleteSession(id: string): void {
     this.sessionsById.delete(id);
-    return Promise.resolve(true);
   }
 
   findCompletedInCommunities(

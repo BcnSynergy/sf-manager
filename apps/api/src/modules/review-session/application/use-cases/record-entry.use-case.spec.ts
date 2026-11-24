@@ -259,7 +259,7 @@ describe('RecordEntryUseCase', () => {
     ).rejects.toThrow(ReviewSessionNotEditableError);
   });
 
-  // Fresh-context review finding M1: unlike complete()/discardDraft(),
+  // Fresh-context review finding M1: unlike complete()/discardDraftWithPhotoKeys(),
   // upsertEntry() had no `WHERE status='draft'` guard of its own — the
   // domain-layer check above (session.recordEntry/markUnreviewed) only
   // protects the aggregate reference SessionAccess already loaded; a
@@ -279,7 +279,6 @@ describe('RecordEntryUseCase', () => {
       findDraftsByPerformer: jest.fn(),
       upsertEntry: jest.fn().mockResolvedValue(false),
       complete: jest.fn(),
-      discardDraft: jest.fn(),
       findCompletedInCommunities: jest.fn(),
       findCompletedByIdInCommunities: jest.fn(),
       findCompletedForPerformer: jest.fn(),

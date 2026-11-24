@@ -24,10 +24,12 @@ export interface ElementReviewEntryRow {
 // `InspectableElementRepository.findByIdInCommunity` precedent. There is
 // deliberately NO `findById(id)`, NO `updateById` and NO status setter:
 // `findByIdForPerformer` is the only by-id read, scoped to the performer
-// (Layer 3 of the scope check, `SessionAccess`); `complete`/`discardDraft`
-// are the only state transitions, each carrying its own `WHERE
-// status='draft'` so a lost race fails on affected-row-count rather than
-// silently mutating a completed session.
+// (Layer 3 of the scope check, `SessionAccess`); `complete` is the only
+// state transition here, carrying its own `WHERE status='draft'` so a lost
+// race fails on affected-row-count rather than silently mutating a
+// completed session. Discarding a draft is
+// `ReviewPhotoRepository.discardDraftWithPhotoKeys` (EN-164/EN-224), which
+// deletes the session under the same guard.
 export interface ReviewSessionRepository {
   // P2002 on the hand-written partial unique index
   // `ReviewSession_open_draft_key` -> OpenDraftAlreadyExistsError (adapter's
@@ -67,24 +69,17 @@ export interface ReviewSessionRepository {
   // FK-violation error.
   //
   // Fresh-context review finding M1: carries the SAME `WHERE status='draft'`
-  // guard as complete()/discardDraft() — `false` => the caller maps this to
+  // guard as complete()/discardDraftWithPhotoKeys() — `false` => the caller maps this to
   // 409 REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8). The domain-layer
   // guard the caller runs before this call (session.recordEntry/
   // markUnreviewed) only protects the aggregate reference it already holds;
-  // this is the concurrency backstop for a complete()/discardDraft() that
+  // this is the concurrency backstop for a complete()/discardDraftWithPhotoKeys() that
   // committed at the DB layer between that load and this write.
   upsertEntry(entry: ElementReviewEntry): Promise<boolean>;
 
   // `WHERE status='draft'`; false => the caller maps this to 409
   // REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8).
   complete(id: string, at: Date): Promise<boolean>;
-
-  // Hard delete (resolved 2026-09-06, design.md Interfaces/Contracts — no
-  // `deletedAt` exists on the three review tables). `WHERE status='draft'`;
-  // false => 409 REVIEW_SESSION_NOT_EDITABLE. `ElementReviewEntry`/
-  // `QuestionAnswer`'s FKs declare `ON DELETE CASCADE`, so a discarded
-  // draft's recorded entries/answers are removed with it, never orphaned.
-  discardDraft(id: string): Promise<boolean>;
 
   // review-history design.md Decision 3: four named methods, one per
   // (scope x shape) — no scope discriminant, no branching query builder.

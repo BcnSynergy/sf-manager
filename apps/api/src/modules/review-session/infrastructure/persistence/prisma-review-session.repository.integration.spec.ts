@@ -447,7 +447,7 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     expect(replaced?.entries[0].observations).toBe('Not accessible this cycle');
   });
 
-  // Fresh-context review finding M1: complete()/discardDraft() both guard
+  // Fresh-context review finding M1: complete()/discardDraftWithPhotoKeys() both guard
   // their write with `WHERE status='draft'` and treat 0 affected rows as
   // "no longer editable" — upsertEntry() had no such guard, so a concurrent
   // complete() that commits between RecordEntryUseCase's load of the

@@ -61,7 +61,7 @@ describe('InMemoryReviewSessionRepository.upsertEntry (review finding #C)', () =
     expect(stored?.entries[0].answers).toEqual([answer]);
   });
 
-  // Fresh-context review finding M1: mirrors complete()/discardDraft()'s
+  // Fresh-context review finding M1: mirrors complete()/discardDraftWithPhotoKeys()'s
   // own `WHERE status='draft'` guard — `false`, not a thrown error, is the
   // fake's contract for "the write lost a concurrency race" (the real
   // Prisma adapter's own DB-level guard makes the same distinction; see

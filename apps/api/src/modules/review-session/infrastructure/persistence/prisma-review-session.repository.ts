@@ -151,17 +151,17 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
   // `entry.reviewSessionId` (Phase 5 follow-up) — there is no separate
   // `sessionId` argument either.
   //
-  // Fresh-context review finding M1: unlike complete()/discardDraft(), this
+  // Fresh-context review finding M1: unlike complete()/discardDraftWithPhotoKeys(), this
   // method previously had NO `WHERE status='draft'` guard of its own — a
   // concurrent complete() committing between RecordEntryUseCase's load of
   // the aggregate (still draft) and this write could silently land on an
   // already-completed session. The `guard` updateMany below is that missing
   // backstop: it re-asserts `status='draft'` inside THIS transaction (the
   // SET is a no-op — same value — the WHERE clause's affected-row count is
-  // the point), so a concurrent complete()/discardDraft() that already
+  // the point), so a concurrent complete()/discardDraftWithPhotoKeys() that already
   // committed makes `guard.count` 0 and the entry write below never runs.
   // 0 affected rows for an id that still exists maps to `false` (mirrors
-  // complete()/discardDraft()'s own mapping); 0 affected rows for an id
+  // complete()/discardDraftWithPhotoKeys()'s own mapping); 0 affected rows for an id
   // that never existed at all still maps to ReviewSessionNotFoundError
   // (mirrors this method's own pre-existing FK-violation mapping below —
   // SessionAccess's callers already validated existence moments earlier, so
@@ -243,18 +243,6 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     const result = await this.prisma.reviewSession.updateMany({
       where: { id, status: 'draft' },
       data: { status: 'completed', completedAt: at },
-    });
-
-    return result.count > 0;
-  }
-
-  // Hard delete, `WHERE status='draft'` (design.md Interfaces/Contracts —
-  // no deletedAt on this table). ElementReviewEntry/QuestionAnswer's FKs
-  // declare ON DELETE CASCADE, so recorded entries/answers are removed with
-  // it at the database level.
-  async discardDraft(id: string): Promise<boolean> {
-    const result = await this.prisma.reviewSession.deleteMany({
-      where: { id, status: 'draft' },
     });
 
     return result.count > 0;

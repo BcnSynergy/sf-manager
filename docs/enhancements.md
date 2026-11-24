@@ -1162,13 +1162,6 @@ content type`). Today that is the only 415 it raises, but a future one
   deterministic version would hold the session lock from one connection
   while the other starts. Origin: `en-164-review-photos` fresh review,
   2026-11-22.
-- **EN-224** (api readability): `ReviewSessionRepository.discardDraft()` has
-  no production caller any more: the discard use case goes through
-  `ReviewPhotoRepository.discardDraftWithPhotoKeys`, which locks the session
-  and returns the photo keys. Only tests and the in-memory fake still use
-  it, so the two discard paths can drift apart. Remove it, or route its
-  tests through the new method. Origin: `en-164-review-photos` scoped fresh
-  review S-1, 2026-11-22.
 - **EN-225** (api tests): the same-performer cross-session case in
   `apps/api/test/review-photos.e2e-spec.ts` assigns the technician to the
   completion community and opens a second draft there, closing it only on
@@ -1204,6 +1197,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-224** (api readability): `ReviewSessionRepository.discardDraft()` had no production caller since EN-164 (the discard use case goes through `ReviewPhotoRepository.discardDraftWithPhotoKeys`, which locks the session and returns the photo keys), so two discard paths could drift apart. It is gone from the port and the Prisma adapter; the in-memory session fake keeps a `deleteSession` test helper outside the port for the photo fake. The attribution write-path integration test now discards through `discardDraftWithPhotoKeys`, and the photo integration case that only re-checked the cascade was dropped, since the next case checks it too. Comments now name the remaining method. No behavior change. Done in `en-224-remove-discard-draft` (PR #467). Origin: `en-164-review-photos` scoped fresh review S-1, 2026-11-22.
 - **EN-234** (review photos): the EN-222 sweep listed only complete files, so the temporary file a `LocalFileStorage.put` interrupted by a crash leaves (`review-photos/<key>.<uuid>.tmp`) was never deleted. `FileStorage` gains `deleteUnfinishedWrites(directory, startedBefore)`: the local adapter deletes, directly under the directory, only files named like a put's temporary file and older than the cutoff (complete files never), and resolves the count; the in-memory fake keeps its own unfinished writes for tests. Each sweep now calls it for `review-photos/` with the same one-hour cutoff and logs the count, before and independently of the no-row guard (a leftover is never a photo); a failure is logged and the orphan file sweep still runs. Temporary files under `logos/` are out of scope. Done in `en-234-sweep-tmp-files` (PR #466; spec `review-session-management`). Origin: `en-222-photo-file-sweep` (PR #459), 2026-11-23.
 - **EN-205** (web UX): on the new-user form and the reset-password page a field stayed marked as failed until the next submit, even after the user corrected it. Editing a marked field now clears its own mark and message at once (the password field shows its rules hint again), leaving the other fields' marks; on the new-user form, a role change that hides the maintenance company field also drops its mark, and the "Fix the fields marked below." alert goes once no field is marked. The next submit validates every field again. Both pages changed together, as the entry asked. Done in `en-205-field-error-clear` (PR #465; specs `user-admin-ui`, `authentication`). Origin: `user-create-field-errors` fresh review S-1, 2026-11-17.
 - **EN-131** (web): EN-129's leave guard on the organization profile only caught in-app navigation, so reloading or closing the tab dropped unsaved edits without a word. While the form holds unsaved edits, the page now cancels `beforeunload`, so the browser shows its own confirmation prompt (its text is not ours to set); with no unsaved edits, or once the admin has left the page, the tab unloads without asking. Five page tests dispatch `beforeunload` with unsaved edits, with nothing edited, with edits typed back, after a save and after leaving the page. Done in `en-131-beforeunload-guard` (PR #464; spec `organization-profile-admin-ui`). Origin: `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.

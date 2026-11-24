@@ -7,14 +7,16 @@ import { User } from '../../../users/domain/user.entity';
 import { PrismaCommunityRepository } from '../../../community/infrastructure/persistence/prisma-community.repository';
 import { Community } from '../../../community/domain/community.entity';
 import { ReviewSession } from '../../domain/review-session.entity';
+import { PrismaReviewPhotoRepository } from './prisma-review-photo.repository';
 import { PrismaReviewSessionRepository } from './prisma-review-session.repository';
 
 const idGenerator = new UuidV7IdGenerator();
 
 // Integration test against a real Postgres instance (design.md Decision 1 —
 // "no repository method, use case or route ever writes it again"). tasks.md
-// 1.13: enumerates the write paths reachable on ReviewSessionRepository
-// (complete, discardDraft) and asserts NEITHER changes, clears or writes
+// 1.13: enumerates the write paths that change a session (complete on
+// ReviewSessionRepository, discardDraftWithPhotoKeys on ReviewPhotoRepository
+// since EN-224) and asserts NEITHER changes, clears or writes
 // performedByCompanyId on a session, including a completed one.
 describe('ReviewSession.performedByCompanyId — no write path beyond create() ever touches it (integration)', () => {
   let prisma: PrismaService;
@@ -132,7 +134,7 @@ describe('ReviewSession.performedByCompanyId — no write path beyond create() e
     expect(row?.performedByCompanyId).toBe(companyId);
   });
 
-  it('discardDraft() removes the row entirely — no residual attribution write is even possible', async () => {
+  it('discardDraftWithPhotoKeys() removes the row entirely — no residual attribution write is even possible', async () => {
     const communityId = await createCommunity('discard-no-attribution-write');
     const templateId = await createTemplate('discard-no-attribution-write');
     const performedById = await createUser('discard-no-attribution-write');
@@ -149,8 +151,10 @@ describe('ReviewSession.performedByCompanyId — no write path beyond create() e
     });
     await repository.create(session);
 
-    const discarded = await repository.discardDraft(session.id);
-    expect(discarded).toBe(true);
+    const discarded = await new PrismaReviewPhotoRepository(
+      prisma,
+    ).discardDraftWithPhotoKeys(session.id);
+    expect(discarded).toEqual({ outcome: 'discarded', storageKeys: [] });
 
     const row = await prisma.reviewSession.findUnique({
       where: { id: session.id },

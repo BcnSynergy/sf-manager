@@ -17,7 +17,7 @@ export type DeleteReviewPhotoResult =
 // session.
 export interface ReviewPhotoRepository {
   // Atomic: locks the session row (`FOR UPDATE`, so complete() and
-  // discardDraft(), which write that row, serialize with it), refuses unless
+  // discardDraftWithPhotoKeys(), which write that row, serialize with it), refuses unless
   // the session is a draft, counts the element's photos in the session and
   // inserts only below `maxPerElement`. The row lock is what keeps the limit
   // under concurrent uploads.

@@ -121,17 +121,17 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
     });
   }
 
-  async discardDraftWithPhotoKeys(
+  discardDraftWithPhotoKeys(
     reviewSessionId: string,
   ): Promise<DiscardReviewSessionResult> {
     if (this.sessions.statusOf(reviewSessionId) !== 'draft') {
-      return { outcome: 'not_editable' };
+      return Promise.resolve({ outcome: 'not_editable' });
     }
     const storageKeys = this.all()
       .filter((photo) => photo.reviewSessionId === reviewSessionId)
       .map((photo) => photo.storageKey);
     // The photos disappear with the session (cascade, see all()).
-    await this.sessions.discardDraft(reviewSessionId);
-    return { outcome: 'discarded', storageKeys };
+    this.sessions.deleteSession(reviewSessionId);
+    return Promise.resolve({ outcome: 'discarded', storageKeys });
   }
 }

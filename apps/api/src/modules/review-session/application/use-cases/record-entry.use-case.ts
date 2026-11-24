@@ -180,7 +180,7 @@ export class RecordEntryUseCase {
     // `WHERE status='draft'` concurrency backstop reporting a lost race —
     // the domain guard above (session.recordEntry/markUnreviewed) only
     // protects the aggregate reference this use case already holds; it
-    // cannot see a complete()/discardDraft() that committed at the DB layer
+    // cannot see a complete()/discardDraftWithPhotoKeys() that committed at the DB layer
     // after that reference was loaded.
     const editable = await this.sessionRepository.upsertEntry(entry);
     if (!editable) {
