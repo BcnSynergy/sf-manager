@@ -8,6 +8,8 @@ import type {
 export class InMemoryFileStorage implements FileStorage {
   private readonly files = new Map<string, Buffer>();
   private readonly storedAt = new Map<string, Date>();
+  // Leftovers of writes that never finished, by key, with when each started.
+  private readonly unfinished = new Map<string, Date>();
 
   put(key: string, content: Buffer): Promise<void> {
     this.files.set(key, Buffer.from(content));
@@ -20,14 +22,37 @@ export class InMemoryFileStorage implements FileStorage {
     this.storedAt.set(key, at);
   }
 
+  // Test helper: pretends a put of `key` started at `at` and never finished
+  // (EN-234 sweep tests). The key is not stored, so get and list ignore it.
+  leaveUnfinishedWrite(key: string, at: Date): void {
+    this.unfinished.set(key, at);
+  }
+
+  unfinishedWriteKeys(): string[] {
+    return [...this.unfinished.keys()].sort();
+  }
+
+  deleteUnfinishedWrites(
+    directory: string,
+    startedBefore: Date,
+  ): Promise<number> {
+    let deleted = 0;
+    for (const [key, startedAt] of this.unfinished) {
+      if (
+        isDirectlyUnder(key, directory) &&
+        startedAt.getTime() < startedBefore.getTime()
+      ) {
+        this.unfinished.delete(key);
+        deleted += 1;
+      }
+    }
+    return Promise.resolve(deleted);
+  }
+
   list(directory: string): Promise<StoredFile[]> {
-    const prefix = `${directory}/`;
     return Promise.resolve(
       [...this.files.keys()]
-        .filter(
-          (key) =>
-            key.startsWith(prefix) && !key.slice(prefix.length).includes('/'),
-        )
+        .filter((key) => isDirectlyUnder(key, directory))
         .map((key) => ({
           key,
           storedAt: this.storedAt.get(key) ?? new Date(0),
@@ -49,4 +74,9 @@ export class InMemoryFileStorage implements FileStorage {
   keys(): string[] {
     return [...this.files.keys()].sort();
   }
+}
+
+function isDirectlyUnder(key: string, directory: string): boolean {
+  const prefix = `${directory}/`;
+  return key.startsWith(prefix) && !key.slice(prefix.length).includes('/');
 }

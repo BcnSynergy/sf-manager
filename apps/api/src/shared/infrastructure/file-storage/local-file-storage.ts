@@ -21,6 +21,12 @@ import type {
 // never reach the disk.
 const KEY_PATTERN = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*(\.[a-z0-9]+)?$/;
 
+// The temporary file a put writes before renaming it: `<last key segment>.
+// <uuid>.tmp`. Only a name of this shape is ever deleted as an unfinished
+// write.
+const TEMPORARY_NAME_PATTERN =
+  /^[a-z0-9][a-z0-9-]*(\.[a-z0-9]+)?\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+
 // FileStorage adapter on a local directory (a Docker volume in production,
 // FILE_STORAGE_DIR). A put writes to a temporary file and renames it over
 // the target, so a reader never sees a half-written file.
@@ -79,6 +85,38 @@ export class LocalFileStorage implements FileStorage {
       }
     }
     return files;
+  }
+
+  // EN-234: a put interrupted by a crash leaves its temporary file; a failed
+  // write removes its own. Such a file older than the cutoff can no longer
+  // belong to a put in progress.
+  async deleteUnfinishedWrites(
+    directory: string,
+    startedBefore: Date,
+  ): Promise<number> {
+    const directoryPath = this.pathFor(directory);
+    let entries: Dirent[];
+    try {
+      entries = await readdir(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+      throw error;
+    }
+    let deleted = 0;
+    for (const entry of entries) {
+      if (!entry.isFile() || !TEMPORARY_NAME_PATTERN.test(entry.name)) continue;
+      const path = join(directoryPath, entry.name);
+      try {
+        const { mtime } = await stat(path);
+        if (mtime.getTime() >= startedBefore.getTime()) continue;
+        await rm(path);
+        deleted += 1;
+      } catch (error) {
+        // Renamed or deleted meanwhile: nothing left to delete.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+    }
+    return deleted;
   }
 
   private pathFor(key: string): string {

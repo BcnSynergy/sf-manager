@@ -25,7 +25,10 @@ export const ORPHAN_PHOTO_FILE_MIN_AGE_MS = 60 * 60 * 1000;
 // never thrown). A row is never removed here, so a referenced file is never
 // touched. A file that cannot be deleted is logged and the others are still
 // tried. When no photo row exists at all, nothing is deleted (see below).
-// Returns how many files were deleted.
+// It also deletes the leftovers of photo writes interrupted by a crash
+// (EN-234), older than the same hour; those are never a photo, so the
+// no-row guard does not apply to them. Returns how many orphan files were
+// deleted.
 @Injectable()
 export class SweepOrphanReviewPhotoFilesUseCase {
   private readonly logger = new Logger(SweepOrphanReviewPhotoFilesUseCase.name);
@@ -39,6 +42,8 @@ export class SweepOrphanReviewPhotoFilesUseCase {
 
   async execute(): Promise<number> {
     const cutoff = this.clock.now().getTime() - ORPHAN_PHOTO_FILE_MIN_AGE_MS;
+    await this.deleteUnfinishedWrites(new Date(cutoff));
+
     const oldEnough = (await this.fileStorage.list(REVIEW_PHOTO_DIRECTORY))
       .filter((file) => file.storedAt.getTime() < cutoff)
       .map((file) => file.key);
@@ -76,5 +81,20 @@ export class SweepOrphanReviewPhotoFilesUseCase {
     }
     this.logger.log(`Swept ${deleted} orphan review photo file(s)`);
     return deleted;
+  }
+
+  // A failure here is logged and never stops the orphan file sweep.
+  private async deleteUnfinishedWrites(startedBefore: Date): Promise<void> {
+    try {
+      const deleted = await this.fileStorage.deleteUnfinishedWrites(
+        REVIEW_PHOTO_DIRECTORY,
+        startedBefore,
+      );
+      this.logger.log(`Deleted ${deleted} unfinished review photo write(s)`);
+    } catch (error) {
+      this.logger.warn(
+        `Could not delete unfinished review photo writes: ${(error as Error).message}`,
+      );
+    }
   }
 }

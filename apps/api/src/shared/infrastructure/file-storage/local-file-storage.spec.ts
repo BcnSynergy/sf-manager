@@ -108,4 +108,75 @@ describe('LocalFileStorage', () => {
       );
     });
   });
+
+  // EN-234: a put interrupted by a crash leaves its temporary file behind.
+  describe('deleteUnfinishedWrites', () => {
+    const cutoff = new Date('2026-11-23T11:00:00.000Z');
+    const before = new Date('2026-11-23T10:00:00.000Z');
+    const after = new Date('2026-11-23T11:30:00.000Z');
+    const UUID = '3b241101-e2bb-4255-8caf-4136c566a962';
+
+    const writeAt = async (
+      name: string,
+      at: Date,
+      directory = 'review-photos',
+    ) => {
+      await mkdir(join(root, directory), { recursive: true });
+      const path = join(root, directory, name);
+      await writeFile(path, 'partial');
+      await utimes(path, at, at);
+    };
+
+    it('deletes a temporary file started before the cutoff, keeping newer ones and every complete file', async () => {
+      await writeAt(`a.jpg.${UUID}.tmp`, before);
+      await writeAt(`b.jpg.${UUID}.tmp`, after);
+      await writeAt('old.jpg', before);
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(1);
+
+      expect((await readdir(join(root, 'review-photos'))).sort()).toEqual([
+        `b.jpg.${UUID}.tmp`,
+        'old.jpg',
+      ]);
+    });
+
+    it('only looks directly under the directory', async () => {
+      await writeAt(`d.png.${UUID}.tmp`, before, 'logos');
+      await writeAt(`e.jpg.${UUID}.tmp`, before, 'review-photos/nested');
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(0);
+
+      expect(await readdir(join(root, 'logos'))).toHaveLength(1);
+      expect(await readdir(join(root, 'review-photos', 'nested'))).toHaveLength(
+        1,
+      );
+    });
+
+    it('leaves a file that only looks temporary but is not a put leftover', async () => {
+      await writeAt('notes.tmp', before);
+      await writeAt('f.jpg.not-a-uuid.tmp', before);
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(0);
+
+      expect(await readdir(join(root, 'review-photos'))).toHaveLength(2);
+    });
+
+    it('deletes nothing for a directory that does not exist', async () => {
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(0);
+    });
+
+    it('rejects a directory that is not a valid key segment', async () => {
+      await expect(
+        storage.deleteUnfinishedWrites('../etc', cutoff),
+      ).rejects.toThrow('Invalid file storage key');
+    });
+  });
 });
