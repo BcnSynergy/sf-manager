@@ -159,9 +159,11 @@ the admin to confirm leaving. Cancelling MUST keep them on the page with
 their edits intact; confirming MUST leave and drop the edits, with no save
 request. With no such difference (nothing edited, edits typed back to the
 saved values, or edits already saved) the page MUST be left without
-asking. Reloading or closing the browser tab is not covered, nor is logging out
-or the session ending, which end the session before any navigation. (Added by
-EN-129.)
+asking. Reloading or closing the browser tab with such a difference MUST
+first ask through the browser's own confirmation prompt, whose text the page
+does not set; with no such difference the tab MUST unload without asking.
+Logging out or the session ending is not covered, as they end the session
+before any navigation. (Added by EN-129; reload and tab close added by EN-131.)
 
 #### Scenario: Cancelling keeps the edits
 
@@ -180,6 +182,18 @@ EN-129.)
 - GIVEN the profile form matches the last loaded or saved profile
 - WHEN a `SYSTEM_ADMIN` navigates away
 - THEN the destination page MUST be shown without a confirmation
+
+#### Scenario: Reloading or closing the tab with unsaved edits asks first
+
+- GIVEN a `SYSTEM_ADMIN` has edited a profile field without saving
+- WHEN they reload the page or close the browser tab
+- THEN the browser MUST first show its own confirmation prompt
+
+#### Scenario: Reloading or closing the tab with no unsaved edits
+
+- GIVEN the profile form matches the last loaded or saved profile
+- WHEN a `SYSTEM_ADMIN` reloads the page or closes the browser tab
+- THEN the tab MUST unload without a confirmation
 
 ### Requirement: The Profile Page Shows the Logo and Links to Its Page
 

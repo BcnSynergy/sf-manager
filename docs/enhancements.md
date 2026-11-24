@@ -761,12 +761,6 @@ none }`) as hiding the nav or footer, although that only hides chrome inside
   changed. It was checked in the browser for PR #316. Origin:
   `en-127-logo-page` (PR #316) native review, 2026-11-01.
 
-- **EN-131** (web): warn before reloading or closing the tab with unsaved
-  edits on the organization profile. EN-129's leave guard only catches
-  in-app navigation; a reload or a closed tab still drops the edits without
-  a word. A `beforeunload` handler (the browser's own prompt, its text not
-  ours) would cover it. Origin: `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
-
 - **EN-132** (web): `App` creates its data router in a `useState`
   initializer, which `<StrictMode>` runs twice in development; the discarded
   router stays subscribed to `popstate`. Harmless (no loaders, never
@@ -1197,9 +1191,18 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-235** (web tests): the EN-131 unload guard tests in
+  `apps/web/src/pages/OrganizationProfilePage.test.tsx` share one `window`.
+  With the listener cleanup removed, the "nothing was edited" and "typed
+  back" tests also fail, partly because listeners left by earlier tests
+  still cancel the event, so that result depends on test order. The "after
+  save" and "after leaving the page" tests are the ones that really pin the
+  cleanup. Spying on `window.removeEventListener` would make it explicit.
+  Origin: `en-131-beforeunload-guard` fresh review S-1, 2026-11-24.
 
 ## Done
 
+- **EN-131** (web): EN-129's leave guard on the organization profile only caught in-app navigation, so reloading or closing the tab dropped unsaved edits without a word. While the form holds unsaved edits, the page now cancels `beforeunload`, so the browser shows its own confirmation prompt (its text is not ours to set); with no unsaved edits, or once the admin has left the page, the tab unloads without asking. Five page tests dispatch `beforeunload` with unsaved edits, with nothing edited, with edits typed back, after a save and after leaving the page. Done in `en-131-beforeunload-guard` (PR #464; spec `organization-profile-admin-ui`). Origin: `en-129-unsaved-changes-guard` (PR #317), 2026-11-01.
 - **EN-222** (review photos): a photo file left with no row (the process stopped between storing the file and inserting the row, or a file delete after a photo delete or a discard failed and was only logged) is now deleted by a sweep in the API. A few minutes after start-up and then every 24 hours, it lists `review-photos/`, keeps every file a `ReviewPhoto` row references (any session, any age) and every file stored less than an hour ago (an upload in progress), deletes the rest and logs the count; a failed delete or sweep is logged and never stops the next one. `FileStorage` gains `list(directory)` (complete files only, with their modification time). The maintainer chose an automatic sweep over a manual command. Done in `en-222-photo-file-sweep` (PR #459; spec `review-session-management`). Origin: `en-164-review-photos` fresh review and Gentle review, 2026-11-22.
 - **EN-163** (web, FR-007): a technician can now scan an element's QR label with the device camera during a review session. A Scan control next to the code field (shown only where the browser can open a camera, which needs HTTPS) opens the rear camera in a dialog; the code read opens that element exactly like a typed code (the maintainer chose opening the element over only filling the field), and typed entry stays the fallback. The browser's native `BarcodeDetector` is used where it reads QR codes; elsewhere (Firefox, Safari, every iOS browser) `jsqr` loads on demand in its own chunk. The maintainer chose jsQR (plain JavaScript, unmaintained since 2021, no dependencies) over a ZXing WebAssembly reader, which the production CSP (`deployment` spec) would block without adding `'wasm-unsafe-eval'`. No API or data model change. Done in `en-163-qr-scan` (PR #458; specs `review-session-ui`, `review-session-management`). Origin: product discussion, 2026-11-09.
 - **EN-233** (web): `ReviewHistoryDetailView` guarded its detail read's failure branch with `active` (EN-229), but no test pinned that guard: with it removed, a late failure for session A, arriving after B had loaded on one mounted view, would replace B's record with A's error, and every test still passed. A view rerender test now rejects A late and checks that B's record stays with no error (it fails when the guard is removed). Test-only. Done in `en-233-history-failure-guard` (PR #456). Origin: `en-232-document-reset` fresh review W-1, 2026-11-23.
