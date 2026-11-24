@@ -121,7 +121,11 @@ export function ResetPasswordPage() {
             type="password"
             autoComplete="new-password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              // EN-205: editing the field clears its own mark.
+              setPasswordError(false);
+            }}
             aria-invalid={passwordError}
             aria-describedby="reset-password-rules"
             data-testid="reset-password"
@@ -154,7 +158,11 @@ export function ResetPasswordPage() {
             type="password"
             autoComplete="new-password"
             value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
+            onChange={(event) => {
+              setConfirm(event.target.value);
+              // EN-205: editing the field clears its own mark.
+              setConfirmError(false);
+            }}
             aria-invalid={confirmError}
             aria-describedby={confirmError ? 'reset-confirm-error' : undefined}
             data-testid="reset-password-confirm"

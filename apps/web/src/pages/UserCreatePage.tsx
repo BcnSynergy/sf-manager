@@ -92,11 +92,26 @@ export function UserCreatePage() {
     };
   }, []);
 
+  // EN-205: editing a marked field clears its own mark; the alert points to
+  // the marked fields, so it goes with the last one.
+  function clearFieldError(field: FieldName) {
+    if (!fieldErrors.has(field)) {
+      return;
+    }
+    const remaining = new Set(fieldErrors);
+    remaining.delete(field);
+    setFieldErrors(remaining);
+    if (remaining.size === 0) {
+      clearError();
+    }
+  }
+
   function handleRoleChange(event: ChangeEvent<HTMLSelectElement>) {
     const nextRole = event.target.value as Role;
     setRole(nextRole);
     if (!isMaintenanceRole(nextRole)) {
       setCompanyId('');
+      clearFieldError('maintenanceCompanyId');
     }
   }
 
@@ -143,7 +158,10 @@ export function UserCreatePage() {
             id="user-create-email-input"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              clearFieldError('email');
+            }}
             aria-invalid={fieldErrors.has('email')}
             aria-describedby={fieldErrors.has('email') ? 'user-create-email-error' : undefined}
             data-testid="user-create-email"
@@ -165,7 +183,10 @@ export function UserCreatePage() {
             type="password"
             autoComplete="new-password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              clearFieldError('password');
+            }}
             aria-invalid={fieldErrors.has('password')}
             aria-describedby="user-create-password-rules"
             data-testid="user-create-password"
@@ -212,7 +233,10 @@ export function UserCreatePage() {
             <select
               id="user-create-company-input"
               value={companyId}
-              onChange={(event) => setCompanyId(event.target.value)}
+              onChange={(event) => {
+                setCompanyId(event.target.value);
+                clearFieldError('maintenanceCompanyId');
+              }}
               required
               aria-invalid={fieldErrors.has('maintenanceCompanyId')}
               aria-describedby={

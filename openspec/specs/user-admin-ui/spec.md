@@ -168,6 +168,18 @@ without a manual page reload.
 - AND a valid email MUST NOT be shown as rejected because the password
   failed, nor the reverse
 
+#### Scenario: Editing a marked field clears its own error
+
+- GIVEN the create form shows errors next to more than one field after
+  a rejected submission
+- WHEN the `SYSTEM_ADMIN` edits one of those fields, or changes the role
+  so that the maintenance company field is hidden
+- THEN that field's error MUST disappear at once, without a new
+  submission, and the other fields' errors MUST remain
+- AND the alert above the form MUST disappear once no field shows an
+  error
+- AND submitting again MUST validate every field again (added by EN-205)
+
 #### Scenario: Duplicate email shows a specific message
 
 - GIVEN the submitted email already belongs to an active user

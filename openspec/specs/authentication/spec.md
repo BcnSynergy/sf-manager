@@ -1420,8 +1420,11 @@ one digit) next to the new-password field and ask for the new password twice.
 Before any request it MUST validate the password with the shared password
 schema and check that both entries match, showing the failing field's own
 message next to that field: the rules message next to the password field,
-"The passwords do not match." next to the confirmation field. On submit it
-MUST post `{ token, password }` to `POST /auth/password-reset/confirm`.
+"The passwords do not match." next to the confirmation field. Editing a
+field that shows its message MUST remove that field's message at once, leaving
+the other field's message; the next submit validates both fields again (added
+by EN-205). On submit it MUST post `{ token, password }` to
+`POST /auth/password-reset/confirm`.
 
 On `204` the app MUST navigate to `/login`, where the password-changed notice
 shows. On `400` with `code` `INVALID_RESET_TOKEN` the page MUST show "This
@@ -1462,6 +1465,16 @@ cases the form MUST stay usable with the token kept in memory.
 - WHEN the user submits `abcdefghi1` and `abcdefghi2`
 - THEN "The passwords do not match." MUST show next to the confirmation field only
 - AND no request MUST be sent
+
+#### Scenario: Editing a field clears its own message
+
+- GIVEN the reset form shows the rules message next to the password field and
+  "The passwords do not match." next to the confirmation field
+- WHEN the user edits the password field
+- THEN the rules message MUST no longer show as an error next to the password
+  field
+- AND "The passwords do not match." MUST still show next to the confirmation
+  field
 
 #### Scenario: Success
 
