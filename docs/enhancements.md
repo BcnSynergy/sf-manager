@@ -1191,6 +1191,14 @@ content type`). Today that is the only 415 it raises, but a future one
   would lower peak memory on low-end phones. Not seen failing; verify on a
   real low-end device first. Origin: `en-164-review-photos` PR 2/3 fresh
   review S-3, 2026-11-22.
+- **EN-235** (web tests): the EN-131 unload guard tests in
+  `apps/web/src/pages/OrganizationProfilePage.test.tsx` share one `window`.
+  With the listener cleanup removed, the "nothing was edited" and "typed
+  back" tests also fail, partly because listeners left by earlier tests
+  still cancel the event, so that result depends on test order. The "after
+  save" and "after leaving the page" tests are the ones that really pin the
+  cleanup. Spying on `window.removeEventListener` would make it explicit.
+  Origin: `en-131-beforeunload-guard` fresh review S-1, 2026-11-24.
 
 ## Done
 
