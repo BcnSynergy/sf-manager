@@ -1475,8 +1475,8 @@ cases the form MUST stay usable with the token kept in memory.
   field
 - AND "The passwords do not match." MUST still show next to the confirmation
   field
-- AND submitting the edited form while it is still invalid MUST show each
-  failing field's message again
+- AND, after either or both fields are edited, submitting the form while it
+  is still invalid MUST show each failing field's message again
 
 #### Scenario: Success
 
