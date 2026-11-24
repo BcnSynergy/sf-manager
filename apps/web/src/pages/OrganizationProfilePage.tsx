@@ -131,11 +131,26 @@ export function OrganizationProfilePage() {
   const hasUnsavedEdits = REQUIRED_FIELDS.some((field) => values[field] !== saved[field]);
   // Any in-app navigation away from this page (Change logo, a nav link,
   // back/forward) waits for the admin to confirm. Needs the data router set
-  // up in App.tsx. Reloading or closing the tab is not covered.
+  // up in App.tsx. Reloading or closing the tab is the unload guard below.
   const leaveBlocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       hasUnsavedEdits && currentLocation.pathname !== nextLocation.pathname,
   );
+
+  // EN-131: reloading or closing the tab with unsaved edits asks first. The
+  // browser shows its own prompt; its text is not ours to set.
+  useEffect(() => {
+    if (!hasUnsavedEdits) {
+      return;
+    }
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      // Legacy browsers (Chrome/Edge before 119) need returnValue set.
+      event.returnValue = true;
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedEdits]);
 
   function handleChange(field: ProfileFieldKey, value: string) {
     setValues((current) => ({ ...current, [field]: value }));

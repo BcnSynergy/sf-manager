@@ -817,3 +817,67 @@ describe('OrganizationProfilePage leave guard', () => {
     expect(await screen.findByTestId('logo-page-stub')).toBeInTheDocument();
   });
 });
+
+// EN-131: reloading or closing the tab with unsaved edits asks first, through
+// the browser's own prompt. A cancelled beforeunload is what makes the
+// browser show it.
+describe('OrganizationProfilePage unload guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedGetOrganizationProfile.mockResolvedValue(filledProfile);
+  });
+
+  async function editName(value: string) {
+    fireEvent.change(await screen.findByTestId('organization-profile-name'), {
+      target: { value },
+    });
+  }
+
+  function unloadIsCancelled() {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  it('asks the browser to confirm a reload or tab close with unsaved edits', async () => {
+    renderPage();
+    await editName('Edited name');
+
+    expect(unloadIsCancelled()).toBe(true);
+  });
+
+  it('lets the tab unload without asking when nothing was edited', async () => {
+    renderPage();
+    await screen.findByTestId('organization-profile-name');
+
+    expect(unloadIsCancelled()).toBe(false);
+  });
+
+  it('lets the tab unload without asking when the edits were typed back to the saved values', async () => {
+    renderPage();
+    await editName('Edited name');
+    await editName(filledProfile.name);
+
+    expect(unloadIsCancelled()).toBe(false);
+  });
+
+  it('lets the tab unload without asking after the edits were saved', async () => {
+    mockedUpdateOrganizationProfile.mockResolvedValue({ ...filledProfile, name: 'Edited name' });
+    renderPage();
+    await editName('Edited name');
+    fireEvent.click(screen.getByTestId('organization-profile-submit'));
+    await screen.findByTestId('organization-profile-success');
+
+    expect(unloadIsCancelled()).toBe(false);
+  });
+
+  it('stops asking once the admin has left the page, dropping the edits', async () => {
+    renderPage();
+    await editName('Edited name');
+    fireEvent.click(screen.getByRole('link', { name: 'Change logo' }));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await screen.findByTestId('logo-page-stub');
+
+    expect(unloadIsCancelled()).toBe(false);
+  });
+});
