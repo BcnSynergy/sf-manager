@@ -22,10 +22,16 @@ import type {
 const KEY_PATTERN = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*(\.[a-z0-9]+)?$/;
 
 // The temporary file a put writes before renaming it: `<last key segment>.
-// <uuid>.tmp`. Only a name of this shape is ever deleted as an unfinished
-// write.
+// <uuid>.tmp` (temporaryPathFor). Only a name of this shape is ever deleted
+// as an unfinished write.
 const TEMPORARY_NAME_PATTERN =
   /^[a-z0-9][a-z0-9-]*(\.[a-z0-9]+)?\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+
+// Where a put writes the content before renaming it over `path`. Exported so
+// the tests pin that its names match TEMPORARY_NAME_PATTERN (EN-234).
+export function temporaryPathFor(path: string): string {
+  return `${path}.${randomUUID()}.tmp`;
+}
 
 // FileStorage adapter on a local directory (a Docker volume in production,
 // FILE_STORAGE_DIR). A put writes to a temporary file and renames it over
@@ -36,7 +42,7 @@ export class LocalFileStorage implements FileStorage {
   async put(key: string, content: Buffer): Promise<void> {
     const path = this.pathFor(key);
     await mkdir(dirname(path), { recursive: true });
-    const temporary = `${path}.${randomUUID()}.tmp`;
+    const temporary = temporaryPathFor(path);
     try {
       await writeFile(temporary, content);
       await rename(temporary, path);
@@ -88,8 +94,9 @@ export class LocalFileStorage implements FileStorage {
   }
 
   // EN-234: a put interrupted by a crash leaves its temporary file; a failed
-  // write removes its own. Such a file older than the cutoff can no longer
-  // belong to a put in progress.
+  // write removes its own. The file's modification time is when it was last
+  // written to, never earlier than when the put started, so a file last
+  // written before the cutoff can no longer belong to a put in progress.
   async deleteUnfinishedWrites(
     directory: string,
     startedBefore: Date,

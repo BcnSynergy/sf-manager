@@ -8,7 +8,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LocalFileStorage } from './local-file-storage';
+import { LocalFileStorage, temporaryPathFor } from './local-file-storage';
 
 describe('LocalFileStorage', () => {
   let root: string;
@@ -139,6 +139,45 @@ describe('LocalFileStorage', () => {
       expect((await readdir(join(root, 'review-photos'))).sort()).toEqual([
         `b.jpg.${UUID}.tmp`,
         'old.jpg',
+      ]);
+    });
+
+    it('deletes the temporary file a put really writes', async () => {
+      // Pins put's temporary naming to the pattern: if put ever names its
+      // temporary file differently, its leftovers would stop being deleted.
+      const path = temporaryPathFor(join(root, 'review-photos', 'g.jpg'));
+      await mkdir(join(root, 'review-photos'), { recursive: true });
+      await writeFile(path, 'partial');
+      await utimes(path, before, before);
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(1);
+
+      expect(await readdir(join(root, 'review-photos'))).toEqual([]);
+    });
+
+    it('keeps a temporary file last written exactly at the cutoff', async () => {
+      await writeAt(`h.jpg.${UUID}.tmp`, cutoff);
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(0);
+
+      expect(await readdir(join(root, 'review-photos'))).toHaveLength(1);
+    });
+
+    it('leaves a directory named like a temporary file', async () => {
+      const path = join(root, 'review-photos', `i.jpg.${UUID}.tmp`);
+      await mkdir(path, { recursive: true });
+      await utimes(path, before, before);
+
+      await expect(
+        storage.deleteUnfinishedWrites('review-photos', cutoff),
+      ).resolves.toBe(0);
+
+      expect(await readdir(join(root, 'review-photos'))).toEqual([
+        `i.jpg.${UUID}.tmp`,
       ]);
     });
 

@@ -443,7 +443,7 @@ once that write started more than one hour earlier, and MUST log how many it
 deleted. Such a leftover is never a photo, so it MUST be deleted even when no
 `ReviewPhoto` row exists at all. A failure to delete these leftovers MUST be
 logged and MUST NOT stop the rest of the sweep. A complete stored file MUST
-NEVER be treated as such a leftover. (Added by EN-234.)
+NOT be treated as such a leftover. (Added by EN-234.)
 
 #### Scenario: An old file with no row is deleted
 
@@ -492,7 +492,7 @@ NEVER be treated as such a leftover. (Added by EN-234.)
 - AND no `ReviewPhoto` row exists at all
 - WHEN the sweep runs
 - THEN the interrupted write MUST be deleted
-- AND no stored file MUST be deleted
+- AND stored files MUST NOT be deleted
 
 ### Requirement: Resolve an Element by Code Within the Session's Scope
 

@@ -1193,6 +1193,14 @@ content type`). Today that is the only 415 it raises, but a future one
   save" and "after leaving the page" tests are the ones that really pin the
   cleanup. Spying on `window.removeEventListener` would make it explicit.
   Origin: `en-131-beforeunload-guard` fresh review S-1, 2026-11-24.
+- **EN-236** (api tests): in `LocalFileStorage.deleteUnfinishedWrites`
+  (`apps/api/src/shared/infrastructure/file-storage/local-file-storage.ts`),
+  the per-file catch that skips `ENOENT` (a put renamed its temporary file,
+  or something deleted it, between the `stat` and the `rm`) has no test:
+  making it rethrow passes every test. It fails safe (the use case logs the
+  error and the orphan sweep still runs), but the race cannot be triggered
+  from a test without a seam over `node:fs/promises`. Origin:
+  `en-234-sweep-tmp-files` fresh review W-1, 2026-11-24.
 
 ## Done
 
