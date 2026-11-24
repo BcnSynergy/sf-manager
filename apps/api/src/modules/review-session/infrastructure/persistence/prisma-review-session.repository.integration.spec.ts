@@ -447,16 +447,16 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     expect(replaced?.entries[0].observations).toBe('Not accessible this cycle');
   });
 
-  // Fresh-context review finding M1: complete()/discardDraft() both guard
-  // their write with `WHERE status='draft'` and treat 0 affected rows as
-  // "no longer editable" — upsertEntry() had no such guard, so a concurrent
-  // complete() that commits between RecordEntryUseCase's load of the
+  // Fresh-context review finding M1: complete()/discardDraftWithPhotoKeys()
+  // both guard their write with `WHERE status='draft'` and treat 0 affected
+  // rows as "no longer editable" — upsertEntry() had no such guard, so a
+  // concurrent complete() that commits between RecordEntryUseCase's load of the
   // aggregate (still draft) and this write could silently land on an
-  // already-completed session, breaking the immutability invariant. This
-  // is the real, sequential proof against Postgres: complete the session
-  // first (as if a concurrent request already committed it), THEN attempt
-  // upsertEntry() — it must report the loss (return `false`) and must NOT
-  // write an ElementReviewEntry row for the now-completed session.
+  // already-completed session, breaking the immutability invariant. This is the
+  // real, sequential proof against Postgres: complete the session first (as if
+  // a concurrent request already committed it), THEN attempt upsertEntry() — it
+  // must report the loss (return `false`) and must NOT write an
+  // ElementReviewEntry row for the now-completed session.
   it('returns false and writes no entry when the session was completed before upsertEntry reaches the database (concurrency backstop)', async () => {
     const { sessionId, inspectableElementId } = await createDraftSession();
 

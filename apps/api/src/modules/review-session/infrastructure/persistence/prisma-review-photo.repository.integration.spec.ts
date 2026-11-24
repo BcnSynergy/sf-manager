@@ -382,19 +382,6 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     );
   });
 
-  it('removes the rows with a discarded draft (ON DELETE CASCADE)', async () => {
-    const sessionId = await createDraft();
-    const elementId = await createElement();
-    await photos.addToDraft(photo(sessionId, elementId), 3);
-    await photos.addToDraft(photo(sessionId, elementId), 3);
-
-    await expect(sessions.discardDraft(sessionId)).resolves.toBe(true);
-
-    expect(
-      await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
-    ).toBe(0);
-  });
-
   it('discards a draft returning the keys of its photos, rows and session gone', async () => {
     const sessionId = await createDraft();
     const otherSessionId = await createDraft();

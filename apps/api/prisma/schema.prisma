@@ -374,8 +374,9 @@ enum AnswerValue {
 // review-session/design.md Decision 4/8: the aggregate root. NO `deletedAt`
 // (design.md Interfaces/Contracts — ADR-010's stricter rule for review
 // records, spec.md "Review Records Carry No Deletion Path"). Discarding a
-// `draft` is a hard delete (repository.discardDraft), the only removal path
-// that exists; a `completed` session is permanently immutable —
+// `draft` is a hard delete (ReviewPhotoRepository.discardDraftWithPhotoKeys,
+// the only discard path since EN-224), the only removal path that exists; a
+// `completed` session is permanently immutable —
 // `recordEntry`/`markUnreviewed`/`complete`/`discard` all guard
 // `status === 'draft'` at the domain layer (Decision 8).
 //
@@ -398,9 +399,10 @@ model ReviewSession {
 
   // review-history-company-scope/design.md Decision 1/2: the performer's
   // maintenance company, SNAPSHOTTED at session creation and never updated
-  // again — no `complete()`/`discardDraft()` write path touches it. Nullable
-  // forever (not a closing `SET NOT NULL` step) — a performer with no
-  // company is a legitimate, permanent state, not a transient gap. The FK to
+  // again — no `complete()`/`discardDraftWithPhotoKeys()` write path
+  // touches it. Nullable forever (not a closing `SET NOT NULL` step) — a
+  // performer with no company is a legitimate, permanent state, not a
+  // transient gap. The FK to
   // MaintenanceCompany(id) is hand-written in migration.sql, INVISIBLE to
   // Prisma (no `@relation` here, ADR-013).
   performedByCompanyId String? @db.Uuid

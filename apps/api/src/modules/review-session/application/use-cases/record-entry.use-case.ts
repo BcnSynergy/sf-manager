@@ -176,11 +176,11 @@ export class RecordEntryUseCase {
     // which session it belongs to (Phase 5 redundancy fix — see
     // review-session.repository.port.ts).
     //
-    // Fresh-context review finding M1: `false` is the repository's own
-    // `WHERE status='draft'` concurrency backstop reporting a lost race —
-    // the domain guard above (session.recordEntry/markUnreviewed) only
-    // protects the aggregate reference this use case already holds; it
-    // cannot see a complete()/discardDraft() that committed at the DB layer
+    // Fresh-context review finding M1: `false` is the repository's own `WHERE
+    // status='draft'` concurrency backstop reporting a lost race — the domain
+    // guard above (session.recordEntry/markUnreviewed) only protects the
+    // aggregate reference this use case already holds; it cannot see a
+    // complete()/discardDraftWithPhotoKeys() that committed at the DB layer
     // after that reference was loaded.
     const editable = await this.sessionRepository.upsertEntry(entry);
     if (!editable) {
