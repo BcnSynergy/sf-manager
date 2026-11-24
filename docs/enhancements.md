@@ -1200,7 +1200,7 @@ content type`). Today that is the only 415 it raises, but a future one
   making it rethrow passes every test. It fails safe (the use case logs the
   error and the orphan sweep still runs), but the race cannot be triggered
   from a test without a seam over `node:fs/promises`. Origin:
-  `en-234-sweep-tmp-files` fresh review W-1, 2026-11-24.
+  `en-234-sweep-tmp-files` fresh review W-1c, 2026-11-24.
 
 ## Done
 
