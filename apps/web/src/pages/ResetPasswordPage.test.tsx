@@ -155,6 +155,46 @@ describe('ResetPasswordPage', () => {
     expect(mockedConfirm).not.toHaveBeenCalled();
   });
 
+  // EN-205: editing a marked field clears its own mark only.
+  it('clears the password mark when the password is edited, and keeps the confirmation mark', () => {
+    renderPage();
+    fill('short1', 'different1');
+
+    fireEvent.change(screen.getByTestId('reset-password'), { target: { value: 'short12' } });
+
+    expect(screen.queryByTestId('reset-password-error')).toBeNull();
+    expect(screen.getByTestId('reset-password-rules')).toBeInTheDocument();
+    expect(screen.getByTestId('reset-password')).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByTestId('reset-confirm-error')).toBeInTheDocument();
+    expect(screen.getByTestId('reset-password-confirm')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('clears the confirmation mark when the confirmation is edited, and keeps the password mark', () => {
+    renderPage();
+    fill('short1', 'different1');
+
+    fireEvent.change(screen.getByTestId('reset-password-confirm'), {
+      target: { value: 'different12' },
+    });
+
+    expect(screen.queryByTestId('reset-confirm-error')).toBeNull();
+    expect(screen.getByTestId('reset-password-confirm')).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByTestId('reset-password-confirm')).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByTestId('reset-password-error')).toBeInTheDocument();
+    expect(screen.getByTestId('reset-password')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('marks the fields again when the edited form is submitted still invalid', () => {
+    renderPage();
+    fill('short1', 'different1');
+
+    fill('short12', 'different12');
+
+    expect(screen.getByTestId('reset-password-error')).toBeInTheDocument();
+    expect(screen.getByTestId('reset-confirm-error')).toBeInTheDocument();
+    expect(mockedConfirm).not.toHaveBeenCalled();
+  });
+
   it('goes to the login page with a success notice flag on 204', async () => {
     mockedConfirm.mockResolvedValue(undefined);
     renderPage();

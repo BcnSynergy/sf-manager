@@ -205,6 +205,116 @@ describe('UserCreatePage', () => {
       expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
       expect(screen.getByTestId('user-create-password-rules')).toBeInTheDocument();
     });
+
+    // EN-205: editing a marked field clears its own mark only; the alert
+    // goes once no field is marked.
+    it('clears a field mark as soon as the field is edited, keeping the other marks and the alert', async () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-email-error');
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: 'n' } });
+
+      expect(screen.queryByTestId('user-create-email-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-email')).toHaveAttribute('aria-invalid', 'false');
+      expect(screen.getByTestId('user-create-email')).not.toHaveAttribute('aria-describedby');
+      expect(screen.getByTestId('user-create-password-error')).toHaveTextContent(RULES);
+      expect(screen.getByTestId('user-create-password')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('user-create-error')).toHaveTextContent(
+        'Fix the fields marked below.',
+      );
+    });
+
+    it('clears the password mark when the password is edited, bringing back the rules hint', async () => {
+      renderPage();
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short' } });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-password-error');
+
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 'short1' } });
+
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-password-rules')).toHaveTextContent(RULES);
+      expect(screen.getByTestId('user-create-password')).toHaveAttribute('aria-invalid', 'false');
+    });
+
+    it('removes the alert once the last marked field is edited', async () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-error');
+
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: 'n' } });
+      fireEvent.change(screen.getByTestId('user-create-password'), { target: { value: 's' } });
+
+      expect(screen.queryByTestId('user-create-email-error')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('user-create-password-error')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('user-create-error')).not.toBeInTheDocument();
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('clears the company mark when a company is chosen', async () => {
+      renderPage();
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: VALID_PASSWORD },
+      });
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'MAINTENANCE_TECHNICIAN' },
+      });
+      await screen.findByRole('option', { name: 'Acme Maintenance' });
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-company-error');
+
+      fireEvent.change(screen.getByTestId('user-create-company'), {
+        target: { value: 'company-1' },
+      });
+
+      expect(screen.queryByTestId('user-create-company-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-company')).toHaveAttribute('aria-invalid', 'false');
+      expect(screen.queryByTestId('user-create-error')).not.toBeInTheDocument();
+    });
+
+    it('drops the company mark when a role change hides the company field', async () => {
+      renderPage();
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: VALID_EMAIL } });
+      fireEvent.change(screen.getByTestId('user-create-password'), {
+        target: { value: VALID_PASSWORD },
+      });
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'MAINTENANCE_TECHNICIAN' },
+      });
+      await screen.findByTestId('user-create-company');
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-company-error');
+
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'SYSTEM_ADMIN' },
+      });
+      expect(screen.queryByTestId('user-create-error')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByTestId('user-create-role'), {
+        target: { value: 'MAINTENANCE_TECHNICIAN' },
+      });
+
+      expect(screen.queryByTestId('user-create-company-error')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-create-company')).toHaveAttribute('aria-invalid', 'false');
+    });
+
+    it('marks the fields again when the edited form is submitted still invalid', async () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+      await screen.findByTestId('user-create-email-error');
+      fireEvent.change(screen.getByTestId('user-create-email'), { target: { value: 'n' } });
+
+      fireEvent.click(screen.getByTestId('user-create-submit'));
+
+      expect(await screen.findByTestId('user-create-email-error')).toBeInTheDocument();
+      expect(screen.getByTestId('user-create-error')).toHaveTextContent(
+        'Fix the fields marked below.',
+      );
+      expect(mockedCreateUser).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps the alert in the same language as the field errors after a language switch', async () => {
