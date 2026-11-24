@@ -437,6 +437,14 @@ MUST log a warning: that state points at a database that does not match the
 files (for example an empty one after a failed restore), and deleting would
 wipe every photo.
 
+The sweep MUST also delete what a photo write interrupted before it finished
+leaves under `review-photos/` (the process stopped while storing the file),
+once that write started more than one hour earlier, and MUST log how many it
+deleted. Such a leftover is never a photo, so it MUST be deleted even when no
+`ReviewPhoto` row exists at all. A failure to delete these leftovers MUST be
+logged and MUST NOT stop the rest of the sweep. A complete stored file MUST
+NOT be treated as such a leftover. (Added by EN-234.)
+
 #### Scenario: An old file with no row is deleted
 
 - GIVEN a file under `review-photos/` stored two hours ago
@@ -468,6 +476,23 @@ wipe every photo.
 - GIVEN two orphan files, the first of which cannot be deleted
 - WHEN the sweep runs
 - THEN the failure MUST be logged and the second file MUST still be deleted
+
+#### Scenario: An old interrupted photo write is deleted
+
+- GIVEN a photo write under `review-photos/` that started two hours ago and
+  never finished
+- AND another that started ten minutes ago
+- WHEN the sweep runs
+- THEN the first MUST be deleted and the second MUST be kept
+- AND the number deleted MUST be logged
+
+#### Scenario: Interrupted writes are deleted even with no photo row
+
+- GIVEN an interrupted photo write that started two hours ago
+- AND no `ReviewPhoto` row exists at all
+- WHEN the sweep runs
+- THEN the interrupted write MUST be deleted
+- AND stored files MUST NOT be deleted
 
 ### Requirement: Resolve an Element by Code Within the Session's Scope
 

@@ -24,6 +24,16 @@ export interface FileStorage {
   // exist. Only complete files are listed, never one still being written.
   // EN-222: used by the orphan photo file sweep.
   list(directory: string): Promise<StoredFile[]>;
+
+  // Deletes the leftovers of writes under one directory segment that were
+  // started before `startedBefore` and never finished (a process stopped in
+  // the middle of a put), and resolves how many it deleted. Never touches a
+  // complete file. An adapter whose writes leave nothing behind resolves 0.
+  // EN-234: used by the orphan photo file sweep.
+  deleteUnfinishedWrites(
+    directory: string,
+    startedBefore: Date,
+  ): Promise<number>;
 }
 
 export const FILE_STORAGE = Symbol('FILE_STORAGE');

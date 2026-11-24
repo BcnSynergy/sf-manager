@@ -168,4 +168,57 @@ describe('SweepOrphanReviewPhotoFilesUseCase', () => {
       'Could not delete orphan review photo file review-photos/a.jpg: disk busy',
     );
   });
+
+  // EN-234: leftovers of puts interrupted by a crash.
+  describe('unfinished writes', () => {
+    it('deletes unfinished writes under review-photos/ started more than an hour ago, and logs the count', async () => {
+      seedPhoto('session-1', 'kept');
+      storage.leaveUnfinishedWrite('review-photos/old.jpg', minutesAgo(120));
+      storage.leaveUnfinishedWrite('review-photos/recent.jpg', minutesAgo(10));
+      storage.leaveUnfinishedWrite('logos/old.png', minutesAgo(120));
+
+      await useCase.execute();
+
+      expect(storage.unfinishedWriteKeys()).toEqual([
+        'logos/old.png',
+        'review-photos/recent.jpg',
+      ]);
+      expect(log).toHaveBeenCalledWith(
+        'Deleted 1 unfinished review photo write(s)',
+      );
+    });
+
+    it('deletes them even when no photo row exists at all', async () => {
+      storage.leaveUnfinishedWrite('review-photos/old.jpg', minutesAgo(120));
+      await storeFile('review-photos/orphan.jpg', minutesAgo(120));
+
+      await expect(useCase.execute()).resolves.toBe(0);
+
+      expect(storage.unfinishedWriteKeys()).toEqual([]);
+      expect(storage.keys()).toEqual(['review-photos/orphan.jpg']);
+    });
+
+    it('logs a failure to delete them and still sweeps the orphan files', async () => {
+      class FailingUnfinishedDelete extends InMemoryFileStorage {
+        deleteUnfinishedWrites(): Promise<number> {
+          return Promise.reject(new Error('disk busy'));
+        }
+      }
+      storage = new FailingUnfinishedDelete();
+      useCase = new SweepOrphanReviewPhotoFilesUseCase(
+        photos,
+        storage,
+        new FixedClock(NOW),
+      );
+      seedPhoto('session-1', 'kept');
+      await storeFile('review-photos/orphan.jpg', minutesAgo(120));
+
+      await expect(useCase.execute()).resolves.toBe(1);
+
+      expect(storage.keys()).toEqual([]);
+      expect(warn).toHaveBeenCalledWith(
+        'Could not delete unfinished review photo writes: disk busy',
+      );
+    });
+  });
 });
