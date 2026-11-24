@@ -1422,8 +1422,8 @@ schema and check that both entries match, showing the failing field's own
 message next to that field: the rules message next to the password field,
 "The passwords do not match." next to the confirmation field. Editing a
 field that shows its message MUST remove that field's message at once, leaving
-the other field's message; the next submit validates both fields again (added
-by EN-205). On submit it MUST post `{ token, password }` to
+the other field's message; the next submit MUST validate both fields again
+(added by EN-205). On submit it MUST post `{ token, password }` to
 `POST /auth/password-reset/confirm`.
 
 On `204` the app MUST navigate to `/login`, where the password-changed notice
@@ -1475,6 +1475,8 @@ cases the form MUST stay usable with the token kept in memory.
   field
 - AND "The passwords do not match." MUST still show next to the confirmation
   field
+- AND submitting the edited form while it is still invalid MUST show each
+  failing field's message again
 
 #### Scenario: Success
 

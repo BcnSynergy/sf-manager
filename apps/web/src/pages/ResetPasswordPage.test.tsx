@@ -179,6 +179,7 @@ describe('ResetPasswordPage', () => {
 
     expect(screen.queryByTestId('reset-confirm-error')).toBeNull();
     expect(screen.getByTestId('reset-password-confirm')).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByTestId('reset-password-confirm')).not.toHaveAttribute('aria-describedby');
     expect(screen.getByTestId('reset-password-error')).toBeInTheDocument();
     expect(screen.getByTestId('reset-password')).toHaveAttribute('aria-invalid', 'true');
   });
