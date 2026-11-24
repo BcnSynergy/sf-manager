@@ -259,17 +259,17 @@ describe('RecordEntryUseCase', () => {
     ).rejects.toThrow(ReviewSessionNotEditableError);
   });
 
-  // Fresh-context review finding M1: unlike complete()/discardDraftWithPhotoKeys(),
-  // upsertEntry() had no `WHERE status='draft'` guard of its own — the
-  // domain-layer check above (session.recordEntry/markUnreviewed) only
-  // protects the aggregate reference SessionAccess already loaded; a
-  // concurrent complete() that commits at the DB layer between that load
-  // and this use case's own write could still land silently on an
-  // already-completed session. This test isolates RecordEntryUseCase's
-  // OWN responsibility — mapping a `false` "lost the race" result from the
-  // repository to ReviewSessionNotEditableError — with a hand-rolled
-  // repository double so it does not depend on any particular fake's
-  // internals (the real backstop, and its Postgres-level proof, live in
+  // Fresh-context review finding M1: unlike
+  // complete()/discardDraftWithPhotoKeys(), upsertEntry() had no `WHERE
+  // status='draft'` guard of its own — the domain-layer check above
+  // (session.recordEntry/markUnreviewed) only protects the aggregate reference
+  // SessionAccess already loaded; a concurrent complete() that commits at the
+  // DB layer between that load and this use case's own write could still land
+  // silently on an already-completed session. This test isolates
+  // RecordEntryUseCase's OWN responsibility — mapping a `false` "lost the race"
+  // result from the repository to ReviewSessionNotEditableError — with a
+  // hand-rolled repository double so it does not depend on any particular
+  // fake's internals (the real backstop, and its Postgres-level proof, live in
   // prisma-review-session.repository.ts / .integration.spec.ts).
   it('rejects with ReviewSessionNotEditableError when upsertEntry reports the write lost a concurrency race (returns false)', async () => {
     const session = draftSession();

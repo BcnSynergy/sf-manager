@@ -90,12 +90,14 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
   // PrismaReviewSessionRepository's mapped FK-violation behaviour.
   //
   // Fresh-context review finding M1: explicit `status !== 'draft'` guard
-  // mirroring complete()/discardDraftWithPhotoKeys() below — `false` is the concurrency
-  // backstop's mapped result (PrismaReviewSessionRepository's own `WHERE
+  // mirroring complete() below — `false` is the concurrency backstop's
+  // mapped result (PrismaReviewSessionRepository's own `WHERE
   // status='draft'` guard), not a domain-guard throw. A fresh lookup here
   // (rather than reusing a caller-held aggregate reference) is what lets
-  // this fake observe a concurrent complete()/discardDraftWithPhotoKeys() that already
-  // replaced the map entry.
+  // this fake observe a concurrent complete() that already replaced the map
+  // entry; after a concurrent discard (the photo fake's
+  // discardDraftWithPhotoKeys) the entry is gone and this rejects with
+  // ReviewSessionNotFoundError instead.
   upsertEntry(entry: ElementReviewEntry): Promise<boolean> {
     const session = this.sessionsById.get(entry.reviewSessionId);
     if (!session) {

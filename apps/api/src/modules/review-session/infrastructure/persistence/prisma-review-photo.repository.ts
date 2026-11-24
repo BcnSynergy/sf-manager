@@ -35,11 +35,12 @@ function toPhoto(row: Row): ReviewPhoto {
 }
 
 // EN-164. addToDraft and deleteFromDraft run in one interactive transaction
-// that first locks the session row with `SELECT ... FOR UPDATE`. complete()
-// and discardDraftWithPhotoKeys() write that same row, so they wait for the lock (and the
-// photo write waits for them): a photo can never land on a session that was
-// completed or deleted first, and two concurrent uploads count one after the
-// other, which is what makes the per-element limit hold (Risk item 4).
+// that first locks the session row with `SELECT ... FOR UPDATE`. complete() and
+// discardDraftWithPhotoKeys() write that same row, so they wait for the lock
+// (and the photo write waits for them): a photo can never land on a session
+// that was completed or deleted first, and two concurrent uploads count one
+// after the other, which is what makes the per-element limit hold (Risk item
+// 4).
 @Injectable()
 export class PrismaReviewPhotoRepository implements ReviewPhotoRepository {
   constructor(private readonly prisma: PrismaService) {}

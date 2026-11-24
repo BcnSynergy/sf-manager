@@ -69,12 +69,13 @@ export interface ReviewSessionRepository {
   // FK-violation error.
   //
   // Fresh-context review finding M1: carries the SAME `WHERE status='draft'`
-  // guard as complete()/discardDraftWithPhotoKeys() — `false` => the caller maps this to
-  // 409 REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8). The domain-layer
-  // guard the caller runs before this call (session.recordEntry/
+  // guard as complete()/discardDraftWithPhotoKeys() — `false` => the caller
+  // maps this to 409 REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8). The
+  // domain-layer guard the caller runs before this call (session.recordEntry/
   // markUnreviewed) only protects the aggregate reference it already holds;
-  // this is the concurrency backstop for a complete()/discardDraftWithPhotoKeys() that
-  // committed at the DB layer between that load and this write.
+  // this is the concurrency backstop for a
+  // complete()/discardDraftWithPhotoKeys() that committed at the DB layer
+  // between that load and this write.
   upsertEntry(entry: ElementReviewEntry): Promise<boolean>;
 
   // `WHERE status='draft'`; false => the caller maps this to 409

@@ -21,9 +21,9 @@ function session(overrides: Partial<ReviewSession> = {}): ReviewSession {
   });
 }
 
-// spec.md "Discard a Draft Session": hard delete via
-// discardDraftWithPhotoKeys (WHERE status='draft'); false => 409 REVIEW_SESSION_NOT_EDITABLE. Only
-// the opener, in scope, may discard (SessionAccess).
+// spec.md "Discard a Draft Session": hard delete via discardDraftWithPhotoKeys
+// (WHERE status='draft'); false => 409 REVIEW_SESSION_NOT_EDITABLE. Only the
+// opener, in scope, may discard (SessionAccess).
 describe('DiscardReviewSessionUseCase', () => {
   let repository: InMemoryReviewSessionRepository;
   let photos: InMemoryReviewPhotoRepository;
