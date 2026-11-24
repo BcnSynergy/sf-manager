@@ -35,6 +35,19 @@ export class InMemoryReviewPhotoRepository implements ReviewPhotoRepository {
     this.photos.push(photo);
   }
 
+  // Both read only visible photos: rows of a discarded session are gone
+  // (ON DELETE CASCADE).
+  hasAnyPhoto(): Promise<boolean> {
+    return Promise.resolve(this.all().length > 0);
+  }
+
+  findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>> {
+    const referenced = new Set(this.all().map((photo) => photo.storageKey));
+    return Promise.resolve(
+      new Set(storageKeys.filter((key) => referenced.has(key))),
+    );
+  }
+
   addToDraft(
     photo: ReviewPhoto,
     maxPerElement: number,

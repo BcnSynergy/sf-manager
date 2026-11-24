@@ -26,6 +26,9 @@ export function isJpegPhoto(content: Uint8Array): boolean {
   return detectLogoFormat(content)?.extension === 'jpg';
 }
 
+// The FileStorage directory every photo file lives in (EN-222 sweeps it).
+export const REVIEW_PHOTO_DIRECTORY = 'review-photos';
+
 export function reviewPhotoKey(id: string): string {
-  return `review-photos/${id}.jpg`;
+  return `${REVIEW_PHOTO_DIRECTORY}/${id}.jpg`;
 }

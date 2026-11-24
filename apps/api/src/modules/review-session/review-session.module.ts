@@ -5,6 +5,8 @@ import { OrganizationProfileModule } from '../organization-profile/organization-
 import { ReviewTemplateModule } from '../review-template/review-template.module';
 import { UsersModule } from '../users/users.module';
 import { REVIEW_PHOTO_REPOSITORY } from './application/ports/review-photo.repository.port';
+import { SweepOrphanReviewPhotoFilesUseCase } from './application/use-cases/sweep-orphan-review-photo-files.use-case';
+import { ReviewPhotoSweepScheduler } from './infrastructure/scheduling/review-photo-sweep.scheduler';
 import { REVIEW_SESSION_REPOSITORY } from './application/ports/review-session.repository.port';
 import { USER_DIRECTORY } from './application/ports/user-directory.port';
 import { REVIEW_DOCUMENT_NAME_DIRECTORY } from './application/ports/review-document-name-directory.port';
@@ -100,6 +102,9 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     },
     SessionAccessService,
     ReviewHistoryAccessService,
+    // EN-222: orphan photo file sweep, a few minutes after boot, then daily.
+    SweepOrphanReviewPhotoFilesUseCase,
+    ReviewPhotoSweepScheduler,
     GetReviewScopeUseCase,
     OpenReviewSessionUseCase,
     ListOwnReviewSessionsUseCase,

@@ -623,13 +623,22 @@ A wrong password makes the download fail without writing any file.
 
 ### Uploaded files
 
-Uploaded files, for now only the organization logo, live in the `api-files`
-named volume, mounted at `FILE_STORAGE_DIR` (`/var/lib/sf-manager/files`).
+Uploaded files (the organization logo and review photos) live in the
+`api-files` named volume, mounted at `FILE_STORAGE_DIR`
+(`/var/lib/sf-manager/files`).
 The `backup` service archives them with each dump (see "Database backups"),
 because a dump records which logo is current, not the image itself. The
 archive is taken a moment after the dump, so a logo changed in between can
 be missing after a restore; the profile and the documents then show no logo
 until it is uploaded again.
+
+The API deletes review photo files on its own (EN-222): a few minutes after
+it starts, then every 24 hours, it removes files under `review-photos/` that
+no photo row references and that are more than an hour old, and logs how
+many. It deletes nothing while the database has no photo row at all, and
+logs a warning instead. Still, always run the API on the database restored
+together with the files: on a database with some photos but not these, the
+files it does not know are deleted.
 
 ### Email
 

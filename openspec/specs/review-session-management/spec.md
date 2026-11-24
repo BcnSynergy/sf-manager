@@ -419,6 +419,56 @@ content security policy.
 - WHEN U discards the draft
 - THEN the response MUST be 2xx, the discarded session's photos and stored files MUST be gone, and the other session's photos and files MUST be unchanged
 
+### Requirement: Orphan Photo Files Are Swept
+
+A photo's stored file can outlive its row: the process can stop between
+storing the file and inserting the row, and a file delete after a photo
+delete or a discard can fail (it is logged, never thrown). The system MUST
+therefore delete, on its own, every stored file under `review-photos/` that
+no `ReviewPhoto` row references and that was stored more than one hour
+earlier. The hour keeps an upload in progress (file stored, row not yet
+inserted) safe. A file that a row references MUST NEVER be deleted by the
+sweep, whatever its age. The sweep MUST run a few minutes after the API
+starts and then every 24 hours, MUST NOT delay start-up or requests, and
+MUST log how many files it deleted. A file it cannot delete, or a sweep that
+fails, MUST be logged and MUST NOT stop later sweeps. When old files exist
+but there is no `ReviewPhoto` row at all, the sweep MUST delete nothing and
+MUST log a warning: that state points at a database that does not match the
+files (for example an empty one after a failed restore), and deleting would
+wipe every photo.
+
+#### Scenario: An old file with no row is deleted
+
+- GIVEN a file under `review-photos/` stored two hours ago
+- AND no `ReviewPhoto` row references it
+- WHEN the sweep runs
+- THEN the file MUST be deleted
+
+#### Scenario: A recent file with no row is kept
+
+- GIVEN a file under `review-photos/` stored ten minutes ago, with no row
+- WHEN the sweep runs
+- THEN the file MUST be kept
+
+#### Scenario: A file with a row is kept
+
+- GIVEN a photo stored a year ago whose row still exists
+- WHEN the sweep runs
+- THEN its file MUST be kept
+
+#### Scenario: Nothing is deleted when no photo row exists
+
+- GIVEN files under `review-photos/` stored days ago
+- AND no `ReviewPhoto` row exists at all
+- WHEN the sweep runs
+- THEN no file MUST be deleted and a warning MUST be logged
+
+#### Scenario: A failed delete does not stop the sweep
+
+- GIVEN two orphan files, the first of which cannot be deleted
+- WHEN the sweep runs
+- THEN the failure MUST be logged and the second file MUST still be deleted
+
 ### Requirement: Resolve an Element by Code Within the Session's Scope
 
 Within a `draft` session, the system MUST resolve a submitted element
