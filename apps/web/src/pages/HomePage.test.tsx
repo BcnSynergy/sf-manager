@@ -69,8 +69,17 @@ describe('HomePage', () => {
     signInAs('MAINTENANCE_TECHNICIAN');
     renderPage();
 
-    const card = screen.getByRole('link', { name: /Review sessions/ });
-    expect(card).toHaveTextContent('Start a review or continue a draft');
+    const card = screen.getByRole('link', { name: 'Review sessions' });
+    expect(card).toHaveAccessibleDescription('Start a review or continue a draft');
+  });
+
+  it("pairs every section with its own description, never another section's", () => {
+    const items = ROLES.flatMap((role) => sectionLinks(role));
+    for (const item of items) {
+      expect(item.descriptionKey, item.to).toBe(
+        item.labelKey.replace(/^nav\./, 'home.description.'),
+      );
+    }
   });
 
   it("groups the sections under the navigation's group headings", () => {
@@ -99,7 +108,7 @@ describe('HomePage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Inicio');
-    expect(screen.getByRole('link', { name: /Sesiones de revisión/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sesiones de revisión' })).toBeInTheDocument();
   });
 
   it('shows no system status and does not call the health check', () => {

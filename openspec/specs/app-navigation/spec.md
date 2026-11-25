@@ -437,7 +437,7 @@ with the role's sections; the API's `/health` endpoint is unchanged.)
 
 - GIVEN the state of the main branch at every commit
 - WHEN the app's navigation controls are enumerated
-- THEN no page MUST offer a role a section link that is not built from the navigation's role → items table
+- THEN a page MUST NOT offer a role a section link that is not built from the navigation's role → items table
 
 ### Requirement: The Home Page Lists the Role's Sections
 

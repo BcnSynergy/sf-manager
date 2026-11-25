@@ -50,10 +50,21 @@ export function HomePage() {
             <ul className="sf-home-grid">
               {section.items.map((item) => (
                 <li key={item.to}>
-                  <Link className="sf-home-card" to={item.to}>
-                    <span className="sf-home-card-title">{t(item.labelKey)}</span>
+                  <Link
+                    className="sf-home-card"
+                    to={item.to}
+                    aria-labelledby={`${item.testId}-title`}
+                    aria-describedby={
+                      item.descriptionKey ? `${item.testId}-description` : undefined
+                    }
+                  >
+                    <span className="sf-home-card-title" id={`${item.testId}-title`}>
+                      {t(item.labelKey)}
+                    </span>
                     {item.descriptionKey && (
-                      <span className="sf-home-card-text">{t(item.descriptionKey)}</span>
+                      <span className="sf-home-card-text" id={`${item.testId}-description`}>
+                        {t(item.descriptionKey)}
+                      </span>
                     )}
                   </Link>
                 </li>
