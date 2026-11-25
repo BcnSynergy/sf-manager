@@ -474,12 +474,13 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
   };
 
   // Waits until `expected` backends are queued behind the holder, directly or
-  // behind another waiter.
+  // behind another waiter. The deadline stays well under Jest's 5 s test
+  // timeout so a missing wait reports this error, not a generic timeout.
   const waitForQueue = async (
     holderPid: number,
     expected: number,
   ): Promise<void> => {
-    const deadline = Date.now() + 10_000;
+    const deadline = Date.now() + 2_000;
     for (;;) {
       const [row] = await prisma.$queryRaw<Array<{ count: number }>>`
         WITH RECURSIVE queued("pid") AS (
@@ -515,7 +516,14 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
       started.push(secondRun);
       await waitForQueue(holder.pid, 2);
       await holder.release();
-      return [await firstRun, await secondRun];
+      // Settle both before reading either, so neither rejection is unhandled.
+      const [firstResult, secondResult] = await Promise.allSettled([
+        firstRun,
+        secondRun,
+      ]);
+      if (firstResult.status === 'rejected') throw firstResult.reason;
+      if (secondResult.status === 'rejected') throw secondResult.reason;
+      return [firstResult.value, secondResult.value];
     } catch (error) {
       await holder.release();
       await Promise.allSettled(started);
