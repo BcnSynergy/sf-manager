@@ -730,29 +730,49 @@ describe('Review photos (e2e)', () => {
     });
 
     it('does not serve a photo through another session of the same performer', async () => {
-      // tech2 has their own draft in the same community.
+      // tech2 has their own draft in the same community. The discard (S4)
+      // tests open the same draft, so the finally always discards it, even
+      // when an assertion fails (EN-225). It does not assert, so a failure
+      // here is reported as itself; the discard tests check discarding.
       const own = await openSession(tech2, communityId, templateId);
-      const response = await tech2.get(photoUrl(own.id, photoId)).expect(404);
-      expect(response.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
-      await tech2.delete(`/review-sessions/${own.id}`).expect(204);
+      try {
+        const response = await tech2.get(photoUrl(own.id, photoId)).expect(404);
+        expect(response.body).toMatchObject({
+          code: 'REVIEW_PHOTO_NOT_FOUND',
+        });
+      } finally {
+        await tech2.delete(`/review-sessions/${own.id}`);
+      }
     });
 
     it('does not serve or delete a photo of S1 through S2 of the SAME performer', async () => {
-      // tech holds S1 (community 1) and opens S2 in the completion community.
-      await assignTechnician(admin, completionCommunityId, 'rp-tech-id');
-      const second = await openSession(tech, completionCommunityId, templateId);
-      const keys = built.fileStorage.keys();
+      // tech holds S1 (community 1) and opens S2 in a community of its own,
+      // which no other test uses, so the assignment cannot leak into them
+      // (EN-225). The finally discards S2 even when an assertion fails, and
+      // does not assert, so the original failure is the one reported.
+      const secondCommunity = await createCommunity(
+        admin,
+        'Second session community',
+      );
+      await assignTechnician(admin, secondCommunity.id, 'rp-tech-id');
+      const second = await openSession(tech, secondCommunity.id, templateId);
+      try {
+        const keys = built.fileStorage.keys();
 
-      const read = await tech.get(photoUrl(second.id, photoId)).expect(404);
-      expect(read.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
-      const removed = await tech
-        .delete(photoUrl(second.id, photoId))
-        .expect(404);
-      expect(removed.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+        const read = await tech.get(photoUrl(second.id, photoId)).expect(404);
+        expect(read.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+        const removed = await tech
+          .delete(photoUrl(second.id, photoId))
+          .expect(404);
+        expect(removed.body).toMatchObject({
+          code: 'REVIEW_PHOTO_NOT_FOUND',
+        });
 
-      expect(built.fileStorage.keys()).toEqual(keys);
-      await tech.get(photoUrl(session.id, photoId)).expect(200);
-      await tech.delete(`/review-sessions/${second.id}`).expect(204);
+        expect(built.fileStorage.keys()).toEqual(keys);
+        await tech.get(photoUrl(session.id, photoId)).expect(200);
+      } finally {
+        await tech.delete(`/review-sessions/${second.id}`);
+      }
     });
   });
 
@@ -781,53 +801,61 @@ describe('Review photos (e2e)', () => {
         completionCommunityId,
         templateId,
       );
-      const created = await upload(
-        tech3,
-        completionSession.id,
-        completionElement.id,
-      ).expect(201);
-      const id = (created.body as { id: string }).id;
-      await tech3
-        .put(
-          `/review-sessions/${completionSession.id}/entries/${completionElement.id}`,
-        )
-        .send({ answers: [{ questionId, value: 'YES' }] })
-        .expect(200);
-      await tech3
-        .post(`/review-sessions/${completionSession.id}/complete`)
-        .expect(200);
-      const keys = built.fileStorage.keys();
+      // The review history beforeAll opens tech3's draft for the same pair,
+      // so a failure before `complete` must not leave this one open
+      // (EN-225). After `complete` the discard answers 409 and changes
+      // nothing, which is why the finally does not assert.
+      try {
+        const created = await upload(
+          tech3,
+          completionSession.id,
+          completionElement.id,
+        ).expect(201);
+        const id = (created.body as { id: string }).id;
+        await tech3
+          .put(
+            `/review-sessions/${completionSession.id}/entries/${completionElement.id}`,
+          )
+          .send({ answers: [{ questionId, value: 'YES' }] })
+          .expect(200);
+        await tech3
+          .post(`/review-sessions/${completionSession.id}/complete`)
+          .expect(200);
+        const keys = built.fileStorage.keys();
 
-      const uploaded = await upload(
-        tech3,
-        completionSession.id,
-        completionElement.id,
-      ).expect(409);
-      expect(uploaded.body).toMatchObject({
-        code: 'REVIEW_SESSION_NOT_EDITABLE',
-      });
-      const deleted = await tech3
-        .delete(photoUrl(completionSession.id, id))
-        .expect(409);
-      expect(deleted.body).toMatchObject({
-        code: 'REVIEW_SESSION_NOT_EDITABLE',
-      });
+        const uploaded = await upload(
+          tech3,
+          completionSession.id,
+          completionElement.id,
+        ).expect(409);
+        expect(uploaded.body).toMatchObject({
+          code: 'REVIEW_SESSION_NOT_EDITABLE',
+        });
+        const deleted = await tech3
+          .delete(photoUrl(completionSession.id, id))
+          .expect(409);
+        expect(deleted.body).toMatchObject({
+          code: 'REVIEW_SESSION_NOT_EDITABLE',
+        });
 
-      expect(built.fileStorage.keys()).toEqual(keys);
-      expect(
-        built.photoRepository
-          .all()
-          .filter((photo) => photo.reviewSessionId === completionSession.id),
-      ).toHaveLength(1);
+        expect(built.fileStorage.keys()).toEqual(keys);
+        expect(
+          built.photoRepository
+            .all()
+            .filter((photo) => photo.reviewSessionId === completionSession.id),
+        ).toHaveLength(1);
 
-      // The performer still lists and reads it (S3: any status).
-      const listed = await tech3
-        .get(photosUrl(completionSession.id, completionElement.id))
-        .expect(200);
-      expect(
-        (listed.body as Array<{ id: string }>).map((row) => row.id),
-      ).toEqual([id]);
-      await tech3.get(photoUrl(completionSession.id, id)).expect(200);
+        // The performer still lists and reads it (S3: any status).
+        const listed = await tech3
+          .get(photosUrl(completionSession.id, completionElement.id))
+          .expect(200);
+        expect(
+          (listed.body as Array<{ id: string }>).map((row) => row.id),
+        ).toEqual([id]);
+        await tech3.get(photoUrl(completionSession.id, id)).expect(200);
+      } finally {
+        await tech3.delete(`/review-sessions/${completionSession.id}`);
+      }
     });
   });
 
