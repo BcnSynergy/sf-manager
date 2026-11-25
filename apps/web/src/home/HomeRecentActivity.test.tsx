@@ -79,6 +79,38 @@ describe('HomeRecentActivity', () => {
     );
   });
 
+  it('names a review whose community or performer is gone with the neutral labels', async () => {
+    mockedListReviewHistory.mockResolvedValue([
+      { ...row('a', '', '2026-11-24T23:30:00.000Z'), performedByEmail: '' },
+    ]);
+    renderActivity('MAINTENANCE_TECHNICIAN');
+
+    const link = await screen.findByRole('link', { name: 'Unknown community' });
+    expect(link).toHaveAttribute('href', '/review-history/a');
+    expect(link).toHaveAccessibleDescription('Completed on November 25, 2026 by Unknown performer');
+  });
+
+  it('breaks a tie on completion time by id, so the five shown are stable', async () => {
+    const same = '2026-11-10T10:00:00.000Z';
+    mockedListReviewHistory.mockResolvedValue([
+      row('a', 'Alpha', same),
+      row('f', 'Foxtrot', same),
+      row('c', 'Charlie', same),
+      row('e', 'Echo', same),
+      row('b', 'Bravo', same),
+      row('d', 'Delta', same),
+    ]);
+    renderActivity('MAINTENANCE_TECHNICIAN');
+
+    expect((await activityItems()).map(([name]) => name)).toEqual([
+      'Foxtrot',
+      'Echo',
+      'Delta',
+      'Charlie',
+      'Bravo',
+    ]);
+  });
+
   it('offers the whole review history once there is something to show', async () => {
     mockedListReviewHistory.mockResolvedValue([row('a', 'Alpha', '2026-11-01T10:00:00.000Z')]);
     renderActivity('MAINTENANCE_COMPANY_MANAGER');

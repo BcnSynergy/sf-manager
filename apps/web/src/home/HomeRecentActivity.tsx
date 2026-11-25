@@ -24,7 +24,8 @@ function latest(rows: ReviewHistoryRow[]): ReviewHistoryRow[] {
 // from the same scoped GET /review-history as the history page (the server
 // decides the scope per role; an ungranted manager gets an empty list).
 // GET /review-history has no limit yet, so the whole list is fetched and
-// the five latest are kept (EN-240).
+// the five latest are kept (EN-240). An empty community name or email (a
+// soft-deleted community or user) gets the history page's neutral label.
 export function HomeRecentActivity({ role }: { role: Role }) {
   const { t, i18n } = useTranslation();
   const shown = roleOffers(role, HISTORY_PATH);
@@ -73,12 +74,12 @@ export function HomeRecentActivity({ role }: { role: Role }) {
             {load.rows.map((row) => (
               <li key={row.id}>
                 <Link to={`${HISTORY_PATH}/${row.id}`} aria-describedby={`home-activity-${row.id}`}>
-                  {row.communityName}
+                  {row.communityName || t('reviewHistory.list.communityUnknown')}
                 </Link>
                 <span className="sf-home-activity-meta" id={`home-activity-${row.id}`}>
                   {t('home.activity.completed', {
                     date: formatDocumentDate(new Date(row.completedAt), i18n.language),
-                    email: row.performedByEmail,
+                    email: row.performedByEmail || t('reviewHistory.list.performerUnknown'),
                   })}
                 </span>
               </li>

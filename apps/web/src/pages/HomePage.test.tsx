@@ -172,6 +172,34 @@ describe('HomePage', () => {
     expect(screen.queryByText('1 unfinished draft')).not.toBeInTheDocument();
   });
 
+  it("starts the recent activity again from loading when the role changes, never showing the previous role's reviews", async () => {
+    signInAs('MAINTENANCE_TECHNICIAN');
+    vi.mocked(reviewHistoryApi.listReviewHistory).mockResolvedValue([
+      {
+        id: 'session-1',
+        communityId: 'community-1',
+        communityName: 'Dev Seed Residences North',
+        performedById: '1',
+        performedByEmail: 'technician@sf-manager.example',
+        startedAt: '2026-11-20T10:00:00.000Z',
+        completedAt: '2026-11-20T11:00:00.000Z',
+      },
+    ]);
+    const { rerender } = renderPage();
+    expect(await screen.findByText('Dev Seed Residences North')).toBeInTheDocument();
+
+    vi.mocked(reviewHistoryApi.listReviewHistory).mockReturnValue(new Promise(() => {}));
+    signInAs('MANAGER');
+    rerender(
+      <MemoryRouter initialEntries={['/']}>
+        <HomePage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('home-activity-loading')).toBeInTheDocument();
+    expect(screen.queryByText('Dev Seed Residences North')).not.toBeInTheDocument();
+  });
+
   it('shows the recent activity after the alerts and before the sections', async () => {
     signInAs('MAINTENANCE_TECHNICIAN');
     renderPage();

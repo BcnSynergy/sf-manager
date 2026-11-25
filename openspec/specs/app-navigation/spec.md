@@ -584,8 +584,11 @@ history page (`GET /review-history`, `review-history`); the client MUST NOT
 narrow that scope. Each review MUST show its community as a link to that
 review's read-only view (`/review-history/:sessionId`), and, as the link's
 description, when it was completed (a localized long date in the
-Europe/Madrid time zone) and the email of who performed it. Below the list a
-link MUST lead to the whole review history.
+Europe/Madrid time zone) and the email of who performed it. A review whose
+community name or performer email comes back empty (a soft-deleted
+community or user) MUST show the same localized neutral label the Review
+history page shows ("Unknown community", "Unknown performer"). Below the
+list a link MUST lead to the whole review history.
 
 A role MUST get the section only if its navigation offers the Review
 history item (all five roles today); an unrecognized role MUST see no
@@ -606,6 +609,12 @@ loading message, and if it fails, one localized error message.
 - GIVEN a review completed at `2026-11-24T23:30:00Z` by `technician@sf-manager.example`
 - WHEN it is listed
 - THEN its description MUST read "Completed on November 25, 2026 by technician@sf-manager.example", localized
+
+#### Scenario: A gone community or performer gets a neutral label
+
+- GIVEN a listed review whose community name and performer email are both empty
+- WHEN it is listed
+- THEN its link MUST read "Unknown community" and its description MUST end with "by Unknown performer", localized
 
 #### Scenario: Nothing completed yet
 

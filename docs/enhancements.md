@@ -1198,7 +1198,11 @@ content type`). Today that is the only 415 it raises, but a future one
   home page's recent activity (EN-238) fetches the user's whole history to
   show five reviews. Fine with today's data; with a large history it is a
   heavy request on every home page visit. Add an optional `limit` (newest
-  first) to the endpoint and pass `limit=5` from the home page. Origin:
+  first) to the endpoint and pass `limit=5` from the home page. This is a
+  contract change, not API-only: it means editing the `review-history` spec
+  (which fixes the order but no limit) and the review-history-ui sentence
+  that list pagination "MUST NOT be started, stubbed or parameterized for
+  here". Origin:
   `home-page` slice 3 (EN-238), 2026-11-25.
 - **EN-239** (api tests): the review-session e2e scope guard
   (`apps/api/test/review-session.e2e-spec.ts`) skips `HomeAlerts` files
