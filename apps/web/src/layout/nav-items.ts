@@ -15,6 +15,9 @@ export type NavItem = {
   readonly testId: string;
   readonly end?: boolean;
   readonly group?: NavGroup;
+  // What the section is for, shown under its name on the home page. Every
+  // item except Home has one (HomePage.test.tsx checks all three locales).
+  readonly descriptionKey?: string;
 };
 
 export type NavSection = {
@@ -24,8 +27,10 @@ export type NavSection = {
 
 // Each item is declared ONCE and shared by reference across the role rows
 // below, so REVIEW_HISTORY's five appearances can never drift apart.
-// HOME is shared by all five roles: without it, "/" (HealthPage) becomes
-// unreachable via nav the moment a user clicks any other item.
+// HOME is shared by all five roles: without it, "/" (HomePage) becomes
+// unreachable via nav the moment a user clicks any other item. The home page
+// links to the role's other items from this same table, so the two can never
+// offer different sections.
 // `end: true` is required on HOME alone: NavLink matches against the
 // current URL pathname, and "/" is the only path that is a prefix of every
 // other route — without `end` it would show aria-current on every
@@ -36,54 +41,63 @@ const USERS: NavItem = {
   labelKey: 'nav.users',
   testId: 'nav-link-users',
   group: 'administration',
+  descriptionKey: 'home.description.users',
 };
 const COMMUNITIES: NavItem = {
   to: '/communities',
   labelKey: 'nav.communities',
   testId: 'nav-link-communities',
   group: 'setup',
+  descriptionKey: 'home.description.communities',
 };
 const MAINTENANCE_COMPANIES: NavItem = {
   to: '/maintenance-companies',
   labelKey: 'nav.maintenanceCompanies',
   testId: 'nav-link-maintenance-companies',
   group: 'setup',
+  descriptionKey: 'home.description.maintenanceCompanies',
 };
 const CHECKLIST_QUESTIONS: NavItem = {
   to: '/checklist-questions',
   labelKey: 'nav.checklistQuestions',
   testId: 'nav-link-checklist-questions',
   group: 'setup',
+  descriptionKey: 'home.description.checklistQuestions',
 };
 const REVIEW_TEMPLATES: NavItem = {
   to: '/review-templates',
   labelKey: 'nav.reviewTemplates',
   testId: 'nav-link-review-templates',
   group: 'setup',
+  descriptionKey: 'home.description.reviewTemplates',
 };
 const REVIEW_SESSIONS: NavItem = {
   to: '/review-sessions',
   labelKey: 'nav.reviewSessions',
   testId: 'nav-link-review-sessions',
   group: 'operations',
+  descriptionKey: 'home.description.reviewSessions',
 };
 const REVIEW_HISTORY: NavItem = {
   to: '/review-history',
   labelKey: 'nav.reviewHistory',
   testId: 'nav-link-review-history',
   group: 'operations',
+  descriptionKey: 'home.description.reviewHistory',
 };
 const REVIEW_SCHEDULE: NavItem = {
   to: '/review-schedule',
   labelKey: 'nav.reviewSchedule',
   testId: 'nav-link-review-schedule',
   group: 'operations',
+  descriptionKey: 'home.description.reviewSchedule',
 };
 const ORGANIZATION_PROFILE: NavItem = {
   to: '/organization-profile',
   labelKey: 'nav.organizationProfile',
   testId: 'nav-link-organization-profile',
   group: 'administration',
+  descriptionKey: 'home.description.organizationProfile',
 };
 
 // Rows follow the sidebar order of the app-navigation spec table: Home, then

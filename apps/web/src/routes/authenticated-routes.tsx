@@ -31,7 +31,7 @@ function lazyPage(load: () => Promise<ComponentType>) {
 export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
   {
     path: '/',
-    ...lazyPage(() => import('../pages/HealthPage').then((m) => m.HealthPage)),
+    ...lazyPage(() => import('../pages/HomePage').then((m) => m.HomePage)),
     allowedRoles: undefined,
   },
   {

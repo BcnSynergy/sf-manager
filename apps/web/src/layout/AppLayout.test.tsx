@@ -11,7 +11,7 @@ import { AppLayout } from './AppLayout';
 import { mockAuthFetch as mockFetch } from './test-support/mock-auth-fetch';
 
 // nav-menu/design.md Decision 2/7: AppLayout is exercised the same way
-// HealthPage.test.tsx exercised the logout flow it replaces — a REAL
+// the former HealthPage.test.tsx exercised the logout flow it replaces — a REAL
 // AuthProvider with global fetch stubbed, never a mocked useAuth() — because
 // AuthProvider.logout() swallows its own errors internally (try/catch/
 // finally), so a mocked logout() rejecting would never reach
@@ -448,9 +448,7 @@ describe('AppLayout', () => {
 
     // design.md Decision 7 correction: AuthProvider.logout() never rejects —
     // it swallows the error itself — so this exercises the real swallow
-    // behaviour via a real AuthProvider + a rejecting fetch stub, the same
-    // pattern HealthPage.test.tsx's equivalent case still uses today (its
-    // removal is scoped to PR3, not this PR).
+    // behaviour via a real AuthProvider + a rejecting fetch stub.
     it('still clears the session and navigates to /login when the logout request fails', async () => {
       vi.stubGlobal('fetch', mockFetch({ logoutRejects: true }));
       renderAppLayout();

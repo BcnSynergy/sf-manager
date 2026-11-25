@@ -627,11 +627,21 @@
       "signedAtLabel": "Signat el: {{date}}"
     }
   },
-  "health": {
-    "title": "Estat del sistema",
-    "checking": "Comprovant...",
-    "ok": "Tot funciona correctament",
-    "error": "Alguna cosa no funciona"
+  "home": {
+    "title": "Inici",
+    "signedInAs": "Sessió iniciada com a {{email}}",
+    "signedInAsWithRole": "Sessió iniciada com a {{email}} ({{role}})",
+    "description": {
+      "reviewSchedule": "Quines revisions toquen i quan",
+      "reviewSessions": "Comença una revisió o continua un esborrany",
+      "reviewHistory": "Revisions acabades i els seus documents",
+      "communities": "Comunitats i els seus elements inspeccionables",
+      "maintenanceCompanies": "Les empreses que fan les revisions",
+      "reviewTemplates": "La llista de preguntes de cada tipus de revisió",
+      "checklistQuestions": "Les preguntes que poden fer servir les plantilles",
+      "users": "Comptes, rols i accessos",
+      "organizationProfile": "Dades i logotip de la teva organització"
+    }
   },
   "reviewSchedule": {
     "title": "Calendari de revisions",

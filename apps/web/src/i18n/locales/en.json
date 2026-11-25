@@ -627,11 +627,21 @@
       "signedAtLabel": "Signed on: {{date}}"
     }
   },
-  "health": {
-    "title": "System status",
-    "checking": "Checking...",
-    "ok": "All systems operational",
-    "error": "Something is not working"
+  "home": {
+    "title": "Home",
+    "signedInAs": "Signed in as {{email}}",
+    "signedInAsWithRole": "Signed in as {{email}} ({{role}})",
+    "description": {
+      "reviewSchedule": "Which reviews are due, and when",
+      "reviewSessions": "Start a review or continue a draft",
+      "reviewHistory": "Completed reviews and their documents",
+      "communities": "Communities and their inspectable elements",
+      "maintenanceCompanies": "The companies that carry out the reviews",
+      "reviewTemplates": "The question list for each type of review",
+      "checklistQuestions": "The questions the templates can use",
+      "users": "Accounts, roles and access",
+      "organizationProfile": "Your organization's details and logo"
+    }
   },
   "reviewSchedule": {
     "title": "Review schedule",

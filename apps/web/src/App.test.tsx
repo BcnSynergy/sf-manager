@@ -18,8 +18,8 @@ import type { AuthenticatedRoute } from './routes/authenticated-routes';
 // own module/component name (`page-stub-<Name>`), never a shared trivial
 // placeholder, so this suite can additionally assert rendered-component
 // identity per path, not just nav presence/absence and gating.
-vi.mock('./pages/HealthPage', () => ({
-  HealthPage: () => <div data-testid="page-stub-HealthPage">HealthPage</div>,
+vi.mock('./pages/HomePage', () => ({
+  HomePage: () => <div data-testid="page-stub-HomePage">HomePage</div>,
 }));
 vi.mock('./pages/UsersListPage', () => ({
   UsersListPage: () => <div data-testid="page-stub-UsersListPage">UsersListPage</div>,
