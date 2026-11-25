@@ -43,6 +43,18 @@ describe('ReviewHistoryPage', () => {
     expect(screen.getByTestId('review-history-loading')).toBeInTheDocument();
   });
 
+  it('asks for the whole history, never a limited one (EN-240)', async () => {
+    mockedListReviewHistory.mockResolvedValue([]);
+
+    renderPage();
+
+    await screen.findByTestId('review-history-empty');
+    expect(mockedListReviewHistory).toHaveBeenCalled();
+    for (const args of mockedListReviewHistory.mock.calls) {
+      expect(args.length === 0 || args[0]?.limit === undefined).toBe(true);
+    }
+  });
+
   it('shows an empty state when there is no history, not an error', async () => {
     mockedListReviewHistory.mockResolvedValue([]);
 

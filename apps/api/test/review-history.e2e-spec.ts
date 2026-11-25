@@ -697,6 +697,45 @@ describe('Review History (e2e)', () => {
         .expect(401);
     });
 
+    // EN-240: `?limit=N` keeps the N most recently completed sessions.
+    it('keeps only the most recently completed sessions when given a limit', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const all = (await technicianUAgent.get('/review-history').expect(200))
+        .body as HistoryRowBody[];
+      const limited = (
+        await technicianUAgent.get('/review-history?limit=1').expect(200)
+      ).body as HistoryRowBody[];
+
+      expect(all.map((row) => row.id)).toEqual([
+        sessionForD.id,
+        sessionByUForC.id,
+      ]);
+      expect(limited.map((row) => row.id)).toEqual([sessionForD.id]);
+    });
+
+    it('returns every session when the limit exceeds them', async () => {
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await technicianUAgent
+        .get('/review-history?limit=100')
+        .expect(200);
+
+      expect((response.body as HistoryRowBody[]).map((row) => row.id)).toEqual([
+        sessionForD.id,
+        sessionByUForC.id,
+      ]);
+    });
+
+    it.each(['0', '01', '-1', '101', '1.5', 'abc', '', '1&limit=2'])(
+      'rejects the limit %j with 400',
+      async (raw) => {
+        const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+
+        await technicianUAgent.get(`/review-history?limit=${raw}`).expect(400);
+      },
+    );
+
     it('resolves communityId, communityName and startedAt/completedAt on each row', async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
@@ -1140,6 +1179,11 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(listResponse.body).toEqual([]);
+      // EN-240: a limit changes nothing for an ungranted manager.
+      const limitedResponse = await managerAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedResponse.body).toEqual([]);
 
       const nonexistentResponse = await managerAgent
         .get('/review-history/00000000-0000-7000-8000-000000000000')
@@ -1444,7 +1488,7 @@ describe('Review History (e2e)', () => {
       );
     });
 
-    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on either route', async () => {
+    it('a page/cursor/offset/date-range/sort/search query parameter has no effect on either route, and limit keeps the newest list rows', async () => {
       const technicianUAgent = await loginAgent(built.app, technicianUEmail);
 
       const filteredListResponse = await technicianUAgent
@@ -1452,7 +1496,6 @@ describe('Review History (e2e)', () => {
         .query({
           page: 1,
           cursor: 'x',
-          limit: 1,
           offset: 1,
           from: '2020-01-01',
           to: '2020-01-02',
@@ -1464,6 +1507,15 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(filteredListResponse.body).toEqual(plainListResponse.body);
+
+      // EN-240: `limit` is the one list parameter that applies: it keeps the
+      // newest rows of the same list.
+      const limitedListResponse = await technicianUAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedListResponse.body).toEqual(
+        (plainListResponse.body as unknown[]).slice(0, 1),
+      );
 
       const filteredDetailResponse = await technicianUAgent
         .get(`/review-history/${sessionByUForC.id}`)
@@ -1477,8 +1529,9 @@ describe('Review History (e2e)', () => {
 
     // tasks.md 4.11: "no page/cursor/limit/offset/date-range/sort/search
     // parameter accepted on any of the three scopes" — the representative
-    // (community) scope's variant of the test above.
-    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on the representative scope', async () => {
+    // (community) scope's variant of the test above. Since EN-240 `limit`
+    // applies to the list (newest rows); the others still have no effect.
+    it('a page/cursor/offset/date-range/sort/search query parameter has no effect on the representative scope, and limit keeps the newest list rows', async () => {
       const representativeAgent = await loginAgent(
         built.app,
         representativeEmail,
@@ -1489,7 +1542,6 @@ describe('Review History (e2e)', () => {
         .query({
           page: 1,
           cursor: 'x',
-          limit: 1,
           offset: 1,
           from: '2020-01-01',
           to: '2020-01-02',
@@ -1501,6 +1553,15 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(filteredListResponse.body).toEqual(plainListResponse.body);
+
+      // EN-240: `limit` is the one list parameter that applies: it keeps the
+      // newest rows of the same list.
+      const limitedListResponse = await representativeAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedListResponse.body).toEqual(
+        (plainListResponse.body as unknown[]).slice(0, 1),
+      );
     });
   });
 
@@ -2318,7 +2379,7 @@ describe('Review History (e2e)', () => {
 
     // tasks.md 4.11: no list-control parameter has any effect on the
     // manager's scope either.
-    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on the manager scope', async () => {
+    it('a page/cursor/offset/date-range/sort/search query parameter has no effect on the manager scope, and limit keeps the newest list rows', async () => {
       const managerXAgent = await loginAgent(built.app, managerXEmail);
 
       const filteredResponse = await managerXAgent
@@ -2326,7 +2387,6 @@ describe('Review History (e2e)', () => {
         .query({
           page: 1,
           cursor: 'x',
-          limit: 1,
           offset: 1,
           from: '2020-01-01',
           to: '2020-01-02',
@@ -2338,6 +2398,15 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(filteredResponse.body).toEqual(plainResponse.body);
+
+      // EN-240: `limit` is the one list parameter that applies: it keeps the
+      // newest rows of the same list.
+      const limitedListResponse = await managerXAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedListResponse.body).toEqual(
+        (plainResponse.body as unknown[]).slice(0, 1),
+      );
     });
 
     // tasks.md 4.11: the manager holds no write access to the review-session
@@ -2575,6 +2644,24 @@ describe('Review History (e2e)', () => {
       expect(rowIds).not.toContain(draftForX.id);
     });
 
+    // EN-240: a granted MANAGER's limited list is the start of its own list.
+    it("a granted MANAGER's limited list keeps its newest sessions", async () => {
+      const grantedManagerAgent = await loginAgent(
+        built.app,
+        grantedManagerEmail,
+      );
+
+      const plain = (
+        await grantedManagerAgent.get('/review-history').expect(200)
+      ).body as HistoryRowBody[];
+      const limited = (
+        await grantedManagerAgent.get('/review-history?limit=2').expect(200)
+      ).body as HistoryRowBody[];
+
+      expect(plain.length).toBeGreaterThan(2);
+      expect(limited).toEqual(plain.slice(0, 2));
+    });
+
     // review-history/spec.md "The ordering matches every other scope's
     // list, including a granted manager's" + tasks.md 3.18: closes the 3
     // e2e-orphaned granted-manager scenarios by proving the granted
@@ -2703,7 +2790,7 @@ describe('Review History (e2e)', () => {
       await adminAgent.delete(`/review-sessions/${draftForX.id}`).expect(403);
     });
 
-    it('a page/cursor/limit/offset/date-range/sort/search query parameter has no effect on the admin scope', async () => {
+    it('a page/cursor/offset/date-range/sort/search query parameter has no effect on the admin scope, and limit keeps the newest list rows', async () => {
       const adminAgent = await loginAgent(built.app, adminEmail);
 
       const filteredListResponse = await adminAgent
@@ -2711,7 +2798,6 @@ describe('Review History (e2e)', () => {
         .query({
           page: 1,
           cursor: 'x',
-          limit: 1,
           offset: 1,
           from: '2020-01-01',
           to: '2020-01-02',
@@ -2723,6 +2809,15 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(filteredListResponse.body).toEqual(plainListResponse.body);
+
+      // EN-240: `limit` is the one list parameter that applies: it keeps the
+      // newest rows of the same list.
+      const limitedListResponse = await adminAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedListResponse.body).toEqual(
+        (plainListResponse.body as unknown[]).slice(0, 1),
+      );
 
       const filteredDetailResponse = await adminAgent
         .get(`/review-history/${sessionForX.id}`)

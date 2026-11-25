@@ -57,8 +57,12 @@ export type ReviewHistoryDetail = {
   questions: ReviewHistoryQuestion[];
 };
 
-export function listReviewHistory(): Promise<ReviewHistoryRow[]> {
-  return apiFetch<ReviewHistoryRow[]>('/review-history');
+// EN-240: `limit` keeps only the newest N sessions (1-100, server-checked).
+// The history pages never pass it (review-history-ui); the home page's
+// recent activity does.
+export function listReviewHistory(options: { limit?: number } = {}): Promise<ReviewHistoryRow[]> {
+  const query = options.limit === undefined ? '' : `?limit=${options.limit}`;
+  return apiFetch<ReviewHistoryRow[]>(`/review-history${query}`);
 }
 
 export function readReviewHistory(sessionId: string): Promise<ReviewHistoryDetail> {

@@ -5,6 +5,7 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  Query,
   StreamableFile,
 } from '@nestjs/common';
 import {
@@ -13,6 +14,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiProduces,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -22,6 +24,12 @@ import { RequirePermission } from '../../../shared/presentation/decorators/requi
 import { buildCodedError } from '../../../shared/presentation/http/coded-error';
 import { uuidParamPipe } from '../../../shared/presentation/http/uuid-param.pipe';
 import { sessionIdPipe } from './session-id.pipe';
+import {
+  REVIEW_HISTORY_MAX_LIMIT,
+  reviewHistoryListQuerySchema,
+  type ReviewHistoryListQuery,
+} from '@sf-manager/validation';
+import { ZodValidationPipe } from '../../../shared/presentation/pipes/zod-validation.pipe';
 import { ActiveTemplateNotFoundError } from '../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
 import { InspectableElementNotFoundError } from '../../inspectable-element/domain/errors/inspectable-element-not-found.error';
@@ -68,17 +76,28 @@ export class ReviewHistoryController {
 
   @Get('review-history')
   @RequirePermission('reviewSession:read')
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: REVIEW_HISTORY_MAX_LIMIT },
+    description: `Keep only the N most recently completed sessions (1-${REVIEW_HISTORY_MAX_LIMIT}). Omitted: every session.`,
+  })
   @ApiOkResponse({ type: ReviewHistoryRowDto, isArray: true })
+  @ApiBadRequestResponse({
+    description: `limit is not a whole number from 1 to ${REVIEW_HISTORY_MAX_LIMIT}.`,
+  })
   @ApiUnauthorizedResponse({ description: 'No valid session.' })
   @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
   async list(
     @CurrentUser() user: VerifiedAccessToken,
+    @Query(new ZodValidationPipe(reviewHistoryListQuerySchema))
+    query: ReviewHistoryListQuery,
   ): Promise<ReviewHistoryRowDto[]> {
     try {
-      return await this.listReviewHistoryUseCase.execute({
-        userId: user.sub,
-        role: user.role,
-      });
+      return await this.listReviewHistoryUseCase.execute(
+        { userId: user.sub, role: user.role },
+        { limit: query.limit },
+      );
     } catch (error) {
       throw this.mapError(error);
     }

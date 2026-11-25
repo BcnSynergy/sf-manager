@@ -580,8 +580,9 @@ The home page MUST show a **Recent activity** section, after the Alerts
 section and before the section cards, listing the **five** most recently
 completed reviews the user can see, newest first by completion time. The
 reviews MUST come from the same role-scoped review history as the Review
-history page (`GET /review-history`, `review-history`); the client MUST NOT
-narrow that scope. Each review MUST show its community as a link to that
+history page (`GET /review-history`, `review-history`), requested with
+`limit=5` so only those five are sent; the client MUST NOT narrow that
+scope. Each review MUST show its community as a link to that
 review's read-only view (`/review-history/:sessionId`), and, as the link's
 description, when it was completed (a localized long date in the
 Europe/Madrid time zone) and the email of who performed it. A review whose
@@ -632,7 +633,7 @@ loading message, and if it fails, one localized error message.
 
 - GIVEN a signed-in user of any of the five roles
 - WHEN the home page renders
-- THEN it MUST show the Recent activity section and MUST request the history once
+- THEN it MUST show the Recent activity section and MUST request the history once, with `limit=5`
 
 ### Requirement: The Navigation Adds No Third Entry Point to the Element History Page
 

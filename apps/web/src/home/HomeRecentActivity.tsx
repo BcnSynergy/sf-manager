@@ -23,8 +23,9 @@ function latest(rows: ReviewHistoryRow[]): ReviewHistoryRow[] {
 // home-page slice 3 (EN-238): the latest completed reviews the user can see,
 // from the same scoped GET /review-history as the history page (the server
 // decides the scope per role; an ungranted manager gets an empty list).
-// GET /review-history has no limit yet, so the whole list is fetched and
-// the five latest are kept (EN-240). An empty community name or email (a
+// It asks the server for the five newest only (`limit`, EN-240) and still
+// sorts and cuts them itself, so the five shown never depend on the
+// direction the server lists them in. An empty community name or email (a
 // soft-deleted community or user) gets the history page's neutral label.
 export function HomeRecentActivity({ role }: { role: Role }) {
   const { t, i18n } = useTranslation();
@@ -34,7 +35,7 @@ export function HomeRecentActivity({ role }: { role: Role }) {
   useEffect(() => {
     if (!shown) return;
     let active = true;
-    listReviewHistory()
+    listReviewHistory({ limit: SHOWN })
       .then((rows) => {
         if (active) setLoad({ state: 'loaded', rows: latest(rows) });
       })

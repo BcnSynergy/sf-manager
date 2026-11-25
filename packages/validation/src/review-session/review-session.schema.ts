@@ -72,3 +72,21 @@ export const recordEntryRequestSchema = z.union([
 ]);
 
 export type RecordEntryRequest = z.infer<typeof recordEntryRequestSchema>;
+
+// EN-240: GET /review-history?limit=N keeps only the N most recently
+// completed sessions (newest first, the list's own order). Query values
+// arrive as strings: a whole number from 1 to 100, written without sign,
+// leading zeros, decimals or spaces. A repeated `limit` arrives as an array
+// and is rejected.
+export const REVIEW_HISTORY_MAX_LIMIT = 100;
+
+export const reviewHistoryListQuerySchema = z.object({
+  limit: z
+    .string()
+    .regex(/^[1-9][0-9]*$/)
+    .transform(Number)
+    .pipe(z.number().int().max(REVIEW_HISTORY_MAX_LIMIT))
+    .optional(),
+});
+
+export type ReviewHistoryListQuery = z.infer<typeof reviewHistoryListQuerySchema>;
