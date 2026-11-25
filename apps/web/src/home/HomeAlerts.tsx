@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { listReviewSchedule, type ReviewScheduleStatus } from '../api/review-schedule';
 import { listOwnReviewSessions } from '../api/review-session';
-import { NAV_ITEMS_BY_ROLE } from '../layout/nav-items';
 import { statusBadgeClassName } from '../review-schedule/schedule-labels';
+import { roleOffers } from './role-offers';
 
 const SCHEDULE_PATH = '/review-schedule';
 const SESSIONS_PATH = '/review-sessions';
@@ -22,13 +22,6 @@ type Alert = { key: string; labelKey: string; count: number; to: string; badge: 
 
 type LoadState = { state: 'loading' } | { state: 'error' } | { state: 'loaded'; alerts: Alert[] };
 
-function offers(role: Role, path: string): boolean {
-  return (
-    Object.hasOwn(NAV_ITEMS_BY_ROLE, role) &&
-    NAV_ITEMS_BY_ROLE[role].some((item) => item.to === path)
-  );
-}
-
 // home-page slice 2 (EN-237): counts of what needs attention, each linking
 // to the page that lists it. A role gets the schedule alerts only if its
 // navigation offers the Review schedule, and the drafts alert only if it
@@ -37,8 +30,8 @@ function offers(role: Role, path: string): boolean {
 // counts are the server's (review-schedule-ui): nothing is recomputed here.
 export function HomeAlerts({ role }: { role: Role }) {
   const { t } = useTranslation();
-  const showSchedule = offers(role, SCHEDULE_PATH);
-  const showDrafts = offers(role, SESSIONS_PATH);
+  const showSchedule = roleOffers(role, SCHEDULE_PATH);
+  const showDrafts = roleOffers(role, SESSIONS_PATH);
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
 
   useEffect(() => {

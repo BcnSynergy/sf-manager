@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { PageHeader } from '../components/PageHeader';
 import { HomeAlerts } from '../home/HomeAlerts';
+import { HomeRecentActivity } from '../home/HomeRecentActivity';
 import { groupNavItems, NAV_ITEMS_BY_ROLE } from '../layout/nav-items';
 import { mapRoleToLabelKey } from '../users/role-labels';
 
@@ -12,7 +13,8 @@ function isKnownRole(role: string): role is Role {
 }
 
 // The landing page at "/": who is signed in, the role's alerts (slice 2,
-// HomeAlerts), and one card per section the role's navigation offers
+// HomeAlerts), its recent activity (slice 3, HomeRecentActivity), and one
+// card per section the role's navigation offers
 // (home-page slice 1). The cards come from the same
 // NAV_ITEMS_BY_ROLE table as the sidebar, minus Home itself, so the page can
 // never offer a section the navigation does not. An unrecognized role gets
@@ -39,9 +41,11 @@ export function HomePage() {
             : t('home.signedInAs', { email: user.email })}
         </p>
       )}
-      {/* Keyed on the role so a role change starts from the loading state
-          instead of showing the previous role's counts. */}
-      {role && <HomeAlerts key={role} role={role} />}
+      {/* Keyed on the role (with distinct prefixes, as siblings) so a role
+          change starts each block from loading instead of showing the
+          previous role's data. */}
+      {role && <HomeAlerts key={`alerts-${role}`} role={role} />}
+      {role && <HomeRecentActivity key={`activity-${role}`} role={role} />}
       <div className="sf-home-sections" data-testid="home-sections">
         {sections.map((section) => (
           <section

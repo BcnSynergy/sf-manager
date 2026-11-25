@@ -34,8 +34,8 @@ change to a route's `allowedRoles` or to `ProtectedRoute`'s precedence
 logic. Promoting a CRUD sub-route or the element-history drill-in to a nav
 item is likewise out of scope. The home page at `/` (since `home-page`)
 lists the role's sections as cards built from the same role → items table,
-and the role's alerts (see "The Home Page Shows the Role's Alerts"); recent
-activity on it is not part of this capability yet.
+the role's alerts (see "The Home Page Shows the Role's Alerts") and its
+recent activity (see "The Home Page Shows Recent Activity").
 (Previously: "a **link bar and nothing more**", with a sidebar, a design
 system, CSS framework, theming and app branding out of scope.)
 
@@ -573,6 +573,66 @@ are out of scope.
 - GIVEN a signed-in `MAINTENANCE_TECHNICIAN` whose drafts request fails
 - WHEN the home page renders
 - THEN the Alerts section MUST show "Alerts could not be loaded.", localized, and no count
+
+### Requirement: The Home Page Shows Recent Activity
+
+The home page MUST show a **Recent activity** section, after the Alerts
+section and before the section cards, listing the **five** most recently
+completed reviews the user can see, newest first by completion time. The
+reviews MUST come from the same role-scoped review history as the Review
+history page (`GET /review-history`, `review-history`); the client MUST NOT
+narrow that scope. Each review MUST show its community as a link to that
+review's read-only view (`/review-history/:sessionId`), and, as the link's
+description, when it was completed (a localized long date in the
+Europe/Madrid time zone) and the email of who performed it. A review whose
+community name or performer email comes back empty (a soft-deleted
+community or user) MUST show the same localized neutral label the Review
+history page shows ("Unknown community", "Unknown performer"). Below the
+list a link MUST lead to the whole review history.
+
+A role MUST get the section only if its navigation offers the Review
+history item (all five roles today); an unrecognized role MUST see no
+section and no request MUST be made. When there is no completed review to
+show, an ungranted `MANAGER` included, the section MUST say "No reviews
+have been completed yet.", localized, with no list and no link to the
+whole history. While the history loads the section MUST show a localized
+loading message, and if it fails, one localized error message.
+
+#### Scenario: The five latest reviews, newest first
+
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN` who can see seven completed reviews
+- WHEN the home page renders
+- THEN the Recent activity section MUST list the five most recently completed ones, newest first, each linking to `/review-history/:sessionId`
+
+#### Scenario: When and by whom
+
+- GIVEN a review completed at `2026-11-24T23:30:00Z` by `technician@sf-manager.example`
+- WHEN it is listed
+- THEN its description MUST read "Completed on November 25, 2026 by technician@sf-manager.example", localized
+
+#### Scenario: A gone community or performer gets a neutral label
+
+- GIVEN a listed review whose community name and performer email are both empty
+- WHEN it is listed
+- THEN its link MUST read "Unknown community" and its description MUST end with "by Unknown performer", localized
+
+#### Scenario: Nothing completed yet
+
+- GIVEN a signed-in user who can see no completed review
+- WHEN the home page renders
+- THEN the section MUST say "No reviews have been completed yet." and MUST show no list and no link to the whole history
+
+#### Scenario: The history cannot be loaded
+
+- GIVEN a signed-in user whose history request fails
+- WHEN the home page renders
+- THEN the section MUST show "Recent activity could not be loaded.", localized, and no list
+
+#### Scenario: Every role gets the section
+
+- GIVEN a signed-in user of any of the five roles
+- WHEN the home page renders
+- THEN it MUST show the Recent activity section and MUST request the history once
 
 ### Requirement: The Navigation Adds No Third Entry Point to the Element History Page
 

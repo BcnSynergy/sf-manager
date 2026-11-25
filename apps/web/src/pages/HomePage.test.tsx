@@ -3,12 +3,14 @@ import { MemoryRouter } from 'react-router';
 import type { Role } from '@sf-manager/validation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
+import * as reviewHistoryApi from '../api/review-history';
 import * as reviewScheduleApi from '../api/review-schedule';
 import * as reviewSessionApi from '../api/review-session';
 import { useAuth } from '../auth/AuthProvider';
 import { NAV_ITEMS_BY_ROLE } from '../layout/nav-items';
 import { HomePage } from './HomePage';
 
+vi.mock('../api/review-history');
 vi.mock('../api/review-schedule');
 vi.mock('../api/review-session');
 vi.mock('../auth/AuthProvider', async () => {
@@ -54,6 +56,7 @@ describe('HomePage', () => {
     vi.stubGlobal('fetch', fetchSpy);
     vi.mocked(reviewScheduleApi.listReviewSchedule).mockResolvedValue([]);
     vi.mocked(reviewSessionApi.listOwnReviewSessions).mockResolvedValue([]);
+    vi.mocked(reviewHistoryApi.listReviewHistory).mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -167,6 +170,49 @@ describe('HomePage', () => {
 
     expect(screen.getByTestId('home-alerts-loading')).toBeInTheDocument();
     expect(screen.queryByText('1 unfinished draft')).not.toBeInTheDocument();
+  });
+
+  it("starts the recent activity again from loading when the role changes, never showing the previous role's reviews", async () => {
+    signInAs('MAINTENANCE_TECHNICIAN');
+    vi.mocked(reviewHistoryApi.listReviewHistory).mockResolvedValue([
+      {
+        id: 'session-1',
+        communityId: 'community-1',
+        communityName: 'Dev Seed Residences North',
+        performedById: '1',
+        performedByEmail: 'technician@sf-manager.example',
+        startedAt: '2026-11-20T10:00:00.000Z',
+        completedAt: '2026-11-20T11:00:00.000Z',
+      },
+    ]);
+    const { rerender } = renderPage();
+    expect(await screen.findByText('Dev Seed Residences North')).toBeInTheDocument();
+
+    vi.mocked(reviewHistoryApi.listReviewHistory).mockReturnValue(new Promise(() => {}));
+    signInAs('MANAGER');
+    rerender(
+      <MemoryRouter initialEntries={['/']}>
+        <HomePage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('home-activity-loading')).toBeInTheDocument();
+    expect(screen.queryByText('Dev Seed Residences North')).not.toBeInTheDocument();
+  });
+
+  it('shows the recent activity after the alerts and before the sections', async () => {
+    signInAs('MAINTENANCE_TECHNICIAN');
+    renderPage();
+
+    const alerts = await screen.findByRole('heading', { level: 2, name: 'Alerts' });
+    const activity = await screen.findByRole('heading', { level: 2, name: 'Recent activity' });
+    const sections = screen.getByTestId('home-sections');
+    expect(
+      alerts.compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      activity.compareDocumentPosition(sections) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('offers no section to an unrecognized role', () => {

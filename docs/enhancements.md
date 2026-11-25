@@ -1194,9 +1194,16 @@ content type`). Today that is the only 415 it raises, but a future one
   error and the orphan sweep still runs), but the race cannot be triggered
   from a test without a seam over `node:fs/promises`. Origin:
   `en-234-sweep-tmp-files` fresh review W-1c, 2026-11-24.
-- **EN-238** (home page, slice 3): recent activity on the home page, such
-  as the latest completed reviews the user can see (review history, scoped
-  by role). Origin: `home-page` slice 1, 2026-11-25.
+- **EN-240** (api performance): `GET /review-history` has no limit, so the
+  home page's recent activity (EN-238) fetches the user's whole history to
+  show five reviews. Fine with today's data; with a large history it is a
+  heavy request on every home page visit. Add an optional `limit` (newest
+  first) to the endpoint and pass `limit=5` from the home page. This is a
+  contract change, not API-only: it means editing the `review-history` spec
+  (which fixes the order but no limit) and the review-history-ui sentence
+  that list pagination "MUST NOT be started, stubbed or parameterized for
+  here". Origin:
+  `home-page` slice 3 (EN-238), 2026-11-25.
 - **EN-239** (api tests): the review-session e2e scope guard
   (`apps/api/test/review-session.e2e-spec.ts`) skips `HomeAlerts` files
   whole, because they legitimately say "overdue". A reminder or export
@@ -1207,6 +1214,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-238** (home page, slice 3): the home page shows a Recent activity section, after the alerts, with the five most recently completed reviews the user can see (from the role-scoped `GET /review-history`, sorted newest first on the client), each linking to its read-only view and describing when (Europe/Madrid long date) and by whom it was completed (a soft-deleted community or user gets the history page's "Unknown community" / "Unknown performer" labels, shared keys), plus a link to the whole history. Every role gets it; with nothing to show it says so. No API change; the missing endpoint limit is EN-240. Done in `home-page` (PR 3; spec `app-navigation`). Origin: `home-page` slice 1, 2026-11-25.
 - **EN-237** (home page, slice 2): the home page shows an Alerts section with counts of overdue, never-reviewed and upcoming schedule obligations (from `GET /review-schedule`) and of the user's unfinished drafts (from `GET /review-sessions`), each linking to its page; zero counts are left out, and a role gets an alert only if its navigation offers the page it links to (the company manager gets none). No API change. The review-session e2e scope guard now also skips `HomeAlerts` files and the `home.alerts` catalog keys, as it does the review schedule's (TD-16), since the alerts say "overdue" (see EN-239). Done in `home-page` (PR 2, #470; spec `app-navigation`). Origin: `home-page` slice 1, 2026-11-25.
 - **EN-224** (api readability): `ReviewSessionRepository.discardDraft()` had no production caller since EN-164 (the discard use case goes through `ReviewPhotoRepository.discardDraftWithPhotoKeys`, which locks the session and returns the photo keys), so two discard paths could drift apart. It is gone from the port and the Prisma adapter; the in-memory session fake keeps a `deleteSession` test helper outside the port for the photo fake. The attribution write-path integration test now discards through `discardDraftWithPhotoKeys`, and the photo integration case that only re-checked the cascade was dropped, since the next case checks it too. Comments now name the remaining method. No behavior change. Done in `en-224-remove-discard-draft` (PR #467). Origin: `en-164-review-photos` scoped fresh review S-1, 2026-11-22.
 - **EN-234** (review photos): the EN-222 sweep listed only complete files, so the temporary file a `LocalFileStorage.put` interrupted by a crash leaves (`review-photos/<key>.<uuid>.tmp`) was never deleted. `FileStorage` gains `deleteUnfinishedWrites(directory, startedBefore)`: the local adapter deletes, directly under the directory, only files named like a put's temporary file and older than the cutoff (complete files never), and resolves the count; the in-memory fake keeps its own unfinished writes for tests. Each sweep now calls it for `review-photos/` with the same one-hour cutoff and logs the count, before and independently of the no-row guard (a leftover is never a photo); a failure is logged and the orphan file sweep still runs. Temporary files under `logos/` are out of scope. Done in `en-234-sweep-tmp-files` (PR #466; spec `review-session-management`). Origin: `en-222-photo-file-sweep` (PR #459), 2026-11-23.
