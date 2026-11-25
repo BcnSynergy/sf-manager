@@ -1178,6 +1178,8 @@ content type`). Today that is the only 415 it raises, but a future one
   files for every forbidden term except `overdue`/`Overdue`. Low risk today,
   since reminders are out of scope in the spec. Origin: PR #470 (EN-237)
   scoped fresh review S-2, 2026-11-25.
+- **EN-241** (web, licensing): AGPL-3.0 section 13 asks that users who interact with a modified version over a network be offered its source code. The deployed app has no link to the source yet; a "Source code" link (for example in the footer or an about view) to https://github.com/BcnSynergy/sf-manager would make that offer explicit. Low priority while only the copyright holder runs the code. Origin: `licensing` fresh review W-2, 2026-11-25.
+- **EN-242** (docs, licensing): `LICENSING.md` says contributions need a contributor license agreement, but no CLA text or `CONTRIBUTING.md` exists. Write one (or adopt a standard CLA) before accepting the first external contribution. Origin: `licensing` fresh review S-3, 2026-11-25.
 
 ## Done
 

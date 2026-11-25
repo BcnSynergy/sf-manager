@@ -2,7 +2,7 @@
   "name": "@sf-manager/api",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "Jordi Bonilla Muñoz (BcnSynergy)",
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {

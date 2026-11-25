@@ -36,5 +36,6 @@ touch before opening a pull request.
 
 ## Third-party software
 
-Dependencies are not covered by this notice; each keeps its own license, found
-in its package.
+Dependencies and vendored files are not covered by this notice; each keeps its
+own license, found in its package or next to the vendored file (for example the
+SIL Open Font License notices in `apps/web/src/assets/fonts`).

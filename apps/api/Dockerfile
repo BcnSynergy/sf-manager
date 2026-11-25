@@ -43,6 +43,10 @@ FROM base AS runtime
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-api, EN-91)
 # to this repository, so it inherits the repository's access permissions.
 LABEL org.opencontainers.image.source=https://github.com/BcnSynergy/sf-manager
+# The images are public, so they carry the license (AGPL-3.0-only, dual
+# licensed; see LICENSING.md).
+LABEL org.opencontainers.image.licenses=AGPL-3.0-only
+COPY LICENSE LICENSING.md /usr/share/licenses/sf-manager/
 
 # The Prisma CLI is a production dependency of the API: migrations run when
 # the container starts.
