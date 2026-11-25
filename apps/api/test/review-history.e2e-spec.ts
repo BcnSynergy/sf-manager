@@ -727,7 +727,7 @@ describe('Review History (e2e)', () => {
       ]);
     });
 
-    it.each(['0', '-1', '101', '1.5', 'abc', '', '1&limit=2'])(
+    it.each(['0', '01', '-1', '101', '1.5', 'abc', '', '1&limit=2'])(
       'rejects the limit %j with 400',
       async (raw) => {
         const technicianUAgent = await loginAgent(built.app, technicianUEmail);
@@ -1179,6 +1179,11 @@ describe('Review History (e2e)', () => {
         .get('/review-history')
         .expect(200);
       expect(listResponse.body).toEqual([]);
+      // EN-240: a limit changes nothing for an ungranted manager.
+      const limitedResponse = await managerAgent
+        .get('/review-history?limit=1')
+        .expect(200);
+      expect(limitedResponse.body).toEqual([]);
 
       const nonexistentResponse = await managerAgent
         .get('/review-history/00000000-0000-7000-8000-000000000000')
@@ -2645,6 +2650,24 @@ describe('Review History (e2e)', () => {
     // manager's list is session-for-session IDENTICAL to the admin's on
     // this same installation-wide fixture (companies X/Y, a deactivated
     // community, a soft-deleted performer, an unattributed session).
+    // EN-240: a granted MANAGER's limited list is the start of its own list.
+    it("a granted MANAGER's limited list keeps its newest sessions", async () => {
+      const grantedManagerAgent = await loginAgent(
+        built.app,
+        grantedManagerEmail,
+      );
+
+      const plain = (
+        await grantedManagerAgent.get('/review-history').expect(200)
+      ).body as HistoryRowBody[];
+      const limited = (
+        await grantedManagerAgent.get('/review-history?limit=2').expect(200)
+      ).body as HistoryRowBody[];
+
+      expect(plain.length).toBeGreaterThan(2);
+      expect(limited).toEqual(plain.slice(0, 2));
+    });
+
     it("a granted MANAGER's list is identical to the SYSTEM_ADMIN's, including the deactivated community, the soft-deleted performer and the unattributed session", async () => {
       const adminAgent = await loginAgent(built.app, adminEmail);
       const grantedManagerAgent = await loginAgent(

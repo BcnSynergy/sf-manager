@@ -79,7 +79,7 @@ export class ReviewHistoryController {
   @ApiQuery({
     name: 'limit',
     required: false,
-    type: Number,
+    schema: { type: 'integer', minimum: 1, maximum: REVIEW_HISTORY_MAX_LIMIT },
     description: `Keep only the N most recently completed sessions (1-${REVIEW_HISTORY_MAX_LIMIT}). Omitted: every session.`,
   })
   @ApiOkResponse({ type: ReviewHistoryRowDto, isArray: true })

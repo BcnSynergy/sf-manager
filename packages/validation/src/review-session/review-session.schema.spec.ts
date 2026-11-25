@@ -67,9 +67,12 @@ describe('reviewHistoryListQuerySchema', () => {
     expect(reviewHistoryListQuerySchema.parse({ limit: raw })).toEqual({ limit: parsed });
   });
 
-  it.each(['0', '-1', '101', '1.5', 'abc', '', ' '])('rejects the limit %j', (raw) => {
-    expect(reviewHistoryListQuerySchema.safeParse({ limit: raw }).success).toBe(false);
-  });
+  it.each(['0', '01', '0100', '+1', '1e2', ' 5', '-1', '101', '1.5', 'abc', '', ' '])(
+    'rejects the limit %j',
+    (raw) => {
+      expect(reviewHistoryListQuerySchema.safeParse({ limit: raw }).success).toBe(false);
+    },
+  );
 
   it('rejects a repeated limit', () => {
     expect(reviewHistoryListQuerySchema.safeParse({ limit: ['1', '2'] }).success).toBe(false);

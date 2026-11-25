@@ -515,13 +515,15 @@ rules.)
 
 The session history list (`GET /review-history`) MUST accept one optional
 query parameter, `limit`: a whole number from 1 to 100, written as plain
-digits. With `limit = N` the response MUST be the first N sessions of the
+digits without a sign or leading zeros. With `limit = N` the response MUST be the first N sessions of the
 caller's own scoped list in its usual order, newest completion first, so
 every one of the five scopes keeps its own sessions and only the oldest
 are dropped. A limit larger than the list MUST return the whole list.
 Without `limit` the list MUST be returned whole, exactly as before. Any
-other value (zero, negative, above 100, a decimal, non-digits, empty, or
-the parameter repeated) MUST be rejected with `400` and return no session.
+other value (zero, a leading zero, negative, above 100, a decimal,
+non-digits, empty, or the parameter repeated) MUST be rejected with `400`
+and return no session. Other parameter names, such as `limit[]`, are not
+`limit` and are ignored like any unknown parameter.
 Community names and performer emails MUST be resolved only for the
 sessions returned. The by-id read and the element-keyed read MUST NOT
 accept `limit`; on them it has no effect.
@@ -542,12 +544,12 @@ accept `limit`; on them it has no effect.
 
 - GIVEN a caller of any of the five scopes
 - WHEN they request `GET /review-history?limit=1`
-- THEN the response MUST equal the first row of their own unlimited list
+- THEN the response MUST equal the first row of their own unlimited list, and an ungranted `MANAGER` MUST still get an empty list
 
 #### Scenario: An invalid limit is rejected
 
 - GIVEN an authorized caller
-- WHEN they request `GET /review-history` with `limit` set to `0`, `-1`, `101`, `1.5`, `abc`, an empty value, or twice
+- WHEN they request `GET /review-history` with `limit` set to `0`, `01`, `-1`, `101`, `1.5`, `abc`, an empty value, or twice
 - THEN the response MUST be `400`
 
 ### Requirement: Only Completed Sessions Appear in History

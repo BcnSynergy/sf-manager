@@ -85,6 +85,7 @@ describe('ListReviewHistoryUseCase', () => {
       scopeChecker.assign('user-1', id);
     }
     const findById = jest.spyOn(communityRepository, 'findById');
+    const findEmailsByIds = jest.spyOn(userDirectory, 'findEmailsByIds');
 
     const useCase = buildUseCase(
       sessionRepository,
@@ -101,6 +102,46 @@ describe('ListReviewHistoryUseCase', () => {
     expect(findById.mock.calls.map(([id]) => id).sort()).toEqual([
       'community-mid',
       'community-new',
+    ]);
+    expect(findEmailsByIds).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves emails only for the performers of the rows kept', async () => {
+    const sessionRepository = new InMemoryReviewSessionRepository();
+    const scopeChecker = new FakeCommunityScopeChecker();
+    const userDirectory = new InMemoryUserDirectory();
+    // A representative's community-scoped list spans several performers.
+    for (const [day, performer] of [
+      ['01', 'performer-old'],
+      ['02', 'performer-mid'],
+      ['03', 'performer-new'],
+    ]) {
+      sessionRepository.seed(
+        completedSession({
+          id: `session-${day}`,
+          performedById: performer,
+          completedAt: new Date(`2026-02-${day}T00:00:00.000Z`),
+        }),
+      );
+    }
+    scopeChecker.assign('representative-1', 'community-1');
+    const findEmailsByIds = jest.spyOn(userDirectory, 'findEmailsByIds');
+
+    const useCase = buildUseCase(
+      sessionRepository,
+      scopeChecker,
+      new InMemoryCommunityRepository(),
+      userDirectory,
+    );
+    const rows = await useCase.execute(
+      { userId: 'representative-1', role: 'COMMUNITY_REPRESENTATIVE' },
+      { limit: 2 },
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(['session-03', 'session-02']);
+    expect([...findEmailsByIds.mock.calls[0][0]].sort()).toEqual([
+      'performer-mid',
+      'performer-new',
     ]);
   });
 
