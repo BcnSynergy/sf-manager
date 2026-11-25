@@ -55,6 +55,86 @@ function buildUseCase(
 // performedByEmail resolved via ONE UserDirectory.findEmailsByIds call over
 // the distinct performedById values.
 describe('ListReviewHistoryUseCase', () => {
+  // EN-240: `limit` keeps the newest N rows and resolves names only for them.
+  it('keeps only the newest rows up to the limit, resolving names only for those', async () => {
+    const sessionRepository = new InMemoryReviewSessionRepository();
+    const scopeChecker = new FakeCommunityScopeChecker();
+    const communityRepository = new InMemoryCommunityRepository();
+    const userDirectory = new InMemoryUserDirectory();
+    for (const [id, day] of [
+      ['community-old', '01'],
+      ['community-mid', '02'],
+      ['community-new', '03'],
+    ]) {
+      await communityRepository.create(
+        new Community({
+          id,
+          name: id,
+          address: 'Carrer Major 1, Girona',
+          locale: 'ca',
+          deletedAt: null,
+        }),
+      );
+      sessionRepository.seed(
+        completedSession({
+          id: `session-${day}`,
+          communityId: id,
+          completedAt: new Date(`2026-02-${day}T00:00:00.000Z`),
+        }),
+      );
+      scopeChecker.assign('user-1', id);
+    }
+    const findById = jest.spyOn(communityRepository, 'findById');
+
+    const useCase = buildUseCase(
+      sessionRepository,
+      scopeChecker,
+      communityRepository,
+      userDirectory,
+    );
+    const rows = await useCase.execute(
+      { userId: 'user-1', role: 'MAINTENANCE_TECHNICIAN' },
+      { limit: 2 },
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(['session-03', 'session-02']);
+    expect(findById.mock.calls.map(([id]) => id).sort()).toEqual([
+      'community-mid',
+      'community-new',
+    ]);
+  });
+
+  it('returns every row when no limit is given', async () => {
+    const sessionRepository = new InMemoryReviewSessionRepository();
+    const scopeChecker = new FakeCommunityScopeChecker();
+    for (const day of ['01', '02', '03']) {
+      sessionRepository.seed(
+        completedSession({
+          id: `session-${day}`,
+          completedAt: new Date(`2026-02-${day}T00:00:00.000Z`),
+        }),
+      );
+    }
+    scopeChecker.assign('user-1', 'community-1');
+
+    const useCase = buildUseCase(
+      sessionRepository,
+      scopeChecker,
+      new InMemoryCommunityRepository(),
+      new InMemoryUserDirectory(),
+    );
+    const rows = await useCase.execute({
+      userId: 'user-1',
+      role: 'MAINTENANCE_TECHNICIAN',
+    });
+
+    expect(rows.map((row) => row.id)).toEqual([
+      'session-03',
+      'session-02',
+      'session-01',
+    ]);
+  });
+
   it('maps sessions to rows with the resolved community name and performer email', async () => {
     const sessionRepository = new InMemoryReviewSessionRepository();
     const scopeChecker = new FakeCommunityScopeChecker();

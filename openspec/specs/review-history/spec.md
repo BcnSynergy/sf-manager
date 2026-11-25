@@ -48,7 +48,10 @@ session-level surface is untouched.
 Deliberately **not** here (deferred, see the guard requirements below):
 the other five `ManagerCapability` names ADR-011 Decision 2 lists,
 per-element history filtering, pagination, date filters, sorting and
-search, and any write, scheduling or analytics path. Signing is
+search, and any write, scheduling or analytics path. The one list control
+that ships is an optional `limit` on the session list, which keeps its
+newest sessions (EN-240, see _The Session History List Can Be Limited to Its
+Newest Sessions_); it is not pagination. Signing is
 completion itself (`review-session-management`), and the review
 document of one completed session is owned by `review-document`, which
 reuses this capability's five scopes without widening any of them. No
@@ -507,6 +510,45 @@ rules.)
 - GIVEN a `completed` session with recorded answers
 - WHEN a `SYSTEM_ADMIN` lists and opens it any number of times
 - THEN its status, entries, answers and observations MUST be byte-for-byte unchanged
+
+### Requirement: The Session History List Can Be Limited to Its Newest Sessions
+
+The session history list (`GET /review-history`) MUST accept one optional
+query parameter, `limit`: a whole number from 1 to 100, written as plain
+digits. With `limit = N` the response MUST be the first N sessions of the
+caller's own scoped list in its usual order, newest completion first, so
+every one of the five scopes keeps its own sessions and only the oldest
+are dropped. A limit larger than the list MUST return the whole list.
+Without `limit` the list MUST be returned whole, exactly as before. Any
+other value (zero, negative, above 100, a decimal, non-digits, empty, or
+the parameter repeated) MUST be rejected with `400` and return no session.
+Community names and performer emails MUST be resolved only for the
+sessions returned. The by-id read and the element-keyed read MUST NOT
+accept `limit`; on them it has no effect.
+
+#### Scenario: A limit keeps the newest sessions
+
+- GIVEN a `MAINTENANCE_TECHNICIAN` who completed a session for community C and, later, one for community D
+- WHEN they request `GET /review-history?limit=1`
+- THEN the response MUST be 2xx and contain only the session for D
+
+#### Scenario: A limit larger than the list returns all of it
+
+- GIVEN the same technician
+- WHEN they request `GET /review-history?limit=100`
+- THEN the response MUST contain both sessions, newest first
+
+#### Scenario: Every scope keeps its own newest sessions
+
+- GIVEN a caller of any of the five scopes
+- WHEN they request `GET /review-history?limit=1`
+- THEN the response MUST equal the first row of their own unlimited list
+
+#### Scenario: An invalid limit is rejected
+
+- GIVEN an authorized caller
+- WHEN they request `GET /review-history` with `limit` set to `0`, `-1`, `101`, `1.5`, `abc`, an empty value, or twice
+- THEN the response MUST be `400`
 
 ### Requirement: Only Completed Sessions Appear in History
 
@@ -1308,7 +1350,10 @@ and the guard becomes a bound on it — one element-keyed read family, five
 scopes, no controls, no second variant. The capability clause previously
 read "gate review-history visibility only"; the three rows marked
 _(narrowed for review-schedule)_ below are bounded, not deleted, to allow
-the one read-only schedule read.)
+the one read-only schedule read. The List controls row is likewise
+narrowed, not deleted, for EN-240: it forbade a `limit` too, and the
+_"No list-control parameters are accepted"_ scenario now excepts the
+session list's `limit`.)
 
 | Deferred                                                                      | Must not exist                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1318,7 +1363,7 @@ the one read-only schedule read.)
 | An audit trail                                                                | Any audit table, event or write recording a capability grant, a capability revoke or a role change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | A narrowed variant of the granted read                                        | Any per-company, per-community or date-bounded variant of `VIEW_ALL_REVIEWS`, and any granted-manager-specific repository method or route, on either surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | A second element-keyed surface _(narrowed for review-schedule)_               | Any cross-element or cross-community aggregation ("every element's last review") **other than the `review-schedule` read, which aggregates per `(community, elementType)` pair and returns no element-level data**, any element-keyed read reached from a route other than the single nested one, any unscoped `findById` on the inspectable-element port, and any `GET` by-id inspectable-element endpoint                                                                                                                                                                                                                      |
-| List controls                                                                 | Any pagination, cursor, limit, offset, date-range filter, sorting or search parameter on a history read — on **either** surface, including the installation-wide list and an element's own record however long it grows                                                                                                                                                                                                                                                                                                                                                                                                          |
+| List controls _(narrowed for EN-240)_                                         | Any pagination, cursor, limit, offset, date-range filter, sorting or search parameter on a history read — on **either** surface, including the installation-wide list and an element's own record however long it grows — **except** the optional `limit` on the session list defined by _The Session History List Can Be Limited to Its Newest Sessions_                                                                                                                                                                                                                                                                        |
 | Analytics derived from the element record                                     | Any stored `lastInspectedAt` or equivalent projection, any overdue or due-date computation, any trend or chart, and any export or signing path over an element's record. The `review-schedule` read is not derived from an element's record: it is computed on read, per pair, from completed sessions                                                                                                                                                                                                                                                                                                                           |
 | Company-attribution history                                                   | Any effective-dated employment table, attribution version history, or route/use case that rewrites a session's recorded performing company                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
@@ -1378,7 +1423,7 @@ sentence is a clarification, not a relaxation.)
 
 - GIVEN the history read routes and their request contracts after this change
 - WHEN they are inspected
-- THEN none MUST accept a page, cursor, limit, offset, date-range, sort or search parameter, on any of the five scopes or on the element-keyed read
+- THEN none MUST accept a page, cursor, offset, date-range, sort or search parameter, on any of the five scopes or on the element-keyed read, and only the session list MUST accept `limit`
 
 #### Scenario: No projection or analytics is derived from the element record
 

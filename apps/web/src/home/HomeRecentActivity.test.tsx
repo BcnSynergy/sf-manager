@@ -171,6 +171,7 @@ describe('HomeRecentActivity', () => {
       await screen.findByRole('heading', { level: 2, name: 'Recent activity' }),
     ).toBeInTheDocument();
     expect(mockedListReviewHistory).toHaveBeenCalledTimes(1);
+    expect(mockedListReviewHistory).toHaveBeenCalledWith({ limit: 5 });
   });
 
   it('shows nothing to an unrecognized role and requests nothing', () => {

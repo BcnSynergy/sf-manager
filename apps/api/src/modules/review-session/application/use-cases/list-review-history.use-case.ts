@@ -43,8 +43,18 @@ export class ListReviewHistoryUseCase {
     private readonly userDirectory: UserDirectory,
   ) {}
 
-  async execute(actor: Actor): Promise<ReviewHistoryRow[]> {
-    const sessions = await this.reviewHistoryAccessService.listForActor(actor);
+  // EN-240: `limit` keeps the first N sessions of the scoped list, which
+  // is newest first, BEFORE community names and emails are resolved, so a
+  // limited request only looks up what it returns. The scoped query itself
+  // still reads every session (pushing the limit into the repository is a
+  // later option that would not change this contract).
+  async execute(
+    actor: Actor,
+    options: { limit?: number } = {},
+  ): Promise<ReviewHistoryRow[]> {
+    const scoped = await this.reviewHistoryAccessService.listForActor(actor);
+    const sessions =
+      options.limit === undefined ? scoped : scoped.slice(0, options.limit);
 
     // review-history-admin-scope PR1 fix-up (4R fresh-context review
     // CRITICAL #2, post-b8fb5a9): this loop was previously bounded by a

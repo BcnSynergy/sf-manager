@@ -906,7 +906,10 @@ is by far the largest list in the app; so is a long-lived element's own
 record, whose length is accepted on exactly the same terms. Their size is
 an accepted, recorded consequence, and filtering, sorting, pagination and
 search across all entities is a separate app-wide initiative that MUST
-NOT be started, stubbed or parameterized for here.
+NOT be started, stubbed or parameterized for here. The history pages
+MUST NOT pass the API's `limit` (EN-240, `review-history`); it exists for
+the home page's recent activity (`app-navigation`), not for this
+surface.
 
 Exactly **one** per-element history view MUST exist: the page defined by
 _An Element's Own Review History Page_, reachable only through the two

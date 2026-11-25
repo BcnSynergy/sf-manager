@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recordEntryRequestSchema } from './review-session.schema';
+import { recordEntryRequestSchema, reviewHistoryListQuerySchema } from './review-session.schema';
 
 // review-session/design.md Decision 1: an entry-write body MUST be exactly
 // ONE of `{ answers: [...] }` or `{ observations: string }` — never both,
@@ -50,5 +50,28 @@ describe('recordEntryRequestSchema — answers XOR observations', () => {
       answers: [{ questionId: 'question-1', value: 'MAYBE' }],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// EN-240: GET /review-history?limit=N keeps only the N newest rows.
+describe('reviewHistoryListQuerySchema', () => {
+  it('accepts no limit', () => {
+    expect(reviewHistoryListQuerySchema.parse({})).toEqual({});
+  });
+
+  it.each([
+    ['1', 1],
+    ['5', 5],
+    ['100', 100],
+  ])('reads the query string limit %s as the number %s', (raw, parsed) => {
+    expect(reviewHistoryListQuerySchema.parse({ limit: raw })).toEqual({ limit: parsed });
+  });
+
+  it.each(['0', '-1', '101', '1.5', 'abc', '', ' '])('rejects the limit %j', (raw) => {
+    expect(reviewHistoryListQuerySchema.safeParse({ limit: raw }).success).toBe(false);
+  });
+
+  it('rejects a repeated limit', () => {
+    expect(reviewHistoryListQuerySchema.safeParse({ limit: ['1', '2'] }).success).toBe(false);
   });
 });
