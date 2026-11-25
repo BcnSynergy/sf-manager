@@ -79,14 +79,24 @@ describe('HomeRecentActivity', () => {
     );
   });
 
-  it('names a review whose community or performer is gone with the neutral labels', async () => {
-    mockedListReviewHistory.mockResolvedValue([
-      { ...row('a', '', '2026-11-24T23:30:00.000Z'), performedByEmail: '' },
-    ]);
+  it('names a review whose community is gone with the neutral label', async () => {
+    mockedListReviewHistory.mockResolvedValue([row('a', '', '2026-11-24T23:30:00.000Z')]);
     renderActivity('MAINTENANCE_TECHNICIAN');
 
     const link = await screen.findByRole('link', { name: 'Unknown community' });
     expect(link).toHaveAttribute('href', '/review-history/a');
+    expect(link).toHaveAccessibleDescription(
+      'Completed on November 25, 2026 by technician@sf-manager.example',
+    );
+  });
+
+  it('names a review whose performer is gone with the neutral label', async () => {
+    mockedListReviewHistory.mockResolvedValue([
+      { ...row('a', 'Alpha', '2026-11-24T23:30:00.000Z'), performedByEmail: '' },
+    ]);
+    renderActivity('MAINTENANCE_TECHNICIAN');
+
+    const link = await screen.findByRole('link', { name: 'Alpha' });
     expect(link).toHaveAccessibleDescription('Completed on November 25, 2026 by Unknown performer');
   });
 
