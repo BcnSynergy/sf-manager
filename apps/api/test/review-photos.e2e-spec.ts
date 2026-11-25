@@ -738,21 +738,32 @@ describe('Review photos (e2e)', () => {
     });
 
     it('does not serve or delete a photo of S1 through S2 of the SAME performer', async () => {
-      // tech holds S1 (community 1) and opens S2 in the completion community.
-      await assignTechnician(admin, completionCommunityId, 'rp-tech-id');
-      const second = await openSession(tech, completionCommunityId, templateId);
-      const keys = built.fileStorage.keys();
+      // tech holds S1 (community 1) and opens S2 in a community of its own,
+      // which no other test uses, so the assignment cannot leak into them
+      // (EN-225). The finally discards S2 even when an assertion fails.
+      const secondCommunity = await createCommunity(
+        admin,
+        'Second session community',
+      );
+      await assignTechnician(admin, secondCommunity.id, 'rp-tech-id');
+      const second = await openSession(tech, secondCommunity.id, templateId);
+      try {
+        const keys = built.fileStorage.keys();
 
-      const read = await tech.get(photoUrl(second.id, photoId)).expect(404);
-      expect(read.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
-      const removed = await tech
-        .delete(photoUrl(second.id, photoId))
-        .expect(404);
-      expect(removed.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+        const read = await tech.get(photoUrl(second.id, photoId)).expect(404);
+        expect(read.body).toMatchObject({ code: 'REVIEW_PHOTO_NOT_FOUND' });
+        const removed = await tech
+          .delete(photoUrl(second.id, photoId))
+          .expect(404);
+        expect(removed.body).toMatchObject({
+          code: 'REVIEW_PHOTO_NOT_FOUND',
+        });
 
-      expect(built.fileStorage.keys()).toEqual(keys);
-      await tech.get(photoUrl(session.id, photoId)).expect(200);
-      await tech.delete(`/review-sessions/${second.id}`).expect(204);
+        expect(built.fileStorage.keys()).toEqual(keys);
+        await tech.get(photoUrl(session.id, photoId)).expect(200);
+      } finally {
+        await tech.delete(`/review-sessions/${second.id}`).expect(204);
+      }
     });
   });
 

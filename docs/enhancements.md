@@ -1162,14 +1162,6 @@ content type`). Today that is the only 415 it raises, but a future one
   deterministic version would hold the session lock from one connection
   while the other starts. Origin: `en-164-review-photos` fresh review,
   2026-11-22.
-- **EN-225** (api tests): the same-performer cross-session case in
-  `apps/api/test/review-photos.e2e-spec.ts` assigns the technician to the
-  completion community and opens a second draft there, closing it only on
-  its last line; a failed assertion leaves the draft open, and the
-  assignment stays for the later delete tests, so the file's tests depend on
-  run order. Clean up in a `finally`/`afterEach`, or use a community nothing
-  else uses. Origin: `en-164-review-photos` Gentle review (R3-001),
-  2026-11-22.
 - **EN-226** (web): `compressPhoto`
   (`apps/web/src/review-session/compress-photo.ts`) decodes the whole photo
   with `createImageBitmap` before scaling it down, so a 48 MP phone photo
@@ -1204,6 +1196,7 @@ content type`). Today that is the only 415 it raises, but a future one
 
 ## Done
 
+- **EN-225** (api tests): the same-performer cross-session case in `apps/api/test/review-photos.e2e-spec.ts` now opens its second draft in a community of its own (created in the test, used by no other test) and discards it in a `finally`, so a failed assertion no longer leaves a draft open or an extra assignment on the completion community. Forcing the test to fail leaves the other 27 tests passing and the cleanup succeeding. Test-only, no spec change. Done in `en-225-photo-e2e-isolation` (PR 1/1). Origin: `en-164-review-photos` Gentle review (R3-001), 2026-11-22.
 - **EN-240** (api performance): `GET /review-history` accepts an optional `limit` (a whole number from 1 to 100; anything else is a 400) that keeps the newest N sessions of the caller's own scoped list, and the home page's recent activity asks for `limit=5`. The use case cuts the list before resolving community names and emails, so a limited request only looks those up for what it returns; the scoped query still reads every session (pushing the limit into the four repository queries is a later option with the same contract). The history pages still ask for the whole list. Contract change: `review-history` gains _The Session History List Can Be Limited to Its Newest Sessions_ and its List controls row and scenario are narrowed for `limit`; `review-history-ui` and `app-navigation` say who passes it. Done in `review-history-limit` (PR 1/1, #472). Origin: `home-page` slice 3 (EN-238), 2026-11-25.
 - **EN-238** (home page, slice 3): the home page shows a Recent activity section, after the alerts, with the five most recently completed reviews the user can see (from the role-scoped `GET /review-history`, sorted newest first on the client), each linking to its read-only view and describing when (Europe/Madrid long date) and by whom it was completed (a soft-deleted community or user gets the history page's "Unknown community" / "Unknown performer" labels, shared keys), plus a link to the whole history. Every role gets it; with nothing to show it says so. No API change; the missing endpoint limit is EN-240. Done in `home-page` (PR 3; spec `app-navigation`). Origin: `home-page` slice 1, 2026-11-25.
 - **EN-237** (home page, slice 2): the home page shows an Alerts section with counts of overdue, never-reviewed and upcoming schedule obligations (from `GET /review-schedule`) and of the user's unfinished drafts (from `GET /review-sessions`), each linking to its page; zero counts are left out, and a role gets an alert only if its navigation offers the page it links to (the company manager gets none). No API change. The review-session e2e scope guard now also skips `HomeAlerts` files and the `home.alerts` catalog keys, as it does the review schedule's (TD-16), since the alerts say "overdue" (see EN-239). Done in `home-page` (PR 2, #470; spec `app-navigation`). Origin: `home-page` slice 1, 2026-11-25.
