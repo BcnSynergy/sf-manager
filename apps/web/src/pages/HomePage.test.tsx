@@ -141,6 +141,34 @@ describe('HomePage', () => {
     ).toBeTruthy();
   });
 
+  it("starts the alerts again from loading when the role changes, never showing the previous role's counts", async () => {
+    signInAs('MAINTENANCE_TECHNICIAN');
+    vi.mocked(reviewSessionApi.listOwnReviewSessions).mockResolvedValue([
+      {
+        id: 'session-1',
+        communityId: 'community-1',
+        templateId: 'template-1',
+        performedById: '1',
+        status: 'draft',
+        startedAt: '2026-11-20T10:00:00.000Z',
+        completedAt: null,
+      },
+    ]);
+    const { rerender } = renderPage();
+    expect(await screen.findByText('1 unfinished draft')).toBeInTheDocument();
+
+    vi.mocked(reviewScheduleApi.listReviewSchedule).mockReturnValue(new Promise(() => {}));
+    signInAs('MANAGER');
+    rerender(
+      <MemoryRouter initialEntries={['/']}>
+        <HomePage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('home-alerts-loading')).toBeInTheDocument();
+    expect(screen.queryByText('1 unfinished draft')).not.toBeInTheDocument();
+  });
+
   it('offers no section to an unrecognized role', () => {
     signInAs('NOT_A_ROLE');
     renderPage();

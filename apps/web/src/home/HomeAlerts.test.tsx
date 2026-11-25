@@ -90,6 +90,25 @@ describe('HomeAlerts', () => {
     ]);
   });
 
+  it("shows each alert as a badge in its schedule status's tone, drafts neutral", async () => {
+    mockedListReviewSchedule.mockResolvedValue(
+      schedule({ OVERDUE: 1, NEVER_REVIEWED: 1, UPCOMING: 1 }),
+    );
+    mockedListOwnReviewSessions.mockResolvedValue(drafts(1));
+    renderAlerts('MAINTENANCE_TECHNICIAN');
+
+    const list = await screen.findByTestId('home-alerts-list');
+    const badgeClasses = within(list)
+      .getAllByRole('link')
+      .map((link) => link.querySelector('.sf-badge')?.className);
+    expect(badgeClasses).toEqual([
+      'sf-badge sf-badge-danger',
+      'sf-badge sf-badge-warning',
+      'sf-badge sf-badge-notice',
+      'sf-badge',
+    ]);
+  });
+
   it('uses the singular for a count of one', async () => {
     mockedListReviewSchedule.mockResolvedValue(schedule({ OVERDUE: 1, UPCOMING: 1 }));
     mockedListOwnReviewSessions.mockResolvedValue(drafts(1));

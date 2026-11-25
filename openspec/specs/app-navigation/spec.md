@@ -520,13 +520,14 @@ not get its alerts. A role that gets neither, `MAINTENANCE_COMPANY_MANAGER`
 and an unrecognized role included, MUST see no Alerts section.
 
 An alert MUST be shown only when its count is above zero, and MUST be shown
-when it is, in the order of the table, each as a status badge in its schedule status's tone (the drafts
-alert neutral) with a localized, pluralized text such as "2 overdue
-reviews". When every count is zero the section MUST say "You have no
-alerts.", localized. Counts MUST come from the server's statuses as
-returned; the client MUST NOT recompute a status or deadline. While the
-sources load the section MUST show a localized loading message, and if any
-source fails it MUST show one localized error message and no partial count.
+when it is, in the order of the table, each as a status badge in its
+schedule status's tone (the drafts alert neutral) with a localized,
+pluralized text such as "2 overdue reviews". When every count is zero the
+section MUST say "You have no alerts.", localized. Counts MUST come from the
+server's statuses as returned; the client MUST NOT recompute a status or
+deadline. While the sources load the section MUST show a localized loading
+message, and if any source fails it MUST show one localized error message
+and no partial count.
 
 Reminders or notifications sent to responsible parties (the rest of FR-009)
 are out of scope.
