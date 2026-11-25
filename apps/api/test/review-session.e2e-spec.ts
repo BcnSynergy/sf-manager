@@ -1261,8 +1261,9 @@ describe('Review Sessions (e2e)', () => {
     // not qualify.
     // The home page alerts (EN-237) count the schedule's overdue, never-
     // reviewed and upcoming rows, so they are a schedule consumer too and are
-    // recognized the same way: a `HomeAlerts` file name, not followed by a
-    // lowercase character.
+    // recognized the same way: a directory or file name that is `HomeAlerts`
+    // or continues with a non-lowercase character (EN-239 tracks that the
+    // whole file is skipped, not only its schedule terms).
     const isReviewScheduleFile = (relative: string): boolean =>
       relative
         .split('/')
