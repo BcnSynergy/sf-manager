@@ -868,7 +868,9 @@ describe('OrganizationProfilePage unload guard', () => {
     fireEvent.click(screen.getByTestId('organization-profile-submit'));
     await screen.findByTestId('organization-profile-success');
 
-    expect(unloadIsCancelled()).toBe(false);
+    // The save resolves outside act(), so the success alert can be on screen
+    // before React runs the effect cleanup that removes the listener.
+    await waitFor(() => expect(unloadIsCancelled()).toBe(false));
   });
 
   it('stops asking once the admin has left the page, dropping the edits', async () => {
@@ -878,6 +880,8 @@ describe('OrganizationProfilePage unload guard', () => {
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
     await screen.findByTestId('logo-page-stub');
 
-    expect(unloadIsCancelled()).toBe(false);
+    // Same race as above: the router navigates asynchronously, so the page can
+    // be gone before the unmount cleanup removes the listener.
+    await waitFor(() => expect(unloadIsCancelled()).toBe(false));
   });
 });
