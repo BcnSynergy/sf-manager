@@ -519,8 +519,8 @@ Review sessions item; the page MUST NOT request a source for a role that does
 not get its alerts. A role that gets neither, `MAINTENANCE_COMPANY_MANAGER`
 and an unrecognized role included, MUST see no Alerts section.
 
-Only alerts whose count is above zero MUST be shown, in the order of the
-table, each as a status badge in its schedule status's tone (the drafts
+An alert MUST be shown only when its count is above zero, and MUST be shown
+when it is, in the order of the table, each as a status badge in its schedule status's tone (the drafts
 alert neutral) with a localized, pluralized text such as "2 overdue
 reviews". When every count is zero the section MUST say "You have no
 alerts.", localized. Counts MUST come from the server's statuses as

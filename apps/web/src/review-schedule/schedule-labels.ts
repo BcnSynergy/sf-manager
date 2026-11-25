@@ -38,6 +38,13 @@ export function mapStatusToBadgeTone(status: ReviewScheduleStatus): BadgeTone | 
   return Object.hasOwn(STATUS_BADGE_TONES, status) ? STATUS_BADGE_TONES[status] : null;
 }
 
+// The badge's class list for a status, shared by the schedule page and the
+// home page alerts so the two can never show a status in different tones.
+export function statusBadgeClassName(status: ReviewScheduleStatus): string {
+  const tone = mapStatusToBadgeTone(status);
+  return tone ? `sf-badge sf-badge-${tone}` : 'sf-badge';
+}
+
 // Shown in place of the last-review date when no covering session exists.
 export const NEVER_REVIEWED_LABEL_KEY = 'reviewSchedule.neverReviewed';
 

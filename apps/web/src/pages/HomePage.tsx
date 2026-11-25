@@ -39,7 +39,9 @@ export function HomePage() {
             : t('home.signedInAs', { email: user.email })}
         </p>
       )}
-      {role && <HomeAlerts role={role} />}
+      {/* Keyed on the role so a role change starts from the loading state
+          instead of showing the previous role's counts. */}
+      {role && <HomeAlerts key={role} role={role} />}
       <div className="sf-home-sections" data-testid="home-sections">
         {sections.map((section) => (
           <section

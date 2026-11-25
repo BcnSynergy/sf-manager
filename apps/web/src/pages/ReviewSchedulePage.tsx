@@ -8,16 +8,11 @@ import {
   NEVER_REVIEWED_LABEL_KEY,
   formatCalendarDate,
   mapReasonToText,
-  mapStatusToBadgeTone,
   mapStatusToLabelKey,
+  statusBadgeClassName,
 } from '../review-schedule/schedule-labels';
 
 type LoadState = 'loading' | 'loaded' | 'error';
-
-function badgeClassName(status: ReviewScheduleRow['status']): string {
-  const tone = mapStatusToBadgeTone(status);
-  return tone ? `sf-badge sf-badge-${tone}` : 'sf-badge';
-}
 
 // review-schedule-ui spec: a read-only view of the server's schedule. Scope,
 // status, reason and order are all decided server-side, so this page applies
@@ -96,7 +91,7 @@ export function ReviewSchedulePage() {
                         as an outlined badge right after it (text, no
                         control). */}
                       <span
-                        className={badgeClassName(row.status)}
+                        className={statusBadgeClassName(row.status)}
                         data-testid={`review-schedule-status-${rowKey}`}
                       >
                         {t(mapStatusToLabelKey(row.status))}

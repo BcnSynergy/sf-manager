@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { listReviewSchedule, type ReviewScheduleStatus } from '../api/review-schedule';
 import { listOwnReviewSessions } from '../api/review-session';
 import { NAV_ITEMS_BY_ROLE } from '../layout/nav-items';
-import { mapStatusToBadgeTone } from '../review-schedule/schedule-labels';
+import { statusBadgeClassName } from '../review-schedule/schedule-labels';
 
 const SCHEDULE_PATH = '/review-schedule';
 const SESSIONS_PATH = '/review-sessions';
@@ -29,11 +29,6 @@ function offers(role: Role, path: string): boolean {
   );
 }
 
-function badgeClassName(status: ReviewScheduleStatus): string {
-  const tone = mapStatusToBadgeTone(status);
-  return tone ? `sf-badge sf-badge-${tone}` : 'sf-badge';
-}
-
 // home-page slice 2 (EN-237): counts of what needs attention, each linking
 // to the page that lists it. A role gets the schedule alerts only if its
 // navigation offers the Review schedule, and the drafts alert only if it
@@ -55,20 +50,26 @@ export function HomeAlerts({ role }: { role: Role }) {
     ])
       .then(([rows, ownDrafts]) => {
         if (!active) return;
-        const alerts: Alert[] = ALERT_STATUSES.map(({ status, labelKey }) => ({
-          key: status,
-          labelKey,
-          count: rows.filter((row) => row.status === status).length,
-          to: SCHEDULE_PATH,
-          badge: badgeClassName(status),
-        }));
-        alerts.push({
-          key: 'DRAFTS',
-          labelKey: 'home.alerts.drafts',
-          count: ownDrafts.length,
-          to: SESSIONS_PATH,
-          badge: 'sf-badge',
-        });
+        // Each alert is built only for a role that gets it, so gating never
+        // depends on the zero-count filter below.
+        const alerts: Alert[] = showSchedule
+          ? ALERT_STATUSES.map(({ status, labelKey }) => ({
+              key: status,
+              labelKey,
+              count: rows.filter((row) => row.status === status).length,
+              to: SCHEDULE_PATH,
+              badge: statusBadgeClassName(status),
+            }))
+          : [];
+        if (showDrafts) {
+          alerts.push({
+            key: 'DRAFTS',
+            labelKey: 'home.alerts.drafts',
+            count: ownDrafts.length,
+            to: SESSIONS_PATH,
+            badge: 'sf-badge',
+          });
+        }
         setLoad({ state: 'loaded', alerts: alerts.filter((alert) => alert.count > 0) });
       })
       .catch(() => {

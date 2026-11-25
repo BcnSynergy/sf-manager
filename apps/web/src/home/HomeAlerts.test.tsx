@@ -157,6 +157,21 @@ describe('HomeAlerts', () => {
     expect(screen.queryByTestId('home-alerts-list')).not.toBeInTheDocument();
   });
 
+  it.each(['MANAGER', 'MAINTENANCE_TECHNICIAN'])(
+    'shows the error, not "no alerts", to %s when the schedule request fails',
+    async (role) => {
+      mockedListReviewSchedule.mockRejectedValue(new Error('network'));
+      mockedListOwnReviewSessions.mockResolvedValue(drafts(1));
+      renderAlerts(role);
+
+      expect(await screen.findByTestId('home-alerts-error')).toHaveTextContent(
+        'Alerts could not be loaded.',
+      );
+      expect(screen.queryByTestId('home-alerts-none')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('home-alerts-list')).not.toBeInTheDocument();
+    },
+  );
+
   it('gives the alerts a heading', async () => {
     renderAlerts('MANAGER');
 
@@ -172,6 +187,19 @@ describe('HomeAlerts', () => {
     expect(await alertLinks()).toEqual([
       ['2 revisiones vencidas', '/review-schedule'],
       ['1 borrador sin terminar', '/review-sessions'],
+    ]);
+  });
+
+  it('uses the Catalan singular and plural', async () => {
+    await i18n.changeLanguage('ca');
+    mockedListReviewSchedule.mockResolvedValue(schedule({ OVERDUE: 1, UPCOMING: 2 }));
+    mockedListOwnReviewSessions.mockResolvedValue(drafts(2));
+    renderAlerts('MAINTENANCE_TECHNICIAN');
+
+    expect(await alertLinks()).toEqual([
+      ['1 revisió vençuda', '/review-schedule'],
+      ['2 revisions properes', '/review-schedule'],
+      ['2 esborranys sense acabar', '/review-sessions'],
     ]);
   });
 });
