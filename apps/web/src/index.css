@@ -622,6 +622,23 @@ code {
   flex-wrap: wrap;
 }
 
+/* Home page alerts: one badge per alert, each linking to the page that
+   lists what it counts. */
+.sf-home-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-home-alerts a {
+  text-decoration: none;
+}
+.sf-home-alerts a:hover .sf-badge {
+  text-decoration: underline;
+}
+
 /* Home page: the role's sections, one group per navigation group, each
    section a card linking to it. */
 .sf-home-sections {

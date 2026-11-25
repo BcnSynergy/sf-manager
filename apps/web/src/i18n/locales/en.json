@@ -641,6 +641,20 @@
       "checklistQuestions": "The questions the templates can use",
       "users": "Accounts, roles and access",
       "organizationProfile": "Your organization's details and logo"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "loading": "Checking for alerts...",
+      "error": "Alerts could not be loaded.",
+      "none": "You have no alerts.",
+      "overdue_one": "{{count}} overdue review",
+      "overdue_other": "{{count}} overdue reviews",
+      "neverReviewed_one": "{{count}} never reviewed",
+      "neverReviewed_other": "{{count}} never reviewed",
+      "upcoming_one": "{{count}} upcoming review",
+      "upcoming_other": "{{count}} upcoming reviews",
+      "drafts_one": "{{count}} unfinished draft",
+      "drafts_other": "{{count}} unfinished drafts"
     }
   },
   "reviewSchedule": {

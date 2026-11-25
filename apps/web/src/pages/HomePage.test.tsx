@@ -3,10 +3,14 @@ import { MemoryRouter } from 'react-router';
 import type { Role } from '@sf-manager/validation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
+import * as reviewScheduleApi from '../api/review-schedule';
+import * as reviewSessionApi from '../api/review-session';
 import { useAuth } from '../auth/AuthProvider';
 import { NAV_ITEMS_BY_ROLE } from '../layout/nav-items';
 import { HomePage } from './HomePage';
 
+vi.mock('../api/review-schedule');
+vi.mock('../api/review-session');
 vi.mock('../auth/AuthProvider', async () => {
   const actual =
     await vi.importActual<typeof import('../auth/AuthProvider')>('../auth/AuthProvider');
@@ -48,6 +52,8 @@ describe('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('fetch', fetchSpy);
+    vi.mocked(reviewScheduleApi.listReviewSchedule).mockResolvedValue([]);
+    vi.mocked(reviewSessionApi.listOwnReviewSessions).mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -118,6 +124,21 @@ describe('HomePage', () => {
     expect(screen.queryByTestId('health-status')).not.toBeInTheDocument();
     expect(screen.queryByText('All systems operational')).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows the alerts between who is signed in and the sections', async () => {
+    signInAs('MAINTENANCE_TECHNICIAN');
+    renderPage();
+
+    const alerts = await screen.findByRole('heading', { level: 2, name: 'Alerts' });
+    const signedIn = screen.getByTestId('home-signed-in');
+    const sections = screen.getByTestId('home-sections');
+    expect(
+      signedIn.compareDocumentPosition(alerts) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      alerts.compareDocumentPosition(sections) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('offers no section to an unrecognized role', () => {

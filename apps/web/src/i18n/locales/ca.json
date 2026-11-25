@@ -641,6 +641,20 @@
       "checklistQuestions": "Les preguntes que poden fer servir les plantilles",
       "users": "Comptes, rols i accessos",
       "organizationProfile": "Dades i logotip de la teva organització"
+    },
+    "alerts": {
+      "title": "Avisos",
+      "loading": "Comprovant avisos...",
+      "error": "No s'han pogut carregar els avisos.",
+      "none": "No tens cap avís.",
+      "overdue_one": "{{count}} revisió vençuda",
+      "overdue_other": "{{count}} revisions vençudes",
+      "neverReviewed_one": "{{count}} sense cap revisió",
+      "neverReviewed_other": "{{count}} sense cap revisió",
+      "upcoming_one": "{{count}} revisió propera",
+      "upcoming_other": "{{count}} revisions properes",
+      "drafts_one": "{{count}} esborrany sense acabar",
+      "drafts_other": "{{count}} esborranys sense acabar"
     }
   },
   "reviewSchedule": {
