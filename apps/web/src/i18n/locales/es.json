@@ -641,6 +641,20 @@
       "checklistQuestions": "Las preguntas que pueden usar las plantillas",
       "users": "Cuentas, roles y accesos",
       "organizationProfile": "Datos y logotipo de tu organización"
+    },
+    "alerts": {
+      "title": "Avisos",
+      "loading": "Comprobando avisos...",
+      "error": "No se han podido cargar los avisos.",
+      "none": "No tienes avisos.",
+      "overdue_one": "{{count}} revisión vencida",
+      "overdue_other": "{{count}} revisiones vencidas",
+      "neverReviewed_one": "{{count}} sin ninguna revisión",
+      "neverReviewed_other": "{{count}} sin ninguna revisión",
+      "upcoming_one": "{{count}} revisión próxima",
+      "upcoming_other": "{{count}} revisiones próximas",
+      "drafts_one": "{{count}} borrador sin terminar",
+      "drafts_other": "{{count}} borradores sin terminar"
     }
   },
   "reviewSchedule": {

@@ -1259,11 +1259,16 @@ describe('Review Sessions (e2e)', () => {
     // or continues with a non-lowercase character (`ReviewSchedulePage.tsx`,
     // `review-schedule.ts`), so `ReviewScheduler` or `review-scheduled` do
     // not qualify.
+    // The home page alerts (EN-237) count the schedule's overdue, never-
+    // reviewed and upcoming rows, so they are a schedule consumer too and are
+    // recognized the same way: a directory or file name that is `HomeAlerts`
+    // or continues with a non-lowercase character (EN-239 tracks that the
+    // whole file is skipped, not only its schedule terms).
     const isReviewScheduleFile = (relative: string): boolean =>
       relative
         .split('/')
         .some((segment) =>
-          /^(review-schedule|ReviewSchedule)(?![a-z])/.test(segment),
+          /^(review-schedule|ReviewSchedule|HomeAlerts)(?![a-z])/.test(segment),
         );
     const excludedDirs = new Set(['node_modules', 'dist', '.turbo']);
 
@@ -1357,6 +1362,10 @@ describe('Review Sessions (e2e)', () => {
       ['pages/ReviewScheduler.tsx', false],
       ['api/review-scheduled-sessions.ts', false],
       ['i18n/locales/en.json', false],
+      ['home/HomeAlerts.tsx', true],
+      ['home/HomeAlerts.test.tsx', true],
+      ['home/HomeAlertsy.tsx', false],
+      ['pages/HomePage.tsx', false],
     ])('isReviewScheduleFile(%s) is %s', (relative, expected) => {
       expect(isReviewScheduleFile(relative)).toBe(expected);
     });
@@ -1387,7 +1396,8 @@ describe('Review Sessions (e2e)', () => {
       // reviews. It is its own surface, not a review-session mechanism, so
       // its files are skipped by naming convention (isReviewScheduleFile,
       // TD-16). The locale catalogs are scanned without their
-      // `reviewSchedule` subtree, and the locale key-set test without its
+      // `reviewSchedule` subtree and the home page alerts' `home.alerts`
+      // subtree (EN-237), and the locale key-set test without its
       // `reviewSchedule.*` key paths. Every other key and file is scanned.
       const withoutReviewScheduleCopy = (
         relative: string,
@@ -1399,6 +1409,8 @@ describe('Review Sessions (e2e)', () => {
         ) {
           const catalog = JSON.parse(content) as Record<string, unknown>;
           delete catalog.reviewSchedule;
+          const home = catalog.home as Record<string, unknown> | undefined;
+          if (home) delete home.alerts;
           return JSON.stringify(catalog);
         }
         if (relative === 'i18n/locales.test.ts') {

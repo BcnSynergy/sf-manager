@@ -33,9 +33,9 @@ dashboard or a user/profile menu; any other language switcher; and any
 change to a route's `allowedRoles` or to `ProtectedRoute`'s precedence
 logic. Promoting a CRUD sub-route or the element-history drill-in to a nav
 item is likewise out of scope. The home page at `/` (since `home-page`)
-lists the role's sections as cards built from the same role → items table;
-counts, alerts and recent activity on it are not part of this capability
-yet.
+lists the role's sections as cards built from the same role → items table,
+and the role's alerts (see "The Home Page Shows the Role's Alerts"); recent
+activity on it is not part of this capability yet.
 (Previously: "a **link bar and nothing more**", with a sidebar, a design
 system, CSS framework, theming and app branding out of scope.)
 
@@ -499,6 +499,80 @@ and deployment checks.
 - GIVEN every navigation item other than Home, for every role
 - WHEN its description is looked up in `en`, `es` and `ca`
 - THEN each locale MUST carry it
+
+### Requirement: The Home Page Shows the Role's Alerts
+
+The home page MUST show an **Alerts** section, between who is signed in
+and the section cards, that counts what needs the user's attention, each
+alert linking to the page that lists it:
+
+| Alert             | Counted from                                   | Links to        |
+| ----------------- | ---------------------------------------------- | --------------- |
+| Overdue reviews   | schedule rows with status `OVERDUE`            | Review schedule |
+| Never reviewed    | schedule rows with status `NEVER_REVIEWED`     | Review schedule |
+| Upcoming reviews  | schedule rows with status `UPCOMING`           | Review schedule |
+| Unfinished drafts | the user's own drafts (`GET /review-sessions`) | Review sessions |
+
+A role MUST get the three schedule alerts only if its navigation offers the
+Review schedule item, and the drafts alert only if its navigation offers the
+Review sessions item; the page MUST NOT request a source for a role that does
+not get its alerts. A role that gets neither, `MAINTENANCE_COMPANY_MANAGER`
+and an unrecognized role included, MUST see no Alerts section.
+
+An alert MUST be shown only when its count is above zero, and MUST be shown
+when it is, in the order of the table, each as a status badge in its
+schedule status's tone (the drafts alert neutral) with a localized,
+pluralized text such as "2 overdue reviews". When every count is zero the
+section MUST say "You have no alerts.", localized. Counts MUST come from the
+server's statuses as returned; the client MUST NOT recompute a status or
+deadline. While the sources load the section MUST show a localized loading
+message, and if any source fails it MUST show one localized error message
+and no partial count.
+
+Reminders or notifications sent to responsible parties (the rest of FR-009)
+are out of scope.
+
+#### Scenario: A technician sees every kind of alert
+
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN` whose schedule has 2 `OVERDUE`, 3 `NEVER_REVIEWED`, 4 `UPCOMING` and 5 `UP_TO_DATE` rows, and who has 2 drafts
+- WHEN the home page renders
+- THEN the Alerts section MUST show "2 overdue reviews", "3 never reviewed" and "4 upcoming reviews", each linking to the Review schedule, and "2 unfinished drafts" linking to Review sessions, in that order
+
+#### Scenario: A count of one is singular
+
+- GIVEN a signed-in `COMMUNITY_REPRESENTATIVE` with 1 `OVERDUE` row
+- WHEN the home page renders
+- THEN the alert MUST read "1 overdue review"
+
+#### Scenario: Zero counts are left out
+
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN` with only `UPCOMING` and `UP_TO_DATE` rows and no draft
+- WHEN the home page renders
+- THEN the only alert MUST be the upcoming one
+
+#### Scenario: Nothing to warn about
+
+- GIVEN a signed-in user whose schedule rows are all `UP_TO_DATE` and who has no draft
+- WHEN the home page renders
+- THEN the Alerts section MUST say "You have no alerts." and show no alert
+
+#### Scenario: Admin and manager get no drafts alert
+
+- GIVEN a signed-in `SYSTEM_ADMIN` or `MANAGER`
+- WHEN the home page renders
+- THEN it MUST show the schedule alerts and MUST NOT request the user's drafts
+
+#### Scenario: The company manager sees no alerts
+
+- GIVEN a signed-in `MAINTENANCE_COMPANY_MANAGER`
+- WHEN the home page renders
+- THEN it MUST show no Alerts section and MUST request neither the schedule nor the drafts
+
+#### Scenario: A failing source shows one message
+
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN` whose drafts request fails
+- WHEN the home page renders
+- THEN the Alerts section MUST show "Alerts could not be loaded.", localized, and no count
 
 ### Requirement: The Navigation Adds No Third Entry Point to the Element History Page
 
