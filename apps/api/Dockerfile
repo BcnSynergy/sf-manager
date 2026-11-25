@@ -43,6 +43,9 @@ FROM base AS runtime
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-api, EN-91)
 # to this repository, so it inherits the repository's access permissions.
 LABEL org.opencontainers.image.source=https://github.com/BcnSynergy/sf-manager
+# The images are public, so they carry the license (AGPL-3.0-only, dual
+# licensed; see LICENSING.md). The files are copied near the end of the stage.
+LABEL org.opencontainers.image.licenses=AGPL-3.0-only
 
 # The Prisma CLI is a production dependency of the API: migrations run when
 # the container starts.
@@ -67,6 +70,8 @@ ENV FILE_STORAGE_DIR=/var/lib/sf-manager/files
 RUN mkdir -p "$FILE_STORAGE_DIR" && chown node:node "$FILE_STORAGE_DIR"
 # Keeps npm's update notice out of the migration and seed output.
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+# Late, so an edit to either file keeps the cached install layers above.
+COPY LICENSE LICENSING.md /usr/share/licenses/sf-manager/
 WORKDIR /app/apps/api
 USER node
 EXPOSE 3000

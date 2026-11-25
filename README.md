@@ -675,3 +675,9 @@ expires (one year when it was created); renew it before then.
 
 `apps/mobile` and `apps/desktop` don't exist yet — deferred until the web+API
 walking skeleton is validated (ADR-006).
+
+## License
+
+SF-Manager is dual-licensed under the
+[GNU Affero General Public License v3.0 only](LICENSE) or a commercial
+license. See [LICENSING.md](LICENSING.md) for details.

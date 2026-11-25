@@ -26,5 +26,9 @@ FROM caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9
 # Links the image published by CI (ghcr.io/bcnsynergy/sf-manager-web, EN-91)
 # to this repository, so it inherits the repository's access permissions.
 LABEL org.opencontainers.image.source=https://github.com/BcnSynergy/sf-manager
+# The images are public, so they carry the license (AGPL-3.0-only, dual
+# licensed; see LICENSING.md).
+LABEL org.opencontainers.image.licenses=AGPL-3.0-only
+COPY LICENSE LICENSING.md /usr/share/licenses/sf-manager/
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv
