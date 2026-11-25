@@ -15,7 +15,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "turbo": "^2.11.11",
+    "turbo": "^2.11.13",
     "typescript": "^6.0.3",
     "eslint": "^10.15.0",
     "prettier": "^3.10.1"
