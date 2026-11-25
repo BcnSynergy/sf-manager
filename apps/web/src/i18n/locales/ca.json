@@ -655,6 +655,14 @@
       "upcoming_other": "{{count}} revisions properes",
       "drafts_one": "{{count}} esborrany sense acabar",
       "drafts_other": "{{count}} esborranys sense acabar"
+    },
+    "activity": {
+      "title": "Activitat recent",
+      "loading": "Carregant l'activitat recent...",
+      "error": "No s'ha pogut carregar l'activitat recent.",
+      "none": "Encara no hi ha cap revisió acabada.",
+      "completed": "Acabada el {{date}} per {{email}}",
+      "viewAll": "Veure tot l'historial"
     }
   },
   "reviewSchedule": {

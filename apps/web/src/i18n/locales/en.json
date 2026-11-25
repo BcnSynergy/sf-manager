@@ -655,6 +655,14 @@
       "upcoming_other": "{{count}} upcoming reviews",
       "drafts_one": "{{count}} unfinished draft",
       "drafts_other": "{{count}} unfinished drafts"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "loading": "Loading recent activity...",
+      "error": "Recent activity could not be loaded.",
+      "none": "No reviews have been completed yet.",
+      "completed": "Completed on {{date}} by {{email}}",
+      "viewAll": "View all review history"
     }
   },
   "reviewSchedule": {

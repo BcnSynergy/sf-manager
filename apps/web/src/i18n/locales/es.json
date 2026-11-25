@@ -655,6 +655,14 @@
       "upcoming_other": "{{count}} revisiones próximas",
       "drafts_one": "{{count}} borrador sin terminar",
       "drafts_other": "{{count}} borradores sin terminar"
+    },
+    "activity": {
+      "title": "Actividad reciente",
+      "loading": "Cargando la actividad reciente...",
+      "error": "No se ha podido cargar la actividad reciente.",
+      "none": "Todavía no hay revisiones terminadas.",
+      "completed": "Terminada el {{date}} por {{email}}",
+      "viewAll": "Ver todo el historial"
     }
   },
   "reviewSchedule": {

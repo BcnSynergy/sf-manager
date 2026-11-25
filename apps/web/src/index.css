@@ -639,6 +639,23 @@ code {
   text-decoration: underline;
 }
 
+/* Home page recent activity: one line per completed review, the community
+   as a link and when and by whom it was completed under it. */
+.sf-home-activity {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-home-activity li {
+  display: grid;
+  gap: var(--space-1);
+}
+.sf-home-activity-meta {
+  color: var(--ink-muted);
+}
+
 /* Home page: the role's sections, one group per navigation group, each
    section a card linking to it. */
 .sf-home-sections {
