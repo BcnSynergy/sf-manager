@@ -25,6 +25,7 @@ const codeGenerator = new RandomElementCodeGenerator();
 describe('PrismaReviewPhotoRepository (integration)', () => {
   let prisma: PrismaService;
   let otherPrisma: PrismaService;
+  let holderPrisma: PrismaService;
   let photos: PrismaReviewPhotoRepository;
   let otherPhotos: PrismaReviewPhotoRepository;
   let sessions: PrismaReviewSessionRepository;
@@ -40,8 +41,11 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     // Two independent connections so concurrent adds genuinely overlap.
     prisma = new PrismaService();
     otherPrisma = new PrismaService();
+    // EN-223: a third connection holds the session lock in the race tests.
+    holderPrisma = new PrismaService();
     await prisma.$connect();
     await otherPrisma.$connect();
+    await holderPrisma.$connect();
     photos = new PrismaReviewPhotoRepository(prisma);
     otherPhotos = new PrismaReviewPhotoRepository(otherPrisma);
     sessions = new PrismaReviewSessionRepository(prisma);
@@ -128,6 +132,7 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
   afterAll(async () => {
     await prisma.$disconnect();
     await otherPrisma.$disconnect();
+    await holderPrisma.$disconnect();
   });
 
   const createElement = async (): Promise<string> => {
@@ -427,68 +432,174 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     ).toBe(1);
   });
 
-  // EN-164 S4: an add racing a discard. Every add that committed must have
-  // its key in the keys the discard returned (so its file is deleted); an add
-  // that lost the race is refused. Repeated, because the interleaving is
-  // timing-dependent.
-  it('never leaves a committed photo key out of a racing discard', async () => {
-    for (let round = 0; round < 15; round++) {
-      const sessionId = await createDraft();
-      const elementId = await createElement();
-      const adds = Array.from({ length: 3 }, () => photo(sessionId, elementId));
-
-      const [discard, ...added] = await Promise.all([
-        photos.discardDraftWithPhotoKeys(sessionId),
-        ...adds.map((row) => otherPhotos.addToDraft(row, 3)),
-      ]);
-
-      expect(discard.outcome).toBe('discarded');
-      const returned =
-        discard.outcome === 'discarded' ? discard.storageKeys : [];
-      adds.forEach((row, index) => {
-        if (added[index] === 'added') {
-          expect(returned).toContain(row.storageKey);
-        } else {
-          expect(added[index]).toBe('not_editable');
-        }
-      });
-      expect(
-        await prisma.reviewPhoto.count({
-          where: { reviewSessionId: sessionId },
+  // EN-223: the race tests below force one interleaving instead of repeating
+  // rounds. A third connection locks the session row; each racing operation
+  // must then queue behind it (which proves it waits on that row), and
+  // Postgres grants a row lock to its waiters in arrival order, so `first`
+  // runs before `second` once the holder commits.
+  const holdSessionLock = async (
+    sessionId: string,
+  ): Promise<{ pid: number; release: () => Promise<void> }> => {
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked!: (pid: number) => void;
+    const pid = new Promise<number>((resolve) => {
+      locked = resolve;
+    });
+    const done = holderPrisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT 1 FROM "ReviewSession" WHERE "id" = ${sessionId}::uuid FOR UPDATE`;
+        const [row] = await tx.$queryRaw<
+          Array<{ pid: number }>
+        >`SELECT pg_backend_pid() AS "pid"`;
+        locked(row.pid);
+        await released;
+      },
+      { timeout: 30_000 },
+    );
+    return {
+      pid: await Promise.race([
+        pid,
+        done.then(() => {
+          throw new Error('the lock holder ended before locking');
         }),
-      ).toBe(0);
+      ]),
+      release: async () => {
+        release();
+        await done;
+      },
+    };
+  };
+
+  // Waits until `expected` backends are queued behind the holder, directly or
+  // behind another waiter.
+  const waitForQueue = async (
+    holderPid: number,
+    expected: number,
+  ): Promise<void> => {
+    const deadline = Date.now() + 10_000;
+    for (;;) {
+      const [row] = await prisma.$queryRaw<Array<{ count: number }>>`
+        WITH RECURSIVE queued("pid") AS (
+          SELECT a."pid" FROM pg_stat_activity a
+          WHERE ${holderPid}::int = ANY(pg_blocking_pids(a."pid"))
+          UNION
+          SELECT a."pid" FROM pg_stat_activity a
+          JOIN queued q ON q."pid" = ANY(pg_blocking_pids(a."pid"))
+        )
+        SELECT count(*)::int AS "count" FROM queued`;
+      if (row.count === expected) return;
+      if (Date.now() > deadline) {
+        throw new Error(
+          `expected ${expected} operations queued behind the session lock, saw ${row.count}`,
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
     }
+  };
+
+  const inLockOrder = async <A, B>(
+    sessionId: string,
+    first: () => Promise<A>,
+    second: () => Promise<B>,
+  ): Promise<[A, B]> => {
+    const holder = await holdSessionLock(sessionId);
+    const started: Promise<unknown>[] = [];
+    try {
+      const firstRun = first();
+      started.push(firstRun);
+      await waitForQueue(holder.pid, 1);
+      const secondRun = second();
+      started.push(secondRun);
+      await waitForQueue(holder.pid, 2);
+      await holder.release();
+      return [await firstRun, await secondRun];
+    } catch (error) {
+      await holder.release();
+      await Promise.allSettled(started);
+      throw error;
+    }
+  };
+
+  // EN-164 S4: an add racing a discard. An add that loses is refused; an add
+  // that wins has its key in the keys the discard returns (so its file is
+  // deleted).
+  it('refuses an add that queues behind a discard', async () => {
+    const sessionId = await createDraft();
+    const elementId = await createElement();
+    const late = photo(sessionId, elementId);
+
+    const [discard, added] = await inLockOrder(
+      sessionId,
+      () => photos.discardDraftWithPhotoKeys(sessionId),
+      () => otherPhotos.addToDraft(late, 3),
+    );
+
+    expect(discard).toEqual({ outcome: 'discarded', storageKeys: [] });
+    expect(added).toBe('not_editable');
+    expect(await prisma.reviewPhoto.count({ where: { id: late.id } })).toBe(0);
+  });
+
+  it('returns the key of an add that queues ahead of a discard', async () => {
+    const sessionId = await createDraft();
+    const elementId = await createElement();
+    const early = photo(sessionId, elementId);
+
+    const [added, discard] = await inLockOrder(
+      sessionId,
+      () => otherPhotos.addToDraft(early, 3),
+      () => photos.discardDraftWithPhotoKeys(sessionId),
+    );
+
+    expect(added).toBe('added');
+    expect(discard).toEqual({
+      outcome: 'discarded',
+      storageKeys: [early.storageKey],
+    });
+    expect(
+      await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
+    ).toBe(0);
   });
 
   // S-3: complete() writes the session row the add locks, so an add either
   // committed first (its row is there) or is refused; no photo lands on a
   // completed session after the fact.
-  it('keeps add and complete consistent when they race', async () => {
-    for (let round = 0; round < 10; round++) {
-      const sessionId = await createDraft();
-      const elementId = await createElement();
-      const adds = Array.from({ length: 3 }, () => photo(sessionId, elementId));
+  it('refuses an add that queues behind a complete', async () => {
+    const sessionId = await createDraft();
+    const elementId = await createElement();
 
-      const [completed, ...added] = await Promise.all([
-        sessions.complete(sessionId, new Date()),
-        ...adds.map((row) => otherPhotos.addToDraft(row, 3)),
-      ]);
+    const [completed, added] = await inLockOrder(
+      sessionId,
+      () => sessions.complete(sessionId, new Date()),
+      () => otherPhotos.addToDraft(photo(sessionId, elementId), 3),
+    );
 
-      expect(completed).toBe(true);
-      const rows = await prisma.reviewPhoto.findMany({
-        where: { reviewSessionId: sessionId },
-      });
-      expect(rows.map((row) => row.id).sort()).toEqual(
-        adds
-          .filter((_, index) => added[index] === 'added')
-          .map((row) => row.id)
-          .sort(),
-      );
-      // Once completed, nothing more can land.
-      await expect(
-        photos.addToDraft(photo(sessionId, elementId), 3),
-      ).resolves.toBe('not_editable');
-    }
+    expect(completed).toBe(true);
+    expect(added).toBe('not_editable');
+    expect(
+      await prisma.reviewPhoto.count({ where: { reviewSessionId: sessionId } }),
+    ).toBe(0);
+  });
+
+  it('keeps the photo of an add that queues ahead of a complete', async () => {
+    const sessionId = await createDraft();
+    const elementId = await createElement();
+    const early = photo(sessionId, elementId);
+
+    const [added, completed] = await inLockOrder(
+      sessionId,
+      () => otherPhotos.addToDraft(early, 3),
+      () => sessions.complete(sessionId, new Date()),
+    );
+
+    expect(added).toBe('added');
+    expect(completed).toBe(true);
+    const rows = await prisma.reviewPhoto.findMany({
+      where: { reviewSessionId: sessionId },
+    });
+    expect(rows.map((row) => row.id)).toEqual([early.id]);
   });
 
   // EN-222: the orphan file sweep keeps every key a row references, in any
