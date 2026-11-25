@@ -627,11 +627,21 @@
       "signedAtLabel": "Firmado el: {{date}}"
     }
   },
-  "health": {
-    "title": "Estado del sistema",
-    "checking": "Comprobando...",
-    "ok": "Todo funciona correctamente",
-    "error": "Algo no está funcionando"
+  "home": {
+    "title": "Inicio",
+    "signedInAs": "Sesión iniciada como {{email}}",
+    "signedInAsWithRole": "Sesión iniciada como {{email}} ({{role}})",
+    "description": {
+      "reviewSchedule": "Qué revisiones tocan y cuándo",
+      "reviewSessions": "Empieza una revisión o continúa un borrador",
+      "reviewHistory": "Revisiones terminadas y sus documentos",
+      "communities": "Comunidades y sus elementos inspeccionables",
+      "maintenanceCompanies": "Las empresas que realizan las revisiones",
+      "reviewTemplates": "La lista de preguntas de cada tipo de revisión",
+      "checklistQuestions": "Las preguntas que pueden usar las plantillas",
+      "users": "Cuentas, roles y accesos",
+      "organizationProfile": "Datos y logotipo de tu organización"
+    }
   },
   "reviewSchedule": {
     "title": "Calendario de revisiones",

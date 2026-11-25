@@ -1194,6 +1194,14 @@ content type`). Today that is the only 415 it raises, but a future one
   error and the orphan sweep still runs), but the race cannot be triggered
   from a test without a seam over `node:fs/promises`. Origin:
   `en-234-sweep-tmp-files` fresh review W-1c, 2026-11-24.
+- **EN-237** (home page, slice 2): alerts on the home page for each role,
+  such as overdue and upcoming reviews (reusing `GET /review-schedule`,
+  FR-009) or a technician's unfinished drafts. What counts as an alert for
+  each role is decided when the slice starts. Origin: `home-page` slice 1,
+  2026-11-25.
+- **EN-238** (home page, slice 3): recent activity on the home page, such
+  as the latest completed reviews the user can see (review history, scoped
+  by role). Origin: `home-page` slice 1, 2026-11-25.
 
 ## Done
 

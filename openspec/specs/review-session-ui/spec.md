@@ -77,8 +77,11 @@ item** (`app-navigation`), offered to these two roles on **every**
 authenticated page — not a role-conditional link on the app's entry page.
 The entry-page link that previously satisfied this requirement is removed
 by the same change that introduces the navigation, and this requirement
-MUST NOT be read as requiring a control that no longer exists: the entry
-page renders its health-status readout and nothing else.
+MUST NOT be read as requiring a control that no longer exists. The entry
+page is now the home page (`app-navigation`, "The Home Page Lists the
+Role's Sections"): any link it offers into this flow is built from the
+navigation's own role → items table, so it reaches exactly the same two
+roles.
 
 Because the navigation is global, reachability is no longer confined to
 the landing view: these two roles MUST be able to enter the flow from any
@@ -106,11 +109,11 @@ serves and for the three it must not.)
 - WHEN the page renders
 - THEN a navigation item leading into the review-session flow MUST be present, with no hand-typed URL required
 
-#### Scenario: The entry page no longer carries the link
+#### Scenario: The entry page offers the flow only through the navigation's table
 
-- GIVEN a signed-in user of either role on the app's entry page after this change
+- GIVEN a signed-in user of any role on the app's entry page
 - WHEN that page's own controls are enumerated
-- THEN it MUST render its health-status readout only — no role-conditional review-session link and no logout button of its own
+- THEN it MUST render no logout button of its own, and MUST offer a link into the review-session flow only if that role's navigation offers one
 
 #### Scenario: No other role is offered a path into the flow
 

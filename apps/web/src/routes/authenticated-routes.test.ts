@@ -11,7 +11,7 @@ import { CommunityDetailPage } from '../pages/CommunityDetailPage';
 import { CommunityEditPage } from '../pages/CommunityEditPage';
 import { CommunityElementsListPage } from '../pages/CommunityElementsListPage';
 import { ElementReviewHistoryPage } from '../pages/ElementReviewHistoryPage';
-import { HealthPage } from '../pages/HealthPage';
+import { HomePage } from '../pages/HomePage';
 import { InspectableElementCreatePage } from '../pages/InspectableElementCreatePage';
 import { InspectableElementEditPage } from '../pages/InspectableElementEditPage';
 import { InspectableElementLabelPage } from '../pages/InspectableElementLabelPage';
@@ -48,7 +48,7 @@ const EXPECTED_ROUTES: {
   allowedRoles: string[] | undefined;
   elementType: unknown;
 }[] = [
-  { path: '/', allowedRoles: undefined, elementType: HealthPage },
+  { path: '/', allowedRoles: undefined, elementType: HomePage },
   { path: '/users', allowedRoles: ['SYSTEM_ADMIN'], elementType: UsersListPage },
   { path: '/users/new', allowedRoles: ['SYSTEM_ADMIN'], elementType: UserCreatePage },
   { path: '/users/:id/edit', allowedRoles: ['SYSTEM_ADMIN'], elementType: UserEditPage },

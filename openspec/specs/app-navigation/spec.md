@@ -32,7 +32,10 @@ collapse/toggle state; breadcrumbs, a "back" affordance, search, a
 dashboard or a user/profile menu; any other language switcher; and any
 change to a route's `allowedRoles` or to `ProtectedRoute`'s precedence
 logic. Promoting a CRUD sub-route or the element-history drill-in to a nav
-item is likewise out of scope.
+item is likewise out of scope. The home page at `/` (since `home-page`)
+lists the role's sections as cards built from the same role → items table;
+counts, alerts and recent activity on it are not part of this capability
+yet.
 (Previously: "a **link bar and nothing more**", with a sidebar, a design
 system, CSS framework, theming and app branding out of scope.)
 
@@ -379,20 +382,26 @@ manager's only item; it is restated as "the identical Review history item".)
 - WHEN each is inspected
 - THEN none MUST carry or branch on `managerCapabilities` or `VIEW_ALL_REVIEWS`, and no endpoint MUST have been added to expose it
 
-### Requirement: Logout Moves Into the Navigation and the Health Page Keeps Only Its Readout
+### Requirement: Logout Moves Into the Navigation and the Home Page Carries No Logout of Its Own
 
 The logout control MUST live in the navigation and MUST therefore be
 reachable from **every** authenticated page. Its behaviour MUST be
 unchanged: it calls the logout operation and then redirects to `/login`.
 
-The health page's two role-conditional entry links and its logout button
-MUST be **removed in the same change that introduces the navigation** —
-the two mechanisms MUST NOT coexist on the main branch. After this
-change the health page MUST render its health-status readout and nothing
-else: no navigation link and no logout control.
+The entry page's two role-conditional entry links and its logout button
+were **removed in the same change that introduced the navigation**, so
+the two mechanisms never coexisted on the main branch. The home page
+that now sits at `/` MUST NOT render a logout control of its own, and
+every link it offers MUST come from the navigation's own role → items
+table (see "The Home Page Lists the Role's Sections"), so it can never
+offer a section the navigation does not.
 
 The two translation keys those removed links used MUST be deleted from
 every locale file, leaving no dead key behind.
+
+(Previously: after the navigation shipped, the entry page MUST render its
+health-status readout and nothing else. `home-page` replaces that readout
+with the role's sections; the API's `/health` endpoint is unchanged.)
 
 #### Scenario: Logout is reachable from every authenticated page
 
@@ -412,23 +421,84 @@ every locale file, leaving no dead key behind.
 - WHEN the logout operation succeeds
 - THEN they MUST be redirected to `/login`, exactly as the shipped logout flow already specifies
 
-#### Scenario: The health page renders no link and no logout button
+#### Scenario: The home page renders no logout button of its own
 
-- GIVEN a signed-in user of any role on the health page
-- WHEN its controls are enumerated
-- THEN it MUST show its health-status readout, and MUST render no navigation link and no logout button of its own
+- GIVEN a signed-in user of any role on the home page
+- WHEN its own controls are enumerated
+- THEN it MUST render no logout button, and every link it renders MUST lead to an item of that role's navigation
 
 #### Scenario: The removed translation keys exist in no locale
 
 - GIVEN the `en`, `es` and `ca` locale files after this change
-- WHEN the two keys that labelled the health page's removed links are looked for
+- WHEN the two keys that labelled the entry page's removed links are looked for
 - THEN they MUST be absent from all three
 
 #### Scenario: Two navigation mechanisms never coexist
 
-- GIVEN the state of the main branch at every commit of this change
+- GIVEN the state of the main branch at every commit
 - WHEN the app's navigation controls are enumerated
-- THEN at no point MUST both the health page's role-conditional links and the global navigation be present together
+- THEN no page MUST offer a role a section link that is not built from the navigation's role → items table
+
+### Requirement: The Home Page Lists the Role's Sections
+
+The home page at `/` MUST say who is signed in (their email and, for a
+known role, the role's localized name) and MUST offer one card per item
+of the signed-in role's navigation **except Home itself**, in the
+navigation's order, grouped under the navigation's localized group
+headings (Operations, Setup, Administration), skipping a group the role
+has no item in. Each card MUST link to its section and MUST show the
+section's localized name and a one-line localized description of what
+the section is for.
+
+The cards MUST be built from the same role → items table as the
+navigation, never from a second list. A role outside the five known
+`Role` values MUST get no card, exactly as it gets no navigation item.
+
+The home page MUST NOT show the system's health status and MUST NOT call
+the API's health check; `/health` stays an API endpoint for monitoring
+and deployment checks.
+
+#### Scenario: Each role sees its own sections
+
+- GIVEN a signed-in user of any of the five roles
+- WHEN the home page renders
+- THEN it MUST link to exactly the role's navigation items other than Home, in the navigation's order
+
+#### Scenario: Sections are grouped like the navigation
+
+- GIVEN a signed-in `SYSTEM_ADMIN`
+- WHEN the home page renders
+- THEN its cards MUST sit under the headings Operations, Setup and Administration, in that order
+
+#### Scenario: A card says what its section is for
+
+- GIVEN a signed-in `MAINTENANCE_TECHNICIAN`
+- WHEN the home page renders
+- THEN the Review sessions card MUST show its name and a description such as "Start a review or continue a draft"
+
+#### Scenario: The page says who is signed in
+
+- GIVEN a signed-in `MANAGER` with email `someone@sf-manager.example`
+- WHEN the home page renders
+- THEN it MUST show "Signed in as someone@sf-manager.example (Manager)", localized
+
+#### Scenario: No system status on the home page
+
+- GIVEN a signed-in user of any role
+- WHEN the home page renders
+- THEN it MUST NOT show a health-status readout and MUST NOT request `/health`
+
+#### Scenario: An unrecognized role gets no section
+
+- GIVEN a signed-in user whose role is not one of the five known `Role` values
+- WHEN the home page renders
+- THEN it MUST show who is signed in and MUST render no section card
+
+#### Scenario: Every section description exists in every locale
+
+- GIVEN every navigation item other than Home, for every role
+- WHEN its description is looked up in `en`, `es` and `ca`
+- THEN each locale MUST carry it
 
 ### Requirement: The Navigation Adds No Third Entry Point to the Element History Page
 

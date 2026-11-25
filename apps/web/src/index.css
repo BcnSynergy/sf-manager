@@ -622,6 +622,50 @@ code {
   flex-wrap: wrap;
 }
 
+/* Home page: the role's sections, one group per navigation group, each
+   section a card linking to it. */
+.sf-home-sections {
+  align-self: stretch;
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+.sf-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-home-card {
+  display: grid;
+  gap: var(--space-1);
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  text-decoration: none;
+}
+.sf-home-card:hover {
+  background: var(--hover);
+  border-color: var(--border-strong);
+}
+.sf-home-card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.sf-home-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.sf-home-card-text {
+  color: var(--ink-muted);
+}
+
 /* A vertical list of panels (one per record, such as a session's entries).
    A <ul> so screen readers count the items. */
 .sf-stack {
