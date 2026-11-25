@@ -2644,12 +2644,6 @@ describe('Review History (e2e)', () => {
       expect(rowIds).not.toContain(draftForX.id);
     });
 
-    // review-history/spec.md "The ordering matches every other scope's
-    // list, including a granted manager's" + tasks.md 3.18: closes the 3
-    // e2e-orphaned granted-manager scenarios by proving the granted
-    // manager's list is session-for-session IDENTICAL to the admin's on
-    // this same installation-wide fixture (companies X/Y, a deactivated
-    // community, a soft-deleted performer, an unattributed session).
     // EN-240: a granted MANAGER's limited list is the start of its own list.
     it("a granted MANAGER's limited list keeps its newest sessions", async () => {
       const grantedManagerAgent = await loginAgent(
@@ -2668,6 +2662,12 @@ describe('Review History (e2e)', () => {
       expect(limited).toEqual(plain.slice(0, 2));
     });
 
+    // review-history/spec.md "The ordering matches every other scope's
+    // list, including a granted manager's" + tasks.md 3.18: closes the 3
+    // e2e-orphaned granted-manager scenarios by proving the granted
+    // manager's list is session-for-session IDENTICAL to the admin's on
+    // this same installation-wide fixture (companies X/Y, a deactivated
+    // community, a soft-deleted performer, an unattributed session).
     it("a granted MANAGER's list is identical to the SYSTEM_ADMIN's, including the deactivated community, the soft-deleted performer and the unattributed session", async () => {
       const adminAgent = await loginAgent(built.app, adminEmail);
       const grantedManagerAgent = await loginAgent(
