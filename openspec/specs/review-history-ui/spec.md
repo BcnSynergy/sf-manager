@@ -592,9 +592,9 @@ a URL by hand, through the **global navigation's Review history item**
 entry page is now the home page (`app-navigation`, "The Home Page Lists
 the Role's Sections"): it offers the admin a Review history card, built
 from the same role → items table as the navigation, so it adds no path
-the navigation does not offer. The home page is a list of the role's
-sections, not a dashboard: it shows no counts, statistics or session
-data. Opening a row MUST navigate to that session's read-only view.
+the navigation does not offer; what else the home page shows is
+`app-navigation`'s to define. Opening a row MUST navigate to that
+session's read-only view.
 
 That navigation path MUST NOT cross the `/review-sessions` write surface
 owned by `review-session-ui`, which this role MUST NOT gain: no
@@ -623,9 +623,10 @@ guarantee that none of those seven items is the review-session write
 surface. The counts "other six navigation items", "seven" and "seven-item"
 were already stale once the Organization profile item shipped (eight items)
 and are false with the Review schedule item (nine); the text and the two
-scenarios below no longer count items. Since `home-page`, the entry page is the home page,
-whose cards come from the navigation's table; before, it carried no link
-and the text said no admin dashboard existed.)
+scenarios below no longer count items.)
+(Previously: the app's entry page carried no link and no admin dashboard
+existed. Since `home-page` the entry page is the home page, whose cards
+come from the navigation's table.)
 
 #### Scenario: The admin reaches history from any authenticated page
 
