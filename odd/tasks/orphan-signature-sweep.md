@@ -12,10 +12,10 @@ Locator: `odd/tasks/orphan-signature-sweep.md` (Engram mirror: `odd/orphan-signa
 
 ## Tasks
 
-| ID  | Specs  | Route  | Status   | Commit / PR |
-| --- | ------ | ------ | -------- | ----------- |
-| T1  | S1, S2 | inline | pushed   | PR 1/2 #483 |
-| T2  | S3     | inline | verified | PR 2/2      |
+| ID  | Specs  | Route  | Status | Commit / PR                  |
+| --- | ------ | ------ | ------ | ---------------------------- |
+| T1  | S1, S2 | inline | done   | PR 1/2 #483, merge `5f8622b` |
+| T2  | S3     | inline | done   | PR 2/2 #484, merge `c6a1f2a` |
 
 Route evidence: no writer trigger (sequential, dependent units; T2 reuses T1's helper and scheduler). Risk: item 1 (deletes stored files) on both, so an independent verifier runs at the feature's end, besides each PR's fresh review.
 
@@ -27,3 +27,4 @@ Route evidence: no writer trigger (sequential, dependent units; T2 reuses T1's h
 - **L4** T1 fresh review: APPROVE. W-1 fixed: `review-history` spec (_Exactly two actor-unscoped reads exist_) now names the sweep's two reads as the exception, so changed specs are `review-session-management` and `review-history`. S-1 (a thrown `complete()` after a committed UPDATE deletes the recorded copy, pre-existing on main) registered as TD-55. S-2 (assert false before signing) not applied: the rolled-back transaction test already pins the false case.
 - **L5** T2 evidence (branch `orphan-signature-sweep/02-signatures`, based on PR 1): unit suite 187/1981, `prisma-reviewer-signature` integration 7/7, eslint and `format:check` clean. Mutation probes killed: no-row guard off, wrong directory, references ignored, own sweep not run, own sweep not awaited, sweep not exported (DI bootstrap), `hasAnySignature` always true, `findReferencedStorageKeys` unfiltered. No call-site guard in `reviewer-signature`: its reads return keys only and the photo repository's equivalent reads have none either. The logo upload's same leftover (mentioned in EN-243) registered as EN-246, per S4.
 - **L6** Independent verification of the whole feature (9951928..7f6db37), also PR 2's fresh review: APPROVE, S1-S4 met, no referenced file can be deleted, 6 probes killed (none survived, so no regression test to add). W-1 fixed: the module comment "the only export" reworded. S-1 applied: the sweep is exported as the `ORPHAN_SIGNATURE_FILE_SWEEP` port token (`useExisting`), as every other cross-module export, instead of the use-case class; dropping the export still fails the DI bootstrap test. Prisma integration tests not run by the verifier (`.env` deny rule); run by the parent (29/29, 7/7).
+- **L7** (2026-11-26) Closed. PR 1/2 #483: `952c108` (feature), `ccedf74` (review-history spec, TD-55), merged as `5f8622b`; the independent verification of the whole feature served as its pre-merge review (user: "adelante"). PR 2/2 #484, rebased on main after #483 merged: `e6ef81e` (feature), `edf8e0a` (port token), merged as `c6a1f2a`; CI green on both. Specs changed: `review-session-management`, `review-history`, `reviewer-signature`. Registers: EN-244 and EN-243 Done; TD-55 and EN-246 added. Deploy pending (new sweeps start on the next API start).
