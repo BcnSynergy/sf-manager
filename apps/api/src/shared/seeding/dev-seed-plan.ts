@@ -6,6 +6,7 @@ import { CommunityNotInScopeError } from '../../modules/review-session/domain/er
 import { OpenDraftAlreadyExistsError } from '../../modules/review-session/domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotEditableError } from '../../modules/review-session/domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
+import { SignatureRequiredError } from '../../modules/review-session/domain/errors/signature-required.error';
 import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
 import type { ReviewSession } from '../../modules/review-session/domain/review-session.entity';
 import type { User } from '../../modules/users/domain/user.entity';
@@ -90,6 +91,8 @@ const EXPECTED_SESSION_ERRORS = [
   ReviewSessionNotEditableError,
   UnreviewedElementsWithoutReasonError,
   OpenDraftAlreadyExistsError,
+  // QA removed the performer's signature file after the seed registered it.
+  SignatureRequiredError,
 ];
 
 // design.md Decision 12: the domain errors a QA change can raise from the

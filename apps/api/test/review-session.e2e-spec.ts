@@ -6,6 +6,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { REVIEWER_SIGNATURE_REPOSITORY } from '../src/modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
+import { InMemoryReviewerSignatureRepository } from '../src/modules/reviewer-signature/application/use-cases/testing/in-memory-reviewer-signature.repository';
+import { seedSignatures } from '../src/modules/reviewer-signature/application/use-cases/testing/seed-signatures';
+import { FILE_STORAGE } from '../src/shared/application/ports/file-storage.port';
+import { InMemoryFileStorage } from '../src/shared/testing/in-memory-file-storage';
+import { pngHeader } from '../src/modules/organization-profile/domain/testing/logo-fixtures';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
 import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter';
@@ -158,6 +164,8 @@ interface BuiltApp {
   representativeRepository: InMemoryCommunityRepresentativeRepository;
   elementRepository: InMemoryInspectableElementRepository;
   sessionRepository: InMemoryReviewSessionRepository;
+  signatures: InMemoryReviewerSignatureRepository;
+  fileStorage: InMemoryFileStorage;
 }
 
 async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
@@ -177,6 +185,15 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
   const elementRepository = new InMemoryInspectableElementRepository();
   const sessionRepository = new InMemoryReviewSessionRepository();
   const tokenDenylist = new InMemoryTokenDenylist();
+  // Completing a session needs the performer's signature: every seeded user
+  // starts with one registered (reviewer-signature T2).
+  const signatures = new InMemoryReviewerSignatureRepository();
+  const fileStorage = new InMemoryFileStorage();
+  await seedSignatures(
+    fileStorage,
+    signatures,
+    (seed.users ?? []).map((user) => user.id),
+  );
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -209,6 +226,10 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
     // would need the stubbed Prisma.
     .overrideProvider(REVIEW_PHOTO_REPOSITORY)
     .useValue(new InMemoryReviewPhotoRepository(sessionRepository))
+    .overrideProvider(REVIEWER_SIGNATURE_REPOSITORY)
+    .useValue(signatures)
+    .overrideProvider(FILE_STORAGE)
+    .useValue(fileStorage)
     .overrideProvider(USER_DIRECTORY)
     .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
     .overrideProvider(ThrottlerStorage)
@@ -238,6 +259,8 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
     representativeRepository,
     elementRepository,
     sessionRepository,
+    signatures,
+    fileStorage,
   };
 }
 
@@ -1575,6 +1598,188 @@ describe('Review Sessions (e2e)', () => {
         .get(`/review-sessions/${session.id}`)
         .expect(200);
       expect((stillDraft.body as { status: string }).status).toBe('draft');
+    });
+  });
+
+  // reviewer-signature T2: completion is the signing act, and signing
+  // requires the performer's own registered signature, snapshotted onto the
+  // session (review-session-management "Completion Is the Signing Act").
+  describe('Signing requires a signature (reviewer-signature T2)', () => {
+    let built: BuiltApp;
+    const adminEmail = 'rs-sign-admin@example.com';
+    const technicianEmail = 'rs-sign-technician@example.com';
+    const representativeEmail = 'rs-sign-representative@example.com';
+    const technicianId = '00000000-0000-7000-8000-0000000005a1';
+    const representativeId = '00000000-0000-7000-8000-0000000005a2';
+    const PNG = pngHeader(40, 12);
+
+    beforeAll(async () => {
+      const admin = await buildSeedUser({
+        id: '00000000-0000-7000-8000-0000000005a0',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+      });
+      const technician = await buildSeedUser({
+        id: technicianId,
+        email: technicianEmail,
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+      const representative = await buildSeedUser({
+        id: representativeId,
+        email: representativeEmail,
+        role: 'COMMUNITY_REPRESENTATIVE',
+      });
+      built = await buildApp({ users: [admin, technician, representative] });
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    // An element-free community and a template, so a session completes with
+    // no entries (spec "Complete a Session With Explained Gaps Only").
+    async function openOwnSession(
+      who: 'technician' | 'representative',
+      label: string,
+    ) {
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const community = await createCommunity(adminAgent, label);
+      if (who === 'technician') {
+        await assignTechnician(adminAgent, community.id, technicianId);
+      } else {
+        await adminAgent
+          .post(`/communities/${community.id}/representatives`)
+          .send({ userId: representativeId })
+          .expect(201);
+      }
+      const question = await createQuestion(adminAgent, `${label} question`);
+      const template = await createActiveTemplate(
+        adminAgent,
+        `${label} template`,
+        [question.id],
+      );
+      const agent = await loginAgent(
+        built.app,
+        who === 'technician' ? technicianEmail : representativeEmail,
+      );
+      const session = await openSession(agent, community.id, template.id);
+      return { agent, session };
+    }
+
+    function signatureKeys(): string[] {
+      return built.fileStorage
+        .keys()
+        .filter((key) => key.startsWith('review-signatures/'));
+    }
+
+    // The copy's key is fresh per signing attempt:
+    // review-signatures/<sessionId>-<id>.<ext>.
+    function recordedKey(sessionId: string): string {
+      const key = built.sessionRepository.signatureStorageKeyOf(sessionId);
+      expect(key).toMatch(
+        new RegExp(`^review-signatures/${sessionId}-[0-9a-f-]+\\.png$`),
+      );
+      return key as string;
+    }
+
+    async function removeSignature(userId: string): Promise<void> {
+      await built.fileStorage.delete(`signatures/${userId}.png`);
+    }
+
+    it('answers 409 SIGNATURE_REQUIRED to a performer without a signature, keeping the session a draft and storing nothing', async () => {
+      const { agent, session } = await openOwnSession(
+        'technician',
+        'No-signature community',
+      );
+      await removeSignature(technicianId);
+
+      const response = await agent
+        .post(`/review-sessions/${session.id}/complete`)
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe('SIGNATURE_REQUIRED');
+      const stored = await agent
+        .get(`/review-sessions/${session.id}`)
+        .expect(200);
+      expect((stored.body as { status: string }).status).toBe('draft');
+      expect(signatureKeys()).toEqual([]);
+      expect(built.sessionRepository.signatureStorageKeyOf(session.id)).toBe(
+        null,
+      );
+
+      // Registering a signature unblocks the same session.
+      await seedSignatures(built.fileStorage, built.signatures, [technicianId]);
+      await agent.post(`/review-sessions/${session.id}/complete`).expect(200);
+    });
+
+    it('a technician signs: the copy has the same bytes under a fresh review-signatures/<id>-<id>.png key that is recorded', async () => {
+      const { agent, session } = await openOwnSession(
+        'technician',
+        'Technician signs community',
+      );
+
+      const completed = await agent
+        .post(`/review-sessions/${session.id}/complete`)
+        .expect(200);
+
+      expect((completed.body as { status: string }).status).toBe('completed');
+      const key = recordedKey(session.id);
+      expect(signatureKeys()).toContain(key);
+      expect(await built.fileStorage.get(key)).toEqual(PNG);
+      expect(built.sessionRepository.signatureStorageKeyOf(session.id)).toBe(
+        key,
+      );
+    });
+
+    it('a representative signs the same way', async () => {
+      const { agent, session } = await openOwnSession(
+        'representative',
+        'Representative signs community',
+      );
+
+      await agent.post(`/review-sessions/${session.id}/complete`).expect(200);
+
+      const key = recordedKey(session.id);
+      expect(await built.fileStorage.get(key)).toEqual(PNG);
+      expect(built.sessionRepository.signatureStorageKeyOf(session.id)).toBe(
+        key,
+      );
+    });
+
+    it('a representative without a signature gets 409 SIGNATURE_REQUIRED too', async () => {
+      const { agent, session } = await openOwnSession(
+        'representative',
+        'Representative no-signature community',
+      );
+      await removeSignature(representativeId);
+
+      const response = await agent
+        .post(`/review-sessions/${session.id}/complete`)
+        .expect(409);
+
+      expect((response.body as ErrorBody).code).toBe('SIGNATURE_REQUIRED');
+      expect(built.sessionRepository.signatureStorageKeyOf(session.id)).toBe(
+        null,
+      );
+    });
+
+    it("replacing the performer's signature afterwards leaves the signed session's copy unchanged", async () => {
+      const { agent, session } = await openOwnSession(
+        'technician',
+        'Replace-after community',
+      );
+      await agent.post(`/review-sessions/${session.id}/complete`).expect(200);
+      const key = recordedKey(session.id);
+
+      await agent
+        .put('/me/signature')
+        .attach('file', pngHeader(99, 99), 'new.png')
+        .expect(200);
+
+      expect(await built.fileStorage.get(key)).toEqual(PNG);
+      expect(built.sessionRepository.signatureStorageKeyOf(session.id)).toBe(
+        key,
+      );
     });
   });
 });

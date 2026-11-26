@@ -1,4 +1,16 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  REVIEWER_SIGNATURE_REPOSITORY,
+  type ReviewerSignatureRepository,
+} from '../../modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
+import { detectSignatureFormat } from '../../modules/reviewer-signature/domain/reviewer-signature';
+import {
+  FILE_STORAGE,
+  type FileStorage,
+} from '../application/ports/file-storage.port';
 import {
   CHECKLIST_QUESTION_REPOSITORY,
   type ChecklistQuestionRepository,
@@ -152,6 +164,7 @@ describe('seedDevDataset (integration)', () => {
     logs: string[];
     data: DevDataset;
   };
+  let storageDir: string;
   let logs: string[];
   const log = (line: string) => logs.push(line);
 
@@ -160,6 +173,9 @@ describe('seedDevDataset (integration)', () => {
     process.env.JWT_SECRET = 'seed-integration-jwt-secret-0123456789';
     process.env.THROTTLE_KEY_SECRET = 'test-throttle-key-secret-0123456789ab';
     process.env.CORS_ORIGIN = 'http://localhost:5173';
+    // The seed stores signature files: keep them out of ./storage.
+    storageDir = mkdtempSync(join(tmpdir(), 'sf-manager-seed-files-'));
+    process.env.FILE_STORAGE_DIR = storageDir;
 
     moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -218,6 +234,7 @@ describe('seedDevDataset (integration)', () => {
 
   afterAll(async () => {
     await moduleRef.close();
+    rmSync(storageDir, { recursive: true, force: true });
   });
 
   async function seededCompanies(data: DevDataset) {
@@ -762,6 +779,44 @@ describe('seedDevDataset (integration)', () => {
         ),
       ).toEqual([draft.id]);
       expect(logs.filter((l) => /^(Seeded|WARN)/.test(l))).toEqual([]);
+    });
+
+    // reviewer-signature T2: the seed signs its sessions, so every performer,
+    // the draft's included, gets a PNG signature registered; a second run
+    // leaves a signature the performer replaced.
+    it('registers a signature for every performer and keeps one they replaced', async () => {
+      const data = buildDataset('sg1');
+      const deps = resolveDevSeedDeps(moduleRef);
+      await resetLineages();
+      await seedDevDataset(deps, data, log);
+      const { actor } = await actors(data);
+      const signatures = moduleRef.get<ReviewerSignatureRepository>(
+        REVIEWER_SIGNATURE_REPOSITORY,
+      );
+      const storage = moduleRef.get<FileStorage>(FILE_STORAGE);
+      const performers = [
+        ...new Set(data.sessions.map((s) => s.performerEmail)),
+      ].map((email) => actor(email));
+
+      for (const performer of performers) {
+        const row = await signatures.findByUserId(performer.userId);
+        expect(row?.storageKey).toBe(`signatures/${performer.userId}.png`);
+        expect(
+          detectSignatureFormat((await storage.get(row!.storageKey))!),
+        ).toEqual({
+          extension: 'png',
+          contentType: 'image/png',
+        });
+      }
+
+      const replaced = performers[0];
+      await storage.put('signatures/sg1-own.png', Buffer.from('qa-image'));
+      await signatures.save(replaced.userId, 'signatures/sg1-own.png');
+      await seedDevDataset(deps, data, log);
+
+      expect((await signatures.findByUserId(replaced.userId))?.storageKey).toBe(
+        'signatures/sg1-own.png',
+      );
     });
 
     it('keeps a QA-edited entry on rerun', async () => {

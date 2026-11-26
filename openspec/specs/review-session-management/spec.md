@@ -36,14 +36,44 @@ signature image and signer full name are FR-010 slice 2.
 Completing a session MUST be the act of signing it. The signer of a
 `completed` session MUST be its performer (`performedById`) and the
 signing date MUST be its `completedAt`. Signing MUST NOT introduce a new
-operation, status, field, column or write: the completion write path,
-its preconditions (_Complete a Session With Explained Gaps Only_) and its
-resulting `completed` status MUST be unchanged, and no `signed` status
-MUST exist.
+operation or status: the completion write path and its resulting
+`completed` status MUST be unchanged, and no `signed` status MUST exist.
+(Previously: signing also introduced no field, column or write; it now adds
+the signature precondition and the signature copy below.)
+
+Completion MUST require the performer's own registered signature
+(`reviewer-signature`). The checks MUST run in this order, and the first
+that fails MUST decide the response: the session is the caller's and is a
+`draft` (_Completed Sessions Are Immutable_), every active element is
+covered (_Complete a Session With Explained Gaps Only_), then the
+signature. A performer with no registered signature, or whose recorded
+signature file cannot be read, MUST be rejected with 409 and
+`{ code: SIGNATURE_REQUIRED }`; the session MUST remain a `draft` and
+nothing MUST be stored. When the file is missing, the performer's signature
+MUST be read again once, because a replacement that is still being recorded
+removes the old file: the new file is used when the recorded signature
+changed meanwhile.
+
+On success the performer's current signature image MUST be copied, byte for
+byte, to a session-owned storage key `review-signatures/<sessionId>-<id>.<ext>`
+(`<ext>` being the signature's own format: `png`, `jpg` or `webp`; `<id>`
+fresh for each signing attempt, so an attempt that loses a race never
+removes the copy another attempt recorded), and
+that key MUST be recorded on the session (`signatureStorageKey`, unique,
+never returned by any response) in the same write that sets
+`status = completed` and `completedAt`, guarded by `status = draft` like
+the rest of completion. The copy is the session's own: replacing or
+re-uploading the performer's signature afterwards MUST NOT change it, so a
+document already signed never changes. When that write fails or finds the
+session no longer a `draft`, the copy MUST be deleted again (a failure to
+delete it MUST NOT replace the error the caller gets) and the existing
+error behaviour MUST be unchanged.
 
 Every `completed` session — including every session completed before
 this change — MUST count as signed by its performer at its
-`completedAt`, with no backfill and no data migration.
+`completedAt`, with no backfill and no data migration. A session
+completed before the signature existed has no signature copy
+(`signatureStorageKey` is null) and MUST NOT be given one.
 
 Signing MUST NOT open any path to reopen, unsign, re-sign or amend a
 completed session, for any role, `SYSTEM_ADMIN` included. _Completed
@@ -61,18 +91,62 @@ session.
 - GIVEN a session completed before this change was deployed
 - WHEN its signer and signing date are resolved
 - THEN they MUST be its performer and its `completedAt`, with no backfill having run
+- AND it MUST have no signature copy
 
-#### Scenario: The completion contract is unchanged
+#### Scenario: A performer without a signature cannot sign
 
-- GIVEN the completion request, its preconditions and its response before and after this change
-- WHEN they are compared
-- THEN they MUST be identical, and the resulting status MUST be `completed`
+- GIVEN a technician with no registered signature and a draft whose gaps are all explained
+- WHEN they complete the session
+- THEN the response MUST be 409 with `{ code: SIGNATURE_REQUIRED }`, the session MUST remain `draft` and no file MUST be stored under `review-signatures/`
 
-#### Scenario: No signed status or signature field exists
+#### Scenario: A representative without a signature cannot sign either
 
-- GIVEN the schema, the domain entity and the status enum after this change
+- GIVEN a community representative with no registered signature and a draft whose gaps are all explained
+- WHEN they complete the session
+- THEN the response MUST be 409 with `{ code: SIGNATURE_REQUIRED }` and the session MUST remain `draft`
+
+#### Scenario: A recorded signature whose file is gone cannot sign
+
+- GIVEN a technician whose recorded signature file no longer exists, and who has not replaced it since
+- WHEN they complete the session
+- THEN the response MUST be 409 with `{ code: SIGNATURE_REQUIRED }` and the session MUST remain `draft`
+
+#### Scenario: A signature replaced during the read is still found
+
+- GIVEN a technician whose recorded signature file vanished because a replacement was recorded just before the read
+- WHEN they complete the session
+- THEN the new signature MUST be read once more and used, and the session MUST complete
+
+#### Scenario: Signing copies the current signature to the session
+
+- GIVEN a technician with a registered signature image of B bytes
+- WHEN they complete a session S
+- THEN the response MUST be 2xx, the recorded file under `review-signatures/<S.id>-` MUST hold exactly B and its key MUST be recorded on S
+
+#### Scenario: Replacing the signature later leaves the signed session's copy unchanged
+
+- GIVEN session S signed with the technician's signature B
+- WHEN the technician uploads a different signature
+- THEN the copy of S MUST still hold exactly B and its recorded key MUST be unchanged
+
+#### Scenario: A lost write removes the copy
+
+- GIVEN the copy of the signature was stored and the completing write then finds the session no longer a draft, or fails
+- WHEN the request ends
+- THEN the copy MUST be deleted, the session MUST be unchanged by this request and the caller MUST get the error completion gave before this change
+
+#### Scenario: A gap is reported before a missing signature
+
+- GIVEN a draft with an unexplained gap, completed by a performer with no signature
+- WHEN they complete the session
+- THEN the response MUST be 409 `UNREVIEWED_ELEMENTS_WITHOUT_REASON`, not `SIGNATURE_REQUIRED`
+
+#### Scenario: The status is unchanged and no signed status exists
+
+- GIVEN the status enum and the domain entity after this change
 - WHEN they are inspected
-- THEN no `signed` status, no `signedAt`/`signedById` field and no signature column MUST exist
+- THEN no `signed` status and no `signedAt`/`signedById` field MUST exist, and a signed session MUST have the status `completed`
+  (Previously: _The completion contract is unchanged_ and _No signed status or signature field exists_ stated that the request, its preconditions and the schema were identical before and after signing and that no signature column existed; the signature precondition and the `signatureStorageKey` column are the deliberate exception.)
 
 #### Scenario: Not even an admin can reopen a signed session
 
@@ -688,7 +762,9 @@ rejected when any active, non-soft-deleted element of the session's
 community and element type is neither reviewed nor carries a recorded
 unreviewed reason. Completion MUST transition the session to `completed`.
 Decommissioned and soft-deleted elements MUST NOT be required for
-completion.
+completion. Completion also requires the performer's registered signature,
+checked after the coverage rule (_Completion Is the Signing Act_).
+(Previously: completion had no signature precondition.)
 
 #### Scenario: A partial session with explained gaps completes
 

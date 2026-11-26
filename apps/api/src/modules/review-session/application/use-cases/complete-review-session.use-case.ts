@@ -1,5 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  FILE_STORAGE,
+  type FileStorage,
+} from '../../../../shared/application/ports/file-storage.port';
+import {
+  ID_GENERATOR,
+  type IdGenerator,
+} from '../../../../shared/application/ports/id-generator.port';
+import {
+  OWN_SIGNATURE_READER,
+  type OwnSignatureReader,
+} from '../../../reviewer-signature/application/ports/own-signature.reader.port';
+import {
   INSPECTABLE_ELEMENT_REPOSITORY,
   type InspectableElementRepository,
 } from '../../../inspectable-element/application/ports/inspectable-element.repository.port';
@@ -9,6 +21,7 @@ import {
 } from '../../../review-template/application/ports/review-template.repository.port';
 import { ActiveTemplateNotFoundError } from '../../domain/errors/active-template-not-found.error';
 import { ReviewSessionNotEditableError } from '../../domain/errors/review-session-not-editable.error';
+import { SignatureRequiredError } from '../../domain/errors/signature-required.error';
 import { UnreviewedElementsWithoutReasonError } from '../../domain/errors/unreviewed-elements-without-reason.error';
 import { computeUncoveredElements } from '../../domain/completion-coverage';
 import {
@@ -34,6 +47,16 @@ export interface CompleteReviewSessionResult {
 // SessionAccess (Decision 4, Layer 3); `session.complete()` (Decision 8) is
 // the primary immutability enforcement, and `repository.complete()`'s own
 // `WHERE status='draft'` is the concurrency backstop for a lost race.
+//
+// reviewer-signature T2 (review-session-management "Completion Is the Signing
+// Act"): after those two checks, the performer's CURRENT signature is copied
+// to a fresh session-owned key `review-signatures/<sessionId>-<id>.<ext>`
+// (fresh per attempt, so a concurrent attempt that loses the race deletes
+// only its own copy, never the one the winner recorded) and that key is
+// recorded in the SAME write that completes the session, so replacing the
+// signature later never alters a signed session. No signature (or a recorded
+// file that is gone) rejects with SignatureRequiredError before anything is
+// written; a lost race or a failed write deletes the copy again.
 @Injectable()
 export class CompleteReviewSessionUseCase {
   constructor(
@@ -44,6 +67,12 @@ export class CompleteReviewSessionUseCase {
     private readonly templateRepository: ReviewTemplateRepository,
     @Inject(INSPECTABLE_ELEMENT_REPOSITORY)
     private readonly elementRepository: InspectableElementRepository,
+    @Inject(OWN_SIGNATURE_READER)
+    private readonly signatureReader: OwnSignatureReader,
+    @Inject(FILE_STORAGE)
+    private readonly fileStorage: FileStorage,
+    @Inject(ID_GENERATOR)
+    private readonly idGenerator: IdGenerator,
   ) {}
 
   async execute(
@@ -87,17 +116,42 @@ export class CompleteReviewSessionUseCase {
       );
     }
 
+    const signature = await this.signatureReader.execute(actor.userId);
+    if (!signature) {
+      throw new SignatureRequiredError();
+    }
+    const signatureKey = `review-signatures/${session.id}-${this.idGenerator.generate()}.${signature.extension}`;
+    await this.fileStorage.put(signatureKey, signature.content);
+
     const completedAt = new Date();
-    const completed = await this.sessionRepository.complete(
-      session.id,
-      completedAt,
-    );
+    let completed: boolean;
+    try {
+      completed = await this.sessionRepository.complete(
+        session.id,
+        completedAt,
+        signatureKey,
+      );
+    } catch (error) {
+      await this.deleteCopyQuietly(signatureKey);
+      throw error;
+    }
     if (!completed) {
       // Concurrency backstop (Decision 8): a lost race against another
       // mutation between the domain guard above and this write.
+      await this.deleteCopyQuietly(signatureKey);
       throw new ReviewSessionNotEditableError();
     }
 
     return { id: session.id, status: 'completed', completedAt };
+  }
+
+  // The copy is unreferenced once the write failed or lost: a failed delete
+  // must not replace the error the caller is about to get.
+  private async deleteCopyQuietly(key: string): Promise<void> {
+    try {
+      await this.fileStorage.delete(key);
+    } catch {
+      // Nothing references the key; the copy is harmless.
+    }
   }
 }

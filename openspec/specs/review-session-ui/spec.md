@@ -395,6 +395,19 @@ unassigned from the community would otherwise see a link to a uniform
 signing meaning and no irreversibility warning, and the absence of a
 document link was implicit.)
 
+When the completion is rejected with `SIGNATURE_REQUIRED` (the performer has
+no registered signature), the page MUST show, in the same danger alert as
+the other completion errors, a message saying that a signature must be
+registered before signing a review, and MUST offer a link labelled **My
+signature** to `/my-signature` (`reviewer-signature-ui`). The message and
+the link label MUST exist in English, Spanish and Catalan, and the message
+MUST be chosen by the error code, never by the server's message text. The
+session MUST remain a `draft` with its answers and reasons intact. The link
+MUST be offered only for this error and MUST disappear when completion is
+tried again. Every other completion error MUST be shown as before.
+(Previously: a rejected completion could only name the unexplained elements
+or show a generic error.)
+
 #### Scenario: Completion collects a reason for each unreviewed element
 
 - GIVEN 5 active elements exist and 3 have been answered
@@ -424,6 +437,25 @@ document link was implicit.)
 - GIVEN the signing confirmation dialog is open
 - WHEN the user confirms with **Sign and close**
 - THEN the completion request MUST be sent, and on success the session MUST be shown read-only
+
+#### Scenario: Signing without a registered signature links to My signature
+
+- GIVEN an open session whose gaps are all explained, and a performer with no registered signature
+- WHEN the user confirms with **Sign and close** and the API answers 409 `SIGNATURE_REQUIRED`
+- THEN the danger alert MUST say that a signature must be registered before signing a review
+- AND a link labelled **My signature** to `/my-signature` MUST be offered, and the session MUST remain a `draft`
+
+#### Scenario: The signature message and link are translated
+
+- GIVEN the same rejection with the interface in Spanish or in Catalan
+- WHEN the alert and the link render
+- THEN both MUST be shown in that language, and neither MUST fall back to the English text
+
+#### Scenario: Another completion error offers no signature link
+
+- GIVEN a completion rejected for any other reason, such as a network failure
+- WHEN the alert renders
+- THEN no link to `/my-signature` MUST be offered
 
 #### Scenario: Cancelling leaves the session a draft
 

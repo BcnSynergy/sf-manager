@@ -76,6 +76,15 @@ organization profile.
 (Previously: a single active EXTINGUISHER x MONTHLY template, a few completed
 sessions and 1 draft, and no `ANNUAL` template or session.)
 
+Every user who performs a seeded session (the three technicians' and the
+representative's sessions, the draft's performer included) MUST also get a
+registered signature, a small valid PNG stored and recorded exactly as the
+signature upload leaves it, before the seed completes their sessions, since
+completing requires one (`review-session-management`, _Completion Is the
+Signing Act_). A performer who already has a signature, the seed's or their
+own, MUST keep it: the seed never replaces one.
+(Previously: the seed registered no signatures.)
+
 #### Scenario: Dataset shape
 
 - GIVEN a database seeded under the gate
@@ -90,6 +99,19 @@ sessions and 1 draft, and no `ANNUAL` template or session.)
 - WHEN the seeded EXTINGUISHER templates are read
 - THEN an active EXTINGUISHER x QUARTERLY template and an active EXTINGUISHER x ANNUAL template exist
 - AND no EXTINGUISHER x MONTHLY template exists
+
+#### Scenario: Seeded performers have a signature
+
+- GIVEN a freshly reset database seeded under the gate
+- WHEN the signatures of the performers of the seeded sessions are read
+- THEN each has a registered PNG signature
+- AND the seeded completed sessions were signed with it
+
+#### Scenario: A signature a performer replaced is kept
+
+- GIVEN a seeded performer who replaced their signature
+- WHEN the seed runs again
+- THEN their signature is still the one they registered
 
 #### Scenario: Four completed sessions, one annual, in North only
 
@@ -190,7 +212,8 @@ everything depending on it (assignments, sessions), and continue with the
 rest. It MUST NOT repair the row.
 
 More generally, each planned session MUST run inside one guard that catches
-the expected domain errors of the session use cases, logs a warning naming
+the expected domain errors of the session use cases (a missing signature
+among them, when QA removed the performer's signature file), logs a warning naming
 the session plan, the performer, the community and the error, skips that
 session, and lets the run continue. Non-domain errors MUST propagate. The
 seed MUST NOT reactivate or modify existing assignments, elements or

@@ -45,7 +45,37 @@ describe('Own signature reads (reviewer-signature: status and image)', () => {
       expect(await useCase.execute('user-1')).toEqual({
         content: WEBP,
         contentType: 'image/webp',
+        extension: 'webp',
       });
+    });
+
+    // EN-112 pattern: a replacing upload records the new key and then deletes
+    // the old file, so a read holding the old key can find its file gone.
+    it('reads the key again when its file is gone and serves the new file once', async () => {
+      await storage.put('signatures/b.webp', WEBP);
+      const first = { userId: 'user-1', storageKey: 'signatures/a.webp' };
+      const second = { userId: 'user-1', storageKey: 'signatures/b.webp' };
+      const find = jest
+        .spyOn(repository, 'findByUserId')
+        .mockResolvedValueOnce({ ...first, updatedAt: new Date() })
+        .mockResolvedValueOnce({ ...second, updatedAt: new Date() });
+      const useCase = new ReadOwnSignatureImageUseCase(repository, storage);
+
+      expect(await useCase.execute('user-1')).toEqual({
+        content: WEBP,
+        contentType: 'image/webp',
+        extension: 'webp',
+      });
+      expect(find).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns null when the key is unchanged on the second read', async () => {
+      await repository.save('user-1', 'signatures/a.webp');
+      const find = jest.spyOn(repository, 'findByUserId');
+      const useCase = new ReadOwnSignatureImageUseCase(repository, storage);
+
+      expect(await useCase.execute('user-1')).toBeNull();
+      expect(find).toHaveBeenCalledTimes(2);
     });
 
     it('returns null without a signature', async () => {

@@ -5,6 +5,7 @@ import { CommunityNotInScopeError } from '../../modules/review-session/domain/er
 import { OpenDraftAlreadyExistsError } from '../../modules/review-session/domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotEditableError } from '../../modules/review-session/domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../../modules/review-session/domain/errors/review-session-not-found.error';
+import { SignatureRequiredError } from '../../modules/review-session/domain/errors/signature-required.error';
 import { UnreviewedElementsWithoutReasonError } from '../../modules/review-session/domain/errors/unreviewed-elements-without-reason.error';
 import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question/domain/errors/checklist-question-not-found.error';
 import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
@@ -202,6 +203,7 @@ describe('isExpectedSessionError', () => {
       new ReviewSessionNotEditableError(),
       new UnreviewedElementsWithoutReasonError(['E1']),
       new OpenDraftAlreadyExistsError(),
+      new SignatureRequiredError(),
     ].map((error) => [error.name, error] as const),
   )('is true for %s', (_name, error) => {
     expect(isExpectedSessionError(error)).toBe(true);

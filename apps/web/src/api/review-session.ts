@@ -17,7 +17,8 @@ export type ReviewSessionErrorCode =
   | 'ANSWERS_DO_NOT_MATCH_TEMPLATE'
   | 'MISSING_OBSERVATIONS'
   | 'MISSING_ANSWERS'
-  | 'UNREVIEWED_ELEMENTS_WITHOUT_REASON';
+  | 'UNREVIEWED_ELEMENTS_WITHOUT_REASON'
+  | 'SIGNATURE_REQUIRED';
 
 // Mirrors ReviewScopeResponseDto (GET /review-scope).
 export type ReviewScopeCommunity = { id: string; name: string };

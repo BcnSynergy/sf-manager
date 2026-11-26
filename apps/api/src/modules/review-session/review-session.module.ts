@@ -3,6 +3,7 @@ import { CommunityModule } from '../community/community.module';
 import { InspectableElementModule } from '../inspectable-element/inspectable-element.module';
 import { OrganizationProfileModule } from '../organization-profile/organization-profile.module';
 import { ReviewTemplateModule } from '../review-template/review-template.module';
+import { ReviewerSignatureModule } from '../reviewer-signature/reviewer-signature.module';
 import { UsersModule } from '../users/users.module';
 import { REVIEW_PHOTO_REPOSITORY } from './application/ports/review-photo.repository.port';
 import { SweepOrphanReviewPhotoFilesUseCase } from './application/use-cases/sweep-orphan-review-photo-files.use-case';
@@ -73,6 +74,9 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     InspectableElementModule,
     UsersModule,
     OrganizationProfileModule,
+    // reviewer-signature T2: OWN_SIGNATURE_READER, for the signature copy
+    // made when a session is signed. That module imports nothing: no cycle.
+    ReviewerSignatureModule,
   ],
   controllers: [
     ReviewSessionController,

@@ -29,16 +29,17 @@ export function detectSignatureFormat(
 
 // The stored key ends with the format's extension (`signatures/<id>.png`), so
 // a read answers with the right content type without sniffing again.
-export function signatureContentTypeForKey(
-  key: string,
-): SignatureFormatInfo['contentType'] | null {
+export function signatureFormatForKey(key: string): SignatureFormatInfo | null {
   const dot = key.lastIndexOf('.');
   if (dot === -1) return null;
   const extension = key.slice(dot + 1);
-  return (
-    FORMATS.find((format) => format.extension === extension)?.contentType ??
-    null
-  );
+  return FORMATS.find((format) => format.extension === extension) ?? null;
+}
+
+export function signatureContentTypeForKey(
+  key: string,
+): SignatureFormatInfo['contentType'] | null {
+  return signatureFormatForKey(key)?.contentType ?? null;
 }
 
 // One registered signature per user. `storageKey` never leaves the API.

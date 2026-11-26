@@ -11,6 +11,13 @@ reads and changes only their own signature; no other user, the system
 admin included, reads or changes it. The page is owned by
 `reviewer-signature-ui`.
 
+Signing a review (completing it) requires the performer's registered
+signature and copies it onto the session
+(`review-session-management`, _Completion Is the Signing Act_): the copy is
+the session's own, so replacing a signature afterwards never changes the
+copy of a session already signed. Only the current signature is replaced;
+every earlier copy keeps the image it was signed with.
+
 Out of scope: removing a signature, an admin uploading one on someone's
 behalf, the signer's full name.
 

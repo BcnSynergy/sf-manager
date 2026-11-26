@@ -4,6 +4,9 @@ import cookieParser from 'cookie-parser';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { REVIEWER_SIGNATURE_REPOSITORY } from '../src/modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
+import { InMemoryReviewerSignatureRepository } from '../src/modules/reviewer-signature/application/use-cases/testing/in-memory-reviewer-signature.repository';
+import { seedSignatures } from '../src/modules/reviewer-signature/application/use-cases/testing/seed-signatures';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
 import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter';
@@ -159,6 +162,7 @@ interface BuiltApp {
   sessionRepository: InMemoryReviewSessionRepository;
   photoRepository: InMemoryReviewPhotoRepository;
   fileStorage: InMemoryFileStorage;
+  signatures: InMemoryReviewerSignatureRepository;
 }
 
 async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
@@ -174,6 +178,7 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
   const sessionRepository = new InMemoryReviewSessionRepository();
   const photoRepository = new InMemoryReviewPhotoRepository(sessionRepository);
   const fileStorage = new InMemoryFileStorage();
+  const signatures = new InMemoryReviewerSignatureRepository();
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -206,6 +211,8 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
     .useValue(photoRepository)
     .overrideProvider(FILE_STORAGE)
     .useValue(fileStorage)
+    .overrideProvider(REVIEWER_SIGNATURE_REPOSITORY)
+    .useValue(signatures)
     .overrideProvider(USER_DIRECTORY)
     .useValue(new InMemoryUserRepositoryBackedUserDirectory(userRepository))
     .overrideProvider(ThrottlerStorage)
@@ -226,7 +233,13 @@ async function buildApp(seed: { users?: User[] }): Promise<BuiltApp> {
   app.enableCors({ origin: 'http://localhost:5173', credentials: true });
   await app.init();
 
-  return { app, sessionRepository, photoRepository, fileStorage };
+  return {
+    app,
+    sessionRepository,
+    photoRepository,
+    fileStorage,
+    signatures,
+  };
 }
 
 async function loginAgent(app: INestApplication<App>, email: string) {
@@ -818,6 +831,9 @@ describe('Review photos (e2e)', () => {
           )
           .send({ answers: [{ questionId, value: 'YES' }] })
           .expect(200);
+        await seedSignatures(built.fileStorage, built.signatures, [
+          'rp-tech3-id',
+        ]);
         await tech3
           .post(`/review-sessions/${completionSession.id}/complete`)
           .expect(200);
@@ -919,6 +935,9 @@ describe('Review photos (e2e)', () => {
         .put(`/review-sessions/${completed.id}/entries/${completionElement.id}`)
         .send({ answers: [{ questionId, value: 'YES' }] })
         .expect(200);
+      await seedSignatures(built.fileStorage, built.signatures, [
+        'rp-tech3-id',
+      ]);
       await tech3.post(`/review-sessions/${completed.id}/complete`).expect(200);
 
       draft = await openSession(tech3, completionCommunityId, templateId);

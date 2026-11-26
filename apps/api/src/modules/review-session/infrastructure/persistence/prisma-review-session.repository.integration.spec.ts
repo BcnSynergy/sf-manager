@@ -480,6 +480,67 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     expect(rows).toHaveLength(0);
   });
 
+  // reviewer-signature T2: the session-owned signature copy is recorded in the
+  // same `WHERE status='draft'` write that completes the session.
+  it('complete(id, at, key) writes the status, the time and the signature key in one write', async () => {
+    const { sessionId } = await createDraftSession();
+    const at = new Date('2026-11-26T10:00:00.000Z');
+    const key = `review-signatures/${sessionId}.png`;
+
+    await expect(repository.complete(sessionId, at, key)).resolves.toBe(true);
+
+    const row = await prisma.reviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(row.status).toBe('completed');
+    expect(row.completedAt).toEqual(at);
+    expect(row.signatureStorageKey).toBe(key);
+  });
+
+  it('complete(id, at) without a key leaves the signature key null', async () => {
+    const { sessionId } = await createDraftSession();
+
+    await expect(repository.complete(sessionId, new Date())).resolves.toBe(
+      true,
+    );
+
+    const row = await prisma.reviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(row.signatureStorageKey).toBeNull();
+  });
+
+  it('complete(id, at, key) on a completed session returns false and records nothing', async () => {
+    const { sessionId } = await createDraftSession();
+    const firstAt = new Date('2026-11-26T10:00:00.000Z');
+    await repository.complete(sessionId, firstAt);
+
+    await expect(
+      repository.complete(
+        sessionId,
+        new Date('2026-11-26T11:00:00.000Z'),
+        `review-signatures/${sessionId}.png`,
+      ),
+    ).resolves.toBe(false);
+
+    const row = await prisma.reviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(row.signatureStorageKey).toBeNull();
+    expect(row.completedAt).toEqual(firstAt);
+  });
+
+  it('refuses two sessions with the same signature key', async () => {
+    const first = await createDraftSession();
+    const second = await createDraftSession();
+    const key = `review-signatures/${first.sessionId}.png`;
+    await repository.complete(first.sessionId, new Date(), key);
+
+    await expect(
+      repository.complete(second.sessionId, new Date(), key),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
   it('rejects with ReviewSessionNotFoundError for an unknown sessionId instead of a raw FK-violation error', async () => {
     // A real (community, element) pair isolates this failure to the
     // reviewSessionId FK specifically — this test is about the missing
