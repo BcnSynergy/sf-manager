@@ -92,6 +92,14 @@ const REVIEW_SCHEDULE: NavItem = {
   group: 'operations',
   descriptionKey: 'home.description.reviewSchedule',
 };
+// reviewer-signature-ui: only the two roles that sign reviews.
+const MY_SIGNATURE: NavItem = {
+  to: '/my-signature',
+  labelKey: 'nav.mySignature',
+  testId: 'nav-link-my-signature',
+  group: 'setup',
+  descriptionKey: 'home.description.mySignature',
+};
 const ORGANIZATION_PROFILE: NavItem = {
   to: '/organization-profile',
   labelKey: 'nav.organizationProfile',
@@ -128,8 +136,8 @@ export const NAV_ITEMS_BY_ROLE = {
   ],
   MANAGER: [HOME, REVIEW_SCHEDULE, REVIEW_HISTORY],
   MAINTENANCE_COMPANY_MANAGER: [HOME, REVIEW_HISTORY],
-  MAINTENANCE_TECHNICIAN: [HOME, REVIEW_SCHEDULE, REVIEW_SESSIONS, REVIEW_HISTORY],
-  COMMUNITY_REPRESENTATIVE: [HOME, REVIEW_SCHEDULE, REVIEW_SESSIONS, REVIEW_HISTORY],
+  MAINTENANCE_TECHNICIAN: [HOME, REVIEW_SCHEDULE, REVIEW_SESSIONS, REVIEW_HISTORY, MY_SIGNATURE],
+  COMMUNITY_REPRESENTATIVE: [HOME, REVIEW_SCHEDULE, REVIEW_SESSIONS, REVIEW_HISTORY, MY_SIGNATURE],
 } as const satisfies Record<Role, readonly NavItem[]>;
 
 // Splits a role's items into the sidebar's sections: the ungrouped items

@@ -78,12 +78,14 @@ const EXPECTED_ITEM_TESTIDS: Record<Role, string[]> = {
     'nav-link-review-schedule',
     'nav-link-review-sessions',
     'nav-link-review-history',
+    'nav-link-my-signature',
   ],
   COMMUNITY_REPRESENTATIVE: [
     'nav-link-home',
     'nav-link-review-schedule',
     'nav-link-review-sessions',
     'nav-link-review-history',
+    'nav-link-my-signature',
   ],
 };
 
@@ -91,8 +93,8 @@ const EXPECTED_GROUP_LABELS: Record<Role, string[]> = {
   SYSTEM_ADMIN: ['Operations', 'Setup', 'Administration'],
   MANAGER: ['Operations'],
   MAINTENANCE_COMPANY_MANAGER: ['Operations'],
-  MAINTENANCE_TECHNICIAN: ['Operations'],
-  COMMUNITY_REPRESENTATIVE: ['Operations'],
+  MAINTENANCE_TECHNICIAN: ['Operations', 'Setup'],
+  COMMUNITY_REPRESENTATIVE: ['Operations', 'Setup'],
 };
 
 describe('AppLayout', () => {

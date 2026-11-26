@@ -15,6 +15,7 @@ import { ReviewTemplateModule } from './modules/review-template/review-template.
 import { ReviewSessionModule } from './modules/review-session/review-session.module';
 import { OrganizationProfileModule } from './modules/organization-profile/organization-profile.module';
 import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.module';
+import { ReviewerSignatureModule } from './modules/reviewer-signature/reviewer-signature.module';
 
 // PR 4 (tasks.md Phase 7): first point every module built in PR 1-3 is
 // actually wired into a running app. AuthModule self-registers the global
@@ -53,6 +54,7 @@ import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.
 // the organization logo, reading FILE_STORAGE_DIR at boot.
 // EmailModule (password-reset, ADR-018) is @Global() as well: EMAIL_SENDER,
 // reading the SMTP settings at boot.
+// ReviewerSignatureModule (reviewer-signature) registers /me/signature.
 @Module({
   imports: [
     PrismaModule,
@@ -70,6 +72,7 @@ import { ReviewScheduleModule } from './modules/review-schedule/review-schedule.
     ReviewSessionModule,
     OrganizationProfileModule,
     ReviewScheduleModule,
+    ReviewerSignatureModule,
     HealthModule,
   ],
 })

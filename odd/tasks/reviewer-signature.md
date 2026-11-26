@@ -1,0 +1,35 @@
+# Reviewer signature — FR-010 slice 2 (signature image)
+
+Objective: each reviewer registers their own signature image; signing a review requires it and snapshots it onto the session; the printable review document shows it. Delivery: `stacked-to-main`, branches `reviewer-signature/<NN>-<slug>` (forecast about 1500 authored lines in 3 PRs). Runners: Jest in `apps/api` (`npm test`, `npm run test:e2e`, `npm run test:integration`), Vitest in `apps/web`, `npm run format:check`.
+Locator: `odd/tasks/reviewer-signature.md` (Engram mirror: `odd/reviewer-signature/tasks`). Spec change: yes (user confirmed 2026-11-26, "adelante").
+
+## Specs
+
+- **S1** Who registers (user chose "El propio revisor (Recommended)": "Nueva página \"Mi firma\" accesible desde la navegación para quien firma revisiones. Cada uno sube/cambia la suya. No existe hoy página de perfil propio, sería la primera."): the users who sign reviews (the roles that perform review sessions: `MAINTENANCE_TECHNICIAN`, `COMMUNITY_REPRESENTATIVE`) upload, replace and view their own signature image from a "My signature" page reachable from the navigation. Nobody else reads or changes it.
+- **S2** Signing without a signature (user chose "Se bloquea el cierre": "No puede cerrar la revisión hasta registrar su firma (error en API + enlace a \"Mi firma\")."): completing (signing) a session is rejected by the API while the performer has no registered signature; the web shows the error with a link to "My signature".
+- **S3** Snapshot (FR-010 slice 2 decision, 2026-09-23, accepted with "adelante"): on signing, the performer's current signature image is copied onto the session, so replacing the signature later does not alter documents already signed. Sessions signed before this change have no image.
+- **S4** Document (accepted with "adelante"): the printable review document shows the session's snapshotted signature image in the signature block; a session without one shows the block as today.
+- **S5** File rules (proposed by Claude, accepted with "adelante"): PNG, JPEG or WebP, checked by content, at most 2 MB, as the organization logo but without SVG.
+- **S6** Out of scope (accepted with "adelante"): signer full name and snapshotting reference labels (community, company) at signing; registered as an EN pointing to FR-010.
+- **S7** Specs and copy: new capability(ies) for the signature registration (API + UI); `review-session-management`, `review-session-ui`, `review-document`, `review-document-ui` updated; every user-facing string in EN, ES and CA.
+
+## Tasks
+
+| ID  | Specs          | Route  | Status                   | Commit |
+| --- | -------------- | ------ | ------------------------ | ------ |
+| T1  | S1, S5, S7     | inline | done (local, not pushed) |        |
+| T2  | S2, S3, S7     | inline | pending                  |        |
+| T3  | S3, S4, S6, S7 | inline | pending                  |        |
+
+- T1 (PR 1/3, `reviewer-signature/01-register-signature`): storage of the signature (migration), upload / read / own-only routes, "My signature" page and nav link, new spec capability.
+- T2 (PR 2/3, `reviewer-signature/02-sign-requires-signature`): completion rejects a performer without signature, snapshot onto the session (migration), Sign and close dialog shows the error with a link, `review-session-management` and `review-session-ui` specs.
+- T3 (PR 3/3, `reviewer-signature/03-document-signature`): document signature read route behind the history access service, `ReviewDocumentPage` renders it, `review-document(-ui)` specs, FR-010 status, EN for S6.
+
+Risk: items 1 (migrations, snapshot of stored data), 2 (own-only access, file serving) and 3 (completion contract change: existing drafts of reviewers without a signature can no longer be signed): independent fresh-context review per PR.
+
+## Log
+
+- **L1** (2026-11-26, user): "no vamos a poner una imagen para la firma y que aparezca cuando firmamos una revision", then "si" to starting it now as FR-010 slice 2. Decisions: S1 and S2 by the user (options above); scope (S3-S6) proposed by Claude and accepted with "adelante", which also confirmed the spec change.
+- **L2** Map (explorer): logo flow is the model (`organization-logo.ts` `detectLogoFormat`, upload use case put → record → delete previous, `logo-file.interceptor.ts`, `logo-upload-error.filter.ts`, GET headers `no-store`, `default-src 'none'; sandbox`, `nosniff`); completion is `complete-review-session.use-case.ts` → `prisma-review-session.repository.ts` `complete()` (`updateMany` where draft, no lock); document signature block is `ReviewDocumentPage.tsx` `SignatureFooter`; nav in `layout/nav-items.ts`; the dev seed completes 4 sessions through `CompleteReviewSessionUseCase` (`seed-dev-dataset.ts:759`), so T2 must give the seeded performers a signature.
+- **L3** T1 written inline. Decisions (no product impact): new module `reviewer-signature` with table `ReviewerSignature` (userId PK, storageKey unique, updatedAt; hand-written FK to User, ON DELETE RESTRICT); routes `GET /me/signature`, `GET /me/signature/image`, `PUT /me/signature`, all gated by the existing `reviewSession:complete` (no new permission); format check reuses `detectLogoFormat` without SVG; web page `/my-signature` in the Setup group for both roles, Upload button like the logo page. Specs: new `reviewer-signature`, `reviewer-signature-ui`; `app-navigation` table (technician and representative 5 items). RED observed for the use cases (missing module), the nav/layout tests and the page test (missing module); repository integration, e2e and the route/App test updates were written after the code (GREEN only). Checks: api unit 1937, e2e 647 (17 new), integration 316 (4 new); web vitest 1956; api and web typecheck and lint clean; `format:check` clean. Size: about 910 code lines (i18n, schema and migration included), 860 test lines, 245 spec/doc lines.
+- **L4** (2026-11-26) Browser pass (Chrome, technician, ES), with the user's OK to `prisma migrate deploy` the dev DB and run `npm run dev`: "Mi firma" under Configuración in the nav; empty state "Todavía no tienes ninguna firma registrada. No podrás firmar una revisión hasta que subas una."; a 400x120 PNG drawn in a canvas uploaded, "Firma guardada." and the image shown; an SVG declared as `image/png` reached the API and was rejected with "La firma debe ser una imagen PNG, JPEG o WebP." keeping the current image; a 2 MiB + 1 file rejected client-side with "La firma no puede ocupar más de 2 MB."; the image persists after reload. The image read answered `image/png` and `no-store`; its CSP and nosniff headers are not visible to a cross-origin fetch (not exposed by CORS) and are covered by the e2e. The technician's dev signature was kept for T2's browser pass.
