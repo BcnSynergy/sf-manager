@@ -24,6 +24,17 @@ project's Engram memory on 2026-10-09.
 
 ### Medium
 
+- **TD-55**: in `CompleteReviewSessionUseCase`
+  (`apps/api/src/modules/review-session/application/use-cases/complete-review-session.use-case.ts`),
+  when `sessionRepository.complete()` throws, the signature copy is deleted
+  (`deleteCopyQuietly`). If the UPDATE committed and only the reply was lost
+  (for example the database connection drops before the result arrives),
+  the session is completed and records that copy, so the signed review
+  document loses its signature image. Rare, but the copy cannot be rebuilt.
+  Leaving the copy on a thrown error would be safe: the orphan file sweep
+  (EN-244) deletes it after an hour if no session records it. Origin:
+  `orphan-signature-sweep` PR 1/2 fresh review S-1, 2026-11-26.
+
 - **TD-53**: Brevo rewrites the password-reset link through its click-tracking
   redirector (`…sendibt3.com/tr/cl/…`), so the single-use reset token (in
   the link's fragment) passes through and may be logged by Brevo before the

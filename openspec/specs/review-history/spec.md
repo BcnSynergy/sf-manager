@@ -1048,11 +1048,18 @@ actor scope. The guarantee is not weakened, only recounted — the number
 of actor-unscoped reads is now a bounded, enumerable **two**, each
 reachable from the same two actor paths and from nowhere else.)
 
+Reads made for a system task, never reached by a request, are outside that
+count when they return no session data: only which of the storage keys the
+caller supplied a session records, or whether any session records one. The
+orphan signature copy sweep (`review-session-management`, _Orphan Photo and
+Signature Files Are Swept_) has two such reads, and they MUST be reachable
+from that sweep only. (Added by EN-244.)
+
 #### Scenario: Exactly two actor-unscoped reads exist
 
 - GIVEN the review-session repository port and its adapters after this change
 - WHEN the methods that read `completed` sessions or their entries are enumerated
-- THEN exactly two MUST carry no performer, community or maintenance-company scope — the shipped installation-wide list/by-id pair, and the single installation-wide element-keyed read — and every other method MUST carry one
+- THEN exactly two MUST carry no performer, community or maintenance-company scope — the shipped installation-wide list/by-id pair, and the single installation-wide element-keyed read — and every other method MUST carry one, apart from the orphan signature copy sweep's two reads, which return no session data and MUST be reachable from that sweep only
 
 #### Scenario: Every element-keyed read names its scope in its signature
 
