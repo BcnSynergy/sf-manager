@@ -1454,6 +1454,16 @@ describe('Review Sessions (e2e)', () => {
       ['home/HomeAlerts.test.tsx', 'overdue; new jspdf()', ['jspdf']],
       ['pages/ReviewSchedulePage.tsx', 'overdue; dueDate', []],
       ['pages/HomePage.tsx', 'overdue', ['overdue']],
+      [
+        'i18n/locales/en.json',
+        '{"home":{"alerts":{"a":"Overdue"}},"reviewSchedule":{"b":"overdue"},"x":"dueDate"}',
+        ['dueDate'],
+      ],
+      [
+        'i18n/locales.test.ts',
+        "'reviewSchedule.overdue'; 'Overdue'",
+        ['Overdue'],
+      ],
     ])(
       'webOffendingTerms(%s, %j) is %j',
       (relative, content, expected: string[]) => {
