@@ -14,8 +14,8 @@ Locator: `odd/tasks/orphan-signature-sweep.md` (Engram mirror: `odd/orphan-signa
 
 | ID  | Specs  | Route  | Status    | Commit / PR |
 | --- | ------ | ------ | --------- | ----------- |
-| T1  | S1, S2 | inline | committed | PR 1/2      |
-| T2  | S3     | inline | pending   | PR 2/2      |
+| T1  | S1, S2 | inline | pushed    | PR 1/2 #483 |
+| T2  | S3     | inline | committed | PR 2/2      |
 
 Route evidence: no writer trigger (sequential, dependent units; T2 reuses T1's helper and scheduler). Risk: item 1 (deletes stored files) on both, so an independent verifier runs at the feature's end, besides each PR's fresh review.
 
@@ -25,3 +25,4 @@ Route evidence: no writer trigger (sequential, dependent units; T2 reuses T1's h
 - **L2** Design: one scheduler in `review-session` (renamed from the photo-only one) runs every sweep, each failure logged on its own; T2 exports the `signatures/` sweep from `reviewer-signature` (review-session already imports that module). Sessions have no soft delete and `ReviewerSignature` rows are never deleted, so every row still counts as a reference.
 - **L3** T1 evidence: unit suite 186/1975, `prisma-review-session.repository` integration 29/29, eslint and `format:check` clean. Mutation probes killed: no-row guard off, wrong directory, references ignored, signature sweep not run, no stop check between sweeps, sweeps in parallel, label in error, `hasAnySignedSession` without its filter, `findReferencedSignatureStorageKeys` unfiltered. The two new unscoped reads tripped the port-surface guard ("No unscoped session read exists"); added to its list (they return keys, not sessions) plus a call-site guard, following the installation-wide reads' precedent. Split: about 360 code, 490 test, 80 docs lines.
 - **L4** T1 fresh review: APPROVE. W-1 fixed: `review-history` spec (_Exactly two actor-unscoped reads exist_) now names the sweep's two reads as the exception, so changed specs are `review-session-management` and `review-history`. S-1 (a thrown `complete()` after a committed UPDATE deletes the recorded copy, pre-existing on main) registered as TD-55. S-2 (assert false before signing) not applied: the rolled-back transaction test already pins the false case.
+- **L5** T2 evidence (branch `orphan-signature-sweep/02-signatures`, based on PR 1): unit suite 187/1981, `prisma-reviewer-signature` integration 7/7, eslint and `format:check` clean. Mutation probes killed: no-row guard off, wrong directory, references ignored, own sweep not run, own sweep not awaited, sweep not exported (DI bootstrap), `hasAnySignature` always true, `findReferencedStorageKeys` unfiltered. No call-site guard in `reviewer-signature`: its reads return keys only and the photo repository's equivalent reads have none either. The logo upload's same leftover (mentioned in EN-243) registered as EN-246, per S4.

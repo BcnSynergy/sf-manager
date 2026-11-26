@@ -3,6 +3,7 @@ import { OWN_SIGNATURE_READER } from './application/ports/own-signature.reader.p
 import { REVIEWER_SIGNATURE_REPOSITORY } from './application/ports/reviewer-signature.repository.port';
 import { GetOwnSignatureStatusUseCase } from './application/use-cases/get-own-signature-status.use-case';
 import { ReadOwnSignatureImageUseCase } from './application/use-cases/read-own-signature-image.use-case';
+import { SweepOrphanSignatureFilesUseCase } from './application/use-cases/sweep-orphan-signature-files.use-case';
 import { UploadOwnSignatureUseCase } from './application/use-cases/upload-own-signature.use-case';
 import { PrismaReviewerSignatureRepository } from './infrastructure/persistence/prisma-reviewer-signature.repository';
 import { ReviewerSignatureController } from './presentation/reviewer-signature.controller';
@@ -27,7 +28,10 @@ import { ReviewerSignatureController } from './presentation/reviewer-signature.c
       provide: OWN_SIGNATURE_READER,
       useExisting: ReadOwnSignatureImageUseCase,
     },
+    // EN-243: run by review-session's ReviewFileSweepScheduler, so every
+    // orphan file sweep shares one schedule.
+    SweepOrphanSignatureFilesUseCase,
   ],
-  exports: [OWN_SIGNATURE_READER],
+  exports: [OWN_SIGNATURE_READER, SweepOrphanSignatureFilesUseCase],
 })
 export class ReviewerSignatureModule {}

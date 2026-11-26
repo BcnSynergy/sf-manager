@@ -21,4 +21,20 @@ export class PrismaReviewerSignatureRepository implements ReviewerSignatureRepos
       update: { storageKey, updatedAt },
     });
   }
+
+  async findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>> {
+    if (storageKeys.length === 0) return new Set();
+    const rows = await this.prisma.reviewerSignature.findMany({
+      where: { storageKey: { in: storageKeys } },
+      select: { storageKey: true },
+    });
+    return new Set(rows.map((row) => row.storageKey));
+  }
+
+  async hasAnySignature(): Promise<boolean> {
+    const row = await this.prisma.reviewerSignature.findFirst({
+      select: { userId: true },
+    });
+    return row !== null;
+  }
 }

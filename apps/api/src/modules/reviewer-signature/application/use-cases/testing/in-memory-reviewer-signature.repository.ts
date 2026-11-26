@@ -21,4 +21,17 @@ export class InMemoryReviewerSignatureRepository implements ReviewerSignatureRep
     this.rows.set(userId, row);
     return Promise.resolve({ ...row });
   }
+
+  findReferencedStorageKeys(storageKeys: string[]): Promise<Set<string>> {
+    const referenced = new Set(
+      [...this.rows.values()].map((row) => row.storageKey),
+    );
+    return Promise.resolve(
+      new Set(storageKeys.filter((key) => referenced.has(key))),
+    );
+  }
+
+  hasAnySignature(): Promise<boolean> {
+    return Promise.resolve(this.rows.size > 0);
+  }
 }
