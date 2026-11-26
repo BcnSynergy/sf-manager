@@ -527,6 +527,43 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
     expect(row.completedAt).toEqual(firstAt);
   });
 
+  // EN-244: what the orphan signature copy sweep keeps.
+  it('findReferencedSignatureStorageKeys returns only the keys a session records', async () => {
+    const signed = await createDraftSession();
+    await createDraftSession();
+    const key = `review-signatures/${signed.sessionId}-kept.png`;
+    await repository.complete(signed.sessionId, new Date(), key);
+    const orphanKey = `review-signatures/${idGenerator.generate()}-orphan.png`;
+
+    await expect(
+      repository.findReferencedSignatureStorageKeys([orphanKey, key]),
+    ).resolves.toEqual(new Set([key]));
+    await expect(
+      repository.findReferencedSignatureStorageKeys([]),
+    ).resolves.toEqual(new Set());
+    await expect(repository.hasAnySignedSession()).resolves.toBe(true);
+  });
+
+  it('hasAnySignedSession is false when only sessions without a signature copy exist', async () => {
+    await createDraftSession();
+    // Inside a transaction rolled back at the end, so the other tests of
+    // this run keep their signed sessions.
+    const rollback = new Error('rollback');
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await tx.reviewSession.updateMany({
+          data: { signatureStorageKey: null },
+        });
+        const inTransaction = new PrismaReviewSessionRepository(
+          tx as unknown as PrismaService,
+        );
+        await expect(inTransaction.hasAnySignedSession()).resolves.toBe(false);
+        expect(await tx.reviewSession.count()).toBeGreaterThan(0);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+  });
+
   it('refuses two sessions with the same signature key', async () => {
     const first = await createDraftSession();
     const second = await createDraftSession();
@@ -832,9 +869,45 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
         'findCompletedEntriesForElementInCommunities',
         'findCompletedEntriesForElementForCompany',
         'findCompletedEntriesForElementAcrossInstallation',
+        // EN-244: unscoped, but returns no session, only which of the given
+        // storage keys some session records; call sites guarded below.
+        'findReferencedSignatureStorageKeys',
       ].sort(),
     );
     expect(readMethods).not.toContain('findById');
+  });
+
+  // EN-244: the orphan signature copy sweep's reads are unscoped (a system
+  // task, never reached by a request), so, like the installation-wide reads
+  // below, they may only be called by that sweep. Same textual scan and
+  // exclusions (`*.spec.ts`, `**/testing/**`) as those guards.
+  it('findReferencedSignatureStorageKeys/hasAnySignedSession appear only in the port, the Prisma adapter and the signature copy sweep — no other production file', () => {
+    const srcRoot = join(__dirname, '..', '..', '..', '..');
+    const matchingFiles = readdirSync(srcRoot, {
+      recursive: true,
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .filter((entry) => !entry.name.endsWith('.spec.ts'))
+      .map((entry) => join(entry.parentPath, entry.name))
+      .filter((filePath) => !filePath.split(sep).includes('testing'))
+      .filter((filePath) =>
+        /findReferencedSignatureStorageKeys|hasAnySignedSession/.test(
+          readFileSync(filePath, 'utf8'),
+        ),
+      )
+      .map((filePath) => filePath.split(sep).join('/'));
+
+    const expectedSuffixes = [
+      'application/ports/review-session.repository.port.ts',
+      'infrastructure/persistence/prisma-review-session.repository.ts',
+      'application/use-cases/sweep-orphan-review-signature-files.use-case.ts',
+    ];
+
+    expect(matchingFiles).toHaveLength(expectedSuffixes.length);
+    for (const suffix of expectedSuffixes) {
+      expect(matchingFiles.some((f) => f.endsWith(suffix))).toBe(true);
+    }
   });
 
   // review-history-admin-scope design.md Decision 2, mechanism 2, tasks.md

@@ -279,6 +279,8 @@ describe('RecordEntryUseCase', () => {
       findDraftsByPerformer: jest.fn(),
       upsertEntry: jest.fn().mockResolvedValue(false),
       complete: jest.fn(),
+      findReferencedSignatureStorageKeys: jest.fn(),
+      hasAnySignedSession: jest.fn(),
       findCompletedInCommunities: jest.fn(),
       findCompletedByIdInCommunities: jest.fn(),
       findCompletedForPerformer: jest.fn(),

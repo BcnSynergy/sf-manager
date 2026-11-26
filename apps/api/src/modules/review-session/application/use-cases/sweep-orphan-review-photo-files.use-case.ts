@@ -7,28 +7,21 @@ import {
   FILE_STORAGE,
   type FileStorage,
 } from '../../../../shared/application/ports/file-storage.port';
+import { sweepOrphanFiles } from '../../../../shared/application/orphan-file-sweep';
 import { REVIEW_PHOTO_DIRECTORY } from '../../domain/review-photo';
 import {
   REVIEW_PHOTO_REPOSITORY,
   type ReviewPhotoRepository,
 } from '../ports/review-photo.repository.port';
 
-// A file younger than this may belong to an upload in progress: the file is
-// stored before its row is inserted.
-export const ORPHAN_PHOTO_FILE_MIN_AGE_MS = 60 * 60 * 1000;
-
-// review-session-management "Orphan Photo Files Are Swept" (EN-222): deletes
-// every file under review-photos/ that no ReviewPhoto row references and
-// that was stored more than an hour ago. Such files are left by a process
-// that stopped between storing a file and inserting its row, or by a file
-// delete that failed after a photo delete or a discard (those are logged,
-// never thrown). A row is never removed here, so a referenced file is never
-// touched. A file that cannot be deleted is logged and the others are still
-// tried. When no photo row exists at all, nothing is deleted (see below).
-// It also deletes the leftovers of photo writes interrupted by a crash
-// (EN-234), older than the same hour; those are never a photo, so the
-// no-row guard does not apply to them. Returns how many orphan files were
-// deleted.
+// review-session-management "Orphan Photo and Signature Files Are Swept"
+// (EN-222): deletes every file under review-photos/ that no ReviewPhoto row
+// references and that was stored more than an hour ago (sweepOrphanFiles).
+// Such files are left by a process that stopped between storing a file and
+// inserting its row, or by a file delete that failed after a photo delete or
+// a discard (those are logged, never thrown). Rows of a discarded session are
+// gone (ON DELETE CASCADE), so they keep nothing. Returns how many orphan
+// files were deleted.
 @Injectable()
 export class SweepOrphanReviewPhotoFilesUseCase {
   private readonly logger = new Logger(SweepOrphanReviewPhotoFilesUseCase.name);
@@ -40,61 +33,19 @@ export class SweepOrphanReviewPhotoFilesUseCase {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async execute(): Promise<number> {
-    const cutoff = this.clock.now().getTime() - ORPHAN_PHOTO_FILE_MIN_AGE_MS;
-    await this.deleteUnfinishedWrites(new Date(cutoff));
-
-    const oldEnough = (await this.fileStorage.list(REVIEW_PHOTO_DIRECTORY))
-      .filter((file) => file.storedAt.getTime() < cutoff)
-      .map((file) => file.key);
-    if (oldEnough.length === 0) {
-      this.logger.log('Swept 0 orphan review photo file(s)');
-      return 0;
-    }
-    // Old files but no photo row at all: the API is most likely running on a
-    // database that does not match the files volume (an empty one after a
-    // failed restore, a reset dev database). Deleting would wipe every file,
-    // so nothing is deleted until a photo row exists.
-    if (!(await this.photoRepository.hasAnyPhoto())) {
-      this.logger.warn(
-        `Skipped the orphan review photo file sweep: ${oldEnough.length} old file(s) but no photo row at all ` +
-          '(is the API on the database restored with these files?)',
-      );
-      return 0;
-    }
-    // Read after the listing: a row inserted meanwhile belongs to a file
-    // that was already stored, so it is seen here and kept.
-    const referenced =
-      await this.photoRepository.findReferencedStorageKeys(oldEnough);
-
-    let deleted = 0;
-    for (const key of oldEnough) {
-      if (referenced.has(key)) continue;
-      try {
-        await this.fileStorage.delete(key);
-        deleted += 1;
-      } catch (error) {
-        this.logger.warn(
-          `Could not delete orphan review photo file ${key}: ${(error as Error).message}`,
-        );
-      }
-    }
-    this.logger.log(`Swept ${deleted} orphan review photo file(s)`);
-    return deleted;
-  }
-
-  // A failure here is logged and never stops the orphan file sweep.
-  private async deleteUnfinishedWrites(startedBefore: Date): Promise<void> {
-    try {
-      const deleted = await this.fileStorage.deleteUnfinishedWrites(
-        REVIEW_PHOTO_DIRECTORY,
-        startedBefore,
-      );
-      this.logger.log(`Deleted ${deleted} unfinished review photo write(s)`);
-    } catch (error) {
-      this.logger.warn(
-        `Could not delete unfinished review photo writes: ${(error as Error).message}`,
-      );
-    }
+  execute(): Promise<number> {
+    return sweepOrphanFiles(
+      {
+        directory: REVIEW_PHOTO_DIRECTORY,
+        fileLabel: 'review photo',
+        rowLabel: 'photo',
+        findReferencedStorageKeys: (keys) =>
+          this.photoRepository.findReferencedStorageKeys(keys),
+        hasAnyRow: () => this.photoRepository.hasAnyPhoto(),
+      },
+      this.fileStorage,
+      this.clock.now(),
+      this.logger,
+    );
   }
 }

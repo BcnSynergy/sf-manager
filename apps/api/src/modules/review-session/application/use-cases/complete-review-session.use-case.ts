@@ -24,6 +24,7 @@ import { ReviewSessionNotEditableError } from '../../domain/errors/review-sessio
 import { SignatureRequiredError } from '../../domain/errors/signature-required.error';
 import { UnreviewedElementsWithoutReasonError } from '../../domain/errors/unreviewed-elements-without-reason.error';
 import { computeUncoveredElements } from '../../domain/completion-coverage';
+import { REVIEW_SIGNATURE_DIRECTORY } from '../../domain/review-session.entity';
 import {
   Actor,
   SessionAccessService,
@@ -120,7 +121,7 @@ export class CompleteReviewSessionUseCase {
     if (!signature) {
       throw new SignatureRequiredError();
     }
-    const signatureKey = `review-signatures/${session.id}-${this.idGenerator.generate()}.${signature.extension}`;
+    const signatureKey = `${REVIEW_SIGNATURE_DIRECTORY}/${session.id}-${this.idGenerator.generate()}.${signature.extension}`;
     await this.fileStorage.put(signatureKey, signature.content);
 
     const completedAt = new Date();

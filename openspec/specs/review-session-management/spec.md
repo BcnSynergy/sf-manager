@@ -493,7 +493,7 @@ content security policy.
 - WHEN U discards the draft
 - THEN the response MUST be 2xx, the discarded session's photos and stored files MUST be gone, and the other session's photos and files MUST be unchanged
 
-### Requirement: Orphan Photo Files Are Swept
+### Requirement: Orphan Photo and Signature Files Are Swept
 
 A photo's stored file can outlive its row: the process can stop between
 storing the file and inserting the row, and a file delete after a photo
@@ -518,6 +518,22 @@ deleted. Such a leftover is never a photo, so it MUST be deleted even when no
 `ReviewPhoto` row exists at all. A failure to delete these leftovers MUST be
 logged and MUST NOT stop the rest of the sweep. A complete stored file MUST
 NOT be treated as such a leftover. (Added by EN-234.)
+
+The sweep MUST also cover `review-signatures/`. Signing a session stores the
+session-owned copy of the performer's signature there before the write that
+completes the session, so the process can stop between the two, and a copy
+whose completion lost a race is deleted again only on a best-effort basis.
+A file under `review-signatures/` that no `ReviewSession` records as its
+signature copy, and that was stored more than one hour earlier, MUST be
+deleted; a recorded copy MUST NEVER be deleted, whatever its age. Every rule
+above applies to that directory on its own: the one-hour age, the logged
+count, a failed delete logged without stopping the others, the interrupted
+writes, and the guard, which compares against sessions that record a
+signature copy: when old files exist under `review-signatures/` but no
+session records a signature copy at all, nothing there MUST be deleted and a
+warning MUST be logged. The two directories MUST be swept one after the
+other, and a failed sweep of one MUST be logged and MUST NOT stop the sweep
+of the other. (Added by EN-244.)
 
 #### Scenario: An old file with no row is deleted
 
@@ -567,6 +583,36 @@ NOT be treated as such a leftover. (Added by EN-234.)
 - WHEN the sweep runs
 - THEN the interrupted write MUST be deleted
 - AND stored files MUST NOT be deleted
+
+#### Scenario: An old signature copy no session records is deleted
+
+- GIVEN a file under `review-signatures/` stored two hours ago
+- AND no `ReviewSession` records it as its signature copy
+- AND another session records a signature copy
+- WHEN the sweep runs
+- THEN the file MUST be deleted
+
+#### Scenario: A recorded signature copy is kept
+
+- GIVEN a session signed a year ago whose signature copy is under
+  `review-signatures/`
+- WHEN the sweep runs
+- THEN its signature copy MUST be kept
+
+#### Scenario: No signature copy is deleted when no session is signed
+
+- GIVEN files under `review-signatures/` stored days ago
+- AND no `ReviewSession` records a signature copy at all
+- WHEN the sweep runs
+- THEN no file under `review-signatures/` MUST be deleted and a warning MUST
+  be logged
+
+#### Scenario: A failed photo sweep does not stop the signature copy sweep
+
+- GIVEN the sweep of `review-photos/` fails
+- WHEN the sweep runs
+- THEN the failure MUST be logged
+- AND the sweep of `review-signatures/` MUST still run
 
 ### Requirement: Resolve an Element by Code Within the Session's Scope
 

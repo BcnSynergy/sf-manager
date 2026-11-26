@@ -150,6 +150,27 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     return Promise.resolve(true);
   }
 
+  // Both read the key on the session, whether seeded or written by
+  // complete().
+  findReferencedSignatureStorageKeys(
+    storageKeys: string[],
+  ): Promise<Set<string>> {
+    const referenced = new Set(this.signatureStorageKeys());
+    return Promise.resolve(
+      new Set(storageKeys.filter((key) => referenced.has(key))),
+    );
+  }
+
+  hasAnySignedSession(): Promise<boolean> {
+    return Promise.resolve(this.signatureStorageKeys().length > 0);
+  }
+
+  private signatureStorageKeys(): string[] {
+    return [...this.sessionsById.values()]
+      .map((session) => session.signatureStorageKey)
+      .filter((key): key is string => key !== null);
+  }
+
   // Test helper, not on the port (EN-224): InMemoryReviewPhotoRepository's
   // discardDraftWithPhotoKeys checks the draft status, then deletes the
   // session through this.

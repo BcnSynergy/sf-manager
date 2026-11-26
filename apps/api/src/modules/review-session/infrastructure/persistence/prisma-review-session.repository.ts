@@ -257,6 +257,29 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
     return result.count > 0;
   }
 
+  async findReferencedSignatureStorageKeys(
+    storageKeys: string[],
+  ): Promise<Set<string>> {
+    if (storageKeys.length === 0) return new Set();
+    const rows = await this.prisma.reviewSession.findMany({
+      where: { signatureStorageKey: { in: storageKeys } },
+      select: { signatureStorageKey: true },
+    });
+    return new Set(
+      rows
+        .map((row) => row.signatureStorageKey)
+        .filter((key): key is string => key !== null),
+    );
+  }
+
+  async hasAnySignedSession(): Promise<boolean> {
+    const row = await this.prisma.reviewSession.findFirst({
+      where: { signatureStorageKey: { not: null } },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   // review-history design.md Decision 3/6: list rows do not need entries
   // hydrated (mirrors findDraftsByPerformer above) — the detail read (PR 2)
   // is the only caller that needs the full aggregate. `communityIds = []`
