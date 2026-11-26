@@ -316,6 +316,27 @@ describe('Reviewer signature (e2e, reviewer-signature)', () => {
     expect(fileStorage.keys()).toEqual([]);
   });
 
+  // TD-44: multer does not take a malformed content type as multipart, so
+  // the request carries no file.
+  it('rejects a malformed multipart content type with 400 SIGNATURE_FILE_MISSING and keeps the signature', async () => {
+    const agent = await loginAgent(app, TECHNICIAN.email);
+    await agent.put('/me/signature').attach('file', JPEG, 'a.jpg').expect(200);
+    const current = (await signatures.findByUserId(TECHNICIAN.id))?.storageKey;
+
+    const response = await agent
+      .put('/me/signature')
+      .set('Content-Type', 'multipart/form-data; boundary')
+      .send('not a form')
+      .expect(400);
+
+    expect(response.body).toMatchObject({ code: 'SIGNATURE_FILE_MISSING' });
+    expect((await signatures.findByUserId(TECHNICIAN.id))?.storageKey).toBe(
+      current,
+    );
+    expect(fileStorage.keys()).toEqual([current]);
+  });
+
+  // Same case list as the organization logo (EN-111, TD-44).
   it.each([
     [
       'the file in another field',
@@ -327,25 +348,51 @@ describe('Reviewer signature (e2e, reviewer-signature)', () => {
         req.attach('file', PNG, 'a.png').attach('file', JPEG, 'b.jpg'),
     ],
     [
-      'a text field',
+      'a text field next to the file',
       (req: request.Test) =>
         req.field('note', 'x').attach('file', PNG, 'a.png'),
     ],
+    ['a text field alone', (req: request.Test) => req.field('note', 'x')],
+    [
+      'a multipart body without a boundary',
+      (req: request.Test) =>
+        req.set('Content-Type', 'multipart/form-data').send('not a form'),
+    ],
+    // TD-44: platform-express 12 answers this content type with a 415.
+    [
+      'a multipart type other than form-data',
+      (req: request.Test) =>
+        req
+          .set('Content-Type', 'multipart/mixed; boundary=x')
+          .send('--x--\r\n'),
+    ],
   ])(
-    'rejects a form with %s with 400 SIGNATURE_UPLOAD_INVALID',
+    'rejects %s with 400 SIGNATURE_UPLOAD_INVALID and keeps the signature',
     async (_name, build) => {
       const agent = await loginAgent(app, TECHNICIAN.email);
+      await agent
+        .put('/me/signature')
+        .attach('file', JPEG, 'current.jpg')
+        .expect(200);
+      const current = (await signatures.findByUserId(TECHNICIAN.id))
+        ?.storageKey;
 
       const response = await build(agent.put('/me/signature')).expect(400);
 
-      expect(response.body).toMatchObject({ code: 'SIGNATURE_UPLOAD_INVALID' });
-      expect(fileStorage.keys()).toEqual([]);
+      expect(response.body).toMatchObject({
+        statusCode: 400,
+        code: 'SIGNATURE_UPLOAD_INVALID',
+      });
+      expect((await signatures.findByUserId(TECHNICIAN.id))?.storageKey).toBe(
+        current,
+      );
+      expect(fileStorage.keys()).toEqual([current]);
     },
   );
 
   it.each(NON_SIGNERS)(
     'answers 403 to a $role on every route and stores nothing',
-    async ({ email }) => {
+    async ({ id, email }) => {
       const agent = await loginAgent(app, email);
 
       await agent.get('/me/signature').expect(403);
@@ -353,7 +400,7 @@ describe('Reviewer signature (e2e, reviewer-signature)', () => {
       await agent.put('/me/signature').attach('file', PNG, 'a.png').expect(403);
 
       expect(fileStorage.keys()).toEqual([]);
-      expect(await signatures.findByUserId(NON_SIGNERS[0].id)).toBeNull();
+      expect(await signatures.findByUserId(id)).toBeNull();
     },
   );
 

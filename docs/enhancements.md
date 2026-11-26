@@ -1189,6 +1189,13 @@ content type`). Today that is the only 415 it raises, but a future one
   contributor license agreement, but no CLA text or `CONTRIBUTING.md` exists.
   Write one (or adopt a standard CLA) before accepting the first external
   contribution. Origin: `licensing` fresh review S-3, 2026-11-25.
+- **EN-243** (api): two concurrent signature uploads by the same user both
+  read the same previous key, so one of the two new files is left in
+  `signatures/` with no row pointing at it. Harmless (disk space only, the
+  user's row always points at a complete file), and the organization logo
+  upload behaves the same. A sweep like EN-222's for `review-photos`, or
+  serialising the upload per user, would remove the leftover. Origin:
+  `reviewer-signature` PR 1/3 fresh review S-3, 2026-11-26.
 
 ## Done
 

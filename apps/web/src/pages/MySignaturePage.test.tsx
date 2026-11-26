@@ -108,6 +108,19 @@ describe('MySignaturePage (reviewer-signature-ui)', () => {
     expect(screen.getByTestId('my-signature-preview')).toHaveAttribute('src', '/signature?v=1000');
   });
 
+  it('names the size limit when the API answers 413', async () => {
+    mockedStatus.mockResolvedValue(WITH_SIGNATURE);
+    mockedUpload.mockRejectedValue(new ApiError(413, 'SIGNATURE_TOO_LARGE'));
+    renderPage();
+
+    await upload(signatureFile());
+
+    expect(await screen.findByTestId('my-signature-error')).toHaveTextContent(
+      'The signature must be at most 2 MB.',
+    );
+    expect(screen.getByTestId('my-signature-preview')).toBeInTheDocument();
+  });
+
   it('names an oversize file without sending it', async () => {
     mockedStatus.mockResolvedValue(WITHOUT_SIGNATURE);
     renderPage();

@@ -75,6 +75,21 @@ describe('PrismaReviewerSignatureRepository (integration, reviewer-signature)', 
     );
   });
 
+  // The migration's ON DELETE RESTRICT: users are soft-deleted (ADR-010),
+  // so a hard delete of a user with a signature is refused and the
+  // signature row stays.
+  it('refuses to hard-delete a user who has a signature (ON DELETE RESTRICT)', async () => {
+    const userId = await createUser();
+    await repository.save(userId, `signatures/${userId}.png`);
+
+    await expect(
+      prisma.user.delete({ where: { id: userId } }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+    expect((await repository.findByUserId(userId))?.storageKey).toBe(
+      `signatures/${userId}.png`,
+    );
+  });
+
   it('refuses a signature for a user that does not exist (FK to User)', async () => {
     const missing = randomUUID();
 
