@@ -166,6 +166,9 @@ vi.mock('./pages/OrganizationLogoPage', () => ({
     <div data-testid="page-stub-OrganizationLogoPage">OrganizationLogoPage</div>
   ),
 }));
+vi.mock('./pages/MySignaturePage', () => ({
+  MySignaturePage: () => <div data-testid="page-stub-MySignaturePage">MySignaturePage</div>,
+}));
 
 const ALL_ROLES: Role[] = [
   'SYSTEM_ADMIN',

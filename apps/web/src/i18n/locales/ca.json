@@ -640,7 +640,8 @@
       "reviewTemplates": "La llista de preguntes de cada tipus de revisió",
       "checklistQuestions": "Les preguntes que poden fer servir les plantilles",
       "users": "Comptes, rols i accessos",
-      "organizationProfile": "Dades i logotip de la teva organització"
+      "organizationProfile": "Dades i logotip de la teva organització",
+      "mySignature": "La imatge de signatura que apareix a les revisions que signes"
     },
     "alerts": {
       "title": "Avisos",
@@ -703,6 +704,7 @@
     "reviewHistory": "Historial de revisions",
     "reviewSchedule": "Calendari de revisions",
     "organizationProfile": "Perfil de l'organització",
+    "mySignature": "La meva signatura",
     "group": {
       "operations": "Operacions",
       "setup": "Configuració",
@@ -747,5 +749,19 @@
   },
   "brand": {
     "credit": "Un producte de BCNSynergy"
+  },
+  "mySignature": {
+    "title": "La meva signatura",
+    "loading": "Carregant…",
+    "errorState": "No s'ha pogut carregar la teva signatura. Torna-ho a provar.",
+    "none": "Encara no tens cap signatura registrada. No podràs signar una revisió fins que en pugis una.",
+    "alt": "La teva signatura",
+    "loadError": "No s'ha pogut mostrar la teva signatura.",
+    "fileLabel": "Imatge de la signatura (PNG, JPEG o WebP, fins a 2 MB)",
+    "uploadLabel": "Puja",
+    "uploadSuccess": "Signatura desada.",
+    "uploadError": "No s'ha pogut desar la signatura. Torna-ho a provar.",
+    "tooLargeError": "La signatura no pot ocupar més de 2 MB.",
+    "unsupportedError": "La signatura ha de ser una imatge PNG, JPEG o WebP."
   }
 }

@@ -640,7 +640,8 @@
       "reviewTemplates": "La lista de preguntas de cada tipo de revisión",
       "checklistQuestions": "Las preguntas que pueden usar las plantillas",
       "users": "Cuentas, roles y accesos",
-      "organizationProfile": "Datos y logotipo de tu organización"
+      "organizationProfile": "Datos y logotipo de tu organización",
+      "mySignature": "La imagen de firma que aparece en las revisiones que firmas"
     },
     "alerts": {
       "title": "Avisos",
@@ -703,6 +704,7 @@
     "reviewHistory": "Historial de revisiones",
     "reviewSchedule": "Calendario de revisiones",
     "organizationProfile": "Perfil de la organización",
+    "mySignature": "Mi firma",
     "group": {
       "operations": "Operaciones",
       "setup": "Configuración",
@@ -747,5 +749,19 @@
   },
   "brand": {
     "credit": "Un producto de BCNSynergy"
+  },
+  "mySignature": {
+    "title": "Mi firma",
+    "loading": "Cargando…",
+    "errorState": "No se ha podido cargar tu firma. Inténtalo de nuevo.",
+    "none": "Todavía no tienes ninguna firma registrada. No podrás firmar una revisión hasta que subas una.",
+    "alt": "Tu firma",
+    "loadError": "No se ha podido mostrar tu firma.",
+    "fileLabel": "Imagen de la firma (PNG, JPEG o WebP, hasta 2 MB)",
+    "uploadLabel": "Subir",
+    "uploadSuccess": "Firma guardada.",
+    "uploadError": "No se ha podido guardar la firma. Inténtalo de nuevo.",
+    "tooLargeError": "La firma no puede ocupar más de 2 MB.",
+    "unsupportedError": "La firma debe ser una imagen PNG, JPEG o WebP."
   }
 }

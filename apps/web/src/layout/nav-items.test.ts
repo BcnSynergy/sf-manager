@@ -34,6 +34,7 @@ const EXPECTED_SECTIONS: Record<Role, [string | null, string[]][]> = {
       'operations',
       ['nav-link-review-schedule', 'nav-link-review-sessions', 'nav-link-review-history'],
     ],
+    ['setup', ['nav-link-my-signature']],
   ],
   COMMUNITY_REPRESENTATIVE: [
     [null, ['nav-link-home']],
@@ -41,6 +42,7 @@ const EXPECTED_SECTIONS: Record<Role, [string | null, string[]][]> = {
       'operations',
       ['nav-link-review-schedule', 'nav-link-review-sessions', 'nav-link-review-history'],
     ],
+    ['setup', ['nav-link-my-signature']],
   ],
 };
 

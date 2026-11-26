@@ -584,3 +584,13 @@ model PasswordResetToken {
   // Replacing a user's unused tokens looks them up by user.
   @@index([userId])
 }
+
+// reviewer-signature: the signature image a user who signs reviews has
+// registered, one row per user. The file lives in FILE_STORAGE under
+// "storageKey", which never leaves the API. The FK to User is hand-written
+// in the migration (ADR-013).
+model ReviewerSignature {
+  userId     String   @id @db.Uuid
+  storageKey String   @unique
+  updatedAt  DateTime @db.Timestamptz(3)
+}

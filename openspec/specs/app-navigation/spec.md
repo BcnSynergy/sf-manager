@@ -116,19 +116,22 @@ Administration:
 | Role                          | Home | Operations                                       | Setup                                                                     | Administration              | Total |
 | ----------------------------- | ---- | ------------------------------------------------ | ------------------------------------------------------------------------- | --------------------------- | ----- |
 | `SYSTEM_ADMIN`                | Home | Review schedule, Review history                  | Communities, Maintenance companies, Review templates, Checklist questions | Users, Organization profile | **9** |
-| `MAINTENANCE_TECHNICIAN`      | Home | Review schedule, Review sessions, Review history | —                                                                         | —                           | **4** |
-| `COMMUNITY_REPRESENTATIVE`    | Home | Review schedule, Review sessions, Review history | —                                                                         | —                           | **4** |
+| `MAINTENANCE_TECHNICIAN`      | Home | Review schedule, Review sessions, Review history | My signature                                                              | —                           | **5** |
+| `COMMUNITY_REPRESENTATIVE`    | Home | Review schedule, Review sessions, Review history | My signature                                                              | —                           | **5** |
 | `MAINTENANCE_COMPANY_MANAGER` | Home | Review history                                   | —                                                                         | —                           | **2** |
 | `MANAGER`                     | Home | Review schedule, Review history                  | —                                                                         | —                           | **3** |
 
 A group with no items for the role MUST NOT render, not even its label.
 Each rendered group MUST show its localized label once, before its items.
+(Previously: the technician and the representative had no Setup item, 4
+items each; reviewer-signature-ui adds My signature.)
 
 Every item MUST point at its section's **top-level route**: the list
 route for a section that manages a collection, and the page itself for
 the organization profile, which manages a singleton and therefore has
-no collection to list, and for the review schedule, which is a single
-page. No `/new`, `/:id`, `/:id/edit` or other
+no collection to list, for the review schedule, which is a single
+page, and for My signature (`/my-signature`), the caller's own single
+signature. No `/new`, `/:id`, `/:id/edit` or other
 sub-route MUST appear in the navigation; those stay reachable from
 their list page as they already are.
 

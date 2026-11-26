@@ -559,6 +559,21 @@ and the capability "MUST gate review-history visibility only".)
 - WHEN they call any checklist-question or review-template endpoint — create, update, activate or read
 - THEN every response MUST be 403, and no capability MUST be consulted by those endpoints' authorization
 
+### Requirement: Permission Check on the Own Signature Endpoints
+
+The `/me/signature` endpoints (`reviewer-signature`) MUST require
+`reviewSession:complete`, reusing it rather than adding a permission: a
+review is signed by completing it, so only the roles that may complete a
+session have a signature. They add no member to `ROLE_PERMISSIONS`.
+Authentication MUST be evaluated first: a request without a valid session
+MUST receive 401.
+
+#### Scenario: A role that cannot complete a session has no signature endpoints
+
+- GIVEN an authenticated `SYSTEM_ADMIN`, `MANAGER` or `MAINTENANCE_COMPANY_MANAGER`
+- WHEN they call any `/me/signature` endpoint
+- THEN the response MUST be 403
+
 ### Requirement: Permission Check on Review Session Endpoints
 
 The system MUST check the caller's role before allowing access to any

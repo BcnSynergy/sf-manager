@@ -374,4 +374,11 @@ export const AUTHENTICATED_ROUTES: readonly AuthenticatedRoute[] = [
     ...lazyPage(() => import('../pages/OrganizationLogoPage').then((m) => m.OrganizationLogoPage)),
     allowedRoles: ['SYSTEM_ADMIN'],
   },
+  // reviewer-signature-ui: the caller's own signature, for the two roles
+  // that sign reviews (the API requires reviewSession:complete).
+  {
+    path: '/my-signature',
+    ...lazyPage(() => import('../pages/MySignaturePage').then((m) => m.MySignaturePage)),
+    allowedRoles: ['MAINTENANCE_TECHNICIAN', 'COMMUNITY_REPRESENTATIVE'],
+  },
 ];

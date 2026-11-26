@@ -640,7 +640,8 @@
       "reviewTemplates": "The question list for each type of review",
       "checklistQuestions": "The questions the templates can use",
       "users": "Accounts, roles and access",
-      "organizationProfile": "Your organization's details and logo"
+      "organizationProfile": "Your organization's details and logo",
+      "mySignature": "The signature image printed on the reviews you sign"
     },
     "alerts": {
       "title": "Alerts",
@@ -703,6 +704,7 @@
     "reviewHistory": "Review history",
     "reviewSchedule": "Review schedule",
     "organizationProfile": "Organization profile",
+    "mySignature": "My signature",
     "group": {
       "operations": "Operations",
       "setup": "Setup",
@@ -747,5 +749,19 @@
   },
   "brand": {
     "credit": "A BCNSynergy product"
+  },
+  "mySignature": {
+    "title": "My signature",
+    "loading": "Loading…",
+    "errorState": "Could not load your signature. Please try again.",
+    "none": "You have no signature registered yet. You cannot sign a review until you upload one.",
+    "alt": "Your signature",
+    "loadError": "Your signature could not be shown.",
+    "fileLabel": "Signature image (PNG, JPEG or WebP, up to 2 MB)",
+    "uploadLabel": "Upload",
+    "uploadSuccess": "Signature saved.",
+    "uploadError": "Could not save the signature. Please try again.",
+    "tooLargeError": "The signature must be at most 2 MB.",
+    "unsupportedError": "The signature must be a PNG, JPEG or WebP image."
   }
 }
