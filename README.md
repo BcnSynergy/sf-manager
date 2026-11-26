@@ -406,32 +406,42 @@ new certificate is requested. From `~/sf-manager`, with the new commit
 checked out (`git fetch` and `git checkout <commit>`) but the stack still
 running the old one:
 
+First the edge proxy's env file: its site is production's domain, taken
+from `prod.env`. Check that the printed line names the real domain:
+
 ```sh
-# The edge proxy's site is production's domain, taken from prod.env.
-sed -n 's/^SITE_ADDRESS=/SFMANAGER_SITE=/p' prod.env >deploy/edge/edge.env
-cat deploy/edge/edge.env
-# Every image the move needs is pulled before the outage: the edge proxy's
-# (which also copies the certificates) and the stack's (step 2's pinning).
+sed -n 's/^SITE_ADDRESS=/SFMANAGER_SITE=/p' prod.env >deploy/edge/edge.env &&
+  grep -q '^SFMANAGER_SITE=.' deploy/edge/edge.env && cat deploy/edge/edge.env
+```
+
+Then the move itself, one chain, so any failing step stops it. Everything
+before `stop web` only checks, downloads and copies: the edge proxy's image
+(the copy uses the same image, pinned in `deploy/edge/docker-compose.yml`;
+keep the two digests equal), the old certificates (`docker volume inspect`
+makes sure the old volume exists, since `docker run -v` would quietly create
+an empty one), and the stack's images, pinned as step 2 does (the `tag`,
+`grep` and `sed` lines and the pull are step 2's, so its notes apply: a tag
+CI did not publish fails the pull with `not found`). The outage starts at
+`stop web`:
+
+```sh
 docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env pull &&
+  docker volume inspect sf-manager-prod_caddy-data >/dev/null &&
   docker volume create sf-edge_caddy-data &&
   docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
     caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 \
-    cp -a /from/. /to/
-tag=sha-$(git rev-parse HEAD | cut -c1-7)
-grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
-sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
-docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
+    cp -a /from/. /to/ &&
+  tag=sha-$(git rev-parse HEAD | cut -c1-7) &&
+  { grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env; } &&
+  sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
   docker compose -f docker-compose.prod.yml --env-file prod.env stop web &&
   docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d &&
   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 ```
 
-Check that `edge.env` shows the real domain before going on. The outage
-starts at `stop web`; everything before it only downloads and copies. The
-`tag`, `grep` and `sed` lines and the pull are step 2's, so the same notes
-apply (a tag CI did not publish fails the pull with `not found`, and nothing
-is stopped). If a step after `stop web` fails, put the old Caddy back: stop
-the edge proxy if it started (see the rollback below) and run
+If a step after `stop web` fails, put the old Caddy back: stop the edge
+proxy if it started (see the rollback below) and run
 `docker compose -f docker-compose.prod.yml --env-file prod.env start web`,
 which starts the old container, ports included.
 
