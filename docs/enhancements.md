@@ -1174,6 +1174,25 @@ content type`). Today that is the only 415 it raises, but a future one
   contributor license agreement, but no CLA text or `CONTRIBUTING.md` exists.
   Write one (or adopt a standard CLA) before accepting the first external
   contribution. Origin: `licensing` fresh review S-3, 2026-11-25.
+- **EN-247** (deployment): production's public domain is set twice,
+  `SFMANAGER_SITE` in `deploy/edge/edge.env` (the edge proxy's certificate
+  and route) and `SITE_ADDRESS` in `prod.env` (the API's CORS origin), and
+  only comments say they must match. A mismatch would serve one domain while
+  CORS expects the other, and nothing would report it until browsers fail. A
+  single source, or a check in the deploy script or
+  `deploy/check-production.sh`, would catch it. Phase 2 of `demo-instance`
+  (the demo's own env) is the natural place to settle the env layout.
+  Origin: `demo-instance` PR 1/4 Gentle review (R2-duplicated-site-config,
+  R3-site-mismatch-unchecked), 2026-11-26.
+- **EN-248** (deployment, security): the stack's Caddy
+  (`apps/web/Caddyfile`) trusts `X-Forwarded-For` from every private
+  address. Today only the edge proxy can reach it, but the demo stack
+  (`demo-instance` T2) will join the same `sf-edge` network, and any
+  container there could then set the client address the production API
+  keys its login limit on (`TRUST_PROXY=2`). Before the demo joins, trust
+  only the edge proxy, for example with a fixed subnet on `sf-edge` and a
+  fixed address for the edge proxy. Required by `demo-instance` T2. Origin:
+  `demo-instance` PR 1/4 Gentle review (R1-001), 2026-11-26.
 - **EN-246** (api): the organization logo upload stores the new file under
   `logos/` before it records it and then deletes the previous one, like the
   signature upload, so a process that stops between those writes, two

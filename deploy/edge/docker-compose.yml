@@ -1,12 +1,14 @@
-# Edge proxy (spec `deployment`, "Single public origin"; README "Edge
-# proxy"). The server's only public entry point: it owns ports 80 and 443,
-# obtains and renews the HTTPS certificate of every site, redirects plain
-# HTTP to HTTPS and forwards each site to its stack's `web` service over the
-# shared `sf-edge` network. Each stack's own Caddy (the `web` service) serves
+# Edge proxy (spec `deployment`, "Single public origin"; README "Production
+# deployment", step 0). The server's only public entry point: it owns ports
+# 80 and 443, obtains and renews the HTTPS certificate of every site,
+# redirects plain HTTP to HTTPS and forwards each site to its stack's `web`
+# service over the shared `sf-edge` network. Each stack's own Caddy (the `web` service) serves
 # the app behind it, with the security headers, on plain HTTP and publishes
 # no port. Start it once, before any stack, from the repository root:
 #   docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d
-# It does not change with a deploy, so deploys never restart it.
+# It does not change with a deploy, so deploys never restart it. After a
+# change here, add --force-recreate: Caddy does not reload the mounted
+# Caddyfile on its own.
 name: sf-edge
 
 services:

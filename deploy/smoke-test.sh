@@ -221,7 +221,9 @@ echo "smoke: admin seed created the system admin, who can log in"
 # container on the sf-edge network. Were one address counted for every
 # client (the edge proxy's or the web service's), that login would be
 # refused too. A spoofed X-Forwarded-For must not spread the host's
-# attempts over several keys either: the edge proxy replaces it.
+# attempts over several keys either: the edge proxy replaces it. 15 leaves
+# room above the per-client limit (LOGIN_RATE_LIMIT_MAX_ATTEMPTS, 10 by
+# default, which the stack does not change) plus the admin's login above.
 limited=''
 attempt=0
 while [ "$attempt" -lt 15 ]; do
@@ -237,7 +239,10 @@ while [ "$attempt" -lt 15 ]; do
   esac
 done
 [ -n "$limited" ] || fail "15 failed logins from one address were never limited"
-status=$(docker run --rm --network sf-edge curlimages/curl:8.11.1 \
+# Pinned by digest like the stack's images; Dependabot does not read this
+# script, so it moves only by hand.
+status=$(docker run --rm --network sf-edge \
+  curlimages/curl:8.11.1@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69 \
   -sk --max-time 10 -o /dev/null -w '%{http_code}' \
   --connect-to localhost:443:caddy:443 -H 'Content-Type: application/json' \
   -d "{\"email\":\"$SEED_ADMIN_EMAIL\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \

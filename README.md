@@ -284,8 +284,9 @@ spec is `openspec/specs/deployment/spec.md`.
    docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d
    ```
 
-   A deploy never restarts it. Restart it (the same `up -d`) only after
-   `deploy/edge/` changes. To move a server that ran an older version,
+   A deploy never restarts it. After `deploy/edge/` changes, recreate it
+   with the same command plus `--force-recreate`: its Caddyfile is a mounted
+   file, which a plain `up -d` neither notices nor reloads. To move a server that ran an older version,
    whose Caddy published the ports itself, see "Moving a server behind the
    edge proxy" below instead.
 
@@ -397,30 +398,43 @@ updates".
 ### Moving a server behind the edge proxy
 
 A server that ran a version whose Caddy published ports 80 and 443 itself
-moves once, with a short outage (from stopping the old Caddy until the new
-one is up, normally under a minute). Keep the certificate: Caddy's data
-volume is copied into the edge proxy's, so no new certificate is requested.
-From `~/sf-manager`, with the new commit checked out (`git fetch` and
-`git checkout <commit>`) but the stack still on the old one:
+moves once, with a short outage: from stopping the old Caddy until the new
+API is healthy and its Caddy is up. The images are pulled beforehand, so
+that is the API restart plus any migration, normally under a minute. Keep
+the certificate: Caddy's data volume is copied into the edge proxy's, so no
+new certificate is requested. From `~/sf-manager`, with the new commit
+checked out (`git fetch` and `git checkout <commit>`) but the stack still
+running the old one:
 
 ```sh
 cp deploy/edge/edge.env.example deploy/edge/edge.env   # SFMANAGER_SITE = SITE_ADDRESS
 docker volume create sf-edge_caddy-data
 docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
   alpine cp -a /from/. /to/
+tag=sha-$(git rev-parse HEAD | cut -c1-7)
+sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
+docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
+# The outage starts here.
 docker compose -f docker-compose.prod.yml --env-file prod.env stop web
 docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d
+docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 ```
 
 Compose warns that `sf-edge_caddy-data` was not created by it; that is
-expected, and it uses the volume. Then run step 2 (or the Deploy workflow)
-for the new commit, and check
-`https://<SITE_ADDRESS>/api/health` and `sh deploy/check-production.sh
-https://<SITE_ADDRESS>`. To roll back: stop the edge proxy
-(`docker compose -f deploy/edge/docker-compose.yml down`), check out the
-previous commit and run step 2; its Caddy publishes the ports again with its
-old data volume, which the move left untouched. Once the new setup has run
-for a while, the old volumes can go:
+expected, and it uses the volume. Check `https://<SITE_ADDRESS>/api/health`
+and `sh deploy/check-production.sh https://<SITE_ADDRESS>`.
+
+To roll back, stop the edge proxy (`stop`, not `down`: its network cannot
+go while the stack's web container is attached to it), check out the
+previous commit and run step 2. Its Caddy publishes the ports again with its
+old data volume, which the move left untouched:
+
+```sh
+docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env stop
+git checkout <previous commit>   # then step 2
+```
+
+Once the new setup has run for a while, the old volumes can go:
 `docker volume rm sf-manager-prod_caddy-data sf-manager-prod_caddy-config`.
 
 ### Images in CI
