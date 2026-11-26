@@ -10,7 +10,7 @@ const NOW = new Date('2026-11-23T12:00:00.000Z');
 const minutesAgo = (minutes: number) =>
   new Date(NOW.getTime() - minutes * 60_000);
 
-// review-session-management "Orphan Photo Files Are Swept" (EN-222).
+// review-session-management "Orphan Photo and Signature Files Are Swept" (EN-222).
 describe('SweepOrphanReviewPhotoFilesUseCase', () => {
   let sessions: InMemoryReviewSessionRepository;
   let photos: InMemoryReviewPhotoRepository;

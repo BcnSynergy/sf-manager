@@ -84,6 +84,18 @@ export interface ReviewSessionRepository {
   // signature, recorded in the SAME write that completes the session.
   complete(id: string, at: Date, signatureStorageKey: string): Promise<boolean>;
 
+  // EN-244: the subset of `storageKeys` that some session's signature copy
+  // (`signatureStorageKey`) references. Sessions are never deleted, so every
+  // signed session keeps its copy. Not scoped: the orphan file sweep is a
+  // system task, never reached by a request.
+  findReferencedSignatureStorageKeys(
+    storageKeys: string[],
+  ): Promise<Set<string>>;
+
+  // EN-244: whether any session has a signature copy. The sweep deletes
+  // nothing under review-signatures/ when none has (sweepOrphanFiles).
+  hasAnySignedSession(): Promise<boolean>;
+
   // review-history design.md Decision 3: four named methods, one per
   // (scope x shape) — no scope discriminant, no branching query builder.
   // Every one of the four carries `status = 'completed'` in its `WHERE`,

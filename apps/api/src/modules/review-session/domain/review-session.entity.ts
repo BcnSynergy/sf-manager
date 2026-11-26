@@ -2,6 +2,10 @@ import { ReviewSessionStatus } from './review-session-status';
 import { ElementReviewEntry } from './element-review-entry.entity';
 import { ReviewSessionNotEditableError } from './errors/review-session-not-editable.error';
 
+// The FileStorage directory every session-owned signature copy lives in
+// (`review-signatures/<sessionId>-<id>.<ext>`, reviewer-signature T2).
+export const REVIEW_SIGNATURE_DIRECTORY = 'review-signatures';
+
 // Hand-written domain entity (ADR-013) — zero Prisma/framework dependency.
 // Fields mirror the Prisma `ReviewSession` model (design.md
 // Interfaces/Contracts). design.md Decision 9: plain fields, no Value
