@@ -440,10 +440,16 @@ docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env
   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 ```
 
-If a step after `stop web` fails, put the old Caddy back: stop the edge
-proxy if it started (see the rollback below) and run
-`docker compose -f docker-compose.prod.yml --env-file prod.env start web`,
-which starts the old container, ports included.
+If a step after `stop web` fails, what to do depends on which one:
+
+- The edge proxy's `up -d` failed: the stack's containers are still the old
+  ones, so stop the edge proxy if it started (see the rollback below) and
+  run `docker compose -f docker-compose.prod.yml --env-file prod.env start web`,
+  which starts the old Caddy, ports included.
+- The last `up -d` failed (for example a failed migration, see step 2): the
+  old containers are already replaced by new ones whose Caddy publishes no
+  port, so `start web` does not help. Leave the edge proxy running, fix the
+  cause and run that last command again, or roll back as below.
 
 Compose warns that `sf-edge_caddy-data` was not created by it; that is
 expected, and it uses the volume. Check `https://<SITE_ADDRESS>/api/health`
