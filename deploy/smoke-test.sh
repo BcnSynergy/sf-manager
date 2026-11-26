@@ -220,8 +220,10 @@ echo "smoke: admin seed created the system admin, who can log in"
 # per-email limit never applies), then log in from another address: a
 # container on the sf-edge network. Were one address counted for every
 # client (the edge proxy's or the web service's), that login would be
-# refused too. A spoofed X-Forwarded-For must not spread the host's
-# attempts over several keys either: the edge proxy replaces it. 15 leaves
+# refused too. Each attempt also sends a different spoofed X-Forwarded-For,
+# which must not spread the host's attempts over several keys (the spec's
+# "Spoofed forwarding header"); with TRUST_PROXY=2 the API counts from the
+# right, so this holds as long as the hop count is right. 15 leaves
 # room above the per-client limit (LOGIN_RATE_LIMIT_MAX_ATTEMPTS, 10 by
 # default, which the stack does not change) plus the admin's login above.
 limited=''

@@ -407,11 +407,16 @@ checked out (`git fetch` and `git checkout <commit>`) but the stack still
 running the old one:
 
 ```sh
-cp deploy/edge/edge.env.example deploy/edge/edge.env   # SFMANAGER_SITE = SITE_ADDRESS
-docker volume create sf-edge_caddy-data
-docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
-  alpine cp -a /from/. /to/
-# Step 2's pinning and pull. A failed pull stops the chain before the outage.
+# The edge proxy's site is production's domain, taken from prod.env.
+sed -n 's/^SITE_ADDRESS=/SFMANAGER_SITE=/p' prod.env >deploy/edge/edge.env
+cat deploy/edge/edge.env
+# Every image the move needs is pulled before the outage: the edge proxy's
+# (which also copies the certificates) and the stack's (step 2's pinning).
+docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env pull &&
+  docker volume create sf-edge_caddy-data &&
+  docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
+    caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 \
+    cp -a /from/. /to/
 tag=sha-$(git rev-parse HEAD | cut -c1-7)
 grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
@@ -421,9 +426,14 @@ docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
   docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 ```
 
-The outage starts at `stop web`. The first three lines are step 2's, so the
-same notes apply (a tag CI did not publish fails the pull with `not found`,
-and nothing is stopped).
+Check that `edge.env` shows the real domain before going on. The outage
+starts at `stop web`; everything before it only downloads and copies. The
+`tag`, `grep` and `sed` lines and the pull are step 2's, so the same notes
+apply (a tag CI did not publish fails the pull with `not found`, and nothing
+is stopped). If a step after `stop web` fails, put the old Caddy back: stop
+the edge proxy if it started (see the rollback below) and run
+`docker compose -f docker-compose.prod.yml --env-file prod.env start web`,
+which starts the old container, ports included.
 
 Compose warns that `sf-edge_caddy-data` was not created by it; that is
 expected, and it uses the volume. Check `https://<SITE_ADDRESS>/api/health`
@@ -433,7 +443,8 @@ To roll back, stop the edge proxy (`stop`, not `down`: its network cannot
 go while the stack's web container is attached to it), check out the
 previous commit and run step 2, which pins `IMAGE_TAG` back to that commit.
 Its Caddy publishes the ports again with its old data volume, which the
-move left untouched:
+move left untouched. The Deploy workflow cannot do this rollback: it does
+not stop the edge proxy, so the old Caddy could not bind the ports.
 
 ```sh
 docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env stop
@@ -497,7 +508,10 @@ workflow"), optionally with the commit to deploy; empty deploys the current
 a commit that is not on `main` or has no published images, then deploys
 over SSH and runs the production check (see "Monitoring"). To roll back,
 deploy an older commit of `main`; as with a manual rollback, migrations the
-newer version applied stay. It never starts on its own: to deploy every
+newer version applied stay. A commit from before the edge proxy (its Caddy
+publishes the ports itself) cannot be deployed this way once the server
+runs the edge proxy: roll back to it by hand, as "Moving a server behind
+the edge proxy" describes. It never starts on its own: to deploy every
 green `main` automatically, change its trigger.
 
 The workflow and the server look for the images under the first 7

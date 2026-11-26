@@ -1184,6 +1184,14 @@ content type`). Today that is the only 415 it raises, but a future one
   (the demo's own env) is the natural place to settle the env layout.
   Origin: `demo-instance` PR 1/4 Gentle review (R2-duplicated-site-config,
   R3-site-mismatch-unchecked), 2026-11-26.
+- **EN-249** (deployment tests): spec `deployment` "Single public origin"
+  says the edge proxy holds requests for up to 30 seconds while a deploy
+  recreates the stack's Caddy (`lb_try_duration 30s` in
+  `deploy/edge/Caddyfile`), but no test pins it. A smoke check could send a
+  request while `web` is stopped and start `web` within the window,
+  expecting 200 (the `demo-instance` PR 1/4 fresh review did this by hand:
+  200 after 7 s, and 502 after 33 s with `web` left stopped). Origin:
+  `demo-instance` PR 1/4 fresh review S-1, 2026-11-26.
 - **EN-248** (deployment, security): the stack's Caddy
   (`apps/web/Caddyfile`) trusts `X-Forwarded-For` from every private
   address. Today only the edge proxy can reach it, but the demo stack

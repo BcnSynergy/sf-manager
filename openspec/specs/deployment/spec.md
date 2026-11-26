@@ -180,6 +180,7 @@ A GitHub Actions workflow MUST deploy one commit to production when started by h
 - GIVEN production runs a commit of `main`
 - WHEN the maintainer deploys an older commit of `main`
 - THEN production runs the older commit's images; migrations the newer version applied are not undone
+- AND a commit whose stack's Caddy publishes host ports itself (from before the edge proxy, `demo-instance` T1) is out of this scenario once the server runs the edge proxy: the edge proxy holds those ports, so the rollback to it is manual (stop the edge proxy first, README "Moving a server behind the edge proxy")
 
 #### Scenario: Commit not on main or not published
 
