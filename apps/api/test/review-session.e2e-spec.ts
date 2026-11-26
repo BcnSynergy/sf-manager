@@ -1282,17 +1282,22 @@ describe('Review Sessions (e2e)', () => {
     // or continues with a non-lowercase character (`ReviewSchedulePage.tsx`,
     // `review-schedule.ts`), so `ReviewScheduler` or `review-scheduled` do
     // not qualify.
-    // The home page alerts (EN-237) count the schedule's overdue, never-
-    // reviewed and upcoming rows, so they are a schedule consumer too and are
-    // recognized the same way: a directory or file name that is `HomeAlerts`
-    // or continues with a non-lowercase character (EN-239 tracks that the
-    // whole file is skipped, not only its schedule terms).
     const isReviewScheduleFile = (relative: string): boolean =>
       relative
         .split('/')
         .some((segment) =>
-          /^(review-schedule|ReviewSchedule|HomeAlerts)(?![a-z])/.test(segment),
+          /^(review-schedule|ReviewSchedule)(?![a-z])/.test(segment),
         );
+    // The home page alerts (EN-237) count the schedule's overdue, never-
+    // reviewed and upcoming rows, so they legitimately say "overdue". They are
+    // recognized the same way (a directory or file name that is `HomeAlerts`
+    // or continues with a non-lowercase character) but, unlike the schedule,
+    // they are still scanned for every other forbidden term (EN-239).
+    const isHomeAlertsFile = (relative: string): boolean =>
+      relative
+        .split('/')
+        .some((segment) => /^HomeAlerts(?![a-z])/.test(segment));
+    const overdueTerms = new Set(['overdue', 'Overdue']);
     const excludedDirs = new Set(['node_modules', 'dist', '.turbo']);
 
     function collectFiles(target: string): string[] {
@@ -1385,13 +1390,76 @@ describe('Review Sessions (e2e)', () => {
       ['pages/ReviewScheduler.tsx', false],
       ['api/review-scheduled-sessions.ts', false],
       ['i18n/locales/en.json', false],
-      ['home/HomeAlerts.tsx', true],
-      ['home/HomeAlerts.test.tsx', true],
-      ['home/HomeAlertsy.tsx', false],
-      ['pages/HomePage.tsx', false],
+      ['home/HomeAlerts.tsx', false],
     ])('isReviewScheduleFile(%s) is %s', (relative, expected) => {
       expect(isReviewScheduleFile(relative)).toBe(expected);
     });
+
+    it.each([
+      ['home/HomeAlerts.tsx', true],
+      ['home/HomeAlerts.test.tsx', true],
+      ['HomeAlerts/AlertRow.tsx', true],
+      ['home/HomeAlertsy.tsx', false],
+      ['pages/HomePage.tsx', false],
+      ['pages/ReviewSchedulePage.tsx', false],
+    ])('isHomeAlertsFile(%s) is %s', (relative, expected) => {
+      expect(isHomeAlertsFile(relative)).toBe(expected);
+    });
+
+    // Concrete web identifiers that would only appear if a scheduling,
+    // reminder, export or history mechanism had been built.
+    const webForbidden = [
+      'dueDate',
+      'overdue',
+      'Overdue',
+      'PDFDocument',
+      'pdfkit',
+      'jspdf',
+      'ExportReviewSession',
+      'ReviewSessionHistory',
+      'ScheduleReviewSession',
+    ];
+
+    // The review schedule (FR-009 slice 1) legitimately speaks of overdue
+    // reviews. It is its own surface, not a review-session mechanism, so its
+    // files are skipped by naming convention (isReviewScheduleFile, TD-16).
+    // The home page alerts are scanned without `overdue`/`Overdue`
+    // (isHomeAlertsFile, EN-239). The locale catalogs are scanned without
+    // their `reviewSchedule` subtree and the home page alerts' `home.alerts`
+    // subtree (EN-237), and the locale key-set test without its
+    // `reviewSchedule.*` key paths. Every other key and file is scanned.
+    const webOffendingTerms = (relative: string, content: string): string[] => {
+      if (isReviewScheduleFile(relative)) {
+        return [];
+      }
+      let scanned = content;
+      if (relative.startsWith('i18n/locales/') && relative.endsWith('.json')) {
+        const catalog = JSON.parse(content) as Record<string, unknown>;
+        delete catalog.reviewSchedule;
+        const home = catalog.home as Record<string, unknown> | undefined;
+        if (home) delete home.alerts;
+        scanned = JSON.stringify(catalog);
+      } else if (relative === 'i18n/locales.test.ts') {
+        scanned = content.replace(/reviewSchedule\.[\w.]+/g, '');
+      }
+      const terms = isHomeAlertsFile(relative)
+        ? webForbidden.filter((term) => !overdueTerms.has(term))
+        : webForbidden;
+      return terms.filter((term) => scanned.includes(term));
+    };
+
+    it.each([
+      ['home/HomeAlerts.tsx', 'const overdue = 1; Overdue', []],
+      ['home/HomeAlerts.tsx', 'overdue; const dueDate = 1', ['dueDate']],
+      ['home/HomeAlerts.test.tsx', 'overdue; new jspdf()', ['jspdf']],
+      ['pages/ReviewSchedulePage.tsx', 'overdue; dueDate', []],
+      ['pages/HomePage.tsx', 'overdue', ['overdue']],
+    ])(
+      'webOffendingTerms(%s, %j) is %j',
+      (relative, content, expected: string[]) => {
+        expect(webOffendingTerms(relative, content)).toEqual(expected);
+      },
+    );
 
     // Corrected review-session/08 (PR8/8, discovered during the PR8 full-
     // suite run, not something PR8 introduced): this assertion originally
@@ -1404,60 +1472,15 @@ describe('Review Sessions (e2e)', () => {
     // web side either — is the one worth keeping, mirroring the sibling
     // scanRoot check above for the API module.
     it('no review-session web file introduces a scheduling, reminder, export or history mechanism', () => {
-      const forbidden = [
-        'dueDate',
-        'overdue',
-        'Overdue',
-        'PDFDocument',
-        'pdfkit',
-        'jspdf',
-        'ExportReviewSession',
-        'ReviewSessionHistory',
-        'ScheduleReviewSession',
-      ];
-      // The review schedule (FR-009 slice 1) legitimately speaks of overdue
-      // reviews. It is its own surface, not a review-session mechanism, so
-      // its files are skipped by naming convention (isReviewScheduleFile,
-      // TD-16). The locale catalogs are scanned without their
-      // `reviewSchedule` subtree and the home page alerts' `home.alerts`
-      // subtree (EN-237), and the locale key-set test without its
-      // `reviewSchedule.*` key paths. Every other key and file is scanned.
-      const withoutReviewScheduleCopy = (
-        relative: string,
-        content: string,
-      ): string => {
-        if (
-          relative.startsWith('i18n/locales/') &&
-          relative.endsWith('.json')
-        ) {
-          const catalog = JSON.parse(content) as Record<string, unknown>;
-          delete catalog.reviewSchedule;
-          const home = catalog.home as Record<string, unknown> | undefined;
-          if (home) delete home.alerts;
-          return JSON.stringify(catalog);
-        }
-        if (relative === 'i18n/locales.test.ts') {
-          return content.replace(/reviewSchedule\.[\w.]+/g, '');
-        }
-        return content;
-      };
       const offenders: string[] = [];
       for (const file of collectFiles(webScanRoot)) {
         const relative = path
           .relative(webScanRoot, file)
           .split(path.sep)
           .join('/');
-        if (isReviewScheduleFile(relative)) {
-          continue;
-        }
-        const content = withoutReviewScheduleCopy(
-          relative,
-          fs.readFileSync(file, 'utf-8'),
-        );
-        for (const term of forbidden) {
-          if (content.includes(term)) {
-            offenders.push(`${term} found in ${file}`);
-          }
+        const content = fs.readFileSync(file, 'utf-8');
+        for (const term of webOffendingTerms(relative, content)) {
+          offenders.push(`${term} found in ${file}`);
         }
       }
       expect(offenders).toEqual([]);
