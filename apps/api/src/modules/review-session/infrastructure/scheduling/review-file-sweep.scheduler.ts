@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnApplicationBootstrap,
@@ -6,13 +7,20 @@ import {
 } from '@nestjs/common';
 import { SweepOrphanReviewPhotoFilesUseCase } from '../../application/use-cases/sweep-orphan-review-photo-files.use-case';
 import { SweepOrphanReviewSignatureFilesUseCase } from '../../application/use-cases/sweep-orphan-review-signature-files.use-case';
+import {
+  ORPHAN_SIGNATURE_FILE_SWEEP,
+  type OrphanSignatureFileSweep,
+} from '../../../reviewer-signature/application/ports/orphan-signature-file-sweep.port';
 
 export const REVIEW_FILE_SWEEP_FIRST_DELAY_MS = 5 * 60 * 1000;
 export const REVIEW_FILE_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 // review-session-management "Orphan Photo and Signature Files Are Swept"
-// (EN-222, EN-244): runs the orphan file sweeps a few minutes after start-up,
-// so they never delay the boot or the first requests, then every 24 hours.
+// (EN-222, EN-244) and reviewer-signature "Orphan Signature Files Are Swept"
+// (EN-243, sweep exported by ReviewerSignatureModule): runs the orphan file
+// sweeps (review photos, signature copies, own signatures) a few minutes
+// after start-up, so they never delay the boot or the first requests, then
+// every 24 hours.
 // The sweeps run one after the other, and each run is scheduled only after
 // the previous one settled, so two never overlap. A failed sweep is logged
 // and neither stops the other sweeps of the same run nor the next run. The
@@ -29,7 +37,9 @@ export class ReviewFileSweepScheduler
 
   constructor(
     private readonly photoSweep: SweepOrphanReviewPhotoFilesUseCase,
-    private readonly signatureSweep: SweepOrphanReviewSignatureFilesUseCase,
+    private readonly signatureCopySweep: SweepOrphanReviewSignatureFilesUseCase,
+    @Inject(ORPHAN_SIGNATURE_FILE_SWEEP)
+    private readonly ownSignatureSweep: OrphanSignatureFileSweep,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -51,7 +61,8 @@ export class ReviewFileSweepScheduler
 
   private async run(): Promise<void> {
     await this.runSweep('review photo', this.photoSweep);
-    await this.runSweep('review signature', this.signatureSweep);
+    await this.runSweep('review signature', this.signatureCopySweep);
+    await this.runSweep('signature', this.ownSignatureSweep);
     this.schedule(REVIEW_FILE_SWEEP_INTERVAL_MS);
   }
 

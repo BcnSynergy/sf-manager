@@ -148,3 +148,46 @@ an unauthenticated caller MUST receive 401.
 - GIVEN no valid session
 - WHEN any `/me/signature` route is called
 - THEN the response MUST be 401
+
+### Requirement: Orphan Signature Files Are Swept
+
+A signature file can outlive the row that referenced it: an upload stores
+the new file before it records it and only then deletes the previous one,
+so two concurrent uploads by the same user, a process that stops between
+those writes, or a failed delete (logged, never thrown) leaves a file that
+no signature row references. The system MUST therefore delete, on its own,
+every stored file under `signatures/` that no user's signature row
+references and that was stored more than one hour earlier; the hour keeps
+an upload in progress safe. A file that a signature row references MUST
+NEVER be deleted by the sweep, whatever its age. The sweep MUST follow the
+same rules as the review photo sweep (`review-session-management`, _Orphan
+Photo and Signature Files Are Swept_), on its own: it runs on the same
+schedule, after the review photo and signature copy sweeps, logs how many
+files it deleted, logs a file it cannot delete and still tries the others,
+deletes interrupted writes under `signatures/` older than one hour, and,
+when old files exist but no signature row exists at all, deletes nothing
+and logs a warning. A failed sweep of `signatures/` MUST be logged and MUST
+NOT stop the other sweeps or later runs. (Added by EN-243.)
+
+#### Scenario: A replaced signature file is deleted
+
+- GIVEN a technician whose signature row references a file uploaded two
+  hours ago
+- AND an older file of theirs under `signatures/` that no row references,
+  stored three hours ago
+- WHEN the sweep runs
+- THEN the older file MUST be deleted and the referenced file MUST be kept
+
+#### Scenario: A recent file with no row is kept
+
+- GIVEN a file under `signatures/` stored ten minutes ago, with no row
+- WHEN the sweep runs
+- THEN the file MUST be kept
+
+#### Scenario: Nothing is deleted when no signature row exists
+
+- GIVEN files under `signatures/` stored days ago
+- AND no signature row exists at all
+- WHEN the sweep runs
+- THEN no file under `signatures/` MUST be deleted and a warning MUST be
+  logged

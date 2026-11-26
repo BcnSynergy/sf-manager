@@ -75,6 +75,43 @@ describe('PrismaReviewerSignatureRepository (integration, reviewer-signature)', 
     );
   });
 
+  // EN-243: what the orphan signature file sweep keeps.
+  it('findReferencedStorageKeys returns only the keys a row references now', async () => {
+    const userId = await createUser();
+    await repository.save(userId, `signatures/${userId}-old.png`);
+    await repository.save(userId, `signatures/${userId}-new.png`);
+
+    await expect(
+      repository.findReferencedStorageKeys([
+        `signatures/${userId}-old.png`,
+        `signatures/${userId}-new.png`,
+        `signatures/${randomUUID()}.png`,
+      ]),
+    ).resolves.toEqual(new Set([`signatures/${userId}-new.png`]));
+    await expect(repository.findReferencedStorageKeys([])).resolves.toEqual(
+      new Set(),
+    );
+    await expect(repository.hasAnySignature()).resolves.toBe(true);
+  });
+
+  it('hasAnySignature is false when no signature row exists', async () => {
+    await repository.save(await createUser(), `signatures/${randomUUID()}.png`);
+    // Inside a transaction rolled back at the end, so the rows of the other
+    // tests of this run stay.
+    const rollback = new Error('rollback');
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await tx.reviewerSignature.deleteMany({});
+        const inTransaction = new PrismaReviewerSignatureRepository(
+          tx as unknown as PrismaService,
+        );
+        await expect(inTransaction.hasAnySignature()).resolves.toBe(false);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+    await expect(repository.hasAnySignature()).resolves.toBe(true);
+  });
+
   // The migration's ON DELETE RESTRICT: users are soft-deleted (ADR-010),
   // so a hard delete of a user with a signature is refused and the
   // signature row stays.
