@@ -242,7 +242,10 @@ describe('LocalFileStorage', () => {
         });
       };
 
+      // mockReset also drops an unused mockImplementationOnce, so a sweep
+      // that never calls rm cannot leave it to the outer cleanup's rm.
       afterEach(() => {
+        jest.mocked(rm).mockReset();
         jest.mocked(rm).mockImplementation(actualRm);
       });
 
