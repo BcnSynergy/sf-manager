@@ -4751,6 +4751,7 @@ describe('Review History (e2e)', () => {
     const technicianUEmail = 'rhsig-technician-u@example.com';
     const technicianWEmail = 'rhsig-technician-w@example.com';
     const ungrantedManagerEmail = 'rhsig-manager@example.com';
+    const grantedManagerEmail = 'rhsig-granted-manager@example.com';
     const representativeEmail = 'rhsig-representative@example.com';
     const companyManagerEmail = 'rhsig-company-manager@example.com';
 
@@ -4801,6 +4802,12 @@ describe('Review History (e2e)', () => {
             id: 'rhsig-manager-id',
             email: ungrantedManagerEmail,
             role: 'MANAGER',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-granted-manager-id',
+            email: grantedManagerEmail,
+            role: 'MANAGER',
+            managerCapabilities: ['VIEW_ALL_REVIEWS'],
           }),
         ],
       });
@@ -4914,6 +4921,7 @@ describe('Review History (e2e)', () => {
       ['an assigned representative', () => representativeEmail],
       ["the performer's company manager", () => companyManagerEmail],
       ['the admin', () => adminEmail],
+      ['a MANAGER granted VIEW_ALL_REVIEWS', () => grantedManagerEmail],
     ])(
       '%s gets the signature of a document in their scope',
       async (_label, getEmail: () => string) => {
@@ -4945,6 +4953,11 @@ describe('Review History (e2e)', () => {
         'an ungranted MANAGER',
         () => ungrantedManagerEmail,
         () => completedSessionId,
+      ],
+      [
+        "a company manager, for another company's session",
+        () => companyManagerEmail,
+        () => otherSessionId,
       ],
       [
         'the performer, for a draft',

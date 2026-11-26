@@ -408,7 +408,11 @@ describe('signature footer', () => {
     expect(image).toHaveAccessibleName('Signature of the signer');
     expect(image).not.toHaveAttribute('data-print-hide');
     expect(screen.getByTestId('review-document-signature')).toContainElement(image);
-    expect(screen.getByTestId('review-document-signed-by')).toBeInTheDocument();
+    // spec: the image comes before the "Signed by" line.
+    expect(
+      image.compareDocumentPosition(screen.getByTestId('review-document-signed-by')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('shows no signature image when the session has none', async () => {

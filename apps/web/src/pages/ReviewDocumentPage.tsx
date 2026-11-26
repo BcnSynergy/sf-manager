@@ -187,7 +187,9 @@ function SessionDataRegion({ document, locale }: { document: ReviewDocument; loc
 // other unresolvable-lookup field on this page. reviewer-signature: when the
 // session has a signature copy its image heads the footer, printed with it;
 // `hasSignature` can be true while the file is gone (the read then answers
-// 404), so an image that fails to load is dropped without an error.
+// 404), so an image that fails to load is dropped without an error. The
+// failed state resets on another document because ReviewDocumentPage keys
+// the whole view by session id.
 function SignatureFooter({ document, locale }: { document: ReviewDocument; locale: string }) {
   const { t } = useTranslation();
   const [signatureFailed, setSignatureFailed] = useState(false);
@@ -509,7 +511,7 @@ export function ReviewDocumentView({ sessionId }: { sessionId: string | undefine
           photosPending={currentPhotos === null}
           photosFailed={currentPhotos?.state === 'error'}
         />
-        <SignatureFooter key={document.id} document={document} locale={i18n.language} />
+        <SignatureFooter document={document} locale={i18n.language} />
       </div>
       {/* spec: "Print Through the Browser, Document Only" / "The Document
           Page Offers No Other Action" — the ONLY control besides ordinary
