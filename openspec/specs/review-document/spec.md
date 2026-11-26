@@ -14,12 +14,13 @@ Signing itself is not a new operation: a session is signed by completing
 it (`review-session-management`, _Completion Is the Signing Act_). The
 printable page is owned by `review-document-ui`.
 
-Out of scope (slice 2, next change): signer full name, signature image,
-and snapshotting reference labels onto the session at signing time. Also
-out of scope: any PDF, file, download or email. The organization logo
-is shown through the document since organization-logo (_The Document
-Carries the Organization Logo_).
-(Previously: also out of scope was "any logo".)
+Out of scope (deferred, EN-245): signer full name and snapshotting
+reference labels onto the session at signing time. Also out of scope: any
+PDF, file, download or email. The organization logo is shown through the
+document since organization-logo (_The Document Carries the Organization
+Logo_), and the signer's signature image since reviewer-signature (_The
+Document Carries the Session Signature_).
+(Previously: also out of scope were "any logo" and the signature image.)
 
 ## Requirements
 
@@ -34,7 +35,7 @@ four parts, returned as structured data:
 | Letterhead      | The organization profile's `name`, `legalName`, `taxId`, `address`, `phone` and `email`, verbatim — blank values as empty strings, no substitution and no completeness flag — and `hasLogo` (_The Document Carries the Organization Logo_) |
 | Session data    | The community's name, the template's element type, frequency, name and version, the session's `startedAt` and `completedAt`, and the attributed maintenance company's name when the session carries an attribution                         |
 | Recorded record | Every entry the history read-back returns for that session — each with its element's `code`, `name` and `location`, its answers paired with the snapshotted question wording, and, for an unreviewed element, its recorded reason          |
-| Signature       | The signer, identified by the performer's email, and the signing date, equal to `completedAt`                                                                                                                                              |
+| Signature       | The signer, identified by the performer's email, the signing date, equal to `completedAt`, and `hasSignature` (_The Document Carries the Session Signature_)                                                                               |
 
 The recorded record MUST match _Scoped Read-Back of One Historical
 Session_ for the same session in its **entry set, answers, snapshotted
@@ -305,6 +306,59 @@ permission MUST be needed or granted.
 - GIVEN the organization has no logo, or its recorded file is missing
 - WHEN a caller reads the logo of a document they may open
 - THEN the response MUST be `404`, and the document itself MUST still be returned, with `hasLogo: false` when no logo is recorded
+
+### Requirement: The Document Carries the Session Signature
+
+The document MUST carry `hasSignature`: `true` when the session has a
+signature copy recorded at signing (`review-session-management`,
+_Completion Is the Signing Act_), `false` otherwise, as for a session
+signed before signatures existed. The storage key MUST NOT appear
+anywhere in the response.
+
+`GET /review-history/:sessionId/document/signature` MUST return the
+session's own signature copy, never the performer's current registered
+signature, with the content type of the copy (`image/png`, `image/jpeg` or
+`image/webp`), `Cache-Control: no-store`,
+`Content-Security-Policy: default-src 'none'; sandbox` and
+`X-Content-Type-Options: nosniff`. It MUST be gated by `reviewSession:read`
+and MUST run the same scope check as the document read **before** reading
+the file: it MUST be reachable if and only if the document read of the same
+session is reachable by the same caller, and a session that is out of
+scope, nonexistent or not `completed` MUST be rejected with the document
+read's `404 REVIEW_SESSION_NOT_FOUND`. A malformed `sessionId` MUST be
+rejected with `400 INVALID_SESSION_ID`. When the session has no copy, or its
+recorded file is missing, the route MUST answer `404`.
+(Previously: the document carried no signature image.)
+
+#### Scenario: A reader sees the signature of a document they may open
+
+- GIVEN a `completed` session signed with a signature, and a caller who may open its document (the performer, an assigned representative, the performer's company manager, a granted manager or an administrator)
+- WHEN they read the document and its signature
+- THEN the document MUST carry `hasSignature: true` and no storage key, and the signature read MUST return the copy's bytes with its content type and the three headers above
+
+#### Scenario: An unreachable document has no signature
+
+- GIVEN a session the caller cannot open as a document: out of scope, nonexistent or a draft
+- WHEN they read its signature
+- THEN the response MUST be `404 REVIEW_SESSION_NOT_FOUND`, exactly as for the document read, and no image MUST be returned
+
+#### Scenario: A session signed before the signature existed
+
+- GIVEN a `completed` session with no signature copy
+- WHEN a caller who may open it reads its document and its signature
+- THEN the document MUST be returned with `hasSignature: false`, and the signature read MUST answer `404`
+
+#### Scenario: The recorded copy is missing
+
+- GIVEN a session whose recorded signature file is missing from storage
+- WHEN a caller who may open it reads its signature
+- THEN the response MUST be `404`, and the document itself MUST still be returned with `hasSignature: true`
+
+#### Scenario: Replacing the signature does not alter a signed document
+
+- GIVEN a `completed` session signed with a signature, and its performer later registers a different signature
+- WHEN a caller reads the session's signature
+- THEN the response MUST be the image the performer had when signing
 
 ### Requirement: Reference Labels Are Read Live in This Slice
 

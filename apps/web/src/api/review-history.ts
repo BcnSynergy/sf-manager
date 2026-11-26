@@ -162,6 +162,9 @@ export type ReviewDocument = {
   entries: ReviewDocumentEntry[];
   questions: ReviewHistoryQuestion[];
   letterhead: ReviewDocumentLetterhead;
+  // reviewer-signature: whether the session has a signature image to read
+  // from reviewDocumentSignatureUrl().
+  hasSignature: boolean;
 };
 
 export function readReviewDocument(sessionId: string): Promise<ReviewDocument> {
@@ -173,6 +176,12 @@ export function readReviewDocument(sessionId: string): Promise<ReviewDocument> {
 // the session cookie itself.
 export function reviewDocumentLogoUrl(sessionId: string): string {
   return `${API_BASE_URL}/review-history/${sessionId}/document/logo`;
+}
+
+// reviewer-signature T3: the signature copy of the session as an <img>
+// source, behind the same gate as the document.
+export function reviewDocumentSignatureUrl(sessionId: string): string {
+  return `${API_BASE_URL}/review-history/${sessionId}/document/signature`;
 }
 
 // EN-164 T3: the photos of a completed review, behind the same gate as the

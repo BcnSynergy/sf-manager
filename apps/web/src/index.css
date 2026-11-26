@@ -759,6 +759,19 @@ code {
   background: var(--logo-backdrop);
 }
 
+/* The signer's signature image in the review document's footer, on screen
+   and in print: a signature line high, never taller, on the white it prints
+   on (a transparent signature stays visible in dark mode). */
+.sf-signature-image {
+  display: block;
+  max-width: 240px;
+  max-height: 60px;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+  padding: var(--space-1);
+  background: var(--logo-backdrop);
+}
+
 /* EN-227: the photos of an element in the review document, about 5 cm wide
    in print, in a row that wraps (an image is never split across two pages).
    `contain` keeps the whole photo visible (evidence is not cropped). */

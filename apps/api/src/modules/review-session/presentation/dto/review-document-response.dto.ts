@@ -122,4 +122,10 @@ export class ReviewDocumentResponseDto {
 
   @ApiProperty({ type: ReviewDocumentLetterheadDto })
   letterhead!: ReviewDocumentLetterheadDto;
+
+  @ApiProperty({
+    description:
+      'Whether the session has a signature image; read it from GET /review-history/:sessionId/document/signature. False for a session signed before signatures existed.',
+  })
+  hasSignature!: boolean;
 }

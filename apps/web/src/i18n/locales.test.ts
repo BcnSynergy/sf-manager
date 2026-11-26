@@ -567,6 +567,8 @@ describe('locale key-set parity (en/es/ca)', () => {
     'reviewDocument.footer.signedByLabel',
     'reviewDocument.footer.emailUnknown',
     'reviewDocument.footer.signedAtLabel',
+    // reviewer-signature T3: the signature image's alt text.
+    'reviewDocument.footer.signatureAlt',
     // Record and print (PR 12): record region, neutral element label, print control.
     'reviewDocument.record.title',
     'reviewDocument.record.elementUnknown',

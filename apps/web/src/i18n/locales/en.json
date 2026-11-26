@@ -626,7 +626,8 @@
     "footer": {
       "signedByLabel": "Signed by: {{email}}",
       "emailUnknown": "Unknown signer",
-      "signedAtLabel": "Signed on: {{date}}"
+      "signedAtLabel": "Signed on: {{date}}",
+      "signatureAlt": "Signature of the signer"
     }
   },
   "home": {

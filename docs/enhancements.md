@@ -1204,6 +1204,16 @@ content type`). Today that is the only 415 it raises, but a future one
   sweep covers `review-photos/` only). Disk space only. Extending the orphan
   sweep to `review-signatures/` and `signatures/` would also cover EN-243.
   Origin: `reviewer-signature` PR 2/3 fresh review W-2, 2026-11-26.
+- **EN-245** (review document, FR-010 slice 2 remainder): the document shows
+  the signer by email only. Show the signer's full name, and snapshot the
+  reference labels (letterhead, community, company and element labels) onto
+  the session at signing, so a later rename or soft-delete cannot change a
+  signed document (today they are read live, `review-document` _Reference
+  Labels Are Read Live in This Slice_). Deferred by the user's scope
+  decision when the signature image was built; the image itself shipped in
+  `reviewer-signature`. Also deferred under FR-010: a link to the document
+  from the field-flow session page. Origin: `reviewer-signature` S6,
+  2026-11-26.
 
 ## Done
 

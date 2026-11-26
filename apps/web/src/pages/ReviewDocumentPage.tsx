@@ -6,6 +6,7 @@ import {
   listReviewHistoryPhotos,
   readReviewDocument,
   reviewDocumentLogoUrl,
+  reviewDocumentSignatureUrl,
   reviewHistoryPhotoUrl,
   type ReviewDocument,
   type ReviewDocumentEntry,
@@ -183,12 +184,27 @@ function SessionDataRegion({ document, locale }: { document: ReviewDocument; loc
 // signer is always the performer (design.md "Signing is copy, not state") —
 // no separate `signedBy` field exists; `performedByEmail` may be the
 // defensive-fallback empty string, rendered as a placeholder like every
-// other unresolvable-lookup field on this page.
+// other unresolvable-lookup field on this page. reviewer-signature: when the
+// session has a signature copy its image heads the footer, printed with it;
+// `hasSignature` can be true while the file is gone (the read then answers
+// 404), so an image that fails to load is dropped without an error. The
+// failed state resets on another document because ReviewDocumentPage keys
+// the whole view by session id.
 function SignatureFooter({ document, locale }: { document: ReviewDocument; locale: string }) {
   const { t } = useTranslation();
+  const [signatureFailed, setSignatureFailed] = useState(false);
 
   return (
     <footer data-testid="review-document-signature">
+      {document.hasSignature && !signatureFailed && (
+        <img
+          className="sf-signature-image"
+          src={reviewDocumentSignatureUrl(document.id)}
+          alt={t('reviewDocument.footer.signatureAlt')}
+          onError={() => setSignatureFailed(true)}
+          data-testid="review-document-signature-image"
+        />
+      )}
       <p data-testid="review-document-signed-by">
         {t('reviewDocument.footer.signedByLabel', {
           email: document.performedByEmail || t('reviewDocument.footer.emailUnknown'),

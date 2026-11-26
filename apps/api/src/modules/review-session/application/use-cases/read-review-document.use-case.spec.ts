@@ -399,6 +399,46 @@ describe('ReadReviewDocumentUseCase', () => {
     expect(JSON.stringify(result)).not.toContain('logos/logo-1.png');
   });
 
+  // reviewer-signature T3, review-document "The Document Says Whether the
+  // Session Has a Signature": `hasSignature` only, never the copy's key.
+  it.each([
+    [
+      'a session signed with a signature copy',
+      'review-signatures/s-1.png',
+      true,
+    ],
+    ['a session signed before the signature existed', null, false],
+  ])(
+    'hasSignature for %s',
+    async (_label, signatureStorageKey: string | null, expected: boolean) => {
+      const template = buildTemplate();
+      templateRepository.seed(template, []);
+      sessionRepository.seed(
+        new ReviewSession({
+          id: 'session-1',
+          communityId: 'community-1',
+          templateId: template.id,
+          performedById: 'user-1',
+          status: 'completed',
+          startedAt: new Date('2026-01-01T00:00:00.000Z'),
+          completedAt: new Date('2026-01-02T00:00:00.000Z'),
+          signatureStorageKey,
+          entries: [],
+        }),
+      );
+      scopeChecker.assign('user-1', 'community-1');
+
+      const result = await useCase.execute('session-1', {
+        userId: 'user-1',
+        role: 'MAINTENANCE_TECHNICIAN',
+      });
+
+      expect(result.hasSignature).toBe(expected);
+      expect(JSON.stringify(result)).not.toContain('review-signatures');
+      expect(JSON.stringify(result)).not.toContain('signatureStorageKey');
+    },
+  );
+
   // spec.md "Deleted context still labels the document" (company half): a
   // recorded company id that resolves no row renders '' (fallback owned by
   // the use case, never the port — design.md "Fallbacks and letterhead").

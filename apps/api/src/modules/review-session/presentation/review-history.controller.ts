@@ -43,6 +43,10 @@ import { ReadReviewHistoryUseCase } from '../application/use-cases/read-review-h
 import { ReadElementReviewHistoryUseCase } from '../application/use-cases/read-element-review-history.use-case';
 import { ReadReviewDocumentUseCase } from '../application/use-cases/read-review-document.use-case';
 import { ReadReviewDocumentLogoUseCase } from '../application/use-cases/read-review-document-logo.use-case';
+import {
+  ReadReviewDocumentSignatureUseCase,
+  type ReviewDocumentSignature,
+} from '../application/use-cases/read-review-document-signature.use-case';
 import type { OrganizationLogo } from '../../organization-profile/application/ports/organization-logo.reader.port';
 import { ReviewHistoryRowDto } from './dto/review-history-row.dto';
 import { ReviewHistoryDetailResponseDto } from './dto/review-history-detail-response.dto';
@@ -70,6 +74,7 @@ export class ReviewHistoryController {
     private readonly readElementReviewHistoryUseCase: ReadElementReviewHistoryUseCase,
     private readonly readReviewDocumentUseCase: ReadReviewDocumentUseCase,
     private readonly readReviewDocumentLogoUseCase: ReadReviewDocumentLogoUseCase,
+    private readonly readReviewDocumentSignatureUseCase: ReadReviewDocumentSignatureUseCase,
     private readonly listReviewHistoryPhotosUseCase: ListReviewHistoryPhotosUseCase,
     private readonly readReviewHistoryPhotoUseCase: ReadReviewHistoryPhotoUseCase,
   ) {}
@@ -224,6 +229,50 @@ export class ReviewHistoryController {
     return new StreamableFile(logo.content, {
       type: logo.contentType,
       length: logo.content.length,
+    });
+  }
+
+  // reviewer-signature T3: the signature copy of a document the caller may
+  // open — same gate, same 404 and same headers as the logo above. A PNG,
+  // JPEG or WebP never carries script, but the headers stay identical so the
+  // two image routes cannot drift apart.
+  @Get('review-history/:sessionId/document/signature')
+  @RequirePermission('reviewSession:read')
+  @Header('Cache-Control', 'no-store')
+  @Header('Content-Security-Policy', "default-src 'none'; sandbox")
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiProduces('image/png', 'image/jpeg', 'image/webp')
+  @ApiOkResponse({ description: "The session's signature image." })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiForbiddenResponse({ description: 'Caller lacks reviewSession:read.' })
+  @ApiBadRequestResponse({
+    description:
+      'sessionId is not a well-formed UUID. Body carries code: INVALID_SESSION_ID.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The document is unreachable, exactly as for the document read ' +
+      '(code: REVIEW_SESSION_NOT_FOUND), or the session has no signature image.',
+  })
+  async readDocumentSignature(
+    @CurrentUser() user: VerifiedAccessToken,
+    @Param('sessionId', sessionIdPipe()) sessionId: string,
+  ): Promise<StreamableFile> {
+    let signature: ReviewDocumentSignature | null;
+    try {
+      signature = await this.readReviewDocumentSignatureUseCase.execute(
+        sessionId,
+        { userId: user.sub, role: user.role },
+      );
+    } catch (error) {
+      throw this.mapError(error);
+    }
+    if (!signature) {
+      throw new NotFoundException('The session has no signature image.');
+    }
+    return new StreamableFile(signature.content, {
+      type: signature.contentType,
+      length: signature.content.length,
     });
   }
 
