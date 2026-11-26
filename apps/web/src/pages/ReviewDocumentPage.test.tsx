@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { ApiError } from '../api/client';
 import * as reviewHistoryApi from '../api/review-history';
 import { ReviewDocumentPage, ReviewDocumentView } from './ReviewDocumentPage';
@@ -54,6 +54,7 @@ const document: reviewHistoryApi.ReviewDocument = {
     email: 'org@sf-manager.example',
     hasLogo: false,
   },
+  hasSignature: false,
 };
 
 function renderPage() {
@@ -390,6 +391,89 @@ describe('signature footer', () => {
 
     const signedBy = screen.getByTestId('review-document-signed-by');
     expect(signedBy.textContent).not.toBe('');
+  });
+
+  // review-document-ui "The Signature Footer Shows the Signature Image"
+  it('shows the signature image from the document signature route, printed with the footer', async () => {
+    mockedReadReviewDocument.mockResolvedValue({ ...document, hasSignature: true });
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    const image = screen.getByTestId('review-document-signature-image');
+    expect(image).toHaveAttribute(
+      'src',
+      expect.stringMatching(new RegExp(`/review-history/${SESSION_ID}/document/signature$`)),
+    );
+    expect(image).toHaveAccessibleName('Signature of the signer');
+    expect(image).not.toHaveAttribute('data-print-hide');
+    expect(screen.getByTestId('review-document-signature')).toContainElement(image);
+    expect(screen.getByTestId('review-document-signed-by')).toBeInTheDocument();
+  });
+
+  it('shows no signature image when the session has none', async () => {
+    mockedReadReviewDocument.mockResolvedValue(document);
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+
+    expect(screen.queryByTestId('review-document-signature-image')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-document-signed-by')).toBeInTheDocument();
+    expect(screen.getByTestId('review-document-signed-at')).toBeInTheDocument();
+  });
+
+  it('drops a signature image that fails to load, with no error, keeping the rest of the footer', async () => {
+    mockedReadReviewDocument.mockResolvedValue({ ...document, hasSignature: true });
+
+    renderPage();
+    await screen.findByTestId('review-document-content');
+    fireEvent.error(screen.getByTestId('review-document-signature-image'));
+
+    expect(screen.queryByTestId('review-document-signature-image')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('review-document-signed-by')).toHaveTextContent(
+      'tech@sf-manager.example',
+    );
+    expect(screen.getByTestId('review-document-signed-at')).toBeInTheDocument();
+  });
+
+  it('a signature that failed on one document still shows on the next one', async () => {
+    mockedReadReviewDocument.mockImplementation((sessionId) =>
+      Promise.resolve({ ...document, hasSignature: true, id: sessionId }),
+    );
+    const router = createMemoryRouter(
+      [{ path: '/review-history/:sessionId/document', element: <ReviewDocumentPage /> }],
+      { initialEntries: [`/review-history/${SESSION_ID}/document`] },
+    );
+
+    render(<RouterProvider router={router} />);
+    fireEvent.error(await screen.findByTestId('review-document-signature-image'));
+    expect(screen.queryByTestId('review-document-signature-image')).not.toBeInTheDocument();
+
+    await act(() => router.navigate('/review-history/session-2/document'));
+
+    expect(await screen.findByTestId('review-document-signature-image')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/review-history\/session-2\/document\/signature$/),
+    );
+  });
+
+  it.each([
+    ['en', 'Signature of the signer'],
+    ['es', 'Firma de quien firma'],
+    ['ca', 'Signatura de qui signa'],
+  ])('localizes the signature alt text in %s', async (language, alt) => {
+    await i18n.changeLanguage(language);
+    try {
+      mockedReadReviewDocument.mockResolvedValue({ ...document, hasSignature: true });
+
+      renderPage();
+      await screen.findByTestId('review-document-content');
+
+      expect(screen.getByTestId('review-document-signature-image')).toHaveAccessibleName(alt);
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });
 

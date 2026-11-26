@@ -26,6 +26,7 @@ import { ReadReviewHistoryUseCase } from './application/use-cases/read-review-hi
 import { ReadElementReviewHistoryUseCase } from './application/use-cases/read-element-review-history.use-case';
 import { ReadReviewDocumentUseCase } from './application/use-cases/read-review-document.use-case';
 import { ReadReviewDocumentLogoUseCase } from './application/use-cases/read-review-document-logo.use-case';
+import { ReadReviewDocumentSignatureUseCase } from './application/use-cases/read-review-document-signature.use-case';
 import { ReadReviewSessionUseCase } from './application/use-cases/read-review-session.use-case';
 import { ResolveElementByCodeUseCase } from './application/use-cases/resolve-element-by-code.use-case';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -117,6 +118,7 @@ import { ReviewHistoryController } from './presentation/review-history.controlle
     ReadElementReviewHistoryUseCase,
     ReadReviewDocumentUseCase,
     ReadReviewDocumentLogoUseCase,
+    ReadReviewDocumentSignatureUseCase,
     ReadReviewSessionUseCase,
     DiscardReviewSessionUseCase,
     ResolveElementByCodeUseCase,

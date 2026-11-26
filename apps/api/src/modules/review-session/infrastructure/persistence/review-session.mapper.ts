@@ -32,6 +32,7 @@ export class ReviewSessionMapper {
       startedAt: record.startedAt,
       completedAt: record.completedAt,
       performedByCompanyId: record.performedByCompanyId,
+      signatureStorageKey: record.signatureStorageKey,
       entries: entryRecords.map((entry) => this.entryToDomain(entry)),
     });
   }

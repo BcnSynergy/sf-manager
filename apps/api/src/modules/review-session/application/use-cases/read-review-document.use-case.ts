@@ -65,6 +65,9 @@ export interface ReadReviewDocumentResult {
     email: string;
     hasLogo: boolean;
   };
+  // reviewer-signature: whether the session has a signature copy; read it
+  // from GET /review-history/:sessionId/document/signature. Never the key.
+  hasSignature: boolean;
 }
 
 // design.md Decision 1: the scope gate FIRST, via the SAME
@@ -202,6 +205,7 @@ export class ReadReviewDocumentUseCase {
         email: profile.email,
         hasLogo: profile.logoAssetId !== null,
       },
+      hasSignature: session.signatureStorageKey !== null,
     };
   }
 }

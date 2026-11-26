@@ -12,9 +12,11 @@ it (supersedes proposal question 3, decided 2026-09-23). What each role
 may open is decided entirely by the server.
 
 Shipped in the same change as its API, per ADR-006's 2026-08-25
-addendum. Out of scope (slice 2): signer full name and signature image.
-Also out of scope: any download, email or share control.
-(Previously: also out of scope was "any logo".)
+addendum. Out of scope (deferred, EN-245): signer full name. Also out of
+scope: any download, email or share control. The signer's signature image
+is shown since reviewer-signature (_The Signature Footer Shows the
+Signature Image_).
+(Previously: also out of scope were "any logo" and the signature image.)
 
 ## Requirements
 
@@ -55,7 +57,7 @@ The page MUST render, in this order:
 | Letterhead       | The organization's non-blank profile fields (see _A Blank or Incomplete Profile Still Prints_)                                                                                                                                                                                                                                                                                                                                                                           |
 | Session data     | Community name, localized element type, localized frequency, template name and version, start and completion dates, and the maintenance company's name when present                                                                                                                                                                                                                                                                                                      |
 | Record           | Every entry, in the deterministic order the server returns them (element code ascending, entries lacking a code last; ties, including among code-less entries, broken by recorded time then entry id — `review-document`): its element's code, name and location, then each question's snapshotted wording, in the frozen template's question order, with its localized answer; or, for an unreviewed element, a localized "not reviewed" label with its recorded reason |
-| Signature footer | A localized "signed by" label with the performer's email, and the signing date equal to `completedAt`, rendered as **date and time** (`HH:mm`), fixed to `Europe/Madrid`                                                                                                                                                                                                                                                                                                 |
+| Signature footer | A localized "signed by" label with the performer's email, and the signing date equal to `completedAt`, rendered as **date and time** (`HH:mm`), fixed to `Europe/Madrid`; and the signature image when the session has one (_The Signature Footer Shows the Signature Image_)                                                                                                                                                                                            |
 
 A deactivated or soft-deleted element MUST render under its real code,
 name and location, exactly as an active element does. Only an entry
@@ -70,8 +72,8 @@ company line entirely. A completed session with zero entries MUST still
 render its letterhead, session data and signature footer, with the
 record region showing no entry and no error about its entries (the
 photo note below may still appear there). The page MUST NOT hide,
-re-sort or truncate entries, and MUST NOT render a signature image or a
-signer name other than the email.
+re-sort or truncate entries, and MUST NOT render a signer name other than
+the email. (Previously: also MUST NOT render a signature image.)
 
 Each entry MUST also show the photos of its element in that session
 (`review-history` _Photos of a Completed Review Are Read Through the
@@ -231,6 +233,36 @@ warning, which depends only on the six text fields.
 - GIVEN every organization profile text field is blank and the organization has a logo
 - WHEN the document page renders
 - THEN the letterhead MUST show the logo alone, and the incomplete-profile warning MUST still be shown on screen only
+
+### Requirement: The Signature Footer Shows the Signature Image
+
+When the document carries `hasSignature: true`, the page MUST show the
+session's signature image in the signature footer, before the "signed by"
+line, read from `GET /review-history/:sessionId/document/signature`, with
+a localized alternative text, on screen **and** in the printed output, at
+a size that keeps the footer a signature block (at most about 60 px tall
+on screen). When `hasSignature` is `false`, no image and no placeholder
+MUST render and the footer MUST be as before. An image that fails to load
+MUST be dropped without an error message, and the rest of the footer and
+the document MUST be unaffected.
+
+#### Scenario: The signature heads the footer
+
+- GIVEN the document carries `hasSignature: true`
+- WHEN the document page renders and is printed
+- THEN the signature image MUST appear in the footer before the "signed by" line on screen and in the print output
+
+#### Scenario: No signature recorded
+
+- GIVEN the document carries `hasSignature: false`
+- WHEN the document page renders
+- THEN no signature image MUST render, and the "signed by" and signing date lines MUST be shown as before
+
+#### Scenario: A signature that fails to load is dropped
+
+- GIVEN the document carries `hasSignature: true` and the signature read fails
+- WHEN the document page renders
+- THEN no image and no error message MUST be shown, and the "signed by" and signing date lines MUST still render
 
 ### Requirement: Print Through the Browser, Document Only
 

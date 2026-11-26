@@ -143,6 +143,7 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
         // the pre-completion session, exactly like PrismaReviewSessionRepository
         // .complete()'s UPDATE (which has no such column in its SET clause).
         performedByCompanyId: session.performedByCompanyId,
+        signatureStorageKey,
         entries: session.entries,
       }),
     );

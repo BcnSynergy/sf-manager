@@ -42,6 +42,23 @@ describe('ReviewSessionMapper', () => {
     });
   });
 
+  describe('signatureStorageKey', () => {
+    it('maps the recorded signature copy key on read', () => {
+      const session = ReviewSessionMapper.toDomain({
+        ...baseRecord,
+        signatureStorageKey: 'review-signatures/s-1.png',
+      });
+
+      expect(session.signatureStorageKey).toBe('review-signatures/s-1.png');
+    });
+
+    it('maps a session signed before the signature existed to null', () => {
+      const session = ReviewSessionMapper.toDomain(baseRecord);
+
+      expect(session.signatureStorageKey).toBeNull();
+    });
+  });
+
   describe('toPersistence', () => {
     it('includes the attributed company id in the create payload', () => {
       const session = new ReviewSession({

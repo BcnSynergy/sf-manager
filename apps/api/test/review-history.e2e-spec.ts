@@ -8,6 +8,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { REVIEWER_SIGNATURE_REPOSITORY } from '../src/modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
 import { InMemoryReviewerSignatureRepository } from '../src/modules/reviewer-signature/application/use-cases/testing/in-memory-reviewer-signature.repository';
+import { pngHeader } from '../src/modules/organization-profile/domain/testing/logo-fixtures';
 import { seedSignatures } from '../src/modules/reviewer-signature/application/use-cases/testing/seed-signatures';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
@@ -42,6 +43,7 @@ import {
 import { INSPECTABLE_ELEMENT_REPOSITORY } from '../src/modules/inspectable-element/application/ports/inspectable-element.repository.port';
 import { InMemoryInspectableElementRepository } from '../src/modules/inspectable-element/application/use-cases/testing/in-memory-inspectable-element.repository';
 import { REVIEW_SESSION_REPOSITORY } from '../src/modules/review-session/application/ports/review-session.repository.port';
+import { ReviewSession } from '../src/modules/review-session/domain/review-session.entity';
 import { InMemoryReviewSessionRepository } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-session.repository';
 import { REVIEW_PHOTO_REPOSITORY } from '../src/modules/review-session/application/ports/review-photo.repository.port';
 import { InMemoryReviewPhotoRepository } from '../src/modules/review-session/application/use-cases/testing/in-memory-review-photo.repository';
@@ -188,6 +190,9 @@ interface BuiltApp {
   // reviewer-signature T2: a user seeded after buildApp needs a signature
   // (seedSignatures) before completing a session.
   signatures: InMemoryReviewerSignatureRepository;
+  // reviewer-signature T3: lets a case seed a session signed before the
+  // signature existed (no copy key).
+  sessionRepository: InMemoryReviewSessionRepository;
 }
 
 async function buildApp(seed: {
@@ -298,6 +303,7 @@ async function buildApp(seed: {
     organizationProfileRepository,
     fileStorage,
     signatures,
+    sessionRepository,
   };
 }
 
@@ -3936,6 +3942,7 @@ describe('Review History (e2e)', () => {
           email: 'org@example.com',
           hasLogo: false,
         },
+        hasSignature: true,
       });
     });
 
@@ -4733,6 +4740,304 @@ describe('Review History (e2e)', () => {
       } finally {
         built.organizationProfileRepository.seed(profile);
       }
+    });
+  });
+
+  describe('GET /review-history/:sessionId/document/signature', () => {
+    // seedSignatures registers pngHeader(40, 12) for every seeded user.
+    const SIGNED_BYTES = pngHeader(40, 12);
+    let built: BuiltApp;
+    const adminEmail = 'rhsig-admin@example.com';
+    const technicianUEmail = 'rhsig-technician-u@example.com';
+    const technicianWEmail = 'rhsig-technician-w@example.com';
+    const ungrantedManagerEmail = 'rhsig-manager@example.com';
+    const representativeEmail = 'rhsig-representative@example.com';
+    const companyManagerEmail = 'rhsig-company-manager@example.com';
+
+    let completedSessionId: string;
+    let draftSessionId: string;
+    let otherSessionId: string;
+    let unsignedSessionId: string;
+
+    function signaturePath(sessionId: string): string {
+      return `/review-history/${sessionId}/document/signature`;
+    }
+
+    interface DocumentBody {
+      hasSignature: boolean;
+    }
+
+    beforeAll(async () => {
+      built = await buildApp({
+        users: [
+          await buildSeedUser({
+            id: 'rhsig-admin-id',
+            email: adminEmail,
+            role: 'SYSTEM_ADMIN',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-technician-u-id',
+            email: technicianUEmail,
+            role: 'MAINTENANCE_TECHNICIAN',
+            maintenanceCompanyId: 'rhsig-company-id',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-representative-id',
+            email: representativeEmail,
+            role: 'COMMUNITY_REPRESENTATIVE',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-company-manager-id',
+            email: companyManagerEmail,
+            role: 'MAINTENANCE_COMPANY_MANAGER',
+            maintenanceCompanyId: 'rhsig-company-id',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-technician-w-id',
+            email: technicianWEmail,
+            role: 'MAINTENANCE_TECHNICIAN',
+          }),
+          await buildSeedUser({
+            id: 'rhsig-manager-id',
+            email: ungrantedManagerEmail,
+            role: 'MANAGER',
+          }),
+        ],
+      });
+
+      const adminAgent = await loginAgent(built.app, adminEmail);
+      const communityA = await createCommunity(adminAgent, 'Sig community A');
+      const communityB = await createCommunity(adminAgent, 'Sig community B');
+      await assignTechnician(
+        adminAgent,
+        communityA.id,
+        'rhsig-technician-u-id',
+      );
+      await assignRepresentative(
+        adminAgent,
+        communityA.id,
+        'rhsig-representative-id',
+      );
+      await assignTechnician(
+        adminAgent,
+        communityB.id,
+        'rhsig-technician-w-id',
+      );
+      const question = await createQuestion(adminAgent, 'Is it signed?');
+      const template = await createActiveTemplate(adminAgent, 'Sig template', [
+        question.id,
+      ]);
+
+      const technicianUAgent = await loginAgent(built.app, technicianUEmail);
+      const openedByU = (
+        await technicianUAgent
+          .post('/review-sessions')
+          .send({ communityId: communityA.id, templateId: template.id })
+          .expect(201)
+      ).body as { id: string };
+      completedSessionId = (
+        (
+          await technicianUAgent
+            .post(`/review-sessions/${openedByU.id}/complete`)
+            .expect(200)
+        ).body as SessionBody
+      ).id;
+      draftSessionId = (
+        (
+          await technicianUAgent
+            .post('/review-sessions')
+            .send({ communityId: communityA.id, templateId: template.id })
+            .expect(201)
+        ).body as { id: string }
+      ).id;
+
+      const technicianWAgent = await loginAgent(built.app, technicianWEmail);
+      const openedByW = (
+        await technicianWAgent
+          .post('/review-sessions')
+          .send({ communityId: communityB.id, templateId: template.id })
+          .expect(201)
+      ).body as { id: string };
+      otherSessionId = (
+        (
+          await technicianWAgent
+            .post(`/review-sessions/${openedByW.id}/complete`)
+            .expect(200)
+        ).body as SessionBody
+      ).id;
+
+      // A session signed before the signature existed: completed, no copy.
+      unsignedSessionId = '01997a00-0000-7000-8000-0000000000ee';
+      built.sessionRepository.seed(
+        new ReviewSession({
+          id: unsignedSessionId,
+          communityId: communityA.id,
+          templateId: template.id,
+          performedById: 'rhsig-technician-u-id',
+          status: 'completed',
+          startedAt: new Date('2026-01-01T00:00:00.000Z'),
+          completedAt: new Date('2026-01-02T00:00:00.000Z'),
+          entries: [],
+        }),
+      );
+    });
+
+    afterAll(async () => {
+      await built.app.close();
+    });
+
+    it("the performer gets their session's signature copy and the document says it exists", async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+
+      const document = await agent
+        .get(`/review-history/${completedSessionId}/document`)
+        .expect(200);
+      expect((document.body as DocumentBody).hasSignature).toBe(true);
+      expect(JSON.stringify(document.body)).not.toContain('review-signatures');
+      expect(JSON.stringify(document.body)).not.toContain(
+        'signatureStorageKey',
+      );
+
+      const signature = await agent
+        .get(signaturePath(completedSessionId))
+        .expect(200);
+      expect(signature.headers['content-type']).toBe('image/png');
+      expect(signature.headers['cache-control']).toBe('no-store');
+      expect(signature.headers['content-security-policy']).toBe(
+        "default-src 'none'; sandbox",
+      );
+      expect(signature.headers['x-content-type-options']).toBe('nosniff');
+      expect(Buffer.from(signature.body as Buffer)).toEqual(SIGNED_BYTES);
+    });
+
+    it.each([
+      ['an assigned representative', () => representativeEmail],
+      ["the performer's company manager", () => companyManagerEmail],
+      ['the admin', () => adminEmail],
+    ])(
+      '%s gets the signature of a document in their scope',
+      async (_label, getEmail: () => string) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        const signature = await agent
+          .get(signaturePath(completedSessionId))
+          .expect(200);
+
+        expect(signature.headers['content-type']).toBe('image/png');
+        expect(signature.headers['cache-control']).toBe('no-store');
+        expect(signature.headers['content-security-policy']).toBe(
+          "default-src 'none'; sandbox",
+        );
+        expect(signature.headers['x-content-type-options']).toBe('nosniff');
+        expect(Buffer.from(signature.body as Buffer)).toEqual(SIGNED_BYTES);
+      },
+    );
+
+    it('the admin gets the signature of any document', async () => {
+      const agent = await loginAgent(built.app, adminEmail);
+
+      await agent.get(signaturePath(otherSessionId)).expect(200);
+    });
+
+    it.each([
+      ['another technician', () => technicianWEmail, () => completedSessionId],
+      [
+        'an ungranted MANAGER',
+        () => ungrantedManagerEmail,
+        () => completedSessionId,
+      ],
+      [
+        'the performer, for a draft',
+        () => technicianUEmail,
+        () => draftSessionId,
+      ],
+      [
+        'the performer, for an unknown session',
+        () => technicianUEmail,
+        () => '01997a00-0000-7000-8000-0000000000ff',
+      ],
+    ])(
+      '%s gets the document 404 and no signature',
+      async (_label, getEmail: () => string, getSessionId: () => string) => {
+        const agent = await loginAgent(built.app, getEmail());
+
+        const document = await agent.get(
+          `/review-history/${getSessionId()}/document`,
+        );
+        const signature = await agent.get(signaturePath(getSessionId()));
+
+        expect(document.status).toBe(404);
+        expect(signature.status).toBe(404);
+        expect((signature.body as ErrorBody).code).toBe(
+          'REVIEW_SESSION_NOT_FOUND',
+        );
+        expect(signature.body).toEqual(document.body);
+        expect(signature.headers['content-type']).not.toMatch(/^image\//);
+      },
+    );
+
+    it('rejects a malformed session id with 400 INVALID_SESSION_ID', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+
+      const response = await agent.get(signaturePath('not-a-uuid')).expect(400);
+
+      expect((response.body as ErrorBody).code).toBe('INVALID_SESSION_ID');
+    });
+
+    it('rejects an unauthenticated caller with 401', async () => {
+      await request(built.app.getHttpServer())
+        .get(signaturePath(completedSessionId))
+        .expect(401);
+    });
+
+    it('a session signed before the signature existed has hasSignature false and a 404 read', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+
+      const document = await agent
+        .get(`/review-history/${unsignedSessionId}/document`)
+        .expect(200);
+      expect((document.body as DocumentBody).hasSignature).toBe(false);
+
+      const signature = await agent
+        .get(signaturePath(unsignedSessionId))
+        .expect(404);
+      expect(signature.headers['content-type']).not.toMatch(/^image\//);
+    });
+
+    it('answers 404 when the recorded copy is missing, and the document still says hasSignature true', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+      const [copy] = (await built.fileStorage.list('review-signatures')).filter(
+        (file) => file.key.includes(completedSessionId),
+      );
+      const bytes = await built.fileStorage.get(copy.key);
+      await built.fileStorage.delete(copy.key);
+
+      try {
+        await agent.get(signaturePath(completedSessionId)).expect(404);
+        const document = await agent
+          .get(`/review-history/${completedSessionId}/document`)
+          .expect(200);
+        expect((document.body as DocumentBody).hasSignature).toBe(true);
+      } finally {
+        await built.fileStorage.put(copy.key, bytes as Buffer);
+      }
+    });
+
+    it('replacing the performer signature after signing does not change the served copy', async () => {
+      const agent = await loginAgent(built.app, technicianUEmail);
+      const replacement = pngHeader(80, 24);
+      await built.fileStorage.put('signatures/replacement.png', replacement);
+      await built.signatures.save(
+        'rhsig-technician-u-id',
+        'signatures/replacement.png',
+      );
+
+      const signature = await agent
+        .get(signaturePath(completedSessionId))
+        .expect(200);
+
+      expect(Buffer.from(signature.body as Buffer)).toEqual(SIGNED_BYTES);
+      expect(Buffer.from(signature.body as Buffer)).not.toEqual(replacement);
     });
   });
 });

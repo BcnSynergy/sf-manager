@@ -26,6 +26,10 @@ export interface ReviewSessionProps {
   // pre-existing call site across this module's other layers (write-path
   // siblings untouched by this slice) keeps compiling unchanged.
   performedByCompanyId?: string | null;
+  // reviewer-signature: the session-owned copy of the performer's signature,
+  // recorded once when the session is signed. `null` for a draft and for a
+  // session signed before the signature existed. Never leaves the API.
+  signatureStorageKey?: string | null;
   // Optional: the repository (Phase 4/5) is the source of truth for
   // persisted entries; this in-memory list lets the aggregate itself apply
   // the `@@unique([reviewSessionId, inspectableElementId])` upsert
@@ -45,6 +49,7 @@ export class ReviewSession {
   // review-history-company-scope/design.md Decision 1: readonly, no setter
   // — this class exposes no method that ever changes it after construction.
   readonly performedByCompanyId: string | null;
+  readonly signatureStorageKey: string | null;
   private readonly entriesByElementId: Map<string, ElementReviewEntry>;
 
   constructor(props: ReviewSessionProps) {
@@ -56,6 +61,7 @@ export class ReviewSession {
     this.startedAt = props.startedAt;
     this.completedAt = props.completedAt;
     this.performedByCompanyId = props.performedByCompanyId ?? null;
+    this.signatureStorageKey = props.signatureStorageKey ?? null;
     this.entriesByElementId = new Map(
       (props.entries ?? []).map((entry) => [entry.inspectableElementId, entry]),
     );
