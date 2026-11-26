@@ -777,6 +777,21 @@ Refresh"). Decision 4 itself stands; this records the shape it took.
    a 401 and retries; one refresh at a time per tab, serialized across tabs
    with Web Locks; the mount-time session check tries a refresh first).
 
+## Addendum (2026-11-26): `demo-instance` T1 — production `TRUST_PROXY` becomes 2
+
+Supersedes the value of the 2026-10-25 addendum. Production now runs behind
+an edge proxy (`deploy/edge`, its own Caddy), so a demo stack can share the
+server's ports 80 and 443 (`odd/tasks/demo-instance.md`). Two hops stand in
+front of the API: the edge proxy, which replaces any client-sent
+`X-Forwarded-For` with the client's address, and the stack's Caddy, which
+trusts that header from private addresses only (it publishes no port, so
+only Docker networks reach it) and appends the edge proxy's address. The
+stack therefore sets `TRUST_PROXY=2`. The CI smoke test pins it: a host that
+used up the per-client login limit, sending a spoofed `X-Forwarded-For` with
+each attempt, does not limit a login from a container on the edge network.
+With `TRUST_PROXY=1`, or with the stack's Caddy trusting no proxy, every
+client would share one bucket and that login would be refused.
+
 ## Alternatives Considered
 
 - **Full granular resource×action permission matrix, admin-configurable

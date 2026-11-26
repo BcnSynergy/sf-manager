@@ -81,6 +81,7 @@ business features yet, just the toolchain wired end-to-end.
    | No proxy (API reachable directly)                  | unset (off)                                                                                                     |
    | One reverse proxy (e.g. nginx) in front of the API | `true` (or `1`)                                                                                                 |
    | CDN plus a reverse proxy                           | `2`                                                                                                             |
+   | Edge proxy plus the stack's Caddy (production)     | `2`                                                                                                             |
    | PaaS (e.g. Vercel)                                 | Confirm the platform's documented number of forwarding hops before setting any value; this README asserts none. |
 
    IPv6 clients are limited per `/64` prefix, and an IPv4-mapped IPv6 address
@@ -263,12 +264,31 @@ images, so those only get the weekly digest PRs.
 
 `docker-compose.prod.yml` runs the whole system on one server with Docker:
 Postgres, the API, a backup service and an off-site copy service (below), and Caddy, which serves the web app and forwards `/api/*`
-to the API on the same origin. Only Caddy publishes ports (80 and 443); it
-obtains and renews the HTTPS certificate for `SITE_ADDRESS` on its own, so
-the domain's DNS must point at the server and both ports must be open. The
-server needs Docker Engine 25 or later with the Compose plugin: the API's
-healthcheck uses `start_interval`. The spec is
-`openspec/specs/deployment/spec.md`.
+to the API on the same origin. It runs behind the edge proxy
+(`deploy/edge/`), its own Compose project and the only service that
+publishes ports (80 and 443): it obtains and renews the HTTPS certificate
+for the site on its own, redirects plain HTTP to HTTPS and forwards each
+request to the stack's Caddy over the `sf-edge` Docker network, so the
+domain's DNS must point at the server and both ports must be open. The
+stack's Caddy publishes no port. The server needs Docker Engine 25 or later
+with the Compose plugin: the API's healthcheck uses `start_interval`. The
+spec is `openspec/specs/deployment/spec.md`.
+
+0. Start the edge proxy once, before the stack: the stack joins its network,
+   so without it step 2 fails, saying the external network `sf-edge` could
+   not be found. Its env file names the site and must match `SITE_ADDRESS`
+   in `prod.env`:
+
+   ```sh
+   cp deploy/edge/edge.env.example deploy/edge/edge.env   # then set SFMANAGER_SITE
+   docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d
+   ```
+
+   A deploy never restarts it. After `deploy/edge/` changes, recreate it
+   with the same command plus `--force-recreate`: its Caddyfile is a mounted
+   file, which a plain `up -d` neither notices nor reloads. To move a server that ran an older version,
+   whose Caddy published the ports itself, see "Moving a server behind the
+   edge proxy" below instead.
 
 1. Create the env file from the example and fill in every value
    (`openssl rand -hex 32` gives a URL-safe password or secret):
@@ -278,9 +298,10 @@ healthcheck uses `start_interval`. The spec is
    ```
 
    `prod.env` holds the secrets and is ignored by Git and by the Docker build
-   context. `SITE_ADDRESS=localhost` runs the stack on a developer machine
-   with a certificate from Caddy's local authority, which the browser does
-   not trust until you accept it.
+   context. `SITE_ADDRESS=localhost` (with `SFMANAGER_SITE=localhost` in
+   `edge.env`) runs the stack on a developer machine with a certificate from
+   Caddy's local authority, which the browser does not trust until you
+   accept it.
 
 2. Pin the images to the commit this checkout is on, pull them and start the
    stack:
@@ -318,7 +339,8 @@ healthcheck uses `start_interval`. The spec is
    passes, so in that case `up -d` fails with
    `dependency failed to start: container ... api-1 is unhealthy`. When the
    upgrade replaced Caddy (a new `IMAGE_TAG` always does), the new Caddy is
-   left created but not started, so the whole site is down; Docker does not
+   left created but not started, so the whole site is down (the edge proxy
+   answers 502 after holding each request for 30 seconds); Docker does not
    start it later on its own, even once the API recovers, so after fixing
    the cause run `up -d` again. When Caddy was not replaced, the old one keeps
    running and answers 502 for `/api/*` until then. `docker compose ... ps` shows the
@@ -351,12 +373,15 @@ healthcheck uses `start_interval`. The spec is
    `SMTP_PASSWORD` and `SMTP_FROM` (see "Email"). Add them before running
    step 2, or the API stays down and Caddy with it.
 
-`TRUST_PROXY` is set to `1` in the compose file, because Caddy is the only
-proxy in front of the API and it replaces any `X-Forwarded-For` a client
-sends. Put another proxy or a CDN in front and the value must change (see
-the topology table above).
+`TRUST_PROXY` is set to `2` in the compose file, because two proxies stand
+in front of the API: the edge proxy, which replaces any `X-Forwarded-For` a
+client sends with the client's address, and the stack's Caddy, which keeps
+it and appends the edge proxy's address (it trusts that header from private
+addresses only, and only Docker networks reach it). Put another proxy or a
+CDN in front and the value must change (see the topology table above).
 
-Caddy adds security headers (`apps/web/Caddyfile`): `nosniff` and a
+Caddy adds security headers (`apps/web/Caddyfile`), which the edge proxy
+passes on: `nosniff` and a
 referrer policy on every HTTPS response, HSTS unless `SITE_ADDRESS=localhost`, and a
 Content Security Policy that allows only same-origin resources (plus `data:`
 images and fonts) outside `/api/*`. Anything the web app loads from another
@@ -370,21 +395,98 @@ upgrade. CI builds both images and starts the whole stack for every PR,
 these included. For npm and GitHub Actions updates, see "Dependency
 updates".
 
+### Moving a server behind the edge proxy
+
+A server that ran a version whose Caddy published ports 80 and 443 itself
+moves once, with a short outage: from stopping the old Caddy until the new
+API is healthy and its Caddy is up. The images are pulled beforehand, so
+that is the API restart plus any migration, normally under a minute. Keep
+the certificate: Caddy's data volume is copied into the edge proxy's, so no
+new certificate is requested. From `~/sf-manager`, with the new commit
+checked out (`git fetch` and `git checkout <commit>`) but the stack still
+running the old one:
+
+First the edge proxy's env file: its site is production's domain, taken
+from `prod.env`. Check that the printed line names the real domain:
+
+```sh
+sed -n 's/^SITE_ADDRESS=/SFMANAGER_SITE=/p' prod.env >deploy/edge/edge.env &&
+  grep -q '^SFMANAGER_SITE=.' deploy/edge/edge.env && cat deploy/edge/edge.env
+```
+
+Then the move itself, one chain, so any failing step stops it. Everything
+before `stop web` only checks, downloads and copies: the edge proxy's image
+(the copy uses the same image, pinned in `deploy/edge/docker-compose.yml`;
+keep the two digests equal), the old certificates (`docker volume inspect`
+makes sure the old volume exists, since `docker run -v` would quietly create
+an empty one), and the stack's images, pinned as step 2 does (the `tag`,
+`grep` and `sed` lines and the pull are step 2's, so its notes apply: a tag
+CI did not publish fails the pull with `not found`). The outage starts at
+`stop web`:
+
+```sh
+docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env pull &&
+  docker volume inspect sf-manager-prod_caddy-data >/dev/null &&
+  docker volume create sf-edge_caddy-data &&
+  docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
+    caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 \
+    cp -a /from/. /to/ &&
+  tag=sha-$(git rev-parse HEAD | cut -c1-7) &&
+  { grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env; } &&
+  sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env stop web &&
+  docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
+```
+
+If a step after `stop web` fails, what to do depends on which one:
+
+- The edge proxy's `up -d` failed: the stack's containers are still the old
+  ones, so stop the edge proxy if it started (see the rollback below) and
+  run `docker compose -f docker-compose.prod.yml --env-file prod.env start web`,
+  which starts the old Caddy, ports included.
+- The last `up -d` failed (for example a failed migration, see step 2): the
+  old containers are already replaced by new ones whose Caddy publishes no
+  port, so `start web` does not help. Leave the edge proxy running, fix the
+  cause and run that last command again, or roll back as below.
+
+Compose warns that `sf-edge_caddy-data` was not created by it; that is
+expected, and it uses the volume. Check `https://<SITE_ADDRESS>/api/health`
+and `sh deploy/check-production.sh https://<SITE_ADDRESS>`.
+
+To roll back, stop the edge proxy (`stop`, not `down`: its network cannot
+go while the stack's web container is attached to it), check out the
+previous commit and run step 2, which pins `IMAGE_TAG` back to that commit.
+Its Caddy publishes the ports again with its old data volume, which the
+move left untouched. The Deploy workflow cannot do this rollback: it does
+not stop the edge proxy, so the old Caddy could not bind the ports.
+
+```sh
+docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env stop
+git checkout <previous commit>   # then step 2
+```
+
+Once the new setup has run for a while, the old volumes can go:
+`docker volume rm sf-manager-prod_caddy-data sf-manager-prod_caddy-config`.
+
 ### Images in CI
 
 CI builds the production images and runs `deploy/smoke-test.sh` on every PR
-and push to `main`: it starts the whole stack on `https://localhost` with
-throwaway secrets and fails unless `/api/health` reports the database ok,
-Docker reports the API container healthy,
-the web app answers 200, the API can write uploaded files, the backup
+and push to `main`: it starts the edge proxy and the whole stack behind it
+on `https://localhost` with throwaway secrets and fails unless
+`/api/health` reports the database ok, Docker reports the API container
+healthy, the web app answers 200 with its security headers, plain HTTP
+redirects to HTTPS, a client that used up the login limit does not limit a
+client from another address, the API can write uploaded files, the backup
 service writes a dump and a files archive, the off-site copy service,
 unconfigured, says it is disabled, the documented admin seed command
 creates a system admin who can log in, and a dump taken before the newest
 migration restores, with its uploaded files, and the API then applies that
 migration. Run it locally from the repository root with
-`sh deploy/smoke-test.sh` (ports 80 and 443 must be free; it uses its own
-Compose project, keeps its backups in a volume instead of `backups/`, and
-removes both afterwards).
+`sh deploy/smoke-test.sh` (ports 80 and 443 must be free and no edge proxy
+may run on the machine; it uses its own Compose projects, keeps its backups
+in a volume instead of `backups/`, and removes everything afterwards).
 
 Before that, CI runs `shellcheck deploy/*.sh` and tests the backup and
 off-site copy scripts against throwaway containers, with their own network
@@ -422,7 +524,10 @@ workflow"), optionally with the commit to deploy; empty deploys the current
 a commit that is not on `main` or has no published images, then deploys
 over SSH and runs the production check (see "Monitoring"). To roll back,
 deploy an older commit of `main`; as with a manual rollback, migrations the
-newer version applied stay. It never starts on its own: to deploy every
+newer version applied stay. A commit from before the edge proxy (its Caddy
+publishes the ports itself) cannot be deployed this way once the server
+runs the edge proxy: roll back to it by hand, as "Moving a server behind
+the edge proxy" describes. It never starts on its own: to deploy every
 green `main` automatically, change its trigger.
 
 The workflow and the server look for the images under the first 7

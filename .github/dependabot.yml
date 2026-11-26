@@ -37,8 +37,12 @@ updates:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
 
+  # The edge proxy (deploy/edge) pins the same Caddy image as apps/web:
+  # merge their digest PRs together.
   - package-ecosystem: docker-compose
-    directory: /
+    directories:
+      - /
+      - /deploy/edge
     schedule:
       interval: weekly
     commit-message:

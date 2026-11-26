@@ -1,0 +1,17 @@
+# Edge proxy sites (deploy/edge/docker-compose.yml). Caddy obtains and
+# renews the certificate of each site address and redirects its plain HTTP
+# to HTTPS; `localhost` gets a locally trusted one.
+
+# SF-Manager production: the `web` service of docker-compose.prod.yml, which
+# joins the sf-edge network under this alias. The Host header is passed on
+# unchanged, so that Caddy still recognises the site (HSTS keys on it).
+# Caddy replaces any client-sent X-Forwarded-For with the client's address,
+# and the web app's Caddy trusts it from here, so the API still sees the
+# real client (TRUST_PROXY=2).
+{$SFMANAGER_SITE:localhost} {
+	reverse_proxy sf-manager-prod-web:80 {
+		# A deploy recreates the web container. Requests that arrive
+		# meanwhile wait for it instead of failing at once.
+		lb_try_duration 30s
+	}
+}
