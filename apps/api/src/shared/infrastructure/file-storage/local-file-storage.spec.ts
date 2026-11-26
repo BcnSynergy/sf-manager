@@ -1,3 +1,14 @@
+import * as fsPromises from 'node:fs/promises';
+
+// `node:fs/promises`' exports are non-configurable, so `jest.spyOn` cannot
+// redefine `rm` directly: replace the module with a partial mock that calls
+// the real `rm` unless a test overrides it (EN-236). The adapter under test
+// imports the same mocked module.
+jest.mock('node:fs/promises', () => {
+  const actual = jest.requireActual<typeof fsPromises>('node:fs/promises');
+  return { ...actual, rm: jest.fn(actual.rm) };
+});
+
 import {
   mkdir,
   mkdtemp,
@@ -210,6 +221,55 @@ describe('LocalFileStorage', () => {
       await expect(
         storage.deleteUnfinishedWrites('review-photos', cutoff),
       ).resolves.toBe(0);
+    });
+
+    // EN-236: a put renames its temporary file, or something else deletes
+    // it, between the sweep's stat and its rm.
+    describe('when a temporary file vanishes before it is deleted', () => {
+      const actualRm =
+        jest.requireActual<typeof fsPromises>('node:fs/promises').rm;
+      // The first rm the sweep makes deletes its file for real, then fails
+      // the way rm does on a missing file, as if another process had got
+      // there first. Failing the first call, whichever file it is, keeps the
+      // test independent of the order readdir lists the files in.
+      const failFirstRm = (code: string) => {
+        jest.mocked(rm).mockClear();
+        jest.mocked(rm).mockImplementationOnce(async (path, options) => {
+          await actualRm(path, options);
+          throw Object.assign(new Error(`${code}: ${String(path)}`), {
+            code,
+          });
+        });
+      };
+
+      // mockReset also drops an unused mockImplementationOnce, so a sweep
+      // that never calls rm cannot leave it to the outer cleanup's rm.
+      afterEach(() => {
+        jest.mocked(rm).mockReset();
+        jest.mocked(rm).mockImplementation(actualRm);
+      });
+
+      it('skips it and still deletes the other old temporary files', async () => {
+        await writeAt(`a.jpg.${UUID}.tmp`, before);
+        await writeAt(`b.jpg.${UUID}.tmp`, before);
+        failFirstRm('ENOENT');
+
+        await expect(
+          storage.deleteUnfinishedWrites('review-photos', cutoff),
+        ).resolves.toBe(1);
+
+        expect(jest.mocked(rm)).toHaveBeenCalledTimes(2);
+        expect(await readdir(join(root, 'review-photos'))).toEqual([]);
+      });
+
+      it('rethrows any other error', async () => {
+        await writeAt(`a.jpg.${UUID}.tmp`, before);
+        failFirstRm('EACCES');
+
+        await expect(
+          storage.deleteUnfinishedWrites('review-photos', cutoff),
+        ).rejects.toMatchObject({ code: 'EACCES' });
+      });
     });
 
     it('rejects a directory that is not a valid key segment', async () => {
