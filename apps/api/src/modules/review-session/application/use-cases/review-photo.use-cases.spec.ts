@@ -212,7 +212,11 @@ describe('review photo use cases', () => {
     });
 
     it('rejects a completed session with ReviewSessionNotEditableError and stores nothing', async () => {
-      await sessions.complete('session-1', new Date());
+      await sessions.complete(
+        'session-1',
+        new Date(),
+        'review-signatures/session-1-test.png',
+      );
 
       await expect(
         upload.execute('session-1', 'element-1', jpegHeader(), actor),
@@ -223,7 +227,11 @@ describe('review photo use cases', () => {
     });
 
     it('never writes a file for a completed session (the draft check runs before the put)', async () => {
-      await sessions.complete('session-1', new Date());
+      await sessions.complete(
+        'session-1',
+        new Date(),
+        'review-signatures/session-1-test.png',
+      );
       const put = jest.spyOn(files, 'put');
 
       await expect(
@@ -341,7 +349,11 @@ describe('review photo use cases', () => {
         jpegHeader(),
         actor,
       );
-      await sessions.complete('session-1', new Date());
+      await sessions.complete(
+        'session-1',
+        new Date(),
+        'review-signatures/session-1-test.png',
+      );
       elements.seed(element({ id: 'element-1', deactivatedAt: new Date() }));
 
       const result = await list.execute('session-1', 'element-1', actor);
@@ -356,7 +368,11 @@ describe('review photo use cases', () => {
         jpegHeader(),
         actor,
       );
-      await sessions.complete('session-1', new Date());
+      await sessions.complete(
+        'session-1',
+        new Date(),
+        'review-signatures/session-1-test.png',
+      );
 
       const result = await list.execute('session-1', 'element-1', actor);
 
@@ -464,7 +480,11 @@ describe('review photo use cases', () => {
         jpegHeader(),
         actor,
       );
-      await sessions.complete('session-1', new Date());
+      await sessions.complete(
+        'session-1',
+        new Date(),
+        'review-signatures/session-1-test.png',
+      );
 
       await expect(
         remove.execute('session-1', id, actor),

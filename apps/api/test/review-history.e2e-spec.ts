@@ -6,6 +6,9 @@ import cookieParser from 'cookie-parser';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { REVIEWER_SIGNATURE_REPOSITORY } from '../src/modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
+import { InMemoryReviewerSignatureRepository } from '../src/modules/reviewer-signature/application/use-cases/testing/in-memory-reviewer-signature.repository';
+import { seedSignatures } from '../src/modules/reviewer-signature/application/use-cases/testing/seed-signatures';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { LOGIN_FAILURE_LIMITER } from '../src/modules/auth/application/ports/login-failure-limiter.port';
 import { InMemoryLoginFailureLimiter } from '../src/modules/auth/application/use-cases/testing/in-memory-login-failure-limiter';
@@ -182,6 +185,9 @@ interface BuiltApp {
   organizationProfileRepository: InMemoryOrganizationProfileRepository;
   // organization-logo S8: the document logo route reads the logo bytes here.
   fileStorage: InMemoryFileStorage;
+  // reviewer-signature T2: a user seeded after buildApp needs a signature
+  // (seedSignatures) before completing a session.
+  signatures: InMemoryReviewerSignatureRepository;
 }
 
 async function buildApp(seed: {
@@ -209,6 +215,14 @@ async function buildApp(seed: {
   const tokenDenylist = new InMemoryTokenDenylist();
   const nameDirectory = new InMemoryReviewDocumentNameDirectory();
   const fileStorage = new InMemoryFileStorage();
+  // Completing a session needs the performer's signature: every seeded user
+  // starts with one registered (reviewer-signature T2).
+  const signatures = new InMemoryReviewerSignatureRepository();
+  await seedSignatures(
+    fileStorage,
+    signatures,
+    seed.users.map((user) => user.id),
+  );
   const organizationProfileRepository =
     new InMemoryOrganizationProfileRepository();
 
@@ -257,6 +271,8 @@ async function buildApp(seed: {
     .useValue(organizationProfileRepository)
     .overrideProvider(FILE_STORAGE)
     .useValue(fileStorage)
+    .overrideProvider(REVIEWER_SIGNATURE_REPOSITORY)
+    .useValue(signatures)
     .overrideProvider(ThrottlerStorage)
     .useFactory({ factory: () => new ThrottlerStorageService() })
     .overrideProvider(LOGIN_FAILURE_LIMITER)
@@ -281,6 +297,7 @@ async function buildApp(seed: {
     nameDirectory,
     organizationProfileRepository,
     fileStorage,
+    signatures,
   };
 }
 
@@ -1837,6 +1854,9 @@ describe('Review History (e2e)', () => {
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       built.userRepository.seed(isolatedRepresentative);
+      await seedSignatures(built.fileStorage, built.signatures, [
+        isolatedRepresentative.id,
+      ]);
       const adminAgent = await loginAgent(built.app, adminEmail);
       await assignRepresentative(
         adminAgent,
@@ -4240,6 +4260,9 @@ describe('Review History (e2e)', () => {
         role: 'COMMUNITY_REPRESENTATIVE',
       });
       built.userRepository.seed(isolatedRepresentative);
+      await seedSignatures(built.fileStorage, built.signatures, [
+        isolatedRepresentative.id,
+      ]);
       const adminAgent = await loginAgent(built.app, adminEmail);
       // A dedicated, element-free community: completion requires every
       // active element of the template's type in the community to carry an
@@ -4284,6 +4307,9 @@ describe('Review History (e2e)', () => {
         role: 'MAINTENANCE_TECHNICIAN',
       });
       built.userRepository.seed(isolatedTechnician);
+      await seedSignatures(built.fileStorage, built.signatures, [
+        isolatedTechnician.id,
+      ]);
       await assignTechnician(
         adminAgent,
         communityRepSigner.id,

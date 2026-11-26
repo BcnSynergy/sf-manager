@@ -26,6 +26,7 @@ const CODE_MESSAGE_KEYS: Record<ReviewSessionErrorCode, MessageKey> = {
   MISSING_OBSERVATIONS: 'reviewSession.error.missingObservations',
   MISSING_ANSWERS: 'reviewSession.error.missingAnswers',
   UNREVIEWED_ELEMENTS_WITHOUT_REASON: 'reviewSession.error.unreviewedElementsWithoutReason',
+  SIGNATURE_REQUIRED: 'reviewSession.error.signatureRequired',
 };
 
 const HTTP_BAD_REQUEST = 400;

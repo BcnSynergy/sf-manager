@@ -460,7 +460,11 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
   it('returns false and writes no entry when the session was completed before upsertEntry reaches the database (concurrency backstop)', async () => {
     const { sessionId, inspectableElementId } = await createDraftSession();
 
-    const completed = await repository.complete(sessionId, new Date());
+    const completed = await repository.complete(
+      sessionId,
+      new Date(),
+      `review-signatures/${sessionId}-test.png`,
+    );
     expect(completed).toBe(true);
 
     const entry = ElementReviewEntry.unreviewed({
@@ -478,6 +482,60 @@ describe('PrismaReviewSessionRepository.upsertEntry() (integration, review findi
       where: { reviewSessionId: sessionId },
     });
     expect(rows).toHaveLength(0);
+  });
+
+  // reviewer-signature T2: the session-owned signature copy is recorded in the
+  // same `WHERE status='draft'` write that completes the session.
+  it('complete(id, at, key) writes the status, the time and the signature key in one write', async () => {
+    const { sessionId } = await createDraftSession();
+    const at = new Date('2026-11-26T10:00:00.000Z');
+    const key = `review-signatures/${sessionId}-copy.png`;
+
+    await expect(repository.complete(sessionId, at, key)).resolves.toBe(true);
+
+    const row = await prisma.reviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(row.status).toBe('completed');
+    expect(row.completedAt).toEqual(at);
+    expect(row.signatureStorageKey).toBe(key);
+  });
+
+  it('complete(id, at, key) on a completed session returns false and records nothing', async () => {
+    const { sessionId } = await createDraftSession();
+    const firstAt = new Date('2026-11-26T10:00:00.000Z');
+    await repository.complete(
+      sessionId,
+      firstAt,
+      `review-signatures/${sessionId}-test.png`,
+    );
+
+    await expect(
+      repository.complete(
+        sessionId,
+        new Date('2026-11-26T11:00:00.000Z'),
+        `review-signatures/${sessionId}-copy.png`,
+      ),
+    ).resolves.toBe(false);
+
+    const row = await prisma.reviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(row.signatureStorageKey).toBe(
+      `review-signatures/${sessionId}-test.png`,
+    );
+    expect(row.completedAt).toEqual(firstAt);
+  });
+
+  it('refuses two sessions with the same signature key', async () => {
+    const first = await createDraftSession();
+    const second = await createDraftSession();
+    const key = `review-signatures/${first.sessionId}-copy.png`;
+    await repository.complete(first.sessionId, new Date(), key);
+
+    await expect(
+      repository.complete(second.sessionId, new Date(), key),
+    ).rejects.toMatchObject({ code: 'P2002' });
   });
 
   it('rejects with ReviewSessionNotFoundError for an unknown sessionId instead of a raw FK-violation error', async () => {
@@ -638,6 +696,7 @@ describe('PrismaReviewSessionRepository — findCompleted…InCommunities() (int
       const completed = await repository.complete(
         id,
         completedAt ?? new Date(),
+        `review-signatures/${id}-test.png`,
       );
       expect(completed).toBe(true);
     }
@@ -1043,6 +1102,7 @@ describe('PrismaReviewSessionRepository — findCompletedForCompany/findComplete
       const completed = await repository.complete(
         id,
         params.completedAt ?? new Date(),
+        `review-signatures/${id}-test.png`,
       );
       expect(completed).toBe(true);
       // complete() never writes performedByCompanyId — reassert directly on
@@ -1332,6 +1392,7 @@ describe('PrismaReviewSessionRepository — findCompletedAcrossInstallation/find
       const completed = await repository.complete(
         id,
         params.completedAt ?? new Date(),
+        `review-signatures/${id}-test.png`,
       );
       expect(completed).toBe(true);
       await prisma.reviewSession.update({
@@ -1645,7 +1706,11 @@ describe('PrismaReviewSessionRepository — findCompletedEntriesForElement* (int
     await repository.upsertEntry(entry);
 
     if (params.status === 'completed') {
-      const completed = await repository.complete(sessionId, new Date());
+      const completed = await repository.complete(
+        sessionId,
+        new Date(),
+        `review-signatures/${sessionId}-test.png`,
+      );
       expect(completed).toBe(true);
       await prisma.reviewSession.update({
         where: { id: sessionId },

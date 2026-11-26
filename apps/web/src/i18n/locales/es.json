@@ -467,6 +467,7 @@
       "completeConfirmMessage": "La revisión se cerrará y ya no se podrá modificar. Esto no se puede deshacer.",
       "completeError": "Esta sesión no se ha podido completar.",
       "unreviewedGapsTitle": "Estos elementos todavía necesitan un motivo antes de completar:",
+      "mySignatureLink": "Mi firma",
       "unreviewedGapsElementLink": "Elemento {{code}}",
       "discardLabel": "Descartar borrador",
       "discardConfirmTitle": "Descartar borrador",
@@ -525,6 +526,7 @@
       "answersDoNotMatchTemplate": "Responde todas las preguntas antes de guardar.",
       "missingObservations": "Introduce un motivo.",
       "missingAnswers": "Responde todas las preguntas antes de guardar.",
+      "signatureRequired": "Registra tu firma antes de firmar una revisión.",
       "unreviewedElementsWithoutReason": "Algunos elementos todavía necesitan un motivo antes de completar.",
       "validationFailed": "Introduce datos de sesión válidos."
     }

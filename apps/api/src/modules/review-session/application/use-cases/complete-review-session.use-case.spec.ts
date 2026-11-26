@@ -1,3 +1,8 @@
+import { InMemoryFileStorage } from '../../../../shared/testing/in-memory-file-storage';
+import { pngHeader } from '../../../organization-profile/domain/testing/logo-fixtures';
+import { ReadOwnSignatureImageUseCase } from '../../../reviewer-signature/application/use-cases/read-own-signature-image.use-case';
+import { InMemoryReviewerSignatureRepository } from '../../../reviewer-signature/application/use-cases/testing/in-memory-reviewer-signature.repository';
+import { SignatureRequiredError } from '../../domain/errors/signature-required.error';
 import { InMemoryChecklistQuestionRepository } from '../../../checklist-question/application/use-cases/testing/in-memory-checklist-question.repository';
 import { InMemoryReviewTemplateRepository } from '../../../review-template/application/use-cases/testing/in-memory-review-template.repository';
 import { ReviewTemplate } from '../../../review-template/domain/review-template.entity';
@@ -67,15 +72,37 @@ function element(
 // SessionAccess (Decision 4, Layer 3); the domain-layer guard
 // (session.complete()) is the primary immutability enforcement, and the
 // repository's own `WHERE status='draft'` is the concurrency backstop.
+function sequenceIds(): { generate: () => string } {
+  let next = 0;
+  return { generate: () => `copy-${++next}` };
+}
+
 describe('CompleteReviewSessionUseCase', () => {
   let sessionRepository: InMemoryReviewSessionRepository;
   let elementRepository: InMemoryInspectableElementRepository;
   let templateRepository: InMemoryReviewTemplateRepository;
   let scopeChecker: FakeCommunityScopeChecker;
   let sessionAccess: SessionAccessService;
+  let signatures: InMemoryReviewerSignatureRepository;
+  let storage: InMemoryFileStorage;
   let useCase: CompleteReviewSessionUseCase;
+  const PNG = pngHeader(40, 12);
 
-  beforeEach(() => {
+  // The performer's own registered signature, as the upload use case leaves
+  // it: a file under `signatures/` and the row that records its key.
+  async function registerSignature(
+    userId: string,
+    key = `signatures/${userId}.png`,
+    content: Buffer = PNG,
+  ): Promise<void> {
+    await storage.put(key, content);
+    await signatures.save(userId, key);
+  }
+
+  beforeEach(async () => {
+    signatures = new InMemoryReviewerSignatureRepository();
+    storage = new InMemoryFileStorage();
+    await registerSignature('user-1');
     sessionRepository = new InMemoryReviewSessionRepository();
     elementRepository = new InMemoryInspectableElementRepository();
     templateRepository = new InMemoryReviewTemplateRepository(
@@ -88,6 +115,9 @@ describe('CompleteReviewSessionUseCase', () => {
       sessionRepository,
       templateRepository,
       elementRepository,
+      new ReadOwnSignatureImageUseCase(signatures, storage),
+      storage,
+      sequenceIds(),
     );
   });
 
@@ -346,5 +376,197 @@ describe('CompleteReviewSessionUseCase', () => {
     await expect(useCase.execute('session-1', actor)).rejects.toThrow(
       ReviewSessionNotFoundError,
     );
+  });
+
+  // review-session-management "Completion Is the Signing Act": the
+  // performer's signature is a precondition, checked after the domain guard
+  // and the coverage check.
+  describe('signature (reviewer-signature T2)', () => {
+    function coveredSession(performedById = 'user-1'): void {
+      const session = draftSession({ performedById });
+      session.recordEntry(
+        ElementReviewEntry.reviewed({
+          id: 'entry-1',
+          reviewSessionId: 'session-1',
+          inspectableElementId: 'element-1',
+          answers: [
+            new QuestionAnswer({
+              id: 'answer-1',
+              elementReviewEntryId: 'entry-1',
+              questionId: 'question-1',
+              answer: 'YES',
+            }),
+          ],
+          recordedAt: new Date(),
+        }),
+      );
+      sessionRepository.seed(session);
+      scopeChecker.assign(performedById, 'community-1');
+      templateRepository.seed(frozenTemplate());
+      elementRepository.seed(element());
+    }
+
+    async function storedKeys(): Promise<string[]> {
+      return (await storage.list('review-signatures')).map((f) => f.key);
+    }
+
+    it('copies the current signature to a fresh review-signatures/<sessionId>-<id>.<ext> and records the key', async () => {
+      coveredSession();
+
+      await useCase.execute('session-1', actor);
+
+      expect(await storedKeys()).toEqual([
+        'review-signatures/session-1-copy-1.png',
+      ]);
+      expect(
+        await storage.get('review-signatures/session-1-copy-1.png'),
+      ).toEqual(PNG);
+      expect(sessionRepository.signatureStorageKeyOf('session-1')).toBe(
+        'review-signatures/session-1-copy-1.png',
+      );
+    });
+
+    it('keeps the copy unchanged when the user replaces their signature afterwards', async () => {
+      coveredSession();
+      await useCase.execute('session-1', actor);
+
+      await registerSignature(
+        'user-1',
+        'signatures/new.png',
+        pngHeader(99, 99),
+      );
+
+      expect(
+        await storage.get('review-signatures/session-1-copy-1.png'),
+      ).toEqual(PNG);
+      expect(sessionRepository.signatureStorageKeyOf('session-1')).toBe(
+        'review-signatures/session-1-copy-1.png',
+      );
+    });
+
+    it('rejects a performer without a signature with SignatureRequiredError, leaving the session draft and storing nothing', async () => {
+      coveredSession('user-2');
+      const noSignature = { userId: 'user-2', role: actor.role };
+
+      await expect(useCase.execute('session-1', noSignature)).rejects.toThrow(
+        SignatureRequiredError,
+      );
+
+      const stored = await sessionRepository.findByIdForPerformer(
+        'session-1',
+        'user-2',
+      );
+      expect(stored?.status).toBe('draft');
+      expect(sessionRepository.signatureStorageKeyOf('session-1')).toBeNull();
+      expect(await storedKeys()).toEqual([]);
+    });
+
+    it('rejects when the recorded signature file is gone', async () => {
+      coveredSession();
+      await storage.delete('signatures/user-1.png');
+
+      await expect(useCase.execute('session-1', actor)).rejects.toThrow(
+        SignatureRequiredError,
+      );
+
+      const stored = await sessionRepository.findByIdForPerformer(
+        'session-1',
+        'user-1',
+      );
+      expect(stored?.status).toBe('draft');
+      expect(await storedKeys()).toEqual([]);
+    });
+
+    it('serves the new file when a concurrent replacement removed the first key', async () => {
+      coveredSession();
+      const replacement = pngHeader(7, 7);
+      await storage.put('signatures/new.png', replacement);
+      const find = jest
+        .spyOn(signatures, 'findByUserId')
+        .mockResolvedValueOnce({
+          userId: 'user-1',
+          storageKey: 'signatures/gone.png',
+          updatedAt: new Date(),
+        })
+        .mockResolvedValueOnce({
+          userId: 'user-1',
+          storageKey: 'signatures/new.png',
+          updatedAt: new Date(),
+        });
+
+      await useCase.execute('session-1', actor);
+
+      expect(find).toHaveBeenCalledTimes(2);
+      expect(
+        await storage.get('review-signatures/session-1-copy-1.png'),
+      ).toEqual(replacement);
+    });
+
+    it('checks the coverage before the signature: an unexplained gap wins over a missing signature', async () => {
+      sessionRepository.seed(draftSession());
+      scopeChecker.assign('user-1', 'community-1');
+      templateRepository.seed(frozenTemplate());
+      elementRepository.seed(element());
+      await storage.delete('signatures/user-1.png');
+
+      await expect(useCase.execute('session-1', actor)).rejects.toThrow(
+        UnreviewedElementsWithoutReasonError,
+      );
+    });
+
+    it('deletes the copy when the write loses the race', async () => {
+      coveredSession();
+      jest.spyOn(sessionRepository, 'complete').mockResolvedValue(false);
+
+      await expect(useCase.execute('session-1', actor)).rejects.toThrow(
+        ReviewSessionNotEditableError,
+      );
+
+      expect(await storedKeys()).toEqual([]);
+    });
+
+    // Two attempts on one session (double click, two tabs): the loser deletes
+    // only its own copy, never the file the winner recorded.
+    it("never deletes the winning attempt's copy when this attempt loses the race", async () => {
+      coveredSession();
+      const complete = jest.spyOn(sessionRepository, 'complete');
+      // The winner's write records its copy; the session is still loaded as
+      // a draft by the second attempt, whose write then finds it completed.
+      complete.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      await useCase.execute('session-1', actor);
+
+      await expect(useCase.execute('session-1', actor)).rejects.toThrow(
+        ReviewSessionNotEditableError,
+      );
+
+      expect(await storedKeys()).toEqual([
+        'review-signatures/session-1-copy-1.png',
+      ]);
+      expect(
+        await storage.get('review-signatures/session-1-copy-1.png'),
+      ).toEqual(PNG);
+    });
+
+    it('deletes the copy and rethrows when the write fails', async () => {
+      coveredSession();
+      const failure = new Error('db down');
+      jest.spyOn(sessionRepository, 'complete').mockRejectedValue(failure);
+
+      await expect(useCase.execute('session-1', actor)).rejects.toBe(failure);
+
+      expect(await storedKeys()).toEqual([]);
+    });
+
+    it('keeps the already-completed rejection ahead of the signature check', async () => {
+      sessionRepository.seed(
+        draftSession({ status: 'completed', completedAt: new Date() }),
+      );
+      scopeChecker.assign('user-1', 'community-1');
+      await storage.delete('signatures/user-1.png');
+
+      await expect(useCase.execute('session-1', actor)).rejects.toThrow(
+        ReviewSessionNotEditableError,
+      );
+    });
   });
 });

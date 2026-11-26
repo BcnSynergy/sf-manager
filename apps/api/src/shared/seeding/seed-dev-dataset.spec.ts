@@ -1,3 +1,4 @@
+import { detectSignatureFormat } from '../../modules/reviewer-signature/domain/reviewer-signature';
 // In-memory fakes implement async ports without awaiting anything.
 /* eslint-disable @typescript-eslint/require-await */
 import { EmailAlreadyInUseError } from '../../modules/users/domain/errors/email-already-in-use.error';
@@ -61,6 +62,12 @@ interface World {
   }[];
   opened: Parameters<DevSeedDeps['openSession']['execute']>[0][];
   completedIds: string[];
+  // reviewer-signature T2: the registered signature key per user id, the
+  // stored bytes per key, and the signature keys present when each session
+  // completed.
+  signatureKeys: Map<string, string>;
+  storedFiles: Map<string, Buffer>;
+  signedWhenCompleted: Record<string, string[]>;
   // Performer ids whose open call throws the given error.
   openFails: Map<string, Error>;
   // Errors the template use cases throw, by template id.
@@ -116,6 +123,9 @@ function buildWorld(
     recorded: [],
     opened: [],
     completedIds: [],
+    signatureKeys: new Map<string, string>(),
+    storedFiles: new Map<string, Buffer>(),
+    signedWhenCompleted: {},
     openFails: new Map<string, Error>(),
     setQuestionsFails: new Map<string, Error>(),
     activateFails: new Map<string, Error>(),
@@ -318,8 +328,30 @@ function buildWorld(
           .elementIds.push(elementId);
       },
     },
+    signatureRepository: {
+      findByUserId: async (userId) => {
+        const storageKey = world.signatureKeys.get(userId);
+        return storageKey
+          ? { userId, storageKey, updatedAt: new Date() }
+          : null;
+      },
+      save: async (userId, storageKey) => {
+        world.signatureKeys.set(userId, storageKey);
+        return { userId, storageKey, updatedAt: new Date() };
+      },
+    },
+    fileStorage: {
+      put: async (key, content) => {
+        world.storedFiles.set(key, content);
+      },
+    },
     completeSession: {
-      execute: async (sessionId) => {
+      execute: async (sessionId, actor) => {
+        world.signedWhenCompleted[sessionId] = world.signatureKeys.has(
+          actor.userId,
+        )
+          ? [world.signatureKeys.get(actor.userId)!]
+          : [];
         world.completedIds.push(sessionId);
         world.sessions.find((x) => x.id === sessionId)!.status = 'completed';
       },
@@ -1086,6 +1118,41 @@ describe('seedDevDataset sessions', () => {
       'session-3',
       'session-4',
     ]);
+  });
+
+  // reviewer-signature T2: completing a session requires the performer's
+  // signature, so the seed registers one for every seeded performer first.
+  it('registers a valid PNG signature for each performer before completing their sessions', async () => {
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    const performerIds = new Set(world.sessions.map((x) => x.performedById));
+    expect(performerIds.size).toBe(3);
+    for (const userId of performerIds) {
+      const key = world.signatureKeys.get(userId)!;
+      expect(key).toMatch(/^signatures\/.+\.png$/);
+      expect(detectSignatureFormat(world.storedFiles.get(key)!)).toEqual({
+        extension: 'png',
+        contentType: 'image/png',
+      });
+    }
+    for (const sessionId of world.completedIds) {
+      expect(world.signedWhenCompleted[sessionId]).toHaveLength(1);
+    }
+  });
+
+  it('keeps a signature the performer already registered and writes no file for it', async () => {
+    const world = buildWorld();
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+    const technicianId = idOfUser(world, TECHNICIAN);
+    world.signatureKeys.set(technicianId, 'signatures/qa-own.png');
+    world.storedFiles.clear();
+
+    await seedDevDataset(world.deps, DEV_DATASET, jest.fn());
+
+    expect(world.signatureKeys.get(technicianId)).toBe('signatures/qa-own.png');
+    expect(world.storedFiles.size).toBe(0);
   });
 
   it('records the planned outcomes by element name as the performer', async () => {

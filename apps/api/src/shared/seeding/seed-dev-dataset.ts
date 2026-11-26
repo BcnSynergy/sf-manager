@@ -31,6 +31,15 @@ import {
   CreateMaintenanceCompanyUseCase,
   type CreateMaintenanceCompanyInput,
 } from '../../modules/maintenance-company/application/use-cases/create-maintenance-company.use-case';
+import {
+  REVIEWER_SIGNATURE_REPOSITORY,
+  type ReviewerSignatureRepository,
+} from '../../modules/reviewer-signature/application/ports/reviewer-signature.repository.port';
+import { SIGNATURE_DIRECTORY } from '../../modules/reviewer-signature/domain/reviewer-signature';
+import {
+  FILE_STORAGE,
+  type FileStorage,
+} from '../application/ports/file-storage.port';
 import { UpdateOrganizationProfileUseCase } from '../../modules/organization-profile/application/use-cases/update-organization-profile.use-case';
 import {
   REVIEW_TEMPLATE_REPOSITORY,
@@ -89,6 +98,7 @@ import {
   type SessionPlan,
   type TemplatePlan,
 } from './dev-seed-plan';
+import { buildDevSignaturePng } from './dev-seed-signature';
 import { shouldSeedDevData } from './should-seed-dev-data';
 
 type Log = (line: string) => void;
@@ -162,6 +172,13 @@ export interface DevSeedDeps {
       actor: Actor,
     ): Promise<unknown>;
   };
+  // reviewer-signature T2: completing a session requires the performer's
+  // signature, so the seed registers one (file + row) when they have none.
+  signatureRepository: Pick<
+    ReviewerSignatureRepository,
+    'findByUserId' | 'save'
+  >;
+  fileStorage: Pick<FileStorage, 'put'>;
   completeSession: {
     execute(sessionId: string, actor: Actor): Promise<unknown>;
   };
@@ -210,6 +227,10 @@ export function resolveDevSeedDeps(ctx: {
     ),
     openSession: ctx.get(OpenReviewSessionUseCase),
     recordEntry: ctx.get(RecordEntryUseCase),
+    signatureRepository: ctx.get<ReviewerSignatureRepository>(
+      REVIEWER_SIGNATURE_REPOSITORY,
+    ),
+    fileStorage: ctx.get<FileStorage>(FILE_STORAGE),
     completeSession: ctx.get(CompleteReviewSessionUseCase),
   };
 }
@@ -634,6 +655,7 @@ async function seedSessions(
       `${plan.kind} session of ${where}`,
       log,
       async () => {
+        await ensureDevSignature(deps, performerId);
         const changed = await playSession(
           deps,
           template,
@@ -664,6 +686,21 @@ function templateOf(data: DevDataset, session: DevSession): DevTemplate {
     );
   }
   return template;
+}
+
+// A performer who already has a signature, the seed's or their own, keeps it:
+// the seed never replaces it. Otherwise the dev signature is stored and
+// recorded exactly as an upload leaves it.
+async function ensureDevSignature(
+  deps: DevSeedDeps,
+  userId: string,
+): Promise<void> {
+  if (await deps.signatureRepository.findByUserId(userId)) {
+    return;
+  }
+  const key = `${SIGNATURE_DIRECTORY}/${userId}.png`;
+  await deps.fileStorage.put(key, buildDevSignaturePng());
+  await deps.signatureRepository.save(userId, key);
 }
 
 // Records the planned entries the session lacks, then completes it when the

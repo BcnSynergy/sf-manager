@@ -32,6 +32,14 @@ function orderByCompletedHistory(a: ReviewSession, b: ReviewSession): number {
 // OpenDraftAlreadyExistsError).
 export class InMemoryReviewSessionRepository implements ReviewSessionRepository {
   private readonly sessionsById = new Map<string, ReviewSession>();
+  // reviewer-signature T2: the session-owned signature copy recorded by
+  // complete(); the aggregate does not carry it.
+  private readonly signatureKeys = new Map<string, string>();
+
+  // Test helper: the signature key complete() recorded, null when none.
+  signatureStorageKeyOf(id: string): string | null {
+    return this.signatureKeys.get(id) ?? null;
+  }
 
   seed(session: ReviewSession): void {
     this.sessionsById.set(session.id, session);
@@ -110,11 +118,16 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
     return Promise.resolve(true);
   }
 
-  complete(id: string, at: Date): Promise<boolean> {
+  complete(
+    id: string,
+    at: Date,
+    signatureStorageKey: string,
+  ): Promise<boolean> {
     const session = this.sessionsById.get(id);
     if (!session || session.status !== 'draft') {
       return Promise.resolve(false);
     }
+    this.signatureKeys.set(id, signatureStorageKey);
     this.sessionsById.set(
       id,
       new ReviewSession({

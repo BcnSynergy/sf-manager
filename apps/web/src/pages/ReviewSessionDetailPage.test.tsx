@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useParams } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import '../i18n';
+import i18n from '../i18n';
 import { expectAlertFollowsLanguage } from '../test/expect-alert-follows-language';
 import { ApiError } from '../api/client';
 import * as reviewSessionApi from '../api/review-session';
@@ -396,6 +396,94 @@ describe('ReviewSessionDetailPage', () => {
     const gapLink = await screen.findByTestId('review-session-detail-gap-link-23456789AB');
     expect(gapLink).toHaveAttribute('href', `/review-sessions/${SESSION_ID}/elements/23456789AB`);
     expect(screen.getByTestId('review-session-detail-gap-link-CDEFGHJKMN')).toBeInTheDocument();
+  });
+
+  // reviewer-signature T2 (review-session-ui "Sign and Close Without a
+  // Signature Links to My Signature"): the error names the cause and links to
+  // the page where the signature is registered.
+  it('shows the signature-required message with a link to My signature on SIGNATURE_REQUIRED', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedCompleteReviewSession.mockRejectedValue(new ApiError(409, 'SIGNATURE_REQUIRED'));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    const error = await screen.findByTestId('review-session-detail-complete-error');
+    expect(error).toHaveTextContent(i18n.getFixedT('en')('reviewSession.error.signatureRequired'));
+    const link = screen.getByTestId('review-session-detail-signature-link');
+    expect(link).toHaveAttribute('href', '/my-signature');
+    expect(link).toHaveTextContent('My signature');
+    // The session stays a draft: nothing about it changed.
+    expect(screen.getByTestId('review-session-detail-complete')).toBeInTheDocument();
+    expect(screen.queryByTestId('review-session-detail-unreviewed-gaps')).not.toBeInTheDocument();
+  });
+
+  it.each(['en', 'es', 'ca'])(
+    'shows the signature-required message and link in %s',
+    async (language) => {
+      mockedReadReviewSession.mockResolvedValue(draftSession);
+      mockedCompleteReviewSession.mockRejectedValue(new ApiError(409, 'SIGNATURE_REQUIRED'));
+      renderPage();
+      fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+      fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+      await screen.findByTestId('review-session-detail-complete-error');
+
+      await act(() => i18n.changeLanguage(language));
+      try {
+        const t = i18n.getFixedT(language);
+        expect(screen.getByTestId('review-session-detail-complete-error')).toHaveTextContent(
+          t('reviewSession.error.signatureRequired'),
+        );
+        expect(screen.getByTestId('review-session-detail-signature-link')).toHaveTextContent(
+          t('reviewSession.detail.mySignatureLink'),
+        );
+        if (language !== 'en') {
+          const en = i18n.getFixedT('en');
+          expect(t('reviewSession.error.signatureRequired')).not.toBe(
+            en('reviewSession.error.signatureRequired'),
+          );
+          expect(t('reviewSession.detail.mySignatureLink')).not.toBe(
+            en('reviewSession.detail.mySignatureLink'),
+          );
+        }
+      } finally {
+        await act(() => i18n.changeLanguage('en'));
+      }
+    },
+  );
+
+  it('shows no signature link for another completion error', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedCompleteReviewSession.mockRejectedValue(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-complete-error');
+    expect(screen.queryByTestId('review-session-detail-signature-link')).not.toBeInTheDocument();
+  });
+
+  it('drops the signature link when completing is tried again', async () => {
+    mockedReadReviewSession.mockResolvedValue(draftSession);
+    mockedCompleteReviewSession
+      .mockRejectedValueOnce(new ApiError(409, 'SIGNATURE_REQUIRED'))
+      .mockRejectedValueOnce(new ApiError(0));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByTestId('review-session-detail-complete'));
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    await screen.findByTestId('review-session-detail-signature-link');
+    fireEvent.click(screen.getByTestId('review-session-detail-complete'));
+    expect(screen.queryByTestId('review-session-detail-signature-link')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+
+    await screen.findByTestId('review-session-detail-complete-error');
+    expect(screen.queryByTestId('review-session-detail-signature-link')).not.toBeInTheDocument();
   });
 
   // EN-209: the alert stores the i18n key, so it follows a language switch.

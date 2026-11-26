@@ -67,6 +67,8 @@ export function ReviewSessionDetailPage() {
     clear: clearCompleteError,
   } = useAlertMessage();
   const [unreviewedCodes, setUnreviewedCodes] = useState<string[] | null>(null);
+  // reviewer-signature T2: the completion was refused for want of a signature.
+  const [signatureRequired, setSignatureRequired] = useState(false);
 
   const [pendingDiscard, setPendingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -133,6 +135,7 @@ export function ReviewSessionDetailPage() {
   function requestComplete() {
     clearCompleteError();
     setUnreviewedCodes(null);
+    setSignatureRequired(false);
     setPendingComplete(true);
   }
 
@@ -151,6 +154,7 @@ export function ReviewSessionDetailPage() {
         const codes = apiError.extra?.elementCodes;
         setUnreviewedCodes(Array.isArray(codes) ? (codes as string[]) : []);
       }
+      setSignatureRequired(apiError.code === 'SIGNATURE_REQUIRED');
       showCompleteError(mapApiErrorToMessageKey(apiError));
     } finally {
       setCompleting(false);
@@ -248,6 +252,17 @@ export function ReviewSessionDetailPage() {
           testId="review-session-detail-complete-error"
           message={t(completeError)}
         />
+      )}
+      {isDraft && signatureRequired && (
+        <p>
+          <Link
+            to="/my-signature"
+            className="sf-btn"
+            data-testid="review-session-detail-signature-link"
+          >
+            {t('reviewSession.detail.mySignatureLink')}
+          </Link>
+        </p>
       )}
       {isDraft && unreviewedCodes && unreviewedCodes.length > 0 && (
         <div className="sf-panel" data-testid="review-session-detail-unreviewed-gaps">

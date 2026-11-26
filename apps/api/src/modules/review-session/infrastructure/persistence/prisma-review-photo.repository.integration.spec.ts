@@ -341,7 +341,13 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     const elementId = await createElement();
     const stored = photo(sessionId, elementId);
     await photos.addToDraft(stored, 3);
-    await expect(sessions.complete(sessionId, new Date())).resolves.toBe(true);
+    await expect(
+      sessions.complete(
+        sessionId,
+        new Date(),
+        `review-signatures/${sessionId}-test.png`,
+      ),
+    ).resolves.toBe(true);
 
     await expect(
       photos.addToDraft(photo(sessionId, elementId), 3),
@@ -419,7 +425,11 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     const sessionId = await createDraft();
     const elementId = await createElement();
     await photos.addToDraft(photo(sessionId, elementId), 3);
-    await sessions.complete(sessionId, new Date());
+    await sessions.complete(
+      sessionId,
+      new Date(),
+      `review-signatures/${sessionId}-test.png`,
+    );
 
     await expect(photos.discardDraftWithPhotoKeys(sessionId)).resolves.toEqual({
       outcome: 'not_editable',
@@ -580,7 +590,12 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
 
     const [completed, added] = await inLockOrder(
       sessionId,
-      () => sessions.complete(sessionId, new Date()),
+      () =>
+        sessions.complete(
+          sessionId,
+          new Date(),
+          `review-signatures/${sessionId}-test.png`,
+        ),
       () => otherPhotos.addToDraft(photo(sessionId, elementId), 3),
     );
 
@@ -599,7 +614,12 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     const [added, completed] = await inLockOrder(
       sessionId,
       () => otherPhotos.addToDraft(early, 3),
-      () => sessions.complete(sessionId, new Date()),
+      () =>
+        sessions.complete(
+          sessionId,
+          new Date(),
+          `review-signatures/${sessionId}-test.png`,
+        ),
     );
 
     expect(added).toBe('added');
@@ -620,9 +640,13 @@ describe('PrismaReviewPhotoRepository (integration)', () => {
     const inCompleted = photo(completedId, elementId);
     await photos.addToDraft(inDraft, 3);
     await photos.addToDraft(inCompleted, 3);
-    await expect(sessions.complete(completedId, new Date())).resolves.toBe(
-      true,
-    );
+    await expect(
+      sessions.complete(
+        completedId,
+        new Date(),
+        `review-signatures/${completedId}-test.png`,
+      ),
+    ).resolves.toBe(true);
     const orphanKey = `review-photos/${idGenerator.generate()}.jpg`;
 
     const referenced = await photos.findReferencedStorageKeys([

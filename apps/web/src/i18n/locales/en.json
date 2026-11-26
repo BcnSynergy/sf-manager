@@ -467,6 +467,7 @@
       "completeConfirmMessage": "The review will be closed and can no longer be modified. This cannot be undone.",
       "completeError": "This session could not be completed.",
       "unreviewedGapsTitle": "These elements still need a reason before completing:",
+      "mySignatureLink": "My signature",
       "unreviewedGapsElementLink": "Element {{code}}",
       "discardLabel": "Discard draft",
       "discardConfirmTitle": "Discard draft",
@@ -525,6 +526,7 @@
       "answersDoNotMatchTemplate": "Answer every question before saving.",
       "missingObservations": "Enter a reason.",
       "missingAnswers": "Answer every question before saving.",
+      "signatureRequired": "Register your signature before signing a review.",
       "unreviewedElementsWithoutReason": "Some elements still need a reason before completing.",
       "validationFailed": "Enter valid session details."
     }

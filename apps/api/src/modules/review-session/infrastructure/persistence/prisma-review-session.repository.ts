@@ -240,10 +240,18 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
 
   // `WHERE status='draft'`; 0 rows => false, mapped to 409 upstream
   // (design.md Decision 8 — the concurrency backstop for a lost race).
-  async complete(id: string, at: Date): Promise<boolean> {
+  async complete(
+    id: string,
+    at: Date,
+    signatureStorageKey: string,
+  ): Promise<boolean> {
     const result = await this.prisma.reviewSession.updateMany({
       where: { id, status: 'draft' },
-      data: { status: 'completed', completedAt: at },
+      data: {
+        status: 'completed',
+        completedAt: at,
+        signatureStorageKey,
+      },
     });
 
     return result.count > 0;

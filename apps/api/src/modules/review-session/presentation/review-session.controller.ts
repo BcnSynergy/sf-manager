@@ -42,6 +42,7 @@ import { MissingObservationsError } from '../domain/errors/missing-observations.
 import { OpenDraftAlreadyExistsError } from '../domain/errors/open-draft-already-exists.error';
 import { ReviewSessionNotEditableError } from '../domain/errors/review-session-not-editable.error';
 import { ReviewSessionNotFoundError } from '../domain/errors/review-session-not-found.error';
+import { SignatureRequiredError } from '../domain/errors/signature-required.error';
 import { UnreviewedElementsWithoutReasonError } from '../domain/errors/unreviewed-elements-without-reason.error';
 import { CompleteReviewSessionUseCase } from '../application/use-cases/complete-review-session.use-case';
 import { DiscardReviewSessionUseCase } from '../application/use-cases/discard-review-session.use-case';
@@ -448,6 +449,13 @@ export class ReviewSessionController {
         error.message,
         'UNREVIEWED_ELEMENTS_WITHOUT_REASON',
         { elementCodes: error.elementCodes },
+      );
+    }
+    if (error instanceof SignatureRequiredError) {
+      return buildCodedError(
+        HttpStatus.CONFLICT,
+        error.message,
+        'SIGNATURE_REQUIRED',
       );
     }
     return error;

@@ -467,6 +467,7 @@
       "completeConfirmMessage": "La revisió es tancarà i ja no es podrà modificar. Això no es pot desfer.",
       "completeError": "Aquesta sessió no s'ha pogut completar.",
       "unreviewedGapsTitle": "Aquests elements encara necessiten un motiu abans de completar:",
+      "mySignatureLink": "La meva signatura",
       "unreviewedGapsElementLink": "Element {{code}}",
       "discardLabel": "Descartar esborrany",
       "discardConfirmTitle": "Descartar esborrany",
@@ -525,6 +526,7 @@
       "answersDoNotMatchTemplate": "Respon totes les preguntes abans de desar.",
       "missingObservations": "Introdueix un motiu.",
       "missingAnswers": "Respon totes les preguntes abans de desar.",
+      "signatureRequired": "Registra la teva signatura abans de signar una revisió.",
       "unreviewedElementsWithoutReason": "Alguns elements encara necessiten un motiu abans de completar.",
       "validationFailed": "Introdueix dades de sessió vàlides."
     }

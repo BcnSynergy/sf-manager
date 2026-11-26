@@ -123,7 +123,11 @@ describe('ReviewSession.performedByCompanyId — no write path beyond create() e
     });
     await repository.create(session);
 
-    const completed = await repository.complete(session.id, new Date());
+    const completed = await repository.complete(
+      session.id,
+      new Date(),
+      `review-signatures/${session.id}-test.png`,
+    );
     expect(completed).toBe(true);
 
     const row = await prisma.reviewSession.findUnique({
