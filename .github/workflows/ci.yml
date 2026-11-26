@@ -182,8 +182,8 @@ jobs:
           # --no-install: fail instead of fetching a CLI the image lacks.
           docker run --rm -e DATABASE_URL=postgresql://check@localhost/check "$api" \
             sh -c "node -e \"require('argon2'); require('@prisma/client')\" && npx --no-install prisma --version"
-          # The Caddyfile's only placeholder, SITE_ADDRESS, defaults to
-          # localhost; the stack's other settings are not read by Caddy.
+          # The Caddyfile has no placeholder: it listens on :80 behind the
+          # edge proxy, whose own Caddyfile the smoke test runs.
           docker run --rm "$web" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - uses: actions/upload-artifact@v7
         with:

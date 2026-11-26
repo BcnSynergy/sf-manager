@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how SF-Manager runs in production: one Docker Compose stack on a single server, with Postgres, the API, and Caddy as the only public entry point for both the web app and the API.
+Defines how SF-Manager runs in production: one Docker Compose stack on a single server, with Postgres, the API, and Caddy serving both the web app and the API on one origin, behind an edge proxy that is the server's only public entry point.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ The repository MUST provide `docker-compose.prod.yml`, which starts Postgres, th
 
 #### Scenario: First start
 
-- GIVEN a server with Docker, a checkout of a commit that was green on `main`, and a filled-in `prod.env` whose `IMAGE_TAG` is `sha-<short SHA of that commit>`
+- GIVEN a server with Docker and the edge proxy running (see "Single public origin"), a checkout of a commit that was green on `main`, and a filled-in `prod.env` whose `IMAGE_TAG` is `sha-<short SHA of that commit>`
 - WHEN the operator runs `docker compose -f docker-compose.prod.yml --env-file prod.env pull api web` and then `docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build`
 - THEN Postgres, the API, the backup service, the off-site copy service and Caddy are running, the API and web from the images published for that commit, with no image built on the server
 - AND `https://<SITE_ADDRESS>/api/health` returns 200 with `{"status":"ok","db":"ok"}`
@@ -116,7 +116,7 @@ The API container MUST apply pending Prisma migrations (`prisma migrate deploy`)
 
 ### Requirement: API health in the stack
 
-The API service MUST declare a Compose healthcheck that passes only while the API's `/health` route answers 200, that is, while the API serves requests and reaches the database. Its start period MUST allow pending migrations to run before a failed check counts. Caddy (the `web` service) MUST start only once the API is healthy, so the start command fails, naming the unhealthy API, instead of serving 502 for `/api/*` while the API cannot start.
+The API service MUST declare a Compose healthcheck that passes only while the API's `/health` route answers 200, that is, while the API serves requests and reaches the database. Its start period MUST allow pending migrations to run before a failed check counts. Caddy (the `web` service) MUST start only once the API is healthy, so the start command fails, naming the unhealthy API, instead of forwarding `/api/*` to an API that cannot start.
 
 #### Scenario: Healthy start
 
@@ -225,7 +225,7 @@ The operator MUST be able to create or reset the system admin inside the product
 
 ### Requirement: Single public origin
 
-Caddy MUST serve the built web app and forward `/api/*` to the API with the `/api` prefix removed, on the same origin. The web app MUST be built to call the API at `/api`. A path with no matching file MUST return the web app's `index.html`. Only Caddy SHALL publish host ports (80 and 443); Postgres and the API MUST NOT.
+Caddy MUST serve the built web app and forward `/api/*` to the API with the `/api` prefix removed, on the same origin. The web app MUST be built to call the API at `/api`. A path with no matching file MUST return the web app's `index.html`. The server's only public entry point MUST be the edge proxy (`deploy/edge`), its own Compose project and the only service that publishes host ports (80 and 443): it MUST forward each site to its stack's Caddy (the `web` service) over a shared Docker network, passing the `Host` header on unchanged. No service of the production stack, Caddy included, SHALL publish a host port. The edge proxy MUST be started before the stack, which joins its network, and a deploy of the stack MUST NOT restart it. While the stack's Caddy is being recreated by a deploy, the edge proxy MUST hold incoming requests for up to 30 seconds instead of failing them at once. (Changed by `demo-instance` T1: before, the stack's Caddy published ports 80 and 443 itself.)
 
 #### Scenario: API through the proxy
 
@@ -247,19 +247,25 @@ Caddy MUST serve the built web app and forward `/api/*` to the API with the `/ap
 - AND the refresh-token cookie is `HttpOnly`, `Secure` and `SameSite=Strict` with `Path=/api/auth`, so the browser sends it through the proxy to the auth routes (`/api/auth/...`, including refresh and logout) and to no other API route (TD-5)
 - AND the following `/api/auth/me` request on the same origin is authenticated
 
+#### Scenario: Only the edge proxy publishes ports
+
+- GIVEN the edge proxy and the production stack are running
+- WHEN the published host ports are listed
+- THEN only the edge proxy publishes any (80 and 443), and no service of the production stack does
+
 ### Requirement: HTTPS
 
-Caddy MUST obtain and renew the HTTPS certificate for `SITE_ADDRESS` itself and MUST redirect plain HTTP to HTTPS. Its certificate data MUST persist in a named volume.
+The edge proxy MUST obtain and renew the HTTPS certificate for each site it serves itself (for production, `SFMANAGER_SITE` in its `edge.env`, which MUST equal `SITE_ADDRESS` in `prod.env`), MUST terminate HTTPS and MUST redirect plain HTTP to HTTPS. Its certificate data MUST persist in a named volume of its own Compose project. The stack's Caddy serves plain HTTP on the shared network only. (Changed by `demo-instance` T1: before, the stack's Caddy did this.)
 
 #### Scenario: Plain HTTP
 
-- GIVEN the production stack is running
+- GIVEN the edge proxy and the production stack are running
 - WHEN a client requests `http://<SITE_ADDRESS>/`
-- THEN Caddy redirects it to `https://<SITE_ADDRESS>/`
+- THEN the edge proxy redirects it to `https://<SITE_ADDRESS>/`
 
 ### Requirement: Security headers
 
-Every HTTPS response from Caddy MUST carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. When `SITE_ADDRESS` is not `localhost`, every HTTPS response MUST also carry `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload`; on `localhost` it MUST NOT, so the browser keeps allowing plain HTTP for other localhost ports. Every response outside `/api/*` MUST carry the Content Security Policy `default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, and the web app MUST work under it without the browser reporting a violation.
+The stack's Caddy MUST set these headers, and the edge proxy MUST pass them on unchanged. Every HTTPS response from the stack MUST carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. When `SITE_ADDRESS` is not `localhost`, every HTTPS response MUST also carry `Strict-Transport-Security: max-age=31536000`, without `includeSubDomains` or `preload`; on `localhost` it MUST NOT, so the browser keeps allowing plain HTTP for other localhost ports. Every response outside `/api/*` MUST carry the Content Security Policy `default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, and the web app MUST work under it without the browser reporting a violation.
 
 #### Scenario: Web app response
 
@@ -275,9 +281,9 @@ Every HTTPS response from Caddy MUST carry `X-Content-Type-Options: nosniff` and
 
 #### Scenario: Local stack
 
-- GIVEN the production stack is running with `SITE_ADDRESS=localhost`
+- GIVEN the edge proxy and the production stack are running with `SFMANAGER_SITE=localhost` and `SITE_ADDRESS=localhost`
 - WHEN a client requests `https://localhost/`
-- THEN the response carries no `Strict-Transport-Security` header
+- THEN the response carries `nosniff`, the referrer policy and the CSP, and no `Strict-Transport-Security` header
 
 #### Scenario: No violations
 
@@ -287,13 +293,19 @@ Every HTTPS response from Caddy MUST carry `X-Content-Type-Options: nosniff` and
 
 ### Requirement: Proxy trust
 
-The production stack MUST set `TRUST_PROXY=1`, because Caddy is the only hop in front of the API and replaces any client-sent `X-Forwarded-For`.
+The production stack MUST set `TRUST_PROXY=2`, because two hops stand in front of the API: the edge proxy, which replaces any client-sent `X-Forwarded-For` with the client's address, and the stack's Caddy, which MUST keep the `X-Forwarded-For` it receives from the edge proxy and append the edge proxy's address. The stack's Caddy MAY trust that header from any private address, since it publishes no port and only Docker networks reach it. (Changed by `demo-instance` T1: before, Caddy was the only hop and the value was `1`.)
 
 #### Scenario: Spoofed forwarding header
 
-- GIVEN the production stack is running
+- GIVEN the edge proxy and the production stack are running
 - WHEN one client sends failed login attempts, each with a different email and a different `X-Forwarded-For` value
 - THEN they count against one client key, and the login limit blocks that client once it is reached
+
+#### Scenario: Another client is not limited
+
+- GIVEN one client has reached the login limit through the edge proxy
+- WHEN a client from another address logs in with valid credentials
+- THEN the login succeeds, because each client's own address is counted, not the edge proxy's or the stack's Caddy's
 
 ### Requirement: API documentation off in production
 
@@ -420,7 +432,7 @@ When configured, the stack MUST copy every complete dump and files archive that 
 
 ### Requirement: Images built and published by CI
 
-CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the whole stack on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the API container reports `healthy`, an API that exits before it serves makes the start command fail naming it with Caddy not started, the web app answers 200, the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, the off-site copy service, left unconfigured, reports that it is disabled and keeps running, the documented admin seed command leaves exactly one user, the seeded admin with role `SYSTEM_ADMIN`, who can log in, and a dump taken before the newest migration restores, together with its uploaded files, owned by the API's user, and the API then applies that migration and serves `/api/health` ok. `deploy/smoke-test.sh` MUST run the same check locally. CI MUST also fail unless ShellCheck passes on every script in `deploy/`, and unless the backup and off-site copy scripts pass their tests, which run them against throwaway containers and cover the scenarios of "Database backups" and "Off-site backup copies"; `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` MUST run those tests locally. After CI passes on a push to `main`, separate jobs, the only ones allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Each published tag MUST be one multi-platform image for `linux/amd64` and `linux/arm64`, each platform built natively on a runner of that architecture, and on that runner, before any tag points at them, the platform's API image MUST load its native modules and run its Prisma CLI, and its web image's Caddy MUST accept its configuration. A tag MUST NOT be created or moved unless both platforms' images were built. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
+CI MUST build the API and web images from `docker-compose.prod.yml` on every pull request and every push to `main`, start the edge proxy and the whole stack behind it on `https://localhost` with throwaway secrets, and fail unless `/api/health` returns `{"status":"ok","db":"ok"}`, the API container reports `healthy`, an API that exits before it serves makes the start command fail naming it with Caddy not started, the web app answers 200 with the headers of "Security headers" for `localhost`, plain HTTP is redirected to HTTPS, a client that reached the login limit does not limit a client from another address ("Proxy trust"), the API can write to `FILE_STORAGE_DIR` and the backup service writes a dump and a files archive, the off-site copy service, left unconfigured, reports that it is disabled and keeps running, the documented admin seed command leaves exactly one user, the seeded admin with role `SYSTEM_ADMIN`, who can log in, and a dump taken before the newest migration restores, together with its uploaded files, owned by the API's user, and the API then applies that migration and serves `/api/health` ok. `deploy/smoke-test.sh` MUST run the same check locally. CI MUST also fail unless ShellCheck passes on every script in `deploy/`, and unless the backup and off-site copy scripts pass their tests, which run them against throwaway containers and cover the scenarios of "Database backups" and "Off-site backup copies"; `deploy/test-postgres-backup.sh` and `deploy/test-offsite-copy.sh` MUST run those tests locally. After CI passes on a push to `main`, separate jobs, the only ones allowed to write packages, MUST push both images to GitHub Container Registry as `ghcr.io/bcnsynergy/sf-manager-api` and `ghcr.io/bcnsynergy/sf-manager-web`, each tagged `sha-<short commit SHA>`, and move their `main` tag to that build only while `main` still points at that commit, so a slower run for an older commit never moves it back. Each published tag MUST be one multi-platform image for `linux/amd64` and `linux/arm64`, each platform built natively on a runner of that architecture, and on that runner, before any tag points at them, the platform's API image MUST load its native modules and run its Prisma CLI, and its web image's Caddy MUST accept its configuration. A tag MUST NOT be created or moved unless both platforms' images were built. Both images MUST name this repository as their source, so the packages are linked to it. Pull requests MUST NOT publish images.
 
 #### Scenario: Broken image fails the PR
 

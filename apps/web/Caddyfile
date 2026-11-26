@@ -1,7 +1,20 @@
-# The stack's only public entry point (odd/tasks/deployment.md, S5-S7).
-# SITE_ADDRESS is the public domain, for which Caddy obtains and renews an
-# HTTPS certificate on its own; `localhost` gets a locally trusted one.
-{$SITE_ADDRESS:localhost} {
+# The stack's web server (odd/tasks/deployment.md, S5-S7): one origin for the
+# web app and the API. It publishes no port: the edge proxy (deploy/edge)
+# owns ports 80 and 443, terminates HTTPS and forwards each request here over
+# the sf-edge network on plain HTTP, Host header unchanged
+# (odd/tasks/demo-instance.md, T1).
+{
+	auto_https off
+	servers {
+		# Only Docker networks reach this server, so every peer is the edge
+		# proxy or another container: keep the X-Forwarded-For the edge proxy
+		# set and append its address, so the API finds the real client two
+		# hops back (TRUST_PROXY=2).
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
 	encode zstd gzip
 
 	# Security headers (EN-94; spec `deployment`, "Security headers").
@@ -14,8 +27,9 @@
 	# refuse plain HTTP for every localhost port, the Vite dev server included.
 	# An IP address or a *.localhost name still gets it (browsers ignore HSTS
 	# for IPs). No includeSubDomains or preload, so other subdomains stay
-	# unaffected. The automatic HTTP->HTTPS redirect gets none of these headers:
-	# Caddy serves it outside this site block.
+	# unaffected. The Host header is the public one, since the edge proxy passes
+	# it on. The HTTP->HTTPS redirect gets none of these headers: the edge proxy
+	# serves it.
 	@hsts not host localhost
 	header @hsts Strict-Transport-Security "max-age=31536000"
 
@@ -27,8 +41,9 @@
 	header @web Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 	# The API keeps its routes: /api/auth/login reaches it as /auth/login.
-	# Caddy replaces any client-sent X-Forwarded-For with the real client
-	# address, which is why the API trusts exactly one hop (TRUST_PROXY=1).
+	# The edge proxy replaces any client-sent X-Forwarded-For with the real
+	# client address and this server appends the edge proxy's, which is why the
+	# API trusts exactly two hops (TRUST_PROXY=2).
 	handle_path /api/* {
 		reverse_proxy api:3000
 	}

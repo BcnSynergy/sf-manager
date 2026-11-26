@@ -1,27 +1,34 @@
 #!/bin/sh
 # Smoke test for the production stack (EN-91; spec `deployment`, "Images
 # built and published by CI"). Builds the images from docker-compose.prod.yml,
-# starts the whole stack on https://localhost with throwaway secrets, checks
-# that the API and the web app answer, that Docker reports the API healthy
+# starts the edge proxy (deploy/edge) and the whole stack behind it on
+# https://localhost with throwaway secrets, checks that the API and the web
+# app answer through the edge proxy with the security headers, that plain
+# HTTP redirects to HTTPS, that the login limit counts the real client
+# address (TRUST_PROXY=2), that Docker reports the API healthy
 # (EN-92), that the API can write uploaded
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), that the documented admin seed
 # command creates a system admin who can log in (EN-93), and that a dump taken before the
 # newest migration restores, with its uploaded files, and the API then
-# applies that migration (EN-105, EN-120), then removes the stack and its
-# volumes. CI runs it on every PR and push to main; run it from the
-# repository root:
+# applies that migration (EN-105, EN-120), then removes the stack, the edge
+# proxy and their volumes. CI runs it on every PR and push to main; run it
+# from the repository root:
 #
 #   sh deploy/smoke-test.sh
 #
-# Ports 80 and 443 must be free. It uses its own Compose project and
+# Ports 80 and 443 must be free, and no other edge proxy (its sf-edge
+# network) may exist on the machine. It uses its own Compose projects and
 # volumes, and a Compose override puts backups in a volume instead of the
 # checkout's backups/, so nothing lands next to a real stack's backups
 # (EN-119).
 set -eu
 
 project=sf-manager-smoke
+edge_project=sf-edge-smoke
+edge_env=$(mktemp)
+echo 'SFMANAGER_SITE=localhost' >"$edge_env"
 override=$(mktemp)
 cat >"$override" <<'EOF'
 services:
@@ -61,9 +68,17 @@ compose() {
     --env-file "$env_file" "$@"
 }
 
+edge() {
+  docker compose -p "$edge_project" -f deploy/edge/docker-compose.yml \
+    --env-file "$edge_env" "$@"
+}
+
+# The stack first: the edge proxy's network cannot go while the stack's web
+# container is attached to it.
 cleanup() {
   compose down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$env_file" "$override" "$failing_api"
+  edge down -v --remove-orphans >/dev/null 2>&1 || true
+  rm -f "$env_file" "$override" "$failing_api" "$edge_env"
 }
 trap cleanup EXIT
 # dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
@@ -73,9 +88,12 @@ fail() {
   echo "smoke: $1" >&2
   compose ps -a >&2 || true
   compose logs --tail 40 >&2 || true
+  edge logs --tail 20 >&2 || true
   exit 1
 }
 
+# The edge proxy creates the sf-edge network the stack joins.
+edge up -d || fail "docker compose up of the edge proxy failed"
 compose up -d --build || fail "docker compose up failed"
 
 # The API applies migrations before it listens, so allow it a while. $1
@@ -113,6 +131,31 @@ echo "smoke: api container healthy"
 status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' https://localhost/) || status=000
 [ "$status" = 200 ] || fail "the web app answered $status, expected 200"
 echo "smoke: web app 200"
+
+# The web service's Caddy sets the security headers behind the edge proxy
+# (spec `deployment`, "Security headers"). No HSTS on localhost: it keys on
+# the Host header, so this also shows the edge proxy passes Host on.
+headers=$(curl -sk --max-time 10 -D - -o /dev/null https://localhost/ | tr -d '\r') ||
+  fail "could not read the web app's headers"
+for header in 'x-content-type-options: nosniff' \
+  'referrer-policy: strict-origin-when-cross-origin' \
+  "content-security-policy: default-src 'self'"; do
+  printf '%s\n' "$headers" | grep -qi "^$header" ||
+    fail "the web app's response lacks '$header'"
+done
+if printf '%s\n' "$headers" | grep -qi '^strict-transport-security:'; then
+  fail "https://localhost/ carries HSTS (is the Host header lost on the way?)"
+fi
+echo "smoke: security headers through the edge proxy, no HSTS on localhost"
+
+# The edge proxy redirects plain HTTP to HTTPS (spec `deployment`, "HTTPS").
+redirect=$(curl -s --max-time 10 -o /dev/null -w '%{http_code} %{redirect_url}' \
+  http://localhost/) || redirect=000
+case $redirect in
+  '301 https://localhost/' | '308 https://localhost/') ;;
+  *) fail "http://localhost/ answered '$redirect', expected a redirect to https://localhost/" ;;
+esac
+echo "smoke: plain HTTP redirects to HTTPS"
 
 # Uploaded files (the organization logo) go to the api-files volume, so the
 # API's user must be able to write there (spec `deployment`, "Persistent
@@ -169,6 +212,39 @@ status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' \
   https://localhost/api/auth/login) || status=000
 [ "$status" = 200 ] || fail "the seeded admin's login answered $status, expected 200"
 echo "smoke: admin seed created the system admin, who can log in"
+
+# The login limit counts per client address (spec `authentication`, "Client
+# IP Resolution for Rate Limiting"), which the API reads two hops back,
+# through the edge proxy and the web service's Caddy (TRUST_PROXY=2). Use up
+# this host's limit with failed logins (a new email each time, so the
+# per-email limit never applies), then log in from another address: a
+# container on the sf-edge network. Were one address counted for every
+# client (the edge proxy's or the web service's), that login would be
+# refused too. A spoofed X-Forwarded-For must not spread the host's
+# attempts over several keys either: the edge proxy replaces it.
+limited=''
+attempt=0
+while [ "$attempt" -lt 15 ]; do
+  attempt=$((attempt + 1))
+  status=$(curl -sk --max-time 10 -o /dev/null -w '%{http_code}' \
+    -H 'Content-Type: application/json' -H "X-Forwarded-For: 198.51.100.$attempt" \
+    -d "{\"email\":\"smoke-ip-$attempt@example.com\",\"password\":\"wrong-password\"}" \
+    https://localhost/api/auth/login) || status=000
+  case $status in
+    401) ;;
+    429) limited=yes && break ;;
+    *) fail "a failed login answered $status, expected 401 or 429" ;;
+  esac
+done
+[ -n "$limited" ] || fail "15 failed logins from one address were never limited"
+status=$(docker run --rm --network sf-edge curlimages/curl:8.11.1 \
+  -sk --max-time 10 -o /dev/null -w '%{http_code}' \
+  --connect-to localhost:443:caddy:443 -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$SEED_ADMIN_EMAIL\",\"password\":\"$SEED_ADMIN_PASSWORD\"}" \
+  https://localhost/api/auth/login) || status=000
+[ "$status" = 200 ] ||
+  fail "a login from another address answered $status after this host was limited, expected 200"
+echo "smoke: the login limit counts the real client address through the edge proxy"
 
 # A dump taken on an older version restores, with its uploaded files, and
 # the API then applies the newer migrations (spec `deployment`, "Restore").
