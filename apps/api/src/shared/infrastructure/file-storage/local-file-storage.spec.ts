@@ -228,19 +228,17 @@ describe('LocalFileStorage', () => {
     describe('when a temporary file vanishes before it is deleted', () => {
       const actualRm =
         jest.requireActual<typeof fsPromises>('node:fs/promises').rm;
-      const vanishing = `a.jpg.${UUID}.tmp`;
-
-      // Deletes the file for real, then fails the way rm does on a missing
-      // file, as if another process had got there first.
-      const failRmOf = (name: string, code: string) => {
-        jest.mocked(rm).mockImplementation(async (path, options) => {
-          if (String(path).endsWith(name)) {
-            await actualRm(path, options);
-            throw Object.assign(new Error(`${code}: ${String(path)}`), {
-              code,
-            });
-          }
-          return actualRm(path, options);
+      // The first rm the sweep makes deletes its file for real, then fails
+      // the way rm does on a missing file, as if another process had got
+      // there first. Failing the first call, whichever file it is, keeps the
+      // test independent of the order readdir lists the files in.
+      const failFirstRm = (code: string) => {
+        jest.mocked(rm).mockClear();
+        jest.mocked(rm).mockImplementationOnce(async (path, options) => {
+          await actualRm(path, options);
+          throw Object.assign(new Error(`${code}: ${String(path)}`), {
+            code,
+          });
         });
       };
 
@@ -249,20 +247,21 @@ describe('LocalFileStorage', () => {
       });
 
       it('skips it and still deletes the other old temporary files', async () => {
-        await writeAt(vanishing, before);
+        await writeAt(`a.jpg.${UUID}.tmp`, before);
         await writeAt(`b.jpg.${UUID}.tmp`, before);
-        failRmOf(vanishing, 'ENOENT');
+        failFirstRm('ENOENT');
 
         await expect(
           storage.deleteUnfinishedWrites('review-photos', cutoff),
         ).resolves.toBe(1);
 
+        expect(jest.mocked(rm)).toHaveBeenCalledTimes(2);
         expect(await readdir(join(root, 'review-photos'))).toEqual([]);
       });
 
       it('rethrows any other error', async () => {
-        await writeAt(vanishing, before);
-        failRmOf(vanishing, 'EACCES');
+        await writeAt(`a.jpg.${UUID}.tmp`, before);
+        failFirstRm('EACCES');
 
         await expect(
           storage.deleteUnfinishedWrites('review-photos', cutoff),
