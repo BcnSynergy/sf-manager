@@ -82,11 +82,7 @@ export interface ReviewSessionRepository {
   // REVIEW_SESSION_NOT_EDITABLE (design.md Decision 8). `signatureStorageKey`
   // (reviewer-signature T2) is the session-owned copy of the performer's
   // signature, recorded in the SAME write that completes the session.
-  complete(
-    id: string,
-    at: Date,
-    signatureStorageKey?: string,
-  ): Promise<boolean>;
+  complete(id: string, at: Date, signatureStorageKey: string): Promise<boolean>;
 
   // review-history design.md Decision 3: four named methods, one per
   // (scope x shape) — no scope discriminant, no branching query builder.

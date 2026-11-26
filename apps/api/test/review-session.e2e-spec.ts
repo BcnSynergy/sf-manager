@@ -1636,6 +1636,15 @@ describe('Review Sessions (e2e)', () => {
       await built.app.close();
     });
 
+    // Each case starts with both performers holding the seeded signature, so
+    // a case that removes or replaces one never leaks into the next.
+    beforeEach(async () => {
+      await seedSignatures(built.fileStorage, built.signatures, [
+        technicianId,
+        representativeId,
+      ]);
+    });
+
     // An element-free community and a template, so a session completes with
     // no entries (spec "Complete a Session With Explained Gaps Only").
     async function openOwnSession(

@@ -121,15 +121,13 @@ export class InMemoryReviewSessionRepository implements ReviewSessionRepository 
   complete(
     id: string,
     at: Date,
-    signatureStorageKey?: string,
+    signatureStorageKey: string,
   ): Promise<boolean> {
     const session = this.sessionsById.get(id);
     if (!session || session.status !== 'draft') {
       return Promise.resolve(false);
     }
-    if (signatureStorageKey) {
-      this.signatureKeys.set(id, signatureStorageKey);
-    }
+    this.signatureKeys.set(id, signatureStorageKey);
     this.sessionsById.set(
       id,
       new ReviewSession({

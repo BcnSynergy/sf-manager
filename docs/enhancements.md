@@ -1196,6 +1196,14 @@ content type`). Today that is the only 415 it raises, but a future one
   upload behaves the same. A sweep like EN-222's for `review-photos`, or
   serialising the upload per user, would remove the leftover. Origin:
   `reviewer-signature` PR 1/3 fresh review S-3, 2026-11-26.
+- **EN-244** (api): signing a review copies the signature to
+  `review-signatures/<sessionId>-<id>.<ext>` before the write that completes
+  the session. If the process dies (or the connection drops without an
+  error reaching the use case) between the two, the copy stays with no
+  session pointing at it, and no sweep lists `review-signatures/` (EN-222's
+  sweep covers `review-photos/` only). Disk space only. Extending the orphan
+  sweep to `review-signatures/` and `signatures/` would also cover EN-243.
+  Origin: `reviewer-signature` PR 2/3 fresh review W-2, 2026-11-26.
 
 ## Done
 

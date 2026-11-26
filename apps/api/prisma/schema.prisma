@@ -408,8 +408,9 @@ model ReviewSession {
   performedByCompanyId String? @db.Uuid
 
   // reviewer-signature T2: FILE_STORAGE key of the session-owned COPY of the
-  // performer's signature (`review-signatures/<id>.<ext>`), recorded in the
-  // same write that completes the session. Null for a draft and for sessions
+  // performer's signature (`review-signatures/<sessionId>-<id>.<ext>`, the
+  // id fresh per signing attempt), recorded in the same write that completes
+  // the session. Null for a draft and for sessions
   // completed before the signature existed; never updated afterwards.
   signatureStorageKey String? @unique
 

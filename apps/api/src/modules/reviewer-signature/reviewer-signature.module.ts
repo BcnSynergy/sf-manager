@@ -20,7 +20,7 @@ import { ReviewerSignatureController } from './presentation/reviewer-signature.c
     GetOwnSignatureStatusUseCase,
     ReadOwnSignatureImageUseCase,
     UploadOwnSignatureUseCase,
-    // reviewer-signature (T2): the only export — review-session reads the
+    // reviewer-signature (T2): the only export â€” review-session reads the
     // performer's current signature to snapshot it when a session is signed,
     // never the repository or the upload.
     {

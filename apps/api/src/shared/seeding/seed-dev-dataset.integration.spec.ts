@@ -809,6 +809,31 @@ describe('seedDevDataset (integration)', () => {
         });
       }
 
+      // Each seeded completed session was signed: a copy of its performer's
+      // signature sits under review-signatures/<sessionId>-<id>.png.
+      const copies = (await storage.list('review-signatures')).map(
+        (file) => file.key,
+      );
+      const completed = (
+        await Promise.all(
+          performers.map((performer) =>
+            sessionRepository.findCompletedForPerformer(performer.userId),
+          ),
+        )
+      ).flat();
+      expect(completed).toHaveLength(
+        data.sessions.filter((session) => session.complete).length,
+      );
+      for (const session of completed) {
+        const copy = copies.find((key) =>
+          key.startsWith(`review-signatures/${session.id}-`),
+        );
+        expect(copy).toBeDefined();
+        expect(await storage.get(copy!)).toEqual(
+          await storage.get(`signatures/${session.performedById}.png`),
+        );
+      }
+
       const replaced = performers[0];
       await storage.put('signatures/sg1-own.png', Buffer.from('qa-image'));
       await signatures.save(replaced.userId, 'signatures/sg1-own.png');

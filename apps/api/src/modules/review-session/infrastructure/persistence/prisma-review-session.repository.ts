@@ -243,14 +243,14 @@ export class PrismaReviewSessionRepository implements ReviewSessionRepository {
   async complete(
     id: string,
     at: Date,
-    signatureStorageKey?: string,
+    signatureStorageKey: string,
   ): Promise<boolean> {
     const result = await this.prisma.reviewSession.updateMany({
       where: { id, status: 'draft' },
       data: {
         status: 'completed',
         completedAt: at,
-        ...(signatureStorageKey ? { signatureStorageKey } : {}),
+        signatureStorageKey,
       },
     });
 
