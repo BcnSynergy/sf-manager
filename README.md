@@ -411,14 +411,19 @@ cp deploy/edge/edge.env.example deploy/edge/edge.env   # SFMANAGER_SITE = SITE_A
 docker volume create sf-edge_caddy-data
 docker run --rm -v sf-manager-prod_caddy-data:/from:ro -v sf-edge_caddy-data:/to \
   alpine cp -a /from/. /to/
+# Step 2's pinning and pull. A failed pull stops the chain before the outage.
 tag=sha-$(git rev-parse HEAD | cut -c1-7)
+grep -q '^IMAGE_TAG=' prod.env || printf '\nIMAGE_TAG=\n' >>prod.env
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" prod.env
-docker compose -f docker-compose.prod.yml --env-file prod.env pull api web
-# The outage starts here.
-docker compose -f docker-compose.prod.yml --env-file prod.env stop web
-docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d
-docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
+docker compose -f docker-compose.prod.yml --env-file prod.env pull api web &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env stop web &&
+  docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d &&
+  docker compose -f docker-compose.prod.yml --env-file prod.env up -d --no-build
 ```
+
+The outage starts at `stop web`. The first three lines are step 2's, so the
+same notes apply (a tag CI did not publish fails the pull with `not found`,
+and nothing is stopped).
 
 Compose warns that `sf-edge_caddy-data` was not created by it; that is
 expected, and it uses the volume. Check `https://<SITE_ADDRESS>/api/health`
@@ -426,8 +431,9 @@ and `sh deploy/check-production.sh https://<SITE_ADDRESS>`.
 
 To roll back, stop the edge proxy (`stop`, not `down`: its network cannot
 go while the stack's web container is attached to it), check out the
-previous commit and run step 2. Its Caddy publishes the ports again with its
-old data volume, which the move left untouched:
+previous commit and run step 2, which pins `IMAGE_TAG` back to that commit.
+Its Caddy publishes the ports again with its old data volume, which the
+move left untouched:
 
 ```sh
 docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env stop
