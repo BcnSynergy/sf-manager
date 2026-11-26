@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnApplicationBootstrap,
@@ -6,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { SweepOrphanReviewPhotoFilesUseCase } from '../../application/use-cases/sweep-orphan-review-photo-files.use-case';
 import { SweepOrphanReviewSignatureFilesUseCase } from '../../application/use-cases/sweep-orphan-review-signature-files.use-case';
-import { SweepOrphanSignatureFilesUseCase } from '../../../reviewer-signature/application/use-cases/sweep-orphan-signature-files.use-case';
+import {
+  ORPHAN_SIGNATURE_FILE_SWEEP,
+  type OrphanSignatureFileSweep,
+} from '../../../reviewer-signature/application/ports/orphan-signature-file-sweep.port';
 
 export const REVIEW_FILE_SWEEP_FIRST_DELAY_MS = 5 * 60 * 1000;
 export const REVIEW_FILE_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -34,7 +38,8 @@ export class ReviewFileSweepScheduler
   constructor(
     private readonly photoSweep: SweepOrphanReviewPhotoFilesUseCase,
     private readonly signatureCopySweep: SweepOrphanReviewSignatureFilesUseCase,
-    private readonly ownSignatureSweep: SweepOrphanSignatureFilesUseCase,
+    @Inject(ORPHAN_SIGNATURE_FILE_SWEEP)
+    private readonly ownSignatureSweep: OrphanSignatureFileSweep,
   ) {}
 
   onApplicationBootstrap(): void {

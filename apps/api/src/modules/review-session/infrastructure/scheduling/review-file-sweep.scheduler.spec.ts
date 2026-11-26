@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import type { SweepOrphanReviewPhotoFilesUseCase } from '../../application/use-cases/sweep-orphan-review-photo-files.use-case';
 import type { SweepOrphanReviewSignatureFilesUseCase } from '../../application/use-cases/sweep-orphan-review-signature-files.use-case';
-import type { SweepOrphanSignatureFilesUseCase } from '../../../reviewer-signature/application/use-cases/sweep-orphan-signature-files.use-case';
 import {
   REVIEW_FILE_SWEEP_FIRST_DELAY_MS,
   REVIEW_FILE_SWEEP_INTERVAL_MS,
@@ -29,7 +28,7 @@ describe('ReviewFileSweepScheduler', () => {
       {
         execute: copySweep,
       } as unknown as SweepOrphanReviewSignatureFilesUseCase,
-      { execute: ownSweep } as unknown as SweepOrphanSignatureFilesUseCase,
+      { execute: ownSweep },
     );
     error = jest
       .spyOn(Logger.prototype, 'error')
