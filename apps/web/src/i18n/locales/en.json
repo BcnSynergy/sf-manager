@@ -766,5 +766,10 @@
     "uploadError": "Could not save the signature. Please try again.",
     "tooLargeError": "The signature must be at most 2 MB.",
     "unsupportedError": "The signature must be a PNG, JPEG or WebP image."
+  },
+  "demo": {
+    "banner": "Demo: all data is fictitious and is reset every night.",
+    "accountsTitle": "Demo accounts",
+    "passwordLabel": "Password for every account"
   }
 }

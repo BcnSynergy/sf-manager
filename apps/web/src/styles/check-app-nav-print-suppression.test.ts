@@ -221,6 +221,7 @@ describe('checkAppNavPrintSuppression', () => {
     const shell = `
       .app-nav { display: flex; }
       .app-footer { display: flex; }
+      .app-demo-banner { display: block; }
     `;
 
     it('reports ok when every selector is visible before and hidden inside @media print', () => {
@@ -228,6 +229,7 @@ describe('checkAppNavPrintSuppression', () => {
         @media print {
           .app-nav { display: none; }
           .app-footer { display: none; }
+          .app-demo-banner { display: none; }
         }
       `;
 
@@ -244,6 +246,20 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({
         ok: false,
         reason: '.app-footer { display: none } is missing inside the @media print block.',
+      });
+    });
+
+    it('names the Demo banner when it is not hidden in print', () => {
+      const css = `${shell}
+        @media print {
+          .app-nav { display: none; }
+          .app-footer { display: none; }
+        }
+      `;
+
+      expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({
+        ok: false,
+        reason: '.app-demo-banner { display: none } is missing inside the @media print block.',
       });
     });
 
@@ -268,6 +284,7 @@ describe('checkAppNavPrintSuppression', () => {
         @media print {
           .app-nav { display: none; }
           .app-footer { display: none; }
+          .app-demo-banner { display: none; }
         }
         .app-footer-note { display: block; }
       `;
@@ -275,8 +292,9 @@ describe('checkAppNavPrintSuppression', () => {
       expect(checkAppNavPrintSuppression(css, PRINT_CHROME_SELECTORS)).toEqual({ ok: true });
     });
 
-    it('lists the nav and the footer as print chrome', () => {
-      expect(PRINT_CHROME_SELECTORS).toEqual(['.app-nav', '.app-footer']);
+    // demo-instance S6: the Demo banner is chrome too, never printed.
+    it('lists the nav, the footer and the Demo banner as print chrome', () => {
+      expect(PRINT_CHROME_SELECTORS).toEqual(['.app-nav', '.app-footer', '.app-demo-banner']);
     });
 
     it('holds for the real, shipped apps/web/src/index.css', () => {

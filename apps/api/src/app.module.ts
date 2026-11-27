@@ -4,6 +4,7 @@ import { IdGeneratorModule } from './shared/infrastructure/id/id-generator.modul
 import { ClockModule } from './shared/infrastructure/clock/clock.module';
 import { FileStorageModule } from './shared/infrastructure/file-storage/file-storage.module';
 import { EmailModule } from './shared/infrastructure/email/email.module';
+import { DemoModule } from './modules/demo/demo.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -55,6 +56,8 @@ import { ReviewerSignatureModule } from './modules/reviewer-signature/reviewer-s
 // EmailModule (password-reset, ADR-018) is @Global() as well: EMAIL_SENDER,
 // reading the SMTP settings at boot.
 // ReviewerSignatureModule (reviewer-signature) registers /me/signature.
+// DemoModule (demo-instance S6) registers the public GET /demo, reading
+// DEMO_MODE at boot.
 @Module({
   imports: [
     PrismaModule,
@@ -74,6 +77,7 @@ import { ReviewerSignatureModule } from './modules/reviewer-signature/reviewer-s
     ReviewScheduleModule,
     ReviewerSignatureModule,
     HealthModule,
+    DemoModule,
   ],
 })
 export class AppModule {}

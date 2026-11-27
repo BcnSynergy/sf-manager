@@ -8,6 +8,7 @@ import {
   updateOrganizationProfileSchema,
 } from '@sf-manager/validation';
 import { detectLogoFormat } from '../../modules/organization-profile/domain/organization-logo';
+import { DEMO_LOGIN_ACCOUNTS } from '../../modules/demo/demo-accounts';
 import { DEMO_DATASET, DEMO_SEED_PASSWORD } from './demo-dataset';
 import { DEV_DATASET } from './dev-dataset';
 
@@ -67,6 +68,14 @@ describe('DEMO_DATASET', () => {
 
   it('has no system admin: its credentials are never public', () => {
     expect(data.users.map((u) => u.role)).not.toContain('SYSTEM_ADMIN');
+  });
+
+  // demo-instance S6: the login page lists these accounts, so each one must
+  // be seeded with the role it is shown with.
+  it('seeds every account the demo login page lists, with its role', () => {
+    for (const account of DEMO_LOGIN_ACCOUNTS) {
+      expect(data.users).toContainEqual(expect.objectContaining(account));
+    }
   });
 
   it('has six canonical communities with three to five extinguishers each', () => {

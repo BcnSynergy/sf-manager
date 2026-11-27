@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import i18n from '../i18n';
 import { apiFetch } from '../api/client';
 import { AuthProvider } from '../auth/AuthProvider';
+import { DemoContext, type DemoAccounts } from '../demo/demo-context';
 import { LoginPage } from './LoginPage';
 
 function mockFetch(loginResponse: Partial<Response>) {
@@ -484,6 +485,75 @@ describe('LoginPage language selector', () => {
       expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/login'))).toBe(true);
     });
     expect(screen.queryByTestId('login-error')).toBeNull();
+  });
+
+  // demo-instance S6 (spec `deployment`, "Demo identification").
+  describe('on the demo', () => {
+    const demo: DemoAccounts = {
+      enabled: true,
+      password: 'sf-manager-demo-1',
+      accounts: [
+        { email: 'gestor@demo.sf-manager.example', role: 'MANAGER' },
+        { email: 'tecnico1a@demo.sf-manager.example', role: 'MAINTENANCE_TECHNICIAN' },
+      ],
+    };
+
+    // The language test switches to Spanish; reset it even when it fails.
+    afterEach(async () => {
+      localStorage.clear();
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+      document.documentElement.lang = 'en';
+    });
+
+    function renderDemoLoginPage(info: DemoAccounts | null) {
+      return render(
+        <DemoContext.Provider value={info}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/login']}>
+              <LoginPage />
+            </MemoryRouter>
+          </AuthProvider>
+        </DemoContext.Provider>,
+      );
+    }
+
+    it('lists each demo account with its role and the shared password', () => {
+      renderDemoLoginPage(demo);
+
+      const accounts = screen.getByTestId('login-demo-accounts');
+      expect(accounts).toHaveTextContent('Demo accounts');
+      const rows = screen.getAllByTestId('login-demo-account');
+      expect(rows.map((row) => row.textContent)).toEqual([
+        'Manager: gestor@demo.sf-manager.example',
+        'Maintenance technician: tecnico1a@demo.sf-manager.example',
+      ]);
+      expect(screen.getByTestId('login-demo-password')).toHaveTextContent(
+        'Password for every account: sf-manager-demo-1',
+      );
+    });
+
+    it('shows no demo accounts outside the demo', () => {
+      renderDemoLoginPage(null);
+
+      expect(screen.queryByTestId('login-demo-accounts')).toBeNull();
+    });
+
+    it('labels the accounts in the active language', async () => {
+      renderDemoLoginPage(demo);
+
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'es' } });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('login-demo-accounts')).toHaveTextContent(
+          'Cuentas de demostración',
+        ),
+      );
+      expect(screen.getAllByTestId('login-demo-account')[0]).toHaveTextContent(
+        'Gestor: gestor@demo.sf-manager.example',
+      );
+    });
   });
 
   it('shows the maker credit in the active locale', async () => {

@@ -468,4 +468,64 @@ describe('App (shipped data router)', () => {
     expect(window.location.pathname).toBe('/login');
     expect(screen.queryByTestId('session-unavailable')).not.toBeInTheDocument();
   });
+
+  // demo-instance S6 (spec `deployment`, "Demo identification"): the app root
+  // asks GET /demo once and shows the banner above every page.
+  function demoFetch(demo: unknown, signedIn: boolean) {
+    return vi.fn((url: RequestInfo | URL) => {
+      const href = String(url);
+      if (href.endsWith('/demo')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => demo } as Response);
+      }
+      if (href.includes('/auth/me') && signedIn) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ id: '1', email: 'gestor@demo.sf-manager.example', role: 'MANAGER' }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: false, status: 401 } as Response);
+    });
+  }
+  const DEMO_ON = {
+    enabled: true,
+    password: 'sf-manager-demo-1',
+    accounts: [{ email: 'gestor@demo.sf-manager.example', role: 'MANAGER' }],
+  };
+
+  it('shows the Demo banner and the demo accounts on the login page of the demo', async () => {
+    window.history.replaceState(null, '', '/login');
+    vi.stubGlobal('fetch', demoFetch(DEMO_ON, false));
+
+    render(<App />);
+
+    expect(await screen.findByTestId('demo-banner')).toBeInTheDocument();
+    expect(await screen.findByTestId('login-demo-accounts')).toBeInTheDocument();
+  });
+
+  it('keeps the Demo banner above the pages of a signed-in visitor', async () => {
+    window.history.replaceState(null, '', '/does-not-exist');
+    vi.stubGlobal('fetch', demoFetch(DEMO_ON, true));
+
+    render(<App />);
+
+    await screen.findByTestId('not-found');
+    expect(await screen.findByTestId('demo-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-root')).toBeInTheDocument();
+  });
+
+  it('shows no Demo banner and no demo accounts outside the demo', async () => {
+    window.history.replaceState(null, '', '/login');
+    const fetchMock = demoFetch({ enabled: false }, false);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    await screen.findByTestId('login-email');
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/demo'))).toBe(true),
+    );
+    await Promise.resolve();
+    expect(screen.queryByTestId('demo-banner')).toBeNull();
+    expect(screen.queryByTestId('login-demo-accounts')).toBeNull();
+  });
 });

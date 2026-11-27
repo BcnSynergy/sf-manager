@@ -766,5 +766,10 @@
     "uploadError": "No s'ha pogut desar la signatura. Torna-ho a provar.",
     "tooLargeError": "La signatura no pot ocupar més de 2 MB.",
     "unsupportedError": "La signatura ha de ser una imatge PNG, JPEG o WebP."
+  },
+  "demo": {
+    "banner": "Demo: totes les dades són fictícies i es restableixen cada nit.",
+    "accountsTitle": "Comptes de demostració",
+    "passwordLabel": "Contrasenya de tots els comptes"
   }
 }

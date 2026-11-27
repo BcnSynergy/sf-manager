@@ -361,6 +361,28 @@ status=$(demo_curl -o /dev/null -w '%{http_code}' -H 'Content-Type: application/
 [ "$status" = 200 ] || demo_fail "a demo account's login answered $status, expected 200"
 echo "smoke: a demo account logs in on the demo"
 
+# The demo tells the web app it is the demo (spec `deployment`, "Demo
+# identification"), and every account its login page lists logs in with the
+# password it shows. Production says only that the demo is off.
+prod_demo=$(curl -sk --max-time 10 https://localhost/api/demo) || prod_demo=''
+[ "$prod_demo" = '{"enabled":false}' ] ||
+  fail "production's /api/demo answered '$prod_demo', expected {\"enabled\":false}"
+# shellcheck disable=SC2016 # JavaScript, not shell
+demo_logins=$(demo_curl https://demo.localhost/api/demo | node -e '
+  let d = "";
+  process.stdin.on("data", (c) => (d += c)).on("end", () => {
+    const info = JSON.parse(d);
+    if (info.enabled !== true || !info.accounts.length) process.exit(1);
+    for (const a of info.accounts)
+      console.log(JSON.stringify({ email: a.email, password: info.password }));
+  });') || demo_fail "the demo's /api/demo did not answer enabled with its accounts"
+printf '%s\n' "$demo_logins" | while IFS= read -r body; do
+  status=$(demo_curl -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+    -d "$body" https://demo.localhost/api/auth/login) || status=000
+  [ "$status" = 200 ] || demo_fail "the listed demo login $body answered $status, expected 200"
+done || exit 1
+echo "smoke: the demo lists its accounts and each one logs in; production says the demo is off"
+
 # The QR codes are fixed (spec `demo-seed-data`, "Fixed Element Codes"), and
 # a reset brings back exactly the seeded data after a visitor's changes.
 codes=$(demo_codes) || codes=''
