@@ -101,6 +101,16 @@ project's Engram memory on 2026-10-09.
   reach `minimatch` 11, or Prisma moves to `effect` 3.22.1+, and do not
   force either with `overrides`. Origin:
   `security-dev-alerts` triage, 2026-11-09.
+- **TD-56** (web tests, flaky): `apps/web/src/pages/ReviewDocumentPage.test.tsx`
+  "replaces the loading note with the failure note when the photos cannot be
+  loaded" can leave an unhandled rejection (`ApiError: API 0`, raised at
+  line 806 by `rejectPhotos`). Every test passes, but Vitest fails the run on
+  the unhandled error. The mock returns one shared pending promise for every
+  `listPhotos` call (`mockReturnValue`), so a call whose result nobody
+  handles would leave the rejection unhandled; the exact path is not
+  established. Seen once in CI on PR #489 (run 45961782458, attempt 1),
+  which changes no web code; the same step passed on that PR's previous
+  run. Origin: `demo-instance` PR 2/5 CI, 2026-11-27.
 
 ## Resolved
 
