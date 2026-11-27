@@ -1,6 +1,9 @@
-// Compiles the admin seed (prisma/seed.ts) and the API code it imports to
-// JavaScript for the production image, which has no ts-node (EN-93,
-// apps/api/Dockerfile). Runs after `nest build`, which empties dist/.
+// Compiles the admin seed (prisma/seed.ts), the demo seed entry
+// (demo-seed-data) and the API code they import to JavaScript for the
+// production image, which has no ts-node (EN-93, apps/api/Dockerfile). Both
+// bring src/shared/seeding along, dev and demo datasets included: their
+// flags (NODE_ENV=development, SEED_DEMO_DATA=true) are what keep them from
+// running (EN-251). Runs after `nest build`, which empties dist/.
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -10,5 +13,5 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": ["prisma/seed.ts"]
+  "include": ["prisma/seed.ts", "src/shared/seeding/demo-seed.main.ts"]
 }

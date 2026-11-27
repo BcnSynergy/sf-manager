@@ -212,6 +212,53 @@ admin and the migration's default organization profile row exist. This reset is
 manual and destructive to `sfmanager` — it is never run by
 `test:integration` or any other automated command.
 
+### Demo dataset
+
+The public demo's data (spec `demo-seed-data`) is a separate dataset with its
+own entry, `apps/api/src/shared/seeding/demo-seed.main.ts`: the property
+manager `Finques Mediterrània` with its logo, three maintenance companies,
+six communities with twenty-four extinguishers, the extinguisher checklist
+in Spanish (a quarterly and an annual template) and twelve review sessions
+dated in the past. It runs only with `SEED_DEMO_DATA=true`; any other value
+writes nothing and exits with an error. It seeds the admin from
+`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` too, never the dev dataset.
+
+Seed it into an empty, migrated database, not `sfmanager` (it would mix with
+the dev data), and give it its own file directory, since it stores the logo
+and signatures. For example, with a scratch database on the docker-compose
+Postgres, from the repository root:
+
+```
+docker compose exec -T postgres createdb -U sfmanager sfmanager_demo
+export DATABASE_URL=postgresql://sfmanager:sfmanager@localhost:5432/sfmanager_demo
+export FILE_STORAGE_DIR="$(mktemp -d)"
+npm exec -w apps/api -- prisma migrate deploy
+SEED_DEMO_DATA=true npm run seed:demo -w apps/api
+```
+
+Drop it afterwards with `docker compose exec -T postgres dropdb -U sfmanager
+sfmanager_demo` and remove the `$FILE_STORAGE_DIR` directory.
+
+The API image runs the compiled entry:
+`node dist/seed/src/shared/seeding/demo-seed.main.js`.
+
+Every demo account shares one public password: `sf-manager-demo-1`.
+
+| Account                                                               | Role                                            |
+| --------------------------------------------------------------------- | ----------------------------------------------- |
+| `gestor@demo.sf-manager.example`                                      | Manager with `VIEW_ALL_REVIEWS`                 |
+| `empresa1@`, `empresa2@`, `empresa3@demo.sf-manager.example`          | Maintenance company managers                    |
+| `tecnico1a@`, `tecnico1b@demo.sf-manager.example`                     | Technicians of Extintores Llobregat             |
+| `tecnico2@demo.sf-manager.example`                                    | Technician of ProtecFoc Serveis                 |
+| `tecnico3@demo.sf-manager.example`                                    | Technician of Garraf Seguridad Contra Incendios |
+| `presidente1@`, `presidente2@`, `presidente3@demo.sf-manager.example` | Community representatives, two communities each |
+
+Each extinguisher keeps a fixed code (the one its QR label encodes), so a
+printed sheet of the demo's labels stays valid: `DEM` + the community key
+(`MA`, `JA`, `SE`, `PR`, `VD`, `TR`) + `EXT` + `22` to `26`, for example
+`DEMMAEXT22`. Every technician and representative has a seeded signature, so
+they can sign a review straight away.
+
 ## Continuous integration
 
 Every pull request and every push to `main` runs the `ci` job
