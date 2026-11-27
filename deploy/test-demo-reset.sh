@@ -152,10 +152,12 @@ pass "a failed step fails the reset and runs no further step"
 # Two resets never overlap: a second once waits for the first.
 work 'rm -f /work/calls /work/fail-left'
 # Bounded like run: a lock that is never released fails the case instead of
-# hanging it.
+# hanging it. Each reset is waited for by its own PID, so the container's
+# exit status is non-zero when either of them fails (a bare `wait` is 0).
+# shellcheck disable=SC2016 # expanded in the container
 docker run -d --name "$p" -v "$p:/work" -w /work -e PATH=/work/bin:/usr/local/bin:/usr/bin:/bin \
   -e FILE_STORAGE_DIR=/work/files -e STUB_SLEEP=1 --entrypoint timeout "$image" \
-  60 sh -c 'sh /work/demo-reset.sh once & sh /work/demo-reset.sh once & wait' >/dev/null
+  60 sh -c 'sh /work/demo-reset.sh once & a=$!; sh /work/demo-reset.sh once & b=$!; wait "$a" && wait "$b"' >/dev/null
 waited=$(docker wait "$p")
 out=$(docker logs "$p" 2>&1)
 docker rm "$p" >/dev/null
