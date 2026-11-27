@@ -19,6 +19,7 @@ import { buildDevSignaturePng } from './dev-seed-signature';
 import {
   runDevSeed,
   runSessionGuarded,
+  backdatedSessionTimes,
   seedDevDataset,
   type DevSeedDeps,
 } from './seed-dev-dataset';
@@ -1755,5 +1756,50 @@ describe('seedDevDataset optional dataset fields', () => {
     const id = world.users.find((u) => u.email === representative.email)!.id;
     const key = world.signatureKeys.get(id)!;
     expect(world.storedFiles.get(key)).toEqual(buildDevSignaturePng(3));
+  });
+});
+
+describe('seedDevDataset backdating', () => {
+  const dataset = (): DevDataset => structuredClone(DEV_DATASET);
+
+  it('never backdates a draft, even one with a daysAgo', async () => {
+    const data = dataset();
+    const draft = data.sessions.findIndex((s) => !s.complete);
+    data.sessions[draft] = { ...data.sessions[draft], daysAgo: 7 };
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    expect(world.backdated).toEqual([]);
+  });
+
+  it('backdates a seed draft that the run resumes and completes', async () => {
+    const data = dataset();
+    data.sessions[0] = { ...data.sessions[0], daysAgo: 40 };
+    const world = buildWorld();
+    await seedDevDataset(world.deps, data, jest.fn());
+    // Rewind it to a draft with one entry, as if a run had stopped midway.
+    const first = world.sessions.find(
+      (s) => s.id === world.backdated[0].sessionId,
+    )!;
+    first.status = 'draft';
+    first.elementIds = first.elementIds.slice(0, 1);
+    world.backdated = [];
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    expect(world.backdated).toEqual([{ sessionId: first.id, daysAgo: 40 }]);
+  });
+});
+
+describe('backdatedSessionTimes', () => {
+  it('completes at 10:30 UTC daysAgo days before now, starts 30 minutes earlier and records 15 minutes in', () => {
+    expect(backdatedSessionTimes(new Date('2026-11-27T04:00:00Z'), 60)).toEqual(
+      {
+        startedAt: new Date('2026-09-28T10:00:00Z'),
+        recordedAt: new Date('2026-09-28T10:15:00Z'),
+        completedAt: new Date('2026-09-28T10:30:00Z'),
+      },
+    );
   });
 });

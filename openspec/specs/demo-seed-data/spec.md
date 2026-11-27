@@ -149,7 +149,8 @@ MUST NOT change.
 
 Like the dev seed (`dev-seed-data` _Idempotent Additive Seeding_), a second
 run on a seeded database MUST create no row and change no code or date; it
-only uploads the logo again, which replaces the previous one.
+only writes the organization profile again and uploads the logo again, which
+replaces the previous one.
 
 #### Scenario: Second run
 

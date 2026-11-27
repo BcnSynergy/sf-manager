@@ -27,7 +27,10 @@ describe('seedDemoDataset (integration)', () => {
   let prisma: PrismaService;
   let storage: FileStorage;
   let storageDir: string;
+  // Bounds of the seeding run: backdateSession reads the clock per session,
+  // so a run that crosses 00:00 UTC dates against either day.
   let seededAt: Date;
+  let finishedAt: Date;
   const logs: string[] = [];
 
   beforeAll(async () => {
@@ -58,6 +61,7 @@ describe('seedDemoDataset (integration)', () => {
     await seedDemoDataset(resolveDemoSeedDeps(moduleRef), data, (line) =>
       logs.push(line),
     );
+    finishedAt = new Date();
   });
 
   afterAll(async () => {
@@ -150,8 +154,17 @@ describe('seedDemoDataset (integration)', () => {
   it('dates each completed session its daysAgo back, at 10:30 UTC, with its entries recorded inside it', async () => {
     for (const planned of data.sessions.filter((s) => s.complete)) {
       const session = await sessionOf(planned);
-      const expected = backdatedSessionTimes(seededAt, planned.daysAgo!);
-      expect(session.completedAt).toEqual(expected.completedAt);
+      const expected = [seededAt, finishedAt]
+        .map((at) => backdatedSessionTimes(at, planned.daysAgo!))
+        .find(
+          (times) =>
+            times.completedAt.getTime() === session.completedAt?.getTime(),
+        );
+      if (expected === undefined) {
+        throw new Error(
+          `unexpected completedAt ${session.completedAt?.toISOString()}`,
+        );
+      }
       expect(session.startedAt).toEqual(expected.startedAt);
       const entries = await prisma.elementReviewEntry.findMany({
         where: { reviewSessionId: session.id },

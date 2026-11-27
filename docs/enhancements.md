@@ -1238,6 +1238,23 @@ content type`). Today that is the only 415 it raises, but a future one
   dev and demo seeds from a separate seed image. Origin: `demo-instance`
   T2a, 2026-11-27 (user decision: document the flags as the control now,
   register the rest).
+- **EN-252** (seeding tests): the demo seed entry
+  (`apps/api/src/shared/seeding/demo-seed.main.ts`) checks the flag before it
+  boots the app, so a closed gate writes nothing (not even the admin), exits
+  with status 1 and never seeds the dev dataset (spec `demo-seed-data`
+  _Explicit Demo Flag Gate_). Those three claims are backed by reading the
+  code and by a manual run, not by a test: `runDemoSeed` is tested, the
+  entry around it is not. Extract the entry's flow into a function that takes
+  the environment and a boot callback, and test it. Origin: `demo-instance`
+  T2a fresh review W-4, 2026-11-27.
+- **EN-253** (seeding): two rerun edges of the seed engine that the demo's
+  nightly reset (a fresh database every time) never reaches. Completing a
+  session and backdating it are two writes, so a run that stops between them
+  leaves a session dated today that a rerun skips as already completed. And
+  an element with a fixed code renamed between runs is skipped by name and
+  then created again with the same code, which fails as
+  `ElementCodeGenerationFailedError`, a misleading message. Origin:
+  `demo-instance` T2a fresh review S-2 and S-3, 2026-11-27.
 
 ## Done
 
