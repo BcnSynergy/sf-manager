@@ -63,13 +63,15 @@ EOF
   done' <"$script"
 
 # Runs the script; sets $out and $status instead of failing. Extra -e
-# options come before the arguments as RUN_ENV.
+# options come before the arguments as RUN_ENV. Bounded inside the
+# container, so a loop that should have stopped exits 124 instead of hanging
+# the test.
 run() {
   status=0
   # shellcheck disable=SC2086 # RUN_ENV is one option per word
   out=$(docker run --rm -v "$p:/work" -w /work -e PATH=/work/bin:/usr/local/bin:/usr/bin:/bin \
-    -e FILE_STORAGE_DIR=/work/files ${RUN_ENV:-} --entrypoint sh "$image" \
-    /work/demo-reset.sh "$@" 2>&1) || status=$?
+    -e FILE_STORAGE_DIR=/work/files ${RUN_ENV:-} --entrypoint timeout "$image" \
+    60 sh /work/demo-reset.sh "$@" 2>&1) || status=$?
 }
 work() {
   docker run --rm -v "$p:/work" --entrypoint sh "$image" -c "$1"
@@ -105,6 +107,19 @@ for retry in 0 010 -5 x; do
 done
 run seconds-to-next yesterday
 [ "$status" = 1 ] || fail "a NOW that is not epoch seconds was accepted"
+# Without FILE_STORAGE_DIR both the loop and once stop before any step,
+# instead of retrying a reset that can never succeed.
+work 'rm -f /work/calls'
+for mode in once ''; do
+  # shellcheck disable=SC2086 # an empty mode runs the loop
+  RUN_ENV='-e FILE_STORAGE_DIR=' run $mode
+  case "$status:$out" in
+    1:*"FILE_STORAGE_DIR is not set"*) ;;
+    *) fail "'demo-reset.sh $mode' without FILE_STORAGE_DIR did not stop at once" ;;
+  esac
+done
+[ -z "$(work 'cat /work/calls 2>/dev/null')" ] ||
+  fail "a reset step ran without FILE_STORAGE_DIR"
 pass "bad settings are refused"
 
 # once: every step in order, the uploaded files emptied.

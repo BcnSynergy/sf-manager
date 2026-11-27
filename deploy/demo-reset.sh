@@ -18,9 +18,12 @@
 # so every visitor starts from the same data with the same QR codes. The
 # API keeps running; requests made during the reset may fail. Resets never
 # overlap: a second one (`once` during the scheduled one) waits for the
-# first. A failed reset is logged and retried every
+# first. The lock is a file in the container, so run `once` inside the
+# running reset container (`docker compose exec reset`), never in a new one
+# (`docker compose run`). A failed reset is logged and retried every
 # DEMO_RESET_RETRY_SECONDS (default 900) until one succeeds, instead of
-# leaving the demo broken until the next night or stopping the service.
+# leaving the demo broken until the next night or stopping the service. A
+# missing or invalid setting stops it at once instead.
 set -eu
 reset_hour="${DEMO_RESET_HOUR_UTC:-3}"
 retry_seconds="${DEMO_RESET_RETRY_SECONDS:-900}"
@@ -43,8 +46,17 @@ check_settings() {
   esac
 }
 
+# Resetting needs the uploaded files' directory; a missing one is a
+# configuration error, so it stops the script before the first reset.
+check_files_dir() {
+  if [ -z "${FILE_STORAGE_DIR:-}" ]; then
+    echo "demo-reset: FILE_STORAGE_DIR is not set" >&2
+    exit 1
+  fi
+}
+
 reset_steps() {
-  files_dir="${FILE_STORAGE_DIR:?FILE_STORAGE_DIR is not set}"
+  files_dir="$FILE_STORAGE_DIR"
   echo "demo-reset: dropping the database schema"
   printf 'DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n' |
     npx prisma db execute --stdin || return 1
@@ -84,8 +96,9 @@ seconds_to_next_reset() {
 
 check_settings
 case "${1:-}" in
-  '') ;;
+  '') check_files_dir ;;
   once)
+    check_files_dir
     reset_once
     exit
     ;;
