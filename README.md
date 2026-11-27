@@ -548,9 +548,10 @@ already running:
 
 2. Tell the edge proxy the demo's domain, check the resulting configuration
    and recreate the edge proxy, which creates the `sf-edge-demo` network.
-   The chain stops before touching anything when the demo's domain is empty,
-   equal to production's (Caddy would reject both sites) or already set, and
-   before the restart when Caddy rejects the configuration. Production's site
+   Caddy validates the new configuration (the demo's domain is passed to that
+   check only) before `edge.env` changes, so the chain stops without touching
+   anything when the demo's domain is empty, equal to production's (Caddy
+   would reject both sites), already set, or rejected by Caddy. Production's site
    is down for the 10 to 15 seconds the edge proxy restarts; the production
    stack itself keeps running.
 
@@ -559,10 +560,11 @@ already running:
      prod_site=$(sed -n 's/^SFMANAGER_SITE=//p' deploy/edge/edge.env) &&
      [ -n "$demo_site" ] && [ "$demo_site" != "$prod_site" ] &&
      ! grep -q '^SFMANAGER_DEMO_SITE=' deploy/edge/edge.env &&
+     docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env \
+       run --rm --no-deps -T -e SFMANAGER_DEMO_SITE="$demo_site" caddy \
+       caddy validate --config /etc/caddy/Caddyfile &&
      printf '\nSFMANAGER_DEMO_SITE=%s\n' "$demo_site" >>deploy/edge/edge.env &&
      cat deploy/edge/edge.env &&
-     docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env \
-       run --rm --no-deps -T caddy caddy validate --config /etc/caddy/Caddyfile &&
      docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d --force-recreate
    ```
 
