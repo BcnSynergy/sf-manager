@@ -72,7 +72,10 @@ reset_steps() {
 # One reset at a time, through a lock both the loop and `once` take.
 reset_once() {
   (
-    flock 9 || exit 1
+    if ! flock -n 9; then
+      echo "demo-reset: waiting for the reset already running"
+      flock 9 || exit 1
+    fi
     reset_steps
   ) 9>"$lock_file"
 }

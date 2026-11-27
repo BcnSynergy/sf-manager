@@ -295,7 +295,10 @@ demo_codes() {
 }
 # The override itself puts the demo web on sf-edge-demo under the demo's
 # alias only, whatever demo.env says (EN-248): this env file sets neither.
-# Without `!override`, Compose would add production's alias back.
+# Without `!override`, Compose would add production's alias back. Node.js
+# parses the rendered config (CI's runner has it).
+command -v node >/dev/null 2>&1 ||
+  demo_fail "this check needs Node.js on the machine running the smoke test"
 # shellcheck disable=SC2016 # JavaScript, not shell
 web_networks=$(demo config --format json | node -e '
   let d = "";
@@ -335,10 +338,11 @@ robots=$(demo_curl -D - -o /dev/null https://demo.localhost/ | tr -d '\r' |
 prod_headers=$(curl -sk --max-time 10 -D - -o /dev/null https://localhost/) ||
   fail "could not read production's headers"
 prod_headers=$(printf '%s\n' "$prod_headers" | tr -d '\r')
-case $prod_headers in
-  'HTTP/'*' 200'*) ;;
-  *) fail "production did not answer 200 when checking for X-Robots-Tag" ;;
-esac
+# The status line only (the first one), so a 200 elsewhere in the headers
+# cannot pass for it.
+prod_status=$(printf '%s\n' "$prod_headers" | sed -n '1s/^HTTP\/[0-9.]* \([0-9]*\).*/\1/p')
+[ "$prod_status" = 200 ] ||
+  fail "production answered '$prod_status' when checking for X-Robots-Tag, expected 200"
 if printf '%s\n' "$prod_headers" | grep -qi '^x-robots-tag:'; then
   fail "production answered with an X-Robots-Tag header"
 fi

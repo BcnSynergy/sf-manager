@@ -62,10 +62,16 @@ EOF
     chmod +x "/work/bin/$cmd"
   done' <"$script"
 
-# Runs the script; sets $out and $status instead of failing. Extra -e
-# options come before the arguments as RUN_ENV. Bounded inside the
-# container, so a loop that should have stopped exits 124 instead of hanging
-# the test.
+# Runs the script; sets $out and $status instead of failing. Bounded inside
+# the container, so a loop that should have stopped exits 124 instead of
+# hanging the test. run_with adds docker -e options (its first argument) for
+# that one call only.
+run_with() {
+  RUN_ENV=$1
+  shift
+  run "$@"
+  RUN_ENV=''
+}
 run() {
   status=0
   # shellcheck disable=SC2086 # RUN_ENV is one option per word
@@ -87,32 +93,35 @@ for case in 7200:3600 10800:86400 10801:86399 84600:12600; do
     fail "seconds-to-next $now printed '$out' (exit $status), expected $expected"
   fi
 done
-RUN_ENV='-e DEMO_RESET_HOUR_UTC=0' run seconds-to-next 0
+run_with '-e DEMO_RESET_HOUR_UTC=0' seconds-to-next 0
 [ "$out" = 86400 ] || fail "hour 0 at midnight printed '$out', expected 86400"
 pass "the next reset is the next whole reset hour in UTC"
 
 for hour in 24 03 x; do
-  RUN_ENV="-e DEMO_RESET_HOUR_UTC=$hour" run seconds-to-next 0
+  run_with "-e DEMO_RESET_HOUR_UTC=$hour" seconds-to-next 0
   case "$status:$out" in
     1:*"DEMO_RESET_HOUR_UTC must be a whole hour"*) ;;
     *) fail "DEMO_RESET_HOUR_UTC='$hour' was not refused" ;;
   esac
 done
 for retry in 0 010 -5 x; do
-  RUN_ENV="-e DEMO_RESET_RETRY_SECONDS=$retry" run seconds-to-next 0
+  run_with "-e DEMO_RESET_RETRY_SECONDS=$retry" seconds-to-next 0
   case "$status:$out" in
     1:*"DEMO_RESET_RETRY_SECONDS must be"*) ;;
     *) fail "DEMO_RESET_RETRY_SECONDS='$retry' was not refused" ;;
   esac
 done
 run seconds-to-next yesterday
-[ "$status" = 1 ] || fail "a NOW that is not epoch seconds was accepted"
+case "$status:$out" in
+  1:*"NOW must be epoch seconds"*) ;;
+  *) fail "a NOW that is not epoch seconds was not refused as such" ;;
+esac
 # Without FILE_STORAGE_DIR both the loop and once stop before any step,
 # instead of retrying a reset that can never succeed.
 work 'rm -f /work/calls'
 for mode in once ''; do
   # shellcheck disable=SC2086 # an empty mode runs the loop
-  RUN_ENV='-e FILE_STORAGE_DIR=' run $mode
+  run_with '-e FILE_STORAGE_DIR=' $mode
   case "$status:$out" in
     1:*"FILE_STORAGE_DIR is not set"*) ;;
     *) fail "'demo-reset.sh $mode' without FILE_STORAGE_DIR did not stop at once" ;;
@@ -142,17 +151,25 @@ pass "a failed step fails the reset and runs no further step"
 
 # Two resets never overlap: a second once waits for the first.
 work 'rm -f /work/calls /work/fail-left'
+# Bounded like run: a lock that is never released fails the case instead of
+# hanging it.
 docker run -d --name "$p" -v "$p:/work" -w /work -e PATH=/work/bin:/usr/local/bin:/usr/bin:/bin \
-  -e FILE_STORAGE_DIR=/work/files -e STUB_SLEEP=1 --entrypoint sh "$image" \
-  -c 'sh /work/demo-reset.sh once & sh /work/demo-reset.sh once & wait' >/dev/null
-docker wait "$p" >/dev/null
+  -e FILE_STORAGE_DIR=/work/files -e STUB_SLEEP=1 --entrypoint timeout "$image" \
+  60 sh -c 'sh /work/demo-reset.sh once & sh /work/demo-reset.sh once & wait' >/dev/null
+waited=$(docker wait "$p")
+out=$(docker logs "$p" 2>&1)
 docker rm "$p" >/dev/null
-# Each reset makes three calls; with a lock, the six never interleave: the
-# first three ends come before the second reset's first start.
+[ "$waited" = 0 ] || fail "the two concurrent resets exited $waited"
+# Each call logs its start and its end; the six calls strictly alternate
+# start and end, so no call ever ran while another did.
 order=$(work "sort -n /work/calls | sed 's/^[0-9.]* //; s/ .*//'" | tr '\n' ' ')
 [ "$order" = 'start end start end start end start end start end start end ' ] ||
   fail "two concurrent resets interleaved: $order"
-pass "a second reset waits for the first"
+case $out in
+  *"demo-reset: waiting for the reset already running"*) ;;
+  *) fail "the second reset did not say it was waiting for the first" ;;
+esac
+pass "a second reset waits for the first, and says so"
 
 # The service loop retries a failed reset after DEMO_RESET_RETRY_SECONDS
 # instead of waiting for the next night.
