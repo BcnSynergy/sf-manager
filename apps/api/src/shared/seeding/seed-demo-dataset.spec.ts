@@ -39,6 +39,9 @@ describe('runDemoSeed', () => {
     expect(uploadLogo.execute).toHaveBeenCalledWith(
       Buffer.from(DEMO_DATASET.logoSvg, 'utf8'),
     );
+    expect(
+      jest.mocked(seedDevDataset).mock.invocationCallOrder[0],
+    ).toBeLessThan(uploadLogo.execute.mock.invocationCallOrder[0]);
     expect(log.mock.calls).toEqual([
       ['Seeding demo data. Target database host: db.example:5432.'],
       ['Set the organization logo.'],
