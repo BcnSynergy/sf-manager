@@ -101,18 +101,21 @@ project's Engram memory on 2026-10-09.
   reach `minimatch` 11, or Prisma moves to `effect` 3.22.1+, and do not
   force either with `overrides`. Origin:
   `security-dev-alerts` triage, 2026-11-09.
-- **TD-56** (web tests, flaky): `apps/web/src/pages/ReviewDocumentPage.test.tsx`
-  "replaces the loading note with the failure note when the photos cannot be
-  loaded" can leave an unhandled rejection (`ApiError: API 0`, raised at
-  line 806 by `rejectPhotos`). Every test passes, but Vitest fails the run on
-  the unhandled error. The mock returns one shared pending promise for every
-  `listPhotos` call (`mockReturnValue`), so a call whose result nobody
-  handles would leave the rejection unhandled; the exact path is not
-  established. Seen once in CI on PR #489 (run 45961782458, attempt 1),
-  which changes no web code; the same step passed on that PR's previous
-  run. Origin: `demo-instance` PR 2/5 CI, 2026-11-27.
 
 ## Resolved
+
+- **TD-56** (web tests, flaky): `apps/web/src/pages/ReviewDocumentPage.test.tsx`
+  "replaces the loading note with the failure note when the photos cannot be
+  loaded" sometimes failed the run with an unhandled rejection
+  (`ApiError: API 0`) while every test passed: twice in four CI runs on PR
+  #489, never on `main` and never locally. The test rejected the mocked photo
+  request as soon as the loading note showed, which can happen before the
+  page's effect has called the request and attached its `catch`
+  (`ReviewDocumentPage.tsx`), so the rejection had no handler yet. It now
+  waits until the request was made. Delaying the effect's call reproduced the
+  unhandled rejection with the old test and passes with the new one. Done in
+  `td-56-photo-failure-flake` (PR 1/1). Origin: `demo-instance` PR 2/5 CI,
+  2026-11-27.
 
 - **TD-54**: Review photos (EN-164) opened in a new tab by a plain browser
   request that sent the access cookie alone, without `apiFetch`'s silent
