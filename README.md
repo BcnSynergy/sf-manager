@@ -742,17 +742,20 @@ demo's checkout with `demo.env`, and that key can never deploy production
 (nor production's the demo: the client can only send a commit SHA):
 
 1. Create a second key, `sf-manager-deploy-demo`, as in step 1.
-2. On the server, first reinstall the script from a `main` that already
-   knows the demo target (the commands above the `pub=` line in step 2), and
-   check it: a script from before this change ignores the forced command's
-   `demo`, so the demo's key would deploy production. Only then add the
-   public key with the demo's forced command; the chain stops if the check
-   fails:
+2. On the server, first reinstall the script from `main` (the commands
+   above the `pub=` line in step 2) and check that it knows the demo target:
+   a script that does not (it has no `SFM_DEMO_DIR`, the demo checkout's
+   setting) ignores the forced command's `demo`, so the demo's key would
+   deploy production. Only then add the public key with the demo's forced
+   command; the chain stops, and says why, when the check fails:
 
    ```sh
-   grep -q SFM_DEMO_DIR ~/bin/sf-manager-deploy &&
-     pub='<contents of sf-manager-deploy-demo.pub>' &&
+   if grep -q SFM_DEMO_DIR ~/bin/sf-manager-deploy; then
+     pub='<contents of sf-manager-deploy-demo.pub>'
      echo "restrict,command=\"$HOME/bin/sf-manager-deploy demo\" $pub" >>~/.ssh/authorized_keys
+   else
+     echo 'the installed deploy script does not know the demo target: reinstall it first' >&2
+   fi
    ```
 
 3. Create the `demo` environment as in step 3 (required reviewer, `main`
