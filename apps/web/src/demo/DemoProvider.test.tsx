@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useDemoInfo } from './demo-context';
 import { DemoProvider } from './DemoProvider';
@@ -47,13 +47,8 @@ describe('DemoProvider', () => {
   });
 
   it('gives nothing outside the demo', async () => {
-    const fetchMock = stubFetch(() =>
-      Promise.resolve({
-        ok: true,
-        status: 200,
-        json: async () => ({ enabled: false }),
-      } as Response),
-    );
+    const json = vi.fn(async () => ({ enabled: false }));
+    stubFetch(() => Promise.resolve({ ok: true, status: 200, json } as unknown as Response));
 
     render(
       <DemoProvider>
@@ -61,7 +56,9 @@ describe('DemoProvider', () => {
       </DemoProvider>,
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // The answer was read; let the provider's handler run before asserting.
+    await waitFor(() => expect(json).toHaveBeenCalled());
+    await act(async () => {});
     expect(screen.getByTestId('probe')).toHaveTextContent('none');
   });
 
@@ -75,6 +72,7 @@ describe('DemoProvider', () => {
     );
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await act(async () => {});
     expect(screen.getByTestId('probe')).toHaveTextContent('none');
   });
 

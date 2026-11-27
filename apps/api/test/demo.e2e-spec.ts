@@ -47,13 +47,15 @@ describe('GET /demo (e2e)', () => {
     const server = (await boot('true')).getHttpServer();
 
     const response = await request(server).get('/demo').expect(200);
-    const body = response.body as { accounts: unknown[] };
+    const body = response.body as { accounts: { role: string }[] };
 
     expect(body).toMatchObject({
       enabled: true,
       password: 'sf-manager-demo-1',
     });
     expect(body.accounts).toHaveLength(4);
+    // Never the system admin, whose credentials are not public.
+    expect(body.accounts.map((a) => a.role)).not.toContain('SYSTEM_ADMIN');
   });
 
   it('refuses to boot on an unknown DEMO_MODE value', async () => {
