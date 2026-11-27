@@ -76,8 +76,6 @@ demo_project=sf-manager-demo-smoke
 demo_env=$(mktemp)
 cat >"$demo_env" <<EOF
 SITE_ADDRESS=demo.localhost
-EDGE_NETWORK=sf-edge-demo
-WEB_ALIAS=sf-manager-demo-web
 POSTGRES_USER=demo
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 POSTGRES_DB=sfmanager
@@ -315,9 +313,17 @@ robots=$(demo_curl -D - -o /dev/null https://demo.localhost/ | tr -d '\r' |
   sed -n 's/^[Xx]-[Rr]obots-[Tt]ag: *//p') || robots=''
 [ "$robots" = 'noindex, nofollow' ] ||
   demo_fail "the demo answered X-Robots-Tag '$robots', expected 'noindex, nofollow'"
-prod_robots=$(curl -sk --max-time 10 -D - -o /dev/null https://localhost/ | tr -d '\r' |
-  grep -ci '^x-robots-tag:') || prod_robots=0
-[ "$prod_robots" = 0 ] || fail "production answered with an X-Robots-Tag header"
+# Production's headers are read first, so a failed request fails the check
+# instead of passing for lack of the header.
+prod_headers=$(curl -sk --max-time 10 -D - -o /dev/null https://localhost/ | tr -d '\r') ||
+  fail "could not read production's headers"
+case $prod_headers in
+  'HTTP/'*' 200'*) ;;
+  *) fail "production did not answer 200 when checking for X-Robots-Tag" ;;
+esac
+if printf '%s\n' "$prod_headers" | grep -qi '^x-robots-tag:'; then
+  fail "production answered with an X-Robots-Tag header"
+fi
 echo "smoke: the demo is marked noindex, production is not"
 
 status=$(demo_curl -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \

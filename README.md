@@ -525,7 +525,9 @@ same server, behind the same edge proxy, as its own Compose project
 `sf-manager-demo`: `docker-compose.prod.yml` plus the override
 `docker-compose.demo.yml`, with its own `demo.env`, database and uploaded
 files. Its web joins its own edge network, `sf-edge-demo`, which the
-production web never shares. The edge proxy marks the demo `noindex`. The
+production web never shares; the override sets that itself, so it needs
+Docker Compose 2.24.4 or later (`docker compose version`). The edge proxy
+marks the demo `noindex`. The
 demo sends no email and keeps no backups. Its `reset` service drops the
 database, migrates and seeds the demo dataset when the stack starts and
 every night at `DEMO_RESET_HOUR_UTC` (UTC, default 3), and empties the

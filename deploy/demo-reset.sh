@@ -5,20 +5,28 @@
 # dist/seed). That service sets DATABASE_URL, FILE_STORAGE_DIR (through the
 # image), SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD and SEED_DEMO_DATA=true.
 #
-#   demo-reset.sh          reset now, then every day at DEMO_RESET_HOUR_UTC
-#   demo-reset.sh once     reset now and exit
+#   demo-reset.sh                   reset now, then every day at
+#                                   DEMO_RESET_HOUR_UTC
+#   demo-reset.sh once              reset now and exit
+#   demo-reset.sh seconds-to-next [NOW]
+#                                   print the seconds from NOW (epoch
+#                                   seconds, default the current time) to
+#                                   the next reset (deploy/test-demo-reset.sh)
 #
 # A reset drops and recreates the database schema, applies the migrations,
 # empties the uploaded files and seeds the admin and the demo dataset again,
 # so every visitor starts from the same data with the same QR codes. The
-# API keeps running; requests made during the reset may fail. A failed reset
-# is logged and retried at the next scheduled hour instead of stopping the
-# service.
+# API keeps running; requests made during the reset may fail. Resets never
+# overlap: a second one (`once` during the scheduled one) waits for the
+# first. A failed reset is logged and retried every
+# DEMO_RESET_RETRY_SECONDS (default 900) until one succeeds, instead of
+# leaving the demo broken until the next night or stopping the service.
 set -eu
 reset_hour="${DEMO_RESET_HOUR_UTC:-3}"
-files_dir="${FILE_STORAGE_DIR:?FILE_STORAGE_DIR is not set}"
+retry_seconds="${DEMO_RESET_RETRY_SECONDS:-900}"
+lock_file=/tmp/demo-reset.lock
 
-check_hour() {
+check_settings() {
   # A leading zero is rejected too: shell arithmetic would read it as octal.
   case "$reset_hour" in
     [0-9] | 1[0-9] | 2[0-3]) ;;
@@ -27,9 +35,16 @@ check_hour() {
       exit 1
       ;;
   esac
+  case "$retry_seconds" in
+    '' | 0 | 0* | *[!0-9]*)
+      echo "demo-reset: DEMO_RESET_RETRY_SECONDS must be a whole number of seconds above 0, got '$retry_seconds'" >&2
+      exit 1
+      ;;
+  esac
 }
 
-reset_once() {
+reset_steps() {
+  files_dir="${FILE_STORAGE_DIR:?FILE_STORAGE_DIR is not set}"
   echo "demo-reset: dropping the database schema"
   printf 'DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n' |
     npx prisma db execute --stdin || return 1
@@ -42,30 +57,53 @@ reset_once() {
   echo "demo-reset: done"
 }
 
-# Seconds from now until the next DEMO_RESET_HOUR_UTC:00 UTC, at least 1.
+# One reset at a time, through a lock both the loop and `once` take.
+reset_once() {
+  (
+    flock 9 || exit 1
+    reset_steps
+  ) 9>"$lock_file"
+}
+
+# Seconds from NOW until the next DEMO_RESET_HOUR_UTC:00 UTC, 1 to 86400.
 seconds_to_next_reset() {
-  now=$(date -u +%s)
-  next=$(date -u -d "today $reset_hour:00" +%s)
+  now="${1:-$(date -u +%s)}"
+  case "$now" in
+    '' | *[!0-9]*)
+      echo "demo-reset: NOW must be epoch seconds, got '$now'" >&2
+      exit 1
+      ;;
+  esac
+  day=$(date -u -d "@$now" +%Y-%m-%d)
+  next=$(date -u -d "$day $reset_hour:00" +%s)
   if [ "$next" -le "$now" ]; then
-    next=$(date -u -d "tomorrow $reset_hour:00" +%s)
+    next=$((next + 86400))
   fi
   echo $((next - now))
 }
 
-check_hour
+check_settings
 case "${1:-}" in
   '') ;;
   once)
     reset_once
     exit
     ;;
+  seconds-to-next)
+    seconds_to_next_reset "${2:-}"
+    exit
+    ;;
   *)
-    echo "usage: demo-reset.sh [once]" >&2
+    echo "usage: demo-reset.sh [once | seconds-to-next [NOW]]" >&2
     exit 1
     ;;
 esac
 
 while true; do
-  reset_once || echo "demo-reset: reset failed; next try at $reset_hour:00 UTC" >&2
-  sleep "$(seconds_to_next_reset)"
+  if reset_once; then
+    sleep "$(seconds_to_next_reset)"
+  else
+    echo "demo-reset: reset failed; trying again in $retry_seconds seconds" >&2
+    sleep "$retry_seconds"
+  fi
 done

@@ -1246,6 +1246,16 @@ content type`). Today that is the only 415 it raises, but a future one
   then created again with the same code, which fails as
   `ElementCodeGenerationFailedError`, a misleading message. Origin:
   `demo-instance` T2a fresh review S-2 and S-3, 2026-11-27.
+- **EN-254** (deployment): the demo's `reset` service runs
+  `deploy/demo-reset.sh` bind-mounted from the server's checkout, which
+  follows production's deploys, while the code it calls (the migrations and
+  the compiled demo seed) comes from the demo's own `IMAGE_TAG`. When the
+  two drift (production deployed, demo left on an older tag), a newer script
+  can call into an older image. The backup and off-site services mount their
+  scripts the same way, but they run the same tag as the checkout. Ship the
+  script in the API image, or check that the demo's tag matches the
+  checkout before starting it. Origin: `demo-instance` T2b Gentle review
+  (R4-script-bind-from-checkout), 2026-11-27.
 
 ## Done
 

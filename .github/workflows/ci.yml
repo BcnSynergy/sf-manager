@@ -109,6 +109,10 @@ jobs:
       - name: Deploy script
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: sh deploy/test-deploy.sh
+      # The demo's reset script (demo-instance T2b), with stub npx and node.
+      - name: Demo reset script
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: sh deploy/test-demo-reset.sh
       # Builds the production images and starts the whole stack on
       # https://localhost, so a broken Dockerfile or base-image update
       # (Dependabot) fails the PR (EN-91).

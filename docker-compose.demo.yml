@@ -4,11 +4,22 @@
 # edge proxy on its own edge network:
 #   docker compose -p sf-manager-demo -f docker-compose.prod.yml \
 #     -f docker-compose.demo.yml --env-file demo.env up -d --no-build
-# demo.env sets EDGE_NETWORK=sf-edge-demo and WEB_ALIAS=sf-manager-demo-web,
-# so its web joins the demo's edge network only (deploy/edge). It holds the
+# Its web joins the demo's own edge network (deploy/edge) under its own
+# alias, set here rather than in demo.env so a missing setting can never put
+# it on production's network or alias (EN-248). `!override` needs Docker
+# Compose 2.24.4 or later; an older one refuses this file. It holds the
 # fictitious demo dataset (spec `demo-seed-data`), reset every night, and it
 # sends no email, keeps no backups and makes no off-site copies.
 services:
+  web:
+    networks:
+      sf-edge:
+        # Replaces production's alias instead of adding to it: on this
+        # network the edge proxy must find the demo web under the demo's
+        # alias only.
+        aliases: !override
+          - sf-manager-demo-web
+
   api:
     environment: &no-email
       # No email leaves the demo: the API requires a relay in production, so
@@ -58,3 +69,10 @@ services:
     volumes:
       - api-files:/var/lib/sf-manager/files
       - ./deploy/demo-reset.sh:/usr/local/bin/demo-reset.sh:ro
+
+networks:
+  # The network docker-compose.prod.yml calls sf-edge is, for the demo, the
+  # demo's own edge network, which the edge proxy creates.
+  sf-edge:
+    external: true
+    name: sf-edge-demo

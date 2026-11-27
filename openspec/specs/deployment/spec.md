@@ -316,7 +316,7 @@ The production stack MUST set `TRUST_PROXY=2`, because two hops stand in front o
 
 ### Requirement: Demo stack
 
-A public demo MAY run next to production on the same server, behind the same edge proxy, as its own Compose project (`sf-manager-demo`): `docker-compose.prod.yml` with the override `docker-compose.demo.yml` and its own `demo.env`, so its database, uploaded files and settings are separate from production's. Its `web` MUST join the demo's own edge network (`EDGE_NETWORK=sf-edge-demo`) under its own alias (`WEB_ALIAS=sf-manager-demo-web`); without those settings `docker-compose.prod.yml` keeps production's network and alias. The edge proxy MUST serve the demo at `SFMANAGER_DEMO_SITE` (`demo.localhost` when unset) and MUST add `X-Robots-Tag: noindex, nofollow` to its responses, and to no production response. The demo MUST NOT send email: its API gets an SMTP relay nobody listens on, so a password reset request fails quietly. It MUST NOT run the `backup` and `offsite` services. Its `reset` service MUST reset the demo when it starts and every day at `DEMO_RESET_HOUR_UTC` (default 3): drop and recreate the database schema, apply the migrations, empty the uploaded files and run the demo seed (`demo-seed-data`) with `SEED_DEMO_DATA=true`. `deploy/demo-reset.sh once` MUST reset it on demand. A failed reset MUST be logged and retried at the next scheduled hour without stopping the service. A deploy of production (`deploy/deploy.sh`) MUST NOT touch the demo.
+A public demo MAY run next to production on the same server, behind the same edge proxy, as its own Compose project (`sf-manager-demo`): `docker-compose.prod.yml` with the override `docker-compose.demo.yml` and its own `demo.env`, so its database, uploaded files and settings are separate from production's. Its `web` MUST join the demo's own edge network (`sf-edge-demo`) under the alias `sf-manager-demo-web` only, never production's network or alias. The override MUST set both itself, not `demo.env`, so no missing setting can put the demo on production's network (it replaces production's alias with Compose's `!override`, which needs Docker Compose 2.24.4 or later); `docker-compose.prod.yml` is unchanged by the demo. The edge proxy MUST serve the demo at `SFMANAGER_DEMO_SITE` (`demo.localhost` when unset) and MUST add `X-Robots-Tag: noindex, nofollow` to its responses, and to no production response. The demo MUST NOT send email: its API gets an SMTP relay nobody listens on, so a password reset request fails quietly. It MUST NOT run the `backup` and `offsite` services. Its `reset` service MUST reset the demo when it starts and every day at `DEMO_RESET_HOUR_UTC` (default 3): drop and recreate the database schema, apply the migrations, empty the uploaded files and run the demo seed (`demo-seed-data`) with `SEED_DEMO_DATA=true`. `deploy/demo-reset.sh once` MUST reset it on demand. A failed reset MUST be logged and retried at the next scheduled hour without stopping the service. A deploy of production (`deploy/deploy.sh`) MUST NOT touch the demo.
 
 #### Scenario: The demo answers on its own site, marked noindex
 
@@ -331,11 +331,11 @@ A public demo MAY run next to production on the same server, behind the same edg
 - WHEN the reset runs again
 - THEN the demo holds exactly the seeded dataset again, with the same QR codes, and a demo account can log in
 
-#### Scenario: Production's settings are unchanged
+#### Scenario: The demo's network does not depend on its settings
 
-- GIVEN a `prod.env` without `EDGE_NETWORK` and `WEB_ALIAS`
-- WHEN `docker compose -f docker-compose.prod.yml config` renders the production stack
-- THEN its web joins `sf-edge` under the alias `sf-manager-prod-web`, as before the demo existed
+- GIVEN a `demo.env` that sets only the secrets, the domain and the image tag
+- WHEN `docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml config` renders the demo stack
+- THEN its web joins `sf-edge-demo` with the alias `sf-manager-demo-web` and no other
 
 ### Requirement: API documentation off in production
 
