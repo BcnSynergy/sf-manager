@@ -236,6 +236,77 @@ grep -q ' up ' "$work/docker.log" && fail 'closed output: up was called'
 reset
 if run "$second" up; then fail 'failed up: exit 0'; fi
 
+# demo-instance T3: the demo's key forces `sf-manager-deploy demo`. Its
+# checkout holds demo.env, and the deploy uses the demo override.
+reset_demo() {
+  reset
+  mv "$work/checkout/prod.env" "$work/checkout/demo.env"
+}
+# run_target ARGS INPUT [FAIL]: runs the script with the forced command's
+# arguments (one word, or empty for production's key).
+run_target() {
+  (
+    export SSH_ORIGINAL_COMMAND="$2" SFM_DEPLOY_DIR="$work/checkout" \
+      FAKE_DOCKER_LOG="$work/docker.log" FAKE_DOCKER_FAIL="${3:-}" \
+      PATH="$work/bin:$PATH"
+    unset IMAGE_TAG
+    # shellcheck disable=SC2086 # the forced command's arguments
+    sh "$script" $1
+  ) >"$work/out" 2>&1
+}
+demo_tag_is() { grep -qx "IMAGE_TAG=$1" "$work/checkout/demo.env"; }
+demo_files='-f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env'
+
+reset_demo
+if run_target demo "$second"; then
+  head_is "$second" || fail 'demo: checkout is not at the commit'
+  demo_tag_is "sha-$(short "$second")" || fail 'demo: IMAGE_TAG not set in demo.env'
+  grep -qx 'POSTGRES_PASSWORD=secret' "$work/checkout/demo.env" ||
+    fail 'demo: other demo.env lines changed'
+  [ ! -e "$work/checkout/prod.env" ] || fail 'demo: a prod.env was written'
+  expected="[sha-$(short "$second")] compose $demo_files pull api web
+[] compose $demo_files up -d --no-build"
+  [ "$(cat "$work/docker.log")" = "$expected" ] ||
+    fail "demo: docker calls were: $(cat "$work/docker.log")"
+  grep -q "deploy: demo now runs sha-$(short "$second")" "$work/out" ||
+    fail "demo: no 'demo now runs' in: $(cat "$work/out")"
+else
+  fail "demo: exit non-zero: $(cat "$work/out")"
+fi
+
+# By hand: `sf-manager-deploy demo <sha>`.
+reset_demo
+if (
+  unset SSH_ORIGINAL_COMMAND IMAGE_TAG
+  export SFM_DEPLOY_DIR="$work/checkout" FAKE_DOCKER_LOG="$work/docker.log" \
+    PATH="$work/bin:$PATH"
+  sh "$script" demo "$second"
+) >"$work/out" 2>&1; then
+  demo_tag_is "sha-$(short "$second")" || fail 'demo by hand: IMAGE_TAG not set'
+else
+  fail "demo by hand: exit non-zero: $(cat "$work/out")"
+fi
+
+# An explicit `production` is the same as none.
+reset
+if run_target production "$second"; then
+  docker_calls_are "sha-$(short "$second")" 'explicit production'
+else
+  fail "explicit production: exit non-zero: $(cat "$work/out")"
+fi
+
+# The client never picks the target: production's key (no argument) sent
+# `demo <sha>` is refused like any other malformed commit.
+refused 'target from the client' "demo $second" "$full"
+
+# A failed demo pull names demo.env and leaves it as it was.
+reset_demo
+if run_target demo "$second" pull; then fail 'failed demo pull: exit 0'; fi
+demo_tag_is "$baseline_tag" || fail 'failed demo pull: demo.env changed'
+head_is "$first" || fail 'failed demo pull: checkout moved'
+grep -q 'demo.env unchanged' "$work/out" ||
+  fail "failed demo pull: no 'demo.env unchanged' in: $(cat "$work/out")"
+
 # resolve-commit.sh, in a clone as the workflow runs it.
 reset
 resolves() {
