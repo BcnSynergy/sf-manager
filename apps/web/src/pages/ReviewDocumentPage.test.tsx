@@ -804,7 +804,7 @@ describe('record photos', () => {
     // TD-56: the loading note can show before the effect requests the photos
     // and attaches its catch; rejecting in that gap left the rejection
     // unhandled, which fails the run.
-    await waitFor(() => expect(mockedListPhotos).toHaveBeenCalled());
+    await waitFor(() => expect(mockedListPhotos).toHaveBeenCalledTimes(1));
 
     await act(async () => {
       rejectPhotos(new ApiError(0));
