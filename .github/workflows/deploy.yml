@@ -36,12 +36,14 @@ jobs:
     if: github.repository == 'BcnSynergy/sf-manager'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # The target's site, written once: the approval link and the final check
+    # both read it.
     env:
       TARGET: ${{ inputs.target }}
       SITE_URL: ${{ inputs.target == 'demo' && 'https://sfmanager.demo.bcnsynergy.com' || 'https://sfmanager.bcnsynergy.com' }}
     environment:
       name: ${{ inputs.target }}
-      url: ${{ inputs.target == 'demo' && 'https://sfmanager.demo.bcnsynergy.com' || 'https://sfmanager.bcnsynergy.com' }}
+      url: ${{ env.SITE_URL }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -101,5 +103,8 @@ jobs:
           ssh -i "$ssh_dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$ssh_dir/known_hosts" \
             -o ConnectTimeout=30 "$DEPLOY_SSH_TARGET" "$SHA"
+      # The site check of "Production monitoring", against the target's own
+      # site: it only checks /api/health and the certificate's expiry, which
+      # hold for the demo as for production.
       - name: Check the deployed site
         run: sh deploy/check-production.sh "$SITE_URL"

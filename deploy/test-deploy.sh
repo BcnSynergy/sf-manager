@@ -247,6 +247,7 @@ reset_demo() {
 run_target() {
   (
     export SSH_ORIGINAL_COMMAND="$2" SFM_DEPLOY_DIR="$work/checkout" \
+      SFM_DEMO_DIR="$work/checkout" \
       FAKE_DOCKER_LOG="$work/docker.log" FAKE_DOCKER_FAIL="${3:-}" \
       PATH="$work/bin:$PATH"
     unset IMAGE_TAG
@@ -278,7 +279,7 @@ fi
 reset_demo
 if (
   unset SSH_ORIGINAL_COMMAND IMAGE_TAG
-  export SFM_DEPLOY_DIR="$work/checkout" FAKE_DOCKER_LOG="$work/docker.log" \
+  export SFM_DEMO_DIR="$work/checkout" FAKE_DOCKER_LOG="$work/docker.log" \
     PATH="$work/bin:$PATH"
   sh "$script" demo "$second"
 ) >"$work/out" 2>&1; then
@@ -306,6 +307,49 @@ demo_tag_is "$baseline_tag" || fail 'failed demo pull: demo.env changed'
 head_is "$first" || fail 'failed demo pull: checkout moved'
 grep -q 'demo.env unchanged' "$work/out" ||
   fail "failed demo pull: no 'demo.env unchanged' in: $(cat "$work/out")"
+
+# A forced command with anything but a known target fails closed instead of
+# deploying production (a demo key whose `demo` was mistyped).
+reset
+if run_target demoo "$second"; then fail 'mistyped target: exit 0'; fi
+grep -q "unknown target 'demoo'" "$work/out" ||
+  fail "mistyped target: no 'unknown target' in: $(cat "$work/out")"
+[ -s "$work/docker.log" ] && fail 'mistyped target: docker was called'
+head_is "$first" || fail 'mistyped target: checkout moved'
+
+# The default checkouts: with no override, a demo deploy moves
+# ~/sf-manager-demo only, and production's ~/sf-manager (checkout and
+# prod.env) stays byte for byte, even with SFM_DEPLOY_DIR pointing at it,
+# since that variable is production's.
+home="$work/home"
+rm -rf "$home"
+mkdir "$home"
+git clone -q "$work/origin" "$home/sf-manager"
+git clone -q "$work/origin" "$home/sf-manager-demo"
+for d in sf-manager sf-manager-demo; do
+  git -C "$home/$d" checkout -q --detach "$first"
+done
+printf 'IMAGE_TAG=%s\n' "$baseline_tag" >"$home/sf-manager/prod.env"
+printf 'IMAGE_TAG=%s\n' "$baseline_tag" >"$home/sf-manager-demo/demo.env"
+cp "$home/sf-manager/prod.env" "$work/prod.env.before"
+: >"$work/docker.log"
+if (
+  unset SFM_DEMO_DIR IMAGE_TAG
+  export HOME="$home" SFM_DEPLOY_DIR="$home/sf-manager" SSH_ORIGINAL_COMMAND="$second" \
+    FAKE_DOCKER_LOG="$work/docker.log" PATH="$work/bin:$PATH"
+  sh "$script" demo
+) >"$work/out" 2>&1; then
+  [ "$(git -C "$home/sf-manager-demo" rev-parse HEAD)" = "$second" ] ||
+    fail 'default demo checkout: ~/sf-manager-demo did not move'
+  grep -qx "IMAGE_TAG=sha-$(short "$second")" "$home/sf-manager-demo/demo.env" ||
+    fail 'default demo checkout: demo.env not pinned'
+  [ "$(git -C "$home/sf-manager" rev-parse HEAD)" = "$first" ] ||
+    fail "default demo checkout: production's checkout moved"
+  cmp -s "$home/sf-manager/prod.env" "$work/prod.env.before" ||
+    fail "default demo checkout: production's prod.env changed"
+else
+  fail "default demo checkout: exit non-zero: $(cat "$work/out")"
+fi
 
 # resolve-commit.sh, in a clone as the workflow runs it.
 reset

@@ -669,8 +669,9 @@ workflow"), choosing the target (`production` by default, or `demo`; see
 `main`. It waits for your approval in the GitHub environment named after the
 target, refuses
 a commit that is not on `main` or has no published images, then deploys
-over SSH and runs the production check (see "Monitoring") against that
-target's site. To roll back,
+over SSH and runs the site check of "Monitoring" (`deploy/check-production.sh`,
+which only checks `/api/health` and the certificate, so it fits the demo
+too) against that target's site. To roll back,
 deploy an older commit of `main`; as with a manual rollback, migrations the
 newer version applied stay. A commit from before the edge proxy (its Caddy
 publishes the ports itself) cannot be deployed this way once the server

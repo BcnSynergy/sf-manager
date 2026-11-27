@@ -17,9 +17,15 @@
 #
 # Production runs from ~/sf-manager with prod.env; the demo from its own
 # checkout, ~/sf-manager-demo, with docker-compose.demo.yml and demo.env, so
-# deploying one never moves the other's files. SFM_DEPLOY_DIR overrides the
-# checkout. Any failing step stops the deploy with a non-zero exit.
+# deploying one never moves the other's files. SFM_DEPLOY_DIR overrides
+# production's checkout and SFM_DEMO_DIR the demo's, each for its own target
+# only. Any failing step stops the deploy with a non-zero exit.
 set -eu
+
+refuse() {
+  echo "deploy: $1" >&2
+  exit 2
+}
 
 target=production
 case "${1-}" in
@@ -28,24 +34,26 @@ case "${1-}" in
     shift
     ;;
 esac
+# Under a forced command the arguments come from authorized_keys and the SHA
+# from the client. Anything left after the target there means a mistyped
+# forced command: refuse it rather than fall back to production, so a demo
+# key with a typo can never deploy production.
+if [ -n "${SSH_ORIGINAL_COMMAND+set}" ] && [ $# -gt 0 ]; then
+  refuse "unknown target '$1' in the forced command (expected production or demo)"
+fi
 # The Compose arguments of each target, one word each (no spaces), expanded
 # unquoted below: a prefix assignment (IMAGE_TAG=...) must go straight to
 # `docker`, not to a shell function.
 if [ "$target" = demo ]; then
-  dir="${SFM_DEPLOY_DIR:-$HOME/sf-manager-demo}"
+  dir="${SFM_DEMO_DIR:-$HOME/sf-manager-demo}"
   env_file=demo.env
-  files='-f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env'
+  files="-f docker-compose.prod.yml -f docker-compose.demo.yml --env-file $env_file"
 else
   dir="${SFM_DEPLOY_DIR:-$HOME/sf-manager}"
   env_file=prod.env
-  files='-f docker-compose.prod.yml --env-file prod.env'
+  files="-f docker-compose.prod.yml --env-file $env_file"
 fi
 sha="${SSH_ORIGINAL_COMMAND-${1-}}"
-
-refuse() {
-  echo "deploy: $1" >&2
-  exit 2
-}
 
 # Only a full lower-case SHA: nothing from the input reaches a shell
 # unchecked.
