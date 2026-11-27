@@ -10,7 +10,12 @@ import { ChecklistQuestionNotFoundError } from '../../modules/checklist-question
 import { ReviewTemplateEmptyError } from '../../modules/review-template/domain/errors/review-template-empty.error';
 import { CommunityNotInScopeError } from '../../modules/review-session/domain/errors/community-not-in-scope.error';
 import type { ReviewFrequency } from '@sf-manager/validation';
-import { DEV_DATASET, type SeededFrequency } from './dev-dataset';
+import {
+  DEV_DATASET,
+  type DevDataset,
+  type SeededFrequency,
+} from './dev-dataset';
+import { buildDevSignaturePng } from './dev-seed-signature';
 import {
   runDevSeed,
   runSessionGuarded,
@@ -41,6 +46,11 @@ interface World {
   templates: ReviewTemplate[];
   // Frozen snapshot size per template id; defaults to 3.
   snapshotSizes: Map<string, number>;
+  // Frozen snapshot questions per template id; overrides snapshotSizes.
+  snapshotQuestions: Map<string, { questionId: string; text: string }[]>;
+  // Fixed code per element name created through the fixed-code path.
+  createdElementCodes: Map<string, string>;
+  backdated: { sessionId: string; daysAgo: number }[];
   profileUpdates: Input<'updateProfile'>[];
   addedRepresentatives: Input<'addRepresentative'>[];
   addedTechnicians: Input<'addTechnician'>[];
@@ -109,6 +119,9 @@ function buildWorld(
     templates: [...(seed.templates ?? [])],
     sessions: [...(seed.sessions ?? [])],
     snapshotSizes: new Map<string, number>(),
+    snapshotQuestions: new Map(),
+    createdElementCodes: new Map<string, string>(),
+    backdated: [],
     profileUpdates: [],
     addedRepresentatives: [],
     addedTechnicians: [],
@@ -231,6 +244,12 @@ function buildWorld(
         });
       },
     },
+    createElementWithCode: (code) => ({
+      execute: async (input) => {
+        world.createdElementCodes.set(input.name, code);
+        await world.deps.createElement.execute(input);
+      },
+    }),
     questionRepository: { findAll: async () => [...world.questions] as never },
     createQuestion: {
       execute: async (input) => {
@@ -244,10 +263,15 @@ function buildWorld(
       findFrozenWithSnapshot: async (id) =>
         ({
           id,
-          questions: Array.from(
-            { length: world.snapshotSizes.get(id) ?? 3 },
-            (_, i) => ({ questionId: `${id}-q${i}` }),
-          ),
+          questions:
+            world.snapshotQuestions.get(id) ??
+            Array.from(
+              { length: world.snapshotSizes.get(id) ?? 3 },
+              (_, i) => ({
+                questionId: `${id}-q${i}`,
+                text: `${id}-q${i}`,
+              }),
+            ),
         }) as never,
     },
     createDraftTemplate: {
@@ -344,6 +368,9 @@ function buildWorld(
       put: async (key, content) => {
         world.storedFiles.set(key, content);
       },
+    },
+    backdateSession: async (sessionId, daysAgo) => {
+      world.backdated.push({ sessionId, daysAgo });
     },
     completeSession: {
       execute: async (sessionId, actor) => {
@@ -1589,5 +1616,144 @@ describe('runDevSeed', () => {
       'Seeding dev data. Target database host: localhost:5432.',
     );
     expect(world.users).toHaveLength(DEV_DATASET.users.length);
+  });
+});
+
+// demo-seed-data: the optional dataset fields the demo dataset uses. The dev
+// dataset sets none of them, so its behavior above is unchanged.
+describe('seedDevDataset optional dataset fields', () => {
+  const dataset = (): DevDataset => structuredClone(DEV_DATASET);
+  const templateIdOf = (frequency: SeededFrequency) =>
+    `draft-${frequency.toLowerCase()}`;
+
+  it('creates an element with a fixed code through the fixed-code use case, and the others through the default one', async () => {
+    const data = dataset();
+    const [first, ...rest] = data.elements;
+    data.elements = [{ ...first, code: 'DEMMAEXT22' }, ...rest];
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    expect(world.createdElementCodes).toEqual(
+      new Map([[first.name, 'DEMMAEXT22']]),
+    );
+    expect(world.createdElements.map((e) => e.name)).toEqual(
+      data.elements.map((e) => e.name),
+    );
+    expect(world.createdElements[0]).not.toHaveProperty('code');
+  });
+
+  it('gives each template only the questions tagged with its frequency, in dataset order', async () => {
+    const data = dataset();
+    data.questions = [
+      { elementType: 'EXTINGUISHER', frequencies: ['QUARTERLY'], text: 'A' },
+      {
+        elementType: 'EXTINGUISHER',
+        frequencies: ['QUARTERLY', 'ANNUAL'],
+        text: 'B',
+      },
+      { elementType: 'EXTINGUISHER', frequencies: ['ANNUAL'], text: 'C' },
+    ];
+    data.sessions = [];
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    const idOf = (text: string) =>
+      world.questions.find((q) => q.text === text)!.id;
+    expect(world.templateQuestionSets).toEqual([
+      {
+        templateId: templateIdOf('QUARTERLY'),
+        questionIds: [idOf('A'), idOf('B')],
+      },
+      {
+        templateId: templateIdOf('ANNUAL'),
+        questionIds: [idOf('B'), idOf('C')],
+      },
+    ]);
+  });
+
+  it('answers NO only on the question named by noOn', async () => {
+    const data = dataset();
+    const session = data.sessions[1];
+    const [entry] = session.entries;
+    session.entries = [{ ...entry, outcome: 'NO', noOn: 'Seal intact?' }];
+    const world = buildWorld();
+    world.snapshotQuestions.set(templateIdOf(session.frequency), [
+      { questionId: 'q-visible', text: 'Visible?' },
+      { questionId: 'q-seal', text: 'Seal intact?' },
+    ]);
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    const recorded = world.recorded.find(
+      (r) =>
+        world.elements.find((e) => e.id === r.elementId)!.name ===
+          entry.elementName &&
+        r.actor.userId ===
+          world.users.find((u) => u.email === session.performerEmail)!.id,
+    )!;
+    expect(recorded.input).toEqual({
+      kind: 'reviewed',
+      answers: [
+        { questionId: 'q-visible', value: 'YES' },
+        { questionId: 'q-seal', value: 'NO' },
+      ],
+    });
+  });
+
+  it('fails with a clear error when noOn names a question the template lacks', async () => {
+    const data = dataset();
+    const session = data.sessions[1];
+    session.entries = [
+      { ...session.entries[0], outcome: 'NO', noOn: 'Not in the template?' },
+    ];
+    const world = buildWorld();
+
+    await expect(seedDevDataset(world.deps, data, jest.fn())).rejects.toThrow(
+      'Not in the template?',
+    );
+  });
+
+  it('backdates a newly completed session by its daysAgo, and only that one', async () => {
+    const data = dataset();
+    data.sessions[0] = { ...data.sessions[0], daysAgo: 40 };
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    expect(world.backdated).toEqual([
+      { sessionId: world.completedIds[0], daysAgo: 40 },
+    ]);
+  });
+
+  it('does not backdate again a session that already exists', async () => {
+    const data = dataset();
+    data.sessions[0] = { ...data.sessions[0], daysAgo: 40 };
+    const world = buildWorld();
+    await seedDevDataset(world.deps, data, jest.fn());
+    world.backdated = [];
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    expect(world.backdated).toEqual([]);
+  });
+
+  it('registers a signature with its own stroke for each user that has a signatureVariant, even one who performs no session', async () => {
+    const data = dataset();
+    const representative = data.users.find(
+      (u) => u.role === 'COMMUNITY_REPRESENTATIVE',
+    )!;
+    representative.signatureVariant = 3;
+    data.sessions = data.sessions.filter(
+      (x) => x.performerEmail !== representative.email,
+    );
+    const world = buildWorld();
+
+    await seedDevDataset(world.deps, data, jest.fn());
+
+    const id = world.users.find((u) => u.email === representative.email)!.id;
+    const key = world.signatureKeys.get(id)!;
+    expect(world.storedFiles.get(key)).toEqual(buildDevSignaturePng(3));
   });
 });

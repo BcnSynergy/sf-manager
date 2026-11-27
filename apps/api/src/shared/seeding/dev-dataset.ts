@@ -29,6 +29,10 @@ export interface DevUser {
   // References `DevCompany.taxId`; set only for the maintenance-side roles.
   companyTaxId?: string;
   managerCapabilities?: ManagerCapability[];
+  // demo-seed-data: registers a seed signature drawn with this variant
+  // (`buildDevSignaturePng`), whether or not the user performs a session.
+  // Unset: only a performer gets one, with the default image.
+  signatureVariant?: number;
 }
 
 export const DEV_SEED_MARKER = 'Dev Seed';
@@ -41,6 +45,9 @@ export interface DevAssignment {
 
 export type DevElement = CreateInspectableElementRequest & {
   communityName: string;
+  // demo-seed-data: the element's fixed public code (the one its QR label
+  // encodes). Unset: the application generates a random one.
+  code?: string;
 };
 
 // The frequencies the dataset seeds. The full `ReviewFrequency` would force
@@ -57,6 +64,9 @@ export interface DevTemplate {
 export interface DevSessionEntry {
   elementName: string;
   outcome: 'YES' | 'NO' | 'UNREVIEWED';
+  // demo-seed-data: for a NO outcome, the text of the one question answered
+  // NO. Unset: the template's first question.
+  noOn?: string;
 }
 
 export interface DevSession {
@@ -67,6 +77,9 @@ export interface DevSession {
   // false leaves the session as a draft.
   complete: boolean;
   entries: DevSessionEntry[];
+  // demo-seed-data: when the seed completes the session, its dates are moved
+  // this many days back. Unset: the session keeps the seeding time.
+  daysAgo?: number;
 }
 
 export interface DevDataset {

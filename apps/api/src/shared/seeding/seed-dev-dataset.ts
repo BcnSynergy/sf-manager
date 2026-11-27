@@ -40,6 +40,11 @@ import {
   FILE_STORAGE,
   type FileStorage,
 } from '../application/ports/file-storage.port';
+import {
+  ID_GENERATOR,
+  type IdGenerator,
+} from '../application/ports/id-generator.port';
+import { PrismaService } from '../infrastructure/persistence/prisma.service';
 import { UpdateOrganizationProfileUseCase } from '../../modules/organization-profile/application/use-cases/update-organization-profile.use-case';
 import {
   REVIEW_TEMPLATE_REPOSITORY,
@@ -142,6 +147,11 @@ export interface DevSeedDeps {
     'findAllByCommunity' | 'findActiveByCommunityAndType'
   >;
   createElement: UseCase<InputOf<CreateInspectableElementUseCase>>;
+  // demo-seed-data: the same use case, wired with a generator that returns
+  // the given code, for a dataset element with a fixed code.
+  createElementWithCode(
+    code: string,
+  ): UseCase<InputOf<CreateInspectableElementUseCase>>;
   questionRepository: Pick<ChecklistQuestionRepository, 'findAll'>;
   createQuestion: UseCase<
     InputOf<CreateChecklistQuestionUseCase>,
@@ -182,6 +192,26 @@ export interface DevSeedDeps {
   completeSession: {
     execute(sessionId: string, actor: Actor): Promise<unknown>;
   };
+  // demo-seed-data: moves a completed session's dates `daysAgo` days back.
+  // The review use cases stamp the current time, so this is seed-only.
+  backdateSession(sessionId: string, daysAgo: number): Promise<void>;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// A backdated session completes at 10:30 UTC on its day, a working-hours
+// time, after 30 minutes of work; its entries are recorded 15 minutes in.
+export function backdatedSessionTimes(
+  now: Date,
+  daysAgo: number,
+): { startedAt: Date; recordedAt: Date; completedAt: Date } {
+  const completedAt = new Date(now.getTime() - daysAgo * DAY_MS);
+  completedAt.setUTCHours(10, 30, 0, 0);
+  return {
+    startedAt: new Date(completedAt.getTime() - 30 * 60 * 1000),
+    recordedAt: new Date(completedAt.getTime() - 15 * 60 * 1000),
+    completedAt,
+  };
 }
 
 // Works with any Nest context: `INestApplicationContext` (prisma/seed.ts) and
@@ -212,6 +242,13 @@ export function resolveDevSeedDeps(ctx: {
       INSPECTABLE_ELEMENT_REPOSITORY,
     ),
     createElement: ctx.get(CreateInspectableElementUseCase),
+    createElementWithCode: (code) =>
+      new CreateInspectableElementUseCase(
+        ctx.get<InspectableElementRepository>(INSPECTABLE_ELEMENT_REPOSITORY),
+        ctx.get<CommunityRepository>(COMMUNITY_REPOSITORY),
+        ctx.get<IdGenerator>(ID_GENERATOR),
+        { generate: () => code },
+      ),
     questionRepository: ctx.get<ChecklistQuestionRepository>(
       CHECKLIST_QUESTION_REPOSITORY,
     ),
@@ -232,6 +269,23 @@ export function resolveDevSeedDeps(ctx: {
     ),
     fileStorage: ctx.get<FileStorage>(FILE_STORAGE),
     completeSession: ctx.get(CompleteReviewSessionUseCase),
+    backdateSession: async (sessionId, daysAgo) => {
+      const prisma = ctx.get<PrismaService>(PrismaService);
+      const { startedAt, recordedAt, completedAt } = backdatedSessionTimes(
+        new Date(),
+        daysAgo,
+      );
+      await prisma.$transaction([
+        prisma.reviewSession.update({
+          where: { id: sessionId },
+          data: { startedAt, completedAt },
+        }),
+        prisma.elementReviewEntry.updateMany({
+          where: { reviewSessionId: sessionId },
+          data: { recordedAt },
+        }),
+      ]);
+    },
   };
 }
 
@@ -275,9 +329,14 @@ export async function seedDevDataset(
   const questionIds = await seedQuestions(deps, data, log);
   const outcomeByFrequency = new Map<SeededFrequency, TemplateOutcome>();
   for (const template of data.templates) {
+    // Each template gets the questions tagged with its frequency, in dataset
+    // order (every dev question carries both frequencies).
+    const ownQuestionIds = questionIds.filter((_, i) =>
+      data.questions[i].frequencies.includes(template.frequency),
+    );
     outcomeByFrequency.set(
       template.frequency,
-      await seedTemplate(deps, template, questionIds, log),
+      await seedTemplate(deps, template, ownQuestionIds, log),
     );
   }
   const outcomeOf = (frequency: SeededFrequency): TemplateOutcome => {
@@ -341,6 +400,9 @@ async function seedUsers(
       continue; // blocked: drifted or soft-deleted email
     }
     await grantCapabilities(deps, user, resolved, log);
+    if (user.signatureVariant !== undefined) {
+      await ensureDevSignature(deps, resolved.id, user.signatureVariant);
+    }
     idByEmail.set(user.email, resolved.id);
   }
 
@@ -481,7 +543,7 @@ async function seedElements(
   communityIdByName: Map<string, string>,
   log: Log,
 ): Promise<void> {
-  for (const { communityName, ...element } of data.elements) {
+  for (const { communityName, code, ...element } of data.elements) {
     const communityId = requireId(communityIdByName, communityName);
     const existing =
       await deps.elementRepository.findAllByCommunity(communityId);
@@ -489,7 +551,11 @@ async function seedElements(
       log(`Element ${element.name} already exists, skipping.`);
       continue;
     }
-    await deps.createElement.execute({ ...element, communityId });
+    const create =
+      code === undefined
+        ? deps.createElement
+        : deps.createElementWithCode(code);
+    await create.execute({ ...element, communityId });
     log(`Seeded element: ${element.name}`);
   }
 }
@@ -656,7 +722,7 @@ async function seedSessions(
       log,
       async () => {
         await ensureDevSignature(deps, performerId);
-        const changed = await playSession(
+        const { changed, completed, sessionId } = await playSession(
           deps,
           template,
           session,
@@ -664,6 +730,9 @@ async function seedSessions(
           communityId,
           { userId: performerId, role },
         );
+        if (completed && session.daysAgo !== undefined) {
+          await deps.backdateSession(sessionId, session.daysAgo);
+        }
         log(
           changed
             ? `Seeded session: ${where}`
@@ -694,18 +763,19 @@ function templateOf(data: DevDataset, session: DevSession): DevTemplate {
 async function ensureDevSignature(
   deps: DevSeedDeps,
   userId: string,
+  variant = 0,
 ): Promise<void> {
   if (await deps.signatureRepository.findByUserId(userId)) {
     return;
   }
   const key = `${SIGNATURE_DIRECTORY}/${userId}.png`;
-  await deps.fileStorage.put(key, buildDevSignaturePng());
+  await deps.fileStorage.put(key, buildDevSignaturePng(variant));
   await deps.signatureRepository.save(userId, key);
 }
 
 // Records the planned entries the session lacks, then completes it when the
 // plan says so. Existing entries (including QA edits) are never rewritten.
-// Returns whether anything was written.
+// Returns whether anything was written and whether this run completed it.
 async function playSession(
   deps: DevSeedDeps,
   desired: DevTemplate,
@@ -713,7 +783,7 @@ async function playSession(
   plan: Exclude<SessionPlan, { kind: 'skip' }>,
   communityId: string,
   actor: Actor,
-): Promise<boolean> {
+): Promise<{ changed: boolean; completed: boolean; sessionId: string }> {
   let sessionId: string;
   let templateId: string;
   const covered = new Set<string>();
@@ -758,7 +828,7 @@ async function playSession(
   if (!snapshot || snapshot.questions.length === 0) {
     throw new ActiveTemplateNotFoundError();
   }
-  const questionIds = snapshot.questions.map((q) => q.questionId);
+  const questions = snapshot.questions;
   const record = async (elementId: string, input: RecordEntryInput) => {
     await deps.recordEntry.execute(sessionId, elementId, input, actor);
     covered.add(elementId);
@@ -776,12 +846,12 @@ async function playSession(
       throw new InspectableElementNotFoundError();
     }
     if (!covered.has(element.id)) {
-      await record(element.id, toEntryInput(entry.outcome, questionIds));
+      await record(element.id, toEntryInput(entry, questions));
     }
   }
 
   if (!session.complete) {
-    return changed;
+    return { changed, completed: false, sessionId };
   }
   // Complete rejects uncovered active elements, e.g. one QA added.
   const active = await deps.elementRepository.findActiveByCommunityAndType(
@@ -790,25 +860,39 @@ async function playSession(
   );
   for (const element of active) {
     if (!covered.has(element.id)) {
-      await record(element.id, toEntryInput('YES', questionIds));
+      await record(
+        element.id,
+        toEntryInput({ elementName: element.name, outcome: 'YES' }, questions),
+      );
     }
   }
   await deps.completeSession.execute(sessionId, actor);
-  return true;
+  return { changed: true, completed: true, sessionId };
 }
 
 function toEntryInput(
-  outcome: DevSessionEntry['outcome'],
-  questionIds: string[],
+  { outcome, noOn }: DevSessionEntry,
+  questions: { questionId: string; text: string }[],
 ): RecordEntryInput {
   if (outcome === 'UNREVIEWED') {
     return { kind: 'unreviewed', observations: 'Not reviewed: no access.' };
   }
+  const noIndex =
+    outcome !== 'NO'
+      ? -1
+      : noOn === undefined
+        ? 0
+        : questions.findIndex((q) => q.text === noOn);
+  if (outcome === 'NO' && noIndex === -1) {
+    throw new Error(
+      `Dataset entry answers NO on "${noOn}", a question its template does not ask.`,
+    );
+  }
   return {
     kind: 'reviewed',
-    answers: questionIds.map((questionId, i) => ({
+    answers: questions.map(({ questionId }, i) => ({
       questionId,
-      value: outcome === 'NO' && i === 0 ? 'NO' : 'YES',
+      value: i === noIndex ? 'NO' : 'YES',
     })),
   };
 }
