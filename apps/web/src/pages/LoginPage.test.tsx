@@ -498,6 +498,15 @@ describe('LoginPage language selector', () => {
       ],
     };
 
+    // The language test switches to Spanish; reset it even when it fails.
+    afterEach(async () => {
+      localStorage.clear();
+      await act(async () => {
+        await i18n.changeLanguage('en');
+      });
+      document.documentElement.lang = 'en';
+    });
+
     function renderDemoLoginPage(info: DemoAccounts | null) {
       return render(
         <DemoContext.Provider value={info}>
@@ -544,11 +553,6 @@ describe('LoginPage language selector', () => {
       expect(screen.getAllByTestId('login-demo-account')[0]).toHaveTextContent(
         'Gestor: gestor@demo.sf-manager.example',
       );
-      localStorage.clear();
-      await act(async () => {
-        await i18n.changeLanguage('en');
-      });
-      document.documentElement.lang = 'en';
     });
   });
 
