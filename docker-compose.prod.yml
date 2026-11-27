@@ -13,7 +13,7 @@ name: sf-manager-prod
 
 services:
   postgres:
-    image: postgres:18-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    image: postgres:18-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in prod.env}
@@ -94,7 +94,7 @@ services:
   # (TD-41, TD-42). Copying them off the server is the operator's job
   # (README "Database backups").
   backup:
-    image: postgres:18-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    image: postgres:18-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
     restart: unless-stopped
     # The script sleeps between dumps; without an init process a stop waits
     # for the timeout and then kills it.
