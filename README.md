@@ -524,9 +524,11 @@ dataset is spec `demo-seed-data` and README "Demo dataset") can run on the
 same server, behind the same edge proxy, as its own Compose project
 `sf-manager-demo`: `docker-compose.prod.yml` plus the override
 `docker-compose.demo.yml`, with its own `demo.env`, database and uploaded
-files. Its web joins its own edge network, `sf-edge-demo`, which the
-production web never shares; the override sets that itself, so it needs
-Docker Compose 2.24.4 or later (`docker compose version`). The edge proxy
+files. The override sets its project name itself, so a demo command typed
+without `-p` still acts on the demo, never on production. Its web joins its
+own edge network, `sf-edge-demo`, which the production web never shares; the
+override sets that itself too, so it needs Docker Compose 2.24.4 or later
+(`docker compose version`). The edge proxy
 marks the demo `noindex`. The
 demo sends no email and keeps no backups. Its `reset` service drops the
 database, migrates and seeds the demo dataset when the stack starts and
@@ -544,22 +546,32 @@ already running:
    cp demo.env.example demo.env   # then fill it in
    ```
 
-2. Tell the edge proxy the demo's domain and recreate it, which creates the
-   `sf-edge-demo` network. Production's site is down for the few seconds the
-   edge proxy restarts; the production stack itself keeps running.
+2. Tell the edge proxy the demo's domain, check the resulting configuration
+   and recreate the edge proxy, which creates the `sf-edge-demo` network.
+   The chain stops before touching anything when the demo's domain is empty,
+   equal to production's (Caddy would reject both sites) or already set, and
+   before the restart when Caddy rejects the configuration. Production's site
+   is down for the 10 to 15 seconds the edge proxy restarts; the production
+   stack itself keeps running.
 
    ```sh
-   printf 'SFMANAGER_DEMO_SITE=%s\n' "$(sed -n 's/^SITE_ADDRESS=//p' demo.env)" >>deploy/edge/edge.env &&
+   demo_site=$(sed -n 's/^SITE_ADDRESS=//p' demo.env) &&
+     prod_site=$(sed -n 's/^SFMANAGER_SITE=//p' deploy/edge/edge.env) &&
+     [ -n "$demo_site" ] && [ "$demo_site" != "$prod_site" ] &&
+     ! grep -q '^SFMANAGER_DEMO_SITE=' deploy/edge/edge.env &&
+     printf '\nSFMANAGER_DEMO_SITE=%s\n' "$demo_site" >>deploy/edge/edge.env &&
      cat deploy/edge/edge.env &&
+     docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env \
+       run --rm --no-deps -T caddy caddy validate --config /etc/caddy/Caddyfile &&
      docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d --force-recreate
    ```
 
 3. Start the demo and watch its first reset seed it:
 
    ```sh
-   demo() { docker compose -p sf-manager-demo -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env "$@"; }
-   demo pull api web && demo up -d --no-build
-   demo logs -f reset   # until "demo-reset: done"
+   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env pull api web &&
+     docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env up -d --no-build
+   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env logs -f reset   # until "demo-reset: done"
    ```
 
 4. Check it from outside: `curl -sI https://<demo domain>/` answers 200 with
@@ -568,9 +580,21 @@ already running:
 
 To move the demo to another version, set `IMAGE_TAG` in `demo.env` and run
 step 3 again: the reset runs when the stack starts, so the demo starts over.
-To reset it now: `demo exec reset sh /usr/local/bin/demo-reset.sh once`. To
-remove it: `demo down -v`, then drop `SFMANAGER_DEMO_SITE` from
-`deploy/edge/edge.env` and recreate the edge proxy as in step 2.
+To reset it now, inside the running reset container (its lock lives there):
+
+```sh
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env exec reset sh /usr/local/bin/demo-reset.sh once
+```
+
+To remove it, check that the project shown is `sf-manager-demo`, then take
+it down with its volumes, drop `SFMANAGER_DEMO_SITE` from
+`deploy/edge/edge.env` and recreate the edge proxy (the last command of
+step 2):
+
+```sh
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env config | head -n 1   # name: sf-manager-demo
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env down -v
+```
 
 ### Images in CI
 

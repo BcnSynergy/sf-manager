@@ -2,14 +2,18 @@
 # An override of docker-compose.prod.yml run as its own Compose project, with
 # its own database, uploaded files and settings (demo.env), behind the same
 # edge proxy on its own edge network:
-#   docker compose -p sf-manager-demo -f docker-compose.prod.yml \
-#     -f docker-compose.demo.yml --env-file demo.env up -d --no-build
-# Its web joins the demo's own edge network (deploy/edge) under its own
+#   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml \
+#     --env-file demo.env up -d --no-build
+# The project name is set here, not only with -p: without it the override
+# inherits docker-compose.prod.yml's sf-manager-prod, and a demo command typed
+# without -p (down -v included) would act on production. Its web joins the demo's own edge network (deploy/edge) under its own
 # alias, set here rather than in demo.env so a missing setting can never put
 # it on production's network or alias (EN-248). `!override` needs Docker
 # Compose 2.24.4 or later; an older one refuses this file. It holds the
 # fictitious demo dataset (spec `demo-seed-data`), reset every night, and it
 # sends no email, keeps no backups and makes no off-site copies.
+name: sf-manager-demo
+
 services:
   web:
     networks:

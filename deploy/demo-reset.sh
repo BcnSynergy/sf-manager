@@ -23,7 +23,9 @@
 # (`docker compose run`). A failed reset is logged and retried every
 # DEMO_RESET_RETRY_SECONDS (default 900) until one succeeds, instead of
 # leaving the demo broken until the next night or stopping the service. A
-# missing or invalid setting stops it at once instead.
+# missing or invalid setting makes it exit at once instead, before any step;
+# Docker's restart policy then restarts the service, which keeps failing the
+# same way until the setting is fixed.
 set -eu
 reset_hour="${DEMO_RESET_HOUR_UTC:-3}"
 retry_seconds="${DEMO_RESET_RETRY_SECONDS:-900}"

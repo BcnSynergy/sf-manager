@@ -40,8 +40,9 @@ pass() {
 }
 
 # The script and its stubs in a volume: `npx` and `node` log each call to
-# /work/calls, sleep STUB_SLEEP seconds, and fail while /work/fail-left
-# holds a number above 0 (each failure counts it down).
+# /work/calls, keep what a `--stdin` call reads in /work/sql, sleep
+# STUB_SLEEP seconds, and fail while /work/fail-left holds a number above 0
+# (each failure counts it down).
 docker volume create "$p" >/dev/null
 docker run --rm -i -v "$p:/work" --entrypoint sh "$image" -c '
   mkdir -p /work/bin /work/files &&
@@ -50,6 +51,7 @@ docker run --rm -i -v "$p:/work" --entrypoint sh "$image" -c '
     cat >"/work/bin/$cmd" <<EOF
 #!/bin/sh
 echo "\$(date +%s.%N) start $cmd \$*" >>/work/calls
+case "\$*" in *--stdin*) cat >/work/sql ;; esac
 sleep "\${STUB_SLEEP:-0}"
 left=\$(cat /work/fail-left 2>/dev/null || echo 0)
 if [ "\$left" -gt 0 ]; then
@@ -139,6 +141,9 @@ steps=$(work "sed -n 's/^[0-9.]* start //p' /work/calls" | tr '\n' '|')
 [ "$steps" = 'npx prisma db execute --stdin|npx prisma migrate deploy|node dist/seed/src/shared/seeding/demo-seed.main.js|' ] ||
   fail "once ran '$steps'"
 [ -z "$(work 'ls -A /work/files')" ] || fail "once left uploaded files behind"
+sql=$(work 'cat /work/sql' | tr '\n' ' ')
+[ "$sql" = 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; ' ] ||
+  fail "once sent '$sql' to the database, expected the schema drop and create"
 case $out in *"demo-reset: done"*) ;; *) fail "once did not report done" ;; esac
 pass "once drops, migrates, empties the files and seeds, in that order"
 

@@ -311,6 +311,13 @@ web_networks=$(demo config --format json | node -e '
 [ "$web_networks" = "sf-edge-demo=sf-manager-demo-web ${demo_project}_default=" ] ||
   demo_fail "the demo web's networks are '$web_networks', expected only sf-edge-demo with the demo's alias"
 echo "smoke: the demo override pins the demo web to its own edge network and alias"
+# The override names its own project, so a demo command typed without -p
+# (down -v included) never acts on production's sf-manager-prod.
+demo_name=$(docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml \
+  --env-file "$demo_env" config | sed -n '1s/^name: //p') || demo_name=''
+[ "$demo_name" = sf-manager-demo ] ||
+  demo_fail "without -p the demo stack renders as project '$demo_name', expected sf-manager-demo"
+echo "smoke: without -p the demo stack is still its own project"
 
 demo up -d --no-build || demo_fail "docker compose up of the demo stack failed"
 seeded=''
@@ -384,6 +391,13 @@ status=$(docker run --rm --network sf-edge-demo \
   curlimages/curl:8.11.1@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69 \
   -s --max-time 10 -o /dev/null -w '%{http_code}' http://sf-manager-demo-web:80/) || status=000
 [ "$status" = 200 ] || demo_fail "the demo web answered $status on its own edge network, expected 200"
+# A name lookup alone would miss the production web attached without its
+# alias, so list what is on the network.
+attached=$(docker network inspect sf-edge-demo -f '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' |
+  sed '/^$/d' | sort | tr '\n' ' ') || attached=''
+expected=$(printf '%s\n' "$edge_project-caddy-1" "$demo_project-web-1" | sort | tr '\n' ' ')
+[ "$attached" = "$expected" ] ||
+  demo_fail "sf-edge-demo holds '$attached', expected only '$expected'"
 echo "smoke: the demo's edge network reaches the demo web but not the production web"
 demo down -v --remove-orphans >/dev/null 2>&1 || fail "could not remove the demo stack"
 
