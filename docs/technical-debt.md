@@ -114,7 +114,7 @@ project's Engram memory on 2026-10-09.
   (`ReviewDocumentPage.tsx`), so the rejection had no handler yet. It now
   waits until the request was made. Delaying the effect's call reproduced the
   unhandled rejection with the old test and passes with the new one. Done in
-  `td-56-photo-failure-flake` (PR 1/1). Origin: `demo-instance` PR 2/5 CI,
+  `td-56-photo-failure-flake` (PR 1/1, #490). Origin: `demo-instance` PR 2/5 CI,
   2026-11-27.
 
 - **TD-54**: Review photos (EN-164) opened in a new tab by a plain browser
