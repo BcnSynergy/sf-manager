@@ -150,16 +150,20 @@ services:
         condition: service_healthy
     # No published port: the edge proxy reaches it on the sf-edge network
     # under this alias (deploy/edge/Caddyfile) and serves HTTPS for it. The
-    # default network keeps it on the API.
+    # default network keeps it on the API. The demo stack
+    # (docker-compose.demo.yml) sets EDGE_NETWORK and WEB_ALIAS in demo.env,
+    # so its web joins its own edge network, which the production web never
+    # shares (EN-248).
     networks:
       default:
       sf-edge:
         aliases:
-          - sf-manager-prod-web
+          - ${WEB_ALIAS:-sf-manager-prod-web}
 
 networks:
   sf-edge:
     external: true
+    name: ${EDGE_NETWORK:-sf-edge}
 
 volumes:
   postgres-data:

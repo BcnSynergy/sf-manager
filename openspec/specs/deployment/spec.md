@@ -294,7 +294,7 @@ The stack's Caddy MUST set these headers, and the edge proxy MUST pass them on u
 
 ### Requirement: Proxy trust
 
-The production stack MUST set `TRUST_PROXY=2`, because two hops stand in front of the API: the edge proxy, which replaces any client-sent `X-Forwarded-For` with the client's address, and the stack's Caddy, which MUST keep the `X-Forwarded-For` it receives from the edge proxy and append the edge proxy's address. The stack's Caddy MAY trust that header from any private address, since it publishes no port and only Docker networks reach it. (Changed by `demo-instance` T1: before, Caddy was the only hop and the value was `1`.)
+The production stack MUST set `TRUST_PROXY=2`, because two hops stand in front of the API: the edge proxy, which replaces any client-sent `X-Forwarded-For` with the client's address, and the stack's Caddy, which MUST keep the `X-Forwarded-For` it receives from the edge proxy and append the edge proxy's address. The stack's Caddy MAY trust that header from any private address, since it publishes no port and only Docker networks reach it. For that to hold, the production web MUST share its edge network (`sf-edge`) with the edge proxy only: any other stack behind the edge proxy, the demo included, MUST use an edge network of its own (EN-248). (Changed by `demo-instance` T1: before, Caddy was the only hop and the value was `1`; T2b added the separate edge networks.)
 
 #### Scenario: Spoofed forwarding header
 
@@ -307,6 +307,35 @@ The production stack MUST set `TRUST_PROXY=2`, because two hops stand in front o
 - GIVEN one client has reached the login limit through the edge proxy
 - WHEN a client from another address logs in with valid credentials
 - THEN the login succeeds, because each client's own address is counted, not the edge proxy's or the stack's Caddy's
+
+#### Scenario: The demo cannot reach the production web
+
+- GIVEN the edge proxy, the production stack and the demo stack are running
+- WHEN a container on the demo's edge network (`sf-edge-demo`) requests the production web's alias
+- THEN the request fails, while the demo web answers on that network
+
+### Requirement: Demo stack
+
+A public demo MAY run next to production on the same server, behind the same edge proxy, as its own Compose project (`sf-manager-demo`): `docker-compose.prod.yml` with the override `docker-compose.demo.yml` and its own `demo.env`, so its database, uploaded files and settings are separate from production's. Its `web` MUST join the demo's own edge network (`EDGE_NETWORK=sf-edge-demo`) under its own alias (`WEB_ALIAS=sf-manager-demo-web`); without those settings `docker-compose.prod.yml` keeps production's network and alias. The edge proxy MUST serve the demo at `SFMANAGER_DEMO_SITE` (`demo.localhost` when unset) and MUST add `X-Robots-Tag: noindex, nofollow` to its responses, and to no production response. The demo MUST NOT send email: its API gets an SMTP relay nobody listens on, so a password reset request fails quietly. It MUST NOT run the `backup` and `offsite` services. Its `reset` service MUST reset the demo when it starts and every day at `DEMO_RESET_HOUR_UTC` (default 3): drop and recreate the database schema, apply the migrations, empty the uploaded files and run the demo seed (`demo-seed-data`) with `SEED_DEMO_DATA=true`. `deploy/demo-reset.sh once` MUST reset it on demand. A failed reset MUST be logged and retried at the next scheduled hour without stopping the service. A deploy of production (`deploy/deploy.sh`) MUST NOT touch the demo.
+
+#### Scenario: The demo answers on its own site, marked noindex
+
+- GIVEN the edge proxy, the production stack and the demo stack are running
+- WHEN a client requests `https://<SFMANAGER_DEMO_SITE>/`
+- THEN the demo's web app answers with `X-Robots-Tag: noindex, nofollow`
+- AND a request to production's site carries no `X-Robots-Tag`
+
+#### Scenario: A reset restores the seeded demo
+
+- GIVEN the demo stack ran its first reset, and a visitor then changed or deleted demo data
+- WHEN the reset runs again
+- THEN the demo holds exactly the seeded dataset again, with the same QR codes, and a demo account can log in
+
+#### Scenario: Production's settings are unchanged
+
+- GIVEN a `prod.env` without `EDGE_NETWORK` and `WEB_ALIAS`
+- WHEN `docker compose -f docker-compose.prod.yml config` renders the production stack
+- THEN its web joins `sf-edge` under the alias `sf-manager-prod-web`, as before the demo existed
 
 ### Requirement: API documentation off in production
 
