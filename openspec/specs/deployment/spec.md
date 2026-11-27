@@ -182,6 +182,12 @@ A GitHub Actions workflow MUST deploy one commit to a target, `production` (the 
 - WHEN it is used to send `demo <SHA>`
 - THEN the script refuses it as not a full commit SHA, without touching either checkout, env file or Docker
 
+#### Scenario: An unknown target fails closed
+
+- GIVEN a deploy key whose forced command passes a word other than `production` or `demo` (for example a mistyped `demo`)
+- WHEN it is used to send a valid commit SHA
+- THEN the script refuses it, naming the unknown target, and deploys neither target
+
 #### Scenario: Deploy a green commit
 
 - GIVEN a commit on `main` whose images CI published

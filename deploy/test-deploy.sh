@@ -24,6 +24,11 @@ resolve=$(abs "${2:-deploy/resolve-commit.sh}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT TERM
+# The script defaults to checkouts under HOME, so the tests run with a
+# scratch one: a mutated copy can never reach the tester's real checkouts.
+HOME="$work/home"
+export HOME
+mkdir -p "$HOME"
 
 failures=0
 fail() {

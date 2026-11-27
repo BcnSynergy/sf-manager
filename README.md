@@ -544,13 +544,16 @@ To start it on the server, with the edge proxy already running:
 
 1. Point the demo's DNS name at the server, clone the demo's checkout from
    the public HTTPS URL (the deploy script fetches with it) and fill in
-   `demo.env` with new secrets (none shared with production), its
-   `IMAGE_TAG` being the checked-out commit's (`sha-` plus the first 7
-   characters of `git rev-parse HEAD`):
+   `demo.env` with new secrets (none shared with production). Check out a
+   commit whose images CI published, for example the one production runs,
+   and set `IMAGE_TAG` to its tag (`sha-` plus the first 7 characters of its
+   SHA):
 
    ```sh
    git clone https://github.com/BcnSynergy/sf-manager.git ~/sf-manager-demo
-   cd ~/sf-manager-demo && cp demo.env.example demo.env   # then fill it in
+   cd ~/sf-manager-demo &&
+     git checkout -q --detach "$(git -C ~/sf-manager rev-parse HEAD)" &&
+     cp demo.env.example demo.env   # then fill it in, IMAGE_TAG included
    ```
 
 2. From production's checkout, where the edge proxy's files live, tell the
@@ -739,12 +742,17 @@ demo's checkout with `demo.env`, and that key can never deploy production
 (nor production's the demo: the client can only send a commit SHA):
 
 1. Create a second key, `sf-manager-deploy-demo`, as in step 1.
-2. On the server, with the script installed as in step 2, add its public
-   key with the demo's forced command:
+2. On the server, first reinstall the script from a `main` that already
+   knows the demo target (the commands above the `pub=` line in step 2), and
+   check it: a script from before this change ignores the forced command's
+   `demo`, so the demo's key would deploy production. Only then add the
+   public key with the demo's forced command; the chain stops if the check
+   fails:
 
    ```sh
-   pub='<contents of sf-manager-deploy-demo.pub>'
-   echo "restrict,command=\"$HOME/bin/sf-manager-deploy demo\" $pub" >>~/.ssh/authorized_keys
+   grep -q SFM_DEMO_DIR ~/bin/sf-manager-deploy &&
+     pub='<contents of sf-manager-deploy-demo.pub>' &&
+     echo "restrict,command=\"$HOME/bin/sf-manager-deploy demo\" $pub" >>~/.ssh/authorized_keys
    ```
 
 3. Create the `demo` environment as in step 3 (required reviewer, `main`
