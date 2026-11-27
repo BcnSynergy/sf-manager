@@ -533,20 +533,31 @@ marks the demo `noindex`. The
 demo sends no email and keeps no backups. Its `reset` service drops the
 database, migrates and seeds the demo dataset when the stack starts and
 every night at `DEMO_RESET_HOUR_UTC` (UTC, default 3), and empties the
-uploaded files. A production deploy (the Deploy workflow, `deploy/deploy.sh`)
-never touches it.
+uploaded files. It runs from its own checkout, `~/sf-manager-demo`, next to
+production's `~/sf-manager`: deploying one never moves the other's files,
+and the reset script the demo mounts always matches the demo's images. A
+production deploy (the Deploy workflow, `deploy/deploy.sh`) never touches
+it; the same workflow deploys the demo with the target `demo` ("Deploying
+from CI").
 
-To start it, from the repository root on the server, with the edge proxy
-already running:
+To start it on the server, with the edge proxy already running:
 
-1. Point the demo's DNS name at the server, then fill in `demo.env` with new
-   secrets (none shared with production):
+1. Point the demo's DNS name at the server, clone the demo's checkout from
+   the public HTTPS URL (the deploy script fetches with it) and fill in
+   `demo.env` with new secrets (none shared with production). Check out a
+   commit whose images CI published, for example the one production runs,
+   and set `IMAGE_TAG` to its tag (`sha-` plus the first 7 characters of its
+   SHA):
 
    ```sh
-   cp demo.env.example demo.env   # then fill it in
+   git clone https://github.com/BcnSynergy/sf-manager.git ~/sf-manager-demo
+   cd ~/sf-manager-demo &&
+     git checkout -q --detach "$(git -C ~/sf-manager rev-parse HEAD)" &&
+     cp demo.env.example demo.env   # then fill it in, IMAGE_TAG included
    ```
 
-2. Tell the edge proxy the demo's domain, check the resulting configuration
+2. From production's checkout, where the edge proxy's files live, tell the
+   edge proxy the demo's domain, check the resulting configuration
    and recreate the edge proxy, which creates the `sf-edge-demo` network.
    Caddy validates the new configuration (the demo's domain is passed to that
    check only) before `edge.env` changes, so the chain stops without changing
@@ -558,7 +569,8 @@ already running:
    stack itself keeps running.
 
    ```sh
-   demo_site=$(sed -n 's/^SITE_ADDRESS=//p' demo.env) &&
+   cd ~/sf-manager
+   demo_site=$(sed -n 's/^SITE_ADDRESS=//p' ~/sf-manager-demo/demo.env) &&
      prod_site=$(sed -n 's/^SFMANAGER_SITE=//p' deploy/edge/edge.env) &&
      [ -n "$demo_site" ] && [ "$demo_site" != "$prod_site" ] &&
      ! grep -q '^SFMANAGER_DEMO_SITE=' deploy/edge/edge.env &&
@@ -570,9 +582,11 @@ already running:
      docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d --force-recreate
    ```
 
-3. Start the demo and watch its first reset seed it:
+3. From the demo's checkout, start the demo and watch its first reset seed
+   it:
 
    ```sh
+   cd ~/sf-manager-demo
    docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env pull api web &&
      docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env up -d --no-build
    docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env logs -f reset   # until "demo-reset: done"
@@ -582,18 +596,22 @@ already running:
    `X-Robots-Tag: noindex, nofollow`, and a demo account (README "Demo
    dataset") logs in.
 
-To move the demo to another version, set `IMAGE_TAG` in `demo.env` and run
-step 3 again: the reset runs when the stack starts, so the demo starts over.
-To reset it now, inside the running reset container (its lock lives there):
+To move the demo to another version, run the Deploy workflow with the target
+`demo`, or by hand on the server `~/bin/sf-manager-deploy demo <commit SHA>`
+(installed as in "Deploying from CI"): it checks out the commit in
+`~/sf-manager-demo`, pins `IMAGE_TAG` in `demo.env` and restarts the demo,
+whose reset then runs, so the demo starts over. The commands below run in
+`~/sf-manager-demo`. To reset it now, inside the running reset container
+(its lock lives there):
 
 ```sh
 docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env exec reset sh /usr/local/bin/demo-reset.sh once
 ```
 
 To remove it, check that the project shown is `sf-manager-demo`, then take
-it down with its volumes, drop `SFMANAGER_DEMO_SITE` from
-`deploy/edge/edge.env` and recreate the edge proxy (the last command of
-step 2):
+it down with its volumes, drop `SFMANAGER_DEMO_SITE` from production's
+`deploy/edge/edge.env` and recreate the edge proxy there (the last command
+of step 2), and remove the demo's deploy key from `~/.ssh/authorized_keys`:
 
 ```sh
 docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env config | head -n 1   # name: sf-manager-demo
@@ -649,10 +667,14 @@ For monitoring see "Monitoring". Swagger is off at `/api/docs` unless
 
 The `Deploy` workflow (`.github/workflows/deploy.yml`, EN-185) runs step 4
 of "Production deployment" for you. Start it from the Actions tab ("Run
-workflow"), optionally with the commit to deploy; empty deploys the current
-`main`. It waits for your approval in the `production` environment, refuses
+workflow"), choosing the target (`production` by default, or `demo`; see
+"Demo stack") and optionally the commit to deploy; empty deploys the current
+`main`. It waits for your approval in the GitHub environment named after the
+target, refuses
 a commit that is not on `main` or has no published images, then deploys
-over SSH and runs the production check (see "Monitoring"). To roll back,
+over SSH and runs the site check of "Monitoring" (`deploy/check-production.sh`,
+which only checks `/api/health` and the certificate, so it fits the demo
+too) against that target's site. To roll back,
 deploy an older commit of `main`; as with a manual rollback, migrations the
 newer version applied stay. A commit from before the edge proxy (its Caddy
 publishes the ports itself) cannot be deployed this way once the server
@@ -712,6 +734,38 @@ HTTPS URL. One-time setup:
      `echo "<server address> $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`.
 
    Then delete the private key from your machine.
+
+To deploy the demo from CI too (demo-instance T3), give it a key and an
+environment of its own, once the demo runs from `~/sf-manager-demo` ("Demo
+stack"). Its key's forced command passes `demo`, so the script deploys the
+demo's checkout with `demo.env`, and that key can never deploy production
+(nor production's the demo: the client can only send a commit SHA):
+
+1. Create a second key, `sf-manager-deploy-demo`, as in step 1.
+2. On the server, first reinstall the script from `main` (the commands
+   above the `pub=` line in step 2) and check that it knows the demo target:
+   a script that does not (it has no `SFM_DEMO_DIR`, the demo checkout's
+   setting) ignores the forced command's `demo`, so the demo's key would
+   deploy production. Only then add the public key with the demo's forced
+   command; the chain stops, and says why, when the check fails:
+
+   ```sh
+   if grep -q SFM_DEMO_DIR ~/bin/sf-manager-deploy; then
+     pub='<contents of sf-manager-deploy-demo.pub>'
+     echo "restrict,command=\"$HOME/bin/sf-manager-deploy demo\" $pub" >>~/.ssh/authorized_keys
+   else
+     echo 'the installed deploy script does not know the demo target: reinstall it first' >&2
+   fi
+   ```
+
+3. Create the `demo` environment as in step 3 (required reviewer, `main`
+   only), with the same three secrets, `DEPLOY_SSH_KEY` holding the demo's
+   private key. Then delete that key from your machine.
+
+A demo deploy restarts the demo's reset service with the new image, so the
+demo also starts over. If one stops between steps, check
+`git -C ~/sf-manager-demo log --oneline -1` and `grep IMAGE_TAG
+~/sf-manager-demo/demo.env` and deploy again.
 
 ### Monitoring
 

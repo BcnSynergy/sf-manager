@@ -24,6 +24,11 @@ resolve=$(abs "${2:-deploy/resolve-commit.sh}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT TERM
+# The script defaults to checkouts under HOME, so the tests run with a
+# scratch one: a mutated copy can never reach the tester's real checkouts.
+HOME="$work/home"
+export HOME
+mkdir -p "$HOME"
 
 failures=0
 fail() {
@@ -235,6 +240,121 @@ grep -q ' up ' "$work/docker.log" && fail 'closed output: up was called'
 # A failed up fails the deploy.
 reset
 if run "$second" up; then fail 'failed up: exit 0'; fi
+
+# demo-instance T3: the demo's key forces `sf-manager-deploy demo`. Its
+# checkout holds demo.env, and the deploy uses the demo override.
+reset_demo() {
+  reset
+  mv "$work/checkout/prod.env" "$work/checkout/demo.env"
+}
+# run_target ARGS INPUT [FAIL]: runs the script with the forced command's
+# arguments (one word, or empty for production's key).
+run_target() {
+  (
+    export SSH_ORIGINAL_COMMAND="$2" SFM_DEPLOY_DIR="$work/checkout" \
+      SFM_DEMO_DIR="$work/checkout" \
+      FAKE_DOCKER_LOG="$work/docker.log" FAKE_DOCKER_FAIL="${3:-}" \
+      PATH="$work/bin:$PATH"
+    unset IMAGE_TAG
+    # shellcheck disable=SC2086 # the forced command's arguments
+    sh "$script" $1
+  ) >"$work/out" 2>&1
+}
+demo_tag_is() { grep -qx "IMAGE_TAG=$1" "$work/checkout/demo.env"; }
+demo_files='-f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env'
+
+reset_demo
+if run_target demo "$second"; then
+  head_is "$second" || fail 'demo: checkout is not at the commit'
+  demo_tag_is "sha-$(short "$second")" || fail 'demo: IMAGE_TAG not set in demo.env'
+  grep -qx 'POSTGRES_PASSWORD=secret' "$work/checkout/demo.env" ||
+    fail 'demo: other demo.env lines changed'
+  [ ! -e "$work/checkout/prod.env" ] || fail 'demo: a prod.env was written'
+  expected="[sha-$(short "$second")] compose $demo_files pull api web
+[] compose $demo_files up -d --no-build"
+  [ "$(cat "$work/docker.log")" = "$expected" ] ||
+    fail "demo: docker calls were: $(cat "$work/docker.log")"
+  grep -q "deploy: demo now runs sha-$(short "$second")" "$work/out" ||
+    fail "demo: no 'demo now runs' in: $(cat "$work/out")"
+else
+  fail "demo: exit non-zero: $(cat "$work/out")"
+fi
+
+# By hand: `sf-manager-deploy demo <sha>`.
+reset_demo
+if (
+  unset SSH_ORIGINAL_COMMAND IMAGE_TAG
+  export SFM_DEMO_DIR="$work/checkout" FAKE_DOCKER_LOG="$work/docker.log" \
+    PATH="$work/bin:$PATH"
+  sh "$script" demo "$second"
+) >"$work/out" 2>&1; then
+  demo_tag_is "sha-$(short "$second")" || fail 'demo by hand: IMAGE_TAG not set'
+else
+  fail "demo by hand: exit non-zero: $(cat "$work/out")"
+fi
+
+# An explicit `production` is the same as none.
+reset
+if run_target production "$second"; then
+  docker_calls_are "sha-$(short "$second")" 'explicit production'
+else
+  fail "explicit production: exit non-zero: $(cat "$work/out")"
+fi
+
+# The client never picks the target: production's key (no argument) sent
+# `demo <sha>` is refused like any other malformed commit.
+refused 'target from the client' "demo $second" "$full"
+
+# A failed demo pull names demo.env and leaves it as it was.
+reset_demo
+if run_target demo "$second" pull; then fail 'failed demo pull: exit 0'; fi
+demo_tag_is "$baseline_tag" || fail 'failed demo pull: demo.env changed'
+head_is "$first" || fail 'failed demo pull: checkout moved'
+grep -q 'demo.env unchanged' "$work/out" ||
+  fail "failed demo pull: no 'demo.env unchanged' in: $(cat "$work/out")"
+
+# A forced command with anything but a known target fails closed instead of
+# deploying production (a demo key whose `demo` was mistyped).
+reset
+if run_target demoo "$second"; then fail 'mistyped target: exit 0'; fi
+grep -q "unknown target 'demoo'" "$work/out" ||
+  fail "mistyped target: no 'unknown target' in: $(cat "$work/out")"
+[ -s "$work/docker.log" ] && fail 'mistyped target: docker was called'
+head_is "$first" || fail 'mistyped target: checkout moved'
+
+# The default checkouts: with no override, a demo deploy moves
+# ~/sf-manager-demo only, and production's ~/sf-manager (checkout and
+# prod.env) stays byte for byte, even with SFM_DEPLOY_DIR pointing at it,
+# since that variable is production's.
+home="$work/home"
+rm -rf "$home"
+mkdir "$home"
+git clone -q "$work/origin" "$home/sf-manager"
+git clone -q "$work/origin" "$home/sf-manager-demo"
+for d in sf-manager sf-manager-demo; do
+  git -C "$home/$d" checkout -q --detach "$first"
+done
+printf 'IMAGE_TAG=%s\n' "$baseline_tag" >"$home/sf-manager/prod.env"
+printf 'IMAGE_TAG=%s\n' "$baseline_tag" >"$home/sf-manager-demo/demo.env"
+cp "$home/sf-manager/prod.env" "$work/prod.env.before"
+: >"$work/docker.log"
+if (
+  unset SFM_DEMO_DIR IMAGE_TAG
+  export HOME="$home" SFM_DEPLOY_DIR="$home/sf-manager" SSH_ORIGINAL_COMMAND="$second" \
+    FAKE_DOCKER_LOG="$work/docker.log" PATH="$work/bin:$PATH"
+  sh "$script" demo
+) >"$work/out" 2>&1; then
+  [ "$(git -C "$home/sf-manager-demo" rev-parse HEAD)" = "$second" ] ||
+    fail 'default demo checkout: ~/sf-manager-demo did not move'
+  grep -qx "IMAGE_TAG=sha-$(short "$second")" "$home/sf-manager-demo/demo.env" ||
+    fail 'default demo checkout: demo.env not pinned'
+  [ "$(git -C "$home/sf-manager" rev-parse HEAD)" = "$first" ] ||
+    fail "default demo checkout: production's checkout moved"
+  cmp -s "$home/sf-manager/prod.env" "$work/prod.env.before" ||
+    fail "default demo checkout: production's prod.env changed"
+else
+  fail "default demo checkout: exit non-zero: $(cat "$work/out")"
+fi
 
 # resolve-commit.sh, in a clone as the workflow runs it.
 reset

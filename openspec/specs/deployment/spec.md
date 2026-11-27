@@ -167,7 +167,26 @@ A GitHub Actions workflow MUST check the production site from outside the server
 
 ### Requirement: Deploy from CI
 
-A GitHub Actions workflow MUST deploy one commit to production when started by hand, and MUST NOT start on any other event. Its job MUST run in the GitHub environment `production`, which requires the maintainer's approval, accepts runs from the `main` branch only, and alone holds the deploy secrets (the SSH key, the server's pinned host key and the SSH target). The commit is an input; empty means the current `main`. The workflow MUST refuse, before contacting the server, a commit that is not on `main` or whose API and web images CI did not publish (CI publishes them only for commits green on `main`). On the server, the deploy key's `authorized_keys` entry MUST force one deploy script, installed outside the checkout, and MUST NOT allow port, agent or X11 forwarding or a terminal. The script MUST accept only a full 40-character lower-case commit SHA, MUST refuse a commit that is not on `origin/main`, and then MUST run the upgrade steps of "One-command production stack": check out the commit, pull the API and web images tagged `sha-<first 7 characters of the SHA>`, set `IMAGE_TAG` in `prod.env` to that tag (adding the line when missing, leaving the other lines unchanged) and start the stack with `up -d --no-build`. When the pull fails, or a hangup or termination signal interrupts it (for example when a cancelled run drops the SSH session), the script MUST check out the previous commit again and leave `prod.env` unchanged. Any failing step MUST fail the deploy. After the server step, the workflow MUST run the production check of "Production monitoring", and its failure MUST fail the run. The workflow MUST run only in this repository, never in forks.
+A GitHub Actions workflow MUST deploy one commit to a target, `production` (the default) or `demo` (the "Demo stack"), when started by hand, and MUST NOT start on any other event. Its job MUST run in the GitHub environment named after the target, which requires the maintainer's approval, accepts runs from the `main` branch only, and alone holds that target's deploy secrets (the SSH key, the server's pinned host key and the SSH target). Each target MUST have its own deploy key, and each key's forced command MUST fix the target on the server (the demo's passes `demo`), so the client can never choose it: production's key cannot deploy the demo, nor the demo's production. Deploys of one target MUST run one at a time, independently of the other's. The target and the commit are inputs; an empty commit means the current `main`. For the demo, the script MUST use the demo's own checkout (`~/sf-manager-demo`), `docker-compose.demo.yml` and `demo.env` wherever production's steps below use the production checkout and `prod.env`, and MUST NOT touch production's checkout, `prod.env` or stack. The workflow MUST refuse, before contacting the server, a commit that is not on `main` or whose API and web images CI did not publish (CI publishes them only for commits green on `main`). On the server, the deploy key's `authorized_keys` entry MUST force one deploy script, installed outside the checkout, and MUST NOT allow port, agent or X11 forwarding or a terminal. The script MUST accept only a full 40-character lower-case commit SHA, MUST refuse a commit that is not on `origin/main`, and then MUST run the upgrade steps of "One-command production stack": check out the commit, pull the API and web images tagged `sha-<first 7 characters of the SHA>`, set `IMAGE_TAG` in `prod.env` to that tag (adding the line when missing, leaving the other lines unchanged) and start the stack with `up -d --no-build`. When the pull fails, or a hangup or termination signal interrupts it (for example when a cancelled run drops the SSH session), the script MUST check out the previous commit again and leave `prod.env` unchanged. Any failing step MUST fail the deploy. After the server step, the workflow MUST run the production check of "Production monitoring" against the target's site, and its failure MUST fail the run. The workflow MUST run only in this repository, never in forks.
+
+#### Scenario: Deploy the demo
+
+- GIVEN the demo runs from `~/sf-manager-demo` and a commit on `main` whose images CI published
+- WHEN the maintainer starts the deploy workflow with the target `demo` and that commit, and approves the `demo` environment
+- THEN the demo's checkout is at that commit, `demo.env` has `IMAGE_TAG=sha-<short SHA>`, the demo runs those images (its reset starts it over), and the check of the demo's site succeeds
+- AND production's checkout, `prod.env` and stack are unchanged
+
+#### Scenario: The client cannot choose the target
+
+- GIVEN production's deploy key, whose forced command passes no target
+- WHEN it is used to send `demo <SHA>`
+- THEN the script refuses it as not a full commit SHA, without touching either checkout, env file or Docker
+
+#### Scenario: An unknown target fails closed
+
+- GIVEN a deploy key whose forced command passes a word other than `production` or `demo` (for example a mistyped `demo`)
+- WHEN it is used to send a valid commit SHA
+- THEN the script refuses it, naming the unknown target, and deploys neither target
 
 #### Scenario: Deploy a green commit
 
