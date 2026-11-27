@@ -19,6 +19,11 @@ services:
     restart: unless-stopped
     environment:
       SFMANAGER_SITE: ${SFMANAGER_SITE:?set SFMANAGER_SITE in edge.env}
+      # The public demo (docker-compose.demo.yml); demo.localhost when unset
+      # or empty. Never pass it empty: Caddy's own default applies only to an
+      # unset variable, and a site block without an address makes Caddy
+      # reject the whole Caddyfile, production's site included.
+      SFMANAGER_DEMO_SITE: ${SFMANAGER_DEMO_SITE:-demo.localhost}
     ports:
       - '80:80'
       - '443:443'
@@ -30,12 +35,18 @@ services:
       - caddy-config:/config
     networks:
       - sf-edge
+      - sf-edge-demo
 
 networks:
   # Created by this project; each stack's docker-compose file joins it as an
   # external network, so the edge proxy must be started first.
   sf-edge:
     name: sf-edge
+  # The demo stack's own edge network. The edge proxy is the only container
+  # on both, so the demo never reaches the production web, whose Caddy trusts
+  # the forwarding header from any private address (EN-248).
+  sf-edge-demo:
+    name: sf-edge-demo
 
 volumes:
   caddy-data:

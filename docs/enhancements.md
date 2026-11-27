@@ -1184,15 +1184,6 @@ content type`). Today that is the only 415 it raises, but a future one
   (the demo's own env) is the natural place to settle the env layout.
   Origin: `demo-instance` PR 1/4 Gentle review (R2-duplicated-site-config,
   R3-site-mismatch-unchecked), 2026-11-26.
-- **EN-248** (deployment, security): the stack's Caddy
-  (`apps/web/Caddyfile`) trusts `X-Forwarded-For` from every private
-  address. Today only the edge proxy can reach it, but the demo stack
-  (`demo-instance` T2) will join the same `sf-edge` network, and any
-  container there could then set the client address the production API
-  keys its login limit on (`TRUST_PROXY=2`). Before the demo joins, trust
-  only the edge proxy, for example with a fixed subnet on `sf-edge` and a
-  fixed address for the edge proxy. Required by `demo-instance` T2. Origin:
-  `demo-instance` PR 1/4 Gentle review (R1-001), 2026-11-26.
 - **EN-249** (deployment tests): spec `deployment` "Single public origin"
   says the edge proxy holds requests for up to 30 seconds while a deploy
   recreates the stack's Caddy (`lb_try_duration 30s` in
@@ -1255,8 +1246,31 @@ content type`). Today that is the only 415 it raises, but a future one
   then created again with the same code, which fails as
   `ElementCodeGenerationFailedError`, a misleading message. Origin:
   `demo-instance` T2a fresh review S-2 and S-3, 2026-11-27.
+- **EN-254** (deployment): the demo's `reset` service runs
+  `deploy/demo-reset.sh` bind-mounted from the server's checkout, which
+  follows production's deploys, while the code it calls (the migrations and
+  the compiled demo seed) comes from the demo's own `IMAGE_TAG`. When the
+  two drift (production deployed, demo left on an older tag), a newer script
+  can call into an older image. The backup and off-site services mount their
+  scripts the same way, but they run the same tag as the checkout. Ship the
+  script in the API image, or check that the demo's tag matches the
+  checkout before starting it. Origin: `demo-instance` T2b Gentle review
+  (R4-script-bind-from-checkout), 2026-11-27.
 
 ## Done
+
+- **EN-248** (deployment, security): the stack's Caddy
+  (`apps/web/Caddyfile`) trusts `X-Forwarded-For` from every private
+  address, so a container sharing the production web's edge network could
+  set the client address the production API keys its login limit on
+  (`TRUST_PROXY=2`). Resolved by isolation instead of a fixed subnet (which
+  would have needed another production cutover): the demo stack joins its
+  own edge network, `sf-edge-demo`, which the edge proxy also joins, so the
+  production web shares `sf-edge` with the edge proxy only. The smoke test
+  checks that a container on `sf-edge-demo` cannot reach the production web
+  and can reach the demo web; spec `deployment` "Proxy trust" requires the
+  separate networks. Done in `demo-instance` (PR 3/5). Origin:
+  `demo-instance` PR 1/4 Gentle review (R1-001), 2026-11-26.
 
 - **EN-243** (reviewer signature): the orphan file sweep now also covers `signatures/`, where an upload stores the new file before it records it and then deletes the previous one (two concurrent uploads by one user, a stop between the writes or a failed delete left a file no row references). A file there that no `ReviewerSignature.storageKey` references and that is more than an hour old is deleted; a referenced one never is. `SweepOrphanSignatureFilesUseCase` lives in `reviewer-signature` with its two reads on that module's repository (`findReferencedStorageKeys`, `hasAnySignature`), uses the shared `sweepOrphanFiles` helper (same age, interrupted-write cleanup, logging and no-row guard), and is exported through the `ORPHAN_SIGNATURE_FILE_SWEEP` port token to review-session's `ReviewFileSweepScheduler`, which runs it after the photo and signature copy sweeps; a failure in one sweep never stops the others. The organization logo's same leftover is EN-246. Done in `orphan-signature-sweep` (PR 2/2, #484; spec `reviewer-signature`). Origin: `reviewer-signature` PR 1/3 fresh review S-3, 2026-11-26.
 - **EN-244** (review sessions): the orphan file sweep now also covers `review-signatures/`, where signing stores the session-owned signature copy before the write that completes the session. A file there that no `ReviewSession.signatureStorageKey` records and that is more than an hour old is deleted; a recorded copy never is. The sweep logic moved into a shared `sweepOrphanFiles` helper (`apps/api/src/shared/application/orphan-file-sweep.ts`), so the new directory gets the same one-hour age, interrupted-write cleanup, logging and no-row guard (nothing is deleted when no session records a copy). The photo sweep keeps its log lines. The scheduler (renamed `ReviewFileSweepScheduler`) runs the photo sweep, then the signature copy sweep; a failure in one is logged and does not stop the other. The two new repository reads are unscoped, so they join the port-surface guard and get a call-site guard (only the sweep may call them). Done in `orphan-signature-sweep` (PR 1/2, #483; specs `review-session-management`, requirement renamed _Orphan Photo and Signature Files Are Swept_, and `review-history`). Origin: `reviewer-signature` PR 2/3 fresh review W-2, 2026-11-26.

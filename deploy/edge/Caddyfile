@@ -15,3 +15,13 @@
 		lb_try_duration 30s
 	}
 }
+
+# The public demo (docker-compose.demo.yml, project sf-manager-demo): its
+# `web` joins the sf-edge-demo network under this alias. Same forwarding as
+# production. Search engines are asked not to index it.
+{$SFMANAGER_DEMO_SITE:demo.localhost} {
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy sf-manager-demo-web:80 {
+		lb_try_duration 30s
+	}
+}

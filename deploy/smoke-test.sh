@@ -10,16 +10,20 @@
 # files and that the backup service writes a dump and an archive of the
 # uploaded files (TD-42), that the off-site copy service, unconfigured,
 # reports that it is disabled (EN-104), that the documented admin seed
-# command creates a system admin who can log in (EN-93), and that a dump taken before the
+# command creates a system admin who can log in (EN-93), that the demo
+# stack (docker-compose.demo.yml) answers on https://demo.localhost through
+# the same edge proxy, marked noindex, with the demo dataset seeded and
+# restored by its reset, and cannot reach the production web (EN-248), and
+# that a dump taken before the
 # newest migration restores, with its uploaded files, and the API then
-# applies that migration (EN-105, EN-120), then removes the stack, the edge
+# applies that migration (EN-105, EN-120), then removes the stacks, the edge
 # proxy and their volumes. CI runs it on every PR and push to main; run it
 # from the repository root:
 #
 #   sh deploy/smoke-test.sh
 #
-# Ports 80 and 443 must be free, and no other edge proxy (its sf-edge
-# network) may exist on the machine. It uses its own Compose projects and
+# Ports 80 and 443 must be free, and no other edge proxy (its sf-edge and
+# sf-edge-demo networks) may exist on the machine. It uses its own Compose projects and
 # volumes, and a Compose override puts backups in a volume instead of the
 # checkout's backups/, so nothing lands next to a real stack's backups
 # (EN-119).
@@ -68,17 +72,36 @@ compose() {
     --env-file "$env_file" "$@"
 }
 
+demo_project=sf-manager-demo-smoke
+demo_env=$(mktemp)
+cat >"$demo_env" <<EOF
+SITE_ADDRESS=demo.localhost
+POSTGRES_USER=demo
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
+POSTGRES_DB=sfmanager
+JWT_SECRET=$(openssl rand -hex 32)
+THROTTLE_KEY_SECRET=$(openssl rand -hex 32)
+SEED_ADMIN_EMAIL=demo-admin@example.com
+SEED_ADMIN_PASSWORD=$(openssl rand -hex 16)
+EOF
+
+demo() {
+  docker compose -p "$demo_project" -f docker-compose.prod.yml \
+    -f docker-compose.demo.yml --env-file "$demo_env" "$@"
+}
+
 edge() {
   docker compose -p "$edge_project" -f deploy/edge/docker-compose.yml \
     --env-file "$edge_env" "$@"
 }
 
-# The stack first: the edge proxy's network cannot go while the stack's web
-# container is attached to it.
+# The stacks first: the edge proxy's networks cannot go while a stack's web
+# container is attached to them.
 cleanup() {
+  demo down -v --remove-orphans >/dev/null 2>&1 || true
   compose down -v --remove-orphans >/dev/null 2>&1 || true
   edge down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$env_file" "$override" "$failing_api" "$edge_env"
+  rm -f "$env_file" "$override" "$failing_api" "$edge_env" "$demo_env"
 }
 trap cleanup EXIT
 # dash skips the EXIT trap on a signal, so exit explicitly (Ctrl-C locally).
@@ -252,6 +275,131 @@ status=$(docker run --rm --network sf-edge \
 [ "$status" = 200 ] ||
   fail "a login from another address answered $status after this host was limited, expected 200"
 echo "smoke: the login limit counts the real client address through the edge proxy"
+
+# The demo stack (spec `deployment`, "Demo stack"): the same images under
+# its own project behind the same edge proxy, on demo.localhost. Its reset
+# service seeds the demo dataset when it starts (spec `demo-seed-data`).
+demo_fail() {
+  demo ps -a >&2 || true
+  demo logs --tail 40 >&2 || true
+  fail "$1"
+}
+demo_curl() {
+  curl -sk --max-time 10 --resolve demo.localhost:443:127.0.0.1 "$@"
+}
+demo_sql() {
+  demo exec -T postgres psql -U demo -d sfmanager -tAc "$1"
+}
+demo_codes() {
+  demo_sql "select string_agg(code, ',' order by code) from \"InspectableElement\""
+}
+# The override itself puts the demo web on sf-edge-demo under the demo's
+# alias only, whatever demo.env says (EN-248): this env file sets neither.
+# Without `!override`, Compose would add production's alias back. Node.js
+# parses the rendered config (CI's runner has it).
+command -v node >/dev/null 2>&1 ||
+  demo_fail "this check needs Node.js on the machine running the smoke test"
+# shellcheck disable=SC2016 # JavaScript, not shell
+web_networks=$(demo config --format json | node -e '
+  let d = "";
+  process.stdin.on("data", (c) => (d += c)).on("end", () => {
+    const c = JSON.parse(d);
+    const nets = c.services.web.networks;
+    console.log(Object.keys(nets).map((k) =>
+      `${c.networks[k].name}=${(nets[k] && nets[k].aliases || []).join("+")}`).sort().join(" "));
+  });') || demo_fail "could not render the demo stack's config"
+[ "$web_networks" = "sf-edge-demo=sf-manager-demo-web ${demo_project}_default=" ] ||
+  demo_fail "the demo web's networks are '$web_networks', expected only sf-edge-demo with the demo's alias"
+echo "smoke: the demo override pins the demo web to its own edge network and alias"
+# The override names its own project, so a demo command typed without -p
+# (down -v included) never acts on production's sf-manager-prod.
+demo_name=$(docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml \
+  --env-file "$demo_env" config | sed -n '1s/^name: //p') || demo_name=''
+[ "$demo_name" = sf-manager-demo ] ||
+  demo_fail "without -p the demo stack renders as project '$demo_name', expected sf-manager-demo"
+echo "smoke: without -p the demo stack is still its own project"
+
+demo up -d --no-build || demo_fail "docker compose up of the demo stack failed"
+seeded=''
+i=0
+while [ "$i" -lt 60 ]; do
+  i=$((i + 1))
+  if demo logs reset 2>/dev/null | grep -q 'demo-reset: done'; then
+    seeded=yes && break
+  fi
+  if demo logs reset 2>/dev/null | grep -q 'demo-reset: reset failed'; then
+    break
+  fi
+  sleep 5
+done
+[ -n "$seeded" ] || demo_fail "the demo reset did not seed the demo dataset"
+echo "smoke: demo stack up and seeded by its reset service"
+
+robots=$(demo_curl -D - -o /dev/null https://demo.localhost/ | tr -d '\r' |
+  sed -n 's/^[Xx]-[Rr]obots-[Tt]ag: *//p') || robots=''
+[ "$robots" = 'noindex, nofollow' ] ||
+  demo_fail "the demo answered X-Robots-Tag '$robots', expected 'noindex, nofollow'"
+# Production's headers are read first, so a failed request fails the check
+# instead of passing for lack of the header. curl runs alone, so its own
+# status is the one checked.
+prod_headers=$(curl -sk --max-time 10 -D - -o /dev/null https://localhost/) ||
+  fail "could not read production's headers"
+prod_headers=$(printf '%s\n' "$prod_headers" | tr -d '\r')
+# The status line only (the first one), so a 200 elsewhere in the headers
+# cannot pass for it.
+prod_status=$(printf '%s\n' "$prod_headers" | sed -n '1s/^HTTP\/[0-9.]* \([0-9]*\).*/\1/p')
+[ "$prod_status" = 200 ] ||
+  fail "production answered '$prod_status' when checking for X-Robots-Tag, expected 200"
+if printf '%s\n' "$prod_headers" | grep -qi '^x-robots-tag:'; then
+  fail "production answered with an X-Robots-Tag header"
+fi
+echo "smoke: the demo is marked noindex, production is not"
+
+status=$(demo_curl -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+  -d '{"email":"gestor@demo.sf-manager.example","password":"sf-manager-demo-1"}' \
+  https://demo.localhost/api/auth/login) || status=000
+[ "$status" = 200 ] || demo_fail "a demo account's login answered $status, expected 200"
+echo "smoke: a demo account logs in on the demo"
+
+# The QR codes are fixed (spec `demo-seed-data`, "Fixed Element Codes"), and
+# a reset brings back exactly the seeded data after a visitor's changes.
+codes=$(demo_codes) || codes=''
+[ "$(printf '%s' "$codes" | tr ',' '\n' | grep -c '^DEM..EXT2[2-6]$')" = 24 ] ||
+  demo_fail "expected 24 fixed demo codes, found '$codes'"
+demo_sql "delete from \"QuestionAnswer\"; delete from \"ElementReviewEntry\"; delete from \"ReviewSession\"; update \"InspectableElement\" set name = 'changed by a visitor'" >/dev/null ||
+  demo_fail "could not change the demo data"
+# The README's command, inside sh -c so Git Bash on Windows leaves the
+# container path alone.
+demo exec -T reset sh -c 'sh /usr/local/bin/demo-reset.sh once' >/dev/null ||
+  demo_fail "demo-reset.sh once failed"
+[ "$(demo_codes)" = "$codes" ] || demo_fail "the reset changed the demo's QR codes"
+[ "$(demo_sql "select count(*) from \"ReviewSession\"")" = 12 ] ||
+  demo_fail "after the reset, expected the 12 seeded review sessions"
+[ "$(demo_sql "select count(*) from \"InspectableElement\" where name = 'changed by a visitor'")" = 0 ] ||
+  demo_fail "the reset kept a visitor's change"
+echo "smoke: the demo reset restores the same data and QR codes"
+
+# EN-248: the production web's Caddy trusts the forwarding header from any
+# private address, so nothing of the demo may reach it. The demo's edge
+# network holds the edge proxy and the demo web only.
+if docker run --rm --network sf-edge-demo \
+  curlimages/curl:8.11.1@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69 \
+  -s --max-time 10 -o /dev/null http://sf-manager-prod-web:80/ >/dev/null 2>&1; then
+  fail "a container on the demo's edge network reached the production web"
+fi
+status=$(docker run --rm --network sf-edge-demo \
+  curlimages/curl:8.11.1@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69 \
+  -s --max-time 10 -o /dev/null -w '%{http_code}' http://sf-manager-demo-web:80/) || status=000
+[ "$status" = 200 ] || demo_fail "the demo web answered $status on its own edge network, expected 200"
+# A name lookup alone would miss the production web attached without its
+# alias, so list what is on the network.
+attached=$(docker network inspect sf-edge-demo -f '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' |
+  sed '/^$/d' | sort | tr '\n' ' ') || attached=''
+expected=$(printf '%s\n' "$edge_project-caddy-1" "$demo_project-web-1" | sort | tr '\n' ' ')
+[ "$attached" = "$expected" ] ||
+  demo_fail "sf-edge-demo holds '$attached', expected only '$expected'"
+echo "smoke: the demo's edge network reaches the demo web but not the production web"
+demo down -v --remove-orphans >/dev/null 2>&1 || fail "could not remove the demo stack"
 
 # A dump taken on an older version restores, with its uploaded files, and
 # the API then applies the newer migrations (spec `deployment`, "Restore").

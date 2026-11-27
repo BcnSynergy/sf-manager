@@ -517,6 +517,89 @@ git checkout <previous commit>   # then step 2
 Once the new setup has run for a while, the old volumes can go:
 `docker volume rm sf-manager-prod_caddy-data sf-manager-prod_caddy-config`.
 
+### Demo stack
+
+A public demo with fictitious data (spec `deployment`, "Demo stack"; the
+dataset is spec `demo-seed-data` and README "Demo dataset") can run on the
+same server, behind the same edge proxy, as its own Compose project
+`sf-manager-demo`: `docker-compose.prod.yml` plus the override
+`docker-compose.demo.yml`, with its own `demo.env`, database and uploaded
+files. The override sets its project name itself, so a demo command typed
+without `-p` still acts on the demo, never on production. Its web joins its
+own edge network, `sf-edge-demo`, which the production web never shares; the
+override sets that itself too, so it needs Docker Compose 2.24.4 or later
+(`docker compose version`). The edge proxy
+marks the demo `noindex`. The
+demo sends no email and keeps no backups. Its `reset` service drops the
+database, migrates and seeds the demo dataset when the stack starts and
+every night at `DEMO_RESET_HOUR_UTC` (UTC, default 3), and empties the
+uploaded files. A production deploy (the Deploy workflow, `deploy/deploy.sh`)
+never touches it.
+
+To start it, from the repository root on the server, with the edge proxy
+already running:
+
+1. Point the demo's DNS name at the server, then fill in `demo.env` with new
+   secrets (none shared with production):
+
+   ```sh
+   cp demo.env.example demo.env   # then fill it in
+   ```
+
+2. Tell the edge proxy the demo's domain, check the resulting configuration
+   and recreate the edge proxy, which creates the `sf-edge-demo` network.
+   Caddy validates the new configuration (the demo's domain is passed to that
+   check only) before `edge.env` changes, so the chain stops without changing
+   `edge.env` or the running edge proxy when the demo's domain is empty, equal
+   to production's (Caddy would reject both sites), already set, or rejected
+   by Caddy (the check itself creates the empty `sf-edge-demo` network, which
+   the next attempt reuses). Production's site
+   is down for the 10 to 15 seconds the edge proxy restarts; the production
+   stack itself keeps running.
+
+   ```sh
+   demo_site=$(sed -n 's/^SITE_ADDRESS=//p' demo.env) &&
+     prod_site=$(sed -n 's/^SFMANAGER_SITE=//p' deploy/edge/edge.env) &&
+     [ -n "$demo_site" ] && [ "$demo_site" != "$prod_site" ] &&
+     ! grep -q '^SFMANAGER_DEMO_SITE=' deploy/edge/edge.env &&
+     docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env \
+       run --rm --no-deps -T -e SFMANAGER_DEMO_SITE="$demo_site" caddy \
+       caddy validate --config /etc/caddy/Caddyfile &&
+     printf '\nSFMANAGER_DEMO_SITE=%s\n' "$demo_site" >>deploy/edge/edge.env &&
+     cat deploy/edge/edge.env &&
+     docker compose -f deploy/edge/docker-compose.yml --env-file deploy/edge/edge.env up -d --force-recreate
+   ```
+
+3. Start the demo and watch its first reset seed it:
+
+   ```sh
+   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env pull api web &&
+     docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env up -d --no-build
+   docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env logs -f reset   # until "demo-reset: done"
+   ```
+
+4. Check it from outside: `curl -sI https://<demo domain>/` answers 200 with
+   `X-Robots-Tag: noindex, nofollow`, and a demo account (README "Demo
+   dataset") logs in.
+
+To move the demo to another version, set `IMAGE_TAG` in `demo.env` and run
+step 3 again: the reset runs when the stack starts, so the demo starts over.
+To reset it now, inside the running reset container (its lock lives there):
+
+```sh
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env exec reset sh /usr/local/bin/demo-reset.sh once
+```
+
+To remove it, check that the project shown is `sf-manager-demo`, then take
+it down with its volumes, drop `SFMANAGER_DEMO_SITE` from
+`deploy/edge/edge.env` and recreate the edge proxy (the last command of
+step 2):
+
+```sh
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env config | head -n 1   # name: sf-manager-demo
+docker compose -f docker-compose.prod.yml -f docker-compose.demo.yml --env-file demo.env down -v
+```
+
 ### Images in CI
 
 CI builds the production images and runs `deploy/smoke-test.sh` on every PR
