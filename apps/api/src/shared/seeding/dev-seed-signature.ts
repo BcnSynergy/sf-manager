@@ -4,6 +4,9 @@ import { crc32, deflateSync } from 'node:zlib';
 // can be signed and the document shows something to look at: a transparent
 // 200x60 PNG with a dark-blue wave, drawn pixel by pixel (no asset file, no
 // image dependency). Deterministic: the same bytes on every run.
+// demo-seed-data: `variant` changes the wave's period, phase and amplitude,
+// so each demo signer's signature looks different; variant 0 is the
+// original image.
 const WIDTH = 200;
 const HEIGHT = 60;
 
@@ -16,13 +19,17 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, body, checksum]);
 }
 
-export function buildDevSignaturePng(): Buffer {
+export function buildDevSignaturePng(variant = 0): Buffer {
+  const period = 9 + variant * 2;
+  const shrink = (variant % 3) * 2;
   const rows: Buffer[] = [];
   for (let y = 0; y < HEIGHT; y += 1) {
     // Each scanline starts with filter type 0 (none), then RGBA pixels.
     const row = Buffer.alloc(1 + WIDTH * 4);
     for (let x = 8; x < WIDTH - 8; x += 1) {
-      const waveY = HEIGHT / 2 + Math.sin(x / 9) * (14 - (x / WIDTH) * 8);
+      const waveY =
+        HEIGHT / 2 +
+        Math.sin(x / period + variant) * (14 - (x / WIDTH) * 8 - shrink);
       if (Math.abs(y - waveY) <= 1.2) {
         row.set([20, 40, 120, 255], 1 + x * 4);
       }

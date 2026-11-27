@@ -1218,6 +1218,43 @@ content type`). Today that is the only 415 it raises, but a future one
   `reviewer-signature`. Also deferred under FR-010: a link to the document
   from the field-flow session page. Origin: `reviewer-signature` S6,
   2026-11-26.
+- **EN-250** (checklist questions): a checklist question holds one text
+  (`ChecklistQuestion.text`, rendered verbatim), so a question cannot carry
+  its Spanish and Catalan wording at once, and a template cannot pick one per
+  community locale. The demo dataset keeps the user's questions in Spanish
+  only. Translated question texts (a text per locale, the admin UI to edit
+  them, the review flow and the document picking the community's locale)
+  are a domain change and a slice of their own (ADR-006). Origin:
+  `demo-instance` T2a dataset review, 2026-11-27.
+- **EN-251** (delivery, seeding): dev-seed-data design E8 says dev-only code
+  with a public password does not ship in `dist`, yet since EN-93 the API
+  image compiles `prisma/seed.ts` and everything it imports
+  (`tsconfig.seed.json`), the dev dataset included, into `dist/seed`; the
+  demo seed entry joins it (`demo-seed-data`). Before EN-93 the image held
+  the sources anyway. What keeps the datasets from running is their exact
+  flags (`NODE_ENV=development`, `SEED_DEMO_DATA=true`), and the passwords
+  are public in the repository. To meet E8 again: split the admin seed from
+  the dev seed so the production image compiles only the admin, and run the
+  dev and demo seeds from a separate seed image. Origin: `demo-instance`
+  T2a, 2026-11-27 (user decision: document the flags as the control now,
+  register the rest).
+- **EN-252** (seeding tests): the demo seed entry
+  (`apps/api/src/shared/seeding/demo-seed.main.ts`) checks the flag before it
+  boots the app, so a closed gate writes nothing (not even the admin), exits
+  with status 1 and never seeds the dev dataset (spec `demo-seed-data`
+  _Explicit Demo Flag Gate_). Those three claims are backed by reading the
+  code and by a manual run, not by a test: `runDemoSeed` is tested, the
+  entry around it is not. Extract the entry's flow into a function that takes
+  the environment and a boot callback, and test it. Origin: `demo-instance`
+  T2a fresh review W-4, 2026-11-27.
+- **EN-253** (seeding): two rerun edges of the seed engine that the demo's
+  nightly reset (a fresh database every time) never reaches. Completing a
+  session and backdating it are two writes, so a run that stops between them
+  leaves a session dated today that a rerun skips as already completed. And
+  an element with a fixed code renamed between runs is skipped by name and
+  then created again with the same code, which fails as
+  `ElementCodeGenerationFailedError`, a misleading message. Origin:
+  `demo-instance` T2a fresh review S-2 and S-3, 2026-11-27.
 
 ## Done
 

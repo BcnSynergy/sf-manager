@@ -2923,10 +2923,12 @@ describe('Review History (e2e)', () => {
       'modules/users/presentation/dto/user-response.dto.ts',
       'modules/users/presentation/users.controller.ts',
       // Later changes that legitimately read the capability: the dev seed
-      // (`dev-seed-data`) grants VIEW_ALL_REVIEWS to its seeded manager, and
-      // the review schedule (`review-schedule` PR 5) scopes a manager by it.
+      // (`dev-seed-data`) and the demo seed (`demo-seed-data`) grant
+      // VIEW_ALL_REVIEWS to their seeded manager, and the review schedule
+      // (`review-schedule` PR 5) scopes a manager by it.
       'shared/seeding/dev-dataset.ts',
       'shared/seeding/seed-dev-dataset.ts',
+      'shared/seeding/demo-dataset.ts',
       'modules/review-schedule/application/use-cases/list-review-schedule.use-case.ts',
     ].map((p) => path.join(__dirname, '..', 'src', ...p.split('/')));
 

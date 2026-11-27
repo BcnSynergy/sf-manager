@@ -17,4 +17,19 @@ describe('buildDevSignaturePng', () => {
   it('is the same bytes on every run', () => {
     expect(buildDevSignaturePng().equals(buildDevSignaturePng())).toBe(true);
   });
+
+  it('variant 0 is the default image', () => {
+    expect(buildDevSignaturePng(0).equals(buildDevSignaturePng())).toBe(true);
+  });
+
+  it('gives each variant its own valid image', () => {
+    const variants = [0, 1, 2, 3, 4, 5, 6].map((v) => buildDevSignaturePng(v));
+
+    for (const png of variants) {
+      expect(detectSignatureFormat(png)?.contentType).toBe('image/png');
+    }
+    expect(new Set(variants.map((png) => png.toString('base64'))).size).toBe(
+      variants.length,
+    );
+  });
 });
