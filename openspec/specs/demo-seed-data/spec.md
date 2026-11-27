@@ -10,8 +10,11 @@ every visitor finds the same data. Approved by the user as draft v1
 (2026-11-27); the literals live in `apps/api/src/shared/seeding/demo-dataset.ts`.
 
 It reuses the dev seed's engine (`dev-seed-data`): everything goes through
-the real use cases. The dev dataset and its gate are unchanged. No web UI:
-showing the demo credentials on the login page is `demo-instance` phase 4.
+the real use cases. The dev dataset and its gate are unchanged. No web UI of
+its own: the demo's login page lists some of these accounts (spec
+`deployment`, "Demo identification"), which take their emails and the shared
+password from the same module as this dataset
+(`apps/api/src/modules/demo/demo-accounts.ts`).
 
 ## Requirements
 

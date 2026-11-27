@@ -5,6 +5,8 @@ import { loginRequestSchema } from '@sf-manager/validation';
 import { useAuth } from '../auth/AuthProvider';
 import { Alert } from '../components/Alert';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { useDemoInfo } from '../demo/demo-context';
+import { mapRoleToLabelKey } from '../users/role-labels';
 import { useAlertMessage } from '../components/use-alert-message';
 import { loginErrorKey } from './login-error-key';
 
@@ -43,6 +45,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const error = useAlertMessage();
+  const demo = useDemoInfo();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,6 +126,23 @@ export function LoginPage() {
         <Link to="/forgot-password" data-testid="login-forgot-password">
           {t('auth.passwordReset.forgotLink')}
         </Link>
+        {/* demo-instance S6: on the public demo only, the accounts a visitor
+            can sign in with (spec `deployment`, "Demo identification"). */}
+        {demo && (
+          <section className="sf-login-demo" data-testid="login-demo-accounts">
+            <h2>{t('demo.accountsTitle')}</h2>
+            <ul>
+              {demo.accounts.map((account) => (
+                <li key={account.email} data-testid="login-demo-account">
+                  {t(mapRoleToLabelKey(account.role))}: <code>{account.email}</code>
+                </li>
+              ))}
+            </ul>
+            <p data-testid="login-demo-password">
+              {t('demo.passwordLabel')}: <code>{demo.password}</code>
+            </p>
+          </section>
+        )}
         <div className="sf-login-foot">
           <span className="sf-credit" data-testid="login-credit">
             <picture>

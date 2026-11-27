@@ -5,23 +5,23 @@ import type {
   DevSession,
   DevUser,
 } from './dev-dataset';
+import { DEMO_PASSWORD, demoEmail } from '../../modules/demo/demo-accounts';
 
 // demo-seed-data: the public demo's fictitious dataset, approved by the user
 // (draft v1, 2026-11-27; odd/tasks/demo-instance.md S7-S11). The nightly
 // reset seeds exactly this, so the demo always shows the same data and the
 // same QR codes (S8, S9). Every name, address, tax id and phone is made up.
 
-// Public: shown on the demo login page. Like the dev password, it goes
-// through CreateUser, so the shared password policy validates it.
-export const DEMO_SEED_PASSWORD = 'sf-manager-demo-1';
+// Public: shown on the demo login page, which takes it and the accounts it
+// lists from the same module (demo-instance S6).
+export const DEMO_SEED_PASSWORD = DEMO_PASSWORD;
 
 export type DemoDataset = DevDataset & {
   // The organization logo, uploaded through the logo use case.
   logoSvg: string;
 };
 
-const DOMAIN = '@demo.sf-manager.example';
-const user = (local: string) => `${local}${DOMAIN}`;
+const user = demoEmail;
 
 const C1 = 'B99100001';
 const C2 = 'B99100002';
@@ -464,23 +464,23 @@ export const DEMO_DATASET: DemoDataset = {
     taxId: 'B99100000',
     address: 'Carrer del Rosselló 250, 3r 1a, 08008 Barcelona',
     phone: '+34 930 000 100',
-    email: `info${DOMAIN}`,
+    email: demoEmail('info'),
   },
   companies: [
     {
       name: 'Extintores Llobregat S.L.',
       taxId: C1,
-      contactInfo: `+34 930 000 201 · llobregat${DOMAIN}`,
+      contactInfo: `+34 930 000 201 · ${demoEmail('llobregat')}`,
     },
     {
       name: 'ProtecFoc Serveis S.L.',
       taxId: C2,
-      contactInfo: `+34 930 000 202 · protecfoc${DOMAIN}`,
+      contactInfo: `+34 930 000 202 · ${demoEmail('protecfoc')}`,
     },
     {
       name: 'Garraf Seguridad Contra Incendios S.L.',
       taxId: C3,
-      contactInfo: `+34 930 000 203 · garraf${DOMAIN}`,
+      contactInfo: `+34 930 000 203 · ${demoEmail('garraf')}`,
     },
   ],
   users,

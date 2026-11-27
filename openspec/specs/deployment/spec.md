@@ -357,6 +357,42 @@ A public demo MAY run next to production on the same server, behind the same edg
 - THEN its web joins `sf-edge-demo` with the alias `sf-manager-demo-web` and no other
 - AND, rendered without `-p`, its project is `sf-manager-demo`, not `sf-manager-prod`
 
+### Requirement: Demo identification
+
+The API MUST answer `GET /demo` without a session. When `DEMO_MODE=true` it SHALL answer `enabled: true`, the shared demo password and one demo account per role a visitor can try (manager, maintenance company manager, maintenance technician, community representative), each with its email and role, and never a system admin. Otherwise it SHALL answer only `enabled: false`. Unset or empty `DEMO_MODE` means off; any other value than `true` or `false` MUST make the API fail at startup. The demo override MUST set `DEMO_MODE=true` on the demo's API; production MUST NOT set it. Every account the endpoint lists MUST be seeded by the demo dataset (`demo-seed-data`) with that role and that password. When the API answers `enabled: true`, the web app MUST show a "Demo" banner above every page, the login page included, which states that the data is fictitious and reset every night and is never printed; its login page MUST list those accounts with their role and the shared password. When the API answers `enabled: false`, or cannot be reached, the web app MUST show neither. The texts MUST be available in English, Spanish and Catalan.
+
+#### Scenario: The demo lists its accounts and each one logs in
+
+- GIVEN the demo stack is running
+- WHEN a client requests `https://<SFMANAGER_DEMO_SITE>/api/demo`
+- THEN it answers `enabled: true`, the shared password and the demo accounts
+- AND each listed account logs in with that password
+
+#### Scenario: Production says the demo is off
+
+- GIVEN the production stack is running without `DEMO_MODE`
+- WHEN a client requests `/api/demo`
+- THEN it answers `{"enabled":false}` and nothing else
+
+#### Scenario: An unknown DEMO_MODE value stops the API
+
+- GIVEN `DEMO_MODE=yes`
+- WHEN the API starts
+- THEN it fails at startup with an error naming `DEMO_MODE`
+
+#### Scenario: A visitor sees the banner and the demo accounts
+
+- GIVEN the API answers `enabled: true`
+- WHEN a visitor opens the login page
+- THEN a "Demo" banner shows above it, and the login page lists each demo account with its role and the shared password
+- AND after signing in, the banner still shows above every page, but not on a printed document
+
+#### Scenario: Production shows no demo hints
+
+- GIVEN the API answers `enabled: false`, or cannot be reached
+- WHEN a visitor opens the login page or any other page
+- THEN no "Demo" banner and no demo account is shown
+
 ### Requirement: API documentation off in production
 
 The API MUST NOT serve Swagger UI or the OpenAPI document when `NODE_ENV=production`, unless `API_DOCS_ENABLED=true`. Outside production it SHALL serve them at `/docs` unless `API_DOCS_ENABLED=false`. Any other non-empty `API_DOCS_ENABLED` value MUST make the API fail at startup. The production stack MUST pass `API_DOCS_ENABLED` from `prod.env`, defaulting to `false`.

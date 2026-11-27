@@ -3,6 +3,8 @@ import { createBrowserRouter, Route, Routes } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { AppLayout } from './layout/AppLayout';
 import { AuthProvider } from './auth/AuthProvider';
+import { DemoBanner } from './demo/DemoBanner';
+import { DemoProvider } from './demo/DemoProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { NotFound } from './components/NotFound';
 import { PageSuspense } from './components/PageSuspense';
@@ -95,10 +97,15 @@ export function AppRoutes() {
 // route definitions.
 function App() {
   const [router] = useState(() => createBrowserRouter([{ path: '*', element: <AppRoutes /> }]));
+  // demo-instance S6: the Demo banner sits above every page, the login page
+  // included, on the public demo only.
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <DemoProvider>
+      <DemoBanner />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </DemoProvider>
   );
 }
 

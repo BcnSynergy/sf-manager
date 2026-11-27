@@ -20,7 +20,8 @@ export type PrintSuppressionResult =
 // ui-redesign-foundation design Decision 7: every piece of application chrome
 // the redesign's shell renders around a page. Each must pass the same three
 // checks as the original nav rule.
-export const PRINT_CHROME_SELECTORS = ['.app-nav', '.app-footer'] as const;
+// demo-instance S6 adds the Demo banner.
+export const PRINT_CHROME_SELECTORS = ['.app-nav', '.app-footer', '.app-demo-banner'] as const;
 
 // EN-83: a print block is any `@media` whose query list has a `print` media
 // type (`print and (...)`, `only print`, `screen, print`).

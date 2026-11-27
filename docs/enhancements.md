@@ -1247,6 +1247,12 @@ content type`). Today that is the only 415 it raises, but a future one
   `ElementCodeGenerationFailedError`, a misleading message. Origin:
   `demo-instance` T2a fresh review S-2 and S-3, 2026-11-27.
 
+- **EN-255** (web, demo): the demo login page lists the demo accounts as
+  text; a visitor copies an email and the password by hand. A button per
+  account that fills both fields (or signs in directly) would save the
+  typing. Left out of `demo-instance` T4 to keep the slice's UI minimal
+  (ADR-006). Origin: `demo-instance` T4, 2026-11-27.
+
 ## Done
 
 - **EN-254** (deployment): the demo's `reset` service runs
