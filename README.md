@@ -549,9 +549,11 @@ already running:
 2. Tell the edge proxy the demo's domain, check the resulting configuration
    and recreate the edge proxy, which creates the `sf-edge-demo` network.
    Caddy validates the new configuration (the demo's domain is passed to that
-   check only) before `edge.env` changes, so the chain stops without touching
-   anything when the demo's domain is empty, equal to production's (Caddy
-   would reject both sites), already set, or rejected by Caddy. Production's site
+   check only) before `edge.env` changes, so the chain stops without changing
+   `edge.env` or the running edge proxy when the demo's domain is empty, equal
+   to production's (Caddy would reject both sites), already set, or rejected
+   by Caddy (the check itself creates the empty `sf-edge-demo` network, which
+   the next attempt reuses). Production's site
    is down for the 10 to 15 seconds the edge proxy restarts; the production
    stack itself keeps running.
 
