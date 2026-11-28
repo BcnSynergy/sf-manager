@@ -1252,6 +1252,17 @@ content type`). Today that is the only 415 it raises, but a future one
   account that fills both fields (or signs in directly) would save the
   typing. Left out of `demo-instance` T4 to keep the slice's UI minimal
   (ADR-006). Origin: `demo-instance` T4, 2026-11-27.
+- **EN-256** (deploy, demo): redeploying the version the demo already runs
+  recreates no container, so the demo does not reset; editing `demo.env`
+  and redeploying the same version does recreate the services that read
+  the changed values. The README says both; the `deploy/deploy.sh` comment
+  (lines 105-107) leaves out the `demo.env` condition, and spec
+  `deployment` has no scenario for a same-version redeploy (the "Deploy
+  the demo" scenario now covers only a different commit). Align the
+  comment and add the scenario, or make a demo deploy always reset
+  (`--force-recreate reset`) if that is the behavior wanted. Origin:
+  `demo-instance` PR 6/6 Gentle review (R2-redeploy-condition-drift,
+  R3-same-commit-redeploy-unspecified), 2026-11-28.
 
 ## Done
 
