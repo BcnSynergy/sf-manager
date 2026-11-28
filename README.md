@@ -767,7 +767,7 @@ demo's checkout with `demo.env`, and that key can never deploy production
 
 A demo deploy to a new version restarts the demo's reset service with the
 new image, so the demo also starts over. Deploying the version the demo
-already runs recreates no container, so nothing resets; to reset it, run
+already runs, with `demo.env` unchanged, recreates no container, so nothing resets; to reset it, run
 `demo-reset.sh once` as in "Demo stack". If one stops between steps, check
 `git -C ~/sf-manager-demo log --oneline -1` and `grep IMAGE_TAG
 ~/sf-manager-demo/demo.env` and deploy again.
