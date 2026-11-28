@@ -765,8 +765,10 @@ demo's checkout with `demo.env`, and that key can never deploy production
    only), with the same three secrets, `DEPLOY_SSH_KEY` holding the demo's
    private key. Then delete that key from your machine.
 
-A demo deploy restarts the demo's reset service with the new image, so the
-demo also starts over. If one stops between steps, check
+A demo deploy to a new version restarts the demo's reset service with the
+new image, so the demo also starts over. Deploying the version the demo
+already runs recreates no container, so nothing resets; to reset it, run
+`demo-reset.sh once` as in "Demo stack". If one stops between steps, check
 `git -C ~/sf-manager-demo log --oneline -1` and `grep IMAGE_TAG
 ~/sf-manager-demo/demo.env` and deploy again.
 
