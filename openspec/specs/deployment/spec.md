@@ -171,7 +171,7 @@ A GitHub Actions workflow MUST deploy one commit to a target, `production` (the 
 
 #### Scenario: Deploy the demo
 
-- GIVEN the demo runs from `~/sf-manager-demo` and a commit on `main` whose images CI published
+- GIVEN the demo runs from `~/sf-manager-demo` and a commit on `main`, other than the one the demo runs, whose images CI published
 - WHEN the maintainer starts the deploy workflow with the target `demo` and that commit, and approves the `demo` environment
 - THEN the demo's checkout is at that commit, `demo.env` has `IMAGE_TAG=sha-<short SHA>`, the demo runs those images (its reset starts it over), and the check of the demo's site succeeds
 - AND production's checkout, `prod.env` and stack are unchanged

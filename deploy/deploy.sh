@@ -102,8 +102,9 @@ grep -q '^IMAGE_TAG=' "$env_file" || printf '\nIMAGE_TAG=\n' >>"$env_file"
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$tag/" "$env_file"
 
 # Waits for the API healthcheck: Caddy starts only once the API is healthy.
-# The demo's reset service restarts with the new image, so a demo deploy
-# also resets the demo.
+# The demo's reset service restarts with a new image, so a demo deploy to a
+# new version also resets the demo; redeploying the running version
+# recreates nothing.
 # shellcheck disable=SC2086 # $files is one Compose argument per word
 docker compose $files up -d --no-build
 echo "deploy: $target now runs $tag ($sha)"
